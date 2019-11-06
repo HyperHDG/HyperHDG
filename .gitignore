@@ -1,0 +1,11 @@
+# C++ files created by Cython have a .cpp ending
+*.cpp
+
+# If additional local modules need to be installed
+*.so
+
+# Build directory created by Cython
+[Bb]uild*/
+
+# TestProgram if created
+TestProgram
