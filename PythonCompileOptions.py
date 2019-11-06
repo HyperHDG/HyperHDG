@@ -22,7 +22,7 @@ for root, dirs, files in os.walk(".", topdown=False):
 setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = [
-        Extension("main_py", 
+        Extension("C++ClassWrapper", 
                   sources=["C++ClassWrapper.pyx",
                            "Connector.C",
                            "ConnectorGetter.C",
