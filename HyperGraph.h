@@ -25,7 +25,7 @@ class HyperGraph
     const Topology hyperedge_getter_;
   public:
     HyperGraph(const AbstractJointGetter& joint_getter,
-                       const Topology& hyperedge_getter);
+               const Topology& hyperedge_getter);
     HyperGraph();
     
     const AbstractJoint get_joint(const joint_index_type index) const;

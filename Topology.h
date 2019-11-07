@@ -15,6 +15,7 @@
 #include "TypeDefs.h"
 #include "HyperEdge.h"
 #include <array>
+#include <vector>
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -25,9 +26,7 @@ class HyperGraph_Cubic
     hyperedge_index_type num_of_hyperedges_;
   public:
     typedef HyperEdge_Cubic<hyperedge_dim, space_dim> value_type;
-    HyperGraph_Cubic(const unsigned int num_of_elem_in_x_dir,
-                                const unsigned int num_of_elem_in_y_dir = 0,
-                                const unsigned int num_of_elem_in_z_dir = 0);
+    HyperGraph_Cubic(std::vector<int>& num_elements);
     HyperGraph_Cubic(const HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
     
     const HyperEdge_Cubic<hyperedge_dim, space_dim> get_hyperedge(const hyperedge_index_type index) const;

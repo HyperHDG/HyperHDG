@@ -20,9 +20,9 @@ class DiffusionProblemRegular
 {
   private:
     HyperGraph < JointGetter_RegularQuad<hyperedge_dim,space_dim>,
-                         HyperGraph_Cubic< hyperedge_dim,space_dim>,
-                         Joint_RegularQuad >
-                       hyper_graph_topology;
+                 HyperGraph_Cubic< hyperedge_dim,space_dim>,
+                 Joint_RegularQuad >
+               hyper_graph_topology;
     std::vector<int> dirichlet_indices;
     DiffusionSolver_RegularQuad<hyperedge_dim> local_solver;
     std::vector<unsigned int> Dirichlet_indices;
