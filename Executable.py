@@ -5,7 +5,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 
-from main_py import PyDiffusionProblem
+from ClassWrapper import PyDiffusionProblem
 from scipy.sparse.linalg import LinearOperator
 
 # Initialising the wrapped c++ function

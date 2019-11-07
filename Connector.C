@@ -26,16 +26,20 @@ template class Connector_RegularQuad<3,3>;
 
 
 template<unsigned int space_dim>
-vector<joint_index_type> line_to_point_index(const vector<unsigned int>& num_lines, const connector_index_type index)
+array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const connector_index_type index)
 {
   assert( num_lines.size() == space_dim );
   unsigned int orientation;
   connector_index_type num_elements_in_direction;
   connector_index_type number_with_lower_orientation = 0;
   connector_index_type index_helper = index;
-  vector<joint_index_type> point_indices(2,0);
   
-  vector<connector_index_type> num_lines_with_orientation(space_dim,1);
+  array<joint_index_type, 2> point_indices;
+  point_indices.fill(0);
+  
+  array<connector_index_type, space_dim> num_lines_with_orientation;
+  num_lines_with_orientation.fill(1);
+  
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if (dim_m == dim_n)  num_lines_with_orientation[dim_m] *= num_lines[dim_n];
@@ -49,7 +53,9 @@ vector<joint_index_type> line_to_point_index(const vector<unsigned int>& num_lin
     assert( orientation <= space_dim );
   }
   
-  vector<connector_index_type> local_indices(space_dim,0);
+  array<connector_index_type, space_dim> local_indices;
+  local_indices.fill(0);
+  
   index_helper -= number_with_lower_orientation;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
@@ -75,17 +81,20 @@ vector<joint_index_type> line_to_point_index(const vector<unsigned int>& num_lin
 
 
 template<unsigned int space_dim>
-vector<joint_index_type> square_to_line_index(const vector<unsigned int>& num_squares, const connector_index_type index)
+array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const connector_index_type index)
 {
   assert( num_squares.size() == space_dim );
   unsigned int orientation;
   connector_index_type num_elements_in_direction;
   connector_index_type number_with_lower_orientation = 0;
   connector_index_type index_helper = index;
-  vector<joint_index_type> line_indices(4,0);
   
+  array<joint_index_type, 4> line_indices;
+  line_indices.fill(0);
   
-  vector<connector_index_type> num_squares_with_orientation(space_dim,1);
+  array<connector_index_type, space_dim> num_squares_with_orientation;
+  num_squares_with_orientation.fill(1);
+  
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if ( dim_m != dim_n )     num_squares_with_orientation[dim_m] *= num_squares[dim_n];
@@ -100,7 +109,9 @@ vector<joint_index_type> square_to_line_index(const vector<unsigned int>& num_sq
     assert( orientation <= space_dim );
   }
   
-  vector<connector_index_type> local_indices(space_dim,0);
+  array<connector_index_type, space_dim> local_indices;
+  local_indices.fill(0);
+  
   index_helper -= number_with_lower_orientation;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
@@ -112,7 +123,7 @@ vector<joint_index_type> square_to_line_index(const vector<unsigned int>& num_sq
   }
   assert( index_helper == 0 );
   
-  vector<connector_index_type> num_lines_with_orientation(space_dim,1);
+  array<connector_index_type, space_dim> num_lines_with_orientation;
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if (dim_m == dim_n)  num_lines_with_orientation[dim_m] *= num_squares[dim_n];
@@ -145,15 +156,19 @@ vector<joint_index_type> square_to_line_index(const vector<unsigned int>& num_sq
 
 
 template<unsigned int space_dim>
-vector<joint_index_type> cube_to_square_index(const vector<unsigned int>& num_cubes, const connector_index_type index)
+array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const connector_index_type index)
 {
   assert( num_cubes.size() == space_dim );
   connector_index_type num_elements_in_direction;
   connector_index_type number_with_lower_orientation = 0;
   connector_index_type index_helper = index;
-  vector<joint_index_type> square_indices(2*space_dim,0);
   
-  vector<connector_index_type> local_indices(space_dim,0);
+  array<joint_index_type, 6> square_indices;
+  square_indices.fill(0);
+  
+  array<connector_index_type, space_dim> local_indices;
+  local_indices.fill(0);
+  
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
     num_elements_in_direction = num_cubes[dim];
@@ -163,7 +178,9 @@ vector<joint_index_type> cube_to_square_index(const vector<unsigned int>& num_cu
   }
   assert( index_helper == 0 );
   
-  vector<connector_index_type> num_squares_with_orientation(space_dim,1);
+  array<connector_index_type, space_dim> num_squares_with_orientation;
+  num_squares_with_orientation.fill(1);
+  
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if ( dim_m != dim_n )     num_squares_with_orientation[dim_m] *= num_cubes[dim_n];
@@ -195,21 +212,21 @@ vector<joint_index_type> cube_to_square_index(const vector<unsigned int>& num_cu
 
 template <unsigned int connector_dim, unsigned int space_dim>
 Connector_RegularQuad<connector_dim,space_dim>::
-Connector_RegularQuad(const connector_index_type index, const vector<unsigned int>& num_elements,
+Connector_RegularQuad(const connector_index_type index, const array<unsigned int, space_dim>& num_elements,
                       const connector_index_type num_of_connectors)
 {
-  joint_indices_.resize(2*connector_dim);
-  correct_joint_orientation_.resize(2*connector_dim);
+//  joint_indices_.resize(2*connector_dim);
+//  correct_joint_orientation_.resize(2*connector_dim);
   for (unsigned int local_joint = 0; local_joint < 2 * connector_dim; ++local_joint)
     correct_joint_orientation_[local_joint] = true;
-  if ( connector_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if ( connector_dim == 2 )  joint_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if (connector_dim == 3 )  joint_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  if constexpr ( connector_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  else if constexpr ( connector_dim == 2 )  joint_indices_ = square_to_line_index<space_dim>(num_elements, index);
+  else if constexpr ( connector_dim == 3 )  joint_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
 
 template <unsigned int connector_dim, unsigned int space_dim>
-const vector<joint_index_type>&
+const array<joint_index_type, 2*connector_dim>&
 Connector_RegularQuad<connector_dim,space_dim>::get_joint_indices() const
 {
   return joint_indices_;
