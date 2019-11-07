@@ -24,23 +24,23 @@ template class DiffusionProblemRegular<2,3>;
 template class DiffusionProblemRegular<3,3>;
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-DiffusionProblemRegular<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+DiffusionProblemRegular<hyperedge_dim,space_dim>::
 DiffusionProblemRegular(vector<int> num_elements, int polynomial_degree)
 : hyper_graph_topology
   (
-    JointGetter_RegularQuad<connector_dim,space_dim>
-      (pow((polynomial_degree + 1), connector_dim-1), num_elements[0], num_elements[1], num_elements[2]),
-    ConnectorGetter_RegularQuad< connector_dim, space_dim >
+    JointGetter_RegularQuad<hyperedge_dim,space_dim>
+      (pow((polynomial_degree + 1), hyperedge_dim-1), num_elements[0], num_elements[1], num_elements[2]),
+    HyperGraph_Cubic< hyperedge_dim, space_dim >
       (num_elements[0], num_elements[1], num_elements[2])
   ) ,
   local_solver(polynomial_degree,2,1.)
 {
-  cout << "Amount of Connectors = " << hyper_graph_topology.num_of_connectors() << endl;
-  for(unsigned int i = 0; i < hyper_graph_topology.num_of_connectors(); ++i)
+  cout << "Amount of HyperEdges = " << hyper_graph_topology.num_of_hyperedges() << endl;
+  for(unsigned int i = 0; i < hyper_graph_topology.num_of_hyperedges(); ++i)
   {
-    const Connector_RegularQuad<connector_dim,space_dim> connector = hyper_graph_topology.get_connector(i);
-    const array<joint_index_type, 2*connector_dim> indices = connector.get_joint_indices();
+    const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_topology.get_hyperedge(i);
+    const array<joint_index_type, 2*hyperedge_dim> indices = hyperedge.get_joint_indices();
     cout << i << "   ";
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
     cout << endl;
@@ -50,31 +50,31 @@ DiffusionProblemRegular(vector<int> num_elements, int polynomial_degree)
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-vector<double> DiffusionProblemRegular<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim>::
 return_zero_vector()
 {
   return vector<double>(hyper_graph_topology.num_of_global_dofs(), 0.);
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-vector<double> DiffusionProblemRegular<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim>::
 matrix_vector_multiply(vector<double> x_vec)
 {
   vector<double> vec_Ax(x_vec.size(), 0.);
-  vector< vector<double> > local_result, connector_dofs;
-  array<unsigned int, 2*connector_dim> connector_joints;
+  vector< vector<double> > local_result, hyperedge_dofs;
+  array<unsigned int, 2*hyperedge_dim> hyperedge_joints;
   
-  for (unsigned int connector = 0; connector < hyper_graph_topology.num_of_connectors(); ++connector)
+  for (unsigned int hyperedge = 0; hyperedge < hyper_graph_topology.num_of_hyperedges(); ++hyperedge)
   {
-    connector_joints = hyper_graph_topology.get_connector(connector).get_joint_indices();
-    connector_dofs.resize(connector_joints.size());
-    for (unsigned int joint = 0; joint < connector_joints.size(); ++joint)
-      connector_dofs[joint] = hyper_graph_topology.get_joint(connector_joints[joint]).get_dof_values(x_vec);
-    local_result = local_solver.numerical_flux_from_lambda(connector_dofs);
-    for (unsigned int joint = 0; joint < connector_joints.size(); ++joint)
-      hyper_graph_topology.get_joint(connector_joints[joint]).add_to_dof_values(vec_Ax, local_result[joint]);
+    hyperedge_joints = hyper_graph_topology.get_hyperedge(hyperedge).get_joint_indices();
+    hyperedge_dofs.resize(hyperedge_joints.size());
+    for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
+      hyperedge_dofs[joint] = hyper_graph_topology.get_joint(hyperedge_joints[joint]).get_dof_values(x_vec);
+    local_result = local_solver.numerical_flux_from_lambda(hyperedge_dofs);
+    for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
+      hyper_graph_topology.get_joint(hyperedge_joints[joint]).add_to_dof_values(vec_Ax, local_result[joint]);
   }
   
   for(unsigned int i = 0; i < dirichlet_indices.size(); ++i) 
@@ -84,8 +84,8 @@ matrix_vector_multiply(vector<double> x_vec)
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-int DiffusionProblemRegular<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+int DiffusionProblemRegular<hyperedge_dim,space_dim>::
 size_of_system()
 {
   return hyper_graph_topology.num_of_global_dofs();

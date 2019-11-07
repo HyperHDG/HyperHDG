@@ -26,7 +26,7 @@ class JointGetter
     unsigned int num_of_joints();
 }
 */
-template <unsigned int connector_dim, unsigned int space_dim>
+template <unsigned int hyperedge_dim, unsigned int space_dim>
 class JointGetter_RegularQuad
 {
   private:
@@ -38,7 +38,7 @@ class JointGetter_RegularQuad
                             const unsigned int num_of_elements_in_y_dir = 0,
                             const unsigned int num_of_elements_in_z_dir = 0);
     JointGetter_RegularQuad
-      (const JointGetter_RegularQuad<connector_dim,space_dim>& other);
+      (const JointGetter_RegularQuad<hyperedge_dim,space_dim>& other);
     const Joint_RegularQuad get_joint(const unsigned int index) const;
     const joint_index_type num_of_joints() const;
     const dof_index_type num_of_global_dofs() const;

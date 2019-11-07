@@ -14,10 +14,10 @@
 #ifndef DIFFUSIONSOLVER_H
 #define DIFFUSIONSOLVER_H
 
-#include "Connector.h"
+#include "HyperEdge.h"
 #include <vector>
 
-template<unsigned int connector_dim>
+template<unsigned int hyperedge_dim>
 class DiffusionSolver_RegularQuad
 {
   private:
@@ -38,7 +38,6 @@ class DiffusionSolver_RegularQuad
   public:
     DiffusionSolver_RegularQuad(const unsigned int max_poly_degree, const unsigned int num_of_quad, const double tau);
     std::vector< std::vector<double> >numerical_flux_from_lambda(const std::vector< std::vector<double> >& lambda_values) const;
-//    void update_auxiliaries(Connector<dim,unknown_dim>& connector, const bool hom_rhs = false) const;
 };
 
 #endif
