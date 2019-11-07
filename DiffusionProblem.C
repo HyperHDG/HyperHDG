@@ -31,7 +31,7 @@ DiffusionProblemRegular(vector<int> num_elements, int polynomial_degree)
   (
     JointGetter_RegularQuad<connector_dim,space_dim>
       (pow((polynomial_degree + 1), connector_dim-1), num_elements[0], num_elements[1], num_elements[2]),
-    ConnectorGetter_RegularQuad<connector_dim,space_dim>
+    ConnectorGetter_RegularQuad< connector_dim, space_dim >
       (num_elements[0], num_elements[1], num_elements[2])
   ) ,
   local_solver(polynomial_degree,2,1.)

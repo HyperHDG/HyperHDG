@@ -17,7 +17,7 @@
 #include "ConnectorGetter.h"
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 class HyperGraphTopology
 {
   private:
@@ -29,7 +29,7 @@ class HyperGraphTopology
     HyperGraphTopology();
     
     const AbstractJoint get_joint(const joint_index_type index) const;
-    const AbstractConnector get_connector(const connector_index_type index) const;
+    const typename AbstractConnectorGetter::value_type get_connector(const connector_index_type index) const;
     
     const joint_index_type num_of_joints() const;
     const connector_index_type num_of_connectors() const;

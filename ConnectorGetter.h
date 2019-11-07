@@ -27,6 +27,8 @@ class ConnectorGetter
     unsigned int num_of_connectors();
 };
 */
+
+
 template <unsigned int connector_dim, unsigned int space_dim>
 class ConnectorGetter_RegularQuad
 {
@@ -34,14 +36,14 @@ class ConnectorGetter_RegularQuad
     std::array<unsigned int, space_dim> num_elements_;
     connector_index_type num_of_connectors_;
   public:
+    typedef Connector_RegularQuad<connector_dim, space_dim> value_type;
     ConnectorGetter_RegularQuad(const unsigned int num_of_elem_in_x_dir,
                                 const unsigned int num_of_elem_in_y_dir = 0,
                                 const unsigned int num_of_elem_in_z_dir = 0);
     ConnectorGetter_RegularQuad
       (const ConnectorGetter_RegularQuad<connector_dim,space_dim>& other);
     
-    const Connector_RegularQuad<connector_dim,space_dim> 
-      get_connector(const connector_index_type index) const;
+    const Connector_RegularQuad<connector_dim, space_dim> get_connector(const connector_index_type index) const;
     const connector_index_type num_of_connectors() const;
 };
 
