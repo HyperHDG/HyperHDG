@@ -12,33 +12,33 @@
 
 
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<1,1>, ConnectorGetter_RegularQuad<1,1>, Joint_RegularQuad, Connector_RegularQuad<1,1> >;
+  < JointGetter_RegularQuad<1,1>, ConnectorGetter_RegularQuad< 1, 1 >, Joint_RegularQuad>;
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<1,2>, ConnectorGetter_RegularQuad<1,2>, Joint_RegularQuad, Connector_RegularQuad<1,2> >;
+  < JointGetter_RegularQuad<1,2>, ConnectorGetter_RegularQuad< 1, 2 >, Joint_RegularQuad>;
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<1,3>, ConnectorGetter_RegularQuad<1,3>, Joint_RegularQuad, Connector_RegularQuad<1,3> >;
+  < JointGetter_RegularQuad<1,3>, ConnectorGetter_RegularQuad< 1, 3 >, Joint_RegularQuad>;
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<2,2>, ConnectorGetter_RegularQuad<2,2>, Joint_RegularQuad, Connector_RegularQuad<2,2> >;
+  < JointGetter_RegularQuad<2,2>, ConnectorGetter_RegularQuad< 2, 2 >, Joint_RegularQuad>;
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<2,3>, ConnectorGetter_RegularQuad<2,3>, Joint_RegularQuad, Connector_RegularQuad<2,3> >;
+  < JointGetter_RegularQuad<2,3>, ConnectorGetter_RegularQuad< 2, 3 >, Joint_RegularQuad>;
 template class HyperGraphTopology 
-  < JointGetter_RegularQuad<3,3>, ConnectorGetter_RegularQuad<3,3>, Joint_RegularQuad, Connector_RegularQuad<3,3> >;
+  < JointGetter_RegularQuad<3,3>, ConnectorGetter_RegularQuad< 3, 3 >, Joint_RegularQuad>;
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 HyperGraphTopology(const AbstractJointGetter& joint_getter,
                    const AbstractConnectorGetter& connector_getter)
 : joint_getter_(joint_getter), connector_getter_(connector_getter) { }
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 const AbstractJoint
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 get_joint(const joint_index_type index) const
 {
   return joint_getter_.get_joint(index);
@@ -46,10 +46,10 @@ get_joint(const joint_index_type index) const
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
-const AbstractConnector 
+           class AbstractJoint >
+const typename AbstractConnectorGetter::value_type
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 get_connector(const connector_index_type index) const
 {
   return connector_getter_.get_connector(index);
@@ -57,10 +57,10 @@ get_connector(const connector_index_type index) const
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 const joint_index_type
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 num_of_joints() const
 {
   return joint_getter_.num_of_joints();
@@ -68,10 +68,10 @@ num_of_joints() const
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 const connector_index_type
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 num_of_connectors() const
 {
   return connector_getter_.num_of_connectors();
@@ -79,10 +79,10 @@ num_of_connectors() const
 
 
 template < class AbstractJointGetter, class AbstractConnectorGetter,
-           class AbstractJoint,       class AbstractConnector >
+           class AbstractJoint >
 const dof_index_type 
 HyperGraphTopology< AbstractJointGetter, AbstractConnectorGetter,
-                    AbstractJoint,       AbstractConnector >::
+                    AbstractJoint >::
 num_of_global_dofs() const
 {
   return joint_getter_.num_of_global_dofs();

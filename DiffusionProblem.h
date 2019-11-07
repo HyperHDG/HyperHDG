@@ -20,9 +20,8 @@ class DiffusionProblemRegular
 {
   private:
     HyperGraphTopology < JointGetter_RegularQuad<connector_dim,space_dim>,
-                         ConnectorGetter_RegularQuad<connector_dim,space_dim>,
-                         Joint_RegularQuad,
-                         Connector_RegularQuad<connector_dim,space_dim> >
+                         ConnectorGetter_RegularQuad< connector_dim,space_dim>,
+                         Joint_RegularQuad >
                        hyper_graph_topology;
     std::vector<int> dirichlet_indices;
     DiffusionSolver_RegularQuad<connector_dim> local_solver;

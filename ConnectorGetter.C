@@ -14,12 +14,12 @@
 using namespace std;
 
 
-template class ConnectorGetter_RegularQuad<1,1>;
-template class ConnectorGetter_RegularQuad<1,2>;
-template class ConnectorGetter_RegularQuad<1,3>;
-template class ConnectorGetter_RegularQuad<2,2>;
-template class ConnectorGetter_RegularQuad<2,3>;
-template class ConnectorGetter_RegularQuad<3,3>;
+template class ConnectorGetter_RegularQuad< 1, 1 >;
+template class ConnectorGetter_RegularQuad< 1, 2 >;
+template class ConnectorGetter_RegularQuad< 1, 3 >;
+template class ConnectorGetter_RegularQuad< 2, 2 >;
+template class ConnectorGetter_RegularQuad< 2, 3 >;
+template class ConnectorGetter_RegularQuad< 3, 3 >;
 
 
 template <unsigned int connector_dim, unsigned int space_dim>
@@ -77,7 +77,7 @@ ConnectorGetter_RegularQuad(const ConnectorGetter_RegularQuad<connector_dim,spac
 
 
 template <unsigned int connector_dim, unsigned int space_dim>
-const Connector_RegularQuad<connector_dim,space_dim>
+const Connector_RegularQuad<connector_dim, space_dim>
 ConnectorGetter_RegularQuad<connector_dim,space_dim>::
 get_connector(const connector_index_type index) const
 {
