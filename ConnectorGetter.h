@@ -14,7 +14,7 @@
 
 #include "TypeDefs.h"
 #include "Connector.h"
-#include <vector>
+#include <array>
 
 /*
 template <class AbstractConnector>
@@ -31,7 +31,7 @@ template <unsigned int connector_dim, unsigned int space_dim>
 class ConnectorGetter_RegularQuad
 {
   private:
-    std::vector<unsigned int> num_elements_;
+    std::array<unsigned int, space_dim> num_elements_;
     connector_index_type num_of_connectors_;
   public:
     ConnectorGetter_RegularQuad(const unsigned int num_of_elem_in_x_dir,

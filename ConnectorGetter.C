@@ -32,7 +32,7 @@ ConnectorGetter_RegularQuad(const unsigned int num_of_elem_in_x_dir,
   static_assert( space_dim >= connector_dim, "A domain cannot live within a smaller space!" );
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
   
-  num_elements_.resize(space_dim);
+//  num_elements_.resize(space_dim);
   num_elements_[0] = num_of_elem_in_x_dir;
   if (space_dim > 1)  num_elements_[1] = num_of_elem_in_y_dir;
   if (space_dim > 2)  num_elements_[2] = num_of_elem_in_z_dir;

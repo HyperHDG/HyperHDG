@@ -40,7 +40,7 @@ DiffusionProblemRegular(vector<int> num_elements, int polynomial_degree)
   for(unsigned int i = 0; i < hyper_graph_topology.num_of_connectors(); ++i)
   {
     const Connector_RegularQuad<connector_dim,space_dim> connector = hyper_graph_topology.get_connector(i);
-    const vector<joint_index_type> indices = connector.get_joint_indices();
+    const array<joint_index_type, 2*connector_dim> indices = connector.get_joint_indices();
     cout << i << "   ";
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
     cout << endl;
@@ -64,7 +64,7 @@ matrix_vector_multiply(vector<double> x_vec)
 {
   vector<double> vec_Ax(x_vec.size(), 0.);
   vector< vector<double> > local_result, connector_dofs;
-  vector<unsigned int> connector_joints;
+  array<unsigned int, 2*connector_dim> connector_joints;
   
   for (unsigned int connector = 0; connector < hyper_graph_topology.num_of_connectors(); ++connector)
   {
