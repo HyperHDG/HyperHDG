@@ -31,8 +31,7 @@ DiffusionProblemRegular(vector<int> num_elements, int polynomial_degree)
   (
     JointGetter_RegularQuad<hyperedge_dim,space_dim>
       (pow((polynomial_degree + 1), hyperedge_dim-1), num_elements[0], num_elements[1], num_elements[2]),
-    HyperGraph_Cubic< hyperedge_dim, space_dim >
-      (num_elements[0], num_elements[1], num_elements[2])
+    HyperGraph_Cubic< hyperedge_dim, space_dim > (num_elements)
   ) ,
   local_solver(polynomial_degree,2,1.)
 {

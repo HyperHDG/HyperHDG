@@ -24,18 +24,15 @@ template class HyperGraph_Cubic< 3, 3 >;
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
-HyperGraph_Cubic(const unsigned int num_of_elem_in_x_dir,
-                            const unsigned int num_of_elem_in_y_dir,
-                            const unsigned int num_of_elem_in_z_dir)
+HyperGraph_Cubic(vector<int>& num_elements)
 {
   static_assert( hyperedge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
   static_assert( space_dim >= hyperedge_dim, "A domain cannot live within a smaller space!" );
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
   
-//  num_elements_.resize(space_dim);
-  num_elements_[0] = num_of_elem_in_x_dir;
-  if (space_dim > 1)  num_elements_[1] = num_of_elem_in_y_dir;
-  if (space_dim > 2)  num_elements_[2] = num_of_elem_in_z_dir;
+  num_elements_[0] = num_elements[0];
+  if (space_dim > 1)  num_elements_[1] = num_elements[1];
+  if (space_dim > 2)  num_elements_[2] = num_elements[2];
     
   num_of_hyperedges_ = 1;
   if ( hyperedge_dim == space_dim )

@@ -215,8 +215,6 @@ HyperEdge_Cubic<hyperedge_dim,space_dim>::
 HyperEdge_Cubic(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements,
                       const hyperedge_index_type num_of_hyperedges)
 {
-//  joint_indices_.resize(2*hyperedge_dim);
-//  correct_joint_orientation_.resize(2*hyperedge_dim);
   for (unsigned int local_joint = 0; local_joint < 2 * hyperedge_dim; ++local_joint)
     correct_joint_orientation_[local_joint] = true;
   if constexpr ( hyperedge_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
