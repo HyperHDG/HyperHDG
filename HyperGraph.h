@@ -9,30 +9,30 @@
  */
 
 
-#ifndef DOMAIN_TOPOLOGY_H
-#define DOMAIN_TOPOLOGY_H
+#ifndef HYPERGRAPH_H
+#define HYPERGRAPH_H
 
 #include "TypeDefs.h"
 #include "JointGetter.h"
-#include "ConnectorGetter.h"
+#include "Topology.h"
 
-template < class AbstractJointGetter, class AbstractConnectorGetter,
+template < class AbstractJointGetter, class Topology,
            class AbstractJoint >
-class HyperGraphTopology
+class HyperGraph
 {
   private:
     const AbstractJointGetter joint_getter_;
-    const AbstractConnectorGetter connector_getter_;
+    const Topology hyperedge_getter_;
   public:
-    HyperGraphTopology(const AbstractJointGetter& joint_getter,
-                       const AbstractConnectorGetter& connector_getter);
-    HyperGraphTopology();
+    HyperGraph(const AbstractJointGetter& joint_getter,
+                       const Topology& hyperedge_getter);
+    HyperGraph();
     
     const AbstractJoint get_joint(const joint_index_type index) const;
-    const typename AbstractConnectorGetter::value_type get_connector(const connector_index_type index) const;
+    const typename Topology::value_type get_hyperedge(const hyperedge_index_type index) const;
     
     const joint_index_type num_of_joints() const;
-    const connector_index_type num_of_connectors() const;
+    const hyperedge_index_type num_of_hyperedges() const;
     const dof_index_type num_of_global_dofs() const;
 };
 

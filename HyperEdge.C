@@ -8,7 +8,7 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "Connector.h"
+#include "HyperEdge.h"
 #include <algorithm>
 #include <cassert>
 
@@ -17,27 +17,27 @@
 using namespace std;
 
 
-template class Connector_RegularQuad<1,1>;
-template class Connector_RegularQuad<1,2>;
-template class Connector_RegularQuad<1,3>;
-template class Connector_RegularQuad<2,2>;
-template class Connector_RegularQuad<2,3>;
-template class Connector_RegularQuad<3,3>;
+template class HyperEdge_Cubic<1,1>;
+template class HyperEdge_Cubic<1,2>;
+template class HyperEdge_Cubic<1,3>;
+template class HyperEdge_Cubic<2,2>;
+template class HyperEdge_Cubic<2,3>;
+template class HyperEdge_Cubic<3,3>;
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const connector_index_type index)
+array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
 {
   assert( num_lines.size() == space_dim );
   unsigned int orientation;
-  connector_index_type num_elements_in_direction;
-  connector_index_type number_with_lower_orientation = 0;
-  connector_index_type index_helper = index;
+  hyperedge_index_type num_elements_in_direction;
+  hyperedge_index_type number_with_lower_orientation = 0;
+  hyperedge_index_type index_helper = index;
   
   array<joint_index_type, 2> point_indices;
   point_indices.fill(0);
   
-  array<connector_index_type, space_dim> num_lines_with_orientation;
+  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -53,7 +53,7 @@ array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_d
     assert( orientation <= space_dim );
   }
   
-  array<connector_index_type, space_dim> local_indices;
+  array<hyperedge_index_type, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -81,18 +81,18 @@ array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_d
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const connector_index_type index)
+array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
 {
   assert( num_squares.size() == space_dim );
   unsigned int orientation;
-  connector_index_type num_elements_in_direction;
-  connector_index_type number_with_lower_orientation = 0;
-  connector_index_type index_helper = index;
+  hyperedge_index_type num_elements_in_direction;
+  hyperedge_index_type number_with_lower_orientation = 0;
+  hyperedge_index_type index_helper = index;
   
   array<joint_index_type, 4> line_indices;
   line_indices.fill(0);
   
-  array<connector_index_type, space_dim> num_squares_with_orientation;
+  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -109,7 +109,7 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
     assert( orientation <= space_dim );
   }
   
-  array<connector_index_type, space_dim> local_indices;
+  array<hyperedge_index_type, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -123,7 +123,7 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
   }
   assert( index_helper == 0 );
   
-  array<connector_index_type, space_dim> num_lines_with_orientation;
+  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if (dim_m == dim_n)  num_lines_with_orientation[dim_m] *= num_squares[dim_n];
@@ -156,17 +156,17 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const connector_index_type index)
+array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
 {
   assert( num_cubes.size() == space_dim );
-  connector_index_type num_elements_in_direction;
-  connector_index_type number_with_lower_orientation = 0;
-  connector_index_type index_helper = index;
+  hyperedge_index_type num_elements_in_direction;
+  hyperedge_index_type number_with_lower_orientation = 0;
+  hyperedge_index_type index_helper = index;
   
   array<joint_index_type, 6> square_indices;
   square_indices.fill(0);
   
-  array<connector_index_type, space_dim> local_indices;
+  array<hyperedge_index_type, space_dim> local_indices;
   local_indices.fill(0);
   
   for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -178,7 +178,7 @@ array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_
   }
   assert( index_helper == 0 );
   
-  array<connector_index_type, space_dim> num_squares_with_orientation;
+  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -210,31 +210,31 @@ array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-Connector_RegularQuad<connector_dim,space_dim>::
-Connector_RegularQuad(const connector_index_type index, const array<unsigned int, space_dim>& num_elements,
-                      const connector_index_type num_of_connectors)
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+HyperEdge_Cubic<hyperedge_dim,space_dim>::
+HyperEdge_Cubic(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements,
+                      const hyperedge_index_type num_of_hyperedges)
 {
-//  joint_indices_.resize(2*connector_dim);
-//  correct_joint_orientation_.resize(2*connector_dim);
-  for (unsigned int local_joint = 0; local_joint < 2 * connector_dim; ++local_joint)
+//  joint_indices_.resize(2*hyperedge_dim);
+//  correct_joint_orientation_.resize(2*hyperedge_dim);
+  for (unsigned int local_joint = 0; local_joint < 2 * hyperedge_dim; ++local_joint)
     correct_joint_orientation_[local_joint] = true;
-  if constexpr ( connector_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if constexpr ( connector_dim == 2 )  joint_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if constexpr ( connector_dim == 3 )  joint_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  if constexpr ( hyperedge_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  else if constexpr ( hyperedge_dim == 2 )  joint_indices_ = square_to_line_index<space_dim>(num_elements, index);
+  else if constexpr ( hyperedge_dim == 3 )  joint_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-const array<joint_index_type, 2*connector_dim>&
-Connector_RegularQuad<connector_dim,space_dim>::get_joint_indices() const
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+const array<joint_index_type, 2*hyperedge_dim>&
+HyperEdge_Cubic<hyperedge_dim,space_dim>::get_joint_indices() const
 {
   return joint_indices_;
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-std::vector<double> Connector_RegularQuad<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+std::vector<double> HyperEdge_Cubic<hyperedge_dim,space_dim>::
 abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector<double> det_at_quad(local_quadrature.size(), 1.);
@@ -242,8 +242,8 @@ abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 }
 
 
-template <unsigned int connector_dim, unsigned int space_dim>
-vector< vector<double> > Connector_RegularQuad<connector_dim,space_dim>::
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+vector< vector<double> > HyperEdge_Cubic<hyperedge_dim,space_dim>::
 inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector< vector<double> > jac_at_quad(local_quadrature.size());

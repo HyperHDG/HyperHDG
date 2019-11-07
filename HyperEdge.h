@@ -9,23 +9,23 @@
  */
 
 
-#ifndef CONNECTOR_H
-#define CONNECTOR_H
+#ifndef HYPEREDGE_H
+#define HYPEREDGE_H
 
 #include "TypeDefs.h"
 #include <array>
 #include <vector>
 
-template <unsigned int connector_dim, unsigned int space_dim>
-class Connector_RegularQuad
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+class HyperEdge_Cubic
 {
   private:
-    std::array<joint_index_type, 2*connector_dim> joint_indices_;
-    std::array<bool, 2*connector_dim> correct_joint_orientation_;
+    std::array<joint_index_type, 2*hyperedge_dim> joint_indices_;
+    std::array<bool, 2*hyperedge_dim> correct_joint_orientation_;
   public:
-    Connector_RegularQuad(const connector_index_type index, const std::array<unsigned int, space_dim>& num_elements,
-                          const connector_index_type num_of_connectors);
-    const std::array<joint_index_type, 2*connector_dim>& get_joint_indices() const;
+    HyperEdge_Cubic(const hyperedge_index_type index, const std::array<unsigned int, space_dim>& num_elements,
+                          const hyperedge_index_type num_of_hyperedges);
+    const std::array<joint_index_type, 2*hyperedge_dim>& get_joint_indices() const;
     std::vector<double> abs_det_of_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
     std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 };

@@ -1,0 +1,37 @@
+/* ------------------------------------------------------------------------------------------------------
+ *
+ * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
+ * It solves a PDE that is solely defined on a graph using the HDG method.
+ *
+ * ------------------------------------------------------------------------------------------------------
+ *
+ * Author: Andreas Rupp, University of Heidelberg, 2019
+ */
+
+
+#ifndef TOPOLOGY_H
+#define TOPOLOGY_H
+
+#include "TypeDefs.h"
+#include "HyperEdge.h"
+#include <array>
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+class HyperGraph_Cubic
+{
+  private:
+    std::array<unsigned int, space_dim> num_elements_;
+    hyperedge_index_type num_of_hyperedges_;
+  public:
+    typedef HyperEdge_Cubic<hyperedge_dim, space_dim> value_type;
+    HyperGraph_Cubic(const unsigned int num_of_elem_in_x_dir,
+                                const unsigned int num_of_elem_in_y_dir = 0,
+                                const unsigned int num_of_elem_in_z_dir = 0);
+    HyperGraph_Cubic(const HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
+    
+    const HyperEdge_Cubic<hyperedge_dim, space_dim> get_hyperedge(const hyperedge_index_type index) const;
+    const hyperedge_index_type num_of_hyperedges() const;
+};
+
+#endif

@@ -24,12 +24,12 @@ setup(
     ext_modules = [
         Extension("ClassWrapper", 
                   sources=["ClassWrapper.pyx",
-                           "Connector.C",
-                           "ConnectorGetter.C",
+                           "HyperEdge.C",
+                           "Topology.C",
                            "DiffusionProblem.C",
                            "DiffusionSolver.C",
                            "FuncAndQuad.C",
-                           "HyperGraphTopology.C",
+                           "HyperGraph.C",
                            "Joint.C",
                            "JointGetter.C"
                        ],
