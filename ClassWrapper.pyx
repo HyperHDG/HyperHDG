@@ -11,6 +11,7 @@ from libcpp.vector cimport vector
 cdef extern from "DiffusionProblem.h":
   cdef cppclass DiffusionProblem "DiffusionProblemRegular<1,2,1>":
         DiffusionProblem(vector[int]) except +
+        void read_dirichlet_indices(vector[int]);
         vector[double] return_zero_vector()
         vector[double] matrix_vector_multiply(vector[double])
         int size_of_system()
@@ -22,6 +23,8 @@ cdef class PyDiffusionProblem:
         self.thisptr = new DiffusionProblem(num_elements)
     def __dealloc__(self):
         del self.thisptr
+    def read_dirichlet_indices(self, indices):
+        self.thisptr.read_dirichlet_indices(indices)
     def return_zero_vector(self):
         return self.thisptr.return_zero_vector()
     def matrix_vector_multiply(self, vec):

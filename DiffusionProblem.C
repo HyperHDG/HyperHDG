@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iostream>
 #include <array>
+#include <cassert>
 
 using namespace std;
 
@@ -40,8 +41,19 @@ DiffusionProblemRegular(vector<int> num_elements)
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
     cout << endl;
   }
-  dirichlet_indices.push_back(0);
-  dirichlet_indices.push_back(8);
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
+void DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree>::
+read_dirichlet_indices(std::vector<int> indices)
+{
+  dirichlet_indices.resize(indices.size());
+  for (unsigned int i = 0; i < indices.size(); ++i)
+  {
+    assert( indices[i] >= 0 && indices[i] < hyper_graph_toplogy.num_of_vertices() );
+    dirichlet_indices[i] = indices[i];
+  }
 }
 
 

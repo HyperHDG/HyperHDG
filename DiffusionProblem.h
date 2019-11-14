@@ -22,11 +22,11 @@ class DiffusionProblemRegular
     HyperGraph < local_dof_amount(hyperedge_dim, polynomial_degree),
                  HyperGraph_Cubic< hyperedge_dim, space_dim > >
                hyper_graph_topology;
-    std::vector<int> dirichlet_indices;
+    std::vector<unsigned int> dirichlet_indices;
     DiffusionSolver_RegularQuad<hyperedge_dim> local_solver;
-    std::vector<unsigned int> Dirichlet_indices;
   public:
     DiffusionProblemRegular(std::vector<int> num_elements);
+    void read_dirichlet_indices(std::vector<int> indices);
     std::vector<double> return_zero_vector();
     std::vector<double> matrix_vector_multiply(std::vector<double> x_vec);
     int size_of_system();
