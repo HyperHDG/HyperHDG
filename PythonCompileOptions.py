@@ -30,10 +30,10 @@ setup(
                            "DiffusionSolver.C",
                            "FuncAndQuad.C",
                            "HyperGraph.C",
-                           "Joint.C",
-                           "JointGetter.C"
+                           "VertexFactory.C"
                        ],
                   language="c++",                   # remove this if C and not C++
+                  extra_compile_args=["--std=c++17"],
                   extra_link_args=["-llapack"]
              )
         ]

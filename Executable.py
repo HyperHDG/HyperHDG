@@ -9,7 +9,7 @@ from ClassWrapper import PyDiffusionProblem
 from scipy.sparse.linalg import LinearOperator
 
 # Initialising the wrapped c++ function
-R1 = PyDiffusionProblem([2,2], 1);
+R1 = PyDiffusionProblem([2,2]);
 
 vectorDirichlet = R1.return_zero_vector();
 vectorDirichlet[0] = 1.;
