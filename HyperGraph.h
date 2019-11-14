@@ -13,25 +13,22 @@
 #define HYPERGRAPH_H
 
 #include "TypeDefs.h"
-#include "JointGetter.h"
+#include "VertexFactory.h"
 #include "Topology.h"
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
+template < unsigned int amount_of_local_dofs, class Topology >
 class HyperGraph
 {
   private:
-    const AbstractJointGetter joint_getter_;
+    const VertexFactory<amount_of_local_dofs> vertex_factory_;
     const Topology hyperedge_getter_;
   public:
-    HyperGraph(const AbstractJointGetter& joint_getter,
-               const Topology& hyperedge_getter);
-    HyperGraph();
+    HyperGraph(const Topology& hyperedge_getter);
     
-    const AbstractJoint get_joint(const joint_index_type index) const;
+    const VertexFactory<amount_of_local_dofs> vertex_factory() const; // AR: No reference for performance?!
     const typename Topology::value_type get_hyperedge(const hyperedge_index_type index) const;
     
-    const joint_index_type num_of_joints() const;
+    const joint_index_type num_of_vertices() const;
     const hyperedge_index_type num_of_hyperedges() const;
     const dof_index_type num_of_global_dofs() const;
 };

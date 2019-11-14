@@ -8,104 +8,105 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "JointGetter.h"
-#include <vector>
+#include "VertexFactory.h"
 #include <cassert>
 
 using namespace std;
 
 
-template class JointGetter_RegularQuad<1,1>;
-template class JointGetter_RegularQuad<1,2>;
-template class JointGetter_RegularQuad<1,3>;
-template class JointGetter_RegularQuad<2,2>;
-template class JointGetter_RegularQuad<2,3>;
-template class JointGetter_RegularQuad<3,3>;
+template class VertexFactory<local_dof_amount(1, 1)>;
+template class VertexFactory<local_dof_amount(2, 1)>;
+template class VertexFactory<local_dof_amount(2, 2)>;
+template class VertexFactory<local_dof_amount(2, 3)>;
+// template class VertexFactory<local_dof_amount(3, 1)>;
+template class VertexFactory<local_dof_amount(3, 2)>;
+template class VertexFactory<local_dof_amount(3, 3)>;
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-JointGetter_RegularQuad<hyperedge_dim,space_dim>::
-JointGetter_RegularQuad(const unsigned int amount_of_local_dofs,
-                        const unsigned int num_of_elements_in_x_dir,
-                        const unsigned int num_of_elements_in_y_dir,
-                        const unsigned int num_of_elements_in_z_dir)
-: amount_of_local_dofs_(amount_of_local_dofs)
+/*
+constexpr const unsigned int local_dof_amount(const unsigned int hyperedge_dim, const unsigned int polynomial_degree)
 {
-  static_assert( hyperedge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
-  static_assert( space_dim >= hyperedge_dim, "A domain cannot live within a smaller space!" );
-  static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
-  assert( amount_of_local_dofs_ >= 1 );
-  assert( hyperedge_dim > 1 || amount_of_local_dofs_ == 1 );
-  
-  vector<unsigned int> num_elements;
-  num_elements.resize(space_dim);
-  num_elements[0] = num_of_elements_in_x_dir;
-  if (space_dim > 1)  num_elements[1] = num_of_elements_in_y_dir;
-  if (space_dim > 2)  num_elements[2] = num_of_elements_in_z_dir;
-  
-  num_of_joints_ = 1;
-  if (hyperedge_dim == 1)
-  {
-    num_of_joints_ *= num_of_elements_in_x_dir + 1;
-    if (space_dim > 1)  num_of_joints_ *= num_of_elements_in_y_dir + 1;
-    if (space_dim > 2)  num_of_joints_ *= num_of_elements_in_z_dir + 1;
-  }
-  else if ( hyperedge_dim == space_dim )
-  {
-    num_of_joints_ = 0;
-    for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
-    {
-      int helper = 1;
-      for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
-        if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
-        else                 helper *= num_elements[dim_n];
-      num_of_joints_ += helper;
-    }
-  }
-  else if ( hyperedge_dim == space_dim - 1 )
-  {
-    num_of_joints_ = 0;
-    for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
-    {
-      int helper = 1;
-      for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
-        if (dim_m == dim_n)  helper *= num_elements[dim_n];
-        else                 helper *= num_elements[dim_n] + 1;
-      num_of_joints_ += helper;
-    }
-  }
-  else  assert( 0 == 1 );
-  
-  assert( num_of_joints_ > 0 );
+  return pow(polynomial_degree + 1 , hyperedge_dim - 1);
+}
+*/
+
+template <unsigned int amount_of_local_dofs>
+VertexFactory<amount_of_local_dofs>::
+VertexFactory(const joint_index_type num_of_vertices)
+: num_of_vertices_(num_of_vertices) { }
+
+
+template <unsigned int amount_of_local_dofs>
+VertexFactory<amount_of_local_dofs>::
+VertexFactory(const VertexFactory<amount_of_local_dofs>& other)
+: num_of_vertices_(other.num_of_vertices_) { }
+
+
+template <unsigned int amount_of_local_dofs>
+const joint_index_type VertexFactory<amount_of_local_dofs>::
+num_of_vertices() const
+{
+  return num_of_vertices_;
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-JointGetter_RegularQuad<hyperedge_dim,space_dim>::
-JointGetter_RegularQuad(const JointGetter_RegularQuad<hyperedge_dim,space_dim>& other)
-: num_of_joints_(other.num_of_joints_), amount_of_local_dofs_(other.amount_of_local_dofs_) { }
-
-
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const Joint_RegularQuad JointGetter_RegularQuad<hyperedge_dim,space_dim>::
-get_joint(const unsigned int index) const
-{
-  assert( index < num_of_joints_ );
-  return Joint_RegularQuad(index, amount_of_local_dofs_);
-}
-
-
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const joint_index_type JointGetter_RegularQuad<hyperedge_dim,space_dim>::
-num_of_joints() const
-{
-  return num_of_joints_;
-}
-
-
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const dof_index_type JointGetter_RegularQuad<hyperedge_dim,space_dim>::
+template <unsigned int amount_of_local_dofs>
+const dof_index_type VertexFactory<amount_of_local_dofs>::
 num_of_global_dofs() const
 {
-  return num_of_joints_ * amount_of_local_dofs_;
+  return num_of_vertices_ * amount_of_local_dofs;
+}
+
+
+template <unsigned int amount_of_local_dofs>
+vector<dof_index_type> VertexFactory<amount_of_local_dofs>::
+get_dof_indices(const joint_index_type joint_index) const
+{
+  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  vector<dof_index_type> dof_indices(amount_of_local_dofs ,initial_dof_index);
+  unsigned int local_increment = 0;
+  
+  for_each(dof_indices.begin(), dof_indices.end(), [&local_increment](dof_index_type& glob_index)
+  { glob_index += local_increment++; });
+  
+  return dof_indices;
+}
+
+
+template <unsigned int amount_of_local_dofs>
+vector<dof_value_type> VertexFactory<amount_of_local_dofs>::
+get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>& global_dof_vector) const
+{
+  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  assert( initial_dof_index + amount_of_local_dofs_ <= global_dof_vector.size() );
+  vector<dof_value_type>::const_iterator first = global_dof_vector.begin() + initial_dof_index;
+  vector<dof_value_type>::const_iterator last = first + amount_of_local_dofs;
+  vector<dof_value_type> local_dof_values(first, last);
+  return local_dof_values;
+}
+
+
+template <unsigned int amount_of_local_dofs>
+void VertexFactory<amount_of_local_dofs>::
+add_to_dof_values(const joint_index_type joint_index, vector<dof_value_type>& global_dof_vector,
+                  const vector<dof_value_type>& local_dof_vector) const
+{
+  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  assert( local_dof_vector.size() == amount_of_local_dofs );
+  assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
+  
+  for(dof_index_type index = 0; index < amount_of_local_dofs; ++index)
+    global_dof_vector[index + initial_dof_index] += local_dof_vector[index];
+}
+
+
+template <unsigned int amount_of_local_dofs>
+void VertexFactory<amount_of_local_dofs>::
+set_dof_values(const joint_index_type joint_index, vector<dof_value_type>& global_dof_vector,
+               const double value) const
+{
+  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
+  for(dof_index_type index = 0; index < amount_of_local_dofs; ++index)
+    global_dof_vector[index + initial_dof_index] = value;
 }

@@ -9,81 +9,80 @@
  */
 
 #include "HyperGraph.h"
+#include <cassert>
 
 
-template class HyperGraph
-  < JointGetter_RegularQuad<1,1>, HyperGraph_Cubic< 1, 1 >, Joint_RegularQuad>;
-template class HyperGraph
-  < JointGetter_RegularQuad<1,2>, HyperGraph_Cubic< 1, 2 >, Joint_RegularQuad>;
-template class HyperGraph 
-  < JointGetter_RegularQuad<1,3>, HyperGraph_Cubic< 1, 3 >, Joint_RegularQuad>;
-template class HyperGraph
-  < JointGetter_RegularQuad<2,2>, HyperGraph_Cubic< 2, 2 >, Joint_RegularQuad>;
-template class HyperGraph
-  < JointGetter_RegularQuad<2,3>, HyperGraph_Cubic< 2, 3 >, Joint_RegularQuad>;
-template class HyperGraph 
-  < JointGetter_RegularQuad<3,3>, HyperGraph_Cubic< 3, 3 >, Joint_RegularQuad>;
+template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 1 > >;
+// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 1 > >;
+// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 1 > >;
+template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 2 > >;
+// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 2 > >;
+// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 2 > >;
+template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 3 > >;
+// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 3 > >;
+// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 3 > >;
+template class HyperGraph < local_dof_amount(2 , 1), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount(2 , 2), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount(2 , 3), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount(2 , 1), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount(2 , 2), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount(2 , 3), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount(3 , 1), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount(3 , 2), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount(3 , 3), HyperGraph_Cubic< 3, 3 > >;
 
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
-HyperGraph(const AbstractJointGetter& joint_getter,
-                   const Topology& hyperedge_getter)
-: joint_getter_(joint_getter), hyperedge_getter_(hyperedge_getter) { }
-
-
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
-const AbstractJoint
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
-get_joint(const joint_index_type index) const
+template < unsigned int amount_of_local_dofs, class Topology >
+HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph(const Topology& hyperedge_getter)
+: vertex_factory_(hyperedge_getter.num_of_vertices()), hyperedge_getter_(hyperedge_getter)
 {
-  return joint_getter_.get_joint(index);
+  assert( vertex_factory.num_of_vertices() == hyperedge_getter.num_of_vertices() );
+  assert( vertex_factory.num_of_vertices() >= 2 );
+  assert( hyperedge_getter.num_of_hyperedges() != 0 );
 }
 
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
+template < unsigned int amount_of_local_dofs, class Topology >
+const VertexFactory<amount_of_local_dofs>
+HyperGraph< amount_of_local_dofs, Topology >::
+vertex_factory() const
+{
+  return vertex_factory_;
+}
+
+
+template < unsigned int amount_of_local_dofs, class Topology >
 const typename Topology::value_type
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
+HyperGraph< amount_of_local_dofs, Topology >::
 get_hyperedge(const hyperedge_index_type index) const
 {
   return hyperedge_getter_.get_hyperedge(index);
 }
 
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
+template < unsigned int amount_of_local_dofs, class Topology >
 const joint_index_type
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
-num_of_joints() const
+HyperGraph< amount_of_local_dofs, Topology >::
+num_of_vertices() const
 {
-  return joint_getter_.num_of_joints();
+  return vertex_factory_.num_of_vertices();
 }
 
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
+template < unsigned int amount_of_local_dofs, class Topology >
 const hyperedge_index_type
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
+HyperGraph< amount_of_local_dofs, Topology >::
 num_of_hyperedges() const
 {
   return hyperedge_getter_.num_of_hyperedges();
 }
 
 
-template < class AbstractJointGetter, class Topology,
-           class AbstractJoint >
+template < unsigned int amount_of_local_dofs, class Topology >
 const dof_index_type 
-HyperGraph< AbstractJointGetter, Topology,
-                    AbstractJoint >::
+HyperGraph< amount_of_local_dofs, Topology >::
 num_of_global_dofs() const
 {
-  return joint_getter_.num_of_global_dofs();
+  return vertex_factory_.num_of_global_dofs();
 }

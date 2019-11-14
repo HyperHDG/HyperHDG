@@ -124,6 +124,8 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
   assert( index_helper == 0 );
   
   array<hyperedge_index_type, space_dim> num_lines_with_orientation;
+  num_lines_with_orientation.fill(1);
+  
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
       if (dim_m == dim_n)  num_lines_with_orientation[dim_m] *= num_squares[dim_n];
