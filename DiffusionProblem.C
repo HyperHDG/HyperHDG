@@ -77,14 +77,14 @@ matrix_vector_multiply(vector<double> x_vec)
   {
     hyperedge_joints = hyper_graph_topology.get_hyperedge(hyperedge).get_joint_indices();
     for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
-      hyperedge_dofs[joint] = hyper_graph_topology.vertex_factory().get_dof_values(hyperedge_joints[joint], x_vec);
+      hyperedge_dofs[joint] = hyper_graph_topology.hypernode_factory().get_dof_values(hyperedge_joints[joint], x_vec);
     local_result = local_solver.numerical_flux_from_lambda(hyperedge_dofs);
     for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
-      hyper_graph_topology.vertex_factory().add_to_dof_values(hyperedge_joints[joint], vec_Ax, local_result[joint]);
+      hyper_graph_topology.hypernode_factory().add_to_dof_values(hyperedge_joints[joint], vec_Ax, local_result[joint]);
   }
   
   for(unsigned int i = 0; i < dirichlet_indices.size(); ++i) 
-    hyper_graph_topology.vertex_factory().set_dof_values(dirichlet_indices[i], vec_Ax, 0.);
+    hyper_graph_topology.hypernode_factory().set_dof_values(dirichlet_indices[i], vec_Ax, 0.);
     
   return vec_Ax;
 }

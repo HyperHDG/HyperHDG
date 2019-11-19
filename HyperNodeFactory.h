@@ -9,8 +9,8 @@
  */
 
 
-#ifndef VERTEXFACTORY_H
-#define VERTEXFACTORY_H
+#ifndef HYPERNODEFACTORY_H
+#define HYPERNODEFACTORY_H
 
 #include "TypeDefs.h"
 #include <array>
@@ -25,13 +25,13 @@ constexpr const unsigned int local_dof_amount_node(const unsigned int hyperedge_
 }
 
 template <unsigned int amount_of_local_dofs>
-class VertexFactory
+class HyperNodeFactory
 {
   private:
     const joint_index_type num_of_vertices_;
   public:
-    VertexFactory(const joint_index_type num_of_vertices);
-    VertexFactory(const VertexFactory<amount_of_local_dofs>& other);
+    HyperNodeFactory(const joint_index_type num_of_vertices);
+    HyperNodeFactory(const HyperNodeFactory<amount_of_local_dofs>& other);
     
     const joint_index_type num_of_vertices() const;
     const dof_index_type num_of_global_dofs() const;
