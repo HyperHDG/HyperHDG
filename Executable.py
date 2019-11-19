@@ -17,7 +17,7 @@ from ClassWrapper import PyDiffusionProblem
 # Initialising the wrapped c++ class HDG_wrapper.
 HDG_wrapper = PyDiffusionProblem([2,2])
 
-# Set the vertices that are supposed to be of Dirichlet type.
+# Set the hypernodes that are supposed to be of Dirichlet type.
 index_vector = np.array([ 0, 8 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 

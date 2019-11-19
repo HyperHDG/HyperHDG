@@ -63,40 +63,40 @@ HyperGraph_Cubic(const array<unsigned int, space_dim>& num_elements)
   else  assert( 0 == 1 );  
   assert( num_of_hyperedges_ > 0 );
   
-  // Set num_of_vertices
-  num_of_vertices_ = 1;
+  // Set num_of_hypernodes
+  num_of_hypernodes_ = 1;
   if (hyperedge_dim == 1)
   {
-    num_of_vertices_ *= num_elements[0] + 1;
-    if (space_dim > 1)  num_of_vertices_ *= num_elements[1] + 1;
-    if (space_dim > 2)  num_of_vertices_ *= num_elements[2] + 1;
+    num_of_hypernodes_ *= num_elements[0] + 1;
+    if (space_dim > 1)  num_of_hypernodes_ *= num_elements[1] + 1;
+    if (space_dim > 2)  num_of_hypernodes_ *= num_elements[2] + 1;
   }
   else if ( hyperedge_dim == space_dim )
   {
-    num_of_vertices_ = 0;
+    num_of_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      num_of_vertices_ += helper;
+      num_of_hypernodes_ += helper;
     }
   }
   else if ( hyperedge_dim == space_dim - 1 )
   {
-    num_of_vertices_ = 0;
+    num_of_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      num_of_vertices_ += helper;
+      num_of_hypernodes_ += helper;
     }
   }
   else  assert( 0 == 1 );
-  assert( num_of_vertices_ > 0 );
+  assert( num_of_hypernodes_ > 0 );
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -140,40 +140,40 @@ HyperGraph_Cubic(const std::vector<int>& num_elements)
   else  assert( 0 == 1 );  
   assert( num_of_hyperedges_ > 0 );
   
-  // Set num_of_vertices
-  num_of_vertices_ = 1;
+  // Set num_of_hypernodes
+  num_of_hypernodes_ = 1;
   if (hyperedge_dim == 1)
   {
-    num_of_vertices_ *= num_elements[0] + 1;
-    if (space_dim > 1)  num_of_vertices_ *= num_elements[1] + 1;
-    if (space_dim > 2)  num_of_vertices_ *= num_elements[2] + 1;
+    num_of_hypernodes_ *= num_elements[0] + 1;
+    if (space_dim > 1)  num_of_hypernodes_ *= num_elements[1] + 1;
+    if (space_dim > 2)  num_of_hypernodes_ *= num_elements[2] + 1;
   }
   else if ( hyperedge_dim == space_dim )
   {
-    num_of_vertices_ = 0;
+    num_of_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      num_of_vertices_ += helper;
+      num_of_hypernodes_ += helper;
     }
   }
   else if ( hyperedge_dim == space_dim - 1 )
   {
-    num_of_vertices_ = 0;
+    num_of_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      num_of_vertices_ += helper;
+      num_of_hypernodes_ += helper;
     }
   }
   else  assert( 0 == 1 );
-  assert( num_of_vertices_ > 0 );
+  assert( num_of_hypernodes_ > 0 );
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -201,9 +201,9 @@ num_of_hyperedges() const
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-const joint_index_type
+const hypernode_index_type
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
-num_of_vertices() const
+num_of_hypernodes() const
 {
-  return num_of_vertices_;
+  return num_of_hypernodes_;
 }

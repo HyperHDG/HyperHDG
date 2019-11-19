@@ -36,7 +36,7 @@ DiffusionProblemRegular(vector<int> num_elements)
   for(unsigned int i = 0; i < hyper_graph_topology.num_of_hyperedges(); ++i)
   {
     const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_topology.get_hyperedge(i);
-    const array<joint_index_type, 2*hyperedge_dim> indices = hyperedge.get_joint_indices();
+    const array<hypernode_index_type, 2*hyperedge_dim> indices = hyperedge.get_hypernode_indices();
     cout << i << "   ";
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
     cout << endl;
@@ -51,7 +51,7 @@ read_dirichlet_indices(std::vector<int> indices)
   dirichlet_indices.resize(indices.size());
   for (unsigned int i = 0; i < indices.size(); ++i)
   {
-    assert( indices[i] >= 0 && indices[i] < hyper_graph_topology.num_of_vertices() );
+    assert( indices[i] >= 0 && indices[i] < hyper_graph_topology.num_of_hypernodes() );
     dirichlet_indices[i] = indices[i];
   }
 }
@@ -71,16 +71,16 @@ matrix_vector_multiply(vector<double> x_vec)
 {
   vector<double> vec_Ax(x_vec.size(), 0.);
   array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
-  array<unsigned int, 2*hyperedge_dim> hyperedge_joints;
+  array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
   
   for (unsigned int hyperedge = 0; hyperedge < hyper_graph_topology.num_of_hyperedges(); ++hyperedge)
   {
-    hyperedge_joints = hyper_graph_topology.get_hyperedge(hyperedge).get_joint_indices();
-    for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
-      hyperedge_dofs[joint] = hyper_graph_topology.hypernode_factory().get_dof_values(hyperedge_joints[joint], x_vec);
+    hyperedge_hypernodes = hyper_graph_topology.get_hyperedge(hyperedge).get_hypernode_indices();
+    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+      hyperedge_dofs[hypernode] = hyper_graph_topology.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
     local_result = local_solver.numerical_flux_from_lambda(hyperedge_dofs);
-    for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
-      hyper_graph_topology.hypernode_factory().add_to_dof_values(hyperedge_joints[joint], vec_Ax, local_result[joint]);
+    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+      hyper_graph_topology.hypernode_factory().add_to_dof_values(hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
   }
   
   for(unsigned int i = 0; i < dirichlet_indices.size(); ++i) 
