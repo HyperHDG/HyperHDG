@@ -19,11 +19,11 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polyn
 class DiffusionProblemRegular
 {
   private:
-    HyperGraph < local_dof_amount(hyperedge_dim, polynomial_degree),
+    HyperGraph < local_dof_amount_node(hyperedge_dim, polynomial_degree),
                  HyperGraph_Cubic< hyperedge_dim, space_dim > >
                hyper_graph_topology;
     std::vector<unsigned int> dirichlet_indices;
-    DiffusionSolver_RegularQuad<hyperedge_dim> local_solver;
+    DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree> local_solver;
   public:
     DiffusionProblemRegular(std::vector<int> num_elements);
     void read_dirichlet_indices(std::vector<int> indices);

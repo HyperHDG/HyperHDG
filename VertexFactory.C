@@ -14,21 +14,14 @@
 using namespace std;
 
 
-template class VertexFactory<local_dof_amount(1, 1)>;
-template class VertexFactory<local_dof_amount(2, 1)>;
-template class VertexFactory<local_dof_amount(2, 2)>;
-template class VertexFactory<local_dof_amount(2, 3)>;
-// template class VertexFactory<local_dof_amount(3, 1)>;
-template class VertexFactory<local_dof_amount(3, 2)>;
-template class VertexFactory<local_dof_amount(3, 3)>;
+template class VertexFactory<local_dof_amount_node(1, 1)>;
+template class VertexFactory<local_dof_amount_node(2, 1)>;
+template class VertexFactory<local_dof_amount_node(2, 2)>;
+template class VertexFactory<local_dof_amount_node(2, 3)>;
+// template class VertexFactory<local_dof_amount_node(3, 1)>;
+template class VertexFactory<local_dof_amount_node(3, 2)>;
+template class VertexFactory<local_dof_amount_node(3, 3)>;
 
-
-/*
-constexpr const unsigned int local_dof_amount(const unsigned int hyperedge_dim, const unsigned int polynomial_degree)
-{
-  return pow(polynomial_degree + 1 , hyperedge_dim - 1);
-}
-*/
 
 template <unsigned int amount_of_local_dofs>
 VertexFactory<amount_of_local_dofs>::
@@ -59,29 +52,30 @@ num_of_global_dofs() const
 
 
 template <unsigned int amount_of_local_dofs>
-vector<dof_index_type> VertexFactory<amount_of_local_dofs>::
+array<dof_index_type, amount_of_local_dofs> VertexFactory<amount_of_local_dofs>::
 get_dof_indices(const joint_index_type joint_index) const
 {
   dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
-  vector<dof_index_type> dof_indices(amount_of_local_dofs ,initial_dof_index);
-  unsigned int local_increment = 0;
   
-  for_each(dof_indices.begin(), dof_indices.end(), [&local_increment](dof_index_type& glob_index)
-  { glob_index += local_increment++; });
+  array<dof_index_type, amount_of_local_dofs> dof_indices;
+  for (unsigned int i = 0; i < amount_of_local_dofs; ++i)
+    dof_indices[i] = initial_dof_index + i;
   
   return dof_indices;
 }
 
 
 template <unsigned int amount_of_local_dofs>
-vector<dof_value_type> VertexFactory<amount_of_local_dofs>::
+array<dof_value_type, amount_of_local_dofs> VertexFactory<amount_of_local_dofs>::
 get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>& global_dof_vector) const
 {
   dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
   assert( initial_dof_index + amount_of_local_dofs_ <= global_dof_vector.size() );
-  vector<dof_value_type>::const_iterator first = global_dof_vector.begin() + initial_dof_index;
-  vector<dof_value_type>::const_iterator last = first + amount_of_local_dofs;
-  vector<dof_value_type> local_dof_values(first, last);
+  
+  array<dof_value_type, amount_of_local_dofs> local_dof_values;
+  for (unsigned int i = 0; i < amount_of_local_dofs; ++i)
+    local_dof_values[i] = global_dof_vector[initial_dof_index + i];
+  
   return local_dof_values;
 }
 
@@ -89,7 +83,7 @@ get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>&
 template <unsigned int amount_of_local_dofs>
 void VertexFactory<amount_of_local_dofs>::
 add_to_dof_values(const joint_index_type joint_index, vector<dof_value_type>& global_dof_vector,
-                  const vector<dof_value_type>& local_dof_vector) const
+                  const array<dof_value_type, amount_of_local_dofs>& local_dof_vector) const
 {
   dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
   assert( local_dof_vector.size() == amount_of_local_dofs );

@@ -10,7 +10,7 @@
 
 
 #include "DiffusionProblem.h"
-#include <cmath>
+//#include <cmath>
 #include <iostream>
 #include <array>
 #include <cassert>
@@ -21,16 +21,16 @@ using namespace std;
 template class DiffusionProblemRegular<1,1,1>;
 template class DiffusionProblemRegular<1,2,1>;
 template class DiffusionProblemRegular<1,3,1>;
-template class DiffusionProblemRegular<2,2,1>;
-template class DiffusionProblemRegular<2,3,1>;
-template class DiffusionProblemRegular<3,3,1>;
+//template class DiffusionProblemRegular<2,2,1>;
+//template class DiffusionProblemRegular<2,3,1>;
+//template class DiffusionProblemRegular<3,3,1>;
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree>::
 DiffusionProblemRegular(vector<int> num_elements)
 : hyper_graph_topology(HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
-  local_solver(polynomial_degree,2,1.)
+  local_solver(1.)
 {
   cout << "Amount of HyperEdges = " << hyper_graph_topology.num_of_hyperedges() << endl;
   for(unsigned int i = 0; i < hyper_graph_topology.num_of_hyperedges(); ++i)
@@ -70,13 +70,12 @@ vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree
 matrix_vector_multiply(vector<double> x_vec)
 {
   vector<double> vec_Ax(x_vec.size(), 0.);
-  vector< vector<double> > local_result, hyperedge_dofs;
+  array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_joints;
   
   for (unsigned int hyperedge = 0; hyperedge < hyper_graph_topology.num_of_hyperedges(); ++hyperedge)
   {
     hyperedge_joints = hyper_graph_topology.get_hyperedge(hyperedge).get_joint_indices();
-    hyperedge_dofs.resize(hyperedge_joints.size());
     for (unsigned int joint = 0; joint < hyperedge_joints.size(); ++joint)
       hyperedge_dofs[joint] = hyper_graph_topology.vertex_factory().get_dof_values(hyperedge_joints[joint], x_vec);
     local_result = local_solver.numerical_flux_from_lambda(hyperedge_dofs);
