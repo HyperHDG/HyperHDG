@@ -12,7 +12,7 @@
 #ifndef TYPEDEFS_H
 #define TYPEDEFS_H
 
-typedef unsigned int  joint_index_type, hyperedge_index_type, dof_index_type;
+typedef unsigned int  hypernode_index_type, hyperedge_index_type, dof_index_type;
 typedef double        dof_value_type;
 
 #endif

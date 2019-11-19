@@ -28,18 +28,18 @@ template <unsigned int amount_of_local_dofs>
 class HyperNodeFactory
 {
   private:
-    const joint_index_type num_of_vertices_;
+    const hypernode_index_type num_of_hypernodes_;
   public:
-    HyperNodeFactory(const joint_index_type num_of_vertices);
+    HyperNodeFactory(const hypernode_index_type num_of_hypernodes);
     HyperNodeFactory(const HyperNodeFactory<amount_of_local_dofs>& other);
     
-    const joint_index_type num_of_vertices() const;
+    const hypernode_index_type num_of_hypernodes() const;
     const dof_index_type num_of_global_dofs() const;
     
-    std::array<dof_index_type, amount_of_local_dofs> get_dof_indices(const joint_index_type joint_index) const;
-    std::array<dof_value_type, amount_of_local_dofs> get_dof_values(const joint_index_type joint_index, const std::vector<dof_value_type>& global_dof_vector) const;
-    void add_to_dof_values(const joint_index_type joint_index, std::vector<dof_value_type>& global_dof_vector, const std::array<dof_value_type, amount_of_local_dofs>& local_dof_vector) const;
-    void set_dof_values(const joint_index_type joint_index, std::vector<dof_value_type>& global_dof_vector, const dof_value_type value) const;
+    std::array<dof_index_type, amount_of_local_dofs> get_dof_indices(const hypernode_index_type hypernode_index) const;
+    std::array<dof_value_type, amount_of_local_dofs> get_dof_values(const hypernode_index_type hypernode_index, const std::vector<dof_value_type>& global_dof_vector) const;
+    void add_to_dof_values(const hypernode_index_type hypernode_index, std::vector<dof_value_type>& global_dof_vector, const std::array<dof_value_type, amount_of_local_dofs>& local_dof_vector) const;
+    void set_dof_values(const hypernode_index_type hypernode_index, std::vector<dof_value_type>& global_dof_vector, const dof_value_type value) const;
 };
 
 #endif

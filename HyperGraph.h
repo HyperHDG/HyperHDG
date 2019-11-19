@@ -28,7 +28,7 @@ class HyperGraph
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
     const typename Topology::value_type get_hyperedge(const hyperedge_index_type index) const;
     
-    const joint_index_type num_of_vertices() const;
+    const hypernode_index_type num_of_hypernodes() const;
     const hyperedge_index_type num_of_hyperedges() const;
     const dof_index_type num_of_global_dofs() const;
 };

@@ -20,12 +20,12 @@ template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperEdge_Cubic
 {
   private:
-    std::array<joint_index_type, 2*hyperedge_dim> joint_indices_;
-    std::array<bool, 2*hyperedge_dim> correct_joint_orientation_;
+    std::array<hypernode_index_type, 2*hyperedge_dim> hypernode_indices_;
+    std::array<bool, 2*hyperedge_dim> correct_hypernode_orientation_;
   public:
     HyperEdge_Cubic(const hyperedge_index_type index, const std::array<unsigned int, space_dim>& num_elements,
                     const hyperedge_index_type num_of_hyperedges);
-    const std::array<joint_index_type, 2*hyperedge_dim>& get_joint_indices() const;
+    const std::array<hypernode_index_type, 2*hyperedge_dim>& get_hypernode_indices() const;
 //    std::vector<double> abs_det_of_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 //    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 };

@@ -24,7 +24,7 @@ class HyperGraph_Cubic
   private:
     std::array<unsigned int, space_dim> num_elements_;
     hyperedge_index_type num_of_hyperedges_;
-    joint_index_type num_of_vertices_;
+    hypernode_index_type num_of_hypernodes_;
   public:
     typedef HyperEdge_Cubic<hyperedge_dim, space_dim> value_type;
     HyperGraph_Cubic(const std::vector<int>& num_elements);
@@ -34,7 +34,7 @@ class HyperGraph_Cubic
     const HyperEdge_Cubic<hyperedge_dim, space_dim> get_hyperedge(const hyperedge_index_type index) const;
     
     const hyperedge_index_type num_of_hyperedges() const;
-    const joint_index_type num_of_vertices() const;
+    const hypernode_index_type num_of_hypernodes() const;
 };
 
 #endif

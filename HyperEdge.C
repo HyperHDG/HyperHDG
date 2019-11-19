@@ -26,7 +26,7 @@ template class HyperEdge_Cubic<3,3>;
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
+array<hypernode_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
 {
   assert( num_lines.size() == space_dim );
   unsigned int orientation;
@@ -34,7 +34,7 @@ array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_d
   hyperedge_index_type number_with_lower_orientation = 0;
   hyperedge_index_type index_helper = index;
   
-  array<joint_index_type, 2> point_indices;
+  array<hypernode_index_type, 2> point_indices;
   point_indices.fill(0);
   
   array<hyperedge_index_type, space_dim> num_lines_with_orientation;
@@ -81,7 +81,7 @@ array<joint_index_type, 2> line_to_point_index(const array<unsigned int, space_d
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
+array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
 {
   assert( num_squares.size() == space_dim );
   unsigned int orientation;
@@ -89,7 +89,7 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
   hyperedge_index_type number_with_lower_orientation = 0;
   hyperedge_index_type index_helper = index;
   
-  array<joint_index_type, 4> line_indices;
+  array<hypernode_index_type, 4> line_indices;
   line_indices.fill(0);
   
   array<hyperedge_index_type, space_dim> num_squares_with_orientation;
@@ -158,14 +158,14 @@ array<joint_index_type, 4> square_to_line_index(const array<unsigned int, space_
 
 
 template<unsigned int space_dim>
-array<joint_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
+array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
 {
   assert( num_cubes.size() == space_dim );
   hyperedge_index_type num_elements_in_direction;
   hyperedge_index_type number_with_lower_orientation = 0;
   hyperedge_index_type index_helper = index;
   
-  array<joint_index_type, 6> square_indices;
+  array<hypernode_index_type, 6> square_indices;
   square_indices.fill(0);
   
   array<hyperedge_index_type, space_dim> local_indices;
@@ -217,19 +217,19 @@ HyperEdge_Cubic<hyperedge_dim,space_dim>::
 HyperEdge_Cubic(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements,
                       const hyperedge_index_type num_of_hyperedges)
 {
-  for (unsigned int local_joint = 0; local_joint < 2 * hyperedge_dim; ++local_joint)
-    correct_joint_orientation_[local_joint] = true;
-  if constexpr ( hyperedge_dim == 1 )  joint_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 2 )  joint_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 3 )  joint_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyperedge_dim; ++local_hypernode)
+    correct_hypernode_orientation_[local_hypernode] = true;
+  if constexpr ( hyperedge_dim == 1 )  hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
+  else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-const array<joint_index_type, 2*hyperedge_dim>&
-HyperEdge_Cubic<hyperedge_dim,space_dim>::get_joint_indices() const
+const array<hypernode_index_type, 2*hyperedge_dim>&
+HyperEdge_Cubic<hyperedge_dim,space_dim>::get_hypernode_indices() const
 {
-  return joint_indices_;
+  return hypernode_indices_;
 }
 
 /*

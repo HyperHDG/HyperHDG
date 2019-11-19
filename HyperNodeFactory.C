@@ -25,21 +25,21 @@ template class HyperNodeFactory<local_dof_amount_node(3, 3)>;
 
 template <unsigned int amount_of_local_dofs>
 HyperNodeFactory<amount_of_local_dofs>::
-HyperNodeFactory(const joint_index_type num_of_vertices)
-: num_of_vertices_(num_of_vertices) { }
+HyperNodeFactory(const hypernode_index_type num_of_hypernodes)
+: num_of_hypernodes_(num_of_hypernodes) { }
 
 
 template <unsigned int amount_of_local_dofs>
 HyperNodeFactory<amount_of_local_dofs>::
 HyperNodeFactory(const HyperNodeFactory<amount_of_local_dofs>& other)
-: num_of_vertices_(other.num_of_vertices_) { }
+: num_of_hypernodes_(other.num_of_hypernodes_) { }
 
 
 template <unsigned int amount_of_local_dofs>
-const joint_index_type HyperNodeFactory<amount_of_local_dofs>::
-num_of_vertices() const
+const hypernode_index_type HyperNodeFactory<amount_of_local_dofs>::
+num_of_hypernodes() const
 {
-  return num_of_vertices_;
+  return num_of_hypernodes_;
 }
 
 
@@ -47,15 +47,15 @@ template <unsigned int amount_of_local_dofs>
 const dof_index_type HyperNodeFactory<amount_of_local_dofs>::
 num_of_global_dofs() const
 {
-  return num_of_vertices_ * amount_of_local_dofs;
+  return num_of_hypernodes_ * amount_of_local_dofs;
 }
 
 
 template <unsigned int amount_of_local_dofs>
 array<dof_index_type, amount_of_local_dofs> HyperNodeFactory<amount_of_local_dofs>::
-get_dof_indices(const joint_index_type joint_index) const
+get_dof_indices(const hypernode_index_type hypernode_index) const
 {
-  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  dof_index_type initial_dof_index = hypernode_index * amount_of_local_dofs;
   
   array<dof_index_type, amount_of_local_dofs> dof_indices;
   for (unsigned int i = 0; i < amount_of_local_dofs; ++i)
@@ -67,9 +67,9 @@ get_dof_indices(const joint_index_type joint_index) const
 
 template <unsigned int amount_of_local_dofs>
 array<dof_value_type, amount_of_local_dofs> HyperNodeFactory<amount_of_local_dofs>::
-get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>& global_dof_vector) const
+get_dof_values(const hypernode_index_type hypernode_index, const vector<dof_value_type>& global_dof_vector) const
 {
-  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  dof_index_type initial_dof_index = hypernode_index * amount_of_local_dofs;
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   
   array<dof_value_type, amount_of_local_dofs> local_dof_values;
@@ -82,10 +82,10 @@ get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>&
 
 template <unsigned int amount_of_local_dofs>
 void HyperNodeFactory<amount_of_local_dofs>::
-add_to_dof_values(const joint_index_type joint_index, vector<dof_value_type>& global_dof_vector,
+add_to_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_type>& global_dof_vector,
                   const array<dof_value_type, amount_of_local_dofs>& local_dof_vector) const
 {
-  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  dof_index_type initial_dof_index = hypernode_index * amount_of_local_dofs;
   assert( local_dof_vector.size() == amount_of_local_dofs );
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   
@@ -96,10 +96,10 @@ add_to_dof_values(const joint_index_type joint_index, vector<dof_value_type>& gl
 
 template <unsigned int amount_of_local_dofs>
 void HyperNodeFactory<amount_of_local_dofs>::
-set_dof_values(const joint_index_type joint_index, vector<dof_value_type>& global_dof_vector,
+set_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_type>& global_dof_vector,
                const double value) const
 {
-  dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
+  dof_index_type initial_dof_index = hypernode_index * amount_of_local_dofs;
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   for(dof_index_type index = 0; index < amount_of_local_dofs; ++index)
     global_dof_vector[index + initial_dof_index] = value;
