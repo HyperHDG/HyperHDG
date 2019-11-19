@@ -189,6 +189,8 @@ DiffusionSolver_RegularQuad(const double tau)
     // Deal with quadrature points that remain a vector.
     vector<double> quad_weights1D_vec(quad_weights1D.begin(), quad_weights1D.end());
     vector<double> quad_weights_vec(quad_weights1D.begin(), quad_weights1D.end());
+    if (quad_bdr_.size() == quad_weights1D_vec.size())
+      for (unsigned int i = 0; i < quad_bdr_.size(); ++i)  quad_bdr_[i] = quad_weights1D_vec[i];
     for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
     {
       if (dim == hyperedge_dim - 2)
