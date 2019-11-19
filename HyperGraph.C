@@ -37,8 +37,8 @@ HyperGraph< amount_of_local_dofs, Topology >::
 HyperGraph(const Topology& hyperedge_getter)
 : vertex_factory_(hyperedge_getter.num_of_vertices()), hyperedge_getter_(hyperedge_getter)
 {
-  assert( vertex_factory.num_of_vertices() == hyperedge_getter.num_of_vertices() );
-  assert( vertex_factory.num_of_vertices() >= 2 );
+  assert( vertex_factory_.num_of_vertices() == hyperedge_getter.num_of_vertices() );
+  assert( vertex_factory_.num_of_vertices() >= 2 );
   assert( hyperedge_getter.num_of_hyperedges() != 0 );
 }
 

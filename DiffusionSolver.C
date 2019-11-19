@@ -149,7 +149,7 @@ DiffusionSolver_RegularQuad(const double tau)
     trials_at_bdr1D = trial_functions_at_boundaries<max_poly_degree>();
 //  array< array<double, 2> , max_poly_degree + 1 >
 //    derivs_at_bdr1D = derivs_of_trial_at_boundaries<max_poly_degree>();
-  
+  cout << num_ansatz_fct_<< " " << trials_bound_.size() << " " << trials_bound_[0].size() <<  endl;
   if constexpr (hyperedge_dim == 1)
   {
     quad_weights_ = quad_weights1D;
@@ -232,9 +232,9 @@ DiffusionSolver_RegularQuad(const double tau)
   }
   */
   assert( quad_weights_.size() == num_of_quad_ );
-  assert( num_of_quad_ == pow(num_of_one_dimensional_quad,hyperedge_dim) );
+//  assert( num_of_quad_ == pow(num_of_one_dimensional_quad,hyperedge_dim) );
   assert( quad_bdr_.size() == num_quad_bdr_ );
-  assert( num_quad_bdr_ == pow( num_of_one_dimensional_quad, hyperedge_dim - 1 ) );
+//  assert( num_quad_bdr_ == pow( num_of_one_dimensional_quad, hyperedge_dim - 1 ) );
   
   assert( trials_quad_.size() == num_ansatz_fct_ );
   for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
@@ -255,6 +255,7 @@ DiffusionSolver_RegularQuad(const double tau)
   assert( trials_bound_.size() == 2 * hyperedge_dim );
   for (unsigned int bdr = 0; bdr < 2 * hyperedge_dim; ++bdr)
   {
+    cout << trials_bound_[bdr].size() << "  " << num_ansatz_fct_ << endl;
     assert( trials_bound_[bdr].size() == num_ansatz_fct_ );
     for (unsigned int ansatz = 0; ansatz < num_ansatz_bdr_; ++ansatz)
       assert( trials_bound_[bdr][ansatz].size() == num_quad_bdr_ );

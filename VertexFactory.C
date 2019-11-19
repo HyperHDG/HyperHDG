@@ -70,7 +70,7 @@ array<dof_value_type, amount_of_local_dofs> VertexFactory<amount_of_local_dofs>:
 get_dof_values(const joint_index_type joint_index, const vector<dof_value_type>& global_dof_vector) const
 {
   dof_index_type initial_dof_index = joint_index * amount_of_local_dofs;
-  assert( initial_dof_index + amount_of_local_dofs_ <= global_dof_vector.size() );
+  assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   
   array<dof_value_type, amount_of_local_dofs> local_dof_values;
   for (unsigned int i = 0; i < amount_of_local_dofs; ++i)
