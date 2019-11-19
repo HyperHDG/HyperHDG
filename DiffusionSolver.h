@@ -15,7 +15,6 @@
 #define DIFFUSIONSOLVER_H
 
 #include "FuncAndQuad.h"
-#include "HyperEdge.h"
 #include "HyperNodeFactory.h"
 #include <array>
 
