@@ -12,24 +12,24 @@
 #include <cassert>
 
 
-template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 1 > >;
-// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 1 > >;
-// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 1 > >;
-template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 2 > >;
-// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 2 > >;
-// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 2 > >;
-template class HyperGraph < local_dof_amount(1 , 1), HyperGraph_Cubic< 1, 3 > >;
-// template class HyperGraph < local_dof_amount(1 , 2), HyperGraph_Cubic< 1, 3 > >;
-// template class HyperGraph < local_dof_amount(1 , 3), HyperGraph_Cubic< 1, 3 > >;
-template class HyperGraph < local_dof_amount(2 , 1), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount(2 , 2), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount(2 , 3), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount(2 , 1), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount(2 , 2), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount(2 , 3), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount(3 , 1), HyperGraph_Cubic< 3, 3 > >;
-template class HyperGraph < local_dof_amount(3 , 2), HyperGraph_Cubic< 3, 3 > >;
-template class HyperGraph < local_dof_amount(3 , 3), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 1 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 1 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 1 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 2 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 2 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 2 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 3 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 3 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 3 > >;
+template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 1), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 2), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 3), HyperGraph_Cubic< 3, 3 > >;
 
 
 template < unsigned int amount_of_local_dofs, class Topology >

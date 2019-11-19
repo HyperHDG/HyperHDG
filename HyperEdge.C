@@ -232,7 +232,7 @@ HyperEdge_Cubic<hyperedge_dim,space_dim>::get_joint_indices() const
   return joint_indices_;
 }
 
-
+/*
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 std::vector<double> HyperEdge_Cubic<hyperedge_dim,space_dim>::
 abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
@@ -254,3 +254,4 @@ inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
   });
   return jac_at_quad;
 }
+*/
