@@ -35,20 +35,20 @@ template class HyperGraph < local_dof_amount_node(3 , 3), HyperGraph_Cubic< 3, 3
 template < unsigned int amount_of_local_dofs, class Topology >
 HyperGraph< amount_of_local_dofs, Topology >::
 HyperGraph(const Topology& hyperedge_getter)
-: vertex_factory_(hyperedge_getter.num_of_vertices()), hyperedge_getter_(hyperedge_getter)
+: hypernode_factory_(hyperedge_getter.num_of_vertices()), hyperedge_getter_(hyperedge_getter)
 {
-  assert( vertex_factory_.num_of_vertices() == hyperedge_getter.num_of_vertices() );
-  assert( vertex_factory_.num_of_vertices() >= 2 );
+  assert( hypernode_factory_.num_of_vertices() == hyperedge_getter.num_of_vertices() );
+  assert( hypernode_factory_.num_of_vertices() >= 2 );
   assert( hyperedge_getter.num_of_hyperedges() != 0 );
 }
 
 
 template < unsigned int amount_of_local_dofs, class Topology >
-const VertexFactory<amount_of_local_dofs>
+const HyperNodeFactory<amount_of_local_dofs>
 HyperGraph< amount_of_local_dofs, Topology >::
-vertex_factory() const
+hypernode_factory() const
 {
-  return vertex_factory_;
+  return hypernode_factory_;
 }
 
 
@@ -66,7 +66,7 @@ const joint_index_type
 HyperGraph< amount_of_local_dofs, Topology >::
 num_of_vertices() const
 {
-  return vertex_factory_.num_of_vertices();
+  return hypernode_factory_.num_of_vertices();
 }
 
 
@@ -84,5 +84,5 @@ const dof_index_type
 HyperGraph< amount_of_local_dofs, Topology >::
 num_of_global_dofs() const
 {
-  return vertex_factory_.num_of_global_dofs();
+  return hypernode_factory_.num_of_global_dofs();
 }

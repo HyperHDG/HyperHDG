@@ -16,9 +16,8 @@
 
 #include "FuncAndQuad.h"
 #include "HyperEdge.h"
-#include "VertexFactory.h"
+#include "HyperNodeFactory.h"
 #include <array>
-#include <vector>
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class DiffusionSolver_RegularQuad
