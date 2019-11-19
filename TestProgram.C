@@ -1,5 +1,3 @@
-#include "HyperGraphTopology.h"
-#include "DiffusionSolver.h"
 #include <iostream>
 #include <cmath>
 
@@ -29,7 +27,7 @@ int main(int argc, char *argv[])
 //  vector<double> result = test_problem.matrix_vector_multiply(vec);
   
   for (unsigned int i = 0; i < result.size(); ++i)
-    cout << vec[i] << "  " << result[i] << endl;
+    cout << "  " << result[i] << endl;
   
   return 0;
 }

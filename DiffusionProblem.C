@@ -51,7 +51,7 @@ read_dirichlet_indices(std::vector<int> indices)
   dirichlet_indices.resize(indices.size());
   for (unsigned int i = 0; i < indices.size(); ++i)
   {
-    assert( indices[i] >= 0 && indices[i] < hyper_graph_toplogy.num_of_vertices() );
+    assert( indices[i] >= 0 && indices[i] < hyper_graph_topology.num_of_vertices() );
     dirichlet_indices[i] = indices[i];
   }
 }
