@@ -10,11 +10,10 @@
 
 
 #include "DiffusionSolver.h"
-// #include "FuncAndQuad.h"
 #include "LapackWrapper.h"
 #include <cassert>
 #include <cmath>
-// #include <Eigen/Dense>
+#include <vector>
 
 
 #include <iostream>
@@ -38,12 +37,36 @@ template class DiffusionSolver_RegularQuad<1,4,12>;
 template class DiffusionSolver_RegularQuad<1,5,5>;
 template class DiffusionSolver_RegularQuad<1,5,10>;
 template class DiffusionSolver_RegularQuad<1,5,15>;
-
-
-
-
-//template class DiffusionSolver_RegularQuad<2>;
-//template class DiffusionSolver_RegularQuad<3>;
+template class DiffusionSolver_RegularQuad<2,1,1>;
+template class DiffusionSolver_RegularQuad<2,1,2>;
+template class DiffusionSolver_RegularQuad<2,1,3>;
+template class DiffusionSolver_RegularQuad<2,2,2>;
+template class DiffusionSolver_RegularQuad<2,2,4>;
+template class DiffusionSolver_RegularQuad<2,2,6>;
+template class DiffusionSolver_RegularQuad<2,3,3>;
+template class DiffusionSolver_RegularQuad<2,3,6>;
+template class DiffusionSolver_RegularQuad<2,3,9>;
+template class DiffusionSolver_RegularQuad<2,4,4>;
+template class DiffusionSolver_RegularQuad<2,4,8>;
+template class DiffusionSolver_RegularQuad<2,4,12>;
+template class DiffusionSolver_RegularQuad<2,5,5>;
+template class DiffusionSolver_RegularQuad<2,5,10>;
+template class DiffusionSolver_RegularQuad<2,5,15>;
+template class DiffusionSolver_RegularQuad<3,1,1>;
+template class DiffusionSolver_RegularQuad<3,1,2>;
+template class DiffusionSolver_RegularQuad<3,1,3>;
+template class DiffusionSolver_RegularQuad<3,2,2>;
+template class DiffusionSolver_RegularQuad<3,2,4>;
+template class DiffusionSolver_RegularQuad<3,2,6>;
+template class DiffusionSolver_RegularQuad<3,3,3>;
+template class DiffusionSolver_RegularQuad<3,3,6>;
+template class DiffusionSolver_RegularQuad<3,3,9>;
+template class DiffusionSolver_RegularQuad<3,4,4>;
+template class DiffusionSolver_RegularQuad<3,4,8>;
+template class DiffusionSolver_RegularQuad<3,4,12>;
+template class DiffusionSolver_RegularQuad<3,5,5>;
+template class DiffusionSolver_RegularQuad<3,5,10>;
+template class DiffusionSolver_RegularQuad<3,5,15>;
 
 
 vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)
@@ -135,12 +158,8 @@ DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 DiffusionSolver_RegularQuad(const double tau)
 : tau_(tau)
 { 
-//  constexpr unsigned int num_1D_quad = quadrature_points_amount(max_quad_degree);
-  
   array<double, quadrature_points_amount(max_quad_degree)>
     quad_weights1D = quadrature_weights<max_quad_degree>();
-  array<double, 1>
-    quad_weights_bdr1D = { 1. };
   array< array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
     trials_at_quad1D = trial_functions_at_quadrature_points<max_poly_degree, max_quad_degree>();
   array< array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
@@ -149,116 +168,127 @@ DiffusionSolver_RegularQuad(const double tau)
     trials_at_bdr1D = trial_functions_at_boundaries<max_poly_degree>();
 //  array< array<double, 2> , max_poly_degree + 1 >
 //    derivs_at_bdr1D = derivs_of_trial_at_boundaries<max_poly_degree>();
-  cout << num_ansatz_fct_<< " " << trials_bound_.size() << " " << trials_bound_[0].size() <<  endl;
+  
+  // Trials at the boundary in one dimension is dimension independent.
+  trials_bound_1D_ = trials_at_bdr1D;
+  
+  // In the one-dimensional case, we are done now.
   if constexpr (hyperedge_dim == 1)
   {
     quad_weights_ = quad_weights1D;
-    quad_bdr_ = quad_weights_bdr1D;
+    quad_bdr_ = { 1. };
     trials_quad_ = trials_at_quad1D;
     bound_trials_quad_[0] = { 1. };
-    trials_bound_1D_ = trials_at_bdr1D;
     derivs_quad_[0] = derivs_at_quad1D;
     for (unsigned int side = 0; side < 2; ++side)
       for (unsigned int i = 0; i < max_poly_degree + 1; ++i)
         trials_bound_[side][i][0] = trials_bound_1D_[i][side];
   }
-  else
-    assert( 0 == 1 );
-    
-/*  
-  vector < vector<double> > db_helper = derivs_of_trial_at_boundaries(max_poly_degree);
-  unsigned int num_of_one_dimensional_quad = num_of_quad_;
-  
-
-  
-  trials_bound_.resize(2);
-  for (unsigned int side = 0; side < 2; ++side)
+  else // There is more to be done and we need to use growing containers.
   {
-    trials_bound_[side].resize(max_poly_degree + 1);
-    for (unsigned int i = 0; i < max_poly_degree + 1; ++i)
-      trials_bound_[side][i] = vector<double>(1, trials_bound_1D_[i][side]);
-  }
-  
-  // TODO: QUADRATURE POINTS AND WEIGHTS IN SEVERAL DIMENSIONS
-  if (hyperedge_dim > 1)
-  {
-    vector<double> quad_weights_helper = quad_weights_; // quad weights remain a vector
-     quad_bdr_ = quad_weights_;
+    // Deal with quadrature points that remain a vector.
+    vector<double> quad_weights1D_vec(quad_weights1D.begin(), quad_weights1D.end());
+    vector<double> quad_weights_vec(quad_weights1D.begin(), quad_weights1D.end());
     for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
     {
-      if (dim == hyperedge_dim - 2)  quad_bdr_ = quad_weights_;
-      quad_weights_ = dyadic_product(quad_weights_, quad_weights_helper);
+      if (dim == hyperedge_dim - 2)
+      {
+        assert( quad_bdr_.size() == quad_weights_vec.size() );
+        for (unsigned int i = 0; i < quad_bdr_.size(); ++i)  quad_bdr_[i] = quad_weights_vec[i];
+      }
+      quad_weights_vec = dyadic_product(quad_weights_vec, quad_weights1D_vec);
     }
-    num_of_quad_ = quad_weights_.size();
-    num_quad_bdr_ = quad_bdr_.size();
+    assert( quad_weights_.size() == quad_weights_vec.size() );
+    for (unsigned int i = 0; i < quad_weights_.size(); ++i)  quad_weights_[i] = quad_weights_vec[i];
     
-    vector< vector<double> > trials_helper = trials_quad_; // trials at quad remain a vector (func) of vectors (quad)
+    // Deal with trials at quadrature points that remain a vector (func) of vectors (quad).
+    vector< vector<double> > trials_at_quad1D_vec(trials_at_quad1D.size());
+    for (unsigned int i = 0; i < trials_at_quad1D.size(); ++i)
+    {
+      trials_at_quad1D_vec[i].resize(trials_at_quad1D[i].size());
+      for (unsigned int j = 0; j < trials_at_quad1D[i].size(); ++j)
+        trials_at_quad1D_vec[i][j] = trials_at_quad1D[i][j];
+    }
+    vector< vector<double> > trials_at_quad_vec = trials_at_quad1D_vec;
     for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
-      trials_quad_ = double_dyadic_product(trials_quad_, trials_helper);
+      trials_at_quad_vec = double_dyadic_product(trials_at_quad_vec, trials_at_quad1D_vec);
+    assert( trials_quad_.size() == trials_at_quad_vec.size() );
+    for (unsigned int i = 0; i < trials_quad_.size(); ++i)
+    {
+      assert( trials_quad_[i].size() == trials_at_quad_vec[i].size() );
+      for (unsigned int j = 0; j < trials_quad_[i].size(); ++j)
+        trials_quad_[i][j] = trials_at_quad_vec[i][j];
+    }
     
-    bound_trials_quad_ = trials_helper; // trials of lower dimensional functions are vector (func) of vectors (quad)
+    // Deal with boundary trials at quadrature points that remain a vector (func) of vectors (quad).
+    vector< vector<double> > bound_trials_at_quad_vec = trials_at_quad1D_vec;
     for (unsigned int dim = 1; dim < hyperedge_dim - 1; ++dim)
-      bound_trials_quad_ = double_dyadic_product(bound_trials_quad_, trials_helper);
+      bound_trials_at_quad_vec = double_dyadic_product(bound_trials_at_quad_vec, trials_at_quad1D_vec);
+    assert( bound_trials_quad_.size() == bound_trials_at_quad_vec.size() );
+    for (unsigned int i = 0; i < bound_trials_quad_.size(); ++i)
+    {
+      assert( bound_trials_quad_[i].size() == bound_trials_at_quad_vec[i].size() );
+      for (unsigned int j = 0; j < bound_trials_quad_[i].size(); ++j)
+        bound_trials_quad_[i][j] = bound_trials_at_quad_vec[i][j];
+    }
     
-    vector< vector<double> >derivs_helper = derivs_quad_[0]; // derivs at quad becomes of vector (deriv) of vectors (func) of vectors (quad)
-    derivs_quad_.resize(hyperedge_dim);
+    // Deal with derivatives with respect to first_index of function of second_index at quadrature point
+    // third_index. In 1D only first_index = 0 makes sense.
+    vector< vector<double> > derivs_at_quad1D_vec(derivs_at_quad1D.size());
+    for (unsigned int i = 0; i < derivs_at_quad1D.size(); ++i)
+    {
+      derivs_at_quad1D_vec[i].resize(derivs_at_quad1D[i].size());
+      for (unsigned int j = 0; j < derivs_at_quad1D[i].size(); ++j)
+        derivs_at_quad1D_vec[i][j] = derivs_at_quad1D[i][j];
+    }
+    vector< vector< vector<double> > > derivs_at_quad_vec(hyperedge_dim);
     for (unsigned int dim_deriv = 0; dim_deriv < hyperedge_dim; ++dim_deriv)
     {
-      derivs_quad_[dim_deriv] = trials_helper;
+      derivs_at_quad_vec[dim_deriv] = trials_at_quad1D_vec;
       for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
-        if(dim_deriv == 0 && dim == 1)  derivs_quad_[dim_deriv] = double_dyadic_product(derivs_helper, trials_helper);
-        else if (dim_deriv == dim)      derivs_quad_[dim_deriv] = double_dyadic_product(derivs_quad_[dim_deriv], derivs_helper);
-        else                            derivs_quad_[dim_deriv] = double_dyadic_product(derivs_quad_[dim_deriv], trials_helper);
+        if(dim_deriv == 0 && dim == 1)  derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad1D_vec, trials_at_quad1D_vec);
+        else if (dim_deriv == dim)      derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], derivs_at_quad1D_vec);
+        else                            derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], trials_at_quad1D_vec);
+    }
+    assert( derivs_quad_.size() == derivs_at_quad_vec.size() );
+    for (unsigned int i = 0; i < derivs_quad_.size(); ++i)
+    {
+      assert( derivs_quad_[i].size() == derivs_at_quad_vec[i].size() );
+      for (unsigned int j = 0; j < derivs_quad_[i].size(); ++j)
+      {
+        assert( derivs_quad_[i][j].size() == derivs_at_quad_vec[i][j].size() );
+        for (unsigned int k = 0; k < derivs_quad_[i][j].size(); ++k)
+          derivs_quad_[i][j][k] = derivs_at_quad_vec[i][j][k];
+      }
     }
     
-    // trials at boundary becomes a vector (boundary) of vectors (function) of vectors (quad)
-    trials_bound_.clear();
-    trials_bound_.resize(2 * hyperedge_dim);
+    // Deal with trials at boundary which is a vector (boundary) of vectors (function) of vectors (quad).
+    vector< vector< vector<double> > > trials_bound_vec(2 * hyperedge_dim);
     for (unsigned int side = 0; side < 2; ++side)
     {
       vector< vector<double> > helperling(trials_bound_1D_.size());
       for (unsigned int i = 0; i < helperling.size(); ++i)
         helperling[i] = vector<double>(1, trials_bound_1D_[i][side]);
-      
       for (unsigned int dim_face = 0; dim_face < hyperedge_dim; ++dim_face)
       {
-        trials_bound_[2*dim_face+side] = trials_helper;
+        trials_bound_vec[2*dim_face+side] = trials_at_quad1D_vec;
         for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
-          if (dim_face == 0 && dim == 1)  trials_bound_[2*dim_face+side] = double_dyadic_product(helperling, trials_helper);
-          else if (dim_face == dim)       trials_bound_[2*dim_face+side] = double_dyadic_product(trials_bound_[2*dim_face+side], helperling);
-          else                            trials_bound_[2*dim_face+side] = double_dyadic_product(trials_bound_[2*dim_face+side], trials_helper);
+          if (dim_face == 0 && dim == 1)  trials_bound_vec[2*dim_face+side] = double_dyadic_product(helperling, trials_at_quad1D_vec);
+          else if (dim_face == dim)       trials_bound_vec[2*dim_face+side] = double_dyadic_product(trials_bound_vec[2*dim_face+side], helperling);
+          else                            trials_bound_vec[2*dim_face+side] = double_dyadic_product(trials_bound_vec[2*dim_face+side], trials_at_quad1D_vec);
       }
     }
-  }
-  */
-  assert( quad_weights_.size() == num_of_quad_ );
-//  assert( num_of_quad_ == pow(num_of_one_dimensional_quad,hyperedge_dim) );
-  assert( quad_bdr_.size() == num_quad_bdr_ );
-//  assert( num_quad_bdr_ == pow( num_of_one_dimensional_quad, hyperedge_dim - 1 ) );
-  
-  assert( trials_quad_.size() == num_ansatz_fct_ );
-  for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
-    assert( trials_quad_[ansatz].size() == num_of_quad_ );
-  
-  assert( bound_trials_quad_.size() == num_ansatz_bdr_ );
-  for (unsigned int ansatz = 0; ansatz < num_ansatz_bdr_; ++ansatz)
-    assert( bound_trials_quad_[ansatz].size() == num_quad_bdr_ );
-  
-  assert( derivs_quad_.size() == hyperedge_dim );
-  for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
-  {
-    assert( derivs_quad_[dim].size() == num_ansatz_fct_ );
-    for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
-      assert( derivs_quad_[dim][ansatz].size() == num_of_quad_ );
-  }
-  
-  assert( trials_bound_.size() == 2 * hyperedge_dim );
-  for (unsigned int bdr = 0; bdr < 2 * hyperedge_dim; ++bdr)
-  {
-    cout << trials_bound_[bdr].size() << "  " << num_ansatz_fct_ << endl;
-    assert( trials_bound_[bdr].size() == num_ansatz_fct_ );
-    for (unsigned int ansatz = 0; ansatz < num_ansatz_bdr_; ++ansatz)
-      assert( trials_bound_[bdr][ansatz].size() == num_quad_bdr_ );
+    assert( trials_bound_.size() == trials_bound_vec.size() );
+    for (unsigned int i = 0; i < trials_bound_.size(); ++i)
+    {
+      assert( trials_bound_[i].size() == trials_bound_vec[i].size() );
+      for (unsigned int j = 0; j < trials_bound_[i].size(); ++j)
+      {
+        assert( trials_bound_[i][j].size() == trials_bound_vec[i][j].size() );
+        for (unsigned int k = 0; k < trials_bound_[i][j].size(); ++k)
+          trials_bound_[i][j][k] = trials_bound_vec[i][j][k];
+      }
+    }
   }
 }
 

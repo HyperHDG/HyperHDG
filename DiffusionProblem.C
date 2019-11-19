@@ -21,9 +21,9 @@ using namespace std;
 template class DiffusionProblemRegular<1,1,1>;
 template class DiffusionProblemRegular<1,2,1>;
 template class DiffusionProblemRegular<1,3,1>;
-//template class DiffusionProblemRegular<2,2,1>;
-//template class DiffusionProblemRegular<2,3,1>;
-//template class DiffusionProblemRegular<3,3,1>;
+template class DiffusionProblemRegular<2,2,1>;
+template class DiffusionProblemRegular<2,3,1>;
+template class DiffusionProblemRegular<3,3,1>;
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
