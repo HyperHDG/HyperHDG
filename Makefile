@@ -1,4 +1,5 @@
 default:
+	mkdir -p output
 	./setup.sh
 
 run:	

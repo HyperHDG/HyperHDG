@@ -15,20 +15,22 @@ from ClassWrapper import PyDiffusionProblem
 
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([2,2])
-
-# Set the hypernodes that are supposed to be of Dirichlet type.
-index_vector = np.array([ 0 ]) # Check for trivial solution.
-index_vector = np.array([ 0, 8 ])
-HDG_wrapper.read_dirichlet_indices(index_vector)
+HDG_wrapper = PyDiffusionProblem([4,2,2])
 
 # Initialize vector containing the Dirichlet values: Indices not set in
 # the index_vector are ignored here. However, values not equal zero in
 # vectorDirichlet that have indices that do not occur in the index
-# vector will cause a wrong representation of the final result.
+# vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
 vectorDirichlet[8] = 0. # Comment if checking for trivial solution.
+
+# Set the hypernodes that are supposed to be of Dirichlet type.
+# Note that all non-zero entries of vectorDirichlet are supposed to be
+# contained in the index vector to keep consistency.
+# index_vector = np.array([ 0 ]) # Check for trivial solution.
+index_vector = np.array([ 0, len(vectorDirichlet)-1 ])
+HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
 print("Dirichlet indices: ", index_vector)
@@ -61,4 +63,5 @@ else:
         "number of ", num_iter, " iterations.")
 
 # Plot solution to vtu File to be visualized using Paraview.
-HDG_wrapper.plot_solution(vectorSolution)
+HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
+print("Solution written to file in output directory")

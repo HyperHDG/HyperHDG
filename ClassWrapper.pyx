@@ -9,7 +9,7 @@ from libcpp.vector cimport vector
 
 # c++ interface to cython
 cdef extern from "DiffusionProblem.h":
-  cdef cppclass DiffusionProblem "DiffusionProblemRegular<1,2,1>":
+  cdef cppclass DiffusionProblem "DiffusionProblemRegular<1,3,1>":
         DiffusionProblem(vector[int]) except +
         void read_dirichlet_indices(vector[int]);
         vector[double] return_zero_vector()
