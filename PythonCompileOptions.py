@@ -30,7 +30,11 @@ setup(
                            "DiffusionSolver.C",
                            "FuncAndQuad.C",
                            "HyperGraph.C",
-                           "HyperNodeFactory.C"
+                           "HyperNodeFactory.C",
+                           "HyperEdge_Geometry.C",
+                           "Geometry.C",
+                           "Plotter.C",
+                           "Point.C"
                        ],
                   language="c++",                   # remove this if C and not C++
                   extra_compile_args=["--std=c++17"],

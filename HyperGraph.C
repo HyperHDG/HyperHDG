@@ -12,30 +12,31 @@
 #include <cassert>
 
 
-template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 1 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 1 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 1 > >;
-template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 2 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 2 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 2 > >;
-template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 3 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 3 > >;
-// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 3 > >;
-template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 2 > >;
-template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 3 > >;
-template class HyperGraph < local_dof_amount_node(3 , 1), HyperGraph_Cubic< 3, 3 > >;
-template class HyperGraph < local_dof_amount_node(3 , 2), HyperGraph_Cubic< 3, 3 > >;
-template class HyperGraph < local_dof_amount_node(3 , 3), HyperGraph_Cubic< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 1 >, HyperGraph_Cubic_UnitCube< 1, 1 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 1 >, HyperGraph_Cubic_UnitCube< 1, 1 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 1 >, HyperGraph_Cubic_UnitCube< 1, 1 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 2 >, HyperGraph_Cubic_UnitCube< 1, 2 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 2 >, HyperGraph_Cubic_UnitCube< 1, 2 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 2 >, HyperGraph_Cubic_UnitCube< 1, 2 > >;
+template class HyperGraph < local_dof_amount_node(1 , 1), HyperGraph_Cubic< 1, 3 >, HyperGraph_Cubic_UnitCube< 1, 3 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 2), HyperGraph_Cubic< 1, 3 >, HyperGraph_Cubic_UnitCube< 1, 3 > >;
+// template class HyperGraph < local_dof_amount_node(1 , 3), HyperGraph_Cubic< 1, 3 >, HyperGraph_Cubic_UnitCube< 1, 3 > >;
+/*template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 2 >, HyperGraph_Cubic_UnitCube< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 2 >, HyperGraph_Cubic_UnitCube< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 2 >, HyperGraph_Cubic_UnitCube< 2, 2 > >;
+template class HyperGraph < local_dof_amount_node(2 , 1), HyperGraph_Cubic< 2, 3 >, HyperGraph_Cubic_UnitCube< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(2 , 2), HyperGraph_Cubic< 2, 3 >, HyperGraph_Cubic_UnitCube< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(2 , 3), HyperGraph_Cubic< 2, 3 >, HyperGraph_Cubic_UnitCube< 2, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 1), HyperGraph_Cubic< 3, 3 >, HyperGraph_Cubic_UnitCube< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 2), HyperGraph_Cubic< 3, 3 >, HyperGraph_Cubic_UnitCube< 3, 3 > >;
+template class HyperGraph < local_dof_amount_node(3 , 3), HyperGraph_Cubic< 3, 3 >, HyperGraph_Cubic_UnitCube< 3, 3 > >;*/
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
-HyperGraph< amount_of_local_dofs, Topology >::
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 HyperGraph(const Topology& hyperedge_getter)
-: hypernode_factory_(hyperedge_getter.num_of_hypernodes()), hyperedge_getter_(hyperedge_getter)
+: hypernode_factory_(hyperedge_getter.num_of_hypernodes()), hyperedge_getter_(hyperedge_getter),
+  hyperedge_geometry_(hyperedge_getter)
 {
   assert( hypernode_factory_.num_of_hypernodes() == hyperedge_getter.num_of_hypernodes() );
   assert( hypernode_factory_.num_of_hypernodes() >= 2 );
@@ -43,45 +44,54 @@ HyperGraph(const Topology& hyperedge_getter)
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
 const HyperNodeFactory<amount_of_local_dofs>
-HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 hypernode_factory() const
 {
   return hypernode_factory_;
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
 const typename Topology::value_type
-HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 get_hyperedge(const hyperedge_index_type index) const
 {
   return hyperedge_getter_.get_hyperedge(index);
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
+const typename Geometry::value_type 
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
+get_hyperedge_geometry(const hyperedge_index_type index) const
+{
+  return hyperedge_geometry_.get_hyperedge(index);
+}
+
+
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
 const hypernode_index_type
-HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 num_of_hypernodes() const
 {
   return hypernode_factory_.num_of_hypernodes();
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
 const hyperedge_index_type
-HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 num_of_hyperedges() const
 {
   return hyperedge_getter_.num_of_hyperedges();
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology >
+template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
 const dof_index_type 
-HyperGraph< amount_of_local_dofs, Topology >::
+HyperGraph< amount_of_local_dofs, Topology, Geometry >::
 num_of_global_dofs() const
 {
   return hypernode_factory_.num_of_global_dofs();

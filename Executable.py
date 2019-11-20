@@ -59,3 +59,6 @@ if num_iter == 0:
 else:
   print("The linear solver (conjugate gradients) failed with a total",
         "number of ", num_iter, " iterations.")
+
+# Plot solution to vtu File to be visualized using Paraview.
+HDG_wrapper.plot_solution(vectorSolution)

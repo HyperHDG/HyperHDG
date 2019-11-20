@@ -179,7 +179,8 @@ HyperGraph_Cubic(const std::vector<int>& num_elements)
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
 HyperGraph_Cubic(const HyperGraph_Cubic<hyperedge_dim,space_dim>& other)
-: num_elements_(other.num_elements_), num_of_hyperedges_(other.num_of_hyperedges_) { }
+: num_elements_(other.num_elements_), num_of_hyperedges_(other.num_of_hyperedges_),
+  num_of_hypernodes_(other.num_of_hypernodes_) { }
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -188,7 +189,16 @@ HyperGraph_Cubic<hyperedge_dim,space_dim>::
 get_hyperedge(const hyperedge_index_type index) const
 {
   assert ( index < num_of_hyperedges_ );
-  return HyperEdge_Cubic<hyperedge_dim,space_dim>(index, num_elements_, num_of_hyperedges_);
+  return HyperEdge_Cubic<hyperedge_dim,space_dim>(index, num_elements_);
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+const array<unsigned int, space_dim>& 
+HyperGraph_Cubic<hyperedge_dim,space_dim>::
+num_elements() const
+{
+  return num_elements_;
 }
 
 
