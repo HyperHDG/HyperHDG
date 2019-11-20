@@ -104,13 +104,27 @@ plot(vector<double> lambda)
 	myfile << "      </Cells>" << endl;
   
   
-  myfile << "      <PointData Scalars=\"" << "primary_unknown" << "\">" << endl;
-  myfile << "        <DataArray type=\"Float32\" Name=\"" << "primary" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << endl;
+  myfile << "      <PointData Scalars=\"" << "example" << "\">" << endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << endl;
   
   static_assert( hyperedge_dim == 1 );
   
   array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
+  
+  for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
+  {
+    hyperedge_hypernodes = hyper_graph_.get_hyperedge(he_number).get_hypernode_indices();
+    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
+    local_result = local_solver_.flux_at_boundary_from_lambda(hyperedge_dofs);
+    myfile << "          " << fixed << scientific << setprecision(3) << -local_result[0][0]
+           << "  " << fixed << scientific << setprecision(3) << local_result[1][0] << endl;
+  }
+
+  myfile << "        </DataArray>" << endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << endl;
+  
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
     hyperedge_hypernodes = hyper_graph_.get_hyperedge(he_number).get_hypernode_indices();
