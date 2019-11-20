@@ -15,6 +15,7 @@ cdef extern from "DiffusionProblem.h":
         vector[double] return_zero_vector()
         vector[double] matrix_vector_multiply(vector[double])
         int size_of_system()
+        void plot_solution(vector[double])
 
 # creating a cython wrapper class
 cdef class PyDiffusionProblem:
@@ -31,3 +32,6 @@ cdef class PyDiffusionProblem:
         return self.thisptr.matrix_vector_multiply(vec)
     def size_of_system(self):
         return self.thisptr.size_of_system()
+    def plot_solution(self, vec):
+        self.thisptr.plot_solution(vec)
+        

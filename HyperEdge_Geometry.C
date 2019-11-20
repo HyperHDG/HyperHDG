@@ -8,7 +8,7 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "HyperEdge.h"
+#include "HyperEdge_Geometry.h"
 #include <algorithm>
 #include <cassert>
 
@@ -17,16 +17,16 @@
 using namespace std;
 
 
-template class HyperEdge_Cubic<1,1>;
-template class HyperEdge_Cubic<1,2>;
-template class HyperEdge_Cubic<1,3>;
-template class HyperEdge_Cubic<2,2>;
-template class HyperEdge_Cubic<2,3>;
-template class HyperEdge_Cubic<3,3>;
+template class HyperEdge_Cubic_UnitCube<1,1>;
+template class HyperEdge_Cubic_UnitCube<1,2>;
+template class HyperEdge_Cubic_UnitCube<1,3>;
+// template class HyperEdge_Cubic_UnitCube<2,2>;
+// template class HyperEdge_Cubic_UnitCube<2,3>;
+// template class HyperEdge_Cubic_UnitCube<3,3>;
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 2> line_to_point_index(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
+array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
 {
   assert( num_lines.size() == space_dim );
   unsigned int orientation;
@@ -34,8 +34,8 @@ array<hypernode_index_type, 2> line_to_point_index(const array<unsigned int, spa
   hyperedge_index_type number_with_lower_orientation = 0;
   hyperedge_index_type index_helper = index;
   
-  array<hypernode_index_type, 2> point_indices;
-  point_indices.fill(0);
+  array<Point<space_dim>, 2> point_indices;
+  point_indices.fill(Point<space_dim>());
   
   array<hyperedge_index_type, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
@@ -68,12 +68,10 @@ array<hypernode_index_type, 2> line_to_point_index(const array<unsigned int, spa
   
   for(unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
   {
-    unsigned int helper = 1;
-    for (unsigned int dim_n = 0; dim_n < dim_m; ++dim_n)
-      helper *= num_lines[dim_n] + 1;
-    point_indices[0] += local_indices[dim_m] * helper;
-    if (dim_m == orientation)  point_indices[1] += (local_indices[dim_m] + 1) * helper;
-    else                       point_indices[1] += local_indices[dim_m] * helper;
+    double helper = num_lines[dim_m];
+    point_indices[0][dim_m] = local_indices[dim_m] / helper;
+    if (dim_m == orientation)  point_indices[1][dim_m] = (local_indices[dim_m] + 1) / helper;
+    else                       point_indices[1][dim_m] = local_indices[dim_m] / helper;
   }
   
   return point_indices;
@@ -213,27 +211,31 @@ array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, sp
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-HyperEdge_Cubic<hyperedge_dim,space_dim>::
-HyperEdge_Cubic(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
+HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+HyperEdge_Cubic_UnitCube(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
 {
-  for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyperedge_dim; ++local_hypernode)
-    correct_hypernode_orientation_[local_hypernode] = true;
-  if constexpr ( hyperedge_dim == 1 )  hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  if constexpr ( hyperedge_dim == 1 )  points_ = line_to_points<space_dim>(num_elements, index);
+//  else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
+//  else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
-
 template <unsigned int hyperedge_dim, unsigned int space_dim>
+Point<space_dim> HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+point(unsigned int index) const
+{
+  return points_[index];
+}
+
+/*
 const array<hypernode_index_type, 2*hyperedge_dim>&
-HyperEdge_Cubic<hyperedge_dim,space_dim>::get_hypernode_indices() const
+HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
 
-/*
+
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-std::vector<double> HyperEdge_Cubic<hyperedge_dim,space_dim>::
+std::vector<double> HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
 abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector<double> det_at_quad(local_quadrature.size(), 1.);
@@ -242,7 +244,7 @@ abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-vector< vector<double> > HyperEdge_Cubic<hyperedge_dim,space_dim>::
+vector< vector<double> > HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
 inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector< vector<double> > jac_at_quad(local_quadrature.size());
