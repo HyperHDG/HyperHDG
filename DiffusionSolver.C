@@ -168,10 +168,7 @@ DiffusionSolver_RegularQuad(const double tau)
     trials_at_bdr1D = trial_functions_at_boundaries<max_poly_degree>();
 //  array< array<double, 2> , max_poly_degree + 1 >
 //    derivs_at_bdr1D = derivs_of_trial_at_boundaries<max_poly_degree>();
-  
-  // Trials at the boundary in one dimension is dimension independent.
-  trials_bound_1D_ = trials_at_bdr1D;
-  
+    
   // In the one-dimensional case, we are done now.
   if constexpr (hyperedge_dim == 1)
   {
@@ -180,9 +177,10 @@ DiffusionSolver_RegularQuad(const double tau)
     trials_quad_ = trials_at_quad1D;
     bound_trials_quad_[0] = { 1. };
     derivs_quad_[0] = derivs_at_quad1D;
+    trials_in_corners_ = trials_at_bdr1D;
     for (unsigned int side = 0; side < 2; ++side)
       for (unsigned int i = 0; i < max_poly_degree + 1; ++i)
-        trials_bound_[side][i][0] = trials_bound_1D_[i][side];
+        trials_bound_[side][i][0] = trials_at_bdr1D[i][side];
   }
   else // There is more to be done and we need to use growing containers.
   {
@@ -202,6 +200,25 @@ DiffusionSolver_RegularQuad(const double tau)
     }
     assert( quad_weights_.size() == quad_weights_vec.size() );
     for (unsigned int i = 0; i < quad_weights_.size(); ++i)  quad_weights_[i] = quad_weights_vec[i];
+    
+    // Deal with trials in corners that is a vector (func) of vectors (corners).
+    vector< vector<double> > trials_in_corners1D_vec(trials_at_bdr1D.size());
+    for (unsigned int i = 0; i < trials_at_bdr1D.size(); ++i)
+    {
+      trials_in_corners1D_vec[i].resize(trials_at_bdr1D[i].size());
+      for (unsigned int j = 0; j < trials_at_quad1D[i].size(); ++j)
+        trials_in_corners1D_vec[i][j] = trials_at_bdr1D[i][j];
+    }
+    vector< vector<double> > trials_in_corners_vec = trials_in_corners1D_vec;
+    for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+      trials_in_corners_vec = double_dyadic_product(trials_in_corners_vec, trials_in_corners1D_vec);
+    assert( trials_in_corners_.size() == trials_in_corners_vec.size() );
+    for (unsigned int i = 0; i < trials_in_corners_.size(); ++i)
+    {
+      assert( trials_in_corners_[i].size() == trials_in_corners_vec[i].size() );
+      for (unsigned int j = 0; j < trials_quad_[i].size(); ++j)
+        trials_in_corners_[i][j] = trials_in_corners_vec[i][j];
+    }
     
     // Deal with trials at quadrature points that remain a vector (func) of vectors (quad).
     vector< vector<double> > trials_at_quad1D_vec(trials_at_quad1D.size());
@@ -268,9 +285,9 @@ DiffusionSolver_RegularQuad(const double tau)
     vector< vector< vector<double> > > trials_bound_vec(2 * hyperedge_dim);
     for (unsigned int side = 0; side < 2; ++side)
     {
-      vector< vector<double> > helperling(trials_bound_1D_.size());
+      vector< vector<double> > helperling(trials_at_bdr1D.size());
       for (unsigned int i = 0; i < helperling.size(); ++i)
-        helperling[i] = vector<double>(1, trials_bound_1D_[i][side]);
+        helperling[i] = vector<double>(1, trials_at_bdr1D[i][side]);
       for (unsigned int dim_face = 0; dim_face < hyperedge_dim; ++dim_face)
       {
         trials_bound_vec[2*dim_face+side] = trials_at_quad1D_vec;
@@ -531,20 +548,35 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyper
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+array<double, corners_amount(hyperedge_dim)>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-primal_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
-  return primal_at_boundary(solve_local_problem(lambda_values));
+  array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array<double, corners_amount(hyperedge_dim)> primal_in_corners;
+  primal_in_corners.fill(0.);
+  for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+    for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
+      primal_in_corners[corner] += coefficients[hyperedge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
+  return primal_in_corners;
 }
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+array< array<double, hyperedge_dim> , corners_amount(hyperedge_dim) >
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-flux_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
-  return dual_at_boundary(solve_local_problem(lambda_values));
+  array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array< array<double, hyperedge_dim> , corners_amount(hyperedge_dim) > dual_in_corners;
+  for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+  {
+    dual_in_corners[corner].fill(0.);
+    for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
+      for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+        dual_in_corners[corner][dim] += coefficients[dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
+  }
+  return dual_in_corners;
 }
 
 
