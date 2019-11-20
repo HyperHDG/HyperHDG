@@ -542,6 +542,15 @@ primal_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_b
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+flux_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+{
+  return dual_at_boundary(solve_local_problem(lambda_values));
+}
+
+
+template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array< array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));

@@ -49,6 +49,8 @@ class DiffusionSolver_RegularQuad
     DiffusionSolver_RegularQuad(const double tau);
     std::array< std::array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > 
       primal_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+    std::array< std::array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > 
+      flux_at_boundary_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
     std::array< std::array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
 };

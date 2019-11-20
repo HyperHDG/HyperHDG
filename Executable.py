@@ -64,4 +64,4 @@ else:
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
-print("Solution written to file in output directory")
+print("Solution written to file in output directory.")
