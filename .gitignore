@@ -7,6 +7,13 @@
 # Build directory created by Cython
 [Bb]uild/
 
+# Directory containing output of files
+[Oo]utput*/
+
+# Directory containing VTK to create vtk files for Paraview
+VTK*/
+[Vv]tk*/
+
 # TestProgram if created
 TestProgram
 prog
