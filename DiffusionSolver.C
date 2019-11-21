@@ -79,35 +79,12 @@ vector<double> dyadic_product(const vector<double>& left, const vector<double>& 
 }
 
 
-template<unsigned int left_size, unsigned int right_size>
-array<double, left_size * right_size> dyadic_product(const array<double, left_size> left, const array<double, right_size> right)
-{
-  array<double, left_size * right_size> result;
-  for (unsigned int i = 0; i < right_size; ++i)
-    for (unsigned int j = 0; j < left_size; ++j)
-      result[i * left_size + j] = left[j] * right[i];
-  return result;
-}
-
-
 vector< vector<double> > double_dyadic_product(const vector< vector<double> >& left, const vector< vector<double> >& right)
 {
   vector< vector<double> > result(left.size() * right.size());
   for (unsigned int i = 0; i < right.size(); ++i)
     for (unsigned int j = 0; j < left.size(); ++j)
       result[i * left.size() + j] = dyadic_product(left[j], right[i]);
-  return result;
-}
-
-
-template<unsigned int left_outer, unsigned int left_inner, unsigned int right_outer, unsigned int right_inner>
-array< array<double, left_inner * right_inner> , left_outer * right_outer >
-double_dyadic_product(const array< array<double, left_inner> , left_outer > left, const array< array<double, right_inner> , right_outer > right)
-{
-  array< array<double, left_inner * right_inner> , left_outer * right_outer > result;
-  for(unsigned int i = 0; i < right_outer; ++i)
-    for(unsigned int j = 0; j < left_outer; ++j)
-      result[i * left_outer + j] = dyadic_product(left[j], right[i]);
   return result;
 }
 
@@ -130,28 +107,6 @@ vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge_dim, c
   return result;
 }
 
-/*
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree>
-vector<double> get_relevant_coeffs_indicator(const unsigned int dimension, const unsigned int ansatz)
-{
-  array<double, max_poly_degree + 1> unity_vec, ansatz_vec;
-  unity_vec.fill(1.);
-  ansatz_vec.fill(0.);
-  assert( ansatz < ansatz_vec.size() );
-  ansatz_vec[ansatz] = 1;
-  
-  vector<double> result;
-  if( hyperedge_dim == 1 )  result = unity_vec;
-  else                      result = ansatz_vec;
-  
-  for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
-    if (dim == 1 && dimension == 0)  result = dyadic_product(unity_vec, result);
-    else if (dim == dimension)       result = dyadic_product(result, unity_vec);
-    else                             result = dyadic_product(result, ansatz_vec);
-  
-  return result;
-}
-*/
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::

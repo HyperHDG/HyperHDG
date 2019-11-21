@@ -12,7 +12,7 @@
 #include "DiffusionProblem.h"
 #include "Plotter.h"
 //#include <cmath>
-#include <iostream>
+//#include <iostream>
 #include <array>
 #include <cassert>
 
@@ -22,9 +22,9 @@ using namespace std;
 template class DiffusionProblemRegular<1,1,1>;
 template class DiffusionProblemRegular<1,2,1>;
 template class DiffusionProblemRegular<1,3,1>;
-// template class DiffusionProblemRegular<2,2,1>;
-// template class DiffusionProblemRegular<2,3,1>;
-// template class DiffusionProblemRegular<3,3,1>;
+template class DiffusionProblemRegular<2,2,1>;
+template class DiffusionProblemRegular<2,3,1>;
+template class DiffusionProblemRegular<3,3,1>;
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
@@ -33,7 +33,7 @@ DiffusionProblemRegular(vector<int> num_elements)
 : hyper_graph_(HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
   local_solver_(1.)
 {
-  cout << "Amount of HyperEdges = " << hyper_graph_.num_of_hyperedges() << endl;
+/*  cout << "Amount of HyperEdges = " << hyper_graph_.num_of_hyperedges() << endl;
   for(unsigned int i = 0; i < hyper_graph_.num_of_hyperedges(); ++i)
   {
     const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_.get_hyperedge(i);
@@ -41,7 +41,7 @@ DiffusionProblemRegular(vector<int> num_elements)
     cout << i << "   ";
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
     cout << endl;
-  }
+  }*/
 }
 
 

@@ -75,3 +75,13 @@ bool Point<space_dim>::operator!= (const Point<space_dim>& other_point) const
     if (coordinates_[dim] != other_point.coordinates_[dim])  return true;
   return false;
 }
+
+
+template<unsigned int space_dim>
+bool Point<space_dim>::operator<(const Point<space_dim>& other_point) const
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+    if (coordinates_[dim] < other_point.coordinates_[dim])      return true;
+    else if (coordinates_[dim] > other_point.coordinates_[dim]) return false;
+  return false;
+}
