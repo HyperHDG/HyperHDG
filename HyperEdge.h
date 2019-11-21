@@ -21,7 +21,7 @@ class HyperEdge_Cubic
 {
   private:
     std::array<hypernode_index_type, 2*hyperedge_dim> hypernode_indices_;
-    std::array<bool, 2*hyperedge_dim> correct_hypernode_orientation_;
+    std::array<unsigned int, 2*hyperedge_dim> correct_hypernode_orientation_;
   public:
     HyperEdge_Cubic(const hyperedge_index_type index, const std::array<unsigned int, space_dim>& num_elements);
     const std::array<hypernode_index_type, 2*hyperedge_dim>& get_hypernode_indices() const;
