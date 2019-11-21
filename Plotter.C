@@ -81,6 +81,7 @@ plot(vector<double> lambda)
   myfile << "      </Points>" << endl;
 	myfile << "      <Cells>" << endl;
 	myfile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << endl;
+  myfile << "        ";
   
 	for (point_index_type pt_number = 0; pt_number < num_of_points; ++pt_number)
     myfile << "  " << pt_number;
@@ -88,6 +89,7 @@ plot(vector<double> lambda)
   
   myfile << "        </DataArray>" << endl;
   myfile << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << endl;
+  myfile << "        ";
   
   for (point_index_type pt_number = points_per_hyperedge; pt_number <= num_of_points; pt_number += points_per_hyperedge)
     myfile << "  " << pt_number;
@@ -95,6 +97,7 @@ plot(vector<double> lambda)
   
   myfile << "        </DataArray>" << endl;
 	myfile << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << endl;
+  myfile << "        ";
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
     myfile << "  " << element_id;
@@ -104,11 +107,9 @@ plot(vector<double> lambda)
 	myfile << "      </Cells>" << endl;
   
   
-  myfile << "      <PointData Scalars=\"" << "example" << "\">" << endl;
-  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << endl;
-  
-  static_assert( hyperedge_dim == 1 );
-  
+  myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << endl;
+    
   array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
   array<double, corners_amount(hyperedge_dim)> local_primal;
@@ -120,9 +121,13 @@ plot(vector<double> lambda)
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_dual = local_solver_.dual_in_corners_from_lambda(hyperedge_dofs);
-    myfile << "        ";
-    for(unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
-      myfile << "  " << local_dual[corner][0];
+    myfile << "      ";
+    for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+    {
+      myfile << "  ";
+      for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+        myfile << "  " << local_dual[corner][dim];
+    }
     myfile << endl;
   }
 
@@ -137,7 +142,7 @@ plot(vector<double> lambda)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_primal = local_solver_.primal_in_corners_from_lambda(hyperedge_dofs);
     myfile << "        ";
-    for(unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+    for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
       myfile << "  " << local_primal[corner];
     myfile << endl;
   }
