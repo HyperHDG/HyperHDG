@@ -29,6 +29,7 @@ class Point
     point_coord_type& operator[](const unsigned int coord_entry);
     bool operator==(const Point<space_dim>& other_point) const;
     bool operator!=(const Point<space_dim>& other_point) const;
+    bool operator<(const Point<space_dim>& other_point) const;
 };
 /*
 template<unsigned int space_dim>

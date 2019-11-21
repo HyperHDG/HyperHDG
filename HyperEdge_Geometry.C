@@ -20,9 +20,9 @@ using namespace std;
 template class HyperEdge_Cubic_UnitCube<1,1>;
 template class HyperEdge_Cubic_UnitCube<1,2>;
 template class HyperEdge_Cubic_UnitCube<1,3>;
-// template class HyperEdge_Cubic_UnitCube<2,2>;
-// template class HyperEdge_Cubic_UnitCube<2,3>;
-// template class HyperEdge_Cubic_UnitCube<3,3>;
+template class HyperEdge_Cubic_UnitCube<2,2>;
+template class HyperEdge_Cubic_UnitCube<2,3>;
+template class HyperEdge_Cubic_UnitCube<3,3>;
 
 
 template<unsigned int space_dim>
@@ -214,9 +214,30 @@ template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
 HyperEdge_Cubic_UnitCube(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
 {
-  if constexpr ( hyperedge_dim == 1 )  points_ = line_to_points<space_dim>(num_elements, index);
-//  else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
-//  else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  if constexpr ( hyperedge_dim == 1 )
+  {
+    points_ = line_to_points<space_dim>(num_elements, index);
+  }
+  else if constexpr ( hyperedge_dim == 2 )
+  {
+    array<hypernode_index_type, 4> line_indices = square_to_line_index<space_dim>(num_elements, index);
+    array<Point<space_dim>, 2> points1 = line_to_points<space_dim>(num_elements, line_indices[0]);
+    array<Point<space_dim>, 2> points2 = line_to_points<space_dim>(num_elements, line_indices[1]);
+    points_[0] = points1[0];  points_[1] = points1[1];  points_[2] = points2[0];  points_[3] = points2[1];
+  }
+  else if constexpr ( hyperedge_dim == 3 )
+  {
+    array<hypernode_index_type, 6> square_indices = cube_to_square_index<space_dim>(num_elements, index);
+    array<hypernode_index_type, 4> line_indices1 = square_to_line_index<space_dim>(num_elements, square_indices[0]);
+    array<hypernode_index_type, 4> line_indices2 = square_to_line_index<space_dim>(num_elements, square_indices[1]);
+    array<Point<space_dim>, 2> points1 = line_to_points<space_dim>(num_elements, line_indices1[0]);
+    array<Point<space_dim>, 2> points2 = line_to_points<space_dim>(num_elements, line_indices1[1]);
+    array<Point<space_dim>, 2> points3 = line_to_points<space_dim>(num_elements, line_indices2[0]);
+    array<Point<space_dim>, 2> points4 = line_to_points<space_dim>(num_elements, line_indices2[1]);
+    points_[0] = points1[0];  points_[1] = points1[1];  points_[2] = points2[0];  points_[3] = points2[1];
+    points_[4] = points3[0];  points_[5] = points3[1];  points_[6] = points4[0];  points_[7] = points4[1];
+  }
+  sort(points_.begin(), points_.end());
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>

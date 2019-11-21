@@ -22,7 +22,6 @@ template class HyperGraph_Cubic< 2, 3 >;
 template class HyperGraph_Cubic< 3, 3 >;
 
 
-
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
 HyperGraph_Cubic(const array<unsigned int, space_dim>& num_elements)

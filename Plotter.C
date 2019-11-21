@@ -24,8 +24,9 @@ using namespace std;
 template class Plotter <1, 1, 1>;
 template class Plotter <1, 2, 1>;
 template class Plotter <1, 3, 1>;
-//template class Plotter <1, 2, 1>;
-
+template class Plotter <2, 2, 1>;
+template class Plotter <2, 3, 1>;
+template class Plotter <3, 3, 1>;
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
