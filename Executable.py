@@ -23,7 +23,7 @@ HDG_wrapper = PyDiffusionProblem([4,2,2])
 # vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
-vectorDirichlet[8] = 0. # Comment if checking for trivial solution.
+vectorDirichlet[len(vectorDirichlet)-1] = 0. # Comment if checking for trivial solution.
 
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be
