@@ -2,6 +2,9 @@
  *
  * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
  * It solves a PDE that is solely defined on a graph using the HDG method.
+ * 
+ * Note that at the moment, thy HyperNode Fyctory is restricted to Q_k^d elements (as is the rest of
+ * the current code)!
  *
  * ------------------------------------------------------------------------------------------------------
  *
@@ -16,11 +19,12 @@
 #include <array>
 #include <vector>
 
-// Naive implementation without math packages of "amount = (polynomial_degree) ^ (hyperedge_dim - 1)"!
-constexpr const unsigned int local_dof_amount_node(const unsigned int hyperedge_dim, const unsigned int polynomial_degree)
+// Naive implementation without math packages of "amount = solution_dim * (polynomial_degree ^ (hyperedge_dim - 1))"!
+constexpr const unsigned int local_dof_amount_node(const unsigned int hyperedge_dim, const unsigned int polynomial_degree, const unsigned int solution_dim = 1)
 {
   unsigned int amount = 1;
   for (unsigned int iteration = 0; iteration < hyperedge_dim - 1; ++ iteration)  amount *= polynomial_degree + 1;
+  amount *= solution_dim;
   return amount;
 }
 

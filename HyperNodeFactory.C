@@ -14,13 +14,27 @@
 using namespace std;
 
 
-template class HyperNodeFactory<local_dof_amount_node(1, 1)>;
-template class HyperNodeFactory<local_dof_amount_node(2, 1)>;
-template class HyperNodeFactory<local_dof_amount_node(2, 2)>;
-template class HyperNodeFactory<local_dof_amount_node(2, 3)>;
-// template class HyperNodeFactory<local_dof_amount_node(3, 1)>;
-template class HyperNodeFactory<local_dof_amount_node(3, 2)>;
-template class HyperNodeFactory<local_dof_amount_node(3, 3)>;
+template class HyperNodeFactory<local_dof_amount_node(1, 1, 1)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 1, 1)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 2, 1)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 3, 1)>;
+// template class HyperNodeFactory<local_dof_amount_node(3, 1, 1)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 2, 1)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 3, 1)>;
+// template class HyperNodeFactory<local_dof_amount_node(1, 1, 2)>;
+// template class HyperNodeFactory<local_dof_amount_node(2, 1, 2)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 2, 2)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 3, 2)>;
+// template class HyperNodeFactory<local_dof_amount_node(3, 1, 2)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 2, 2)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 3, 2)>;
+// template class HyperNodeFactory<local_dof_amount_node(1, 1, 3)>;
+// template class HyperNodeFactory<local_dof_amount_node(2, 1, 3)>;
+// template class HyperNodeFactory<local_dof_amount_node(2, 2, 3)>;
+template class HyperNodeFactory<local_dof_amount_node(2, 3, 3)>;
+// template class HyperNodeFactory<local_dof_amount_node(3, 1, 3)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 2, 3)>;
+template class HyperNodeFactory<local_dof_amount_node(3, 3, 3)>;
 
 
 template <unsigned int amount_of_local_dofs>
@@ -73,8 +87,8 @@ get_dof_values(const hypernode_index_type hypernode_index, const vector<dof_valu
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   
   array<dof_value_type, amount_of_local_dofs> local_dof_values;
-  for (unsigned int i = 0; i < amount_of_local_dofs; ++i)
-    local_dof_values[i] = global_dof_vector[initial_dof_index + i];
+  for (unsigned int index = 0; index < amount_of_local_dofs; ++index)
+    local_dof_values[index] = global_dof_vector[initial_dof_index + index];
   
   return local_dof_values;
 }
@@ -89,18 +103,18 @@ add_to_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_t
   assert( local_dof_vector.size() == amount_of_local_dofs );
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
   
-  for(dof_index_type index = 0; index < amount_of_local_dofs; ++index)
-    global_dof_vector[index + initial_dof_index] += local_dof_vector[index];
+  for(unsigned int index = 0; index < amount_of_local_dofs; ++index)
+    global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
 }
 
 
 template <unsigned int amount_of_local_dofs>
 void HyperNodeFactory<amount_of_local_dofs>::
 set_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_type>& global_dof_vector,
-               const double value) const
+               const dof_value_type value) const
 {
   dof_index_type initial_dof_index = hypernode_index * amount_of_local_dofs;
   assert( initial_dof_index + amount_of_local_dofs <= global_dof_vector.size() );
-  for(dof_index_type index = 0; index < amount_of_local_dofs; ++index)
-    global_dof_vector[index + initial_dof_index] = value;
+  for(unsigned int index = 0; index < amount_of_local_dofs; ++index)
+    global_dof_vector[initial_dof_index + index] = value;
 }
