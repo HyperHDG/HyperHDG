@@ -17,6 +17,15 @@
 #include "HyperGraph.h"
 #include "DiffusionSolver.h"
 
+/**
+ * \todo I do not see the point of having this as an object. A
+ * function template should do it. Or could we output several datasets
+ * on the same mesh?
+ *
+ * \todo It must be possible to give it a file handle or file name
+ *
+ * \todo The name should indicate VTU
+ */
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 class Plotter
 {
