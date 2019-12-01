@@ -15,6 +15,11 @@
 #include "HyperGraph.h"
 #include "DiffusionSolver.h"
 
+/**
+ * This is an example problem.
+ *
+ * \todo The loop in matrix_vector_multiply() only combines properties of HyperGraph with local solvers, right? Dirichlet boundary conditions? Post filtering!
+ */
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 class DiffusionProblemRegular
 {
