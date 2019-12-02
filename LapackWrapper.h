@@ -3,7 +3,7 @@
  * @brief	This file provides the function lapack_solve.
  * 
  * This is a wrapper file to provide LAPACK based functions that have the ability to solve (dense) local systems
- * of linear equations in an efficient way. The functions @c daxpy_ and @ dnrm2_ are needed to provide the three
+ * of linear equations in an efficient way. The functions @c daxpy_ and @c dnrm2_ are needed to provide the three
  * functions that solve local systems of equations. From these three functions, one is chosen to be used in the
  * remainder of the code (i.e., @c dgesv_ cf. LAPACK manual for further details).
  * 
