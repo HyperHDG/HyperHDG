@@ -1,13 +1,26 @@
-/* ------------------------------------------------------------------------------------------------------
- *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
- *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2019
- */
-
+/*!*************************************************************************************************************
+ * @brief	This is an example problem.
+ * 
+ * This class contains functions to define and solve Poisson's equation, i.e.,
+ * @f[
+ *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * @f]
+ * in a spatial domain @f$\Omega \subset \mathsf R^d@f$. Here, @f$d@f$ is the spatial dimension @c space_dim,
+ * @f$\Omega@f$ is a regular graph (@c hyperedge_dim = 1) or hypergraph whose hyperedges are surfaces (@c
+ * hyperedge_dim = 2) or volumes (@c hyperedge_dim = 3).
+ * 
+ * \todo	The loop in matrix_vector_multiply() only combines properties of HyperGraph with local solvers,
+ * 			right? Dirichlet boundary conditions? Post filtering!
+ * 
+ * @tparam	hyperedge_dim		Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for PDEs
+ * 								defined on surfaces, and 3 is for PDEs defined on volumes.
+ * @tparam	space_dim			The dimension of the space, the object is located in. This number should be
+ * 								larger than or equal to hyperedge_dim.
+ * @tparam	polynomial_degree	The polynomial degree of test and trial functions.
+ * 
+ * @authors	Guido Kanschat, University of Heidelberg, 2019.
+ * @authors	Andreas Rupp, University of Heidelberg, 2019.
+ **************************************************************************************************************/
 
 #ifndef DIFFUSIONPROBLEM_H
 #define DIFFUSIONPROBLEM_H
@@ -15,11 +28,6 @@
 #include "HyperGraph.h"
 #include "DiffusionSolver.h"
 
-/**
- * This is an example problem.
- *
- * \todo The loop in matrix_vector_multiply() only combines properties of HyperGraph with local solvers, right? Dirichlet boundary conditions? Post filtering!
- */
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 class DiffusionProblemRegular
 {
