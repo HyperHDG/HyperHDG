@@ -43,7 +43,7 @@ class DiffusionSolver_RegularQuad
     std::array< std::array<double, corners_amount(hyperedge_dim)> , max_poly_degree + 1 > trials_in_corners_;
     std::array< std::array< std::array<double, num_of_quad_> , num_ansatz_fct_ > , hyperedge_dim > derivs_quad_;
     std::array< std::array< std::array<double, num_quad_bdr_> , num_ansatz_fct_ > , 2 * hyperedge_dim > trials_bound_;
-    
+     
     unsigned int loc_matrix_index(const unsigned int row, const unsigned int column) const;
     auto assemble_loc_mat() const; // std::array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>
     auto assemble_rhs(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array<double, (hyperedge_dim+1) * num_ansatz_fct_>
