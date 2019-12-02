@@ -5,7 +5,7 @@
  * @f[
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
  * @f]
- * in a spatial domain @f$\Omega \subset \mathsf R^d@f$. Here, @f$d@f$ is the spatial dimension @c space_dim,
+ * in a spatial domain @f$\Omega \subset \mathbb R^d@f$. Here, @f$d@f$ is the spatial dimension @c space_dim,
  * @f$\Omega@f$ is a regular graph (@c hyperedge_dim = 1) or hypergraph whose hyperedges are surfaces (@c
  * hyperedge_dim = 2) or volumes (@c hyperedge_dim = 3).
  * 
@@ -45,7 +45,7 @@ class DiffusionProblemRegular
 	 * Constructor for class containing a HyperGraph and a DiffusionSolver that solve a diffusion problem on a
 	 * regular mesh.
 	 * 
-	 * @param 	num_elements A std::vector containing the amount of mesh elements per spatial dimension.
+	 * @param 	num_elements A @c std::vector containing the amount of mesh elements per spatial dimension.
 	 **********************************************************************************************************/
     DiffusionProblemRegular(std::vector<int> num_elements);
     /*!*********************************************************************************************************
@@ -59,7 +59,7 @@ class DiffusionProblemRegular
 	 * this function) and defines the Dirichlet values by this choice. The remaining elements of the global
 	 * vector of unknowns (which is @b not the vector @c indices are supposed to be zero).
 	 * 
-	 * @param 	indices	A std::vector containing the (global) indices of Dirichlet type hypernodes/faces.
+	 * @param 	indices	A @c std::vector containing the (global) indices of Dirichlet type hypernodes/faces.
 	 **********************************************************************************************************/
     void read_dirichlet_indices(std::vector<int> indices);
     /*!*********************************************************************************************************
