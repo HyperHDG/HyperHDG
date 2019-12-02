@@ -13,7 +13,6 @@ from scipy.sparse.linalg import LinearOperator
 # Import C++ wrapper class to use HDG method on graphs.
 from ClassWrapper import PyDiffusionProblem
 
-
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDiffusionProblem([4,2,2])
 
