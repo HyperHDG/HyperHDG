@@ -20,17 +20,15 @@ LINKERPOSTFLAGS = -llapack
 
 PYTHON      = python3
 PYTHON_M    = /usr/include/python3.6m
-PYTHONCOMP  = PythonCompileLess
+CYTHONIZE		= cythonize
+CYTHONFLAGS	= -3
 
-# This function finds all %.C files in src/ and subdirectories in $(MODULES)
-# and lists them as compilation sources.
+
+
+
+
 SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.C))
-# SOURCES       := $(foreach src_dir, $(SRC_DIR), $(wildcard $(src_dir)/*.C))
 OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
-# OBJECTS       := $(SOURCES:src/%.C=$(OBJECT_DIR)/%.o)
-# DEPENDENCIES  := $(SOURCES:src/%.C=build/%.d)
-
-
 
 
 
@@ -47,9 +45,7 @@ $(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd2
 	rm -rf $(CYTHON_DIR)/*
 	cp $(SRC_DIR)/$(CYTHON_FILE).pyx $(CYTHON_DIR)/$(CYTHON_FILE).pyx
 	cp $(SRC_DIR)/$(CYTHON_FILE).pxd2 $(CYTHON_DIR)/$(CYTHON_FILE).pxd
-	cp $(SRC_DIR)/$(PYTHONCOMP).py $(CYTHON_DIR)/$(PYTHONCOMP).py
-	cd $(CYTHON_DIR); $(PYTHON) $(PYTHONCOMP).py build_ext --inplace
-	cd $(CYTHON_DIR); rm *.so; rm -r build
+	cd $(CYTHON_DIR); $(CYTHONIZE) $(CYTHONFLAGS) $(CYTHON_FILE).pyx
 	cd $(CYTHON_DIR); $(COMPILER) $(BASICFLAGS) -c $(CYTHON_FILE).cpp -o $(CYTHON_FILE).o
 
 cython_cpp: $(CYTHON_DIR)/$(CYTHON_FILE).o
@@ -68,5 +64,13 @@ elegant:
 doxygen:
 	cd doxygen; doxygen Doxyfile
 
+clean:
+	rm -rf build $(CYTHON_FILE).c*
+
+new:
+	make clean
+	make elegant
+
 run:
+	make elegant
 	PYTHONPATH=build python3 Executable.py
