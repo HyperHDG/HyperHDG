@@ -35,38 +35,38 @@ OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
 
 
 default:
-  mkdir -p output
-  ./setup.sh
+	mkdir -p output
+	./setup.sh
 
 $(OBJECT_DIR)/%.o: $(SRC_DIR)/%.C
-  $(COMPILER) $(BASICFLAGS) -c $^ -o $@
+	$(COMPILER) $(BASICFLAGS) -c $^ -o $@
 
 object_files: $(OBJECTS)
 
 $(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd2
-  rm -rf $(CYTHON_DIR)/*
-  cp $(SRC_DIR)/$(CYTHON_FILE).pyx $(CYTHON_DIR)/$(CYTHON_FILE).pyx
-  cp $(SRC_DIR)/$(CYTHON_FILE).pxd2 $(CYTHON_DIR)/$(CYTHON_FILE).pxd
-  cp $(SRC_DIR)/$(PYTHONCOMP).py $(CYTHON_DIR)/$(PYTHONCOMP).py
-  cd $(CYTHON_DIR); $(PYTHON) $(PYTHONCOMP).py build_ext --inplace
-  cd $(CYTHON_DIR); rm *.so; rm -r build
-  cd $(CYTHON_DIR); $(COMPILER) $(BASICFLAGS) -c $(CYTHON_FILE).cpp -o $(CYTHON_FILE).o
+	rm -rf $(CYTHON_DIR)/*
+	cp $(SRC_DIR)/$(CYTHON_FILE).pyx $(CYTHON_DIR)/$(CYTHON_FILE).pyx
+	cp $(SRC_DIR)/$(CYTHON_FILE).pxd2 $(CYTHON_DIR)/$(CYTHON_FILE).pxd
+	cp $(SRC_DIR)/$(PYTHONCOMP).py $(CYTHON_DIR)/$(PYTHONCOMP).py
+	cd $(CYTHON_DIR); $(PYTHON) $(PYTHONCOMP).py build_ext --inplace
+	cd $(CYTHON_DIR); rm *.so; rm -r build
+	cd $(CYTHON_DIR); $(COMPILER) $(BASICFLAGS) -c $(CYTHON_FILE).cpp -o $(CYTHON_FILE).o
 
 cython_cpp: $(CYTHON_DIR)/$(CYTHON_FILE).o
 
 $(BUILD_DIR)/%.so: $(OBJECT_DIR)/*.o $(CYTHON_DIR)/*.o
-  $(LINKER) $(LINKERPREFLAGS) $^ -o $@ $(LINKERPOSTFLAGS)
+	$(LINKER) $(LINKERPREFLAGS) $^ -o $@ $(LINKERPOSTFLAGS)
 
 linking: $(BUILD_DIR)/$(CYTHON_FILE).so
 
 elegant:
-  mkdir -p output $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR)
-  make object_files
-  make cython_cpp
-  make linking
+	mkdir -p output $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR)
+	make object_files
+	make cython_cpp
+	make linking
 
 doxygen:
-  cd doxygen; doxygen Doxyfile
+	cd doxygen; doxygen Doxyfile
 
 run:
-   PYTHONPATH=build python3 Executable.py
+	PYTHONPATH=build python3 Executable.py
