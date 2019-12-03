@@ -18,7 +18,7 @@ LINKERPREFLAGS  = -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbol
                   -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2
 LINKERPOSTFLAGS = -llapack
 
-PYTHON      = python3
+PYTHON      = python3m
 PYTHON_M    = /usr/include/python3.6m
 CYTHONIZE		= cythonize
 CYTHONFLAGS	= -3
@@ -73,4 +73,4 @@ new:
 
 run:
 	make elegant
-	PYTHONPATH=build python3 Executable.py
+	PYTHONPATH=build $(PYTHON) Executable.py
