@@ -12,7 +12,7 @@ from Cython.Distutils import build_ext
 # clean previous build
 for root, dirs, files in os.walk(".", topdown=False):
     for name in files:
-        if (name.startswith("ClassWrapper") and not(name.endswith(".pyx") or name.endswith(".pxd"))):
+        if (name.startswith("ClassWrapper") and not(name.endswith(".pyx") or name.endswith(".pxd") or name.endswith(".pxd2"))):
             os.remove(os.path.join(root, name))
     for name in dirs:
         if (name == "build"):
