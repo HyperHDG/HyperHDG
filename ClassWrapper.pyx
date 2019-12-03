@@ -1,3 +1,5 @@
+# distutils: language=c++
+
 cdef class PyDiffusionProblem:
   cdef DiffusionProblem *thisptr      # hold a C++ instance which we're wrapping
   def __cinit__(self, num_elements):
