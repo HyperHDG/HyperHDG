@@ -1,5 +1,6 @@
 PROJECT     	= HDGonHYPERGRAPHS
-.PHONY:       	default clean doxygen new run with_setup object_files cython_cpp linking
+.PHONY:       	default clean doxygen new run with_PythonCompileOptions object_files cython_cpp \
+								linking
 
 SRC_DIR     	= .
 BUILD_DIR   	= build
@@ -48,9 +49,9 @@ run:
 	make
 	PYTHONPATH=build $(PYTHON) Executable.py
 
-with_setup:
+with_PythonCompileOptions:
 	mkdir -p output
-	./setup.sh
+	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
 
 object_files: $(OBJECTS)
