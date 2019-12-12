@@ -61,6 +61,7 @@ class HyperGraph
 
   // Why is this public? Why not get_hypernode()?
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
+    const value_type operator[] (const hyperedge_index_type index) const;
     const typename Topology::value_type get_hyperedge(const hyperedge_index_type index) const;
     const typename Geometry::value_type get_hyperedge_geometry(const hyperedge_index_type index) const;
     
