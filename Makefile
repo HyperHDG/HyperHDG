@@ -1,12 +1,16 @@
 PROJECT     	= HDGonHYPERGRAPHS
-.PHONY:       	default clean doxygen new run with_PythonCompileOptions object_files cython_cpp \
-								linking
+.PHONY:       	default clean distclean doxygen new run with_PythonCompileOptions object_files \
+								cython_cpp linking
 
 SRC_DIR     	= .
+OUTPUT_DIR		= output
 BUILD_DIR   	= build
+DOXY_FILE_DIR	= doxygen
+
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
 CYTHON_FILE 	= ClassWrapper
+DOXY_DIR			= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
 
 COMPILER    	= g++
 BASICFLAGS  	= -pthread -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat \
@@ -30,16 +34,20 @@ OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
 
 
 default:
-	mkdir -p output $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR)
+	mkdir -p $(OUTPUT_DIR) $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR)
 	make object_files
 	make cython_cpp
 	make linking
 
 clean:
-	rm -rf build $(CYTHON_FILE).c*
+	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR)
+
+distclean:
+	make clean
+	rm -rf $(OUTPUT_DIR)
 
 doxygen:
-	cd doxygen; doxygen Doxyfile
+	cd $(DOXY_FILE_DIR); doxygen Doxyfile
 
 new:
 	make clean
@@ -47,10 +55,10 @@ new:
 
 run:
 	make
-	PYTHONPATH=build $(PYTHON) Executable.py
+	PYTHONPATH=$(BUILD_DIR) $(PYTHON) Executable.py
 
 with_PythonCompileOptions:
-	mkdir -p output
+	mkdir -p $(OUTPUT_DIR)
 	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
 
