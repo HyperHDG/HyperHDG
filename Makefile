@@ -21,8 +21,8 @@ LINKERPOSTFLAGS = -llapack
 
 PYTHON      	= python3m
 PYTHON_M    	= /usr/include/python3.6m
-CYTHONIZE			= cythonize
-CYTHONFLAGS		= -3
+CYTHONIZE			= cython
+CYTHONFLAGS		= -3 --cplus
 
 
 SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.C))
