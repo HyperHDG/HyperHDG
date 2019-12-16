@@ -12,6 +12,7 @@
 #include <cassert>
 
 using namespace std;
+using namespace Geometry;
 
 
 template class HyperGraph_Cubic_UnitCube< 1, 1 >;

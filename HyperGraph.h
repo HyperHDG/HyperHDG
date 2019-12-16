@@ -39,7 +39,7 @@
  * method applied. The Geometry class may use degrees of freedom of
  * the nodes as well.
  */
-template < unsigned int amount_of_local_dofs, class Topo, class Geometry >
+template < unsigned int amount_of_local_dofs, class Topo, class Geom >
 class HyperGraph
 {
   /**
@@ -48,13 +48,13 @@ class HyperGraph
   typedef struct HyperEdge
   {
     typename Topo::value_type topology;
-    typename Geometry::value_type geometry;
+    typename Geom::value_type geometry;
   } value_type;
   
   private:
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory_;
     const Topo hyperedge_getter_;
-    const Geometry hyperedge_geometry_;
+    const Geom hyperedge_geometry_;
   
   public:
     HyperGraph(const Topo& hyperedge_getter);
@@ -63,7 +63,7 @@ class HyperGraph
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
     const value_type operator[] (const hyperedge_index_type index) const;
     const typename Topo::value_type get_hyperedge(const hyperedge_index_type index) const;
-    const typename Geometry::value_type get_hyperedge_geometry(const hyperedge_index_type index) const;
+    const typename Geom::value_type get_hyperedge_geometry(const hyperedge_index_type index) const;
     
     const hypernode_index_type num_of_hypernodes() const;
     const hyperedge_index_type num_of_hyperedges() const;
