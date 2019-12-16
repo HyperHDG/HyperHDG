@@ -39,7 +39,7 @@
  * method applied. The Geometry class may use degrees of freedom of
  * the nodes as well.
  */
-template < unsigned int amount_of_local_dofs, class Topo, class Geom >
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
 class HDGHyperGraph
 {
   /**
@@ -47,26 +47,34 @@ class HDGHyperGraph
    */
   typedef struct HyperEdge
   {
-    typename Topo::value_type topology;
-    typename Geom::value_type geometry;
+    typename TopoT::value_type topology;
+    typename GeomT::value_type geometry;
+    HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
+      : topology(topo), geometry(geom) {};
   } value_type;
-  
+/*  
+  class iterator
+  {
+    iterator
+    
+  };
+*/  
   private:
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory_;
-    const Topo hyperedge_getter_;
-    const Geom hyperedge_geometry_;
+    const TopoT hypergraph_topology_;
+    const GeomT hypergraph_geometry_;
   
   public:
-    HDGHyperGraph(const Topo& hyperedge_getter);
-
-  // Why is this public? Why not get_hypernode()?
-    const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
+    HDGHyperGraph(const TopoT& hyperedge_getter);
     const value_type operator[] (const hyperedge_index_type index) const;
-    const typename Topo::value_type get_hyperedge(const hyperedge_index_type index) const;
-    const typename Geom::value_type get_hyperedge_geometry(const hyperedge_index_type index) const;
     
-    const hypernode_index_type num_of_hypernodes() const;
+    // Why is this public? Why not get_hypernode()?
+    const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
+    const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const;
+    const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const;
+    
     const hyperedge_index_type num_of_hyperedges() const;
+    const hypernode_index_type num_of_hypernodes() const;
     const dof_index_type num_of_global_dofs() const;
 };
 

@@ -32,66 +32,75 @@ template class HDGHyperGraph < local_dof_amount_node(3 , 2), Topology::HyperGrap
 template class HDGHyperGraph < local_dof_amount_node(3 , 3), Topology::HyperGraph_Cubic< 3, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 3, 3 > >;
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
-HDGHyperGraph(const Topology& hyperedge_getter)
-: hypernode_factory_(hyperedge_getter.num_of_hypernodes()), hyperedge_getter_(hyperedge_getter),
-  hyperedge_geometry_(hyperedge_getter)
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+HDGHyperGraph(const TopoT& hypergraph_topology)
+: hypernode_factory_(hypergraph_topology.num_of_hypernodes()), hypergraph_topology_(hypergraph_topology),
+  hypergraph_geometry_(hypergraph_topology)
 {
-  assert( hypernode_factory_.num_of_hypernodes() == hyperedge_getter.num_of_hypernodes() );
+  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
   assert( hypernode_factory_.num_of_hypernodes() >= 2 );
-  assert( hyperedge_getter.num_of_hyperedges() != 0 );
+  assert( hypergraph_topology.num_of_hyperedges() != 0 );
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+const typename HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::value_type
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+operator[](const hyperedge_index_type index) const
+{
+  return value_type(hyperedge_topology(index), hyperedge_geometry(index)); 
+}
+
+
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
 const HyperNodeFactory<amount_of_local_dofs>
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
 hypernode_factory() const
 {
   return hypernode_factory_;
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
-const typename Topology::value_type
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
-get_hyperedge(const hyperedge_index_type index) const
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+const typename TopoT::value_type
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+hyperedge_topology(const hyperedge_index_type index) const
 {
-  return hyperedge_getter_.get_hyperedge(index);
+  return hypergraph_topology_.get_hyperedge(index);
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
-const typename Geometry::value_type 
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
-get_hyperedge_geometry(const hyperedge_index_type index) const
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+const typename GeomT::value_type 
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+hyperedge_geometry(const hyperedge_index_type index) const
 {
-  return hyperedge_geometry_.get_hyperedge(index);
+  return hypergraph_geometry_.get_hyperedge(index);
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+const hyperedge_index_type
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+num_of_hyperedges() const
+{
+  return hypergraph_topology_.num_of_hyperedges();
+}
+
+
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
 const hypernode_index_type
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
 num_of_hypernodes() const
 {
   return hypernode_factory_.num_of_hypernodes();
 }
 
 
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
-const hyperedge_index_type
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
-num_of_hyperedges() const
-{
-  return hyperedge_getter_.num_of_hyperedges();
-}
-
-
-template < unsigned int amount_of_local_dofs, class Topology, class Geometry >
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
 const dof_index_type 
-HDGHyperGraph< amount_of_local_dofs, Topology, Geometry >::
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
 num_of_global_dofs() const
 {
   return hypernode_factory_.num_of_global_dofs();

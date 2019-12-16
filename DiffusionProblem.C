@@ -36,7 +36,7 @@ DiffusionProblemRegular(vector<int> num_elements)
 /*  cout << "Amount of HyperEdges = " << hyper_graph_.num_of_hyperedges() << endl;
   for(unsigned int i = 0; i < hyper_graph_.num_of_hyperedges(); ++i)
   {
-    const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_.get_hyperedge(i);
+    const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_.hyperedge_topology(i);
     const array<hypernode_index_type, 2*hyperedge_dim> indices = hyperedge.get_hypernode_indices();
     cout << i << "   ";
     for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
@@ -76,7 +76,7 @@ matrix_vector_multiply(vector<double> x_vec)
   
   for (unsigned int hyperedge = 0; hyperedge < hyper_graph_.num_of_hyperedges(); ++hyperedge)
   {
-    hyperedge_hypernodes = hyper_graph_.get_hyperedge(hyperedge).get_hypernode_indices();
+    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(hyperedge).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
     local_result = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);

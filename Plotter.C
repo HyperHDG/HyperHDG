@@ -65,7 +65,7 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = hyper_graph_.get_hyperedge_geometry(he_number);
+    HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = hyper_graph_.hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
     {
       myfile << "        ";
@@ -118,7 +118,7 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = hyper_graph_.get_hyperedge(he_number).get_hypernode_indices();
+    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_dual = local_solver_.dual_in_corners_from_lambda(hyperedge_dofs);
@@ -138,7 +138,7 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = hyper_graph_.get_hyperedge(he_number).get_hypernode_indices();
+    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_primal = local_solver_.primal_in_corners_from_lambda(hyperedge_dofs);
