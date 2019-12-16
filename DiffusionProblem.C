@@ -30,7 +30,7 @@ template class DiffusionProblemRegular<3,3,1>;
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree>::
 DiffusionProblemRegular(vector<int> num_elements)
-: hyper_graph_(HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
+: hyper_graph_(Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
   local_solver_(1.)
 {
 /*  cout << "Amount of HyperEdges = " << hyper_graph_.num_of_hyperedges() << endl;

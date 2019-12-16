@@ -31,7 +31,7 @@ template class Plotter <3, 3, 1>;
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 Plotter<hyperedge_dim,space_dim,polynomial_degree>::
-Plotter(HyperGraph< local_dof_amount_node(hyperedge_dim, polynomial_degree), HyperGraph_Cubic< hyperedge_dim, space_dim >, HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
+Plotter(HyperGraph< local_dof_amount_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
         DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver)
 : hyper_graph_(hyper_graph), local_solver_(local_solver) { }
 

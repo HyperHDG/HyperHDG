@@ -12,6 +12,7 @@
 #include <cassert>
 
 using namespace std;
+using namespace Topology;
 
 
 template class HyperGraph_Cubic< 1, 1 >;

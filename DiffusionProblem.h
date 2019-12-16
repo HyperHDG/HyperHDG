@@ -34,7 +34,7 @@ class DiffusionProblemRegular
 {
   private:
     HyperGraph < local_dof_amount_node(hyperedge_dim, polynomial_degree),
-                 HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                 Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                  HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >
                hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;

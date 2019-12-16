@@ -27,7 +27,7 @@ class HyperGraph_Cubic_UnitCube
 //    hypernode_index_type num_of_hypernodes_;
   public:
     typedef HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> value_type;
-    HyperGraph_Cubic_UnitCube(const HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
+    HyperGraph_Cubic_UnitCube(const Topology::HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
     
     const HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> get_hyperedge(const hyperedge_index_type index) const;
     
