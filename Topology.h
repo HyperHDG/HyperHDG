@@ -1,3 +1,29 @@
+#ifndef TOPOLOGY_H
+#define TOPOLOGY_H
+
+#include "TypeDefs.h"
+#include "HyperEdge.h"
+#include <array>
+#include <vector>
+
+/*!*************************************************************************************************
+ * @brief   A namespace containing different classes describing hypergraph topologies.
+ *
+ * One of the advantages of this software package is the strict discrimination between the topology
+ * and the geometry of the domain @f$\Omega@f$. Thus, one can exemplarily define a single topology
+ * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
+ * sphere, since their topology is the same. However, different geometries have to be defined, since
+ * these obviously are not equal. Thus, all parts of the code that involve communication and/or
+ * solving systems of equations are reusable in a much more general (than the standard) sense.
+ * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
+ * periodic domains, for example.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2019.
+ * @authors   Andreas Rupp, University of Heidelberg, 2019.
+ **************************************************************************************************/
+namespace Topology
+{
+
 /*!*************************************************************************************************
  * @brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs.
  *
@@ -18,18 +44,6 @@
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
-
-#ifndef TOPOLOGY_H
-#define TOPOLOGY_H
-
-#include "TypeDefs.h"
-#include "HyperEdge.h"
-#include <array>
-#include <vector>
-
-namespace Topology
-{
-
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperGraph_Cubic
 {
@@ -128,7 +142,8 @@ class HyperGraph_Cubic
      * @retval  num__hypernodes The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
     const hypernode_index_type num_of_hypernodes() const;
-};
+}; // end of class HyperGraph_Cubic
 
-}
-#endif
+} // end of namespace Topology
+
+#endif // end of ifndef TOPOLOGY_H
