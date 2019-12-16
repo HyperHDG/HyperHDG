@@ -40,7 +40,7 @@
  * the nodes as well.
  */
 template < unsigned int amount_of_local_dofs, class Topo, class Geom >
-class HyperGraph
+class HDGHyperGraph
 {
   /**
    * The type for a hyperedge returned by operator[].
@@ -57,7 +57,7 @@ class HyperGraph
     const Geom hyperedge_geometry_;
   
   public:
-    HyperGraph(const Topo& hyperedge_getter);
+    HDGHyperGraph(const Topo& hyperedge_getter);
 
   // Why is this public? Why not get_hypernode()?
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
