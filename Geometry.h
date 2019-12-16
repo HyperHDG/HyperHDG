@@ -17,22 +17,21 @@
 #include "Topology.h"
 #include <array>
 
+namespace Geometry
+{
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperGraph_Cubic_UnitCube
 {
   private:
     std::array<unsigned int, space_dim> num_elements_;
-//    point_index_type num_of_vertices_;
-//    hypernode_index_type num_of_hypernodes_;
   public:
     typedef HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> value_type;
     HyperGraph_Cubic_UnitCube(const Topology::HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
     
     const HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> get_hyperedge(const hyperedge_index_type index) const;
-    
-//    const hyperedge_index_type num_of_hyperedges() const;
-//    const point_index_type num_of_vertices() const;
-};
+}; // end class HyperGraph_Cubic_UnitCube
 
-#endif
+} // end namespace Geometry
+
+#endif // end ifndef GEOMETRY_H
