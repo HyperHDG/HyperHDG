@@ -27,6 +27,9 @@
 #include <array>
 #include <vector>
 
+namespace Topology
+{
+
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperGraph_Cubic
 {
@@ -127,4 +130,5 @@ class HyperGraph_Cubic
     const hypernode_index_type num_of_hypernodes() const;
 };
 
+}
 #endif
