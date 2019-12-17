@@ -13,6 +13,7 @@
 #include "Plotter.h"
 //#include <cmath>
 //#include <iostream>
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -73,7 +74,7 @@ matrix_vector_multiply(vector<double> x_vec)
   vector<double> vec_Ax(x_vec.size(), 0.);
   array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
-  
+/*  
   for (unsigned int hyperedge = 0; hyperedge < hyper_graph_.num_of_hyperedges(); ++hyperedge)
   {
     hyperedge_hypernodes = hyper_graph_.hyperedge_topology(hyperedge).get_hypernode_indices();
@@ -83,6 +84,16 @@ matrix_vector_multiply(vector<double> x_vec)
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyper_graph_.hypernode_factory().add_to_dof_values(hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
   }
+*/
+  for_each( hyper_graph_.begin(), hyper_graph_.end(), [&](const auto hyperedge)
+  {
+    hyperedge_hypernodes = hyperedge.topology.get_hypernode_indices();
+    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
+    local_result = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
+    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+      hyper_graph_.hypernode_factory().add_to_dof_values(hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
+  });
   
   for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i) 
     hyper_graph_.hypernode_factory().set_dof_values(dirichlet_indices_[i], vec_Ax, 0.);
