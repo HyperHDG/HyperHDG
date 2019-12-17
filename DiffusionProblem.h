@@ -11,6 +11,8 @@
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
+ *        -> I believe that we have to discuss, how to do this best. Note that the .C file now
+ *        contains a for_each loop (cf. HDGHyperGraph.h)!
  *
  * @tparam  hyperedge_dim       Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2
  *                              is for PDEs defined on surfaces, and 3 is for PDEs defined on

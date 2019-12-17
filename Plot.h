@@ -21,10 +21,17 @@
  * \todo I do not see the point of having this as an object. A
  * function template should do it. Or could we output several datasets
  * on the same mesh?
+ * -> This has been changed and a PlotOptions class has been introduced,
+ * where the output type could be configured. This can still be extended.
  *
  * \todo It must be possible to give it a file handle or file name
+ * -> This is now possible. One can give a directory and a file name.
  *
  * \todo The name should indicate VTU
+ * -> This has not been implemented directly, but the PlotOptions class
+ * contains a flag discriminating which plot_vtu, ... function should be
+ * chosen in the .C file. However, at the moment only vtu output is
+ * possible.
  */
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
