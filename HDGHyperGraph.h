@@ -39,7 +39,7 @@
  * method applied. The Geometry class may use degrees of freedom of
  * the nodes as well.
  */
-template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 class HDGHyperGraph
 {
   /**
@@ -82,7 +82,7 @@ class HDGHyperGraph
   };
   
   private:
-    const HyperNodeFactory<amount_of_local_dofs> hypernode_factory_;
+    const HyperNodeFactory<n_dofs_per_node> hypernode_factory_;
     const TopoT hypergraph_topology_;
     const GeomT hypergraph_geometry_;
   
@@ -90,11 +90,11 @@ class HDGHyperGraph
     HDGHyperGraph(const TopoT& hyperedge_getter);
     const value_type operator[] (const hyperedge_index_type index) const;
     
-    typename HDGHyperGraph<amount_of_local_dofs, TopoT, GeomT >::iterator begin() const;
-    typename HDGHyperGraph<amount_of_local_dofs, TopoT, GeomT >::iterator end() const;
+    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const;
+    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const;
     
     // Why is this public? Why not get_hypernode()?
-    const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
+    const HyperNodeFactory<n_dofs_per_node> hypernode_factory() const; // AR: No reference for performance?!
     const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const;
     const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const;
     

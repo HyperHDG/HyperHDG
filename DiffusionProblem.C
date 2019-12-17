@@ -72,7 +72,7 @@ vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree
 matrix_vector_multiply(vector<double> x_vec)
 {
   vector<double> vec_Ax(x_vec.size(), 0.);
-  array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
+  array< array<double, compute_n_dofs_per_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
 /*  
   for (unsigned int hyperedge = 0; hyperedge < hyper_graph_.num_of_hyperedges(); ++hyperedge)

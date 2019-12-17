@@ -30,13 +30,13 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polyn
 class Plotter
 {
   private:
-    HDGHyperGraph < local_dof_amount_node(hyperedge_dim, polynomial_degree),
+    HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, polynomial_degree),
                     Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                     Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
                   hyper_graph_;
     DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver_;
   public:
-    Plotter(HDGHyperGraph< local_dof_amount_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
+    Plotter(HDGHyperGraph< compute_n_dofs_per_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
             DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver);
     void plot(std::vector<double> lambda);
 };

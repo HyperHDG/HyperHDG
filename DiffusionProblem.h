@@ -33,7 +33,7 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polyn
 class DiffusionProblemRegular
 {
   private:
-    HDGHyperGraph < local_dof_amount_node(hyperedge_dim, polynomial_degree),
+    HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, polynomial_degree),
                     Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                     Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >
                   hyper_graph_;

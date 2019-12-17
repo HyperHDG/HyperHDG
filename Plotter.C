@@ -31,7 +31,7 @@ template class Plotter <3, 3, 1>;
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
 Plotter<hyperedge_dim,space_dim,polynomial_degree>::
-Plotter(HDGHyperGraph< local_dof_amount_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
+Plotter(HDGHyperGraph< compute_n_dofs_per_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
         DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver)
 : hyper_graph_(hyper_graph), local_solver_(local_solver) { }
 
@@ -111,10 +111,10 @@ plot(vector<double> lambda)
   myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << endl;
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << endl;
     
-  array< array<double, local_dof_amount_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > hyperedge_dofs;
+  array< array<double, compute_n_dofs_per_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
-  array<double, corners_amount(hyperedge_dim)> local_primal;
-  array< array<double, hyperedge_dim> , corners_amount(hyperedge_dim) > local_dual;
+  array<double, compute_n_corners_of_cube(hyperedge_dim)> local_primal;
+  array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > local_dual;
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
@@ -123,7 +123,7 @@ plot(vector<double> lambda)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_dual = local_solver_.dual_in_corners_from_lambda(hyperedge_dofs);
     myfile << "      ";
-    for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
     {
       myfile << "  ";
       for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
@@ -143,7 +143,7 @@ plot(vector<double> lambda)
       hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_primal = local_solver_.primal_in_corners_from_lambda(hyperedge_dofs);
     myfile << "        ";
-    for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
       myfile << "  " << local_primal[corner];
     myfile << endl;
   }
