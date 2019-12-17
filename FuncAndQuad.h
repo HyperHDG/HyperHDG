@@ -18,7 +18,7 @@
 
 // Naive implementation finding the minimal amount of quadrature points to exactly integrate a polynomial of degree at most
 // polynomial_degree in hyperedge_dim dimensions
-constexpr const unsigned int quadrature_points_amount(const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
+constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
 {
   unsigned int amount = 1, amount1D = 1;
   for ( ; 2 * amount1D - 1 < max_quad_degree; ++amount1D ) ;
@@ -33,19 +33,19 @@ double deriv_of_trial_eval(const unsigned int index, const double x_value);
 
 
 template<unsigned int max_quad_degree>
-std::array<double, quadrature_points_amount(max_quad_degree)>
+std::array<double, compute_n_quad_points(max_quad_degree)>
 quadrature_points();
 
 template<unsigned int max_quad_degree>
-std::array<double, quadrature_points_amount(max_quad_degree)>
+std::array<double, compute_n_quad_points(max_quad_degree)>
 quadrature_weights();
 
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-std::array< std::array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
+std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 trial_functions_at_quadrature_points();
 
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-std::array< std::array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
+std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 derivs_of_trial_at_quadrature_points();
 
 template<unsigned int max_poly_degree>

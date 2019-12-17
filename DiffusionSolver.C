@@ -113,11 +113,11 @@ DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 DiffusionSolver_RegularQuad(const double tau)
 : tau_(tau)
 { 
-  array<double, quadrature_points_amount(max_quad_degree)>
+  array<double, compute_n_quad_points(max_quad_degree)>
     quad_weights1D = quadrature_weights<max_quad_degree>();
-  array< array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
+  array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
     trials_at_quad1D = trial_functions_at_quadrature_points<max_poly_degree, max_quad_degree>();
-  array< array<double, quadrature_points_amount(max_quad_degree)> , max_poly_degree + 1 >
+  array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
     derivs_at_quad1D = derivs_of_trial_at_quadrature_points<max_poly_degree, max_quad_degree>();
   array< array<double, 2> , max_poly_degree + 1 >
     trials_at_bdr1D = trial_functions_at_boundaries<max_poly_degree>();
@@ -503,14 +503,14 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyper
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array<double, corners_amount(hyperedge_dim)>
+array<double, compute_n_corners_of_cube(hyperedge_dim)>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array<double, corners_amount(hyperedge_dim)> primal_in_corners;
+  array<double, compute_n_corners_of_cube(hyperedge_dim)> primal_in_corners;
   primal_in_corners.fill(0.);
-  for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
       primal_in_corners[corner] += coefficients[hyperedge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
   return primal_in_corners;
@@ -518,13 +518,13 @@ primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bd
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, hyperedge_dim> , corners_amount(hyperedge_dim) >
+array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) >
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array< array<double, hyperedge_dim> , corners_amount(hyperedge_dim) > dual_in_corners;
-  for (unsigned int corner = 0; corner < corners_amount(hyperedge_dim); ++corner)
+  array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > dual_in_corners;
+  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
   {
     dual_in_corners[corner].fill(0.);
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
@@ -536,7 +536,7 @@ dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {

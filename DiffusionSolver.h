@@ -19,7 +19,7 @@
 #include <array>
 
 // Naive implementation finding the amount of corners for a hypersquare
-constexpr const unsigned int corners_amount(const unsigned int hyperedge_dim)
+constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyperedge_dim)
 {
   unsigned int amount = 1;
   for (unsigned int dim = 0; dim < hyperedge_dim; ++dim) amount *= 2;
@@ -31,16 +31,16 @@ template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int 
 class DiffusionSolver_RegularQuad
 {
   private:
-    static constexpr unsigned int num_of_quad_    = quadrature_points_amount(max_quad_degree, hyperedge_dim),
-                                  num_quad_bdr_   = quadrature_points_amount(max_quad_degree, hyperedge_dim - 1),
-                                  num_ansatz_fct_ = local_dof_amount_node(hyperedge_dim, max_poly_degree) * (max_poly_degree + 1),
-                                  num_ansatz_bdr_ = local_dof_amount_node(hyperedge_dim, max_poly_degree);
+    static constexpr unsigned int num_of_quad_    = compute_n_quad_points(max_quad_degree, hyperedge_dim),
+                                  num_quad_bdr_   = compute_n_quad_points(max_quad_degree, hyperedge_dim - 1),
+                                  num_ansatz_fct_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree) * (max_poly_degree + 1),
+                                  num_ansatz_bdr_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree);
     const double tau_;
     std::array<double, num_of_quad_> quad_weights_;
     std::array<double, num_quad_bdr_> quad_bdr_;
     std::array< std::array<double, num_of_quad_> , num_ansatz_fct_ > trials_quad_;
     std::array< std::array<double, num_quad_bdr_> , num_ansatz_bdr_ > bound_trials_quad_;
-    std::array< std::array<double, corners_amount(hyperedge_dim)> , max_poly_degree + 1 > trials_in_corners_;
+    std::array< std::array<double, compute_n_corners_of_cube(hyperedge_dim)> , max_poly_degree + 1 > trials_in_corners_;
     std::array< std::array< std::array<double, num_of_quad_> , num_ansatz_fct_ > , hyperedge_dim > derivs_quad_;
     std::array< std::array< std::array<double, num_quad_bdr_> , num_ansatz_fct_ > , 2 * hyperedge_dim > trials_bound_;
      
@@ -56,9 +56,9 @@ class DiffusionSolver_RegularQuad
       (const std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >& lambda_values, const std::array<double, (hyperedge_dim + 1) * num_ansatz_fct_>& coeffs) const;
   public:
     DiffusionSolver_RegularQuad(const double tau);
-    std::array<double, corners_amount(hyperedge_dim)> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
-    std::array< std::array<double, hyperedge_dim> , corners_amount(hyperedge_dim) > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
-    std::array< std::array<double, local_dof_amount_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
+    std::array<double, compute_n_corners_of_cube(hyperedge_dim)> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
+    std::array< std::array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
+    std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
 };
 

@@ -139,7 +139,7 @@ class HyperGraph_Cubic
     /*!*********************************************************************************************
      * @brief   Returns the number of hypernodes making up the hypergraph.
      *
-     * @retval  num__hypernodes The total amount of hypernodes of a hypergraph.
+     * @retval  num_hypernodes  The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
     const hypernode_index_type num_of_hypernodes() const;
 }; // end of class HyperGraph_Cubic

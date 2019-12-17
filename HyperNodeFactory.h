@@ -7,8 +7,8 @@
  * to the global vectors comprising degrees of freedom and is universal to (almost) all kinds of
  * possible equations.
  * 
- * @tparam  amount_of_local_dofs    Amount of degrees of freedom associated to an hypernode. This is
- *                                  the number of local trial functions for the skeletal variable.
+ * @tparam  n_dofs_per_node   Amount of degrees of freedom associated to an hypernode. This is the
+ *                            number of local trial functions for the skeletal variable.
  * 
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
@@ -21,7 +21,7 @@
 #include <array>
 #include <vector>
 
-template <unsigned int amount_of_local_dofs>
+template <unsigned int n_dofs_per_node>
 class HyperNodeFactory
 {
   private:
@@ -51,7 +51,7 @@ class HyperNodeFactory
      * 
      * @param   other               A @c HyperNodeFactory to be copied.
      **********************************************************************************************/
-    HyperNodeFactory(const HyperNodeFactory<amount_of_local_dofs>& other);
+    HyperNodeFactory(const HyperNodeFactory<n_dofs_per_node>& other);
     /*!*********************************************************************************************
      * @brief   Returns the total amount of hypernodes in the considered hypergraph.
      * 
@@ -72,7 +72,7 @@ class HyperNodeFactory
      * @retval  dof_indices         A @c std::array containing the global indices of related degrees
      *                              of freedom.
      **********************************************************************************************/
-    std::array<dof_index_type, amount_of_local_dofs> get_dof_indices
+    std::array<dof_index_type, n_dofs_per_node> get_dof_indices
       (const hypernode_index_type hypernode_index) const;
     /*!*********************************************************************************************
      * @brief   Evaluate values of degrees of freedom related to a hypernode.
@@ -81,7 +81,7 @@ class HyperNodeFactory
      * @retval  dof_values          A @c std::array containing the values of related degrees of
      *                              freedom.
      **********************************************************************************************/
-    std::array<dof_value_type, amount_of_local_dofs> get_dof_values
+    std::array<dof_value_type, n_dofs_per_node> get_dof_values
       (const hypernode_index_type hypernode_index,
        const std::vector<dof_value_type>& global_dof_vector) const;
     /*!*********************************************************************************************
@@ -98,7 +98,7 @@ class HyperNodeFactory
      **********************************************************************************************/
     void add_to_dof_values
       (const hypernode_index_type hypernode_index, std::vector<dof_value_type>& global_dof_vector,
-       const std::array<dof_value_type, amount_of_local_dofs>& local_dof_vector) const;
+       const std::array<dof_value_type, n_dofs_per_node>& local_dof_vector) const;
     /*!*********************************************************************************************
      * @brief   Set all values of degrees of freedom of a hypernode to a predefined value.
      * 
@@ -122,12 +122,12 @@ class HyperNodeFactory
  * @param   hyperedge_dim       The dimension of a hyperedge (1 for graphs).
  * @param   polynomial_degree   The local polynomial degree of test functions.
  * @param   solution_dim        The dimension of the solution (1 for scalar equations).
- * @retval  local_dof_amount    The amount of degrees of freedom per hypernode.
+ * @retval  n_dofs_per_node     The amount of degrees of freedom per hypernode.
  * 
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
-constexpr const unsigned int local_dof_amount_node(const unsigned int hyperedge_dim,
+constexpr const unsigned int compute_n_dofs_per_node(const unsigned int hyperedge_dim,
   const unsigned int polynomial_degree, const unsigned int solution_dim = 1)
 {
   unsigned int amount = 1;
