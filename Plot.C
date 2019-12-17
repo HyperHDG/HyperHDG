@@ -11,39 +11,67 @@
  */
 
 
-#include "Plotter.h"
+#include "Plot.h"
 #include "TypeDefs.h"
 #include <fstream>
 #include <iomanip>
+#include <cassert>
 #include <cmath>
 
 
 using namespace std;
 
 
-template class Plotter <1, 1, 1>;
-template class Plotter <1, 2, 1>;
-template class Plotter <1, 3, 1>;
-template class Plotter <2, 2, 1>;
-template class Plotter <2, 3, 1>;
-template class Plotter <3, 3, 1>;
+template void plot<1,1,1>(std::vector<double>, PlotOptions<1,1,1>&);
+template void plot<1,2,1>(std::vector<double>, PlotOptions<1,2,1>&);
+template void plot<1,3,1>(std::vector<double>, PlotOptions<1,3,1>&);
+template void plot<2,2,1>(std::vector<double>, PlotOptions<2,2,1>&);
+template void plot<2,3,1>(std::vector<double>, PlotOptions<2,3,1>&);
+template void plot<3,3,1>(std::vector<double>, PlotOptions<3,3,1>&);
+
+
+template class PlotOptions <1, 1, 1>;
+template class PlotOptions <1, 2, 1>;
+template class PlotOptions <1, 3, 1>;
+template class PlotOptions <2, 2, 1>;
+template class PlotOptions <2, 3, 1>;
+template class PlotOptions <3, 3, 1>;
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
-Plotter<hyperedge_dim,space_dim,polynomial_degree>::
-Plotter(HDGHyperGraph< compute_n_dofs_per_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >, Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
-        DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver)
-: hyper_graph_(hyper_graph), local_solver_(local_solver) { }
+PlotOptions<hyperedge_dim,space_dim,polynomial_degree>::
+PlotOptions( HDGHyperGraph< compute_n_dofs_per_node(hyperedge_dim, polynomial_degree),
+                            Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                            Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
+             DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>& local_solver)
+: hyper_graph_(hyper_graph), local_solver_(local_solver),
+  outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
+  printFileNumber(true), incrementFileNumber(true)  { }
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
-void Plotter<hyperedge_dim,space_dim,polynomial_degree>::
-plot(vector<double> lambda)
+const HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, polynomial_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                      Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
+PlotOptions<hyperedge_dim,space_dim,polynomial_degree>::hyper_graph()
 {
-  hyperedge_index_type num_of_hyperedges = hyper_graph_.num_of_hyperedges();
+  return hyper_graph_;
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
+const DiffusionSolver_RegularQuad<hyperedge_dim, polynomial_degree, 2 * polynomial_degree>&
+PlotOptions<hyperedge_dim,space_dim,polynomial_degree>::local_solver()
+{
+  return local_solver_;
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
+void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,polynomial_degree>& plotOpt)
+{
+  hyperedge_index_type num_of_hyperedges = plotOpt.hyper_graph().num_of_hyperedges();
   unsigned int points_per_hyperedge = pow(2, hyperedge_dim);
   point_index_type num_of_points = points_per_hyperedge * num_of_hyperedges;
-//  HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry;
   
   static_assert (hyperedge_dim <= 3);
   unsigned int element_id;
@@ -54,8 +82,16 @@ plot(vector<double> lambda)
   Point<space_dim> point;
   ofstream myfile;
   
+  string filename = plotOpt.outputDir;
+  filename.append("/"); filename.append(plotOpt.fileName);
+  if(plotOpt.printFileNumber)
+  {
+    filename.append("."); filename.append(to_string(plotOpt.fileNumber));
+  }
+  filename.append(".vtu");
+  if(plotOpt.incrementFileNumber)  ++(plotOpt.fileNumber);
   
-	myfile.open("output/example.vtu");
+	myfile.open(filename);
 	myfile << "<?xml version=\"1.0\"?>"  << endl;
 	myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" compressor=\"vtkZLibDataCompressor\">" << endl;
 	myfile << "  <UnstructuredGrid>" << endl;
@@ -65,7 +101,7 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = hyper_graph_.hyperedge_geometry(he_number);
+    HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
     {
       myfile << "        ";
@@ -118,10 +154,10 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(he_number).get_hypernode_indices();
+    hyperedge_hypernodes = plotOpt.hyper_graph().hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
-    local_dual = local_solver_.dual_in_corners_from_lambda(hyperedge_dofs);
+      hyperedge_dofs[hypernode] = plotOpt.hyper_graph().hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
+    local_dual = plotOpt.local_solver().dual_in_corners_from_lambda(hyperedge_dofs);
     myfile << "      ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
     {
@@ -138,10 +174,10 @@ plot(vector<double> lambda)
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(he_number).get_hypernode_indices();
+    hyperedge_hypernodes = plotOpt.hyper_graph().hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
-    local_primal = local_solver_.primal_in_corners_from_lambda(hyperedge_dofs);
+      hyperedge_dofs[hypernode] = plotOpt.hyper_graph().hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
+    local_primal = plotOpt.local_solver().primal_in_corners_from_lambda(hyperedge_dofs);
     myfile << "        ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
       myfile << "  " << local_primal[corner];
@@ -157,3 +193,14 @@ plot(vector<double> lambda)
 	myfile << "</VTKFile>" << endl;
   myfile.close();
 }
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
+void plot(std::vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,polynomial_degree>& plotOpt)
+{
+  assert( plotOpt.fileEnding == "vtu" );
+  assert( !fileName.empty() );
+  assert( !outputDir.empty() );
+  plot_vtu<hyperedge_dim,space_dim,polynomial_degree>(lambda, plotOpt);
+}
+

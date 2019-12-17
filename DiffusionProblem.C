@@ -10,7 +10,7 @@
 
 
 #include "DiffusionProblem.h"
-#include "Plotter.h"
+#include "Plot.h"
 //#include <cmath>
 //#include <iostream>
 #include <algorithm>
@@ -114,6 +114,6 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polyn
 void DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree>::
 plot_solution(std::vector<double> lambda)
 {
-  Plotter<hyperedge_dim, space_dim, polynomial_degree> plotter(hyper_graph_, local_solver_);
-  plotter.plot(lambda);
+  PlotOptions plotOpts(hyper_graph_,local_solver_);
+  plot(lambda, plotOpts);
 }
