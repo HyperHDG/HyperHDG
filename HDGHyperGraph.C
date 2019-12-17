@@ -10,6 +10,7 @@
 
 #include "HDGHyperGraph.h"
 #include <cassert>
+#include <cassert>
 
 
 template class HDGHyperGraph < local_dof_amount_node(1 , 1), Topology::HyperGraph_Cubic< 1, 1 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 1 > >;
@@ -50,6 +51,24 @@ HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
 operator[](const hyperedge_index_type index) const
 {
   return value_type(hyperedge_topology(index), hyperedge_geometry(index)); 
+}
+
+
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+typename HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::iterator
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+begin() const
+{
+  return HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::iterator(*this, 0); 
+}
+
+
+template < unsigned int amount_of_local_dofs, class TopoT, class GeomT >
+typename HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::iterator
+HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::
+end() const
+{
+  return HDGHyperGraph< amount_of_local_dofs, TopoT, GeomT >::iterator(*this, num_of_hyperedges()); 
 }
 
 

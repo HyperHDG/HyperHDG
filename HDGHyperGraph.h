@@ -52,13 +52,35 @@ class HDGHyperGraph
     HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
       : topology(topo), geometry(geom) {};
   } value_type;
-/*  
+  
   class iterator
   {
-    iterator
-    
+    private:
+      const HDGHyperGraph& hypergraph_;
+      hyperedge_index_type index_;
+    public:
+/*    
+      using iterator_category = std::random_access_iterator_tag;
+      using value_type = HDGHyperGraph::value_type;
+      using difference_type = int;
+      using pointer = HDGHyperGraph::value_type*;
+      using reference = HDGHyperGraph::value_type&;
+*/      
+      iterator(const HDGHyperGraph& hypergraph, const hyperedge_index_type index)
+        : hypergraph_(hypergraph), index_(index) {};
+      iterator(const iterator& other)
+        : hypergraph_(other.hypergraph_), index_(other.index_) {};
+      iterator& operator=(const iterator& other) = default;
+      
+      iterator& operator++() { ++index_; return *this; };
+      iterator& operator--() { --index_; return *this; };
+      iterator operator++(int) { return iterator(hypergraph_, index_++); };
+      iterator operator--(int) { return iterator(hypergraph_, index_--); };
+      HDGHyperGraph::value_type operator*() { return hypergraph_[index_]; };
+      bool operator==(iterator other) { return index_ == other.index_; };
+      bool operator!=(iterator other) { return index_ != other.index_; };
   };
-*/  
+  
   private:
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory_;
     const TopoT hypergraph_topology_;
@@ -67,6 +89,9 @@ class HDGHyperGraph
   public:
     HDGHyperGraph(const TopoT& hyperedge_getter);
     const value_type operator[] (const hyperedge_index_type index) const;
+    
+    typename HDGHyperGraph<amount_of_local_dofs, TopoT, GeomT >::iterator begin() const;
+    typename HDGHyperGraph<amount_of_local_dofs, TopoT, GeomT >::iterator end() const;
     
     // Why is this public? Why not get_hypernode()?
     const HyperNodeFactory<amount_of_local_dofs> hypernode_factory() const; // AR: No reference for performance?!
