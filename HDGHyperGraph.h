@@ -24,6 +24,9 @@
  * method.
  *
  * \todo Is the name ok? It could be HDGHyperGraph and include the HDG loop given a local solver
+ *       -> This has been implemented defining an iterator and using the std::for each in the
+ *       DiffusionProblem implementation. I hope that this is even more general, since for_each
+ *       is pretty general. What do you think?
  *
  * The main class representing a hypergraph. It uses a class
  * `Topology` to represent the collection of nodes and edges as well
