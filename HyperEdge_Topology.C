@@ -211,7 +211,7 @@ HyperEdge_Cubic(const hyperedge_index_type index, const array<unsigned int, spac
 {
   for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyperedge_dim; ++local_hypernode)
     correct_hypernode_orientation_[local_hypernode] = 1;
-  if constexpr ( hyperedge_dim == 1 )  hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  if constexpr ( hyperedge_dim == 1 )       hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
   else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
   else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }

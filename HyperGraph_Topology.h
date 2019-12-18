@@ -51,7 +51,7 @@ class HyperGraph_Cubic
     /*!*********************************************************************************************
      * @brief   Number of elements per spatial dimension.
      *
-     * The an \c std::array comprising the number of elements in each spatial dimension.
+     * A \c std::array comprising the number of elements in each spatial dimension.
      **********************************************************************************************/
     std::array<unsigned int, space_dim> num_elements_;
     /*!*********************************************************************************************
