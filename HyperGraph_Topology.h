@@ -1,8 +1,8 @@
-#ifndef TOPOLOGY_H
-#define TOPOLOGY_H
+#ifndef HYPERGRAPH_TOPOLOGY_H
+#define HYPERGRAPH_TOPOLOGY_H
 
 #include "TypeDefs.h"
-#include "HyperEdge.h"
+#include "HyperEdge_Topology.h"
 #include <array>
 #include <vector>
 
@@ -146,4 +146,4 @@ class HyperGraph_Cubic
 
 } // end of namespace Topology
 
-#endif // end of ifndef TOPOLOGY_H
+#endif // end of ifndef HYPERGRAPH_TOPOLOGY_H

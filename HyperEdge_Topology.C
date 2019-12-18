@@ -8,14 +8,14 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "HyperEdge.h"
+#include "HyperEdge_Topology.h"
 #include <algorithm>
 #include <cassert>
 
-//#include <iostream>
 
 using namespace std;
-#include "HyperEdge.inst"
+using namespace Topology;
+#include "HyperEdge_Topology.inst"
 
 
 template<unsigned int space_dim>
@@ -223,27 +223,3 @@ HyperEdge_Cubic<hyperedge_dim,space_dim>::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
-
-/*
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-std::vector<double> HyperEdge_Cubic<hyperedge_dim,space_dim>::
-abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
-{
-  vector<double> det_at_quad(local_quadrature.size(), 1.);
-  return det_at_quad;
-}
-
-
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-vector< vector<double> > HyperEdge_Cubic<hyperedge_dim,space_dim>::
-inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
-{
-  vector< vector<double> > jac_at_quad(local_quadrature.size());
-  for_each(jac_at_quad.begin(), jac_at_quad.end(), [](vector<double>& local_jac)
-  {
-    local_jac.resize(1);
-    local_jac[0] = 1.;
-  });
-  return jac_at_quad;
-}
-*/

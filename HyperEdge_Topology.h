@@ -9,12 +9,14 @@
  */
 
 
-#ifndef HYPEREDGE_H
-#define HYPEREDGE_H
+#ifndef HYPEREDGE_TOPOLOGY_H
+#define HYPEREDGE_TOPOLOGY_H
 
 #include "TypeDefs.h"
 #include <array>
-//#include <vector>
+
+namespace Topology
+{
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperEdge_Cubic
@@ -25,8 +27,8 @@ class HyperEdge_Cubic
   public:
     HyperEdge_Cubic(const hyperedge_index_type index, const std::array<unsigned int, space_dim>& num_elements);
     const std::array<hypernode_index_type, 2*hyperedge_dim>& get_hypernode_indices() const;
-//    std::vector<double> abs_det_of_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
-//    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 };
+
+}
 
 #endif

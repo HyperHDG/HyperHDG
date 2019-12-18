@@ -17,6 +17,9 @@
 #include <array>
 //#include <vector>
 
+namespace Geometry
+{
+
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 class HyperEdge_Cubic_UnitCube
 {
@@ -30,5 +33,7 @@ class HyperEdge_Cubic_UnitCube
 //    std::vector<double> abs_det_of_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 //    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 };
+
+}
 
 #endif
