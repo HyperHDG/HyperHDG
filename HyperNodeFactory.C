@@ -12,29 +12,7 @@
 #include <cassert>
 
 using namespace std;
-
-
-template class HyperNodeFactory<compute_n_dofs_per_node(1, 1, 1)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 1, 1)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 2, 1)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 3, 1)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(3, 1, 1)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 2, 1)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 3, 1)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(1, 1, 2)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(2, 1, 2)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 2, 2)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 3, 2)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(3, 1, 2)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 2, 2)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 3, 2)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(1, 1, 3)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(2, 1, 3)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(2, 2, 3)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(2, 3, 3)>;
-// template class HyperNodeFactory<compute_n_dofs_per_node(3, 1, 3)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 2, 3)>;
-template class HyperNodeFactory<compute_n_dofs_per_node(3, 3, 3)>;
+#include "HyperNodeFactory.inst"
 
 
 template <unsigned int n_dofs_per_node>

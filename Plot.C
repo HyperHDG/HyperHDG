@@ -20,22 +20,7 @@
 
 
 using namespace std;
-
-
-template void plot<1,1,1>(std::vector<double>, PlotOptions<1,1,1>&);
-template void plot<1,2,1>(std::vector<double>, PlotOptions<1,2,1>&);
-template void plot<1,3,1>(std::vector<double>, PlotOptions<1,3,1>&);
-template void plot<2,2,1>(std::vector<double>, PlotOptions<2,2,1>&);
-template void plot<2,3,1>(std::vector<double>, PlotOptions<2,3,1>&);
-template void plot<3,3,1>(std::vector<double>, PlotOptions<3,3,1>&);
-
-
-template class PlotOptions <1, 1, 1>;
-template class PlotOptions <1, 2, 1>;
-template class PlotOptions <1, 3, 1>;
-template class PlotOptions <2, 2, 1>;
-template class PlotOptions <2, 3, 1>;
-template class PlotOptions <3, 3, 1>;
+#include "Plot.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>

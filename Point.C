@@ -14,18 +14,10 @@
 #include <cassert>
 
 using namespace std;
+#include "Point.inst"
 
-
-template class Point<1>;
-template class Point<2>;
-template class Point<3>;
 
 /*
-template double distance<1>(const Point<1>& left, const Point<1>& right);
-template double distance<2>(const Point<2>& left, const Point<2>& right);
-template double distance<3>(const Point<3>& left, const Point<3>& right);
-
-
 template<unsigned int space_dim>
 double distance(const Point<space_dim>& left, const Point<space_dim>& right)
 {
