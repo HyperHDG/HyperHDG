@@ -86,7 +86,7 @@ void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,polynom
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
+    Geometry::HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
     {
       myfile << "        ";

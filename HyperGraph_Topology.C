@@ -8,12 +8,12 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "Topology.h"
+#include "HyperGraph_Topology.h"
 #include <cassert>
 
 using namespace std;
 using namespace Topology;
-#include "Topology.inst"
+#include "HyperGraph_Topology.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>

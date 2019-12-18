@@ -8,12 +8,12 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "Geometry.h"
+#include "HyperGraph_Geometry.h"
 #include <cassert>
 
 using namespace std;
 using namespace Geometry;
-#include "Geometry.inst"
+#include "HyperGraph_Geometry.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>

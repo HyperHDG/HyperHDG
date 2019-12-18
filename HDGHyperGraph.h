@@ -14,8 +14,8 @@
 
 #include "TypeDefs.h"
 #include "HyperNodeFactory.h"
-#include "Topology.h"
-#include "Geometry.h"
+#include "HyperGraph_Topology.h"
+#include "HyperGraph_Geometry.h"
 
 
 /**

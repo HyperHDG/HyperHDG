@@ -9,12 +9,12 @@
  */
 
 
-#ifndef GEOMETRY_H
-#define GEOMETRY_H
+#ifndef HYPERGRAPH_GEOMETRY_H
+#define HYPERGRAPH_GEOMETRY_H
 
 #include "TypeDefs.h"
 #include "HyperEdge_Geometry.h"
-#include "Topology.h"
+#include "HyperGraph_Topology.h"
 #include <array>
 
 namespace Geometry
@@ -34,4 +34,4 @@ class HyperGraph_Cubic_UnitCube
 
 } // end namespace Geometry
 
-#endif // end ifndef GEOMETRY_H
+#endif // end ifndef HYPERGRAPH_GEOMETRY_H

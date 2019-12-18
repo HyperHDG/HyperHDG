@@ -12,9 +12,9 @@
 #include <algorithm>
 #include <cassert>
 
-//#include <iostream>
 
 using namespace std;
+using namespace Geometry;
 #include "HyperEdge_Geometry.inst"
 
 
