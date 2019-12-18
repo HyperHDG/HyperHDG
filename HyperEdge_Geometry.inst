@@ -1,0 +1,17 @@
+/* ------------------------------------------------------------------------------------------------------
+ *
+ * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
+ * It solves a PDE that is solely defined on a graph using the HDG method.
+ *
+ * ------------------------------------------------------------------------------------------------------
+ *
+ * Author: Andreas Rupp, University of Heidelberg, 2019
+ */
+
+
+template class HyperEdge_Cubic_UnitCube<1,1>;
+template class HyperEdge_Cubic_UnitCube<1,2>;
+template class HyperEdge_Cubic_UnitCube<1,3>;
+template class HyperEdge_Cubic_UnitCube<2,2>;
+template class HyperEdge_Cubic_UnitCube<2,3>;
+template class HyperEdge_Cubic_UnitCube<3,3>;

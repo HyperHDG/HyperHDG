@@ -11,21 +11,12 @@
 
 #include "DiffusionProblem.h"
 #include "Plot.h"
-//#include <cmath>
-//#include <iostream>
 #include <algorithm>
 #include <array>
 #include <cassert>
 
 using namespace std;
-
-
-template class DiffusionProblemRegular<1,1,1>;
-template class DiffusionProblemRegular<1,2,1>;
-template class DiffusionProblemRegular<1,3,1>;
-template class DiffusionProblemRegular<2,2,1>;
-template class DiffusionProblemRegular<2,3,1>;
-template class DiffusionProblemRegular<3,3,1>;
+#include "DiffusionProblem.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
@@ -33,17 +24,7 @@ DiffusionProblemRegular<hyperedge_dim,space_dim,polynomial_degree>::
 DiffusionProblemRegular(vector<int> num_elements)
 : hyper_graph_(Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
   local_solver_(1.)
-{
-/*  cout << "Amount of HyperEdges = " << hyper_graph_.num_of_hyperedges() << endl;
-  for(unsigned int i = 0; i < hyper_graph_.num_of_hyperedges(); ++i)
-  {
-    const HyperEdge_Cubic<hyperedge_dim,space_dim> hyperedge = hyper_graph_.hyperedge_topology(i);
-    const array<hypernode_index_type, 2*hyperedge_dim> indices = hyperedge.get_hypernode_indices();
-    cout << i << "   ";
-    for(unsigned int j = 0; j < indices.size(); ++j)  cout << indices[j] << "  ";
-    cout << endl;
-  }*/
-}
+{ }
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
@@ -74,17 +55,7 @@ matrix_vector_multiply(vector<double> x_vec)
   vector<double> vec_Ax(x_vec.size(), 0.);
   array< array<double, compute_n_dofs_per_node(hyperedge_dim, polynomial_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
-/*  
-  for (unsigned int hyperedge = 0; hyperedge < hyper_graph_.num_of_hyperedges(); ++hyperedge)
-  {
-    hyperedge_hypernodes = hyper_graph_.hyperedge_topology(hyperedge).get_hypernode_indices();
-    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
-    local_result = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
-    for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyper_graph_.hypernode_factory().add_to_dof_values(hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
-  }
-*/
+  
   for_each( hyper_graph_.begin(), hyper_graph_.end(), [&](const auto hyperedge)
   {
     hyperedge_hypernodes = hyperedge.topology.get_hypernode_indices();

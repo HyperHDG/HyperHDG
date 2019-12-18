@@ -12,17 +12,10 @@
 #include <algorithm>
 #include <cassert>
 
-#include <iostream>
+//#include <iostream>
 
 using namespace std;
-
-
-template class HyperEdge_Cubic_UnitCube<1,1>;
-template class HyperEdge_Cubic_UnitCube<1,2>;
-template class HyperEdge_Cubic_UnitCube<1,3>;
-template class HyperEdge_Cubic_UnitCube<2,2>;
-template class HyperEdge_Cubic_UnitCube<2,3>;
-template class HyperEdge_Cubic_UnitCube<3,3>;
+#include "HyperEdge_Geometry.inst"
 
 
 template<unsigned int space_dim>

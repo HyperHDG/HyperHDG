@@ -10,27 +10,9 @@
 
 #include "HDGHyperGraph.h"
 #include <cassert>
-#include <cassert>
 
 
-template class HDGHyperGraph < compute_n_dofs_per_node(1 , 1), Topology::HyperGraph_Cubic< 1, 1 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 1 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 2), Topology::HyperGraph_Cubic< 1, 1 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 1 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 3), Topology::HyperGraph_Cubic< 1, 1 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 1 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(1 , 1), Topology::HyperGraph_Cubic< 1, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 2 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 2), Topology::HyperGraph_Cubic< 1, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 2 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 3), Topology::HyperGraph_Cubic< 1, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 2 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(1 , 1), Topology::HyperGraph_Cubic< 1, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 3 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 2), Topology::HyperGraph_Cubic< 1, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 3 > >;
-// template class HDGHyperGraph < compute_n_dofs_per_node(1 , 3), Topology::HyperGraph_Cubic< 1, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 1, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 1), Topology::HyperGraph_Cubic< 2, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 2 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 2), Topology::HyperGraph_Cubic< 2, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 2 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 3), Topology::HyperGraph_Cubic< 2, 2 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 2 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 1), Topology::HyperGraph_Cubic< 2, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 2), Topology::HyperGraph_Cubic< 2, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(2 , 3), Topology::HyperGraph_Cubic< 2, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 2, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(3 , 1), Topology::HyperGraph_Cubic< 3, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 3, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(3 , 2), Topology::HyperGraph_Cubic< 3, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 3, 3 > >;
-template class HDGHyperGraph < compute_n_dofs_per_node(3 , 3), Topology::HyperGraph_Cubic< 3, 3 >, Geometry::HyperGraph_Cubic_UnitCube< 3, 3 > >;
+#include "HDGHyperGraph.inst"
 
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >

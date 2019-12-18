@@ -13,14 +13,7 @@
 
 using namespace std;
 using namespace Topology;
-
-
-template class HyperGraph_Cubic< 1, 1 >;
-template class HyperGraph_Cubic< 1, 2 >;
-template class HyperGraph_Cubic< 1, 3 >;
-template class HyperGraph_Cubic< 2, 2 >;
-template class HyperGraph_Cubic< 2, 3 >;
-template class HyperGraph_Cubic< 3, 3 >;
+#include "Topology.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
