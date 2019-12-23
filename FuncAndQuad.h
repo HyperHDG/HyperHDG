@@ -17,7 +17,7 @@
 #include <array>
 
 // Naive implementation finding the minimal amount of quadrature points to exactly integrate a polynomial of degree at most
-// polynomial_degree in hyperedge_dim dimensions
+// max_quad_degree in hyperedge_dim dimensions
 constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
 {
   unsigned int amount = 1, amount1D = 1;

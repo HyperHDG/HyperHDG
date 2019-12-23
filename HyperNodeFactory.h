@@ -115,12 +115,12 @@ class HyperNodeFactory
  * @brief   Calculate the amount of local degrees of freedom of a hypernode at compile time.
  * 
  * Naive implementation without math packages of
- * "amount = solution_dim * (polynomial_degree ^ (hyperedge_dim - 1))"!
+ * "amount = solution_dim * (poly_degree ^ (hyperedge_dim - 1))"!
  * 
  * \todo    Find better location, since this can vary with different test functions (P_k, Q_k, ...).
  * 
  * @param   hyperedge_dim       The dimension of a hyperedge (1 for graphs).
- * @param   polynomial_degree   The local polynomial degree of test functions.
+ * @param   poly_degree         The local polynomial degree of test functions.
  * @param   solution_dim        The dimension of the solution (1 for scalar equations).
  * @retval  n_dofs_per_node     The amount of degrees of freedom per hypernode.
  * 
@@ -128,11 +128,11 @@ class HyperNodeFactory
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
 constexpr const unsigned int compute_n_dofs_per_node(const unsigned int hyperedge_dim,
-  const unsigned int polynomial_degree, const unsigned int solution_dim = 1)
+  const unsigned int poly_degree, const unsigned int solution_dim = 1)
 {
   unsigned int amount = 1;
   for (unsigned int iteration = 0; iteration < hyperedge_dim - 1; ++ iteration)
-    amount *= polynomial_degree + 1;
+    amount *= poly_degree + 1;
   amount *= solution_dim;
   return amount;
 }
