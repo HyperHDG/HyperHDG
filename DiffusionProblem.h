@@ -14,12 +14,11 @@
  *        -> I believe that we have to discuss, how to do this best. Note that the .C file now
  *        contains a for_each loop (cf. HDGHyperGraph.h)!
  *
- * @tparam  hyperedge_dim       Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2
- *                              is for PDEs defined on surfaces, and 3 is for PDEs defined on
- *                              volumes.
- * @tparam  space_dim           The dimension of the space, the object is located in. This number
- *                              should be larger than or equal to hyperedge_dim.
- * @tparam  polynomial_degree   The polynomial degree of test and trial functions.
+ * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyperedge_dim.
+ * @tparam  poly_degree     The polynomial degree of test and trial functions.
  *
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
@@ -31,17 +30,16 @@
 #include "HDGHyperGraph.h"
 #include "DiffusionSolver.h"
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int polynomial_degree>
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 class DiffusionProblemRegular
 {
   private:
-    HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, polynomial_degree),
+    HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
                     Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                     Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >
                   hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
-    DiffusionSolver_RegularQuad < hyperedge_dim, polynomial_degree, 2 * polynomial_degree >
-                                local_solver_;
+    DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree > local_solver_;
   public:
     /*!*********************************************************************************************
      * @brief   Example problem constructor.
