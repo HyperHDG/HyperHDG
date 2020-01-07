@@ -106,3 +106,19 @@ num_of_global_dofs() const
 {
   return hypernode_factory_.num_of_global_dofs();
 }
+
+
+template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
+constexpr unsigned int HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
+hyperedge_dimension()
+{
+  return TopoT::hyperedge_dimension();
+}
+
+
+template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
+constexpr unsigned int HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
+space_dimension()
+{
+  return TopoT::space_dimension();
+}

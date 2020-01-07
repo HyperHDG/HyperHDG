@@ -155,6 +155,9 @@ class HDGHyperGraph
     const hyperedge_index_type num_of_hyperedges() const;
     const hypernode_index_type num_of_hypernodes() const;
     const dof_index_type num_of_global_dofs() const;
+    
+    static constexpr unsigned int hyperedge_dimension();
+    static constexpr unsigned int space_dimension();
 };
 
 #endif
