@@ -85,6 +85,19 @@ class HyperGraph_Cubic_UnitCube
      **********************************************************************************************/
     const HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> get_hyperedge
       (const hyperedge_index_type index) const;
+      
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * @retval  hyperedge_dim   The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of the space.
+     *
+     * @retval  space_dim       The dimension of the space.
+     **********************************************************************************************/
+    static constexpr unsigned int space_dimension() { return space_dim; };
 }; // end class HyperGraph_Cubic_UnitCube
 
 } // end namespace Geometry

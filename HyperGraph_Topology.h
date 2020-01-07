@@ -143,8 +143,18 @@ class HyperGraph_Cubic
      **********************************************************************************************/
     const hypernode_index_type num_of_hypernodes() const;
     
-    static constexpr unsigned int hyperedge_dimension();
-    static constexpr unsigned int space_dimension();
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * @retval  hyperedge_dim   The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of the space.
+     *
+     * @retval  space_dim       The dimension of the space.
+     **********************************************************************************************/
+    static constexpr unsigned int space_dimension() { return space_dim; };
 }; // end of class HyperGraph_Cubic
 
 } // end of namespace Topology

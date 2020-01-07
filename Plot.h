@@ -37,39 +37,26 @@
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+template <class HyperGraphT, class LocalSolverT>
 class PlotOptions
 {
   private:
-    const HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                          Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                          Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
-                        hyper_graph_;
-    const DiffusionSolver_RegularQuad<hyperedge_dim, poly_degree, 2 * poly_degree>&
-                        local_solver_;
+    const HyperGraphT& hyper_graph_;
+    const LocalSolverT& local_solver_;
   public:
     std::string outputDir, fileName, fileEnding;
     unsigned int fileNumber;
     bool printFileNumber, incrementFileNumber;
     
-    PlotOptions(HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                                Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                                Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
-                              hyper_graph,
-                DiffusionSolver_RegularQuad<hyperedge_dim, poly_degree, 2*poly_degree>&
-                  local_solver);
+    PlotOptions(HyperGraphT& hyper_graph, LocalSolverT& local_solver);
     
-    const HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                          Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                          Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
-                        hyper_graph();
-    const DiffusionSolver_RegularQuad<hyperedge_dim, poly_degree, 2 * poly_degree>&
-            local_solver();
+    const HyperGraphT& hyper_graph();
+    const LocalSolverT& local_solver();
 }; // end class PlotOptions
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+template <class HyperGraphT, class LocalSolverT>
 void plot
-(std::vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_degree>& plotOpt);
+(std::vector<double> lambda, PlotOptions<HyperGraphT, LocalSolverT>& plotOpt);
 
 #endif

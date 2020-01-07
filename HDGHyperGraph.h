@@ -156,8 +156,9 @@ class HDGHyperGraph
     const hypernode_index_type num_of_hypernodes() const;
     const dof_index_type num_of_global_dofs() const;
     
-    static constexpr unsigned int hyperedge_dimension();
-    static constexpr unsigned int space_dimension();
+    static constexpr unsigned int hyperedge_dimension() { return TopoT::hyperedge_dimension(); };
+    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); };
+    static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; }
 };
 
 #endif
