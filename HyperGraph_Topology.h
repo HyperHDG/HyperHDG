@@ -142,6 +142,9 @@ class HyperGraph_Cubic
      * @retval  num_hypernodes  The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
     const hypernode_index_type num_of_hypernodes() const;
+    
+    static constexpr unsigned int hyperedge_dimension();
+    static constexpr unsigned int space_dimension();
 }; // end of class HyperGraph_Cubic
 
 } // end of namespace Topology

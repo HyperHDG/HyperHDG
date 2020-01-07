@@ -210,3 +210,16 @@ num_of_hypernodes() const
 {
   return num_of_hypernodes_;
 }
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+constexpr unsigned int HyperGraph_Cubic<hyperedge_dim,space_dim>::hyperedge_dimension()
+{
+  return hyperedge_dim;
+}
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+constexpr unsigned int HyperGraph_Cubic<hyperedge_dim,space_dim>::space_dimension()
+{
+  return space_dim;
+}
