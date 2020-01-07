@@ -113,7 +113,7 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * @brief   Returns the template parameter representing the amount of dofs per node.
      *
-     * @retval  hyperedge_dim   The dimension of a hyperedge.
+     * @retval  n_dofs_per_node     The amount of degrees of freedom per node.
      **********************************************************************************************/
     static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; };
 };
