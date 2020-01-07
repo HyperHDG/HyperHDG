@@ -21,6 +21,7 @@ HDGHyperGraph(const TopoT& hypergraph_topology)
 : hypernode_factory_(hypergraph_topology.num_of_hypernodes()), hypergraph_topology_(hypergraph_topology),
   hypergraph_geometry_(hypergraph_topology)
 {
+  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
   assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
   assert( hypernode_factory_.num_of_hypernodes() >= 2 );
   assert( hypergraph_topology.num_of_hyperedges() != 0 );
@@ -107,7 +108,7 @@ num_of_global_dofs() const
   return hypernode_factory_.num_of_global_dofs();
 }
 
-
+/*
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 constexpr unsigned int HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 hyperedge_dimension()
@@ -122,3 +123,4 @@ space_dimension()
 {
   return TopoT::space_dimension();
 }
+*/

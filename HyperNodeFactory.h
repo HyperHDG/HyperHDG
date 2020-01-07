@@ -109,6 +109,13 @@ class HyperNodeFactory
      **********************************************************************************************/
     void set_dof_values(const hypernode_index_type hypernode_index,
       std::vector<dof_value_type>& global_dof_vector, const dof_value_type value) const;
+    
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the amount of dofs per node.
+     *
+     * @retval  hyperedge_dim   The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; };
 };
 
 /*!*************************************************************************************************

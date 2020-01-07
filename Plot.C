@@ -23,37 +23,36 @@ using namespace std;
 #include "Plot.inst"
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-PlotOptions<hyperedge_dim,space_dim,poly_degree>::
-PlotOptions( HDGHyperGraph< compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                            Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                            Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >& hyper_graph,
-             DiffusionSolver_RegularQuad<hyperedge_dim, poly_degree, 2 * poly_degree>& local_solver)
+template <class HyperGraphT, class LocalSolverT>
+PlotOptions<HyperGraphT, LocalSolverT>::
+PlotOptions( HyperGraphT& hyper_graph, LocalSolverT& local_solver)
 : hyper_graph_(hyper_graph), local_solver_(local_solver),
   outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
   printFileNumber(true), incrementFileNumber(true)  { }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-const HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree), Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                      Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >&
-PlotOptions<hyperedge_dim,space_dim,poly_degree>::hyper_graph()
+template <class HyperGraphT, class LocalSolverT>
+const HyperGraphT&
+PlotOptions<HyperGraphT, LocalSolverT>::hyper_graph()
 {
   return hyper_graph_;
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-const DiffusionSolver_RegularQuad<hyperedge_dim, poly_degree, 2 * poly_degree>&
-PlotOptions<hyperedge_dim,space_dim,poly_degree>::local_solver()
+template <class HyperGraphT, class LocalSolverT>
+const LocalSolverT&
+PlotOptions<HyperGraphT, LocalSolverT>::local_solver()
 {
   return local_solver_;
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_degree>& plotOpt)
+template <class HyperGraphT, class LocalSolverT>
+void plot_vtu(vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>& plotOpt)
 {
+  constexpr unsigned int hyperedge_dim = HyperGraphT::hyperedge_dimension();
+  constexpr unsigned int space_dim = HyperGraphT::space_dimension();
+  
   hyperedge_index_type num_of_hyperedges = plotOpt.hyper_graph().num_of_hyperedges();
   unsigned int points_per_hyperedge = pow(2, hyperedge_dim);
   point_index_type num_of_points = points_per_hyperedge * num_of_hyperedges;
@@ -86,7 +85,7 @@ void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_de
   
   for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
   {
-    Geometry::HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
+    auto hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
     {
       myfile << "        ";
@@ -132,7 +131,7 @@ void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_de
   myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << endl;
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << endl;
     
-  array< array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> , 2*hyperedge_dim > hyperedge_dofs;
+  array< array<double, HyperGraphT::n_dof_per_node() > , 2*hyperedge_dim > hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
   array<double, compute_n_corners_of_cube(hyperedge_dim)> local_primal;
   array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > local_dual;
@@ -180,12 +179,12 @@ void plot_vtu(vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_de
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-void plot(std::vector<double> lambda, PlotOptions<hyperedge_dim,space_dim,poly_degree>& plotOpt)
+template <class HyperGraphT, class LocalSolverT>
+void plot(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>& plotOpt)
 {
   assert( plotOpt.fileEnding == "vtu" );
   assert( !fileName.empty() );
   assert( !outputDir.empty() );
-  plot_vtu<hyperedge_dim,space_dim,poly_degree>(lambda, plotOpt);
+  plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
 }
 
