@@ -31,8 +31,8 @@ template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int 
 class DiffusionSolver_RegularQuad
 {
   private:
-    static constexpr unsigned int num_of_quad_    = compute_n_quad_points(max_quad_degree, hyperedge_dim),
-                                  num_quad_bdr_   = compute_n_quad_points(max_quad_degree, hyperedge_dim - 1),
+    static constexpr unsigned int num_of_quad_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim),
+                                  num_quad_bdr_   = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim - 1),
                                   num_ansatz_fct_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree) * (max_poly_degree + 1),
                                   num_ansatz_bdr_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree);
     const double tau_;

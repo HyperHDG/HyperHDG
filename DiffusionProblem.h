@@ -13,6 +13,9 @@
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
  *        -> I believe that we have to discuss, how to do this best. Note that the .C file now
  *        contains a for_each loop (cf. HDGHyperGraph.h)!
+ * 
+ * @todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
+ *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
  *
  * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.

@@ -21,7 +21,7 @@
  *        the moment only vtu output is possible.
  * 
  * @todo  Turn PlotOptions class into fully templated class where the HDGHyperGraph and the
- *        LocalSolver are template classes!
+ *        LocalSolver are template classes! -> Done, but are you ok with this?
  * 
  * This class contains all information needed for creating a plot from a std::vector, i.e., it
  * contains an \c HDGHyperGraph and a \c LocalSolver and several fields to encode a file name, the
