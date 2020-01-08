@@ -18,7 +18,7 @@ using namespace std;
 #include "FuncAndQuad.inst"
 
 
-double trial_function_eval(const unsigned int index, const double x_value)
+double FuncQuad::trial_function_eval(const unsigned int index, const double x_value)
 {
   assert(0 <= index && index <= 5);
   assert(0. <= x_value && x_value <= 1.);
@@ -37,7 +37,7 @@ double trial_function_eval(const unsigned int index, const double x_value)
 }
 
 
-double deriv_of_trial_eval(const unsigned int index, const double x_value)
+double FuncQuad::deriv_of_trial_eval(const unsigned int index, const double x_value)
 {
   assert(0 <= index && index <= 5);
   assert(0. <= x_value && x_value <= 1.);
@@ -57,9 +57,9 @@ double deriv_of_trial_eval(const unsigned int index, const double x_value)
 
 
 template<unsigned int max_quad_degree>
-array<double, compute_n_quad_points(max_quad_degree)> quadrature_points()
+array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadrature_points()
 {
-  constexpr unsigned int num_of_points = compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert(1 <= num_of_points && num_of_points <= 9);
   array<double, num_of_points> quad_points;
   
@@ -130,9 +130,9 @@ array<double, compute_n_quad_points(max_quad_degree)> quadrature_points()
 }
 
 template<unsigned int max_quad_degree>
-array<double, compute_n_quad_points(max_quad_degree)> quadrature_weights()
+array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadrature_weights()
 {
-  constexpr unsigned int num_of_points = compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert(1 <= num_of_points && num_of_points <= 9);
   array<double, num_of_points> quad_weights;
   
@@ -204,10 +204,10 @@ array<double, compute_n_quad_points(max_quad_degree)> quadrature_weights()
 
 
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-trial_functions_at_quadrature_points()
+array< array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+FuncQuad::trial_functions_at_quadrature_points()
 {
-  constexpr unsigned int num_of_points = compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
   static_assert( 1 <= num_of_points && num_of_points <= 9);
   
@@ -216,17 +216,17 @@ trial_functions_at_quadrature_points()
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
     for (unsigned int j = 0; j < num_of_points; ++j)
-      fct_val[i][j] = trial_function_eval(i, quad_points[j]);
+      fct_val[i][j] = FuncQuad::trial_function_eval(i, quad_points[j]);
   
   return fct_val;
 }
 
 
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-derivs_of_trial_at_quadrature_points()
+array< array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+FuncQuad::derivs_of_trial_at_quadrature_points()
 {
-  constexpr unsigned int num_of_points = compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
   static_assert( 1 <= num_of_points && num_of_points <= 9);
   
@@ -235,14 +235,14 @@ derivs_of_trial_at_quadrature_points()
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
     for (unsigned int j = 0; j < num_of_points; ++j)
-      der_val[i][j] = deriv_of_trial_eval(i, quad_points[j]);
+      der_val[i][j] = FuncQuad::deriv_of_trial_eval(i, quad_points[j]);
   
   return der_val;
 }
 
 
 template<unsigned int max_poly_degree>
-array< array<double, 2> , max_poly_degree + 1 > trial_functions_at_boundaries()
+array< array<double, 2> , max_poly_degree + 1 > FuncQuad::trial_functions_at_boundaries()
 {
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
   
@@ -250,8 +250,8 @@ array< array<double, 2> , max_poly_degree + 1 > trial_functions_at_boundaries()
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
   {
-    fct_val[i][0] = trial_function_eval(i, 0.);
-    fct_val[i][1] = trial_function_eval(i, 1.);
+    fct_val[i][0] = FuncQuad::trial_function_eval(i, 0.);
+    fct_val[i][1] = FuncQuad::trial_function_eval(i, 1.);
   }
   
   return fct_val;
@@ -259,7 +259,7 @@ array< array<double, 2> , max_poly_degree + 1 > trial_functions_at_boundaries()
 
 
 template<unsigned int max_poly_degree>
-array< array<double, 2> , max_poly_degree + 1 > derivs_of_trial_at_boundaries()
+array< array<double, 2> , max_poly_degree + 1 > FuncQuad::derivs_of_trial_at_boundaries()
 {
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
   
@@ -267,8 +267,8 @@ array< array<double, 2> , max_poly_degree + 1 > derivs_of_trial_at_boundaries()
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
   {
-    der_val[i][0] = deriv_of_trial_eval(i, 0.);
-    der_val[i][1] = deriv_of_trial_eval(i, 1.);
+    der_val[i][0] = FuncQuad::deriv_of_trial_eval(i, 0.);
+    der_val[i][1] = FuncQuad::deriv_of_trial_eval(i, 1.);
   }
   
   return der_val;

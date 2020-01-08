@@ -17,6 +17,7 @@
 
 
 using namespace std;
+using namespace FuncQuad;
 #include "DiffusionSolver.inst"
 
 
