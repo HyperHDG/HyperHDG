@@ -20,6 +20,11 @@ template <unsigned int space_dim>
 class Point
 {
   private:
+    /*!*********************************************************************************************
+     * @brief   Array containint the coordinates of the point.
+     * 
+     * A @c std::array conatining the i-th coordinate of the point as its i-th entry.
+     **********************************************************************************************/
     std::array<point_coord_type, space_dim> coordinates_;
   public:
     /*!*********************************************************************************************

@@ -28,7 +28,7 @@
  * name of the computed unknowns, etc. It needs to be passed to the main \c plot function to
  * configure its behavior.
  *
- * @tparam  hyedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * @tparam  hyedge_dim      Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * @tparam  space_dim       The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyperedge_dim.
@@ -52,11 +52,11 @@ class PlotOptions
     
     const HyperGraphT& hyper_graph();
     const LocalSolverT& local_solver();
-}; // end class PlotOptions
+}; // end of class PlotOptions
 
 
 template <class HyperGraphT, class LocalSolverT>
 void plot
 (std::vector<double> lambda, PlotOptions<HyperGraphT, LocalSolverT>& plotOpt);
 
-#endif
+#endif // end of ifndef PLOT_H

@@ -52,7 +52,7 @@ class HyperEdge_Cubic
     /*!*********************************************************************************************
      * @brief   Indices of the hypernodes adjacent to the hyperedge.
      *
-     * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
+     * A @c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
      **********************************************************************************************/
     std::array<hypernode_index_type, 2*hyperedge_dim> hypernode_indices_;
     /*!*********************************************************************************************
@@ -61,7 +61,7 @@ class HyperEdge_Cubic
      * @todo    Do we want to change this (cf. detailed description)? This array also does not have
      *          a getter function!
      * 
-     * A \c std::array comprising the orientation of each hypernode. In HyperGraph_Cubic, all edges
+     * A @c std::array comprising the orientation of each hypernode. In HyperGraph_Cubic, all edges
      * are assumed to have the correct orientation and this array is irrelevant. However, this is
      * possible to change for different applications.
      **********************************************************************************************/
@@ -71,7 +71,7 @@ class HyperEdge_Cubic
      * @brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
      *          spatial dimension.
      *
-     * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
+     * Constructs a hyperedge from a @c std::array containing the elementens per spatial dimension
      * which is given as input data and the index of the hyperedge to be constructed.
      * 
      * @param   index           The index of the hyperedge to be created.
@@ -82,7 +82,7 @@ class HyperEdge_Cubic
     /*!*********************************************************************************************
      * @brief   Return indices of hypernodes adjacent to the hyperedge.
      *
-     * Return a \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
+     * Return a @c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
      *
      * @retval  hypernode_indeices  Topological information on the hyperedge (cf. @c value_type).
      **********************************************************************************************/

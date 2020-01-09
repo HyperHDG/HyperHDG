@@ -24,7 +24,7 @@ namespace FuncQuad
  * @brief   Calculate the amount of quadrature points at compile time.
  * 
  * Naive implementation to calculate the amount of needed quadrature points when a rule of accuracy
- * \c max_quad_degree is desired in \c local_dimensions dimensions using an orthogonal product of
+ * @c max_quad_degree is desired in @c local_dimensions dimensions using an orthogonal product of
  * Gaussian quadrature rules.
  * 
  * @param   max_quad_degree     Desired degree of accuracy.
@@ -46,8 +46,8 @@ constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_d
 /*!*************************************************************************************************
  * @brief   Evaluate value of orthonormal trial function.
  * 
- * Evaluates the value of the \c index orthonormal, one-dimensional trial function on the reference
- * interval @f$[0,1]@f$ at abscissa \c x_value.
+ * Evaluates the value of the @c index orthonormal, one-dimensional trial function on the reference
+ * interval @f$[0,1]@f$ at abscissa @c x_value.
  * 
  * @param   index               Index of evaluated trial function.
  * @param   x_value             Abscissa of evaluated trial function.
@@ -60,8 +60,8 @@ double trial_function_eval(const unsigned int index, const double x_value);
 /*!*************************************************************************************************
  * @brief   Evaluate value of the derivatibe of orthonormal trial function.
  * 
- * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional trial function
- * on the reference interval @f$[0,1]@f$ at abscissa \c x_value.
+ * Evaluates the value of the derivative of the @c index orthonormal, one-dimensional trial function
+ * on the reference interval @f$[0,1]@f$ at abscissa @c x_value.
  * 
  * @param   index               Index of evaluated trial function.
  * @param   x_value             Abscissa of evaluated trial function.

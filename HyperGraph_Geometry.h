@@ -58,16 +58,16 @@ class HyperGraph_Cubic_UnitCube
     /*!*********************************************************************************************
      * @brief   Defines the return value of the class.
      *
-     * The \c class \c HyperGraph_Cubic_UnitCube defines the geometry of the hypergraph. It contains
+     * The @c class @c HyperGraph_Cubic_UnitCube defines the geometry of the hypergraph. It contains
      * the different hyperedges (that actually are constructed everytime access is needed from e.g.
      * the solver class). Thus, its main purpose is to provide a structure that administrates the
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
     typedef HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> value_type;
     /*!*********************************************************************************************
-     * @brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
+     * @brief   Construct a cubic that describes a cube hypergraph from a @c HyperGraph_Cubic.
      *
-     * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per 
+     * Constructs a hypergraph from a @c Topology::HyperGraph_Cubic containing the elementens per 
      * spatial dimension which is given as by its topology.
      * 
      * @param   other       The topology of the hypergraph that has the geometry of the unit cube.

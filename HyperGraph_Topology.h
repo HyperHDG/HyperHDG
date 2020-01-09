@@ -51,7 +51,7 @@ class HyperGraph_Cubic
     /*!*********************************************************************************************
      * @brief   Number of elements per spatial dimension.
      *
-     * A \c std::array comprising the number of elements in each spatial dimension.
+     * A @c std::array comprising the number of elements in each spatial dimension.
      **********************************************************************************************/
     std::array<unsigned int, space_dim> num_elements_;
     /*!*********************************************************************************************
@@ -59,34 +59,34 @@ class HyperGraph_Cubic
      *
      * The number of hyperedges that form the hypergraph. This information is needed to allow to go
      * through all hyperedges and execute some code. The number of hyperedges can be computed from
-     * the \c std::array \c num_elements_.
+     * the @c std::array @c num_elements_.
      **********************************************************************************************/
     hyperedge_index_type num_of_hyperedges_;
     /*!*********************************************************************************************
      * @brief   Total amount of hypernodes.
      *
      * The number of hypernodes that make up the hypergraph. This information is needed to have the
-     * appropriate version of a \c HyperNodeFactory. It can be vomputed from the \c std::array
-     * \c num_elements_.
+     * appropriate version of a @c HyperNodeFactory. It can be vomputed from the \c std::array
+     * @c num_elements_.
      **********************************************************************************************/
     hypernode_index_type num_of_hypernodes_;
   public:
     /*!*********************************************************************************************
      * @brief   Defines the return value of the class.
      *
-     * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
+     * The @c class @c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
      * different hyperedges (that actually are constructed everytime access is needed from e.g. the
      * solver class). Thus, its main purpose is to provide a structure that administrates the
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
     typedef HyperEdge_Cubic<hyperedge_dim, space_dim> value_type;
     /*!*********************************************************************************************
-     * @brief   Construct a cubic hypergraph from a \c std::vector.
+     * @brief   Construct a cubic hypergraph from a @c std::vector.
      *
-     * Constructs a hypergraph from a \c std::vector containing the elementens per spatial dimension
-     * which is given as input data. If the input vector is shorter that \c space_dim, the remaining
+     * Constructs a hypergraph from a @c std::vector containing the elementens per spatial dimension
+     * which is given as input data. If the input vector is shorter that @c space_dim, the remaining
      * amounts of elemnts are assumed to be equal to zero. If the vector is longer than
-     * \c space_dim, the first \c space_dim entries are considered only.
+     * @c space_dim, the first @c space_dim entries are considered only.
      * 
      * @todo    If the vector is too short, an error is thrown in the test program and the behavior
      *          is undefined for Python (most likely an error is thrown, too) at the moment.
@@ -95,11 +95,11 @@ class HyperGraph_Cubic
      **********************************************************************************************/
     HyperGraph_Cubic(const std::vector<int>& num_elements);
     /*!*********************************************************************************************
-     * @brief   Construct a cubic hypergraph from a \c std::array.
+     * @brief   Construct a cubic hypergraph from a @c std::array.
      *
-     * Constructs a hypergraph from a \c std::array containing the elementens per spatial dimension
+     * Constructs a hypergraph from a @c std::array containing the elementens per spatial dimension
      * which is given as input data. The array has the correct length (as ensured by the involved
-     * template parametzer \c space_dim.
+     * template parametzer @c space_dim.
      *
      * @param   num_elements    A @c std::array containing number of elements per spatial dimension.
      **********************************************************************************************/
