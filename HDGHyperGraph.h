@@ -111,35 +111,138 @@ class HDGHyperGraph
 */      
       /*!*******************************************************************************************
        * @brief   Construct an iterator from an @c HDGHyperGraph and an index.
-       *
-       * \todo Finish this explanation and copy constructor and copy assignment.
        * 
-       * Constructs a hypergraph from a @c std::array containing the elementens per spatial dimension
-       * which is given as input data. The array has the correct length (as ensured by the involved
-       * template parametzer @c space_dim.
+       * Construct @c HDGHyperGraph::iterator by passing over an @c HDGHyperGraph object and the
+       * index the iterator is supposed to dot at.
        *
-       * @param   num_elements    A @c std::array containing number of elements per spatial dimension.
+       * @param   hypergraph    The @c HDGHyperGraph, the iterator refers to.
+       * @param   index         Index of the object, the iterator dots at.
        ********************************************************************************************/
       iterator(const HDGHyperGraph& hypergraph, const hyperedge_index_type index)
         : hypergraph_(hypergraph), index_(index) {};
+      /*!*******************************************************************************************
+       * @brief   Copy--construct an iterator from another iterator.
+       * 
+       * Construct @c HDGHyperGraph::iterator as copy of another one.
+       *
+       * @param   other         Other @c iterator which is copied.
+       ********************************************************************************************/
       iterator(const iterator& other)
         : hypergraph_(other.hypergraph_), index_(other.index_) {};
+      /*!*******************************************************************************************
+       * @brief   Copy--assign an iterator from another iterator.
+       * 
+       * Asign a given @c HDGHyperGraph::iterator to be a copy of another one
+       *
+       * @param   other         Other @c iterator which is copied.
+       ********************************************************************************************/
       iterator& operator=(const iterator& other) = default;
-      
+      /*!*******************************************************************************************
+       * @brief   Increment iterator and return incremented iterator.
+       *
+       * This function incements the iterator and returns the incremented iterator. Thus, no new
+       * iterator needs to be constructed and only a reference needs to be returned. This makes the
+       * function more performant compared to @c iterator @c operator++(int).
+       * It is executed using @c ++iterator and @b not @c iterator++.
+       *
+       * @retval  incemented    The incremented iterator.
+       ********************************************************************************************/
       iterator& operator++() { ++index_; return *this; };
+      /*!*******************************************************************************************
+       * @brief   Decrement iterator and return incremented iterator.
+       *
+       * This function decements the iterator and returns the decremented iterator. Thus, no new
+       * iterator needs to be constructed and only a reference needs to be returned. This makes the
+       * function more performant compared to @c iterator @c operator--(int).
+       * It is executed using @c --iterator and @b not @c iterator--.
+       *
+       * @retval  decemented    The decremented iterator.
+       ********************************************************************************************/
       iterator& operator--() { --index_; return *this; };
+      /*!*******************************************************************************************
+       * @brief   Increment iterator and return old iterator.
+       *
+       * This function incements the iterator and returns the old iterator. Thus, a new iterator
+       * needs to be constructed and only a reference needs to be returned. This makes the function
+       * less performant compared to @c iterator @c operator++().
+       * It is executed using @c iterator++ and @b not @c ++iterator.
+       *
+       * @retval  incemented    The incremented iterator.
+       ********************************************************************************************/
       iterator operator++(int) { return iterator(hypergraph_, index_++); };
+      /*!*******************************************************************************************
+       * @brief   Decrement iterator and return old iterator.
+       *
+       * This function decements the iterator and returns the old iterator. Thus, a new iterator
+       * needs to be constructed and only a reference needs to be returned. This makes the function
+       * less performant compared to @c iterator @c operator--().
+       * It is executed using @c iterator-- and @b not @c --iterator.
+       *
+       * @retval  decemented    The decremented iterator.
+       ********************************************************************************************/
       iterator operator--(int) { return iterator(hypergraph_, index_--); };
+      /*!*******************************************************************************************
+       * @brief   Dereference @c iterator to @c HyperEdge.
+       *
+       * This function dereferences the iterator and returns the @c HyperEdge this iterator dots at.
+       *
+       * @retval  hyperedge     The hyperedge described by the iterator.
+       ********************************************************************************************/
       HDGHyperGraph::value_type operator*() { return hypergraph_[index_]; };
-      bool operator==(const iterator& other) { return index_ == other.index_ && std::addressof(hypergraph_) == std::addressof(other.hypergraph_); };
-      bool operator!=(const iterator& other) { return index_ != other.index_ || std::addressof(hypergraph_) != std::addressof(other.hypergraph_); };
+      /*!*******************************************************************************************
+       * @brief   Check for equality with another iterator.
+       *
+       * This function checks whether the current iterator is equal to anoother @c iterator. In this
+       * context equal means that they refer to the same @c HDGHyperGraph and have the same index.
+       *
+       * @param   other         @c iterator which is checked to be equal.
+       * @retval  is_equal      @c boolean which is true if both iterators are equal and false
+       *                        otherwise.
+       ********************************************************************************************/
+      bool operator==(const iterator& other)
+      {
+        return index_ == other.index_ 
+               && std::addressof(hypergraph_) == std::addressof(other.hypergraph_);
+      };
+      /*!*******************************************************************************************
+       * @brief   Check for unequality with another iterator.
+       *
+       * This function checks whether the current iterator is equal to anoother @c iterator. In this
+       * context unequal means that they do not refer to the same @c HDGHyperGraph or do not have
+       * the same index.
+       *
+       * @param   other         @c iterator which is checked to be unequal.
+       * @retval  is_equal      @c boolean which is false if both iterators are equal and true
+       *                        otherwise.
+       ********************************************************************************************/
+      bool operator!=(const iterator& other)
+      { return index_ != other.index_ 
+               || std::addressof(hypergraph_) != std::addressof(other.hypergraph_);
+      };
   };
   
   private:
+    /*!*********************************************************************************************
+     * @brief   Hypernode factory administrating the access to degrees of freedom.
+     *
+     * A @c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
+     * are located in some @c std::vector.
+     **********************************************************************************************/
     const HyperNodeFactory<n_dofs_per_node> hypernode_factory_;
+    /*!*********************************************************************************************
+     * @brief   Topology of the hypergraph.
+     *
+     * This object contains the topology of the hypergraph, i.e., it encodes which hyperedges
+     * connect which hypernodes.
+     **********************************************************************************************/
     const TopoT hypergraph_topology_;
+    /*!*********************************************************************************************
+     * @brief   Geometry of the hypergraph.
+     *
+     * This object contains the geometry of the hypergraph, i.e., it encodes the geometry of the
+     * various hyperedges.
+     **********************************************************************************************/
     const GeomT hypergraph_geometry_;
-  
   public:
     HDGHyperGraph(const TopoT& hyperedge_getter);
     const value_type operator[] (const hyperedge_index_type index) const;
