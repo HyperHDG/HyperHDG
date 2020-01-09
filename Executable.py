@@ -31,9 +31,10 @@ vectorDirichlet[len(vectorDirichlet)-1] = 0. # Comment if checking for trivial s
 index_vector = np.array([ 0, len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
-# Print index vector and vector containing the Dirichlet values.
+# Print index vector, vector containing the Dirichlet values, and new output file name.
 print("Dirichlet indices: ", index_vector)
 print("Dirichlet values: ", vectorDirichlet)
+print("Output file name: ", HDG_wrapper.plot_option("fileName", "exampleName"))
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet",
 # where vectorDirichlet is the vector of Dirichlet values.
