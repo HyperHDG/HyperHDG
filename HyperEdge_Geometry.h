@@ -71,7 +71,7 @@ class HyperEdge_Cubic_UnitCube
      * @brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
      *          spatial dimension.
      *
-     * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
+     * Constructs a hyperedge from a @c std::array containing the elementens per spatial dimension
      * which is given as input data and the index of the hyperedge to be constructed.
      * 
      * @param   index           The index of the hyperedge to be created.
@@ -82,7 +82,7 @@ class HyperEdge_Cubic_UnitCube
     /*!*********************************************************************************************
      * @brief   Return vertex of specified index of a hyperedge.
      *
-     * Return a \c Point describing the position of a vertex of a hyperedge.
+     * Return a @c Point describing the position of a vertex of a hyperedge.
      *
      * @retval  point           Point/Vertex of the hyperedge.
      **********************************************************************************************/
