@@ -32,6 +32,7 @@
 
 #include "HDGHyperGraph.h"
 #include "DiffusionSolver.h"
+#include "Plot.h"
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 class DiffusionProblemRegular
@@ -43,6 +44,9 @@ class DiffusionProblemRegular
                   hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
     DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree > local_solver_;
+    PlotOptions< HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
+                    Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                    Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >, DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree > > plot_options;
   public:
     /*!*********************************************************************************************
      * @brief   Example problem constructor.
@@ -106,11 +110,22 @@ class DiffusionProblemRegular
      **********************************************************************************************/
     int size_of_system();
     /*!*********************************************************************************************
+     * @brief   Set plot option and return old plot option.
+     *
+     * Function to set and / or read the current plot option.
+     *
+     * @param   option        A @c std::string containing the plot option to be considered.
+     * @param   value         A @c std::string containing the new value of the considered option.
+     *                        If empty, the old value is kept.
+     * @retval  opt_value     A @c std::string containing the value of the plot option.
+     **********************************************************************************************/
+    std::string plot_option(std::string option, std::string value = "");
+    /*!*********************************************************************************************
      * @brief   Plot solution in vtu format.
      *
      * Function that plots the solution of the problem to a predefined file.
      *
-     * @param   lambda        A vector of unknowns containing the
+     * @param   lambda        A vector of unknowns containing the data vector.
      * @retval  file          A file in the output directory.
      **********************************************************************************************/
     void plot_solution(std::vector<double> lambda);

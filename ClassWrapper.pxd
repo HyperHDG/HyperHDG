@@ -1,4 +1,5 @@
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 
 cdef extern from "DiffusionProblem.h":
   cdef cppclass DiffusionProblem "DiffusionProblemRegular<1,3,1>":
@@ -7,4 +8,5 @@ cdef extern from "DiffusionProblem.h":
     vector[double] return_zero_vector()
     vector[double] matrix_vector_multiply(vector[double])
     int size_of_system()
+    string plot_option(string, string)
     void plot_solution(vector[double])

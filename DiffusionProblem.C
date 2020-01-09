@@ -10,7 +10,6 @@
 
 
 #include "DiffusionProblem.h"
-#include "Plot.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -23,7 +22,7 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_
 DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
 DiffusionProblemRegular(vector<int> num_elements)
 : hyper_graph_(Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
-  local_solver_(1.)
+  local_solver_(1.), plot_options(hyper_graph_, local_solver_)
 { }
 
 
@@ -82,9 +81,32 @@ size_of_system()
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+std::string DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+plot_option(std::string option, std::string value)
+{
+  if (value == "")                            ;
+  else if (option == "outputDir")             plot_options.outputDir = value;
+  else if (option == "fileName")              plot_options.fileName = value;
+  else if (option == "fileEnding")            plot_options.fileEnding = value;
+  else if (option == "fileNumber")            plot_options.fileNumber = stoi(value);
+  else if (option == "printFileNumber")       plot_options.printFileNumber = (value == "true" || value == "1");
+  else if (option == "incrementFileNumber")   plot_options.incrementFileNumber = (value == "true" || value == "1");
+  else assert( 0 == 1 );
+  
+  if (option == "outputDir")                  value = plot_options.outputDir;
+  else if (option == "fileName")              value = plot_options.fileName;
+  else if (option == "fileEnding")            value = plot_options.fileEnding;
+  else if (option == "fileNumber")            value = to_string(plot_options.fileNumber);
+  else if (option == "printFileNumber")       value = to_string(plot_options.printFileNumber);
+  else if (option == "incrementFileNumber")   value = to_string(plot_options.incrementFileNumber);
+  else assert( 0 == 1 );
+  
+  return value;
+}
+
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 void DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
 plot_solution(std::vector<double> lambda)
 {
-  PlotOptions plotOpts(hyper_graph_,local_solver_);
-  plot(lambda, plotOpts);
+  plot(lambda, plot_options);
 }

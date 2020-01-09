@@ -14,5 +14,14 @@ cdef class PyDiffusionProblem:
     return self.thisptr.matrix_vector_multiply(vec)
   def size_of_system(self):
     return self.thisptr.size_of_system()
+  def plot_option(self, option, value):
+    if isinstance(option,str): # Python3 version - use unicode for Python 2
+      option = option.encode()
+    if isinstance(value,str): # Python3 version - use unicode for Python 2
+      value = value.encode()
+    return_val = self.thisptr.plot_option(option, value)
+    if isinstance(return_val,bytes): # Python3 version - use unicode for Python 2
+      return_val = return_val.decode()
+    return return_val
   def plot_solution(self, vec):
     self.thisptr.plot_solution(vec)
