@@ -18,14 +18,42 @@
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const TopoT& hypergraph_topology)
-: hypernode_factory_(hypergraph_topology.num_of_hypernodes()), hypergraph_topology_(hypergraph_topology),
-  hypergraph_geometry_(hypergraph_topology)
+: hypergraph_topology_(hypergraph_topology), hypergraph_geometry_(hypergraph_topology),
+  hypernode_factory_(hypergraph_topology.num_of_hypernodes())
 {
   static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
   assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
   assert( hypernode_factory_.num_of_hypernodes() >= 2 );
   assert( hypergraph_topology.num_of_hyperedges() != 0 );
 }
+
+
+template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
+HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
+HDGHyperGraph(const constructor_value_type& construction_data)
+: hypergraph_topology_(construction_data.topology), hypergraph_geometry_(construction_data.geometry),
+  hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
+{
+  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
+  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
+  assert( hypernode_factory_.num_of_hypernodes() >= 2 );
+  assert( hypergraph_topology_.num_of_hyperedges() != 0 );
+}
+
+
+template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
+HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
+HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
+              const typename GeomT::constructor_value_type& construct_geom)
+: hypergraph_topology_(construct_topo), hypergraph_geometry_(construct_geom),
+  hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
+{
+  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
+  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
+  assert( hypernode_factory_.num_of_hypernodes() >= 2 );
+  assert( hypergraph_topology_.num_of_hyperedges() != 0 );
+}
+
 
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >

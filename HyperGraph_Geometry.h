@@ -65,6 +65,25 @@ class HyperGraph_Cubic_UnitCube
      **********************************************************************************************/
     typedef HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim> value_type;
     /*!*********************************************************************************************
+     * @brief   Defines the value type of input argument for standard constructor.
+     *
+     * To receive a very general @c AbstractProblem, constructors need to account for the fact that
+     * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
+     * needs to be constructed. The @c typedef implements the aspect, that a cubic hypergraph
+     * topology whic is a unit cube is by default constructed by a std::vector that contains amounts
+     * of elements in the different dimensions.
+     **********************************************************************************************/
+    typedef std::vector<int> constructor_value_type;
+    /*!*********************************************************************************************
+     * @brief   Construct a cubic that describes a cube hypergraph from a @c HyperGraph_Cubic.
+     *
+     * Constructs a hypergraph from a @c Topology::HyperGraph_Cubic containing the elementens per 
+     * spatial dimension which is given as by its topology.
+     * 
+     * @param   other       The topology of the hypergraph that has the geometry of the unit cube.
+     **********************************************************************************************/
+    HyperGraph_Cubic_UnitCube(const constructor_value_type& num_elements);
+    /*!*********************************************************************************************
      * @brief   Construct a cubic that describes a cube hypergraph from a @c HyperGraph_Cubic.
      *
      * Constructs a hypergraph from a @c Topology::HyperGraph_Cubic containing the elementens per 

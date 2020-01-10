@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "DiffusionProblem.h"
+#include "AbstractProblem.h"
 
 using namespace std;
 

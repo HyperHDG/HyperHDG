@@ -94,7 +94,7 @@ HyperGraph_Cubic(const array<unsigned int, space_dim>& num_elements)
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
-HyperGraph_Cubic(const std::vector<int>& num_elements)
+HyperGraph_Cubic(const constructor_value_type& num_elements)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim];
   
