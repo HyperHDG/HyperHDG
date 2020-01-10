@@ -9,19 +9,19 @@
  */
 
 
-#include "DiffusionProblem.h"
+#include "AbstractProblem.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
 
 using namespace std;
-#include "DiffusionProblem.inst"
+#include "AbstractProblem.inst"
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
 DiffusionProblemRegular(vector<int> num_elements)
-: hyper_graph_(Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >(num_elements)),
+: hyper_graph_(num_elements,num_elements),
   local_solver_(1.), plot_options(hyper_graph_, local_solver_)
 { }
 

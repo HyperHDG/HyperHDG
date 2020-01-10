@@ -23,6 +23,14 @@ HyperGraph_Cubic_UnitCube(const Topology::HyperGraph_Cubic<hyperedge_dim,space_d
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
+HyperGraph_Cubic_UnitCube<hyperedge_dim,space_dim>::
+HyperGraph_Cubic_UnitCube(const constructor_value_type& num_elements)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim];
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
 const HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>
 HyperGraph_Cubic_UnitCube<hyperedge_dim,space_dim>::
 get_hyperedge(const hyperedge_index_type index) const

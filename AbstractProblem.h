@@ -1,3 +1,12 @@
+#ifndef DIFFUSIONPROBLEM_H
+#define DIFFUSIONPROBLEM_H
+
+#include "HDGHyperGraph.h"
+#include "DiffusionSolver.h"
+#include "Plot.h"
+
+//typedef AbstractProblemProblemRegular DiffusionProblemRegular
+
 /*!*************************************************************************************************
  * @brief   This is an example problem.
  *
@@ -26,14 +35,6 @@
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
-
-#ifndef DIFFUSIONPROBLEM_H
-#define DIFFUSIONPROBLEM_H
-
-#include "HDGHyperGraph.h"
-#include "DiffusionSolver.h"
-#include "Plot.h"
-
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 class DiffusionProblemRegular
 {

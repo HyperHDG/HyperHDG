@@ -75,7 +75,45 @@ class HDGHyperGraph
      **********************************************************************************************/
     HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
       : topology(topo), geometry(geom) { };
-  } value_type; // end of struct HyperEdge
+  } value_type; // end of typedef struct HyperEdge
+  
+  /*!***********************************************************************************************
+   * @brief   The type needed to construct an @c HDGHyperGraph.
+   *
+   * This @c typedef @c struct is needed to defaultly construct an @c HDGHyperGraph. It contains
+   * topological and geometrical construction information about the hypergraph. It is therefore
+   * defined as the @c constructor_value_type of class @c HDGHyperGraph.
+   ************************************************************************************************/
+  typedef struct HyperGraphConstructor
+  {
+    /*!*********************************************************************************************
+     * @brief   Constructor arguments for topological information of a hypergraph.
+     *
+     * A @c TopoT::constructor_value_type comprising the information to construct topological
+     * information of a hypergraph.
+     **********************************************************************************************/
+    typename TopoT::constructor_value_type topology;
+    /*!*********************************************************************************************
+     * @brief   Constructor arguments for geometrical information of a hypergraph.
+     *
+     * A @c TopoT::constructor_value_type comprising the information to construct geometrical
+     * information of a hypergraph.
+     **********************************************************************************************/
+    typename GeomT::constructor_value_type geometry;
+    /*!*********************************************************************************************
+     * @brief   Construct the @c struct that contains geometrical and topological information to
+     *          construct a hypergraph.
+     *
+     * Construct a @c struct @c HyperGraphConstructor which is needed to construct a
+     * @c HDGHyperGraph and contains topolopgical and geometrical information to do so.
+     *
+     * @param   topo    Topological information to construct hypergraph.
+     * @param   geom    Geometrical information to construct hypergraph.
+     **********************************************************************************************/
+    HyperGraphConstructor(const typename TopoT::constructor_value_type& topo,
+                          const typename GeomT::constructor_value_type& geom)
+      : topology(topo), geometry(geom) { };
+  } constructor_value_type; // end of typedef struct HyperGraphConstructor
   
   /*!***********************************************************************************************
    * @brief   Iterator for @c struct @c HyperEdge returned by @c operator[].
@@ -223,13 +261,6 @@ class HDGHyperGraph
   
   private:
     /*!*********************************************************************************************
-     * @brief   Hypernode factory administrating the access to degrees of freedom.
-     *
-     * A @c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
-     * are located in some @c std::vector.
-     **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_node> hypernode_factory_;
-    /*!*********************************************************************************************
      * @brief   Topology of the hypergraph.
      *
      * This object contains the topology of the hypergraph, i.e., it encodes which hyperedges
@@ -243,9 +274,40 @@ class HDGHyperGraph
      * various hyperedges.
      **********************************************************************************************/
     const GeomT hypergraph_geometry_;
+    /*!*********************************************************************************************
+     * @brief   Hypernode factory administrating the access to degrees of freedom.
+     *
+     * A @c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
+     * are located in some @c std::vector.
+     **********************************************************************************************/
+    const HyperNodeFactory<n_dofs_per_node> hypernode_factory_;
   public:
     /*!*********************************************************************************************
-     * @brief   Construct @c HDGHyperGraph from topology informatin.
+     * @brief   Construct @c HDGHyperGraph from @c constructor_value_type.
+     *
+     * This is one of two standard ways of constructing a hypergraph.
+     * That is, a hypergraph is constructed by providing the necessary data in form of the
+     * respective @c constructor_value_type.
+     *
+     * @param   constructor           Information needed to deduce topological and geometrical data
+     *                                to construct a @c HDGHyperGraph.
+     **********************************************************************************************/
+    HDGHyperGraph(const constructor_value_type& construction_data);
+    /*!*********************************************************************************************
+     * @brief   Construct @c HDGHyperGraph from @c constructor_value_type.
+     *
+     * This is one of two standard ways of constructing a hypergraph.
+     * That is, a hypergraph is constructed by providing the necessary data to construct its
+     * topology and its geometry seperately in form of the respective @c constructor_value_type
+     * (plural, two).
+     *
+     * @param   construct_topo        Information needed to deduce topological data.
+     * @param   construct_geom        Information needed to deduce geometrical data.
+     **********************************************************************************************/
+    HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
+                  const typename GeomT::constructor_value_type& construct_geom);
+    /*!*********************************************************************************************
+     * @brief   Construct @c HDGHyperGraph from topology information.
      *
      * This is the standard way of constructing a hypergraph, provided it is in some sense regular
      * and geometrical information can be deduced from topological information or is irrelevant.

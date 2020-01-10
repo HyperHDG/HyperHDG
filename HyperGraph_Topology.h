@@ -81,6 +81,16 @@ class HyperGraph_Cubic
      **********************************************************************************************/
     typedef HyperEdge_Cubic<hyperedge_dim, space_dim> value_type;
     /*!*********************************************************************************************
+     * @brief   Defines the value type of input argument for standard constructor.
+     *
+     * To receive a very general @c AbstractProblem, constructors need to account for the fact that
+     * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
+     * needs to be constructed. The @c typedef implements the aspect, that a cubic hypergraph
+     * topology is by default constructed by a std::vector that contains amounts of elements in the
+     * different dimensions.
+     **********************************************************************************************/
+    typedef std::vector<int> constructor_value_type;
+    /*!*********************************************************************************************
      * @brief   Construct a cubic hypergraph from a @c std::vector.
      *
      * Constructs a hypergraph from a @c std::vector containing the elementens per spatial dimension
@@ -93,7 +103,7 @@ class HyperGraph_Cubic
      *
      * @param   num_elements    A @c std::vector containing number of elements per dimension.
      **********************************************************************************************/
-    HyperGraph_Cubic(const std::vector<int>& num_elements);
+    HyperGraph_Cubic(const constructor_value_type& num_elements);
     /*!*********************************************************************************************
      * @brief   Construct a cubic hypergraph from a @c std::array.
      *
