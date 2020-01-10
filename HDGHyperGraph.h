@@ -35,8 +35,8 @@
  *                          to provide a getter function to the topological information of a
  *                          hyperedge of given index and can be arbitrarily implemented.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2019.
- * @authors   Andreas Rupp, University of Heidelberg, 2019.
+ * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 class HDGHyperGraph
@@ -75,7 +75,7 @@ class HDGHyperGraph
      **********************************************************************************************/
     HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
       : topology(topo), geometry(geom) { };
-  } value_type;
+  } value_type; // end of struct HyperEdge
   
   /*!***********************************************************************************************
    * @brief   Iterator for @c struct @c HyperEdge returned by @c operator[].
@@ -219,7 +219,7 @@ class HDGHyperGraph
       { return index_ != other.index_ 
                || std::addressof(hypergraph_) != std::addressof(other.hypergraph_);
       };
-  };
+  }; // end of class iterator
   
   private:
     /*!*********************************************************************************************
@@ -244,24 +244,124 @@ class HDGHyperGraph
      **********************************************************************************************/
     const GeomT hypergraph_geometry_;
   public:
-    HDGHyperGraph(const TopoT& hyperedge_getter);
+    /*!*********************************************************************************************
+     * @brief   Construct @c HDGHyperGraph from topology informatin.
+     *
+     * This is the standard way of constructing a hypergraph, provided it is in some sense regular
+     * and geometrical information can be deduced from topological information or is irrelevant.
+     *
+     * @param   hypergraph_topology   Topological information about hypergraph.
+     **********************************************************************************************/
+    HDGHyperGraph(const TopoT& hypergraph_topology);
+    /*!*********************************************************************************************
+     * @brief   Subscript operator of a @c HDGHyperGraph.
+     *
+     * The subscript operator takes an index referring to an hyperedge and returns the respective
+     * @c HyperEdge containing its topological and geometrical information. Thus, this operator can
+     * be bypassed by using the functions @c hyperedge_topology (only returning the topological
+     * data) and @c hyperedge_geometry (ony returning the geometrical data).
+     *
+     * @param   index                 Index of the @c HyperEdge to be returned.
+     * @retval  hyperedge             The @c HyperEdge of the given index.
+     **********************************************************************************************/
     const value_type operator[] (const hyperedge_index_type index) const;
-    
+    /*!*********************************************************************************************
+     * @brief   Return iterator to first @c HyperEdge of @c HDGHyperGraph.
+     *
+     * This function returns an @c HDGHyperGraph::iterator that refers to the first @c HyperEdge of
+     * the hypergraph (index = 0). Thus, it can be used to mark the starting point in @c for_each
+     * loops.
+     *
+     * @retval  hyperedge             Iterator referring to first @c HyperEdge.
+     **********************************************************************************************/
     typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const;
+    /*!*********************************************************************************************
+     * @brief   Return iterator to the end of @c HyperEdge list.
+     *
+     * This function returns an @c HDGHyperGraph::iterator that refers to the position of an (non-
+     * existing) @c HyperEdge of the hypergraph (index = num_of_hyperedges), i.e., the position
+     * directly after the last valid entry of the @c HDGHyperGraph. Thus, it can be used to mark the
+     * ending point in @c for_each loops.
+     *
+     * @retval  hyperedge             Iterator referring to position behind last @c HyperEdge.
+     **********************************************************************************************/
     typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const;
-    
-    // Why is this public? Why not get_hypernode()?
-    const HyperNodeFactory<n_dofs_per_node> hypernode_factory() const; // AR: No reference for performance?!
+    /*!*********************************************************************************************
+     * @brief   Return iterator to the end of @c HyperEdge list.
+     *
+     * @todo    Why is this public? Why not get_hypernode()?
+     *          -> Because a hypernode would have several functions and we decided not to introduce
+     *          a hypernode class, but to only have a hypernode factory covering all those aspects.
+     *          What we could do is to repeat all functions of the hypernode_factory in this class.
+     * 
+     * @todo    Decide whether returning a reference or a real object makes more sense, here.
+     * 
+     * This function returns an @c HyperNodeFactory handling the access to the degrees of freedom
+     * encoded in some @c std::vector.
+     *
+     * @retval  hypernode_factory     The @c HyperNodeFactory belonging the hypergraph.
+     **********************************************************************************************/
+    const HyperNodeFactory<n_dofs_per_node> hypernode_factory() const;
+    /*!*********************************************************************************************
+     * @brief   Topological information of prescribed hyperedge.
+     *
+     * Return the topological information of a specific hyperedge identified via its index. This
+     * function can be used to bypass the subscript operator which returns topological and geometric
+     * information about a hyperedge of given index.
+     *
+     * @param   index                 Index of the hyperedge to be returned.
+     * @retval  hyperedge_topology    Topological information about hyperedge.
+     **********************************************************************************************/
     const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const;
+    /*!*********************************************************************************************
+     * @brief   Geometrical information of prescribed hyperedge.
+     *
+     * Return the geometrical information of a specific hyperedge identified via its index. This
+     * function can be used to bypass the subscript operator which returns topological and geometric
+     * information about a hyperedge of given index.
+     *
+     * @param   index                 Index of the hyperedge to be returned.
+     * @retval  hyperedge_geometry    Geometrical information about hyperedge.
+     **********************************************************************************************/
     const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const;
-    
+    /*!*********************************************************************************************
+     * @brief   Returns the number of hyperedges making up the hypergraph.
+     *
+     * @retval  num_hyperedges        The total amount of hyperedges of a hypergraph.
+     **********************************************************************************************/
     const hyperedge_index_type num_of_hyperedges() const;
+    /*!*********************************************************************************************
+     * @brief   Returns the number of hypernodes making up the hypergraph.
+     *
+     * @retval  num_hypernodes        The total amount of hypernodes of a hypergraph.
+     **********************************************************************************************/
     const hypernode_index_type num_of_hypernodes() const;
+    /*!*********************************************************************************************
+     * @brief   Returns the total amount of degrees of freedom in the considered hypergraph.
+     * 
+     * @retval  num_of_global_dofs    The total amount of degreees of freedom in the considered
+     *                                hypergraph.
+     **********************************************************************************************/
     const dof_index_type num_of_global_dofs() const;
     
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * @retval  hyperedge_dim         The dimension of a hyperedge.
+     **********************************************************************************************/
     static constexpr unsigned int hyperedge_dimension() { return TopoT::hyperedge_dimension(); };
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the dimension of the space.
+     *
+     * @retval  space_dim             The dimension of the space.
+     **********************************************************************************************/
     static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); };
+    /*!*********************************************************************************************
+     * @brief   Returns the template parameter representing the amount of dofs per node.
+     *
+     * @retval  n_dofs_per_node       The amount of degrees of freedom per node.
+     **********************************************************************************************/
     static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; }
-};
+}; // end of class HDGHyperGraph
 
-#endif
+#endif // end of ifndef HYPERGRAPH_H
