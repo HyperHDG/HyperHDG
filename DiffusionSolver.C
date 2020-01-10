@@ -21,7 +21,7 @@ using namespace FuncQuad;
 #include "DiffusionSolver.inst"
 
 
-vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)
+inline vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)
 {
   vector<double> result(left.size() * right.size());
   for (unsigned int i = 0; i < right.size(); ++i)
@@ -31,7 +31,7 @@ vector<double> dyadic_product(const vector<double>& left, const vector<double>& 
 }
 
 
-vector< vector<double> > double_dyadic_product(const vector< vector<double> >& left, const vector< vector<double> >& right)
+inline vector< vector<double> > double_dyadic_product(const vector< vector<double> >& left, const vector< vector<double> >& right)
 {
   vector< vector<double> > result(left.size() * right.size());
   for (unsigned int i = 0; i < right.size(); ++i)
@@ -41,7 +41,7 @@ vector< vector<double> > double_dyadic_product(const vector< vector<double> >& l
 }
 
 
-vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge_dim, const unsigned int max_poly_degree, const unsigned int dimension, const unsigned int ansatz)
+inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge_dim, const unsigned int max_poly_degree, const unsigned int dimension, const unsigned int ansatz)
 {
   vector<double> unity_vec(max_poly_degree+1, 1.);
   vector<double> ansatz_vec(max_poly_degree+1, 0.);
@@ -220,7 +220,7 @@ DiffusionSolver_RegularQuad(const double tau)
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-unsigned int DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+inline unsigned int DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 loc_matrix_index(const unsigned int row, const unsigned int column) const
 {
   assert( 0 <= row && row < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) );
@@ -230,7 +230,7 @@ loc_matrix_index(const unsigned int row, const unsigned int column) const
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>
+inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 assemble_loc_mat() const
 {
@@ -286,7 +286,7 @@ assemble_loc_mat() const
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
+inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
@@ -363,7 +363,7 @@ solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hy
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
+inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
@@ -383,7 +383,7 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_di
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
@@ -407,7 +407,7 @@ dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeff
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > 
+inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > 
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
