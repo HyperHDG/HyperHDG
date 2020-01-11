@@ -18,16 +18,17 @@ using namespace std;
 #include "AbstractProblem.inst"
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
-DiffusionProblemRegular(vector<int> num_elements)
-: hyper_graph_(num_elements,num_elements),
+template <class TopologyT, class GeometryT, class LocalSolverT>
+AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
+AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo,
+                const typename GeometryT::constructor_value_type& construct_geom)
+: hyper_graph_(construct_topo,construct_geom),
   local_solver_(1.), plot_options(hyper_graph_, local_solver_)
 { }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-void DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+void AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 read_dirichlet_indices(std::vector<int> indices)
 {
   dirichlet_indices_.resize(indices.size());
@@ -39,18 +40,21 @@ read_dirichlet_indices(std::vector<int> indices)
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+vector<double> AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 return_zero_vector()
 {
   return vector<double>(hyper_graph_.num_of_global_dofs(), 0.);
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-vector<double> DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+vector<double> AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 matrix_vector_multiply(vector<double> x_vec)
 {
+  const unsigned int hyperedge_dim = TopologyT::hyperedge_dimension();
+  const unsigned int poly_degree = LocalSolverT::polynomial_degree();
+  
   vector<double> vec_Ax(x_vec.size(), 0.);
   array< array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
@@ -72,16 +76,16 @@ matrix_vector_multiply(vector<double> x_vec)
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-int DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+int AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 size_of_system()
 {
   return hyper_graph_.num_of_global_dofs();
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-std::string DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+std::string AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 plot_option(std::string option, std::string value)
 {
   if (value == "")                            ;
@@ -104,8 +108,8 @@ plot_option(std::string option, std::string value)
   return value;
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-void DiffusionProblemRegular<hyperedge_dim,space_dim,poly_degree>::
+template <class TopologyT, class GeometryT, class LocalSolverT>
+void AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 plot_solution(std::vector<double> lambda)
 {
   plot(lambda, plot_options);

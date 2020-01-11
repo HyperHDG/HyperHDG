@@ -3,7 +3,7 @@
 cdef class PyDiffusionProblem:
   cdef DiffusionProblem *thisptr      # hold a C++ instance which we're wrapping
   def __cinit__(self, num_elements):
-    self.thisptr = new DiffusionProblem(num_elements)
+    self.thisptr = new DiffusionProblem(num_elements, num_elements)
   def __dealloc__(self):
     del self.thisptr
   def read_dirichlet_indices(self, indices):

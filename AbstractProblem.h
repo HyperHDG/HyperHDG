@@ -1,14 +1,13 @@
-#ifndef DIFFUSIONPROBLEM_H
-#define DIFFUSIONPROBLEM_H
+#ifndef ABSTRACTPROBLEM_H
+#define ABSTRACTPROBLEM_H
 
 #include "HDGHyperGraph.h"
 #include "DiffusionSolver.h"
 #include "Plot.h"
 
-//typedef AbstractProblemProblemRegular DiffusionProblemRegular
 
 /*!*************************************************************************************************
- * @brief   This is an example problem.
+ * @brief   This is an abstract example problem class.
  *
  * This class contains functions to define and solve Poisson's equation, i.e.,
  * @f[
@@ -25,6 +24,9 @@
  * 
  * @todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
  *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
+ * 
+ * @todo  We should rewrite this explanation appropriately and think whether this is general enough.
+ *        (With explanation, I mean this definition and the following function explanations, etc.)
  *
  * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
@@ -32,33 +34,37 @@
  *                          be larger than or equal to hyperedge_dim.
  * @tparam  poly_degree     The polynomial degree of test and trial functions.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2019.
- * @authors   Andreas Rupp, University of Heidelberg, 2019.
+ * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-class DiffusionProblemRegular
+template <class TopologyT, class GeometryT, class LocalSolverT>
+class AbstractProblem
 {
   private:
-    HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                    Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                    Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >
-                  hyper_graph_;
+    HDGHyperGraph < compute_n_dofs_per_node(TopologyT::hyperedge_dimension(),
+                                            LocalSolverT::polynomial_degree()),
+                    TopologyT, GeometryT
+                  > hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
-    DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree > local_solver_;
-    PlotOptions< HDGHyperGraph < compute_n_dofs_per_node(hyperedge_dim, poly_degree),
-                    Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
-                    Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim > >, DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree > > plot_options;
+    LocalSolverT local_solver_;
+    PlotOptions < HDGHyperGraph < compute_n_dofs_per_node(TopologyT::hyperedge_dimension(),
+                                                         LocalSolverT::polynomial_degree()),
+                                  TopologyT, GeometryT
+                                >,
+                  LocalSolverT
+                > plot_options;
   public:
     /*!*********************************************************************************************
-     * @brief   Example problem constructor.
+     * @brief   Abstract problem constructor.
      *
-     * Constructor for class containing a HyperGraph and a DiffusionSolver that solve a diffusion
-     * problem on a regular mesh.
+     * Constructor for class containing a HyperGraph and a local solver that solve a PDE on a
+     * hyperedge.
      *
-     * @param   num_elements  A @c std::vector containing the amount of mesh elements per spatial
-     *                        dimension.
+     * @param   construct_topo    Information to construct a topology.
+     * @param   construct_geom    Information to construct a geometry.
      **********************************************************************************************/
-    DiffusionProblemRegular(std::vector<int> num_elements);
+    AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo,
+                    const typename GeometryT::constructor_value_type& construct_geom);
     /*!*********************************************************************************************
      * @brief   Read indices of Dirichlet type hypernodes/faces.
      *
@@ -130,6 +136,34 @@ class DiffusionProblemRegular
      * @retval  file          A file in the output directory.
      **********************************************************************************************/
     void plot_solution(std::vector<double> lambda);
-};
+}; // end of class AbstractProblem
 
-#endif
+
+/*!*************************************************************************************************
+ * @brief   This is an example problem.
+ *
+ * This class contains functions to define and solve Poisson's equation, i.e.,
+ * @f[
+ *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * @f]
+ * in a spatial domain @f$\Omega \subset \mathbb R^d@f$. Here, @f$d@f$ is the spatial dimension
+ * @c space_dim, @f$\Omega@f$ is a regular graph (@c hyperedge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (@c hyperedge_dim = 2) or volumes (@c hyperedge_dim = 3).
+ *
+ * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyperedge_dim.
+ * @tparam  poly_degree     The polynomial degree of test and trial functions.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+using DiffusionProblemRegular = 
+AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                  Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
+                  DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
+                >;
+
+#endif // end of ifndef ABSTRACTPROBLEM_H
