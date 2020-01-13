@@ -9,7 +9,6 @@
  */
 
 #include "HyperGraph_Geometry.h"
-#include <cassert>
 
 using namespace std;
 using namespace Geometry;
@@ -35,6 +34,5 @@ const HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>
 HyperGraph_Cubic_UnitCube<hyperedge_dim,space_dim>::
 get_hyperedge(const hyperedge_index_type index) const
 {
-  assert ( index < num_of_hyperedges_ );
   return HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>(index, num_elements_);
 }

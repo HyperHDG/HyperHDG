@@ -9,7 +9,7 @@
  */
 
 #include "HyperNodeFactory.h"
-#include <cassert>
+#include "HyAssert.h"
 
 using namespace std;
 #include "HyperNodeFactory.inst"
@@ -59,10 +59,15 @@ get_dof_indices(const hypernode_index_type hypernode_index) const
 
 template <unsigned int n_dofs_per_node>
 array<dof_value_type, n_dofs_per_node> HyperNodeFactory<n_dofs_per_node>::
-get_dof_values(const hypernode_index_type hypernode_index, const vector<dof_value_type>& global_dof_vector) const
+get_dof_values(const hypernode_index_type hypernode_index,
+               const vector<dof_value_type>& global_dof_vector) const
 {
   dof_index_type initial_dof_index = hypernode_index * n_dofs_per_node;
-  assert( initial_dof_index + n_dofs_per_node <= global_dof_vector.size() );
+  hy_assert( initial_dof_index >= 0
+               && initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+             "The initial dof index = " << initial_dof_index << "should be non-negative. Moreover, "
+             << "the final index = " << initial_dof_index + n_dofs_per_node << " must not exceed "
+             << "the size of the vector of global degrees of freedom." );
   
   array<dof_value_type, n_dofs_per_node> local_dof_values;
   for (unsigned int index = 0; index < n_dofs_per_node; ++index)
@@ -74,12 +79,19 @@ get_dof_values(const hypernode_index_type hypernode_index, const vector<dof_valu
 
 template <unsigned int n_dofs_per_node>
 void HyperNodeFactory<n_dofs_per_node>::
-add_to_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_type>& global_dof_vector,
+add_to_dof_values(const hypernode_index_type hypernode_index,
+                  vector<dof_value_type>& global_dof_vector,
                   const array<dof_value_type, n_dofs_per_node>& local_dof_vector) const
 {
   dof_index_type initial_dof_index = hypernode_index * n_dofs_per_node;
-  assert( local_dof_vector.size() == n_dofs_per_node );
-  assert( initial_dof_index + n_dofs_per_node <= global_dof_vector.size() );
+  hy_assert( local_dof_vector.size() == n_dofs_per_node ,
+             "The size of the local dof vector is " << local_dof_vector.size() << ", but should be "
+             << "equal to the amount of local dofs, which is " << n_dofs_per_node << "." );
+  hy_assert( initial_dof_index >= 0 &&
+               initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+             "The initial dof index = " << initial_dof_index << "should be non-negative. Moreover, "
+             << "the final index = " << initial_dof_index + n_dofs_per_node << " must not exceed "
+             << "the size of the vector of global degrees of freedom." );
   
   for(unsigned int index = 0; index < n_dofs_per_node; ++index)
     global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
@@ -88,11 +100,17 @@ add_to_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_t
 
 template <unsigned int n_dofs_per_node>
 void HyperNodeFactory<n_dofs_per_node>::
-set_dof_values(const hypernode_index_type hypernode_index, vector<dof_value_type>& global_dof_vector,
+set_dof_values(const hypernode_index_type hypernode_index,
+               vector<dof_value_type>& global_dof_vector,
                const dof_value_type value) const
 {
   dof_index_type initial_dof_index = hypernode_index * n_dofs_per_node;
-  assert( initial_dof_index + n_dofs_per_node <= global_dof_vector.size() );
+  hy_assert( initial_dof_index >= 0 &&
+               initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+             "The initial dof index = " << initial_dof_index << "should be non-negative. Moreover, "
+             << "the final index = " << initial_dof_index + n_dofs_per_node << " must not exceed "
+             << "the size of the vector of global degrees of freedom." );
+  
   for(unsigned int index = 0; index < n_dofs_per_node; ++index)
     global_dof_vector[initial_dof_index + index] = value;
 }

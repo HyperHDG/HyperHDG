@@ -12,10 +12,10 @@
 
 
 #include "Plot.h"
+#include "HyAssert.h"
 #include "TypeDefs.h"
 #include <fstream>
 #include <iomanip>
-#include <cassert>
 #include <cmath>
 
 
@@ -182,9 +182,11 @@ void plot_vtu(vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>& plot
 template <class HyperGraphT, class LocalSolverT>
 void plot(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>& plotOpt)
 {
-  assert( plotOpt.fileEnding == "vtu" );
-  assert( !fileName.empty() );
-  assert( !outputDir.empty() );
+  hy_assert( plotOpt.fileEnding == "vtu" , 
+             "Only file ending vtu is supported at the moment. Your choice has been "
+             << plotOpt.fileEnding << ", which is invalid.");
+  hy_assert( !plotOpt.fileName.empty() , "File name must not be empty!" );
+  hy_assert( !plotOpt.outputDir.empty() , "Ouput directory must not be empty!" );
   plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
 }
 

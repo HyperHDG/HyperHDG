@@ -10,8 +10,8 @@
 
 
 #include "DiffusionSolver.h"
+#include "HyAssert.h"
 #include "LapackWrapper.h"
-#include <cassert>
 #include <cmath>
 #include <vector>
 
@@ -45,7 +45,7 @@ inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge
 {
   vector<double> unity_vec(max_poly_degree+1, 1.);
   vector<double> ansatz_vec(max_poly_degree+1, 0.);
-  assert( ansatz < ansatz_vec.size() );
+  hy_assert( ansatz < ansatz_vec.size() , "Ansatz function index in one dimension must be smaller than maximal degree + 1." );
   ansatz_vec[ansatz] = 1;
   vector<double> result;
   if( hyperedge_dim == 1 )  result = unity_vec;
@@ -100,12 +100,14 @@ DiffusionSolver_RegularQuad(const double tau)
     {
       if (dim == hyperedge_dim - 2)
       {
-        assert( quad_bdr_.size() == quad_weights_vec.size() );
+        hy_assert( quad_bdr_.size() == quad_weights_vec.size() ,
+                   "Amount of quadrature points should be equal to amount of quadrature weights." );
         for (unsigned int i = 0; i < quad_bdr_.size(); ++i)  quad_bdr_[i] = quad_weights_vec[i];
       }
       quad_weights_vec = dyadic_product(quad_weights_vec, quad_weights1D_vec);
     }
-    assert( quad_weights_.size() == quad_weights_vec.size() );
+    hy_assert( quad_weights_.size() == quad_weights_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < quad_weights_.size(); ++i)  quad_weights_[i] = quad_weights_vec[i];
     
     // Deal with trials in corners that is a vector (func) of vectors (corners).
@@ -119,10 +121,12 @@ DiffusionSolver_RegularQuad(const double tau)
     vector< vector<double> > trials_in_corners_vec = trials_in_corners1D_vec;
     for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
       trials_in_corners_vec = double_dyadic_product(trials_in_corners_vec, trials_in_corners1D_vec);
-    assert( trials_in_corners_.size() == trials_in_corners_vec.size() );
+    hy_assert( trials_in_corners_.size() == trials_in_corners_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < trials_in_corners_.size(); ++i)
     {
-      assert( trials_in_corners_[i].size() == trials_in_corners_vec[i].size() );
+      hy_assert( trials_in_corners_[i].size() == trials_in_corners_vec[i].size() ,
+                 "Size of array and vector that will become array must be equal." );
       for (unsigned int j = 0; j < trials_quad_[i].size(); ++j)
         trials_in_corners_[i][j] = trials_in_corners_vec[i][j];
     }
@@ -138,10 +142,12 @@ DiffusionSolver_RegularQuad(const double tau)
     vector< vector<double> > trials_at_quad_vec = trials_at_quad1D_vec;
     for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
       trials_at_quad_vec = double_dyadic_product(trials_at_quad_vec, trials_at_quad1D_vec);
-    assert( trials_quad_.size() == trials_at_quad_vec.size() );
+    hy_assert( trials_quad_.size() == trials_at_quad_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < trials_quad_.size(); ++i)
     {
-      assert( trials_quad_[i].size() == trials_at_quad_vec[i].size() );
+      hy_assert( trials_quad_[i].size() == trials_at_quad_vec[i].size() ,
+                 "Size of array and vector that will become array must be equal." );
       for (unsigned int j = 0; j < trials_quad_[i].size(); ++j)
         trials_quad_[i][j] = trials_at_quad_vec[i][j];
     }
@@ -150,10 +156,12 @@ DiffusionSolver_RegularQuad(const double tau)
     vector< vector<double> > bound_trials_at_quad_vec = trials_at_quad1D_vec;
     for (unsigned int dim = 1; dim < hyperedge_dim - 1; ++dim)
       bound_trials_at_quad_vec = double_dyadic_product(bound_trials_at_quad_vec, trials_at_quad1D_vec);
-    assert( bound_trials_quad_.size() == bound_trials_at_quad_vec.size() );
+    hy_assert( bound_trials_quad_.size() == bound_trials_at_quad_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < bound_trials_quad_.size(); ++i)
     {
-      assert( bound_trials_quad_[i].size() == bound_trials_at_quad_vec[i].size() );
+      hy_assert( bound_trials_quad_[i].size() == bound_trials_at_quad_vec[i].size() ,
+                 "Size of array and vector that will become array must be equal." );
       for (unsigned int j = 0; j < bound_trials_quad_[i].size(); ++j)
         bound_trials_quad_[i][j] = bound_trials_at_quad_vec[i][j];
     }
@@ -176,13 +184,16 @@ DiffusionSolver_RegularQuad(const double tau)
         else if (dim_deriv == dim)      derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], derivs_at_quad1D_vec);
         else                            derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], trials_at_quad1D_vec);
     }
-    assert( derivs_quad_.size() == derivs_at_quad_vec.size() );
+    hy_assert( derivs_quad_.size() == derivs_at_quad_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < derivs_quad_.size(); ++i)
     {
-      assert( derivs_quad_[i].size() == derivs_at_quad_vec[i].size() );
+      hy_assert( derivs_quad_[i].size() == derivs_at_quad_vec[i].size() ,
+                 "Size of array and vector that will become array must be equal." );
       for (unsigned int j = 0; j < derivs_quad_[i].size(); ++j)
       {
-        assert( derivs_quad_[i][j].size() == derivs_at_quad_vec[i][j].size() );
+        hy_assert( derivs_quad_[i][j].size() == derivs_at_quad_vec[i][j].size() ,
+                   "Size of array and vector that will become array must be equal." );
         for (unsigned int k = 0; k < derivs_quad_[i][j].size(); ++k)
           derivs_quad_[i][j][k] = derivs_at_quad_vec[i][j][k];
       }
@@ -204,13 +215,16 @@ DiffusionSolver_RegularQuad(const double tau)
           else                            trials_bound_vec[2*dim_face+side] = double_dyadic_product(trials_bound_vec[2*dim_face+side], trials_at_quad1D_vec);
       }
     }
-    assert( trials_bound_.size() == trials_bound_vec.size() );
+    hy_assert( trials_bound_.size() == trials_bound_vec.size() ,
+               "Size of array and vector that will become array must be equal." );
     for (unsigned int i = 0; i < trials_bound_.size(); ++i)
     {
-      assert( trials_bound_[i].size() == trials_bound_vec[i].size() );
+      hy_assert( trials_bound_[i].size() == trials_bound_vec[i].size() ,
+                 "Size of array and vector that will become array must be equal." );
       for (unsigned int j = 0; j < trials_bound_[i].size(); ++j)
       {
-        assert( trials_bound_[i][j].size() == trials_bound_vec[i][j].size() );
+        hy_assert( trials_bound_[i][j].size() == trials_bound_vec[i][j].size() ,
+                   "Size of array and vector that will become array must be equal." );
         for (unsigned int k = 0; k < trials_bound_[i][j].size(); ++k)
           trials_bound_[i][j][k] = trials_bound_vec[i][j][k];
       }
@@ -223,8 +237,14 @@ template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int 
 inline unsigned int DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 loc_matrix_index(const unsigned int row, const unsigned int column) const
 {
-  assert( 0 <= row && row < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) );
-  assert( 0 <= column && column < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) );
+  hy_assert( 0 <= row ,
+             "Row index should be larger than or equal to zero." );
+  hy_assert( row < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) ,
+             "Row index should be smaller than total amount of rows." );
+  hy_assert( 0 <= column ,
+             "Column index should be larger than or equal to zero." );
+  hy_assert( column < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) ,
+             "Column index should smaller than total amount of columns." );
   return column * (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) + row;  // Transposed for LAPACK
 }
 
@@ -293,9 +313,11 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& la
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> right_hand_side;
   right_hand_side.fill(0.);
   
-  assert(lambda_values.size() == 2 * hyperedge_dim);
+  hy_assert( lambda_values.size() == 2 * hyperedge_dim ,
+             "The size of the lambda values should be twice the dimension of a hyperedge." );
   for (unsigned int i = 0; i < 2 * hyperedge_dim; ++i)
-    assert(lambda_values[i].size() == num_ansatz_bdr_);
+    hy_assert( lambda_values[i].size() == num_ansatz_bdr_ ,
+               "The size of the lambda values should be the amount of ansatz functions ar boundary." );
   
   for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
     for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
@@ -352,12 +374,14 @@ DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
 solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>& loc_matrix,
                          array<double, (hyperedge_dim+1) * num_ansatz_fct_>& loc_rhs) const
 {
-  assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() );
+  hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
+             "The size of a local matrix should be the size of the right-hand side squared." );
   const int system_size = loc_rhs.size();
   double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data();
   int info = -1;  
   lapack_solve(system_size, mat_a, rhs_b, &info);
-  assert( info == 0 );
+  hy_assert( info == 0 ,
+             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
   return loc_rhs;
 }
 

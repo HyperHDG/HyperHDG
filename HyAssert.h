@@ -1,34 +1,51 @@
-/* ------------------------------------------------------------------------------------------------------
+/*!*************************************************************************************************
+ * @file    HyAssert.h
+ * @brief   This file provides the function hy_assert.
  *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
+ * This is a wrapper file to provide a function that allows to use assertions that are similar to
+ * those provided by @c <cassert>. That is, we define a macro @c hy_assert that implements assert.
+ * If a user wants to use assertions, it is recommended to use @c hy_assert( @c Expr, @c Msg). The
+ * use of the function @c __Hy_Assert is @b not recommended.
+ * 
+ * Function @c hy_assert takes two arguments. The first argument is evaluated to a @c boolean and
+ * if this returns @c true, nothing is done. If the argument is @c false, the running program is
+ * terminated and the second argument is displayed as part of an error message. Here, the second
+ * argument is handled as a @c stringstream (without initial @c <<). Thus, for two integers a and b,
+ * a function call might look like: hy_assert( a == b , "Integers have not been the same, since a
+ * turned out to be " << a << " and b was " << b << "." );
+ * 
+ * Whether this functionality is active or not can be deduced via setting @c NDEBUG, when the code
+ * is compiled. Using this functionality makes your program significantly slower. However, usage is
+ * highly recommended for testing. 
  *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2020
- */
-
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 
 #ifndef HYASSERT_H
 #define HYASSERT_H
 
-#include <iostream>
+// #ifndef NDEBUG
 
-#ifndef NDEBUG
-#define hy_assert(Expr, Msg) __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
-#else
-#define hy_assert(Expr, Msg) ;
-#endif
+#include <sstream>
+#define hy_assert(Expr, Msg) \
+        { std::stringstream __hy_assertion_text; __hy_assertion_text << Msg; \
+          __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); }
 
-void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg)
-{
-  if (!expr)
-  {
-    std::cerr << "Assert failed:\t" << msg << "\n"
-              << "Expected:\t" << expr_str << "\n"
-              << "Source:\t\t" << file << ", line " << line << "\n";
-    abort();
-  }
-}
+/*!*************************************************************************************************
+ * @brief   This function is not (never) to be used.
+ *
+ * This function is @b not to be used in regular code. It only / solely is defined to allow the use
+ * of function @c hy_assert( @c Expr, @c Msg) which is implemented as a macro (cf. file HyAssert.h).
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line,
+                 std::stringstream& msg);
+
+// #else // alternative branch of ifndef NDEBUG
+// #define hy_assert(Expr, Msg) ;
+// #endif // end of ifndef NDEBUG
 
 #endif // end of ifndef HYASSERT_H

@@ -9,12 +9,12 @@
  */
 
 #include "HDGHyperGraph.h"
-#include <cassert>
+#include "HyAssert.h"
 
 
 #include "HDGHyperGraph.inst"
 
-
+/*
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const TopoT& hypergraph_topology)
@@ -26,18 +26,27 @@ HDGHyperGraph(const TopoT& hypergraph_topology)
   assert( hypernode_factory_.num_of_hypernodes() >= 2 );
   assert( hypergraph_topology.num_of_hyperedges() != 0 );
 }
-
+*/
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const constructor_value_type& construction_data)
-: hypergraph_topology_(construction_data.topology), hypergraph_geometry_(construction_data.geometry),
+: hypergraph_topology_(construction_data.topology),
+  hypergraph_geometry_(construction_data.geometry),
   hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
 {
-  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
-  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
-  assert( hypernode_factory_.num_of_hypernodes() >= 2 );
-  assert( hypergraph_topology_.num_of_hyperedges() != 0 );
+  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+                 "The dimension of topology and geometry should be equal!" );
+  hy_assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology_.num_of_hypernodes() ,
+             "The amount of hypernodes known to the hypernode factory is " <<
+             hypernode_factory_.num_of_hypernodes() << ", which is not equal to the amount that the"
+             << " hypergraph assumes, i.e., " << hypergraph_topology_.num_of_hypernodes() << "." );
+  hy_assert( hypernode_factory_.num_of_hypernodes() >= 2 ,
+             "A hypergraph is assumed to consist of at least two hypernodes. This graph only " <<
+             "consists of " << hypernode_factory_.num_of_hypernodes() << " hypernodes." );
+  hy_assert( hypergraph_topology_.num_of_hyperedges() > 0 ,
+             "A hypergraph is supposed to consist of at least one hyperedge. This graph consists "
+             << "of " << hypergraph_topology_.num_of_hyperedges() << " hyperedges." );
 }
 
 
@@ -48,10 +57,18 @@ HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
 : hypergraph_topology_(construct_topo), hypergraph_geometry_(construct_geom),
   hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
 {
-  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
-  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
-  assert( hypernode_factory_.num_of_hypernodes() >= 2 );
-  assert( hypergraph_topology_.num_of_hyperedges() != 0 );
+  static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+                 "The dimension of topology and geometry should be equal!" );
+  hy_assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology_.num_of_hypernodes() ,
+             "The amount of hypernodes known to the hypernode factory is " <<
+             hypernode_factory_.num_of_hypernodes() << ", which is not equal to the amount that the"
+             << " hypergraph assumes, i.e., " << hypergraph_topology_.num_of_hypernodes() << "." );
+  hy_assert( hypernode_factory_.num_of_hypernodes() >= 2 ,
+             "A hypergraph is assumed to consist of at least two hypernodes. This graph only " <<
+             "consists of " << hypernode_factory_.num_of_hypernodes() << " hypernodes." );
+  hy_assert( hypergraph_topology_.num_of_hyperedges() > 0 ,
+             "A hypergraph is supposed to consist of at least one hyperedge. This graph consists "
+             << "of " << hypergraph_topology_.num_of_hyperedges() << " hyperedges." );
 }
 
 
