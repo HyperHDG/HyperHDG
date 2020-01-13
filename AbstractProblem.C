@@ -52,8 +52,8 @@ template <class TopologyT, class GeometryT, class LocalSolverT>
 vector<double> AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 matrix_vector_multiply(vector<double> x_vec)
 {
-  const unsigned int hyperedge_dim = TopologyT::hyperedge_dimension();
-  const unsigned int poly_degree = LocalSolverT::polynomial_degree();
+  constexpr unsigned int hyperedge_dim = TopologyT::hyperedge_dimension();
+  constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();
   
   vector<double> vec_Ax(x_vec.size(), 0.);
   array< array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
