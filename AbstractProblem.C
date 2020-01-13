@@ -10,9 +10,9 @@
 
 
 #include "AbstractProblem.h"
+#include "HyAssert.h"
 #include <algorithm>
 #include <array>
-#include <cassert>
 
 using namespace std;
 #include "AbstractProblem.inst"
@@ -25,9 +25,12 @@ AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo
 : hyper_graph_(construct_topo,construct_geom),
   local_solver_(1.), plot_options(hyper_graph_, local_solver_)
 {
-  static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() , "Hyperedge dimension of topology and geometry must be equal!" );
-  static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() , "Space dimension of topology and geometry must be equal!" );
-  static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() , "Hyperedge dimension of hypergraph and local solver must be equal!" );
+  static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
+                 "Hyperedge dimension of topology and geometry must be equal!" );
+  static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
+                 "Space dimension of topology and geometry must be equal!" );
+  static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() ,
+                 "Hyperedge dimension of hypergraph and local solver must be equal!" );
 }
 
 
@@ -38,7 +41,10 @@ read_dirichlet_indices(std::vector<int> indices)
   dirichlet_indices_.resize(indices.size());
   for (unsigned int i = 0; i < indices.size(); ++i)
   {
-    assert( indices[i] >= 0 && indices[i] < hyper_graph_.num_of_hypernodes() );
+    hy_assert( indices[i] >= 0,
+               "All indices of Dirichlet nodes need to be larger than or equal to zero." );
+    hy_assert( indices[i] < hyper_graph_.num_of_hypernodes(),
+               "All indices of Dirichlet nodes need to smaller than the total amount of hypernodes." );
     dirichlet_indices_[i] = indices[i];
   }
 }
@@ -99,7 +105,7 @@ plot_option(std::string option, std::string value)
   else if (option == "fileNumber")            plot_options.fileNumber = stoi(value);
   else if (option == "printFileNumber")       plot_options.printFileNumber = (value == "true" || value == "1");
   else if (option == "incrementFileNumber")   plot_options.incrementFileNumber = (value == "true" || value == "1");
-  else assert( 0 == 1 );
+  else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
   if (option == "outputDir")                  value = plot_options.outputDir;
   else if (option == "fileName")              value = plot_options.fileName;
@@ -107,7 +113,7 @@ plot_option(std::string option, std::string value)
   else if (option == "fileNumber")            value = to_string(plot_options.fileNumber);
   else if (option == "printFileNumber")       value = to_string(plot_options.printFileNumber);
   else if (option == "incrementFileNumber")   value = to_string(plot_options.incrementFileNumber);
-  else assert( 0 == 1 );
+  else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
   return value;
 }
