@@ -307,15 +307,6 @@ class HDGHyperGraph
     HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
                   const typename GeomT::constructor_value_type& construct_geom);
     /*!*********************************************************************************************
-     * @brief   Construct @c HDGHyperGraph from topology information.
-     *
-     * This is the standard way of constructing a hypergraph, provided it is in some sense regular
-     * and geometrical information can be deduced from topological information or is irrelevant.
-     *
-     * @param   hypergraph_topology   Topological information about hypergraph.
-     **********************************************************************************************/
-    HDGHyperGraph(const TopoT& hypergraph_topology);
-    /*!*********************************************************************************************
      * @brief   Subscript operator of a @c HDGHyperGraph.
      *
      * The subscript operator takes an index referring to an hyperedge and returns the respective

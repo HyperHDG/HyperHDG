@@ -26,7 +26,7 @@ AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo
   local_solver_(1.), plot_options(hyper_graph_, local_solver_)
 {
   static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
-                 "Hyperedge dimension of topology and geometry must be equal!" );
+                 "Hyperedge dimension of topology and geometry must be equal!"  );
   static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
                  "Space dimension of topology and geometry must be equal!" );
   static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() ,
@@ -34,6 +34,11 @@ AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo
 }
 
 
+/*
+ * Function read_dirichlet_indices(..) receives a vector of signed integers, since it is part of the
+ * code that interacts directly with the Python interface which does not allow for unsigned integers
+ * and therefore includes a comparison between signed and unsigned integers in the assertion.
+ */
 template <class TopologyT, class GeometryT, class LocalSolverT>
 void AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 read_dirichlet_indices(std::vector<int> indices)
@@ -41,10 +46,11 @@ read_dirichlet_indices(std::vector<int> indices)
   dirichlet_indices_.resize(indices.size());
   for (unsigned int i = 0; i < indices.size(); ++i)
   {
-    hy_assert( indices[i] >= 0,
-               "All indices of Dirichlet nodes need to be larger than or equal to zero." );
-    hy_assert( indices[i] < hyper_graph_.num_of_hypernodes(),
-               "All indices of Dirichlet nodes need to smaller than the total amount of hypernodes." );
+    hy_assert( indices[i] >= 0 && indices[i] < hyper_graph_.num_of_hypernodes(), 
+               "All indices of Dirichlet nodes need to be larger than or equal to zero and smaller "
+               << "than the total amount of hypernodes." << endl << "In this case, the index is " <<
+               indices[i] << " and the total amount of hypernodes is " << 
+               hyper_graph_.num_of_hypernodes() << "." );
     dirichlet_indices_[i] = indices[i];
   }
 }
@@ -66,17 +72,20 @@ matrix_vector_multiply(vector<double> x_vec)
   constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();
   
   vector<double> vec_Ax(x_vec.size(), 0.);
-  array< array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> , 2*hyperedge_dim > local_result, hyperedge_dofs;
   array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
+  array< array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> , 2*hyperedge_dim >
+    local_result, hyperedge_dofs;
   
   for_each( hyper_graph_.begin(), hyper_graph_.end(), [&](const auto hyperedge)
   {
     hyperedge_hypernodes = hyperedge.topology.get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
+      hyperedge_dofs[hypernode] = 
+        hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
     local_result = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyper_graph_.hypernode_factory().add_to_dof_values(hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
+      hyper_graph_.hypernode_factory().add_to_dof_values
+        (hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
   });
   
   for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i) 
@@ -103,8 +112,10 @@ plot_option(std::string option, std::string value)
   else if (option == "fileName")              plot_options.fileName = value;
   else if (option == "fileEnding")            plot_options.fileEnding = value;
   else if (option == "fileNumber")            plot_options.fileNumber = stoi(value);
-  else if (option == "printFileNumber")       plot_options.printFileNumber = (value == "true" || value == "1");
-  else if (option == "incrementFileNumber")   plot_options.incrementFileNumber = (value == "true" || value == "1");
+  else if (option == "printFileNumber")       plot_options.printFileNumber =
+                                                (value == "true" || value == "1");
+  else if (option == "incrementFileNumber")   plot_options.incrementFileNumber =
+                                                (value == "true" || value == "1");
   else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
   if (option == "outputDir")                  value = plot_options.outputDir;

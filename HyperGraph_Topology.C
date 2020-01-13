@@ -9,7 +9,7 @@
  */
 
 #include "HyperGraph_Topology.h"
-#include <cassert>
+#include "HyAssert.h"
 
 using namespace std;
 using namespace Topology;
@@ -53,8 +53,8 @@ HyperGraph_Cubic(const array<unsigned int, space_dim>& num_elements)
       num_of_hyperedges_ += helper;
     }
   }
-  else  assert( 0 == 1 );  
-  assert( num_of_hyperedges_ > 0 );
+  else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology.");
+  hy_assert( num_of_hyperedges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set num_of_hypernodes
   num_of_hypernodes_ = 1;
@@ -88,8 +88,8 @@ HyperGraph_Cubic(const array<unsigned int, space_dim>& num_elements)
       num_of_hypernodes_ += helper;
     }
   }
-  else  assert( 0 == 1 );
-  assert( num_of_hypernodes_ > 0 );
+  else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
+  hy_assert( num_of_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -130,8 +130,8 @@ HyperGraph_Cubic(const constructor_value_type& num_elements)
       num_of_hyperedges_ += helper;
     }
   }
-  else  assert( 0 == 1 );  
-  assert( num_of_hyperedges_ > 0 );
+  else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
+  hy_assert( num_of_hyperedges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set num_of_hypernodes
   num_of_hypernodes_ = 1;
@@ -165,8 +165,8 @@ HyperGraph_Cubic(const constructor_value_type& num_elements)
       num_of_hypernodes_ += helper;
     }
   }
-  else  assert( 0 == 1 );
-  assert( num_of_hypernodes_ > 0 );
+  else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
+  hy_assert( num_of_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
@@ -181,7 +181,10 @@ const HyperEdge_Cubic<hyperedge_dim, space_dim>
 HyperGraph_Cubic<hyperedge_dim,space_dim>::
 get_hyperedge(const hyperedge_index_type index) const
 {
-  assert ( index < num_of_hyperedges_ );
+  hy_assert( index >= 0 && index < num_of_hyperedges_ ,
+             "The index of an hyperedge must be non-negative and smaller than the total amount of "
+             << "hyperedges, which is " << num_of_hyperedges_ << ". Nonetheless, the " << index <<
+             "-th hyperedge is tried to be accessed." );
   return HyperEdge_Cubic<hyperedge_dim,space_dim>(index, num_elements_);
 }
 

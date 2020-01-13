@@ -9,8 +9,8 @@
  */
 
 #include "HyperEdge_Geometry.h"
+#include "HyAssert.h"
 #include <algorithm>
-#include <cassert>
 
 
 using namespace std;
@@ -21,7 +21,7 @@ using namespace Geometry;
 template<unsigned int space_dim>
 array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
 {
-  assert( num_lines.size() == space_dim );
+  hy_assert( num_lines.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
   hyperedge_index_type num_elements_in_direction;
   hyperedge_index_type number_with_lower_orientation = 0;
@@ -43,7 +43,7 @@ array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& 
         ++orientation)
   {
     number_with_lower_orientation += num_lines_with_orientation[orientation];
-    assert( orientation <= space_dim );
+    hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
   array<hyperedge_index_type, space_dim> local_indices;
@@ -57,7 +57,7 @@ array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& 
     index_helper -= local_indices[(dim + orientation) % space_dim];
     index_helper /= num_elements_in_direction;
   }
-  assert( index_helper == 0 );
+  hy_assert( index_helper == 0 , "No lines should be left any more!" );
   
   for(unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
   {
@@ -74,7 +74,7 @@ array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& 
 template<unsigned int space_dim>
 array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
 {
-  assert( num_squares.size() == space_dim );
+  hy_assert( num_squares.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
   hyperedge_index_type num_elements_in_direction;
   hyperedge_index_type number_with_lower_orientation = 0;
@@ -97,7 +97,7 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
         ++orientation)
   {
     number_with_lower_orientation += num_squares_with_orientation[orientation];
-    assert( orientation <= space_dim );
+    hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
   array<hyperedge_index_type, space_dim> local_indices;
@@ -112,7 +112,7 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
     index_helper -= local_indices[(dim + orientation) % space_dim];
     index_helper /= num_elements_in_direction;
   }
-  assert( index_helper == 0 );
+  hy_assert( index_helper == 0 , "No lines should be left any more!" );
   
   array<hyperedge_index_type, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
@@ -151,7 +151,7 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
 template<unsigned int space_dim>
 array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
 {
-  assert( num_cubes.size() == space_dim );
+  hy_assert( num_cubes.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   hyperedge_index_type num_elements_in_direction;
   hyperedge_index_type number_with_lower_orientation = 0;
   hyperedge_index_type index_helper = index;
@@ -169,7 +169,7 @@ array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, sp
     index_helper -= local_indices[dim];
     index_helper /= num_elements_in_direction;
   }
-  assert( index_helper == 0 );
+  hy_assert( index_helper == 0 , "No lines should be left any more!" );
   
   array<hyperedge_index_type, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
