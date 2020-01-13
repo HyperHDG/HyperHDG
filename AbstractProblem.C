@@ -24,7 +24,11 @@ AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo
                 const typename GeometryT::constructor_value_type& construct_geom)
 : hyper_graph_(construct_topo,construct_geom),
   local_solver_(1.), plot_options(hyper_graph_, local_solver_)
-{ }
+{
+  static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() , "Hyperedge dimension of topology and geometry must be equal!" );
+  static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() , "Space dimension of topology and geometry must be equal!" );
+  static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() , "Hyperedge dimension of hypergraph and local solver must be equal!" );
+}
 
 
 template <class TopologyT, class GeometryT, class LocalSolverT>
