@@ -13,8 +13,8 @@ from ClassWrapper import PyDiffusionProblem
 from ClassWrapper import PyElasticityProblem
 
 # Initialising the wrapped C++ class HDG_wrapper.
-# HDG_wrapper = PyDiffusionProblem([4,2,2])
-HDG_wrapper = PyElasticityProblem([4,2,2])
+HDG_wrapper = PyDiffusionProblem([4,2,2])
+# HDG_wrapper = PyElasticityProblem([4,2,2])
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
@@ -29,15 +29,13 @@ vectorDirichlet[len(vectorDirichlet)-1] = 0. # Comment if checking for trivial s
 index_vector = np.array([ 0, len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
-# Print index vector, vector containing the Dirichlet values, and new output file name.
+# Print index vector and vector containing the Dirichlet values.
 print("Dirichlet indices: ", index_vector)
 print("Dirichlet values: ", vectorDirichlet)
-print("Output file name: ", HDG_wrapper.plot_option("fileName", "exampleName"))
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = HDG_wrapper.matrix_vector_multiply(vectorDirichlet)
-vectorRHS = [-i for i in vectorRHS]
+vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
 
 # Print right-hand side vector.
 print("Right-hand side: ", vectorRHS)
@@ -45,12 +43,10 @@ print("Right-hand side: ", vectorRHS)
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
 system_size = HDG_wrapper.size_of_system()
-A = LinearOperator( (system_size,system_size),
-                    matvec= HDG_wrapper.matrix_vector_multiply )
+A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS,
-  maxiter=100, tol=1e-9) # Parameters for CG solver.
+[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
 
 # Print Solution to the problem (which is x + x_D, i.e. vectorSolution + vectorDirichlet) or number
 # of CG iterations num_iter.
@@ -62,4 +58,4 @@ else:
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
-print("Solution written to file in output directory.")
+print("Solution written to file" , HDG_wrapper.plot_option("fileName", ""), "in output directory.")
