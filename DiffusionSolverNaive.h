@@ -23,8 +23,8 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hypere
 #endif
 
 
-#ifndef DIFFUSIONSOLVER_H
-#define DIFFUSIONSOLVER_H
+#ifndef DIFFUSIONSOLVERNAIVE_H
+#define DIFFUSIONSOLVERNAIVE_H
 
 #include "FuncAndQuad.h"
 #include "HyperNodeFactory.h"
@@ -32,7 +32,7 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hypere
 
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-class DiffusionSolver_RegularQuad
+class DiffusionSolverNaive_RegularQuad
 {
   private:
     static constexpr unsigned int num_of_quad_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim),
@@ -60,7 +60,7 @@ class DiffusionSolver_RegularQuad
       (const std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >& lambda_values, const std::array<double, (hyperedge_dim + 1) * num_ansatz_fct_>& coeffs) const;
   public:
     typedef double constructor_value_type;
-    DiffusionSolver_RegularQuad(const constructor_value_type& tau);
+    DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau);
     std::array<double, compute_n_corners_of_cube(hyperedge_dim)> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
     std::array< std::array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
     std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >

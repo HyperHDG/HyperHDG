@@ -1,0 +1,56 @@
+/* ------------------------------------------------------------------------------------------------------
+ *
+ * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
+ * It solves a PDE that is solely defined on a graph using the HDG method.
+ *
+ * ------------------------------------------------------------------------------------------------------
+ *
+ * Author: Andreas Rupp, University of Heidelberg, 2019
+ */
+
+
+template class DiffusionSolverNaive_RegularQuad<1,1,1>;
+template class DiffusionSolverNaive_RegularQuad<1,1,2>;
+template class DiffusionSolverNaive_RegularQuad<1,1,3>;
+template class DiffusionSolverNaive_RegularQuad<1,2,2>;
+template class DiffusionSolverNaive_RegularQuad<1,2,4>;
+template class DiffusionSolverNaive_RegularQuad<1,2,6>;
+template class DiffusionSolverNaive_RegularQuad<1,3,3>;
+template class DiffusionSolverNaive_RegularQuad<1,3,6>;
+template class DiffusionSolverNaive_RegularQuad<1,3,9>;
+template class DiffusionSolverNaive_RegularQuad<1,4,4>;
+template class DiffusionSolverNaive_RegularQuad<1,4,8>;
+template class DiffusionSolverNaive_RegularQuad<1,4,12>;
+template class DiffusionSolverNaive_RegularQuad<1,5,5>;
+template class DiffusionSolverNaive_RegularQuad<1,5,10>;
+template class DiffusionSolverNaive_RegularQuad<1,5,15>;
+template class DiffusionSolverNaive_RegularQuad<2,1,1>;
+template class DiffusionSolverNaive_RegularQuad<2,1,2>;
+template class DiffusionSolverNaive_RegularQuad<2,1,3>;
+template class DiffusionSolverNaive_RegularQuad<2,2,2>;
+template class DiffusionSolverNaive_RegularQuad<2,2,4>;
+template class DiffusionSolverNaive_RegularQuad<2,2,6>;
+template class DiffusionSolverNaive_RegularQuad<2,3,3>;
+template class DiffusionSolverNaive_RegularQuad<2,3,6>;
+template class DiffusionSolverNaive_RegularQuad<2,3,9>;
+template class DiffusionSolverNaive_RegularQuad<2,4,4>;
+template class DiffusionSolverNaive_RegularQuad<2,4,8>;
+template class DiffusionSolverNaive_RegularQuad<2,4,12>;
+template class DiffusionSolverNaive_RegularQuad<2,5,5>;
+template class DiffusionSolverNaive_RegularQuad<2,5,10>;
+template class DiffusionSolverNaive_RegularQuad<2,5,15>;
+template class DiffusionSolverNaive_RegularQuad<3,1,1>;
+template class DiffusionSolverNaive_RegularQuad<3,1,2>;
+template class DiffusionSolverNaive_RegularQuad<3,1,3>;
+template class DiffusionSolverNaive_RegularQuad<3,2,2>;
+template class DiffusionSolverNaive_RegularQuad<3,2,4>;
+template class DiffusionSolverNaive_RegularQuad<3,2,6>;
+template class DiffusionSolverNaive_RegularQuad<3,3,3>;
+template class DiffusionSolverNaive_RegularQuad<3,3,6>;
+template class DiffusionSolverNaive_RegularQuad<3,3,9>;
+template class DiffusionSolverNaive_RegularQuad<3,4,4>;
+template class DiffusionSolverNaive_RegularQuad<3,4,8>;
+template class DiffusionSolverNaive_RegularQuad<3,4,12>;
+template class DiffusionSolverNaive_RegularQuad<3,5,5>;
+template class DiffusionSolverNaive_RegularQuad<3,5,10>;
+template class DiffusionSolverNaive_RegularQuad<3,5,15>;
