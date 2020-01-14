@@ -131,6 +131,7 @@ plot_option(std::string option, std::string value)
   return value;
 }
 
+
 template <class TopologyT, class GeometryT, class LocalSolverT>
 void AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 plot_solution(std::vector<double> lambda)

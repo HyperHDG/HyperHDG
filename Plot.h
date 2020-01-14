@@ -2,7 +2,7 @@
 #define PLOT_H
 
 #include "HDGHyperGraph.h"
-#include "DiffusionSolver.h"
+#include "LocalSolvers.h"
 
 /*!*************************************************************************************************
  * @brief   A class to encode the chosen options for plotting.
