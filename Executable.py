@@ -10,9 +10,11 @@ from scipy.sparse.linalg import LinearOperator
 
 # Import C++ wrapper class to use HDG method on graphs.
 from ClassWrapper import PyDiffusionProblem
+from ClassWrapper import PyElasticityProblem
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([4,2,2])
+# HDG_wrapper = PyDiffusionProblem([4,2,2])
+HDG_wrapper = PyElasticityProblem([4,2,2])
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the

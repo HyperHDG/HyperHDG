@@ -15,41 +15,27 @@
 #ifndef LAPACKWRAPPER_H
 #define LAPACKWRAPPER_H
 
-extern "C" {
-  void daxpy_(int* n,double* alpha,double* dx,int* incx,double* dy,int* incy);
-  double dnrm2_(int* n,double* x, int* incx);
+/*!*************************************************************************************************
+ * @brief   Solve local system of equations.
+ *
+ * Solve linear (dense) system of equations @f$Ax=b@f$, where @$A@$ is an @f$n \times n@f$ square
+ * matrix, which enters as a pointer to @c double, @f$n@f$ is provided via @c system_size, and the
+ * @c double pointer @c rhs_b is both, input (i.e., @f$b@f$) and output (i.e., @f$x@f$) of the
+ * function.
+ *
+ * Independent of @c const expressions of functions using @c lapack_solve one should not use
+ * @c mat_a after calling this function. The input that has been within @c rhs_b will have been
+ * replaced by the solution of the system of equations if @c info comprises 0. Otherwise, the local
+ * solve is likely to have failed and @c rhs_b contains no valuable information.
+ *
+ * @param  system_size  Size of the system of equations.
+ * @param  mat_a        Pointer to the matrix describing the linear system of equations.
+ * @param  rhs_b        Pointer to the right-hand side of the system.
+ * @retval rhs_b        If @c info is 0, then this is a pointer to the solution of the system of
+ *                      equations.
+ * @retval info         Describes whether the algorithm has been able to compute the solution.
+ *                      0 = success.
+ **************************************************************************************************/
+void lapack_solve(int system_size, double *mat_a, double *rhs_b, int *info);
 
-  void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-  void dgetrs_(char* C, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
-  void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
-
-  /*!***********************************************************************************************
-   * @brief   Solve local system of equations.
-   *
-   * Solve linear (dense) system of equations @f$Ax=b@f$, where @$A@$ is an @f$n \times n@f$ square
-   * matrix, which enters as a pointer to @c double, @f$n@f$ is provided via @c system_size, and the
-   * @c double pointer @c rhs_b is both, input (i.e., @f$b@f$) and output (i.e., @f$x@f$) of the
-   * function.
-   *
-   * Independent of @c const expressions of functions using @c lapack_solve one should not use
-   * @c mat_a after calling this function. The input that has been within @c rhs_b will have been
-   * replaced by the solution of the system of equations if @c info comprises 0. Otherwise, the
-   * local solve is likely to have failed and @c rhs_b contains no valuable information.
-   *
-   * @param  system_size  Size of the system of equations.
-   * @param  mat_a        Pointer to the matrix describing the linear system of equations.
-   * @param  rhs_b        Pointer to the right-hand side of the system.
-   * @retval rhs_b        If @c info is 0, then this is a pointer to the solution of the system of
-   *                      equations.
-   * @retval info         Describes whether the algorithm has been able to compute the solution.
-   *                      0 = success.
-   ************************************************************************************************/
-  void lapack_solve(int system_size, double *mat_a, double *rhs_b, int *info)
-  {
-    int one = 1;
-    int ipiv[system_size];
-    dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, info);
-  }
-}
-
-#endif
+#endif // end of ifndef LAPACKWRAPPER_H

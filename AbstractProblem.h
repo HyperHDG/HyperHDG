@@ -2,9 +2,8 @@
 #define ABSTRACTPROBLEM_H
 
 #include "HDGHyperGraph.h"
-#include "DiffusionSolver.h"
+#include "LocalSolvers.h"
 #include "Plot.h"
-
 
 /*!*************************************************************************************************
  * @brief   This is an abstract example problem class.
@@ -142,7 +141,6 @@ class AbstractProblem
     void plot_solution( std::vector<double> lambda );
 }; // end of class AbstractProblem
 
-
 /*!*************************************************************************************************
  * @brief   This is an example problem.
  *
@@ -168,6 +166,27 @@ using DiffusionProblemRegular =
 AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                   Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
                   DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
+                >;
+
+/*!*************************************************************************************************
+ * @brief   This is an example problem.
+ *
+ * @todo    This has not yet been fully implemented!
+ *
+ * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyperedge_dim.
+ * @tparam  poly_degree     The polynomial degree of test and trial functions.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+using ElasticityProblemRegular = 
+AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
+                  Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
+                  ElasticitySolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
                 >;
 
 #endif // end of ifndef ABSTRACTPROBLEM_H
