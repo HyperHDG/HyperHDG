@@ -21,9 +21,11 @@ using namespace std;
 template <class TopologyT, class GeometryT, class LocalSolverT>
 AbstractProblem<TopologyT,GeometryT,LocalSolverT>::
 AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo,
-                const typename GeometryT::constructor_value_type& construct_geom)
-: hyper_graph_(construct_topo,construct_geom),
-  local_solver_(1.), plot_options(hyper_graph_, local_solver_)
+                const typename GeometryT::constructor_value_type& construct_geom,
+                const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+: hyper_graph_  ( construct_topo, construct_geom ),
+  local_solver_ ( construct_loc_sol ),
+  plot_options  ( hyper_graph_, local_solver_ )
 {
   static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
                  "Hyperedge dimension of topology and geometry must be equal!"  );

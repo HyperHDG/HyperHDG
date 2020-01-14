@@ -62,7 +62,7 @@ inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge
 
 template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 DiffusionSolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-DiffusionSolver_RegularQuad(const double tau)
+DiffusionSolver_RegularQuad(const constructor_value_type& tau)
 : tau_(tau)
 { 
   array<double, compute_n_quad_points(max_quad_degree)>

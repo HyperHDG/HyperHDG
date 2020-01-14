@@ -41,14 +41,16 @@ template <class TopologyT, class GeometryT, class LocalSolverT>
 class AbstractProblem
 {
   private:
-    HDGHyperGraph < compute_n_dofs_per_node(TopologyT::hyperedge_dimension(),
-                                            LocalSolverT::polynomial_degree()),
+    HDGHyperGraph < compute_n_dofs_per_node( TopologyT::hyperedge_dimension(),
+                                             LocalSolverT::polynomial_degree(), 
+                                             LocalSolverT::solution_dimension() ),
                     TopologyT, GeometryT
                   > hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
     LocalSolverT local_solver_;
-    PlotOptions < HDGHyperGraph < compute_n_dofs_per_node(TopologyT::hyperedge_dimension(),
-                                                         LocalSolverT::polynomial_degree()),
+    PlotOptions < HDGHyperGraph < compute_n_dofs_per_node( TopologyT::hyperedge_dimension(),
+                                                           LocalSolverT::polynomial_degree(),
+                                                           LocalSolverT::solution_dimension() ),
                                   TopologyT, GeometryT
                                 >,
                   LocalSolverT
@@ -62,9 +64,11 @@ class AbstractProblem
      *
      * @param   construct_topo    Information to construct a topology.
      * @param   construct_geom    Information to construct a geometry.
+     * @param   construct_loc_sol Information to construct a local solver.
      **********************************************************************************************/
-    AbstractProblem(const typename TopologyT::constructor_value_type& construct_topo,
-                    const typename GeometryT::constructor_value_type& construct_geom);
+    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo,
+                     const typename GeometryT::constructor_value_type& construct_geom,
+                     const typename LocalSolverT::constructor_value_type& construct_loc_sol );
     /*!*********************************************************************************************
      * @brief   Read indices of Dirichlet type hypernodes/faces.
      *
@@ -80,7 +84,7 @@ class AbstractProblem
      * @param   indices       A @c std::vector containing the (global) indices of Dirichlet type
      *                        hypernodes/faces.
      **********************************************************************************************/
-    void read_dirichlet_indices(std::vector<int> indices);
+    void read_dirichlet_indices( std::vector<int> indices );
     /*!*********************************************************************************************
      * @brief   Returns vector of appropriate size for the predefined problem.
      *
@@ -90,7 +94,7 @@ class AbstractProblem
      * @retval  zero          A @c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
-    std::vector<double> return_zero_vector();
+    std::vector<double> return_zero_vector( );
     /*!*********************************************************************************************
      * @brief   Evaluate condensed matrix-vector product.
      *
@@ -102,7 +106,7 @@ class AbstractProblem
      * @param   x_vec         A @c std::vector containing the input vector @f$x@f$.
      * @retval  y_vec         A @c std::vector containing the product @f$y = Ax@f$.
      **********************************************************************************************/
-    std::vector<double> matrix_vector_multiply(std::vector<double> x_vec);
+    std::vector<double> matrix_vector_multiply( std::vector<double> x_vec );
     /*!*********************************************************************************************
      * @brief   Determine size of condensed system for the skeletal unknowns.
      *
@@ -126,7 +130,7 @@ class AbstractProblem
      *                        If empty, the old value is kept.
      * @retval  opt_value     A @c std::string containing the value of the plot option.
      **********************************************************************************************/
-    std::string plot_option(std::string option, std::string value = "");
+    std::string plot_option( std::string option, std::string value = "" );
     /*!*********************************************************************************************
      * @brief   Plot solution in vtu format.
      *
@@ -135,7 +139,7 @@ class AbstractProblem
      * @param   lambda        A vector of unknowns containing the data vector.
      * @retval  file          A file in the output directory.
      **********************************************************************************************/
-    void plot_solution(std::vector<double> lambda);
+    void plot_solution( std::vector<double> lambda );
 }; // end of class AbstractProblem
 
 
