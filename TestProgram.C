@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
   const unsigned int polynomial_degree = 1; //TODO Change to polynomial degree and deduce amount of ansatz functions
   vector<int> num_elements(2, 2);
    
-  DiffusionProblemRegular<hyperedge_dim, space_dim, polynomial_degree> diffusion_problem(num_elements, num_elements, 1.);
+  DiffusionProblemRegularNaive<hyperedge_dim, space_dim, polynomial_degree> diffusion_problem(num_elements, num_elements, 1.);
   vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
   vector<int> dirichlet_indices = { 0 , 8 };
   diffusion_problem.read_dirichlet_indices(dirichlet_indices);

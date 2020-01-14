@@ -162,10 +162,10 @@ class AbstractProblem
  * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
-using DiffusionProblemRegular = 
+using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                   Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
-                  DiffusionSolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
+                  DiffusionSolverNaive_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
                 >;
 
 /*!*************************************************************************************************
