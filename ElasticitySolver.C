@@ -60,12 +60,12 @@ inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 ElasticitySolver_RegularQuad(const constructor_value_type& tau)
 : tau_(tau)
 { 
-  hy_assert( 0 == 1 , "Not yet implemented!" );
+//  hy_assert( 0 == 1 , "Not yet implemented!" );
   array<double, compute_n_quad_points(max_quad_degree)>
     quad_weights1D = quadrature_weights<max_quad_degree>();
   array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
@@ -234,8 +234,8 @@ ElasticitySolver_RegularQuad(const constructor_value_type& tau)
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline unsigned int ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline unsigned int ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 loc_matrix_index(const unsigned int row, const unsigned int column) const
 {
   hy_assert( 0 <= row ,
@@ -250,9 +250,9 @@ loc_matrix_index(const unsigned int row, const unsigned int column) const
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 assemble_loc_mat() const
 {
   double hyperedge_area = 1.;
@@ -306,9 +306,9 @@ assemble_loc_mat() const
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> right_hand_side;
@@ -369,9 +369,9 @@ vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const 
 */
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>& loc_matrix,
                          array<double, (hyperedge_dim+1) * num_ansatz_fct_>& loc_rhs) const
 {
@@ -387,9 +387,9 @@ solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hy
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_> local_matrix;
@@ -407,9 +407,9 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_di
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
   array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
@@ -431,9 +431,9 @@ dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeff
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > 
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
   array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
@@ -455,9 +455,9 @@ primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coe
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values, const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
   array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
@@ -479,9 +479,9 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyper
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array<double, compute_n_corners_of_cube(hyperedge_dim)>
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
@@ -494,9 +494,9 @@ primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bd
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) >
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
@@ -512,9 +512,9 @@ dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-ElasticitySolver_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
 {
   return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));
