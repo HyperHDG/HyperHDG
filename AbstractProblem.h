@@ -40,20 +40,22 @@ template <class TopologyT, class GeometryT, class LocalSolverT>
 class AbstractProblem
 {
   private:
-    HDGHyperGraph < compute_n_dofs_per_node( TopologyT::hyperedge_dimension(),
-                                             LocalSolverT::polynomial_degree(), 
-                                             LocalSolverT::solution_dimension() ),
-                    TopologyT, GeometryT
-                  > hyper_graph_;
+    HDGHyperGraph 
+    < compute_n_dofs_per_node
+      ( TopologyT::hyperedge_dimension(), LocalSolverT::polynomial_degree(),
+        LocalSolverT::solution_dimension_hypernode() ),
+      TopologyT, GeometryT
+    > hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
     LocalSolverT local_solver_;
-    PlotOptions < HDGHyperGraph < compute_n_dofs_per_node( TopologyT::hyperedge_dimension(),
-                                                           LocalSolverT::polynomial_degree(),
-                                                           LocalSolverT::solution_dimension() ),
-                                  TopologyT, GeometryT
-                                >,
-                  LocalSolverT
-                > plot_options;
+    PlotOptions
+    < HDGHyperGraph 
+      < compute_n_dofs_per_node
+        ( TopologyT::hyperedge_dimension(), LocalSolverT::polynomial_degree(),
+          LocalSolverT::solution_dimension_hypernode() ),
+        TopologyT, GeometryT
+      >, LocalSolverT
+    > plot_options;
   public:
     /*!*********************************************************************************************
      * @brief   Abstract problem constructor.
@@ -186,7 +188,8 @@ template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_
 using ElasticityProblemRegular = 
 AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                   Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
-                  ElasticitySolver_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
+                  ElasticitySolver_RegularQuad < hyperedge_dim, space_dim, 
+                                                 poly_degree, 2 * poly_degree >
                 >;
 
 #endif // end of ifndef ABSTRACTPROBLEM_H
