@@ -86,7 +86,9 @@ class HyperEdge_Cubic_UnitCube
      *
      * @retval  point           Point/Vertex of the hyperedge.
      **********************************************************************************************/
-    Point<space_dim> point(unsigned int index) const;
+    Point<space_dim> point(const unsigned int index) const;
+    
+    Point<space_dim> normal(const unsigned int index) const;
 
 //    std::vector<double> abs_det_of_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
 //    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad(const std::vector<double>& local_quadrature) const;
