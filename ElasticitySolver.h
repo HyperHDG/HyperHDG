@@ -28,7 +28,7 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hypere
 #include "HyperNodeFactory.h"
 #include <array>
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class ElasticitySolver_RegularQuad
 {
   private:
@@ -64,7 +64,8 @@ class ElasticitySolver_RegularQuad
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
     static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; };
-    static constexpr unsigned int solution_dimension() { return 1; }
+    static constexpr unsigned int solution_dimension_hyperedge() { return hyperedge_dim; }
+    static constexpr unsigned int solution_dimension_hypernode() { return 1; }
 };
 
 #endif
