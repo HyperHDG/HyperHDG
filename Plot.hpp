@@ -1,5 +1,22 @@
-#ifndef PLOT_H
-#define PLOT_H
+/*!*************************************************************************************************
+ * @file    Plot.hpp
+ * @brief   This file provides the function plot and the class PlotOptions.
+ *
+ * This file provides a file @c plot which takes a @c PlotOptions instatiation to plot given data
+ * encoded in a @c std::vector. Additionally, it defines the @c PlotOptions class which is closely
+ * rekated to the function @c plot.
+ * 
+ * This file is an .hpp file, since class and function are compiled "dynamically" depending on the
+ * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
+ * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
+ * and functions of this file are deduced and the needed versions are compiled.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+
+#ifndef PLOT_HPP
+#define PLOT_HPP
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
@@ -343,4 +360,4 @@ void plot
   plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
 }; // end of void plot
 
-#endif // end of ifndef PLOT_H
+#endif // end of ifndef PLOT_HPP

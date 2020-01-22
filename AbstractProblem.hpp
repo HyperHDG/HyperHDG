@@ -1,5 +1,20 @@
-#ifndef ABSTRACTPROBLEM_H
-#define ABSTRACTPROBLEM_H
+/*!*************************************************************************************************
+ * @file    AbstractProblem.hpp
+ * @brief   This file provides the class AbstractProblem.
+ *
+ * This file provides a file @c AbstractProblem class defining an abstract problem.
+ * 
+ * This file is an .hpp file, since class and function are compiled "dynamically" depending on the
+ * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
+ * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
+ * and functions of this file are deduced and the needed versions are compiled.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+
+#ifndef ABSTRACTPROBLEM_HPP
+#define ABSTRACTPROBLEM_HPP
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
@@ -288,4 +303,4 @@ AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                                                  poly_degree, 2 * poly_degree >
                 >;
 
-#endif // end of ifndef ABSTRACTPROBLEM_H
+#endif // end of ifndef ABSTRACTPROBLEM_HPP
