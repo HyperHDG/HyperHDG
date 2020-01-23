@@ -162,7 +162,7 @@ class AbstractProblem
      * @param   x_vec         A @c std::vector containing the input vector @f$x@f$.
      * @retval  y_vec         A @c std::vector containing the product @f$y = Ax@f$.
      **********************************************************************************************/
-    std::vector<double> matrix_vector_multiply( std::vector<double> x_vec )
+    std::vector<double> matrix_vector_multiply( std::vector<double> x_vec ) const
     {
       constexpr unsigned int hyperedge_dim = TopologyT::hyperedge_dimension();
       constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();

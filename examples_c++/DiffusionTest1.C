@@ -1,5 +1,6 @@
 #include "../AbstractProblem.hpp"
 #include "../SparseLinearAlgebra.hpp"
+#include "../HyAssert.h"
 #include <iostream>
 
 using namespace std;
@@ -21,7 +22,33 @@ int main(int argc, char *argv[])
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
   
-  cout << "SUCCESS" << endl;
+  int num_of_iterations;
+  vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem, num_of_iterations );
+  solution = linear_combination(1., solution, 1., vectorDirichlet);
+  
+  hy_assert ( num_of_iterations > 0 ,
+              "Conjugate gradient method did not converge." );
+  
+  std::vector<double> python_result = 
+  { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
+    0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,
+    0.5,        0.42013223, 0.36123983, 0.72849089, 0.62353531, 0.52383342,
+    0.4428244,  0.39207816, 0.65166809, 0.58551499, 0.5,        0.41448501,
+    0.34833191, 0.60792184, 0.5571756,  0.47616658, 0.37646469, 0.27150911,
+    0.63876017, 0.57986777, 0.5,        0.42013223, 0.36123983, 0.60792184,
+    0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
+    0.44719263, 0.3000305,  0. };
+  
+  hy_assert ( solution.size() == python_result.size() ,
+              "Size of solution of C++ program must be size of reference Python solution." );
+  
+  for (unsigned int i = 0; i < solution.size(); ++i)
+    hy_assert( abs( solution[i] - python_result[i] ) < 1e-8 ,
+               "Difference between Python's refrence solution ans the solution is too large, i.e. "
+               << "it is " << abs( solution[i] - python_result[i] ) << " in the " << i << "-th " <<
+               "component of the solution vector!" );
+  
+  cout << "Diffusion test 1 was successful!" << endl;
   
   return 0;
 }

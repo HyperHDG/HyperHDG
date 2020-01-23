@@ -39,25 +39,23 @@ std::vector<dof_value_type> linear_combination ( const dof_value_type leftFac,
   return lin_comb;
 };
 
-/*
-std::vector<dof_value_type>& std::vector<dof_value_type>::linear_combination 
-( const dof_value_type scaleSelf,
-  const dof_value_type scaleOther, const std::vector<dof_value_type>& vecOther )
+
+void linear_combination ( const dof_value_type leftFac,  const std::vector<dof_value_type>& leftV,
+                          const dof_value_type rightFac, const std::vector<dof_value_type>& rightV,
+                          std::vector<dof_value_type>& result )
 {
-  hy_assert( *this.size() == vecOther.size() ,
-             "Both vectors of linear combination must be of same size!" );
+  hy_assert( leftV.size() == rightV.size() && leftV.size() == result.size() ,
+             "All three vectors of linear combination must be of same size!" );
   
-  for (dof_index_type i = 0; i < leftVec.size(); ++i)
-    (*this)[i] = scaleSelf * (*this)[i] + scaleOther * vecOther[i];
-  return *this;
+  for (dof_index_type i = 0; i < result.size(); ++i)
+    result[i] = leftFac * leftV[i] + rightFac * rightV[i];
 };
-*/
+
 
 template<class ProblemT>
-std::vector<dof_value_type> conjugateGradient ( const std::vector<dof_value_type>& b,
-                                                const ProblemT& problem,
-                                                int& number_of_iterations = 0,
-                                                const dof_value_type tolerance = 1e-9 )
+std::vector<dof_value_type> conjugate_gradient
+( const std::vector<dof_value_type>& b, const ProblemT& problem,
+  int& number_of_iterations = 0, const dof_value_type tolerance = 1e-9 )
 {
   std::vector<dof_value_type> x (b.size(), 0.);
   std::vector<dof_value_type> r = b; // Wiki: b - A x (with x = 0)
@@ -74,13 +72,13 @@ std::vector<dof_value_type> conjugateGradient ( const std::vector<dof_value_type
     r_square_old = r_square_new;
     
     dof_value_type alpha = r_square_old / inner_product(d,z);
-    x = linear_combination(1.,x, alpha,d);
-    r = linear_combination(1.,r, -alpha, z);
+    linear_combination(1.,x, alpha,d,  x);
+    linear_combination(1.,r, -alpha,z, r);
     
     r_square_new = inner_product(r,r);
     
     dof_value_type beta = r_square_new / r_square_old;
-    d = linear_combination(1., r, beta, d);
+    linear_combination(1., r, beta,d,  d);
     
     if ( std::sqrt(r_square_new) < tolerance )  
     {
