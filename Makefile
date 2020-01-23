@@ -11,7 +11,7 @@ EXAMPLE_DIR		= examples_c++
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
-EXAMPLE_BUILD	= $(BUILD_DIR)/ExampleBuild
+EXAMPLE_BUILD	= $(BUILD_DIR)/C++ExampleBuild
 CYTHON_FILE 	= ClassWrapper
 DOXY_DIR			= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
 
@@ -47,11 +47,10 @@ LINKERPOSTFLAGS = -llapack
 # Sets of source and object files
 SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.C))
 OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
-EXAMPLE_SOBJS := $(foreach src, $(SOURCE_FILES), $(EXAMPLE_BUILD)/$(src:.C=.o))
 EXAMPLE_FILES	:= $(foreach src, $(EXAMPLE_DIR), $(wildcard $(EXAMPLE_DIR)/*.C))
 EXAMPLE_HELP	:= $(foreach src, $(EXAMPLE_FILES), $(src:.C=.e))
 EXAMPLE_OBJS	:= $(foreach src, $(EXAMPLE_HELP), $(subst $(EXAMPLE_DIR),$(EXAMPLE_BUILD),$(src)))
-EXAMPLE_EXES	:= $(subst .e,.exe,$(EXAMPLE_OBJS))
+EXAMPLE_EXES	:= $(foreach src, $(EXAMPLE_OBJS), $(src:.e=.exe))
 
 
 default:
@@ -90,16 +89,12 @@ examples:
 
 run_examples:
 	make examples
-	$(EXAMPLE_EXES)
+	echo "Results are (double printed): $(foreach src, $(EXAMPLE_EXES),$(shell $(src)))"
 
 new_run_examples:
 	make clean
 	make run_examples
 
-example_std_objects: $(EXAMPLE_SOBJS)
-
-$(EXAMPLE_BUILD)/%.o: $(SRC_DIR)/%.C
-	$(COMPILER) --std=c++17 -c $^ -o $@
 
 example_objects: $(EXAMPLE_OBJS)
 
@@ -108,7 +103,7 @@ $(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.C
 
 example_linking: $(EXAMPLE_EXES)
 
-$(EXAMPLE_BUILD)/%.exe: $(OBJECT_DIR)/*.o $(EXAMPLE_BUILD)/*.e
+$(EXAMPLE_BUILD)/%.exe: $(OBJECT_DIR)/*.o $(EXAMPLE_BUILD)/%.e
 	$(LINKER) $^ -o $@ $(LINKERPOSTFLAGS)
 
 object_files: $(OBJECTS)
