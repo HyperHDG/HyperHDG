@@ -1,15 +1,17 @@
 PROJECT     	= HDGonHYPERGRAPHS
 .PHONY:       	default clean distclean doxygen new run with_PythonCompileOptions object_files \
-								cython_cpp linking
+								cython_cpp linking examples run_examples new_run_examples
 
 # Predefined directories for output, build files, and doxygen
 SRC_DIR     	= .
 OUTPUT_DIR		= output
 BUILD_DIR   	= build
 DOXY_FILE_DIR	= doxygen
+EXAMPLE_DIR		= examples_c++
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
+EXAMPLE_BUILD	= $(BUILD_DIR)/ExampleBuild
 CYTHON_FILE 	= ClassWrapper
 DOXY_DIR			= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
 
@@ -45,6 +47,11 @@ LINKERPOSTFLAGS = -llapack
 # Sets of source and object files
 SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.C))
 OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
+EXAMPLE_SOBJS := $(foreach src, $(SOURCE_FILES), $(EXAMPLE_BUILD)/$(src:.C=.o))
+EXAMPLE_FILES	:= $(foreach src, $(EXAMPLE_DIR), $(wildcard $(EXAMPLE_DIR)/*.C))
+EXAMPLE_HELP	:= $(foreach src, $(EXAMPLE_FILES), $(src:.C=.e))
+EXAMPLE_OBJS	:= $(foreach src, $(EXAMPLE_HELP), $(subst $(EXAMPLE_DIR),$(EXAMPLE_BUILD),$(src)))
+EXAMPLE_EXES	:= $(subst .e,.exe,$(EXAMPLE_OBJS))
 
 
 default:
@@ -75,6 +82,34 @@ with_PythonCompileOptions:
 	mkdir -p $(OUTPUT_DIR)
 	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
+examples:
+	make
+	mkdir -p $(EXAMPLE_BUILD)
+	make example_objects
+	make example_linking
+
+run_examples:
+	make examples
+	$(EXAMPLE_EXES)
+
+new_run_examples:
+	make clean
+	make run_examples
+
+example_std_objects: $(EXAMPLE_SOBJS)
+
+$(EXAMPLE_BUILD)/%.o: $(SRC_DIR)/%.C
+	$(COMPILER) --std=c++17 -c $^ -o $@
+
+example_objects: $(EXAMPLE_OBJS)
+
+$(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.C
+	$(COMPILER) --std=c++17 -c $^ -o $@
+
+example_linking: $(EXAMPLE_EXES)
+
+$(EXAMPLE_BUILD)/%.exe: $(OBJECT_DIR)/*.o $(EXAMPLE_BUILD)/*.e
+	$(LINKER) $^ -o $@ $(LINKERPOSTFLAGS)
 
 object_files: $(OBJECTS)
 

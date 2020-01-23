@@ -187,9 +187,9 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
 {
   constexpr unsigned int hyperedge_dim = HyperGraphT::hyperedge_dimension();
   constexpr unsigned int space_dim = HyperGraphT::space_dimension();
+  constexpr unsigned int points_per_hyperedge = pow(2, hyperedge_dim);
   
   hyperedge_index_type num_of_hyperedges = plotOpt.hyper_graph().num_of_hyperedges();
-  unsigned int points_per_hyperedge = pow(2, hyperedge_dim);
   point_index_type num_of_points = points_per_hyperedge * num_of_hyperedges;
   
   static_assert (hyperedge_dim <= 3);
