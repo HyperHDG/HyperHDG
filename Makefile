@@ -51,6 +51,7 @@ EXAMPLE_FILES	:= $(foreach src, $(EXAMPLE_DIR), $(wildcard $(EXAMPLE_DIR)/*.C))
 EXAMPLE_HELP	:= $(foreach src, $(EXAMPLE_FILES), $(src:.C=.e))
 EXAMPLE_OBJS	:= $(foreach src, $(EXAMPLE_HELP), $(subst $(EXAMPLE_DIR),$(EXAMPLE_BUILD),$(src)))
 EXAMPLE_EXES	:= $(foreach src, $(EXAMPLE_OBJS), $(src:.e=.exe))
+TEST_EXES			:= $(foreach src, $(EXAMPLE_BUILD), $(wildcard $(EXAMPLE_BUILD)/*.exe))
 
 
 default:
@@ -89,7 +90,8 @@ examples:
 
 run_examples:
 	make examples
-	echo "Results are (double printed): $(foreach src, $(EXAMPLE_EXES),$(shell $(src)))"
+	./build/C++ExampleBuild/DiffusionTest1.exe;
+	./build/C++ExampleBuild/DiffusionTest2.exe;
 
 new_run_examples:
 	make clean
