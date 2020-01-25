@@ -4,8 +4,17 @@
 #include <iostream>
 
 using namespace std;
+using namespace SparseLA;
 
-
+/*!*************************************************************************************************
+ * @brief   Function that tests several aspects of the C++ implementation against a given reference
+ *          solution obtained with the Python interface.
+ *
+ * This function implements an alternative to Executable.py (which usses the Cython interface).
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 int main(int argc, char *argv[])
 {
   vector<int> num_elements = { 4 , 2 , 2 };

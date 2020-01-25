@@ -1,3 +1,17 @@
+/*!*************************************************************************************************
+ * @file    SparseLinearAlgebra.hpp
+ * @brief   A file containing different functions that implement basic linear algebra operations
+ *          using large @c std::vector.
+ *
+ * This namespace provides several functions to implement basic linear algebra operations of (long)
+ * @c std::vector in combination with a class providing a function @c matrix_vector_multiply. This
+ * is mainly used for C++ examples and test cases that do not use the Python interface and its
+ * version of an CG method, for example.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+
 #ifndef SPARSELINEARALGEBRA_HPP
 #define SPARSELINEARALGEBRA_HPP
 
@@ -6,7 +20,37 @@
 #include <vector>
 #include <cmath>
 
+/*!*************************************************************************************************
+ * @brief   A namespace containing different functions that implement basic linear algebra
+ *          operations using large @c std::vector.
+ * 
+ * @todo    Check, whether this construction makes sense.
+ *
+ * This namespace provides several functions to implement basic linear algebra operations of (long)
+ * @c std::vector in combination with a class providing a function @c matrix_vector_multiply. This
+ * is mainly used for C++ examples and test cases that do not use the Python interface and its
+ * version of an CG method, for example.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+namespace SparseLA
+{
 
+/*!*************************************************************************************************
+ * @brief   Evaluate the inner product of two @c std::vector.
+ * 
+ * Naive implementation of an Euclidean inner product of two @c std::vector which are supposed to be
+ * of the same size. This function is needed to calculate a vector's 2 norm or to implement a CG
+ * scheme.
+ * 
+ * @param   left                Left argument of the inner product.
+ * @param   right               Right argument of the inner product.
+ * @retval  product             Inner product of the two arguments.
+ * 
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 dof_value_type inner_product ( const std::vector<dof_value_type>& left,
                                const std::vector<dof_value_type>& right )
 {
@@ -18,13 +62,39 @@ dof_value_type inner_product ( const std::vector<dof_value_type>& left,
   return product;
 };
 
-
+/*!*************************************************************************************************
+ * @brief   Evaluate 2 norm of a @c std::vector.
+ * 
+ * Naive implementation of an 2 norm of a vector. This is the square root of the @c inner_product of
+ * a vector paired with itself.
+ * 
+ * @param   vec                 Vector whose 2 norm is to be calculates.
+ * @retval  norm                2 norm of given vector.
+ * 
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 dof_value_type norm_2 ( const std::vector<dof_value_type>& vec )
 {
   return std::sqrt( inner_product(vec,vec) );
 };
 
-
+/*!*************************************************************************************************
+ * @brief   Evaluate linear combination of vectors and return the result.
+ * 
+ * This functions takes two @c std::vector and two @c dof_value_type and returns their linear
+ * combination "leftFac * leftVec + rightFac * rightVec" as a new vector (in contrast to just a
+ * reference to a vector).
+ * 
+ * @param   leftFac             Scaling factor of left vector.
+ * @param   leftVec             Left vector in linear combination.
+ * @param   rightFac            Scaling factor of right vector.
+ * @param   rightVec            Right vector in linear combination.
+ * @retval  lin_comb            Linear combination of vectors with respective coefficients.
+ * 
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 std::vector<dof_value_type> linear_combination ( const dof_value_type leftFac,
                                                  const std::vector<dof_value_type>& leftVec,
                                                  const dof_value_type rightFac,
@@ -39,7 +109,23 @@ std::vector<dof_value_type> linear_combination ( const dof_value_type leftFac,
   return lin_comb;
 };
 
-
+/*!*************************************************************************************************
+ * @brief   Evaluate linear combination of vectors and return reference to result.
+ * 
+ * This functions takes two @c std::vector and two @c dof_value_type and returns their linear
+ * combination "leftFac * leftVec + rightFac * rightVec" as a reference to a vector. This vector
+ * needs to be passed to the function
+ * 
+ * @param   leftFac             Scaling factor of left vector.
+ * @param   leftVec             Left vector in linear combination.
+ * @param   rightFac            Scaling factor of right vector.
+ * @param   rightVec            Right vector in linear combination.
+ * @param   result              Reference to vector whicb is supposed to contain the result.
+ * @retval  result              Linear combination of vectors with respective coefficients.
+ * 
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 void linear_combination ( const dof_value_type leftFac,  const std::vector<dof_value_type>& leftV,
                           const dof_value_type rightFac, const std::vector<dof_value_type>& rightV,
                           std::vector<dof_value_type>& result )
@@ -51,11 +137,29 @@ void linear_combination ( const dof_value_type leftFac,  const std::vector<dof_v
     result[i] = leftFac * leftV[i] + rightFac * rightV[i];
 };
 
-
+/*!*************************************************************************************************
+ * @brief   Execute conjugate gradient algorithm to find solution to system of equations.
+ * 
+ * Execute conjugate gradient algorithm where the matrix is not explicitly given, but the template
+ * class @c ProblemT is supposed to implement a function @c matrix_vector_multiply which only takes
+ * a @c std::vector and generates the matrix vector product from that. The associated matrix is
+ * assumed to be square and symmetric positive definite.
+ * 
+ * @tparam  ProblemT            Class to implement matrix vector multiplication.
+ * @param   b                   Right-hand side of linear system of equations.
+ * @param   problme             Class instantiation to implement matrix vector multiplication.
+ * @param   n_iterations        Maximum number of iterations. 0 is default and the size of b.
+ * @param   tolerance           Absolute tolerance value in 2 norm. Default is 1e-9.
+ * @retval  solution            Vector sufficing Ax = b up to given tolerance if converged.
+ * @retval  n_iterations        Number of needed iterations. -1 indicates no convergence.
+ * 
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template<class ProblemT>
 std::vector<dof_value_type> conjugate_gradient
 ( const std::vector<dof_value_type>& b, const ProblemT& problem,
-  int& number_of_iterations = 0, const dof_value_type tolerance = 1e-9 )
+  int& n_iterations = 0, const dof_value_type tolerance = 1e-9 )
 {
   std::vector<dof_value_type> x (b.size(), 0.);
   std::vector<dof_value_type> r = b; // Wiki: b - A x (with x = 0)
@@ -64,9 +168,9 @@ std::vector<dof_value_type> conjugate_gradient
   dof_value_type r_square_old;
   dof_value_type r_square_new = inner_product(r,r);
   
-  if (number_of_iterations == 0)  number_of_iterations = b.size();
+  if (n_iterations == 0)  n_iterations = b.size();
   
-  for (unsigned int k = 0; k < number_of_iterations; ++k)
+  for (unsigned int k = 0; k < n_iterations; ++k)
   {
     std::vector<dof_value_type> z = problem.matrix_vector_multiply(d);
     r_square_old = r_square_new;
@@ -82,18 +186,20 @@ std::vector<dof_value_type> conjugate_gradient
     
     if ( std::sqrt(r_square_new) < tolerance )  
     {
-      number_of_iterations = k;
+      n_iterations = k;
       return x;
     }
   }
 
   hy_assert( 0 == 1 ,
-             "CG method did not converge! The final residual after " << number_of_iterations <<
+             "CG method did not converge! The final residual after " << n_iterations <<
              " iterations turned out to be " << std::sqrt(r_square_new) << ", while the needed "
              << "tolerance is " << tolerance << "." );
              
-  number_of_iterations = -1;
+  n_iterations = -1;
   return x;
-}
+};
+
+} // end of namespace SparseLA
 
 #endif // end of ifndef SPARSELINEARALGEBRA_HPP

@@ -1,3 +1,17 @@
+/*!*************************************************************************************************
+ * @file    FuncAndQuad.h
+ * @brief   A namespace containing different functions that evaluate the trial functions at
+ *          quadrature points.
+ *
+ * This namespace aims to ultimately provide the opportunity to choose from several types of trial
+ * functions and different quadrature rules by choosing the appropriate \c namesapce. However, at
+ * the moment only orthonormal trial functions and Gaussian quadrature are implemented resultin in
+ * the currently very general name FuncQuad.
+ *
+ * @authors   Guido Kanschat, University of Heidelberg, 2020.
+ * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+
 #ifndef FUNC_AND_QUAD_H
 #define FUNC_AND_QUAD_H
 
