@@ -18,6 +18,7 @@
 
 using namespace std;
 using namespace FuncQuad;
+using namespace Geometry;
 #include "ElasticitySolver.inst"
 
 
@@ -519,3 +520,27 @@ numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyper
 {
   return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));
 }
+
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
+preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim >& hyperedge_dofs,
+                 HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>& geometry ) const
+{
+  array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim > result;
+  for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+  return result;
+}
+
+
+template<unsigned int hyperedge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array< array<double, space_dim * compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim >
+ElasticitySolver_RegularQuad<hyperedge_dim, space_dim, max_poly_degree, max_quad_degree>::
+postprocess_data( array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim >& hyperedge_dofs,
+                  HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>& geometry ) const
+{
+  std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim > result;
+  for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+  return result;
+}
+

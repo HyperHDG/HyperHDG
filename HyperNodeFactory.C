@@ -17,29 +17,29 @@ using namespace std;
 
 template <unsigned int n_dofs_per_node>
 HyperNodeFactory<n_dofs_per_node>::
-HyperNodeFactory(const hypernode_index_type num_of_hypernodes)
-: num_of_hypernodes_(num_of_hypernodes) { }
+HyperNodeFactory(const hypernode_index_type n_hypernodes)
+: n_hypernodes_(n_hypernodes) { }
 
 
 template <unsigned int n_dofs_per_node>
 HyperNodeFactory<n_dofs_per_node>::
 HyperNodeFactory(const HyperNodeFactory<n_dofs_per_node>& other)
-: num_of_hypernodes_(other.num_of_hypernodes_) { }
+: n_hypernodes_(other.n_hypernodes_) { }
 
 
 template <unsigned int n_dofs_per_node>
 const hypernode_index_type HyperNodeFactory<n_dofs_per_node>::
-num_of_hypernodes() const
+n_hypernodes() const
 {
-  return num_of_hypernodes_;
+  return n_hypernodes_;
 }
 
 
 template <unsigned int n_dofs_per_node>
 const dof_index_type HyperNodeFactory<n_dofs_per_node>::
-num_of_global_dofs() const
+n_global_dofs() const
 {
-  return num_of_hypernodes_ * n_dofs_per_node;
+  return n_hypernodes_ * n_dofs_per_node;
 }
 
 

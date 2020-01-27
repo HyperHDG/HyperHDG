@@ -98,7 +98,7 @@ class AbstractProblem
       plot_options  ( hyper_graph_, local_solver_ )
     {
       static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
-                     "Hyperedge dimension of topology and geometry must be equal!"  );
+                     "Hyperedge dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
                      "Space dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() ,
@@ -130,11 +130,11 @@ class AbstractProblem
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)
       {
-        hy_assert( indices[i] >= 0 && indices[i] < hyper_graph_.num_of_hypernodes(), 
+        hy_assert( indices[i] >= 0 && indices[i] < hyper_graph_.n_global_dofs(), 
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                   << "smaller than the total amount of hypernodes." << std::endl << "In this case,"
-                   << " the index is " << indices[i] << " and the total amount of hypernodes is " <<
-                   hyper_graph_.num_of_hypernodes() << "." );
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << indices[i] << " and the total amount of "
+                   << "hypernodes is " << hyper_graph_.n_hypernodes() << "." );
         dirichlet_indices_[i] = indices[i];
       }
     };
@@ -149,10 +149,12 @@ class AbstractProblem
      **********************************************************************************************/
     std::vector<double> return_zero_vector( )
     {
-      return std::vector<double>(hyper_graph_.num_of_global_dofs(), 0.);
+      return std::vector<double>(hyper_graph_.n_global_dofs(), 0.);
     };
     /*!*********************************************************************************************
      * @brief   Evaluate condensed matrix-vector product.
+     * 
+     * @todo    Decide whether @c auto @c hyperedge should be const!
      *
      * Function that evaluates the condensed, matrix-free version of the matrix-vector product
      * @f$A x = y@f$, where @f$A@f$ is the condensed matrix of the LDG-H method, @f$x@f$ is the
@@ -164,28 +166,49 @@ class AbstractProblem
      **********************************************************************************************/
     std::vector<double> matrix_vector_multiply( std::vector<double> x_vec ) const
     {
-      constexpr unsigned int hyperedge_dim = TopologyT::hyperedge_dimension();
-      constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();
+      constexpr unsigned int hyperedge_dim  = TopologyT::hyperedge_dimension();
+      constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
       
-      std::vector<double> vec_Ax(x_vec.size(), 0.);
+      std::vector<double> vec_Ax( x_vec.size() , 0.);
       std::array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
-      std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, poly_degree)> ,
-                  2*hyperedge_dim > local_result, hyperedge_dofs;
       
-      std::for_each( hyper_graph_.begin(), hyper_graph_.end(), [&](const auto hyperedge)
+      std::array
+      < std::array
+        < double, compute_n_dofs_per_node( hyperedge_dim, poly_degree,
+                                           LocalSolverT::solution_dimension_hypernode() ) > ,
+        2  *hyperedge_dim > hyperedge_dofs;
+      
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyperedge)
       {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyperedge_dofs array
         hyperedge_hypernodes = hyperedge.topology.get_hypernode_indices();
-        for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+        for ( unsigned int hypernode = 0 ; hypernode < hyperedge_hypernodes.size() ; ++hypernode )
           hyperedge_dofs[hypernode] = 
             hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
-        local_result = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
-        for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax
+        if constexpr ( LocalSolverT::need_geometry_processing() )
+        {
+          auto solver_dofs    = local_solver_.preprocess_data(hyperedge_dofs, hyperedge.geometry);
+          auto solver_result  = local_solver_.numerical_flux_from_lambda(solver_dofs);
+          hyperedge_dofs      = local_solver_.postprocess_data(solver_result, hyperedge.geometry);
+        }
+        else  hyperedge_dofs  = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
+        
+        // Fill hyperedge_dofs array degrees of freedom into vec_Ax
+        for ( unsigned int hypernode = 0 ; hypernode < hyperedge_hypernodes.size() ; ++hypernode )
           hyper_graph_.hypernode_factory().add_to_dof_values
-            (hyperedge_hypernodes[hypernode], vec_Ax, local_result[hypernode]);
+            (hyperedge_hypernodes[hypernode], vec_Ax, hyperedge_dofs[hypernode]);
       });
       
       for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i) 
-        hyper_graph_.hypernode_factory().set_dof_values(dirichlet_indices_[i], vec_Ax, 0.);
+      {
+        hy_assert( dirichlet_indices_[i] >= 0 && dirichlet_indices_[i] < vec_Ax.size() ,
+                   "Dirichlet indeices need to be non-negative and smaller than the size of the " <<
+                   "vector of solution coefficients! Here, index " << i << " is invalid, since it is"
+                   << " " << dirichlet_indices_[i] << "." );
+        vec_Ax[i] = 0.;
+      }
     
       return vec_Ax;
     };
@@ -203,7 +226,7 @@ class AbstractProblem
      **********************************************************************************************/
     int size_of_system()
     {
-      return hyper_graph_.num_of_global_dofs();
+      return hyper_graph_.n_global_dofs();
     };
     /*!*********************************************************************************************
      * @brief   Set plot option and return old plot option.
@@ -250,7 +273,7 @@ class AbstractProblem
      **********************************************************************************************/
     void plot_solution( std::vector<double> lambda )
     {
-      plot(lambda, plot_options);
+      plot( lambda , plot_options );
     };
 }; // end of class AbstractProblem
 

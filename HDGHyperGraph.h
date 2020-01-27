@@ -332,9 +332,9 @@ class HDGHyperGraph
      * @brief   Return iterator to the end of @c HyperEdge list.
      *
      * This function returns an @c HDGHyperGraph::iterator that refers to the position of an (non-
-     * existing) @c HyperEdge of the hypergraph (index = num_of_hyperedges), i.e., the position
-     * directly after the last valid entry of the @c HDGHyperGraph. Thus, it can be used to mark the
-     * ending point in @c for_each loops.
+     * existing) @c HyperEdge of the hypergraph (index = n_hyperedges), i.e., the position  directly
+     * after the last valid entry of the @c HDGHyperGraph. Thus, it can be used to mark the ending
+     * point in @c for_each loops.
      *
      * @retval  hyperedge             Iterator referring to position behind last @c HyperEdge.
      **********************************************************************************************/
@@ -378,22 +378,22 @@ class HDGHyperGraph
     /*!*********************************************************************************************
      * @brief   Returns the number of hyperedges making up the hypergraph.
      *
-     * @retval  num_hyperedges        The total amount of hyperedges of a hypergraph.
+     * @retval  n_hyperedges          The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyperedge_index_type num_of_hyperedges() const;
+    const hyperedge_index_type n_hyperedges() const;
     /*!*********************************************************************************************
      * @brief   Returns the number of hypernodes making up the hypergraph.
      *
-     * @retval  num_hypernodes        The total amount of hypernodes of a hypergraph.
+     * @retval  n_hypernodes          The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type num_of_hypernodes() const;
+    const hypernode_index_type n_hypernodes() const;
     /*!*********************************************************************************************
      * @brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
-     * @retval  num_of_global_dofs    The total amount of degreees of freedom in the considered
+     * @retval  n_global_dofs         The total amount of degreees of freedom in the considered
      *                                hypergraph.
      **********************************************************************************************/
-    const dof_index_type num_of_global_dofs() const;
+    const dof_index_type n_global_dofs() const;
     
     /*!*********************************************************************************************
      * @brief   Returns the template parameter representing the dimension of a hyperedge.

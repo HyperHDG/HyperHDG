@@ -25,6 +25,7 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hypere
 #define ELASTICITYSOLVER_H
 
 #include "FuncAndQuad.h"
+#include "HyperEdge_Geometry.h"
 #include "HyperNodeFactory.h"
 #include <array>
 
@@ -62,10 +63,17 @@ class ElasticitySolver_RegularQuad
     std::array< std::array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const;
     std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
+    
+    std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
+      preprocess_data(std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim >& hyperedge_dofs, Geometry::HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>& geometry ) const;
+    std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim >
+      postprocess_data(std::array< std::array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim >& hyperedge_dofs, Geometry::HyperEdge_Cubic_UnitCube<hyperedge_dim, space_dim>& geometry ) const;
+    
     static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; };
-    static constexpr unsigned int solution_dimension_hyperedge() { return hyperedge_dim; }
-    static constexpr unsigned int solution_dimension_hypernode() { return 1; }
+    static constexpr unsigned int solution_dimension_hyperedge() { return hyperedge_dim; };
+    static constexpr unsigned int solution_dimension_hypernode() { return space_dim; };
+    static constexpr bool need_geometry_processing() { return true; };
 };
 
 #endif
