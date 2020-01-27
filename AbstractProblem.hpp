@@ -133,8 +133,8 @@ class AbstractProblem
         hy_assert( indices[i] >= 0 && indices[i] < hyper_graph_.n_global_dofs(), 
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
-                   << "In this case, the index is " << indices[i] << " and the total amount of "
-                   << "hypernodes is " << hyper_graph_.n_hypernodes() << "." );
+                   << "In this case, the index is " << indices[i] << " and the total amount of " <<
+                   "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         dirichlet_indices_[i] = indices[i];
       }
     };
@@ -201,13 +201,15 @@ class AbstractProblem
             (hyperedge_hypernodes[hypernode], vec_Ax, hyperedge_dofs[hypernode]);
       });
       
-      for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i) 
+      for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i)
       {
-        hy_assert( dirichlet_indices_[i] >= 0 && dirichlet_indices_[i] < vec_Ax.size() ,
-                   "Dirichlet indeices need to be non-negative and smaller than the size of the " <<
-                   "vector of solution coefficients! Here, index " << i << " is invalid, since it is"
-                   << " " << dirichlet_indices_[i] << "." );
-        vec_Ax[i] = 0.;
+        hy_assert( dirichlet_indices_[i] >= 0 
+                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
+                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
+                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
+        vec_Ax[dirichlet_indices_[i]] = 0.;
       }
     
       return vec_Ax;

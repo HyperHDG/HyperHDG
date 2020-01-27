@@ -53,8 +53,8 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 if num_iter == 0:
   print("Solution: ", vectorSolution + vectorDirichlet)
 else:
-  print("The linear solver (conjugate gradients) failed with a total",
-        "number of ", num_iter, " iterations.")
+  print("The linear solver (conjugate gradients) failed with a total number of ",
+        num_iter, " iterations.")
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
