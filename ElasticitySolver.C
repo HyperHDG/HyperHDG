@@ -537,7 +537,7 @@ preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hypere
   
   for (unsigned int i = 0; i < 2 * hyperedge_dim; ++i)
   {
-    Point<space_dim> normal_vector = geometry.normal(i);
+    Point<space_dim> normal_vector = geometry.normal(1);
     for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][0] += normal_vector[dim] * hyperedge_dofs[i][dim];
   }
   
@@ -556,7 +556,7 @@ postprocess_data( array< array<double, compute_n_dofs_per_node(hyperedge_dim, ma
   
   for (unsigned int i = 0; i < 2 * hyperedge_dim; ++i)
   {
-    Point<space_dim> normal_vector = geometry.normal(i);
+    Point<space_dim> normal_vector = geometry.normal(1);
     for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][dim] += normal_vector[dim] * hyperedge_dofs[i][0];
   }
   
