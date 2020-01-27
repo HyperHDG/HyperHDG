@@ -340,21 +340,19 @@ class HDGHyperGraph
      **********************************************************************************************/
     typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const;
     /*!*********************************************************************************************
-     * @brief   Return iterator to the end of @c HyperEdge list.
+     * @brief   Return const reference to HyperNodeFactory.
      *
      * @todo    Why is this public? Why not get_hypernode()?
      *          -> Because a hypernode would have several functions and we decided not to introduce
      *          a hypernode class, but to only have a hypernode factory covering all those aspects.
      *          What we could do is to repeat all functions of the hypernode_factory in this class.
      * 
-     * @todo    Decide whether returning a reference or a real object makes more sense, here.
-     * 
      * This function returns an @c HyperNodeFactory handling the access to the degrees of freedom
      * encoded in some @c std::vector.
      *
      * @retval  hypernode_factory     The @c HyperNodeFactory belonging the hypergraph.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_node> hypernode_factory() const;
+    const HyperNodeFactory<n_dofs_per_node>& hypernode_factory() const;
     /*!*********************************************************************************************
      * @brief   Topological information of prescribed hyperedge.
      *

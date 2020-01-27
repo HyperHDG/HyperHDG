@@ -101,7 +101,7 @@ end() const
 
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
-const HyperNodeFactory<n_dofs_per_node>
+const HyperNodeFactory<n_dofs_per_node>&
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 hypernode_factory() const
 {
