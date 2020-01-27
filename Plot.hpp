@@ -2,6 +2,8 @@
  * @file    Plot.hpp
  * @brief   This file provides the function plot and the class PlotOptions.
  *
+ * @todo    Plot has been deactivated to implement elasticity!
+ * 
  * This file provides a file @c plot which takes a @c PlotOptions instatiation to plot given data
  * encoded in a @c std::vector. Additionally, it defines the @c PlotOptions class which is closely
  * rekated to the function @c plot.
@@ -49,6 +51,8 @@
  * 
  * @todo  Turn PlotOptions class into fully templated class where the HDGHyperGraph and the
  *        LocalSolver are template classes! -> Done, but are you ok with this?
+ * 
+ * @todo  Plot has been deactivated to implement elasticity!
  * 
  * This class contains all information needed for creating a plot from a @c std::vector, i.e., it
  * contains an @c HDGHyperGraph and a @c LocalSolver and several fields to encode a file name, the
@@ -330,6 +334,8 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
 
 /*!*************************************************************************************************
  * @brief   Function plotting the solution of an equation on a hypergraph.
+ * 
+ * @todo    Plot function has been deactivated for elasticity!
  *
  * Creates a file according to set plotting options in @c plotOpt. This file contains the solution
  * of the PDE defined in @c plotOpt having the representation @c lambda in terms of its skeletal
@@ -357,7 +363,7 @@ void plot
              << plotOpt.fileEnding << ", which is invalid.");
   hy_assert( !plotOpt.fileName.empty() , "File name must not be empty!" );
   hy_assert( !plotOpt.outputDir.empty() , "Ouput directory must not be empty!" );
-  plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
+  // plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
 }; // end of void plot
 
 #endif // end of ifndef PLOT_HPP

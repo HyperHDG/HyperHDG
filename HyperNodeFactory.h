@@ -32,15 +32,15 @@ class HyperNodeFactory
      * the correct size, to check whether a vector has the appropriate size, and to check whether a
      * degree of freedom has a valid index.
      **********************************************************************************************/
-    const hypernode_index_type num_of_hypernodes_;
+    const hypernode_index_type n_hypernodes_;
   public:
     /*!*********************************************************************************************
      * 
      * @brief   Construct HyperNodeFactory from total number of hypernodes. 
      * 
-     * @param   num_of_hypernodes   Total number of hypernodes.
+     * @param   n_hypernodes   Total number of hypernodes.
      **********************************************************************************************/
-    HyperNodeFactory(const hypernode_index_type num_of_hypernodes);
+    HyperNodeFactory(const hypernode_index_type n_hypernodes);
     /*!*********************************************************************************************
      * @brief   Copy constructot for HypernodeFactory.
      * 
@@ -55,16 +55,16 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * @brief   Returns the total amount of hypernodes in the considered hypergraph.
      * 
-     * @retval  num_of_hypernodes   The total amount of hypernodes in the considered hypergraph.
+     * @retval  n_hypernodes        The total amount of hypernodes in the considered hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type num_of_hypernodes() const;
+    const hypernode_index_type n_hypernodes() const;
     /*!*********************************************************************************************
      * @brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
-     * @retval  num_of_global_dofs  The total amount of degreees of freedom in the considered
+     * @retval  n_global_dofs       The total amount of degreees of freedom in the considered
      *                              hypergraph.
      **********************************************************************************************/
-    const dof_index_type num_of_global_dofs() const;
+    const dof_index_type n_global_dofs() const;
     /*!*********************************************************************************************
      * @brief   Calculate global indices of degrees of freedom related to a hypernode.
      * 
@@ -134,8 +134,8 @@ class HyperNodeFactory
  * @authors   Guido Kanschat, University of Heidelberg, 2019.
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
-constexpr const unsigned int compute_n_dofs_per_node(const unsigned int hyperedge_dim,
-  const unsigned int poly_degree, const unsigned int solution_dim = 1)
+constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyperedge_dim,
+  const unsigned int poly_degree, const unsigned int solution_dim = 1 )
 {
   unsigned int amount = 1;
   for (unsigned int iteration = 0; iteration < hyperedge_dim - 1; ++ iteration)

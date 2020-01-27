@@ -19,12 +19,12 @@ template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const TopoT& hypergraph_topology)
 : hypergraph_topology_(hypergraph_topology), hypergraph_geometry_(hypergraph_topology),
-  hypernode_factory_(hypergraph_topology.num_of_hypernodes())
+  hypernode_factory_(hypergraph_topology.n_hypernodes())
 {
   static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() );
-  assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology.num_of_hypernodes() );
-  assert( hypernode_factory_.num_of_hypernodes() >= 2 );
-  assert( hypergraph_topology.num_of_hyperedges() != 0 );
+  assert( hypernode_factory_.n_hypernodes() == hypergraph_topology.n_hypernodes() );
+  assert( hypernode_factory_.n_hypernodes() >= 2 );
+  assert( hypergraph_topology.n_hyperedges() != 0 );
 }
 */
 
@@ -33,20 +33,20 @@ HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const constructor_value_type& construction_data)
 : hypergraph_topology_(construction_data.topology),
   hypergraph_geometry_(construction_data.geometry),
-  hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
+  hypernode_factory_(hypergraph_topology_.n_hypernodes())
 {
   static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
                  "The dimension of topology and geometry should be equal!" );
-  hy_assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology_.num_of_hypernodes() ,
+  hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
              "The amount of hypernodes known to the hypernode factory is " <<
-             hypernode_factory_.num_of_hypernodes() << ", which is not equal to the amount that the"
-             << " hypergraph assumes, i.e., " << hypergraph_topology_.num_of_hypernodes() << "." );
-  hy_assert( hypernode_factory_.num_of_hypernodes() >= 2 ,
+             hypernode_factory_.n_hypernodes() << ", which is not equal to the amount that the"
+             << " hypergraph assumes, i.e., " << hypergraph_topology_.n_hypernodes() << "." );
+  hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
              "A hypergraph is assumed to consist of at least two hypernodes. This graph only " <<
-             "consists of " << hypernode_factory_.num_of_hypernodes() << " hypernodes." );
-  hy_assert( hypergraph_topology_.num_of_hyperedges() > 0 ,
+             "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
+  hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
              "A hypergraph is supposed to consist of at least one hyperedge. This graph consists "
-             << "of " << hypergraph_topology_.num_of_hyperedges() << " hyperedges." );
+             << "of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
 }
 
 
@@ -55,20 +55,20 @@ HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
               const typename GeomT::constructor_value_type& construct_geom)
 : hypergraph_topology_(construct_topo), hypergraph_geometry_(construct_geom),
-  hypernode_factory_(hypergraph_topology_.num_of_hypernodes())
+  hypernode_factory_(hypergraph_topology_.n_hypernodes())
 {
   static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
                  "The dimension of topology and geometry should be equal!" );
-  hy_assert( hypernode_factory_.num_of_hypernodes() == hypergraph_topology_.num_of_hypernodes() ,
+  hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
              "The amount of hypernodes known to the hypernode factory is " <<
-             hypernode_factory_.num_of_hypernodes() << ", which is not equal to the amount that the"
-             << " hypergraph assumes, i.e., " << hypergraph_topology_.num_of_hypernodes() << "." );
-  hy_assert( hypernode_factory_.num_of_hypernodes() >= 2 ,
+             hypernode_factory_.n_hypernodes() << ", which is not equal to the amount that the"
+             << " hypergraph assumes, i.e., " << hypergraph_topology_.n_hypernodes() << "." );
+  hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
              "A hypergraph is assumed to consist of at least two hypernodes. This graph only " <<
-             "consists of " << hypernode_factory_.num_of_hypernodes() << " hypernodes." );
-  hy_assert( hypergraph_topology_.num_of_hyperedges() > 0 ,
+             "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
+  hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
              "A hypergraph is supposed to consist of at least one hyperedge. This graph consists "
-             << "of " << hypergraph_topology_.num_of_hyperedges() << " hyperedges." );
+             << "of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
 }
 
 
@@ -96,7 +96,7 @@ typename HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
 end() const
 {
-  return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, num_of_hyperedges()); 
+  return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, n_hyperedges()); 
 }
 
 
@@ -130,27 +130,27 @@ hyperedge_geometry(const hyperedge_index_type index) const
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 const hyperedge_index_type
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
-num_of_hyperedges() const
+n_hyperedges() const
 {
-  return hypergraph_topology_.num_of_hyperedges();
+  return hypergraph_topology_.n_hyperedges();
 }
 
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 const hypernode_index_type
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
-num_of_hypernodes() const
+n_hypernodes() const
 {
-  return hypernode_factory_.num_of_hypernodes();
+  return hypernode_factory_.n_hypernodes();
 }
 
 
 template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
 const dof_index_type 
 HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::
-num_of_global_dofs() const
+n_global_dofs() const
 {
-  return hypernode_factory_.num_of_global_dofs();
+  return hypernode_factory_.n_global_dofs();
 }
 
 /*

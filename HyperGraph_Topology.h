@@ -61,7 +61,7 @@ class HyperGraph_Cubic
      * through all hyperedges and execute some code. The number of hyperedges can be computed from
      * the @c std::array @c num_elements_.
      **********************************************************************************************/
-    hyperedge_index_type num_of_hyperedges_;
+    hyperedge_index_type n_hyperedges_;
     /*!*********************************************************************************************
      * @brief   Total amount of hypernodes.
      *
@@ -69,7 +69,7 @@ class HyperGraph_Cubic
      * appropriate version of a @c HyperNodeFactory. It can be vomputed from the \c std::array
      * @c num_elements_.
      **********************************************************************************************/
-    hypernode_index_type num_of_hypernodes_;
+    hypernode_index_type n_hypernodes_;
   public:
     /*!*********************************************************************************************
      * @brief   Defines the return value of the class.
@@ -143,15 +143,15 @@ class HyperGraph_Cubic
     /*!*********************************************************************************************
      * @brief   Returns the number of hyperedges making up the hypergraph.
      *
-     * @retval  num_hyperedges  The total amount of hyperedges of a hypergraph.
+     * @retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyperedge_index_type num_of_hyperedges() const;
+    const hyperedge_index_type n_hyperedges() const;
     /*!*********************************************************************************************
      * @brief   Returns the number of hypernodes making up the hypergraph.
      *
-     * @retval  num_hypernodes  The total amount of hypernodes of a hypergraph.
+     * @retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type num_of_hypernodes() const;
+    const hypernode_index_type n_hypernodes() const;
     
     /*!*********************************************************************************************
      * @brief   Returns the template parameter representing the dimension of a hyperedge.
