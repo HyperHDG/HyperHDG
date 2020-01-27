@@ -1,5 +1,5 @@
-#ifndef HYPERGRAPH_H
-#define HYPERGRAPH_H
+#ifndef HDGHYPERGRAPH_H
+#define HDGHYPERGRAPH_H
 
 #include "TypeDefs.h"
 #include "HyperNodeFactory.h"
