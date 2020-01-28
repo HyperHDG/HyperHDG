@@ -8,8 +8,8 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "HyperNodeFactory.h"
-#include "HyAssert.h"
+#include "HyperNodeFactory.hxx"
+#include "HyAssert.hxx"
 
 using namespace std;
 #include "HyperNodeFactory.inst"

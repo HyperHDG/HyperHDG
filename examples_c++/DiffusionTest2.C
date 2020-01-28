@@ -1,5 +1,5 @@
-#include "../AbstractProblem.hpp"
-#include "../SparseLinearAlgebra.hpp"
+#include "../AbstractProblem.hxx"
+#include "../SparseLinearAlgebra.hxx"
 #include <iostream>
 
 using namespace std;

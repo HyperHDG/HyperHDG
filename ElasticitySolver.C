@@ -9,9 +9,9 @@
  */
 
 
-#include "ElasticitySolver.h"
-#include "HyAssert.h"
-#include "LapackWrapper.h"
+#include "ElasticitySolver.hxx"
+#include "HyAssert.hxx"
+#include "LapackWrapper.hxx"
 #include <cmath>
 #include <vector>
 
