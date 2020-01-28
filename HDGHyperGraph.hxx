@@ -40,6 +40,8 @@
 #include "Topo_Cubic.hxx"
 #include "Geom_UnitCube.hxx"
 
+#include "HyAssert.hxx"
+
 /*!*************************************************************************************************
  * \brief   The class template uniting topology and geometry of a hypergraph with the topology of
  *          the skeleton space of the HDG method.
@@ -108,7 +110,7 @@ class HDGHyperGraph
      * \param   geom    Geometrical information of a hyperedge.
      **********************************************************************************************/
     HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
-      : topology(topo), geometry(geom) { };
+    : topology(topo), geometry(geom) { }
   } value_type; // end of typedef struct HyperEdge
   
   /*!***********************************************************************************************
@@ -146,7 +148,7 @@ class HDGHyperGraph
      **********************************************************************************************/
     HyperGraphConstructor(const typename TopoT::constructor_value_type& topo,
                           const typename GeomT::constructor_value_type& geom)
-      : topology(topo), geometry(geom) { };
+    : topology(topo), geometry(geom) { }
   } constructor_value_type; // end of typedef struct HyperGraphConstructor
   
   /*!***********************************************************************************************
@@ -191,7 +193,7 @@ class HDGHyperGraph
        * \param   index         Index of the object, the iterator dots at.
        ********************************************************************************************/
       iterator(const HDGHyperGraph& hypergraph, const hyperedge_index_type index)
-        : hypergraph_(hypergraph), index_(index) {};
+      : hypergraph_(hypergraph), index_(index) { }
       /*!*******************************************************************************************
        * \brief   Copy--construct an iterator from another iterator.
        * 
@@ -200,7 +202,7 @@ class HDGHyperGraph
        * \param   other         Other \c iterator which is copied.
        ********************************************************************************************/
       iterator(const iterator& other)
-        : hypergraph_(other.hypergraph_), index_(other.index_) {};
+      : hypergraph_(other.hypergraph_), index_(other.index_) { }
       /*!*******************************************************************************************
        * \brief   Copy--assign an iterator from another iterator.
        * 
@@ -219,7 +221,7 @@ class HDGHyperGraph
        *
        * \retval  incemented    The incremented iterator.
        ********************************************************************************************/
-      iterator& operator++() { ++index_; return *this; };
+      iterator& operator++() { ++index_; return *this; }
       /*!*******************************************************************************************
        * \brief   Decrement iterator and return incremented iterator.
        *
@@ -230,7 +232,7 @@ class HDGHyperGraph
        *
        * \retval  decemented    The decremented iterator.
        ********************************************************************************************/
-      iterator& operator--() { --index_; return *this; };
+      iterator& operator--() { --index_; return *this; }
       /*!*******************************************************************************************
        * \brief   Increment iterator and return old iterator.
        *
@@ -241,7 +243,7 @@ class HDGHyperGraph
        *
        * \retval  incemented    The incremented iterator.
        ********************************************************************************************/
-      iterator operator++(int) { return iterator(hypergraph_, index_++); };
+      iterator operator++(int) { return iterator(hypergraph_, index_++); }
       /*!*******************************************************************************************
        * \brief   Decrement iterator and return old iterator.
        *
@@ -252,7 +254,7 @@ class HDGHyperGraph
        *
        * \retval  decemented    The decremented iterator.
        ********************************************************************************************/
-      iterator operator--(int) { return iterator(hypergraph_, index_--); };
+      iterator operator--(int) { return iterator(hypergraph_, index_--); }
       /*!*******************************************************************************************
        * \brief   Dereference \c iterator to \c HyperEdge.
        *
@@ -260,7 +262,7 @@ class HDGHyperGraph
        *
        * \retval  hyperedge     The hyperedge described by the iterator.
        ********************************************************************************************/
-      HDGHyperGraph::value_type operator*() { return hypergraph_[index_]; };
+      HDGHyperGraph::value_type operator*() { return hypergraph_[index_]; }
       /*!*******************************************************************************************
        * \brief   Check for equality with another iterator.
        *
@@ -275,7 +277,7 @@ class HDGHyperGraph
       {
         return index_ == other.index_ 
                && std::addressof(hypergraph_) == std::addressof(other.hypergraph_);
-      };
+      }
       /*!*******************************************************************************************
        * \brief   Check for unequality with another iterator.
        *
@@ -288,9 +290,10 @@ class HDGHyperGraph
        *                        otherwise.
        ********************************************************************************************/
       bool operator!=(const iterator& other)
-      { return index_ != other.index_ 
+      { 
+        return index_ != other.index_ 
                || std::addressof(hypergraph_) != std::addressof(other.hypergraph_);
-      };
+      }
   }; // end of class iterator
   
   private:
@@ -326,7 +329,24 @@ class HDGHyperGraph
      * \param   constructor           Information needed to deduce topological and geometrical data
      *                                to construct a \c HDGHyperGraph.
      **********************************************************************************************/
-    HDGHyperGraph(const constructor_value_type& construction_data);
+    HDGHyperGraph(const constructor_value_type& construction_data)
+    : hypergraph_topology_(construction_data.topology),
+      hypergraph_geometry_(construction_data.geometry),
+      hypernode_factory_(hypergraph_topology_.n_hypernodes())
+    {
+      static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+                     "The dimension of topology and geometry should be equal!" );
+      hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
+                 "The amount of hypernodes known to the hypernode factory is " <<
+                 hypernode_factory_.n_hypernodes() << ", which is not equal to the amount that the"
+                 << " hypergraph assumes, i.e., " << hypergraph_topology_.n_hypernodes() << "." );
+      hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
+                 "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
+                 << "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
+      hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
+                 "A hypergraph is supposed to consist of at least one hyperedge. This graph "
+                  << "consists of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
+    }
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
      *
@@ -339,7 +359,23 @@ class HDGHyperGraph
      * \param   construct_geom        Information needed to deduce geometrical data.
      **********************************************************************************************/
     HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
-                  const typename GeomT::constructor_value_type& construct_geom);
+                  const typename GeomT::constructor_value_type& construct_geom)
+    : hypergraph_topology_(construct_topo), hypergraph_geometry_(construct_geom),
+      hypernode_factory_(hypergraph_topology_.n_hypernodes())
+    {
+      static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+                     "The dimension of topology and geometry should be equal!" );
+      hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
+                 "The amount of hypernodes known to the hypernode factory is " <<
+                 hypernode_factory_.n_hypernodes() << ", which is not equal to the amount that the"
+                 << " hypergraph assumes, i.e., " << hypergraph_topology_.n_hypernodes() << "." );
+      hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
+                 "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
+                 << "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
+      hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
+                 "A hypergraph is supposed to consist of at least one hyperedge. This graph "
+                  << "consists of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
+    }
     /*!*********************************************************************************************
      * \brief   Subscript operator of a \c HDGHyperGraph.
      *
@@ -351,7 +387,8 @@ class HDGHyperGraph
      * \param   index                 Index of the \c HyperEdge to be returned.
      * \retval  hyperedge             The \c HyperEdge of the given index.
      **********************************************************************************************/
-    const value_type operator[] (const hyperedge_index_type index) const;
+    const value_type operator[] (const hyperedge_index_type index) const
+    { return value_type(hyperedge_topology(index), hyperedge_geometry(index)); }
     /*!*********************************************************************************************
      * \brief   Return iterator to first \c HyperEdge of \c HDGHyperGraph.
      *
@@ -361,7 +398,8 @@ class HDGHyperGraph
      *
      * \retval  hyperedge             Iterator referring to first \c HyperEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const;
+    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const
+    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, 0); }
     /*!*********************************************************************************************
      * \brief   Return iterator to the end of \c HyperEdge list.
      *
@@ -372,7 +410,8 @@ class HDGHyperGraph
      *
      * \retval  hyperedge             Iterator referring to position behind last \c HyperEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const;
+    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const
+    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, n_hyperedges()); }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
      *
@@ -386,7 +425,8 @@ class HDGHyperGraph
      *
      * \retval  hypernode_factory     The \c HyperNodeFactory belonging the hypergraph.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_node>& hypernode_factory() const;
+    const HyperNodeFactory<n_dofs_per_node>& hypernode_factory() const
+    { return hypernode_factory_; }
     /*!*********************************************************************************************
      * \brief   Topological information of prescribed hyperedge.
      *
@@ -397,7 +437,8 @@ class HDGHyperGraph
      * \param   index                 Index of the hyperedge to be returned.
      * \retval  hyperedge_topology    Topological information about hyperedge.
      **********************************************************************************************/
-    const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const;
+    const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const
+    { return hypergraph_topology_.get_hyperedge(index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
      *
@@ -408,39 +449,40 @@ class HDGHyperGraph
      * \param   index                 Index of the hyperedge to be returned.
      * \retval  hyperedge_geometry    Geometrical information about hyperedge.
      **********************************************************************************************/
-    const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const;
+    const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const
+    { return hypergraph_geometry_.get_hyperedge(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyperedges          The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyperedge_index_type n_hyperedges() const;
+    const hyperedge_index_type n_hyperedges() const  { return hypergraph_topology_.n_hyperedges(); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *
      * \retval  n_hypernodes          The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type n_hypernodes() const;
+    const hypernode_index_type n_hypernodes() const  { return hypernode_factory_.n_hypernodes(); }
     /*!*********************************************************************************************
      * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
      * \retval  n_global_dofs         The total amount of degreees of freedom in the considered
      *                                hypergraph.
      **********************************************************************************************/
-    const dof_index_type n_global_dofs() const;
+    const dof_index_type n_global_dofs() const  { return hypernode_factory_.n_global_dofs(); }
     
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
      *
      * \retval  hyperedge_dim         The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyperedge_dimension() { return TopoT::hyperedge_dimension(); };
+    static constexpr unsigned int hyperedge_dimension() { return TopoT::hyperedge_dimension(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *
      * \retval  space_dim             The dimension of the space.
      **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); };
+    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the amount of dofs per node.
      *
