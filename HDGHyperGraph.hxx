@@ -37,10 +37,9 @@
 
 #include "TypeDefs.hxx"
 #include "HyperNodeFactory.hxx"
-#include "Topo_Cubic.hxx"
-#include "Geom_UnitCube.hxx"
-
 #include "HyAssert.hxx"
+#include "Topo.hxx"
+#include "Geom.hxx"
 
 /*!*************************************************************************************************
  * \brief   The class template uniting topology and geometry of a hypergraph with the topology of
