@@ -35,17 +35,17 @@ template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int 
 class DiffusionSolverNaive_RegularQuad
 {
   private:
-    static constexpr unsigned int num_of_quad_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim),
+    static constexpr unsigned int n_quads_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim),
                                   num_quad_bdr_   = FuncQuad::compute_n_quad_points(max_quad_degree, hyperedge_dim - 1),
                                   num_ansatz_fct_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree) * (max_poly_degree + 1),
                                   num_ansatz_bdr_ = compute_n_dofs_per_node(hyperedge_dim, max_poly_degree);
     const double tau_;
-    std::array<double, num_of_quad_> quad_weights_;
+    std::array<double, n_quads_> quad_weights_;
     std::array<double, num_quad_bdr_> quad_bdr_;
-    std::array< std::array<double, num_of_quad_> , num_ansatz_fct_ > trials_quad_;
+    std::array< std::array<double, n_quads_> , num_ansatz_fct_ > trials_quad_;
     std::array< std::array<double, num_quad_bdr_> , num_ansatz_bdr_ > bound_trials_quad_;
     std::array< std::array<double, compute_n_corners_of_cube(hyperedge_dim)> , max_poly_degree + 1 > trials_in_corners_;
-    std::array< std::array< std::array<double, num_of_quad_> , num_ansatz_fct_ > , hyperedge_dim > derivs_quad_;
+    std::array< std::array< std::array<double, n_quads_> , num_ansatz_fct_ > , hyperedge_dim > derivs_quad_;
     std::array< std::array< std::array<double, num_quad_bdr_> , num_ansatz_fct_ > , 2 * hyperedge_dim > trials_bound_;
      
     inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column) const;
