@@ -9,9 +9,9 @@
  */
 
 
-template class HyperEdge_Cubic<1,1>;
-template class HyperEdge_Cubic<1,2>;
-template class HyperEdge_Cubic<1,3>;
-template class HyperEdge_Cubic<2,2>;
-template class HyperEdge_Cubic<2,3>;
-template class HyperEdge_Cubic<3,3>;
+template class Cubic< 1, 1 >;
+template class Cubic< 1, 2 >;
+template class Cubic< 1, 3 >;
+template class Cubic< 2, 2 >;
+template class Cubic< 2, 3 >;
+template class Cubic< 3, 3 >;
