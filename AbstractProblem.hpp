@@ -71,14 +71,7 @@ class AbstractProblem
     > hyper_graph_;
     std::vector<unsigned int> dirichlet_indices_;
     LocalSolverT local_solver_;
-    PlotOptions
-    < HDGHyperGraph 
-      < compute_n_dofs_per_node
-        ( TopologyT::hyperedge_dimension(), LocalSolverT::polynomial_degree(),
-          LocalSolverT::solution_dimension_hypernode() ),
-        TopologyT, GeometryT
-      >, LocalSolverT
-    > plot_options;
+    PlotOptions plot_options;
   public:
     /*!*********************************************************************************************
      * @brief   Abstract problem constructor.
@@ -95,7 +88,7 @@ class AbstractProblem
                      const typename LocalSolverT::constructor_value_type& construct_loc_sol )
     : hyper_graph_  ( construct_topo, construct_geom ),
       local_solver_ ( construct_loc_sol ),
-      plot_options  ( hyper_graph_, local_solver_ )
+      plot_options  ()
     {
       static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -130,7 +123,7 @@ class AbstractProblem
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)
       {
-        hy_assert( indices[i] >= 0 && indices[i] < hyper_graph_.n_global_dofs(), 
+        hy_assert( indices[i] >= 0 && indices[i] < (int) hyper_graph_.n_global_dofs(), 
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
                    << "In this case, the index is " << indices[i] << " and the total amount of " <<
@@ -275,7 +268,7 @@ class AbstractProblem
      **********************************************************************************************/
     void plot_solution( std::vector<double> lambda )
     {
-      plot( lambda , plot_options );
+      plot(hyper_graph_, local_solver_, lambda , plot_options );
     };
 }; // end of class AbstractProblem
 
