@@ -289,7 +289,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	myfile << "  </UnstructuredGrid>" << std::endl;
 	myfile << "</VTKFile>" << std::endl;
   myfile.close();
-}; // end of void plot_vtu
+} // end of void plot_vtu
 
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph.
@@ -325,7 +325,7 @@ void plot(const HyperGraphT& hyper_graph,
   hy_assert( !plotOpt.fileName.empty() , "File name must not be empty!" );
   hy_assert( !plotOpt.outputDir.empty() , "Ouput directory must not be empty!" );
   plot_vtu(hyper_graph, local_solver, lambda, plotOpt);
-}; // end of void plot
+} // end of void plot
 
 
 template<class HyperGraphT, unsigned int hdim, unsigned int sdim, unsigned int pd, unsigned int qd>

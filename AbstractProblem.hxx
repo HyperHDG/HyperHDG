@@ -95,7 +95,7 @@ class AbstractProblem
                      "Space dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Read indices of Dirichlet type hypernodes/faces.
      *
@@ -124,7 +124,7 @@ class AbstractProblem
                    "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         dirichlet_indices_[i] = (dof_index_type) indices[i];
       }
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Returns vector of appropriate size for the predefined problem.
      *
@@ -137,7 +137,7 @@ class AbstractProblem
     std::vector<dof_value_type> return_zero_vector( )
     {
       return std::vector<dof_value_type>(hyper_graph_.n_global_dofs(), 0.);
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
      * 
@@ -202,7 +202,7 @@ class AbstractProblem
       }
     
       return vec_Ax;
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Determine size of condensed system for the skeletal unknowns.
      *
@@ -218,7 +218,7 @@ class AbstractProblem
     dof_index_type size_of_system()
     {
       return hyper_graph_.n_global_dofs();
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Set plot option and return old plot option.
      *
@@ -253,7 +253,7 @@ class AbstractProblem
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       return value;
-    };
+    }
     /*!*********************************************************************************************
      * \brief   Plot solution in vtu format.
      *
@@ -265,7 +265,7 @@ class AbstractProblem
     void plot_solution( std::vector<dof_value_type> lambda )
     {
       plot(hyper_graph_, local_solver_, lambda , plot_options );
-    };
+    }
 }; // end of class AbstractProblem
 
 /*!*************************************************************************************************
