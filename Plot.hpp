@@ -1,20 +1,20 @@
 /*!*************************************************************************************************
- * @file    Plot.hpp
- * @brief   This file provides the function plot and the class PlotOptions.
+ * \file    Plot.hpp
+ * \brief   This file provides the function plot and the class PlotOptions.
  *
- * @todo    Plot has been deactivated to implement elasticity!
+ * \todo    Plot has been deactivated to implement elasticity!
  * 
- * This file provides a file @c plot which takes a @c PlotOptions instatiation to plot given data
- * encoded in a @c std::vector. Additionally, it defines the @c PlotOptions class which is closely
- * rekated to the function @c plot.
+ * This file provides a file \c plot which takes a \c PlotOptions instatiation to plot given data
+ * encoded in a \c std::vector. Additionally, it defines the \c PlotOptions class which is closely
+ * rekated to the function \c plot.
  * 
  * This file is an .hpp file, since class and function are compiled "dynamically" depending on the
  * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
  * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
  * and functions of this file are deduced and the needed versions are compiled.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
 #ifndef PLOT_HPP
@@ -34,52 +34,52 @@
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 class PlotOptions
 {
   public:
     /*!*********************************************************************************************
-     * @brief   Name of the directory to put the output into.
+     * \brief   Name of the directory to put the output into.
      *
-     * This @c std::string describes the directory the output is created in. Default is "output".
+     * This \c std::string describes the directory the output is created in. Default is "output".
      **********************************************************************************************/
     std::string outputDir;
     /*!*********************************************************************************************
-     * @brief   Name of the file plotted.
+     * \brief   Name of the file plotted.
      *
-     * This @c std::string describes the name of the file for the output plot. Default is "example".
+     * This \c std::string describes the name of the file for the output plot. Default is "example".
      **********************************************************************************************/
     std::string fileName;
     /*!*********************************************************************************************
-     * @brief   File ending and also way of plotting.
+     * \brief   File ending and also way of plotting.
      *
-     * This @c std::string describes the name of the file ending for the output plot. Thus, it also
+     * This \c std::string describes the name of the file ending for the output plot. Thus, it also
      * characterizes which applications can read the output files properly. Default and currently
      * only option is "vtu" for Paraview.
      * \todo G recommends to make this an enum. Text matching is always apita
      **********************************************************************************************/
     std::string fileEnding;
     /*!*********************************************************************************************
-     * @brief   Number of the plot file.
+     * \brief   Number of the plot file.
      *
-     * This @c unsigned @c int describes the number of the plot file which is created. If a problem
+     * This \c unsigned \c int describes the number of the plot file which is created. If a problem
      * is solved repeatedly (e.g. parabolic problem, local refinement, ...) this number indicates
      * the number of the file (e.g. time step, refinement step, ...). Default is 0.
      **********************************************************************************************/
     unsigned int fileNumber;
     /*!*********************************************************************************************
-     * @brief   Decide whether @c fileNumber is part of the file name.
+     * \brief   Decide whether \c fileNumber is part of the file name.
      *
-     * This @c boolean discriminates whether the @c fileNumber should appear within the name of the
+     * This \c boolean discriminates whether the \c fileNumber should appear within the name of the
      * file (true) or not (false). Default is true.
      **********************************************************************************************/
     bool printFileNumber;
     /*!*********************************************************************************************
-     * @brief   Decide whether @c fileNumber is incremented after plotting.
+     * \brief   Decide whether \c fileNumber is incremented after plotting.
      *
-     * This @c boolean discriminates whether the @c fileNumber should be incremented after a file
+     * This \c boolean discriminates whether the \c fileNumber should be incremented after a file
      * has been written (true) or not (false). Default is true.
      *
      * \todo This could not be implemented in your version with call
@@ -111,36 +111,36 @@ class PlotOptions
      */
     unsigned int n_subintervals;  
     /*!*********************************************************************************************
-     * @brief   Construct a @c PlotOptions class object containing default values.
+     * \brief   Construct a \c PlotOptions class object containing default values.
      *
-     * Constructs a @c PlotOptions object containing default options and information about the
+     * Constructs a \c PlotOptions object containing default options and information about the
      * hypergraph and the local solver.
      * 
-     * @param   hyper_graph     Reference to @c HyperGraphT& representing the hypergraph.
-     * @param   local_solver    Reference to @c LocalSolverT& representing the local solver.
+     * \param   hyper_graph     Reference to \c HyperGraphT& representing the hypergraph.
+     * \param   local_solver    Reference to \c LocalSolverT& representing the local solver.
      **********************************************************************************************/
     PlotOptions();
 }; // end of class PlotOptions
 
 /*!*************************************************************************************************
- * @brief   Function plotting the solution of an equation on a hypergraph in vtu format.
+ * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
- * Creates a file according to set plotting options in @c plotOpt. This file contains the solution
- * of the PDE defined in @c plotOpt having the representation @c lambda in terms of its skeletal
+ * Creates a file according to set plotting options in \c plotOpt. This file contains the solution
+ * of the PDE defined in \c plotOpt having the representation \c lambda in terms of its skeletal
  * degrees of freedom (related to skeletal variable lambda).
  *
- * @tparam  HyperGraphT     Template parameter describing the precise class of the @c HDGHyperGraph,
- *                          i.e., it contains an @c HDGHyperGraph with chosen template parameters
+ * \tparam  HyperGraphT     Template parameter describing the precise class of the \c HDGHyperGraph,
+ *                          i.e., it contains an \c HDGHyperGraph with chosen template parameters
  *                          describing its topology, geometry, etc.
- * @tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
+ * \tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
  *                          i.e., it contains an local solver for a specific equation living on the
  *                          hypergraph.
- * @param   lambda          @c std::vector containing the skeletal degrees of freedom encoding the
+ * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
- * @param   plotOpt         @c PlotOptions object containing plotting options.
+ * \param   plotOpt         \c PlotOptions object containing plotting options.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT>
 void plot(const HyperGraphT& hyper_graph,
@@ -293,26 +293,26 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 }; // end of void plot_vtu
 
 /*!*************************************************************************************************
- * @brief   Function plotting the solution of an equation on a hypergraph.
+ * \brief   Function plotting the solution of an equation on a hypergraph.
  * 
- * @todo    Plot function has been deactivated for elasticity!
+ * \todo    Plot function has been deactivated for elasticity!
  *
- * Creates a file according to set plotting options in @c plotOpt. This file contains the solution
- * of the PDE defined in @c plotOpt having the representation @c lambda in terms of its skeletal
+ * Creates a file according to set plotting options in \c plotOpt. This file contains the solution
+ * of the PDE defined in \c plotOpt having the representation \c lambda in terms of its skeletal
  * degrees of freedom (related to skeletal variable lambda).
  *
- * @tparam  HyperGraphT     Template parameter describing the precise class of the @c HDGHyperGraph,
- *                          i.e., it contains an @c HDGHyperGraph with chosen template parameters
+ * \tparam  HyperGraphT     Template parameter describing the precise class of the \c HDGHyperGraph,
+ *                          i.e., it contains an \c HDGHyperGraph with chosen template parameters
  *                          describing its topology, geometry, etc.
- * @tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
+ * \tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
  *                          i.e., it contains an local solver for a specific equation living on the
  *                          hypergraph.
- * @param   lambda          @c std::vector containing the skeletal degrees of freedom encoding the
+ * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
- * @param   plotOpt         @c PlotOptions object containing plotting options.
+ * \param   plotOpt         \c PlotOptions object containing plotting options.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT>
 void plot(const HyperGraphT& hyper_graph,
