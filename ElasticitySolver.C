@@ -265,11 +265,11 @@ assemble_loc_mat() const
     for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
     {
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
-        for (unsigned int q = 0; q < num_of_quad_; ++q)
+        for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += 
             quad_weights_[q] * hyperedge_area * trials_quad_[i][q] * trials_quad_[j][q];
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
-        for (unsigned int q = 0; q < num_of_quad_; ++q)
+        for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyperedge_dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
     }
@@ -280,7 +280,7 @@ assemble_loc_mat() const
     {
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
       {
-        for (unsigned int q = 0; q < num_of_quad_; ++q)
+        for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index( hyperedge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)

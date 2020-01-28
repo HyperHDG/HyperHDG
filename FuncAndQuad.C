@@ -73,39 +73,39 @@ double FuncQuad::deriv_of_trial_eval(const unsigned int index, const double x_va
 template<unsigned int max_quad_degree>
 array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadrature_points()
 {
-  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
-  static_assert( 1 <= num_of_points && num_of_points <= 9 );
-  array<double, num_of_points> quad_points;
+  constexpr unsigned int n_points = FuncQuad::compute_n_quad_points(max_quad_degree);
+  static_assert( 1 <= n_points && n_points <= 9 );
+  array<double, n_points> quad_points;
   
-  if constexpr (num_of_points == 1)
+  if constexpr (n_points == 1)
     quad_points = { 0. };
-  if constexpr (num_of_points == 2)
+  if constexpr (n_points == 2)
     quad_points = { -sqrt(1./3.) , sqrt(1./3.) };
-  if constexpr (num_of_points == 3)
+  if constexpr (n_points == 3)
     quad_points = { -sqrt(3./5.) , 0. , sqrt(3./5.) };
-  if constexpr (num_of_points == 4)
+  if constexpr (n_points == 4)
     quad_points = { -sqrt(3./7.+2./7.*sqrt(6./5.)) , -sqrt(3./7.-2./7.*sqrt(6./5.)) ,
                      sqrt(3./7.-2./7.*sqrt(6./5.)) ,  sqrt(3./7.+2./7.*sqrt(6./5.)) };
-  if constexpr (num_of_points == 5)
+  if constexpr (n_points == 5)
     quad_points = { -sqrt(5.+2.*sqrt(10./7.))/3. , -sqrt(5.-2.*sqrt(10./7.))/3., 0. ,
                      sqrt(5.-2.*sqrt(10./7.))/3. ,  sqrt(5.+2.*sqrt(10./7.))/3. };
-  if constexpr (num_of_points == 6)
+  if constexpr (n_points == 6)
     quad_points = { 0.6612093864662645, -0.6612093864662645, -0.2386191860831969,
                     0.2386191860831969, -0.9324695142031521,  0.9324695142031521 };
-  if constexpr (num_of_points == 7)
+  if constexpr (n_points == 7)
     quad_points = { 0.0000000000000000,  0.4058451513773972, -0.4058451513773972,
                    -0.7415311855993945,  0.7415311855993945, -0.9491079123427585,
                     0.9491079123427585 };
-  if constexpr (num_of_points == 8)
+  if constexpr (n_points == 8)
     quad_points = {-0.1834346424956498,  0.1834346424956498, -0.5255324099163290,
                     0.5255324099163290, -0.7966664774136267,  0.7966664774136267,
                    -0.9602898564975363,  0.9602898564975363 };
-  if constexpr (num_of_points == 9)
+  if constexpr (n_points == 9)
     quad_points = { 0.0000000000000000, -0.8360311073266358,  0.8360311073266358,
                    -0.9681602395076261,  0.9681602395076261, -0.3242534234038089,
                     0.3123470770400029,  0.2606106964029354,  0.2606106964029354 };
   /*                  
-  switch (num_of_points)
+  switch (n_points)
   {
     case 1: quad_points = { 0. };
             break;
@@ -137,9 +137,9 @@ array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadra
     default: assert( 0 == 1 );
   }
   */
-  hy_assert( num_of_points == quad_points.size() ,
+  hy_assert( n_points == quad_points.size() ,
              "The number of points should equal the size of the array to be returned. In this case "
-             << "the number of points is " << num_of_points << " and the size of the array is " <<
+             << "the number of points is " << n_points << " and the size of the array is " <<
              quad_points.size() );
   // Transform quadrature points from [-1,1] -> [0,1]
   for_each(quad_points.begin(), quad_points.end(), [](double& pt){ pt = 0.5 * ( pt + 1. ); });
@@ -149,39 +149,39 @@ array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadra
 template<unsigned int max_quad_degree>
 array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadrature_weights()
 {
-  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
-  static_assert( 1 <= num_of_points && num_of_points <= 9 );
-  array<double, num_of_points> quad_weights;
+  constexpr unsigned int n_points = FuncQuad::compute_n_quad_points(max_quad_degree);
+  static_assert( 1 <= n_points && n_points <= 9 );
+  array<double, n_points> quad_weights;
   
-  if constexpr (num_of_points == 1)
+  if constexpr (n_points == 1)
     quad_weights = { 2. };
-  if constexpr (num_of_points == 2)
+  if constexpr (n_points == 2)
     quad_weights = { 1. , 1. };
-  if constexpr (num_of_points == 3)
+  if constexpr (n_points == 3)
     quad_weights = { 5./9. , 8./9. , 5./9. };
-  if constexpr (num_of_points == 4)
+  if constexpr (n_points == 4)
     quad_weights = { 1./36.*(18. - sqrt(30.)) , 1./36.*(18. + sqrt(30.)) ,
                      1./36.*(18. + sqrt(30.)) , 1./36.*(18. - sqrt(30.)) };
-  if constexpr (num_of_points == 5)
+  if constexpr (n_points == 5)
     quad_weights = { 1./900.*(322.-13.*sqrt(70.)) , 1./900.*(322.+13.*sqrt(70.)) , 1./900.*(322.+190.) ,
                      1./900.*(322.+13.*sqrt(70.)) , 1./900.*(322.-13.*sqrt(70.)) };
-  if constexpr (num_of_points == 6)
+  if constexpr (n_points == 6)
     quad_weights = { 0.3607615730481386,  0.3607615730481386,  0.4679139345726910,
                      0.4679139345726910,  0.1713244923791704,  0.1713244923791700 };
-  if constexpr (num_of_points == 7)
+  if constexpr (n_points == 7)
     quad_weights = { 0.4179591836734694,  0.3818300505051189,  0.3818300505051189,
                      0.2797053914892766,  0.2797053914892766,  0.1294849661688697,
                      0.1294849661688697 };
-  if constexpr (num_of_points == 8)
+  if constexpr (n_points == 8)
     quad_weights = { 0.3626837833783620,  0.3626837833783620,  0.3137066458778873,
                      0.3137066458778873,  0.2223810344533745,  0.2223810344533745,
                      0.1012285362903763,  0.1012285362903763 };
-  if constexpr (num_of_points == 9)
+  if constexpr (n_points == 9)
     quad_weights = { 0.3302393550012598,  0.1806481606948574,  0.1806481606948574,
                      0.0812743883615744,  0.0812743883615744,  0.3123470770400029,
                      0.3123470770400029,  0.2606106964029354,  0.2606106964029354 };
   /*  
-  switch constexpr (num_of_points)
+  switch constexpr (n_points)
   {
     case 1: quad_weights = { 2. };
             break;
@@ -213,9 +213,9 @@ array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> FuncQuad::quadra
     default: assert( 0 == 1 );
   }
   */
-  hy_assert( num_of_points == quad_weights.size() ,
+  hy_assert( n_points == quad_weights.size() ,
              "The number of points should equal the size of the array to be returned. In this case "
-             << "the number of points is " << num_of_points << " and the size of the array is " <<
+             << "the number of points is " << n_points << " and the size of the array is " <<
              quad_weights.size() );
   // Transform quadrature points from [-1,1] -> [0,1]
   for_each(quad_weights.begin(), quad_weights.end(), [](double& wt){ wt *= 0.5; });
@@ -227,15 +227,15 @@ template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 FuncQuad::trial_functions_at_quadrature_points()
 {
-  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int n_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
-  static_assert( 1 <= num_of_points && num_of_points <= 9);
+  static_assert( 1 <= n_points && n_points <= 9);
   
-  array<double, num_of_points> quad_points = quadrature_points<max_quad_degree>();
-  array< array<double, num_of_points> , max_poly_degree + 1 > fct_val;
+  array<double, n_points> quad_points = quadrature_points<max_quad_degree>();
+  array< array<double, n_points> , max_poly_degree + 1 > fct_val;
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-    for (unsigned int j = 0; j < num_of_points; ++j)
+    for (unsigned int j = 0; j < n_points; ++j)
       fct_val[i][j] = FuncQuad::trial_function_eval(i, quad_points[j]);
   
   return fct_val;
@@ -246,15 +246,15 @@ template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, FuncQuad::compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 FuncQuad::derivs_of_trial_at_quadrature_points()
 {
-  constexpr unsigned int num_of_points = FuncQuad::compute_n_quad_points(max_quad_degree);
+  constexpr unsigned int n_points = FuncQuad::compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 );
-  static_assert( 1 <= num_of_points && num_of_points <= 9);
+  static_assert( 1 <= n_points && n_points <= 9);
   
-  array<double, num_of_points> quad_points = quadrature_points<max_quad_degree>();
-  array< array<double, num_of_points> , max_poly_degree + 1 > der_val;
+  array<double, n_points> quad_points = quadrature_points<max_quad_degree>();
+  array< array<double, n_points> , max_poly_degree + 1 > der_val;
   
   for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-    for (unsigned int j = 0; j < num_of_points; ++j)
+    for (unsigned int j = 0; j < n_points; ++j)
       der_val[i][j] = FuncQuad::deriv_of_trial_eval(i, quad_points[j]);
   
   return der_val;

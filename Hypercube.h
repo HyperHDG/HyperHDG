@@ -10,13 +10,13 @@ template <int dim>
 struct Hypercube
 {
   /// Number of faces of the hypercube
-  constexpr unsigned int num_of_faces ()
+  constexpr unsigned int n_faces ()
   {
     return 2*dim;
   }
 
   /// Number of vertices of the hypercube
-  constexpr unsigned int num_of_vertices ()
+  constexpr unsigned int n_vertices ()
   {
     return 1 << dim;
   }
