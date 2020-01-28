@@ -21,12 +21,12 @@ HDG_wrapper = PyElasticityProblem([4,2,2])
 # index vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
-vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
+# vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 12, len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 12 ]) #, len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
@@ -51,7 +51,7 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 # Print Solution to the problem (which is x + x_D, i.e. vectorSolution + vectorDirichlet) or number
 # of CG iterations num_iter.
 if num_iter == 0:
-  print("Solution (after", num_iter, "CG iterations):\n", vectorSolution + vectorDirichlet)
+  print("Solution:\n", vectorSolution + vectorDirichlet)
 else:
   print("The linear solver (conjugate gradients) failed with a total number of ",
         num_iter, " iterations.")
