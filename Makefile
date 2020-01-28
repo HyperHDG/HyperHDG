@@ -115,7 +115,7 @@ $(OBJECT_DIR)/%.o: $(SRC_DIR)/%.C
 
 cython_cpp: $(CYTHON_DIR)/$(CYTHON_FILE).o
 
-$(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd2 $(SRC_DIR)/*.hpp
+$(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd2
 	rm -rf $(CYTHON_DIR)/*
 	cp $(SRC_DIR)/$(CYTHON_FILE).pyx $(CYTHON_DIR)/$(CYTHON_FILE).pyx
 	cp $(SRC_DIR)/$(CYTHON_FILE).pxd2 $(CYTHON_DIR)/$(CYTHON_FILE).pxd
