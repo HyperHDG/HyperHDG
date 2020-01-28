@@ -30,6 +30,8 @@
 
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
+ * 
+ * \todo    Update these descriptions!
  *
  * This class contains functions to define and solve Poisson's equation, i.e.,
  * \f[
