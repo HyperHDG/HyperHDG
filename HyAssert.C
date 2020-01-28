@@ -9,7 +9,7 @@
  */
 
 
-#include "HyAssert.h"
+#include "HyAssert.hxx"
 #include <iostream>
 #include <string>
 #include <sstream>

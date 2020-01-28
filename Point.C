@@ -9,8 +9,8 @@
  */
 
 
-#include "Point.h"
-#include "HyAssert.h"
+#include "Point.hxx"
+#include "HyAssert.hxx"
 #include <cmath>
 
 using namespace std;

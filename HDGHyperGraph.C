@@ -8,8 +8,8 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "HDGHyperGraph.h"
-#include "HyAssert.h"
+#include "HDGHyperGraph.hxx"
+#include "HyAssert.hxx"
 
 
 #include "HDGHyperGraph.inst"

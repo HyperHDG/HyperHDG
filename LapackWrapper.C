@@ -9,7 +9,7 @@
  */
 
 
-#include "HyAssert.h"
+#include "HyAssert.hxx"
 
 
 extern "C" {
@@ -27,4 +27,6 @@ void lapack_solve(int system_size, double *mat_a, double *rhs_b, int *info)
   int one = 1;
   int ipiv[system_size];
   dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, info);
+  hy_assert( (*info) == 0 ,
+             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
 }

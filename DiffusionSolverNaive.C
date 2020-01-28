@@ -9,9 +9,9 @@
  */
 
 
-#include "DiffusionSolverNaive.h"
-#include "HyAssert.h"
-#include "LapackWrapper.h"
+#include "DiffusionSolverNaive.hxx"
+#include "HyAssert.hxx"
+#include "LapackWrapper.hxx"
 #include <cmath>
 #include <vector>
 

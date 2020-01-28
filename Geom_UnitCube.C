@@ -6,8 +6,8 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 
-#include "Geom_UnitCube.h"
-#include "HyAssert.h"
+#include "Geom_UnitCube.hxx"
+#include "HyAssert.hxx"
 
 using namespace std;
 using namespace Geometry;
