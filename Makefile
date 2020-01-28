@@ -45,10 +45,10 @@ LINKERPREFLAGS  = -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbol
 LINKERPOSTFLAGS = -llapack
 
 # Sets of source and object files
-SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.C))
-OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.C=.o))
-EXAMPLE_FILES	:= $(foreach src, $(EXAMPLE_DIR), $(wildcard $(EXAMPLE_DIR)/*.C))
-EXAMPLE_HELP	:= $(foreach src, $(EXAMPLE_FILES), $(src:.C=.e))
+SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.cxx))
+OBJECTS       := $(foreach src, $(SOURCE_FILES), $(OBJECT_DIR)/$(src:.cxx=.o))
+EXAMPLE_FILES	:= $(foreach src, $(EXAMPLE_DIR), $(wildcard $(EXAMPLE_DIR)/*.cxx))
+EXAMPLE_HELP	:= $(foreach src, $(EXAMPLE_FILES), $(src:.cxx=.e))
 EXAMPLE_OBJS	:= $(foreach src, $(EXAMPLE_HELP), $(subst $(EXAMPLE_DIR),$(EXAMPLE_BUILD),$(src)))
 EXAMPLE_EXES	:= $(foreach src, $(EXAMPLE_OBJS), $(src:.e=.exe))
 TEST_EXES			:= $(foreach src, $(EXAMPLE_BUILD), $(wildcard $(EXAMPLE_BUILD)/*.exe))
@@ -100,7 +100,7 @@ new_run_examples:
 
 example_objects: $(EXAMPLE_OBJS)
 
-$(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.C
+$(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.cxx
 	$(COMPILER) --std=c++17 -c $^ -o $@
 
 example_linking: $(EXAMPLE_EXES)
@@ -110,7 +110,7 @@ $(EXAMPLE_BUILD)/%.exe: $(OBJECT_DIR)/*.o $(EXAMPLE_BUILD)/%.e
 
 object_files: $(OBJECTS)
 
-$(OBJECT_DIR)/%.o: $(SRC_DIR)/%.C
+$(OBJECT_DIR)/%.o: $(SRC_DIR)/%.cxx
 	$(COMPILER) $(BASICFLAGS) -c $^ -o $@
 
 cython_cpp: $(CYTHON_DIR)/$(CYTHON_FILE).o
