@@ -1,16 +1,16 @@
 /*!*************************************************************************************************
- * @file    AbstractProblem.hpp
- * @brief   This file provides the class AbstractProblem.
+ * \file    AbstractProblem.hpp
+ * \brief   This file provides the class AbstractProblem.
  *
- * This file provides a file @c AbstractProblem class defining an abstract problem.
+ * This file provides a file \c AbstractProblem class defining an abstract problem.
  * 
  * This file is an .hpp file, since class and function are compiled "dynamically" depending on the
  * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
  * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
  * and functions of this file are deduced and the needed versions are compiled.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
 #ifndef ABSTRACTPROBLEM_HPP
@@ -29,35 +29,35 @@
 #include <array>
 
 /*!*************************************************************************************************
- * @brief   This is an abstract example problem class.
+ * \brief   This is an abstract example problem class.
  *
  * This class contains functions to define and solve Poisson's equation, i.e.,
- * @f[
+ * \f[
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * @f]
- * in a spatial domain @f$\Omega \subset \mathbb R^d@f$. Here, @f$d@f$ is the spatial dimension
- * @c space_dim, @f$\Omega@f$ is a regular graph (@c hyperedge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (@c hyperedge_dim = 2) or volumes (@c hyperedge_dim = 3).
+ * \f]
+ * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyperedge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyperedge_dim = 2) or volumes (\c hyperedge_dim = 3).
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
  *        -> I believe that we have to discuss, how to do this best. Note that the .C file now
  *        contains a for_each loop (cf. HDGHyperGraph.h)!
  * 
- * @todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
+ * \todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
  *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
  * 
- * @todo  We should rewrite this explanation appropriately and think whether this is general enough.
+ * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
  *        (With explanation, I mean this definition and the following function explanations, etc.)
  *
- * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ * \tparam  space_dim       The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyperedge_dim.
- * @tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template <class TopologyT, class GeometryT, class LocalSolverT>
 class AbstractProblem
@@ -69,26 +69,25 @@ class AbstractProblem
         LocalSolverT::solution_dimension_hypernode() ),
       TopologyT, GeometryT
     > hyper_graph_;
-    std::vector<unsigned int> dirichlet_indices_;
-    LocalSolverT local_solver_;
-    PlotOptions plot_options;
+    std::vector<dof_index_type> dirichlet_indices_;
+    LocalSolverT  local_solver_;
+    PlotOptions   plot_options;
   public:
     /*!*********************************************************************************************
-     * @brief   Abstract problem constructor.
+     * \brief   Abstract problem constructor.
      *
      * Constructor for class containing a HyperGraph and a local solver that solve a PDE on a
      * hyperedge.
      *
-     * @param   construct_topo    Information to construct a topology.
-     * @param   construct_geom    Information to construct a geometry.
-     * @param   construct_loc_sol Information to construct a local solver.
+     * \param   construct_topo    Information to construct a topology.
+     * \param   construct_geom    Information to construct a geometry.
+     * \param   construct_loc_sol Information to construct a local solver.
      **********************************************************************************************/
     AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo,
                      const typename GeometryT::constructor_value_type& construct_geom,
                      const typename LocalSolverT::constructor_value_type& construct_loc_sol )
     : hyper_graph_  ( construct_topo, construct_geom ),
-      local_solver_ ( construct_loc_sol ),
-      plot_options  ()
+      local_solver_ ( construct_loc_sol )
     {
       static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -98,7 +97,7 @@ class AbstractProblem
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     };
     /*!*********************************************************************************************
-     * @brief   Read indices of Dirichlet type hypernodes/faces.
+     * \brief   Read indices of Dirichlet type hypernodes/faces.
      *
      * Read the indices ot the hypernodes/faces that are of Dirichlet type and therefore do not
      * contain degrees of freedom that are allowed to change within iterations of the iterative
@@ -106,70 +105,67 @@ class AbstractProblem
      *
      * The user creates a vector that contains the coefficients of the corresponding degrees of
      * freedom (read by this function) and defines the Dirichlet values by this choice. The
-     * remaining elements of the global vector of unknowns (which is @b not the vector @c indices
+     * remaining elements of the global vector of unknowns (which is \b not the vector \c indices
      * are supposed to be zero).
      *
-     * @param   indices       A @c std::vector containing the (global) indices of Dirichlet type
+     * \param   indices       A \c std::vector containing the (global) indices of Dirichlet type
      *                        hypernodes/faces.
      **********************************************************************************************/
-    /*
-     * Function read_dirichlet_indices(..) receives a vector of signed integers, since it is part of
-     * the code that interacts directly with the Python interface which does not allow for unsigned
-     * integers and therefore includes a comparison between signed and unsigned integers in the 
-     * assertion. This results in warnings, when compiled.
-     */
     void read_dirichlet_indices( std::vector<int> indices )
     {
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)
       {
-        hy_assert( indices[i] >= 0 && indices[i] < (int) hyper_graph_.n_global_dofs(), 
+        hy_assert( (dof_index_type) indices[i] >= 0
+                      && (dof_index_type) indices[i] < hyper_graph_.n_global_dofs(), 
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
                    << "In this case, the index is " << indices[i] << " and the total amount of " <<
                    "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        dirichlet_indices_[i] = indices[i];
+        dirichlet_indices_[i] = (dof_index_type) indices[i];
       }
     };
     /*!*********************************************************************************************
-     * @brief   Returns vector of appropriate size for the predefined problem.
+     * \brief   Returns vector of appropriate size for the predefined problem.
      *
-     * Returns a vector containing only the value zero, but of the size @f$n@f$ which is also the
+     * Returns a vector containing only the value zero, but of the size \f$n\f$ which is also the
      * number which is returned if \c size_of_system() is evaluated.
      *
-     * @retval  zero          A @c std::vector of the correct size for the unknowns of the given
+     * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
-    std::vector<double> return_zero_vector( )
+    std::vector<dof_value_type> return_zero_vector( )
     {
-      return std::vector<double>(hyper_graph_.n_global_dofs(), 0.);
+      return std::vector<dof_value_type>(hyper_graph_.n_global_dofs(), 0.);
     };
     /*!*********************************************************************************************
-     * @brief   Evaluate condensed matrix-vector product.
+     * \brief   Evaluate condensed matrix-vector product.
      * 
-     * @todo    Decide whether @c auto @c hyperedge should be const!
+     * \todo    Decide whether \c auto \c hyperedge should be const!
      *
      * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-     * @f$A x = y@f$, where @f$A@f$ is the condensed matrix of the LDG-H method, @f$x@f$ is the
-     * vector of parameters to define the skeletal variable @f$\lambda@f$, and @f$y@f$ is the
-     * resulting vector, which has the same size as the input vector @f$x@f$.
+     * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
+     * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
+     * resulting vector, which has the same size as the input vector \f$x\f$.
      *
-     * @param   x_vec         A @c std::vector containing the input vector @f$x@f$.
-     * @retval  y_vec         A @c std::vector containing the product @f$y = Ax@f$.
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
-    std::vector<double> matrix_vector_multiply( std::vector<double> x_vec ) const
+    std::vector<dof_value_type> matrix_vector_multiply( std::vector<dof_value_type> x_vec ) const
     {
       constexpr unsigned int hyperedge_dim  = TopologyT::hyperedge_dimension();
       constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
       
-      std::vector<double> vec_Ax( x_vec.size() , 0.);
-      std::array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
+      std::vector<dof_value_type> vec_Ax( x_vec.size() , 0.);
+      std::array<hypernode_index_type, 2*hyperedge_dim> hyperedge_hypernodes;
       
       std::array
       < std::array
-        < double, compute_n_dofs_per_node( hyperedge_dim, poly_degree,
-                                           LocalSolverT::solution_dimension_hypernode() ) > ,
-        2  *hyperedge_dim > hyperedge_dofs;
+        < dof_value_type, 
+          compute_n_dofs_per_node( hyperedge_dim, poly_degree,
+                                   LocalSolverT::solution_dimension_hypernode() ) 
+        > , 2  * hyperedge_dim 
+      > hyperedge_dofs;
       
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyperedge)
       {
@@ -194,7 +190,7 @@ class AbstractProblem
             (hyperedge_hypernodes[hypernode], vec_Ax, hyperedge_dofs[hypernode]);
       });
       
-      for(unsigned int i = 0; i < dirichlet_indices_.size(); ++i)
+      for ( dof_index_type i = 0 ; i < dirichlet_indices_.size() ; ++i )
       {
         hy_assert( dirichlet_indices_[i] >= 0 
                      && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
@@ -208,30 +204,30 @@ class AbstractProblem
       return vec_Ax;
     };
     /*!*********************************************************************************************
-     * @brief   Determine size of condensed system for the skeletal unknowns.
+     * \brief   Determine size of condensed system for the skeletal unknowns.
      *
-     * Function that returns the size @f$n@f$ of the @f$n \times n@f$ linear, sparse system
-     * @f$Ax = b@f$ that is solved by the program in a matrix-free fashion.
+     * Function that returns the size \f$n\f$ of the \f$n \times n\f$ linear, sparse system
+     * \f$Ax = b\f$ that is solved by the program in a matrix-free fashion.
      *
-     * This function is needed to define a @c LinearOperator from Python's @c scipy.sparse.linalg
+     * This function is needed to define a \c LinearOperator from Python's \c scipy.sparse.linalg
      * package which can be used to define iterative solvers for sparse systems.
      *
-     * @retval  n             An @c int which Python needs and actually is a parsed @c unsigned
-     *                        @c int.
+     * \retval  n             An \c int which Python needs and actually is a parsed \c unsigned
+     *                        \c int.
      **********************************************************************************************/
-    int size_of_system()
+    dof_index_type size_of_system()
     {
       return hyper_graph_.n_global_dofs();
     };
     /*!*********************************************************************************************
-     * @brief   Set plot option and return old plot option.
+     * \brief   Set plot option and return old plot option.
      *
      * Function to set and / or read the current plot option.
      *
-     * @param   option        A @c std::string containing the plot option to be considered.
-     * @param   value         A @c std::string containing the new value of the considered option.
+     * \param   option        A \c std::string containing the plot option to be considered.
+     * \param   value         A \c std::string containing the new value of the considered option.
      *                        If empty, the old value is kept.
-     * @retval  opt_value     A @c std::string containing the value of the plot option.
+     * \retval  opt_value     A \c std::string containing the value of the plot option.
      **********************************************************************************************/
     std::string plot_option( std::string option, std::string value = "" )
     {
@@ -259,38 +255,38 @@ class AbstractProblem
       return value;
     };
     /*!*********************************************************************************************
-     * @brief   Plot solution in vtu format.
+     * \brief   Plot solution in vtu format.
      *
      * Function that plots the solution of the problem to a predefined file.
      *
-     * @param   lambda        A vector of unknowns containing the data vector.
-     * @retval  file          A file in the output directory.
+     * \param   lambda        A vector of unknowns containing the data vector.
+     * \retval  file          A file in the output directory.
      **********************************************************************************************/
-    void plot_solution( std::vector<double> lambda )
+    void plot_solution( std::vector<dof_value_type> lambda )
     {
       plot(hyper_graph_, local_solver_, lambda , plot_options );
     };
 }; // end of class AbstractProblem
 
 /*!*************************************************************************************************
- * @brief   This is an example problem.
+ * \brief   This is an example problem.
  *
  * This class contains functions to define and solve Poisson's equation, i.e.,
- * @f[
+ * \f[
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * @f]
- * in a spatial domain @f$\Omega \subset \mathbb R^d@f$. Here, @f$d@f$ is the spatial dimension
- * @c space_dim, @f$\Omega@f$ is a regular graph (@c hyperedge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (@c hyperedge_dim = 2) or volumes (@c hyperedge_dim = 3).
+ * \f]
+ * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyperedge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyperedge_dim = 2) or volumes (\c hyperedge_dim = 3).
  *
- * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ * \tparam  space_dim       The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyperedge_dim.
- * @tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 using DiffusionProblemRegularNaive = 
@@ -300,18 +296,18 @@ AbstractProblem < Topology::HyperGraph_Cubic< hyperedge_dim, space_dim >,
                 >;
 
 /*!*************************************************************************************************
- * @brief   This is an example problem.
+ * \brief   This is an example problem.
  *
- * @todo    This has not yet been fully implemented!
+ * \todo    This has not yet been fully implemented!
  *
- * @tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * @tparam  space_dim       The dimension of the space, the object is located in. This number should
+ * \tparam  space_dim       The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyperedge_dim.
- * @tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 using ElasticityProblemRegular = 
