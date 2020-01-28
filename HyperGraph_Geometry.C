@@ -17,7 +17,7 @@ using namespace Geometry;
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
 HyperGraph_Cubic_UnitCube<hyperedge_dim,space_dim>::
-HyperGraph_Cubic_UnitCube(const Topology::HyperGraph_Cubic<hyperedge_dim,space_dim>& other)
+HyperGraph_Cubic_UnitCube(const Topology::Cubic<hyperedge_dim,space_dim>& other)
 : num_elements_(other.num_elements()) { }
 
 

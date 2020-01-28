@@ -3,7 +3,7 @@
 
 #include "TypeDefs.h"
 #include "HyperEdge_Geometry.h"
-#include "HyperGraph_Topology.h"
+#include "Topo_Cubic.h"
 #include <array>
 
 /*!*************************************************************************************************
@@ -91,7 +91,7 @@ class HyperGraph_Cubic_UnitCube
      * 
      * @param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
-    HyperGraph_Cubic_UnitCube(const Topology::HyperGraph_Cubic<hyperedge_dim,space_dim>& other);
+    HyperGraph_Cubic_UnitCube(const Topology::Cubic<hyperedge_dim,space_dim>& other);
     /*!*********************************************************************************************
      * @brief   Get geometrical hyperedge of given index.
      *

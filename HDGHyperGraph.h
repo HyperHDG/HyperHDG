@@ -3,7 +3,7 @@
 
 #include "TypeDefs.h"
 #include "HyperNodeFactory.h"
-#include "HyperGraph_Topology.h"
+#include "Topo_Cubic.h"
 #include "HyperGraph_Geometry.h"
 
 /*!*************************************************************************************************
