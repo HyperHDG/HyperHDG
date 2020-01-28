@@ -22,10 +22,12 @@
  * @authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
 namespace Topology
-{
-
+{  
 /*!*************************************************************************************************
  * @brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs.
+ *
+ * \todo This is not what brief says. It is one special hypergraph.
+ * \todo Do we use \\ or \@? Let us unify doxygen syntax
  *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain @f$\Omega@f$. Thus, one can exemplarily define a single topology
