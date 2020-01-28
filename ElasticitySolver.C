@@ -530,7 +530,8 @@ preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hypere
 {
   array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2*hyperedge_dim > result;
   hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
-  for (unsigned int i = 0; i < result.size(); ++i){
+  for (unsigned int i = 0; i < result.size(); ++i)
+  {
     hy_assert( result[i].size() == 1 , "Only implemented in one dimension!" );
     result[i].fill(0.);
   }
