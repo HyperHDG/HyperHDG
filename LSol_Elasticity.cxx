@@ -9,7 +9,7 @@
  */
 
 
-#include "ElasticitySolver.hxx"
+#include "LSol_Elasticity.hxx"
 #include "HyAssert.hxx"
 #include "LapackWrapper.hxx"
 #include <cmath>
@@ -19,7 +19,7 @@
 using namespace std;
 using namespace FuncQuad;
 using namespace Geometry;
-#include "ElasticitySolver.inst"
+#include "LSol_Elasticity.inst"
 
 
 inline vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)

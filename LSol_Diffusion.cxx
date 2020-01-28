@@ -9,7 +9,7 @@
  */
 
 
-#include "DiffusionSolverNaive.hxx"
+#include "LSol_Diffusion.hxx"
 #include "HyAssert.hxx"
 #include "LapackWrapper.hxx"
 #include <cmath>
@@ -18,7 +18,7 @@
 
 using namespace std;
 using namespace FuncQuad;
-#include "DiffusionSolverNaive.inst"
+#include "LSol_Diffusion.inst"
 
 
 inline vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)
