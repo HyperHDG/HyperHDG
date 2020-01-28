@@ -23,11 +23,11 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hypere
 #endif
 
 
-#ifndef DIFFUSIONSOLVERNAIVE_H
-#define DIFFUSIONSOLVERNAIVE_H
+#ifndef DIFFUSIONSOLVERNAIVE_HXX
+#define DIFFUSIONSOLVERNAIVE_HXX
 
-#include "FuncAndQuad.h"
-#include "HyperNodeFactory.h"
+#include "FuncAndQuad.hxx"
+#include "HyperNodeFactory.hxx"
 #include <array>
 
 

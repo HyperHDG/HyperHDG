@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * @file    HyAssert.h
+ * @file    HyAssert.hxx
  * @brief   This file provides the function hy_assert.
  *
  * This is a wrapper file to provide a function that allows to use assertions that are similar to
@@ -22,8 +22,8 @@
  * @authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef HYASSERT_H
-#define HYASSERT_H
+#ifndef HYASSERT_HXX
+#define HYASSERT_HXX
 
 // #ifndef NDEBUG
 
@@ -48,4 +48,4 @@ void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line,
 // #define hy_assert(Expr, Msg) ;
 // #endif // end of ifndef NDEBUG
 
-#endif // end of ifndef HYASSERT_H
+#endif // end of ifndef HYASSERT_HXX

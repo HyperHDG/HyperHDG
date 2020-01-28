@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    HyperNodeFactory.h
+ * \file    HyperNodeFactory.hxx
  * \brief   This file is responsible for the mapping of hypernodes to global degrees of freedom.
  * 
  * This file administrates the mapping of topological information (i.e. a hypernode) to information
@@ -15,10 +15,10 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 
-#ifndef HYPERNODEFACTORY_H
-#define HYPERNODEFACTORY_H
+#ifndef HYPERNODEFACTORY_HXX
+#define HYPERNODEFACTORY_HXX
 
-#include "TypeDefs.h"
+#include "TypeDefs.hxx"
 #include <array>
 #include <vector>
 
@@ -162,4 +162,4 @@ constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hypere
   return amount;
 } // end of compute_n_dofs_per_node
 
-#endif // end of ifndef HYPERNODEFACTORY_H
+#endif // end of ifndef HYPERNODEFACTORY_HXX

@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    Topo_Cubic.h
+ * \file    Topo_Cubic.hxx
  * \brief   Define topology of cubic hypergraphs.
  *
  * One of the advantages of this software package is the strict discrimination between the topology
@@ -15,10 +15,10 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 
-#ifndef TOPO_CUBIC_H
-#define TOPO_CUBIC_H
+#ifndef TOPO_CUBIC_HXX
+#define TOPO_CUBIC_HXX
 
-#include "TypeDefs.h"
+#include "TypeDefs.hxx"
 #include <array>
 #include <vector>
 
@@ -239,4 +239,4 @@ class Cubic
 
 } // end of namespace Topology
 
-#endif // end of ifndef TOPO_CUBIC_H
+#endif // end of ifndef TOPO_CUBIC_HXX

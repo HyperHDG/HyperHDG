@@ -1,5 +1,5 @@
-#ifndef HHDG_HYPERCUBE
-#define HHDG_HYPERCUBE
+#ifndef HYPERCUBE_HXX
+#define HYPERCUBE_HXX
 
 /**
  * \brief Helper class containing numbers and functions related to hypercubes.
@@ -32,4 +32,4 @@ struct Hypercube
 
 };
 
-#endif
+#endif // end of ifndef HYPERCUBE_HXX

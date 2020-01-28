@@ -1,7 +1,7 @@
-#ifndef LOCALSOLVERS_H
-#define LOCALSOLVERS_H
+#ifndef LOCALSOLVERS_HXX
+#define LOCALSOLVERS_HXX
 
-#include "DiffusionSolverNaive.h"
-#include "ElasticitySolver.h"
+#include "DiffusionSolverNaive.hxx"
+#include "ElasticitySolver.hxx"
 
-#endif // end of ifndef LOCALSOLVERS_H
+#endif // end of ifndef LOCALSOLVERS_HXX

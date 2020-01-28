@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    Plot.hpp
+ * \file    Plot.hxx
  * \brief   This file provides the function plot and the class PlotOptions.
  *
  * \todo    Plot has been deactivated to implement elasticity!
@@ -17,16 +17,16 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef PLOT_HPP
-#define PLOT_HPP
+#ifndef PLOT_HXX
+#define PLOT_HXX
 
-#include "HDGHyperGraph.h"
-#include "LocalSolvers.h"
+#include "HDGHyperGraph.hxx"
+#include "LocalSolvers.hxx"
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
-#include "HyAssert.h"
-#include "TypeDefs.h"
+#include "HyAssert.hxx"
+#include "TypeDefs.hxx"
 #include <fstream>
 #include <iomanip>
 #include <cmath>
@@ -87,28 +87,27 @@ class PlotOptions
      * reference.
      **********************************************************************************************/
     bool incrementFileNumber;
-    /*!
+    /*!*********************************************************************************************
      * \brief Include the nodes with their function values into the plot
      *
      * Defaults to `false`.
-     */
+     **********************************************************************************************/
     bool plot_nodes;
-    /*!
+    /*!*********************************************************************************************
      * \brief Include the hyperedges with their function values into the plot
      *
      * Defaults to `true`.
-     */
+     **********************************************************************************************/
     bool plot_edges;
-    /*!
+    /*!*********************************************************************************************
      * \brief Number of subintervals for plotting
      *
-     * When plotting an interval, it is split into n_subintervals
-     * intervals such that higher order polynomials and other
-     * functions can be displayed appropriately. When plotting higher
+     * When plotting an interval, it is split into n_subintervals intervals such that higher order
+     * polynomials and other functions can be displayed appropriately. When plotting higher
      * dimensional objects, this subdivision is applied accordingly.
      *
      * Defaults to 1.
-     */
+     **********************************************************************************************/
     unsigned int n_subintervals;  
     /*!*********************************************************************************************
      * \brief   Construct a \c PlotOptions class object containing default values.
@@ -338,4 +337,4 @@ void plot(const HyperGraphT& hyper_graph,
 }
 
 
-#endif // end of ifndef PLOT_HPP
+#endif // end of ifndef PLOT_HXX
