@@ -20,7 +20,7 @@
 // These also would ben included when splitted in .C and .h files.
 #include "HDGHyperGraph.hxx"
 #include "LocalSolvers.hxx"
-#include "Plot.hpp"
+#include "Plot.hxx"
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
