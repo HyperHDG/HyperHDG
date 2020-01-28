@@ -1,19 +1,29 @@
-/* ------------------------------------------------------------------------------------------------------
+/*!*************************************************************************************************
+ * \file    Geom_UnitCube.C
+ * \brief   Implementation of Geom_UnitCube.h (for more details refer to that file).
  *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
- *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2019
- */
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 
 #include "Geom_UnitCube.h"
 #include "HyAssert.h"
 
 using namespace std;
 using namespace Geometry;
-#include "Geom_UnitCube.inst"
+
+
+/*
+ * Relevant instances of Unit cubes!
+ */
+
+
+template class UnitCube< 1, 1 >;
+template class UnitCube< 1, 2 >;
+template class UnitCube< 1, 3 >;
+template class UnitCube< 2, 2 >;
+template class UnitCube< 2, 3 >;
+template class UnitCube< 3, 3 >;
 
 
 /*

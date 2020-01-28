@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    Geom_UnitCube.h
+ * \file    Geom_UnitCube.hxx
  * \brief   Define geometry of hypergraphs that form unit cubes.
  *
  * One of the advantages of this software package is the strict discrimination between the topology
@@ -15,12 +15,12 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 
-#ifndef GEOM_UNITCUBE_H
-#define GEOM_UNITCUBE_H
+#ifndef GEOM_UNITCUBE_HXX
+#define GEOM_UNITCUBE_HXX
 
-#include "TypeDefs.h"
-#include "Point.h"
-#include "Topo_Cubic.h"
+#include "TypeDefs.hxx"
+#include "Point.hxx"
+#include "Topo_Cubic.hxx"
 #include <array>
 
 /*!*************************************************************************************************
@@ -196,4 +196,4 @@ class UnitCube
 
 } // end namespace Geometry
 
-#endif // end ifndef GEOM_UNITCUBE_H
+#endif // end ifndef GEOM_UNITCUBE_HXX

@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    AbstractProblem.hpp
+ * \file    AbstractProblem.hxx
  * \brief   This file provides the class AbstractProblem.
  *
  * This file provides a file \c AbstractProblem class defining an abstract problem.
@@ -13,18 +13,18 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef ABSTRACTPROBLEM_HPP
-#define ABSTRACTPROBLEM_HPP
+#ifndef ABSTRACTPROBLEM_HXX
+#define ABSTRACTPROBLEM_HXX
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
-#include "HDGHyperGraph.h"
-#include "LocalSolvers.h"
+#include "HDGHyperGraph.hxx"
+#include "LocalSolvers.hxx"
 #include "Plot.hpp"
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
-#include "HyAssert.h"
+#include "HyAssert.hxx"
 #include <algorithm>
 #include <array>
 
@@ -317,4 +317,4 @@ AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
                                                  poly_degree, 2 * poly_degree >
                 >;
 
-#endif // end of ifndef ABSTRACTPROBLEM_HPP
+#endif // end of ifndef ABSTRACTPROBLEM_HXX

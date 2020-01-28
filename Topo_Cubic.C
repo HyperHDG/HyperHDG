@@ -1,12 +1,10 @@
-/* ------------------------------------------------------------------------------------------------------
+/*!*************************************************************************************************
+ * \file    Topo_Cubic.C
+ * \brief   Implementation of Topo_Cubic.h (for more details refer to that file).
  *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
- *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2019
- */
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 
 #include "Topo_Cubic.h"
 #include "HyAssert.h"
@@ -14,7 +12,20 @@
 
 using namespace std;
 using namespace Topology;
-#include "Topo_Cubic.inst"
+
+
+/*
+ * Relevant instances of cubic topology!
+ */
+
+
+template class Cubic< 1, 1 >;
+template class Cubic< 1, 2 >;
+template class Cubic< 1, 3 >;
+template class Cubic< 2, 2 >;
+template class Cubic< 2, 3 >;
+template class Cubic< 3, 3 >;
+
 
 
 /*
