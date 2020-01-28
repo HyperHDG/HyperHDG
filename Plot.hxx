@@ -21,7 +21,7 @@
 #define PLOT_HXX
 
 #include "HDGHyperGraph.hxx"
-#include "LocalSolvers.hxx"
+#include "LSol.hxx"           // Includes all local solvers
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.

@@ -19,7 +19,7 @@
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
 #include "HDGHyperGraph.hxx"
-#include "LocalSolvers.hxx"
+#include "LSol.hxx"
 #include "Plot.hxx"
 
 // Includes solely needed for implementation of the different functions.
