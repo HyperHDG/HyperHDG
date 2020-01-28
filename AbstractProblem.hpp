@@ -291,7 +291,7 @@ class AbstractProblem
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
-                  Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
+                  Geometry::UnitCube< hyperedge_dim, space_dim >,
                   DiffusionSolverNaive_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
                 >;
 
@@ -312,7 +312,7 @@ AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
 template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
 using ElasticityProblemRegular = 
 AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
-                  Geometry::HyperGraph_Cubic_UnitCube< hyperedge_dim, space_dim >,
+                  Geometry::UnitCube< hyperedge_dim, space_dim >,
                   ElasticitySolver_RegularQuad < hyperedge_dim, space_dim, 
                                                  poly_degree, 2 * poly_degree >
                 >;

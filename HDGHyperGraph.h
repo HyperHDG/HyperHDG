@@ -4,7 +4,7 @@
 #include "TypeDefs.h"
 #include "HyperNodeFactory.h"
 #include "Topo_Cubic.h"
-#include "HyperGraph_Geometry.h"
+#include "Geom_UnitCube.h"
 
 /*!*************************************************************************************************
  * @brief   The class template uniting topology and geometry of a hypergraph with the topology of

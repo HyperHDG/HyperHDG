@@ -17,6 +17,9 @@ using namespace Topology;
 #include "Topo_Cubic.inst"
 
 
+/*
+ * HyperEdge functions!
+ */
 
 
 template<unsigned int space_dim>
@@ -228,35 +231,6 @@ Cubic<hyperedge_dim,space_dim>::hyperedge::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*

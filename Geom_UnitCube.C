@@ -8,14 +8,17 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-#include "HyperEdge_Geometry.h"
+#include "Geom_UnitCube.h"
 #include "HyAssert.h"
-#include <algorithm>
-
 
 using namespace std;
 using namespace Geometry;
-#include "HyperEdge_Geometry.inst"
+#include "Geom_UnitCube.inst"
+
+
+/*
+ * HyperEdge functions!
+ */
 
 
 template<unsigned int space_dim>
@@ -204,8 +207,8 @@ array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, sp
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
-HyperEdge_Cubic_UnitCube(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
+UnitCube<hyperedge_dim,space_dim>::hyperedge::
+hyperedge(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
 {
   if constexpr ( hyperedge_dim == 1 )
   {
@@ -236,7 +239,7 @@ HyperEdge_Cubic_UnitCube(const hyperedge_index_type index, const array<unsigned 
 }
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-Point<space_dim> HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+Point<space_dim> UnitCube<hyperedge_dim,space_dim>::hyperedge::
 point(unsigned int index) const
 {
   return points_[index];
@@ -244,7 +247,7 @@ point(unsigned int index) const
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-Point<space_dim> HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+Point<space_dim> UnitCube<hyperedge_dim,space_dim>::hyperedge::
 normal(unsigned int index) const
 {
   Point<space_dim> normal;
@@ -256,14 +259,14 @@ normal(unsigned int index) const
 
 /*
 const array<hypernode_index_type, 2*hyperedge_dim>&
-HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::get_hypernode_indices() const
+UnitCube<hyperedge_dim,space_dim>::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-std::vector<double> HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+std::vector<double> UnitCube<hyperedge_dim,space_dim>::
 abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector<double> det_at_quad(local_quadrature.size(), 1.);
@@ -272,7 +275,7 @@ abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 
 
 template <unsigned int hyperedge_dim, unsigned int space_dim>
-vector< vector<double> > HyperEdge_Cubic_UnitCube<hyperedge_dim,space_dim>::
+vector< vector<double> > UnitCube<hyperedge_dim,space_dim>::
 inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector< vector<double> > jac_at_quad(local_quadrature.size());
@@ -284,3 +287,30 @@ inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
   return jac_at_quad;
 }
 */
+
+
+/*
+ * HyperGraph functions!
+ */
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+UnitCube<hyperedge_dim,space_dim>::
+UnitCube(const Topology::Cubic<hyperedge_dim,space_dim>& other)
+: num_elements_(other.num_elements()) { }
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+UnitCube<hyperedge_dim,space_dim>::
+UnitCube(const constructor_value_type& num_elements)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim];
+}
+
+
+template <unsigned int hyperedge_dim, unsigned int space_dim>
+const typename UnitCube<hyperedge_dim, space_dim>::hyperedge
+UnitCube<hyperedge_dim,space_dim>::
+get_hyperedge(const hyperedge_index_type index) const
+{
+  return hyperedge(index, num_elements_);
+}
