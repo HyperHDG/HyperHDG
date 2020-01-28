@@ -20,8 +20,6 @@
 #ifndef PLOT_HPP
 #define PLOT_HPP
 
-// Includes needed for external communication.
-// These also would ben included when splitted in .C and .h files.
 #include "HDGHyperGraph.h"
 #include "LocalSolvers.h"
 
@@ -34,58 +32,13 @@
 #include <cmath>
 
 /*!*************************************************************************************************
- * @brief   A class to encode the chosen options for plotting.
- *
- * \todo  I do not see the point of having this as an object. A function template should do it. Or
- *        could we output several datasets on the same mesh?
- *        -> This has been changed and a PlotOptions class has been introduced, where the output
- *        type could be configured. This can still be extended.
- *
- * \todo  It must be possible to give it a file handle or file name
- *        -> This is now possible. One can give a directory and a file name.
- *
- * \todo  The name should indicate VTU
- *        -> This has not been implemented directly, but the PlotOptions class contains a flag
- *        discriminating which plot_vtu, ... function should be chosen in the .C file. However, at
- *        the moment only vtu output is possible.
- * 
- * @todo  Turn PlotOptions class into fully templated class where the HDGHyperGraph and the
- *        LocalSolver are template classes! -> Done, but are you ok with this?
- * 
- * @todo  Plot has been deactivated to implement elasticity!
- * 
- * This class contains all information needed for creating a plot from a @c std::vector, i.e., it
- * contains an @c HDGHyperGraph and a @c LocalSolver and several fields to encode a file name, the
- * name of the computed unknowns, etc. It needs to be passed to the main @c plot function to
- * configure its behavior.
- *
- * @tparam  HyperGraphT     Template parameter describing the precise class of the @c HDGHyperGraph,
- *                          i.e., it contains an @c HDGHyperGraph with chosen template parameters
- *                          describing its topology, geometry, etc.
- * @tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
- *                          i.e., it contains an local solver for a specific equation living on the
- *                          hypergraph.
+ * \brief   A class storing options for plotting.
  *
  * @authors   Guido Kanschat, University of Heidelberg, 2020.
  * @authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template <class HyperGraphT, class LocalSolverT>
 class PlotOptions
 {
-  private:
-    /*!*********************************************************************************************
-     * @brief   Reference to the hypergraph to be plotted.
-     *
-     * A @c HyperGraphT& containing a @c const reference to a @c HDGHyperGraph.
-     **********************************************************************************************/
-    const HyperGraphT& hyper_graph_;
-    /*!*********************************************************************************************
-     * @brief   Reference to the local olver used to solve the equation to be plotted.
-     *
-     * A @c LocalSolverT& containing a @c const reference to a local solver class that represents
-     * the equation to be plotted and whose domain is the hypergraph.
-     **********************************************************************************************/
-    const LocalSolverT& local_solver_;
   public:
     /*!*********************************************************************************************
      * @brief   Name of the directory to put the output into.
@@ -94,7 +47,7 @@ class PlotOptions
      **********************************************************************************************/
     std::string outputDir;
     /*!*********************************************************************************************
-     * @brief   Name of the file emcoding the plot.
+     * @brief   Name of the file plotted.
      *
      * This @c std::string describes the name of the file for the output plot. Default is "example".
      **********************************************************************************************/
@@ -105,6 +58,7 @@ class PlotOptions
      * This @c std::string describes the name of the file ending for the output plot. Thus, it also
      * characterizes which applications can read the output files properly. Default and currently
      * only option is "vtu" for Paraview.
+     * \todo G recommends to make this an enum. Text matching is always apita
      **********************************************************************************************/
     std::string fileEnding;
     /*!*********************************************************************************************
@@ -116,19 +70,46 @@ class PlotOptions
      **********************************************************************************************/
     unsigned int fileNumber;
     /*!*********************************************************************************************
-     * @brief   Decicde whether @c fileNumber is part of the file name.
+     * @brief   Decide whether @c fileNumber is part of the file name.
      *
      * This @c boolean discriminates whether the @c fileNumber should appear within the name of the
      * file (true) or not (false). Default is true.
      **********************************************************************************************/
     bool printFileNumber;
     /*!*********************************************************************************************
-     * @brief   Decicde whether @c fileNumber is incremented after plotting.
+     * @brief   Decide whether @c fileNumber is incremented after plotting.
      *
      * This @c boolean discriminates whether the @c fileNumber should be incremented after a file
      * has been written (true) or not (false). Default is true.
+     *
+     * \todo This could not be implemented in your version with call
+     * by value, nor can it be implemented in mine with a const
+     * reference.
      **********************************************************************************************/
     bool incrementFileNumber;
+    /*!
+     * \brief Include the nodes with their function values into the plot
+     *
+     * Defaults to `false`.
+     */
+    bool plot_nodes;
+    /*!
+     * \brief Include the hyperedges with their function values into the plot
+     *
+     * Defaults to `true`.
+     */
+    bool plot_edges;
+    /*!
+     * \brief Number of subintervals for plotting
+     *
+     * When plotting an interval, it is split into n_subintervals
+     * intervals such that higher order polynomials and other
+     * functions can be displayed appropriately. When plotting higher
+     * dimensional objects, this subdivision is applied accordingly.
+     *
+     * Defaults to 1.
+     */
+    unsigned int n_subintervals;  
     /*!*********************************************************************************************
      * @brief   Construct a @c PlotOptions class object containing default values.
      *
@@ -138,32 +119,7 @@ class PlotOptions
      * @param   hyper_graph     Reference to @c HyperGraphT& representing the hypergraph.
      * @param   local_solver    Reference to @c LocalSolverT& representing the local solver.
      **********************************************************************************************/
-    PlotOptions(HyperGraphT& hyper_graph, LocalSolverT& local_solver)
-    : hyper_graph_(hyper_graph), local_solver_(local_solver),
-      outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
-      printFileNumber(true), incrementFileNumber(true)  { };
-    /*!*********************************************************************************************
-     * @brief   Return reference to hypergraph.
-     *
-     * Return a reference to the @c HDGHyperGraph where the solution should be plotted on.
-     *
-     * @retval  hyper_graph     Reference to @c HyperGraphT& representing the hypergraph.
-     **********************************************************************************************/
-    const HyperGraphT& hyper_graph()
-    {
-      return hyper_graph_;
-    };
-    /*!*********************************************************************************************
-     * @brief   Return reference to local solver.
-     *
-     * Return a reference to the local solver representing the equation solved on the hypergraph.
-     *
-     * @retval  local_solver    Reference to @c LocalSolverT& representing the local solver.
-     **********************************************************************************************/
-    const LocalSolverT& local_solver()
-    {
-      return local_solver_;
-    };
+    PlotOptions();
 }; // end of class PlotOptions
 
 /*!*************************************************************************************************
@@ -187,14 +143,32 @@ class PlotOptions
  * @authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT>
-void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>& plotOpt)
+void plot(const HyperGraphT& hyper_graph,
+	  const LocalSolverT& local_solver,
+	  const std::vector<double>& lambda,
+	  const PlotOptions& plotOpt);
+
+
+PlotOptions::PlotOptions()
+  : outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
+    printFileNumber(true), incrementFileNumber(true), plot_nodes(false), plot_edges(true),
+    n_subintervals(1)
+{}
+
+
+template <class HyperGraphT, class LocalSolverT>
+void plot_vtu(const HyperGraphT& hyper_graph,
+	      const LocalSolverT& local_solver,
+	      const std::vector<double>& lambda,
+	      const PlotOptions& plotOpt)
 {
   constexpr unsigned int hyperedge_dim = HyperGraphT::hyperedge_dimension();
   constexpr unsigned int space_dim = HyperGraphT::space_dimension();
-  constexpr unsigned int points_per_hyperedge = pow(2, hyperedge_dim);
   
-  hyperedge_index_type num_of_hyperedges = plotOpt.hyper_graph().num_of_hyperedges();
-  point_index_type num_of_points = points_per_hyperedge * num_of_hyperedges;
+  const hyperedge_index_type n_hyperedges = hyper_graph.n_hyperedges();
+  const unsigned int points_per_hyperedge = 1 << hyperedge_dim;
+  
+  point_index_type n_points = points_per_hyperedge * n_hyperedges;
   
   static_assert (hyperedge_dim <= 3);
   unsigned int element_id;
@@ -212,22 +186,18 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
     filename.append("."); filename.append(std::to_string(plotOpt.fileNumber));
   }
   filename.append(".vtu");
-  if(plotOpt.incrementFileNumber)  ++(plotOpt.fileNumber);
   
-	myfile.open(filename);
-	myfile << "<?xml version=\"1.0\"?>"  << std::endl;
-	myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
-         << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
-	myfile << "  <UnstructuredGrid>" << std::endl;
-	myfile << "    <Piece NumberOfPoints=\"" << num_of_points << "\" NumberOfCells= \""
-         << num_of_hyperedges << "\">" << std::endl;
-	myfile << "      <Points>" << std::endl;
-	myfile << "        <Datastd::array type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">"
-         << std::endl;
+  myfile.open(filename);
+  myfile << "<?xml version=\"1.0\"?>"  << std::endl;
+  myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" compressor=\"vtkZLibDataCompressor\">" << std::endl;
+  myfile << "  <UnstructuredGrid>" << std::endl;
+  myfile << "    <Piece NumberOfPoints=\"" << n_points << "\" NumberOfCells= \"" << n_hyperedges << "\">" << std::endl;
+  myfile << "      <Points>" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
   
-  for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
+  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
   {
-    auto hyperedge_geometry = plotOpt.hyper_graph().hyperedge_geometry(he_number);
+    auto hyperedge_geometry = hyper_graph.hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
     {
       myfile << "        ";
@@ -240,44 +210,39 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
     }
   }
   
-  myfile << "        </Datastd::array>" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
   myfile << "      </Points>" << std::endl;
 	myfile << "      <Cells>" << std::endl;
-	myfile << "        <Datastd::array type=\"Int32\" Name=\"connectivity\" format=\"ascii\">"
-         << std::endl;
+	myfile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-	for (point_index_type pt_number = 0; pt_number < num_of_points; ++pt_number)
+	for (point_index_type pt_number = 0; pt_number < n_points; ++pt_number)
     myfile << "  " << pt_number;
   myfile << std::endl;
   
-  myfile << "        </Datastd::array>" << std::endl;
-  myfile << "        <Datastd::array type=\"Int32\" Name=\"offsets\" format=\"ascii\">"
-         << std::endl;
+  myfile << "        </DataArray>" << std::endl;
+  myfile << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-  for (point_index_type pt_number = points_per_hyperedge; pt_number <= num_of_points;
+  for (point_index_type pt_number = points_per_hyperedge; pt_number <= n_points;
        pt_number += points_per_hyperedge)
     myfile << "  " << pt_number;
-  
   myfile << std::endl;
   
-  myfile << "        </Datastd::array>" << std::endl;
-	myfile << "        <Datastd::array type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
+	myfile << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-  for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
+  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
     myfile << "  " << element_id;
   myfile << std::endl;
   
-  myfile << "        </Datastd::array>" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
 	myfile << "      </Cells>" << std::endl;
   
   
-  myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" std::vectors=\""
-         << "example_std::vector" << "\">" << std::endl;
-  myfile << "        <Datastd::array type=\"Float32\" Name=\"" << "dual" 
-         << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << std::endl;
+  myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << std::endl;
     
   std::array< std::array<double, HyperGraphT::n_dof_per_node() > , 2*hyperedge_dim > hyperedge_dofs;
   std::array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
@@ -285,14 +250,12 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
   std::array< std::array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) >
     local_dual;
   
-  for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
+  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = 
-      plotOpt.hyper_graph().hyperedge_topology(he_number).get_hypernode_indices();
+    hyperedge_hypernodes = hyper_graph.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = plotOpt.hyper_graph().hypernode_factory().
-        get_dof_values(hyperedge_hypernodes[hypernode], lambda);
-    local_dual = plotOpt.local_solver().dual_in_corners_from_lambda(hyperedge_dofs);
+      hyperedge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
+    local_dual = local_solver.dual_in_corners_from_lambda(hyperedge_dofs);
     myfile << "      ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
     {
@@ -303,26 +266,23 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
     myfile << std::endl;
   }
 
-  myfile << "        </Datastd::array>" << std::endl;
-  myfile << "        <Datastd::array type=\"Float32\" Name=\"" << "primal" 
-         << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   
   
-  for (hyperedge_index_type he_number = 0; he_number < num_of_hyperedges; ++he_number)
+  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
   {
-    hyperedge_hypernodes = plotOpt.hyper_graph().hyperedge_topology(he_number).
-      get_hypernode_indices();
+    hyperedge_hypernodes = hyper_graph.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
-      hyperedge_dofs[hypernode] = plotOpt.hyper_graph().hypernode_factory().
-        get_dof_values(hyperedge_hypernodes[hypernode], lambda);
-    local_primal = plotOpt.local_solver().primal_in_corners_from_lambda(hyperedge_dofs);
+      hyperedge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
+    local_primal = local_solver.primal_in_corners_from_lambda(hyperedge_dofs);
     myfile << "        ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
       myfile << "  " << local_primal[corner];
     myfile << std::endl;
   }
 
-  myfile << "        </Datastd::array>" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
   myfile << "      </PointData>" << std::endl;
   
 
@@ -355,15 +315,27 @@ void plot_vtu(std::vector<double> lambda, PlotOptions<HyperGraphT,LocalSolverT>&
  * @authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT>
-void plot
-(std::vector<double> lambda, PlotOptions<HyperGraphT, LocalSolverT>& plotOpt)
+void plot(const HyperGraphT& hyper_graph,
+	  const LocalSolverT& local_solver,
+	  const std::vector<double>& lambda,
+	  const PlotOptions& plotOpt)
 {
   hy_assert( plotOpt.fileEnding == "vtu" , 
              "Only file ending vtu is supported at the moment. Your choice has been "
              << plotOpt.fileEnding << ", which is invalid.");
   hy_assert( !plotOpt.fileName.empty() , "File name must not be empty!" );
   hy_assert( !plotOpt.outputDir.empty() , "Ouput directory must not be empty!" );
-  // plot_vtu<HyperGraphT,LocalSolverT>(lambda, plotOpt);
+  plot_vtu(hyper_graph, local_solver, lambda, plotOpt);
 }; // end of void plot
+
+
+template<class HyperGraphT, unsigned int hdim, unsigned int sdim, unsigned int pd, unsigned int qd>
+void plot(const HyperGraphT& hyper_graph,
+	  const ElasticitySolver_RegularQuad<hdim,sdim,pd,qd>& local_solver,
+	  const std::vector<double>& lambda,
+	  const PlotOptions& plotOpt)
+{
+}
+
 
 #endif // end of ifndef PLOT_HPP
