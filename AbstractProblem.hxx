@@ -68,7 +68,7 @@ class AbstractProblem
     HDGHyperGraph 
     < compute_n_dofs_per_node
       ( TopologyT::hyEdge_dimension(), LocalSolverT::polynomial_degree(),
-        LocalSolverT::solution_dimension_hypernode() ),
+        LocalSolverT::solution_dimension_hyNode() ),
       TopologyT, GeometryT
     > hyper_graph_;
     std::vector<dof_index_type> dirichlet_indices_;
@@ -159,23 +159,23 @@ class AbstractProblem
       constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hypernodes;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       
       std::array
       < std::array
         < dof_value_t, 
           compute_n_dofs_per_node( hyEdge_dim, poly_degree,
-                                   LocalSolverT::solution_dimension_hypernode() ) 
+                                   LocalSolverT::solution_dimension_hyNode() ) 
         > , 2  * hyEdge_dim 
       > hyEdge_dofs;
       
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array
-        hyEdge_hypernodes = hyEdge.topology.get_hypernode_indices();
-        for ( unsigned int hypernode = 0 ; hypernode < hyEdge_hypernodes.size() ; ++hypernode )
-          hyEdge_dofs[hypernode] = 
-            hyper_graph_.hypernode_factory().get_dof_values(hyEdge_hypernodes[hypernode], x_vec);
+        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax
         if constexpr ( LocalSolverT::need_geometry_processing() )
@@ -187,9 +187,9 @@ class AbstractProblem
         else  hyEdge_dofs  = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax
-        for ( unsigned int hypernode = 0 ; hypernode < hyEdge_hypernodes.size() ; ++hypernode )
-          hyper_graph_.hypernode_factory().add_to_dof_values
-            (hyEdge_hypernodes[hypernode], vec_Ax, hyEdge_dofs[hypernode]);
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyper_graph_.hyNode_factory().add_to_dof_values
+            (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
       
       for ( dof_index_type i = 0 ; i < dirichlet_indices_.size() ; ++i )

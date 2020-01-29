@@ -228,19 +228,19 @@ template <unsigned int hyEdge_dim, unsigned int space_dim>
 Cubic<hyEdge_dim,space_dim>::hyEdge::
 hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
 {
-  for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyEdge_dim; ++local_hypernode)
-    correct_hypernode_orientation_[local_hypernode] = 1;
-  if constexpr ( hyEdge_dim == 1 )       hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if constexpr ( hyEdge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if constexpr ( hyEdge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  for (unsigned int local_hyNode = 0; local_hyNode < 2 * hyEdge_dim; ++local_hyNode)
+    correct_hyNode_orientation_[local_hyNode] = 1;
+  if constexpr ( hyEdge_dim == 1 )       hyNode_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  else if constexpr ( hyEdge_dim == 2 )  hyNode_indices_ = square_to_line_index<space_dim>(num_elements, index);
+  else if constexpr ( hyEdge_dim == 3 )  hyNode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 const array<hyNode_index_t, 2*hyEdge_dim>&
-Cubic<hyEdge_dim,space_dim>::hyEdge::get_hypernode_indices() const
+Cubic<hyEdge_dim,space_dim>::hyEdge::get_hyNode_indices() const
 {
-  return hypernode_indices_;
+  return hyNode_indices_;
 }
 
 
@@ -290,39 +290,39 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
   hy_assert( n_hyEdges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set n_hypernodes
-  n_hypernodes_ = 1;
+  n_hyNodes_ = 1;
   if (hyEdge_dim == 1)
   {
-    n_hypernodes_ *= num_elements[0] + 1;
-    if (space_dim > 1)  n_hypernodes_ *= num_elements[1] + 1;
-    if (space_dim > 2)  n_hypernodes_ *= num_elements[2] + 1;
+    n_hyNodes_ *= num_elements[0] + 1;
+    if (space_dim > 1)  n_hyNodes_ *= num_elements[1] + 1;
+    if (space_dim > 2)  n_hyNodes_ *= num_elements[2] + 1;
   }
   else if ( hyEdge_dim == space_dim )
   {
-    n_hypernodes_ = 0;
+    n_hyNodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      n_hypernodes_ += helper;
+      n_hyNodes_ += helper;
     }
   }
   else if ( hyEdge_dim == space_dim - 1 )
   {
-    n_hypernodes_ = 0;
+    n_hyNodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      n_hypernodes_ += helper;
+      n_hyNodes_ += helper;
     }
   }
   else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
-  hy_assert( n_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
+  hy_assert( n_hyNodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
@@ -367,46 +367,46 @@ Cubic(const constructor_value_type& num_elements)
   hy_assert( n_hyEdges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set n_hypernodes
-  n_hypernodes_ = 1;
+  n_hyNodes_ = 1;
   if (hyEdge_dim == 1)
   {
-    n_hypernodes_ *= num_elements[0] + 1;
-    if (space_dim > 1)  n_hypernodes_ *= num_elements[1] + 1;
-    if (space_dim > 2)  n_hypernodes_ *= num_elements[2] + 1;
+    n_hyNodes_ *= num_elements[0] + 1;
+    if (space_dim > 1)  n_hyNodes_ *= num_elements[1] + 1;
+    if (space_dim > 2)  n_hyNodes_ *= num_elements[2] + 1;
   }
   else if ( hyEdge_dim == space_dim )
   {
-    n_hypernodes_ = 0;
+    n_hyNodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      n_hypernodes_ += helper;
+      n_hyNodes_ += helper;
     }
   }
   else if ( hyEdge_dim == space_dim - 1 )
   {
-    n_hypernodes_ = 0;
+    n_hyNodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      n_hypernodes_ += helper;
+      n_hyNodes_ += helper;
     }
   }
   else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
-  hy_assert( n_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
+  hy_assert( n_hyNodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 Cubic<hyEdge_dim,space_dim>::
 Cubic(const Cubic<hyEdge_dim,space_dim>& other)
 : num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_),
-  n_hypernodes_(other.n_hypernodes_) { }
+  n_hyNodes_(other.n_hyNodes_) { }
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
@@ -442,9 +442,9 @@ n_hyEdges() const
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 const hyNode_index_t
 Cubic<hyEdge_dim,space_dim>::
-n_hypernodes() const
+n_hyNodes() const
 {
-  return n_hypernodes_;
+  return n_hyNodes_;
 }
 
 /*
