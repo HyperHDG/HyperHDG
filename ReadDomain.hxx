@@ -1,45 +1,50 @@
+/*!*************************************************************************************************
+ * \file    ReadDomain.hxx
+ * \brief   This file reads domains from different file types and returns the uniform DomainInfo.
+ *
+ * \todo    DomainInfo assumes that hyperedges have 2 * hyEdge_dim hyperedges and that every
+ *          hyperedge has 2 ^ (hyEdge_dim-1) points/vertices. This does neither allow for triangular
+ *          hypernodes (needed for simplicial hyperedges in 3D) nor for tringular hyperedges (2D)!
+ *          Is this ok or should this be generalized?
+ * 
+ * \todo    Do the remaining doxygen for this file (when corresponding topology and geometry are
+ *          available) and ensure compatability with the rest of the code.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+
 #ifndef READDOMAIN_HXX
 #define READDOMAIN_HXX
-
 
 #include "TypeDefs.hxx"
 #include "Point.hxx"
 #include "HyAssert.hxx"
-#include "HyperCube.hxx"
 
 #include <array>
 #include <vector>
-
 #include <fstream>
 #include <string>
 #include <sstream>
 
 
-
-#include <iostream>
-
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 struct DomainInfo
 {
   std::vector< Point<space_dim> > points;
-  std::vector< std::array< pt_index_t, 1 << (hyEdge_dim-1) > > points_hyNode;
-  std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge;
+  std::vector< std::array< pt_index_t, 1 << (hyEdge_dim-1) > > points_hyNode; // 2 ^ (hyEdge_dim-1)
+  std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge; // 2 * hyEdge_dim
   
   DomainInfo ( pt_index_t n_points, hyNode_index_t n_hyNodes, hyEdge_index_t n_hyEdges)
   : points(n_points), points_hyNode(n_hyNodes), hyNodes_hyEdge(n_hyEdges) { }
-};
-
-
-
-
+}; // end of struct DomainInfo
 
 
 template < unsigned int hyEdge_dim, unsigned int space_dim >
-DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
+DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
 {
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
-             "The given file needs to be a .geo file, since no other input file types are currently"
-             << " implemented." );
+             "The given file needs to be a .geo file for this function to be applicable!" );
   
   std::ifstream infile(filename);
   
@@ -178,7 +183,16 @@ DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
              "Not all hyperedges have been added to the list!" );
 
   return domain_info;
+} // end of read_domain_geo
 
-}
+
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
+{
+  hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
+             "The given file needs to be a .geo file, since no other input file types are currently"
+             << " implemented." );
+  return read_domain_geo<hyEdge_dim,space_dim>(filename);
+} // end of read_domain
 
 #endif // end of ifndef READDOMAIN_HXX
