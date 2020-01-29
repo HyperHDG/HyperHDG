@@ -84,7 +84,7 @@ class HDGHyperGraph
    * topological and geometrical information about a single hyperedge. It is therefore defined as
    * the \c value_type of class \c HDGHyperGraph.
    ************************************************************************************************/
-  typedef struct HyperEdge
+  typedef struct hyEdge
   {
     /*!*********************************************************************************************
      * \brief   Topological information of a hyperedge.
@@ -108,9 +108,9 @@ class HDGHyperGraph
      * \param   topo    Topological information of a hyperedge.
      * \param   geom    Geometrical information of a hyperedge.
      **********************************************************************************************/
-    HyperEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
+    hyEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
     : topology(topo), geometry(geom) { }
-  } value_type; // end of typedef struct HyperEdge
+  } value_type; // end of typedef struct hyEdge
   
   /*!***********************************************************************************************
    * \brief   The type needed to construct an \c HDGHyperGraph.
@@ -151,7 +151,7 @@ class HDGHyperGraph
   } constructor_value_type; // end of typedef struct HyperGraphConstructor
   
   /*!***********************************************************************************************
-   * \brief   Iterator for \c struct \c HyperEdge returned by \c operator[].
+   * \brief   Iterator for \c struct \c hyEdge returned by \c operator[].
    *
    * Iterator that allows to go through the hyperedges of a hypergraph forwards and backwards. This
    * iterator fulfills the preconditions to allow the use of \c std::for_each on the set of
@@ -163,14 +163,14 @@ class HDGHyperGraph
       /*!*******************************************************************************************
        * \brief   Reference to the \c HDGHyperGraph of the iterator.
        *
-       * The \c HyperEdge is characterized via its respective \c HDGHypergraph (of which the
+       * The \c hyEdge is characterized via its respective \c HDGHypergraph (of which the
        * reference is saved) and its index who need to be members of the \c iterator.
        ********************************************************************************************/
       const HDGHyperGraph& hypergraph_;
       /*!*******************************************************************************************
-       * \brief   Index of the \c HyperEdge of the iterator.
+       * \brief   Index of the \c hyEdge of the iterator.
        *
-       * The \c HyperEdge is characterized via its respective \c HDGHypergraph (of which the
+       * The \c hyEdge is characterized via its respective \c HDGHypergraph (of which the
        * reference is saved) and its index who need to be members of the \c iterator.
        ********************************************************************************************/
       hyEdge_index_t index_;
@@ -255,11 +255,11 @@ class HDGHyperGraph
        ********************************************************************************************/
       iterator operator--(int) { return iterator(hypergraph_, index_--); }
       /*!*******************************************************************************************
-       * \brief   Dereference \c iterator to \c HyperEdge.
+       * \brief   Dereference \c iterator to \c hyEdge.
        *
-       * This function dereferences the iterator and returns the \c HyperEdge this iterator dots at.
+       * This function dereferences the iterator and returns the \c hyEdge this iterator dots at.
        *
-       * \retval  hyperedge     The hyperedge described by the iterator.
+       * \retval  hyEdge     The hyperedge described by the iterator.
        ********************************************************************************************/
       HDGHyperGraph::value_type operator*() { return hypergraph_[index_]; }
       /*!*******************************************************************************************
@@ -342,9 +342,9 @@ class HDGHyperGraph
       hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
                  "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
                  << "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
-      hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
+      hy_assert( hypergraph_topology_.n_hyEdges() > 0 ,
                  "A hypergraph is supposed to consist of at least one hyperedge. This graph "
-                  << "consists of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
+                  << "consists of " << hypergraph_topology_.n_hyEdges() << " hyperedges." );
     }
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
@@ -371,46 +371,46 @@ class HDGHyperGraph
       hy_assert( hypernode_factory_.n_hypernodes() >= 2 ,
                  "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
                  << "consists of " << hypernode_factory_.n_hypernodes() << " hypernodes." );
-      hy_assert( hypergraph_topology_.n_hyperedges() > 0 ,
+      hy_assert( hypergraph_topology_.n_hyEdges() > 0 ,
                  "A hypergraph is supposed to consist of at least one hyperedge. This graph "
-                  << "consists of " << hypergraph_topology_.n_hyperedges() << " hyperedges." );
+                  << "consists of " << hypergraph_topology_.n_hyEdges() << " hyperedges." );
     }
     /*!*********************************************************************************************
      * \brief   Subscript operator of a \c HDGHyperGraph.
      *
      * The subscript operator takes an index referring to an hyperedge and returns the respective
-     * \c HyperEdge containing its topological and geometrical information. Thus, this operator can
-     * be bypassed by using the functions \c hyperedge_topology (only returning the topological
-     * data) and \c hyperedge_geometry (ony returning the geometrical data).
+     * \c hyEdge containing its topological and geometrical information. Thus, this operator can
+     * be bypassed by using the functions \c hyEdge_topology (only returning the topological
+     * data) and \c hyEdge_geometry (ony returning the geometrical data).
      *
-     * \param   index                 Index of the \c HyperEdge to be returned.
-     * \retval  hyperedge             The \c HyperEdge of the given index.
+     * \param   index                 Index of the \c hyEdge to be returned.
+     * \retval  hyEdge             The \c hyEdge of the given index.
      **********************************************************************************************/
     const value_type operator[] (const hyEdge_index_t index) const
-    { return value_type(hyperedge_topology(index), hyperedge_geometry(index)); }
+    { return value_type(hyEdge_topology(index), hyEdge_geometry(index)); }
     /*!*********************************************************************************************
-     * \brief   Return iterator to first \c HyperEdge of \c HDGHyperGraph.
+     * \brief   Return iterator to first \c hyEdge of \c HDGHyperGraph.
      *
-     * This function returns an \c HDGHyperGraph::iterator that refers to the first \c HyperEdge of
+     * This function returns an \c HDGHyperGraph::iterator that refers to the first \c hyEdge of
      * the hypergraph (index = 0). Thus, it can be used to mark the starting point in \c for_each
      * loops.
      *
-     * \retval  hyperedge             Iterator referring to first \c HyperEdge.
+     * \retval  hyEdge             Iterator referring to first \c hyEdge.
      **********************************************************************************************/
     typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const
     { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, 0); }
     /*!*********************************************************************************************
-     * \brief   Return iterator to the end of \c HyperEdge list.
+     * \brief   Return iterator to the end of \c hyEdge list.
      *
      * This function returns an \c HDGHyperGraph::iterator that refers to the position of an (non-
-     * existing) \c HyperEdge of the hypergraph (index = n_hyperedges), i.e., the position  directly
+     * existing) \c hyEdge of the hypergraph (index = n_hyEdges), i.e., the position  directly
      * after the last valid entry of the \c HDGHyperGraph. Thus, it can be used to mark the ending
      * point in \c for_each loops.
      *
-     * \retval  hyperedge             Iterator referring to position behind last \c HyperEdge.
+     * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
      **********************************************************************************************/
     typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const
-    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, n_hyperedges()); }
+    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, n_hyEdges()); }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
      *
@@ -434,10 +434,10 @@ class HDGHyperGraph
      * information about a hyperedge of given index.
      *
      * \param   index                 Index of the hyperedge to be returned.
-     * \retval  hyperedge_topology    Topological information about hyperedge.
+     * \retval  hyEdge_topology    Topological information about hyperedge.
      **********************************************************************************************/
-    const typename TopoT::value_type hyperedge_topology(const hyEdge_index_t index) const
-    { return hypergraph_topology_.get_hyperedge(index); }
+    const typename TopoT::value_type hyEdge_topology(const hyEdge_index_t index) const
+    { return hypergraph_topology_.get_hyEdge(index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
      *
@@ -446,16 +446,16 @@ class HDGHyperGraph
      * information about a hyperedge of given index.
      *
      * \param   index                 Index of the hyperedge to be returned.
-     * \retval  hyperedge_geometry    Geometrical information about hyperedge.
+     * \retval  hyEdge_geometry    Geometrical information about hyperedge.
      **********************************************************************************************/
-    const typename GeomT::value_type hyperedge_geometry(const hyEdge_index_t index) const
-    { return hypergraph_geometry_.get_hyperedge(index); }
+    const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
+    { return hypergraph_geometry_.get_hyEdge(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
-     * \retval  n_hyperedges          The total amount of hyperedges of a hypergraph.
+     * \retval  n_hyEdges          The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyEdge_index_t n_hyperedges() const  { return hypergraph_topology_.n_hyperedges(); }
+    const hyEdge_index_t n_hyEdges() const  { return hypergraph_topology_.n_hyEdges(); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *

@@ -225,8 +225,8 @@ array<hyNode_index_t, 6> cube_to_square_index
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-Cubic<hyEdge_dim,space_dim>::hyperedge::
-hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
+Cubic<hyEdge_dim,space_dim>::hyEdge::
+hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
 {
   for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyEdge_dim; ++local_hypernode)
     correct_hypernode_orientation_[local_hypernode] = 1;
@@ -238,7 +238,7 @@ hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 const array<hyNode_index_t, 2*hyEdge_dim>&
-Cubic<hyEdge_dim,space_dim>::hyperedge::get_hypernode_indices() const
+Cubic<hyEdge_dim,space_dim>::hyEdge::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
@@ -259,35 +259,35 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
     
   // Set n_hyperedges_
-  n_hyperedges_ = 1;
+  n_hyEdges_ = 1;
   if ( hyEdge_dim == space_dim )
-    for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyperedges_ *= num_elements[dim];
+    for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyEdges_ *= num_elements[dim];
   else if ( hyEdge_dim == space_dim - 1 )
   {
-    n_hyperedges_ = 0;
+    n_hyEdges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      n_hyperedges_ += helper;
+      n_hyEdges_ += helper;
     }
   }
   else if ( hyEdge_dim == space_dim - 2 )
   {
-    n_hyperedges_ = 0;
+    n_hyEdges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      n_hyperedges_ += helper;
+      n_hyEdges_ += helper;
     }
   }
   else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology.");
-  hy_assert( n_hyperedges_ > 0 , "An empty hypergraph is being constructed." );
+  hy_assert( n_hyEdges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set n_hypernodes
   n_hypernodes_ = 1;
@@ -336,35 +336,35 @@ Cubic(const constructor_value_type& num_elements)
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
     
   // Set n_hyperedges_
-  n_hyperedges_ = 1;
+  n_hyEdges_ = 1;
   if ( hyEdge_dim == space_dim )
-    for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyperedges_ *= num_elements[dim];
+    for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyEdges_ *= num_elements[dim];
   else if ( hyEdge_dim == space_dim - 1 )
   {
-    n_hyperedges_ = 0;
+    n_hyEdges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n] + 1;
         else                 helper *= num_elements[dim_n];
-      n_hyperedges_ += helper;
+      n_hyEdges_ += helper;
     }
   }
   else if ( hyEdge_dim == space_dim - 2 )
   {
-    n_hyperedges_ = 0;
+    n_hyEdges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
     {
       int helper = 1;
       for (unsigned int dim_n = 0; dim_n < space_dim; ++dim_n)
         if (dim_m == dim_n)  helper *= num_elements[dim_n];
         else                 helper *= num_elements[dim_n] + 1;
-      n_hyperedges_ += helper;
+      n_hyEdges_ += helper;
     }
   }
   else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
-  hy_assert( n_hyperedges_ > 0 , "An empty hypergraph is being constructed." );
+  hy_assert( n_hyEdges_ > 0 , "An empty hypergraph is being constructed." );
   
   // Set n_hypernodes
   n_hypernodes_ = 1;
@@ -405,20 +405,20 @@ Cubic(const constructor_value_type& num_elements)
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 Cubic<hyEdge_dim,space_dim>::
 Cubic(const Cubic<hyEdge_dim,space_dim>& other)
-: num_elements_(other.num_elements_), n_hyperedges_(other.n_hyperedges_),
+: num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_),
   n_hypernodes_(other.n_hypernodes_) { }
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-const typename Cubic<hyEdge_dim,space_dim>::hyperedge
+const typename Cubic<hyEdge_dim,space_dim>::hyEdge
 Cubic<hyEdge_dim,space_dim>::
-get_hyperedge(const hyEdge_index_t index) const
+get_hyEdge(const hyEdge_index_t index) const
 {
-  hy_assert( index >= 0 && index < n_hyperedges_ ,
+  hy_assert( index >= 0 && index < n_hyEdges_ ,
              "The index of an hyperedge must be non-negative and smaller than the total amount of "
-             << "hyperedges, which is " << n_hyperedges_ << ". Nonetheless, the " << index <<
+             << "hyperedges, which is " << n_hyEdges_ << ". Nonetheless, the " << index <<
              "-th hyperedge is tried to be accessed." );
-  return hyperedge(index, num_elements_);
+  return hyEdge(index, num_elements_);
 }
 
 
@@ -434,9 +434,9 @@ num_elements() const
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 const hyEdge_index_t
 Cubic<hyEdge_dim,space_dim>::
-n_hyperedges() const
+n_hyEdges() const
 {
-  return n_hyperedges_;
+  return n_hyEdges_;
 }
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>

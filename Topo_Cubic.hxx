@@ -75,7 +75,7 @@ class Cubic
    * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
    * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
    ************************************************************************************************/
-  class hyperedge
+  class hyEdge
   {
     private:
       /*!*******************************************************************************************
@@ -106,7 +106,7 @@ class Cubic
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyperedge(const hyEdge_index_t index,
+      hyEdge(const hyEdge_index_t index,
                 const std::array<unsigned int, space_dim>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return indices of hypernodes adjacent to the hyperedge.
@@ -132,7 +132,7 @@ class Cubic
      * through all hyperedges and execute some code. The number of hyperedges can be computed from
      * the \c std::array \c num_elements_.
      **********************************************************************************************/
-    hyEdge_index_t n_hyperedges_;
+    hyEdge_index_t n_hyEdges_;
     /*!*********************************************************************************************
      * \brief   Total amount of hypernodes.
      *
@@ -150,7 +150,7 @@ class Cubic
      * solver class). Thus, its main purpose is to provide a structure that administrates the
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
-    typedef hyperedge value_type;
+    typedef hyEdge value_type;
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
@@ -203,7 +203,7 @@ class Cubic
      * \param   index           The index of the hyperedge to be returned.
      * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyperedge get_hyperedge(const hyEdge_index_t index) const;
+    const hyEdge get_hyEdge(const hyEdge_index_t index) const;
     /*!*********************************************************************************************
      * \brief   Read the array of elements per dimensions.
      *
@@ -215,7 +215,7 @@ class Cubic
      *
      * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyEdge_index_t n_hyperedges() const;
+    const hyEdge_index_t n_hyEdges() const;
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *

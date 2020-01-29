@@ -67,7 +67,7 @@ class DiffusionSolverNaive_RegularQuad
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
-    static constexpr unsigned int solution_dimension_hyperedge() { return 1; }
+    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
     static constexpr unsigned int solution_dimension_hypernode() { return 1; }
     static constexpr bool need_geometry_processing() { return false; }
 };

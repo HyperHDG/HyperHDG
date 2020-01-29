@@ -257,7 +257,7 @@ inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) *
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
 assemble_loc_mat() const
 {
-  double hyperedge_area = 1.;
+  double hyEdge_area = 1.;
   array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_mat;
   local_mat.fill(0.);
   
@@ -267,7 +267,7 @@ assemble_loc_mat() const
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += 
-            quad_weights_[q] * hyperedge_area * trials_quad_[i][q] * trials_quad_[j][q];
+            quad_weights_[q] * hyEdge_area * trials_quad_[i][q] * trials_quad_[j][q];
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -=
@@ -525,7 +525,7 @@ numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
-preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyperedge_dofs,
+preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs,
                  typename UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const
 {
   array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim > result;
@@ -539,7 +539,7 @@ preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyEdge
   for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
   {
     Point<space_dim> normal_vector = geometry.normal(1);
-    for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][0] += normal_vector[dim] * hyperedge_dofs[i][dim];
+    for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][0] += normal_vector[dim] * hyEdge_dofs[i][dim];
   }
   
   return result;
@@ -549,7 +549,7 @@ preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyEdge
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 array< array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
-postprocess_data( array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyperedge_dofs,
+postprocess_data( array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs,
                   typename UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const
 {
   std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim > result;
@@ -558,7 +558,7 @@ postprocess_data( array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_p
   for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
   {
     Point<space_dim> normal_vector = geometry.normal(1);
-    for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][dim] += normal_vector[dim] * hyperedge_dofs[i][0];
+    for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][dim] += normal_vector[dim] * hyEdge_dofs[i][0];
   }
   
   return result;
