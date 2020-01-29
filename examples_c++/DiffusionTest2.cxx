@@ -1,6 +1,9 @@
 #include "../AbstractProblem.hxx"
 #include "../SparseLinearAlgebra.hxx"
+#include "../ReadDomain.hxx"
 #include <iostream>
+
+#include <string>
 
 using namespace std;
 
@@ -21,7 +24,13 @@ int main(int argc, char *argv[])
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
   
+  
+  std::string filename = "domains/SimpleTriangle.geo";
+  DomainInfo<1,2> di = read_domain<1,2>(filename);
+  
   cout << "SUCCESS" << endl;
+   
+  
   
   return 0;
 }
