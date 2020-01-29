@@ -121,7 +121,7 @@ class UnitCube
 //      (const std::vector<double>& local_quadrature) const;
 //    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad
 //      (const std::vector<double>& local_quadrature) const;
-  }; // end of class hyperedge
+  }; // end of class hyEdge
   
   private:
     /*!*********************************************************************************************

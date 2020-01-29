@@ -116,7 +116,7 @@ class Cubic
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
       const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hyNode_indices() const;    
-  }; // end of class hyperedge
+  }; // end of class hyEdge
   
   private:
     /*!*********************************************************************************************
