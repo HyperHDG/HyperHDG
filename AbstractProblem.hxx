@@ -38,8 +38,8 @@
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
  * \f]
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyperedge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyperedge_dim = 2) or volumes (\c hyperedge_dim = 3).
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
@@ -52,10 +52,10 @@
  * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
  *        (With explanation, I mean this definition and the following function explanations, etc.)
  *
- * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyperedge_dim.
+ *                          be larger than or equal to hyEdge_dim.
  * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
@@ -67,7 +67,7 @@ class AbstractProblem
   private:
     HDGHyperGraph 
     < compute_n_dofs_per_node
-      ( TopologyT::hyperedge_dimension(), LocalSolverT::polynomial_degree(),
+      ( TopologyT::hyEdge_dimension(), LocalSolverT::polynomial_degree(),
         LocalSolverT::solution_dimension_hypernode() ),
       TopologyT, GeometryT
     > hyper_graph_;
@@ -91,11 +91,11 @@ class AbstractProblem
     : hyper_graph_  ( construct_topo, construct_geom ),
       local_solver_ ( construct_loc_sol )
     {
-      static_assert( TopologyT::hyperedge_dimension() == GeometryT::hyperedge_dimension() ,
+      static_assert( TopologyT::hyEdge_dimension() == GeometryT::hyEdge_dimension() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
                      "Space dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::hyperedge_dimension() == LocalSolverT::hyperedge_dimension() ,
+      static_assert( TopologyT::hyEdge_dimension() == LocalSolverT::hyEdge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     }
     /*!*********************************************************************************************
@@ -136,9 +136,9 @@ class AbstractProblem
      * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
-    std::vector<dof_value_type> return_zero_vector( )
+    std::vector<dof_value_t> return_zero_vector( )
     {
-      return std::vector<dof_value_type>(hyper_graph_.n_global_dofs(), 0.);
+      return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.);
     }
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
@@ -153,20 +153,20 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
-    std::vector<dof_value_type> matrix_vector_multiply( std::vector<dof_value_type> x_vec ) const
+    std::vector<dof_value_t> matrix_vector_multiply( std::vector<dof_value_t> x_vec ) const
     {
-      constexpr unsigned int hyperedge_dim  = TopologyT::hyperedge_dimension();
+      constexpr unsigned int hyEdge_dim  = TopologyT::hyEdge_dimension();
       constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
       
-      std::vector<dof_value_type> vec_Ax( x_vec.size() , 0.);
-      std::array<hypernode_index_type, 2*hyperedge_dim> hyperedge_hypernodes;
+      std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyperedge_hypernodes;
       
       std::array
       < std::array
-        < dof_value_type, 
-          compute_n_dofs_per_node( hyperedge_dim, poly_degree,
+        < dof_value_t, 
+          compute_n_dofs_per_node( hyEdge_dim, poly_degree,
                                    LocalSolverT::solution_dimension_hypernode() ) 
-        > , 2  * hyperedge_dim 
+        > , 2  * hyEdge_dim 
       > hyperedge_dofs;
       
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyperedge)
@@ -264,7 +264,7 @@ class AbstractProblem
      * \param   lambda        A vector of unknowns containing the data vector.
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
-    void plot_solution( std::vector<dof_value_type> lambda )
+    void plot_solution( std::vector<dof_value_t> lambda )
     {
       plot(hyper_graph_, local_solver_, lambda , plot_options );
     }
@@ -278,23 +278,23 @@ class AbstractProblem
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
  * \f]
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyperedge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyperedge_dim = 2) or volumes (\c hyperedge_dim = 3).
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
  *
- * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyperedge_dim.
+ *                          be larger than or equal to hyEdge_dim.
  * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
 using DiffusionProblemRegularNaive = 
-AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
-                  Geometry::UnitCube< hyperedge_dim, space_dim >,
-                  DiffusionSolverNaive_RegularQuad < hyperedge_dim, poly_degree, 2 * poly_degree >
+AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
+                  Geometry::UnitCube< hyEdge_dim, space_dim >,
+                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
 
 /*!*************************************************************************************************
@@ -302,21 +302,20 @@ AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
  *
  * \todo    This has not yet been fully implemented!
  *
- * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyperedge_dim.
+ *                          be larger than or equal to hyEdge_dim.
  * \tparam  poly_degree     The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim, unsigned int poly_degree>
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
 using ElasticityProblemRegular = 
-AbstractProblem < Topology::Cubic< hyperedge_dim, space_dim >,
-                  Geometry::UnitCube< hyperedge_dim, space_dim >,
-                  ElasticitySolver_RegularQuad < hyperedge_dim, space_dim, 
-                                                 poly_degree, 2 * poly_degree >
+AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
+                  Geometry::UnitCube< hyEdge_dim, space_dim >,
+                  ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
 
 #endif // end of ifndef ABSTRACTPROBLEM_HXX

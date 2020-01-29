@@ -34,19 +34,19 @@ template class Cubic< 3, 3 >;
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 2> line_to_point_index
-(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
+array<hyNode_index_t, 2> line_to_point_index
+(const array<unsigned int, space_dim>& num_lines, const hyEdge_index_t index)
 {
   hy_assert( num_lines.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
-  array<hypernode_index_type, 2> point_indices;
+  array<hyNode_index_t, 2> point_indices;
   point_indices.fill(0);
   
-  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
+  array<hyEdge_index_t, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -62,7 +62,7 @@ array<hypernode_index_type, 2> line_to_point_index
     hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -90,19 +90,19 @@ array<hypernode_index_type, 2> line_to_point_index
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 4> square_to_line_index
-(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
+array<hyNode_index_t, 4> square_to_line_index
+(const array<unsigned int, space_dim>& num_squares, const hyEdge_index_t index)
 {
   hy_assert( num_squares.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
-  array<hypernode_index_type, 4> line_indices;
+  array<hyNode_index_t, 4> line_indices;
   line_indices.fill(0);
   
-  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
+  array<hyEdge_index_t, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -119,7 +119,7 @@ array<hypernode_index_type, 4> square_to_line_index
     hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -134,7 +134,7 @@ array<hypernode_index_type, 4> square_to_line_index
   }
   hy_assert( index_helper == 0 , "No squares should be left any more!" );
   
-  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
+  array<hyEdge_index_t, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -169,18 +169,18 @@ array<hypernode_index_type, 4> square_to_line_index
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 6> cube_to_square_index
-(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
+array<hyNode_index_t, 6> cube_to_square_index
+(const array<unsigned int, space_dim>& num_cubes, const hyEdge_index_t index)
 {
   hy_assert( num_cubes.size() == space_dim , "The size of the handed over parmeter does not fit!" );
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
-  array<hypernode_index_type, 6> square_indices;
+  array<hyNode_index_t, 6> square_indices;
   square_indices.fill(0);
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -192,7 +192,7 @@ array<hypernode_index_type, 6> cube_to_square_index
   }
   hy_assert( index_helper == 0 , "No cubes should be left any more!" );
   
-  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
+  array<hyEdge_index_t, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -224,21 +224,21 @@ array<hypernode_index_type, 6> cube_to_square_index
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Cubic<hyperedge_dim,space_dim>::hyperedge::
-hyperedge(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Cubic<hyEdge_dim,space_dim>::hyperedge::
+hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
 {
-  for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyperedge_dim; ++local_hypernode)
+  for (unsigned int local_hypernode = 0; local_hypernode < 2 * hyEdge_dim; ++local_hypernode)
     correct_hypernode_orientation_[local_hypernode] = 1;
-  if constexpr ( hyperedge_dim == 1 )       hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
-  else if constexpr ( hyperedge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
+  if constexpr ( hyEdge_dim == 1 )       hypernode_indices_ = line_to_point_index<space_dim>(num_elements, index);
+  else if constexpr ( hyEdge_dim == 2 )  hypernode_indices_ = square_to_line_index<space_dim>(num_elements, index);
+  else if constexpr ( hyEdge_dim == 3 )  hypernode_indices_ = cube_to_square_index<space_dim>(num_elements, index);    
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const array<hypernode_index_type, 2*hyperedge_dim>&
-Cubic<hyperedge_dim,space_dim>::hyperedge::get_hypernode_indices() const
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+const array<hyNode_index_t, 2*hyEdge_dim>&
+Cubic<hyEdge_dim,space_dim>::hyperedge::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
@@ -249,20 +249,20 @@ Cubic<hyperedge_dim,space_dim>::hyperedge::get_hypernode_indices() const
  */
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Cubic<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Cubic<hyEdge_dim,space_dim>::
 Cubic(const array<unsigned int, space_dim>& num_elements)
 : num_elements_(num_elements)
 {
-  static_assert( hyperedge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
-  static_assert( space_dim >= hyperedge_dim, "A domain cannot live within a smaller space!" );
+  static_assert( hyEdge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
+  static_assert( space_dim >= hyEdge_dim, "A domain cannot live within a smaller space!" );
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
     
   // Set n_hyperedges_
   n_hyperedges_ = 1;
-  if ( hyperedge_dim == space_dim )
+  if ( hyEdge_dim == space_dim )
     for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyperedges_ *= num_elements[dim];
-  else if ( hyperedge_dim == space_dim - 1 )
+  else if ( hyEdge_dim == space_dim - 1 )
   {
     n_hyperedges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -274,7 +274,7 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
       n_hyperedges_ += helper;
     }
   }
-  else if ( hyperedge_dim == space_dim - 2 )
+  else if ( hyEdge_dim == space_dim - 2 )
   {
     n_hyperedges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -291,13 +291,13 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
   
   // Set n_hypernodes
   n_hypernodes_ = 1;
-  if (hyperedge_dim == 1)
+  if (hyEdge_dim == 1)
   {
     n_hypernodes_ *= num_elements[0] + 1;
     if (space_dim > 1)  n_hypernodes_ *= num_elements[1] + 1;
     if (space_dim > 2)  n_hypernodes_ *= num_elements[2] + 1;
   }
-  else if ( hyperedge_dim == space_dim )
+  else if ( hyEdge_dim == space_dim )
   {
     n_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -309,7 +309,7 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
       n_hypernodes_ += helper;
     }
   }
-  else if ( hyperedge_dim == space_dim - 1 )
+  else if ( hyEdge_dim == space_dim - 1 )
   {
     n_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -325,21 +325,21 @@ Cubic(const array<unsigned int, space_dim>& num_elements)
   hy_assert( n_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Cubic<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Cubic<hyEdge_dim,space_dim>::
 Cubic(const constructor_value_type& num_elements)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim];
   
-  static_assert( hyperedge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
-  static_assert( space_dim >= hyperedge_dim, "A domain cannot live within a smaller space!" );
+  static_assert( hyEdge_dim >= 1, "Domains must have dimension larger than or equal to 1!" );
+  static_assert( space_dim >= hyEdge_dim, "A domain cannot live within a smaller space!" );
   static_assert( space_dim <= 3, "Only spaces up to dimension 3 are implemented!" );
     
   // Set n_hyperedges_
   n_hyperedges_ = 1;
-  if ( hyperedge_dim == space_dim )
+  if ( hyEdge_dim == space_dim )
     for (unsigned int dim = 0; dim < space_dim; ++dim)  n_hyperedges_ *= num_elements[dim];
-  else if ( hyperedge_dim == space_dim - 1 )
+  else if ( hyEdge_dim == space_dim - 1 )
   {
     n_hyperedges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -351,7 +351,7 @@ Cubic(const constructor_value_type& num_elements)
       n_hyperedges_ += helper;
     }
   }
-  else if ( hyperedge_dim == space_dim - 2 )
+  else if ( hyEdge_dim == space_dim - 2 )
   {
     n_hyperedges_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -368,13 +368,13 @@ Cubic(const constructor_value_type& num_elements)
   
   // Set n_hypernodes
   n_hypernodes_ = 1;
-  if (hyperedge_dim == 1)
+  if (hyEdge_dim == 1)
   {
     n_hypernodes_ *= num_elements[0] + 1;
     if (space_dim > 1)  n_hypernodes_ *= num_elements[1] + 1;
     if (space_dim > 2)  n_hypernodes_ *= num_elements[2] + 1;
   }
-  else if ( hyperedge_dim == space_dim )
+  else if ( hyEdge_dim == space_dim )
   {
     n_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -386,7 +386,7 @@ Cubic(const constructor_value_type& num_elements)
       n_hypernodes_ += helper;
     }
   }
-  else if ( hyperedge_dim == space_dim - 1 )
+  else if ( hyEdge_dim == space_dim - 1 )
   {
     n_hypernodes_ = 0;
     for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -402,17 +402,17 @@ Cubic(const constructor_value_type& num_elements)
   hy_assert( n_hypernodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Cubic<hyperedge_dim,space_dim>::
-Cubic(const Cubic<hyperedge_dim,space_dim>& other)
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Cubic<hyEdge_dim,space_dim>::
+Cubic(const Cubic<hyEdge_dim,space_dim>& other)
 : num_elements_(other.num_elements_), n_hyperedges_(other.n_hyperedges_),
   n_hypernodes_(other.n_hypernodes_) { }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const typename Cubic<hyperedge_dim,space_dim>::hyperedge
-Cubic<hyperedge_dim,space_dim>::
-get_hyperedge(const hyperedge_index_type index) const
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+const typename Cubic<hyEdge_dim,space_dim>::hyperedge
+Cubic<hyEdge_dim,space_dim>::
+get_hyperedge(const hyEdge_index_t index) const
 {
   hy_assert( index >= 0 && index < n_hyperedges_ ,
              "The index of an hyperedge must be non-negative and smaller than the total amount of "
@@ -422,40 +422,40 @@ get_hyperedge(const hyperedge_index_type index) const
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dim, unsigned int space_dim>
 const array<unsigned int, space_dim>& 
-Cubic<hyperedge_dim,space_dim>::
+Cubic<hyEdge_dim,space_dim>::
 num_elements() const
 {
   return num_elements_;
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const hyperedge_index_type
-Cubic<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+const hyEdge_index_t
+Cubic<hyEdge_dim,space_dim>::
 n_hyperedges() const
 {
   return n_hyperedges_;
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const hypernode_index_type
-Cubic<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+const hyNode_index_t
+Cubic<hyEdge_dim,space_dim>::
 n_hypernodes() const
 {
   return n_hypernodes_;
 }
 
 /*
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-constexpr unsigned int Cubic<hyperedge_dim,space_dim>::hyperedge_dimension()
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+constexpr unsigned int Cubic<hyEdge_dim,space_dim>::hyEdge_dimension()
 {
-  return hyperedge_dim;
+  return hyEdge_dim;
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-constexpr unsigned int Cubic<hyperedge_dim,space_dim>::space_dimension()
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+constexpr unsigned int Cubic<hyEdge_dim,space_dim>::space_dimension()
 {
   return space_dim;
 }

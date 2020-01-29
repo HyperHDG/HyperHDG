@@ -53,15 +53,15 @@ namespace Geometry
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyperedge_dim.
+ *                          be larger than or equal to hyEdge_dim.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dim, unsigned int space_dim>
 class UnitCube
 {
   
@@ -92,7 +92,7 @@ class UnitCube
        *
        * A \c std::array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
-      std::array<Point<space_dim>, 2*hyperedge_dim> points_;
+      std::array<Point<space_dim>, 2*hyEdge_dim> points_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -104,7 +104,7 @@ class UnitCube
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyperedge(const hyperedge_index_type index,
+      hyperedge(const hyEdge_index_t index,
                                const std::array<unsigned int, space_dim>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
@@ -167,7 +167,7 @@ class UnitCube
      * 
      * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
-    UnitCube(const Topology::Cubic<hyperedge_dim,space_dim>& other);
+    UnitCube(const Topology::Cubic<hyEdge_dim,space_dim>& other);
     /*!*********************************************************************************************
      * \brief   Get geometrical hyperedge of given index.
      *
@@ -178,14 +178,14 @@ class UnitCube
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyperedge get_hyperedge(const hyperedge_index_type index) const;
+    const hyperedge get_hyperedge(const hyEdge_index_t index) const;
       
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
      *
-     * \retval  hyperedge_dim   The dimension of a hyperedge.
+     * \retval  hyEdge_dim   The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; };
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *

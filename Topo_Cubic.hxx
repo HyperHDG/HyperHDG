@@ -54,15 +54,15 @@ namespace Topology
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \tparam  hyperedge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyperedge_dim.
+ *                          be larger than or equal to hyEdge_dim.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyperedge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dim, unsigned int space_dim>
 class Cubic
 {
   
@@ -83,7 +83,7 @@ class Cubic
        *
        * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
        ********************************************************************************************/
-      std::array<hypernode_index_type, 2*hyperedge_dim> hypernode_indices_;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hypernode_indices_;
       /*!*******************************************************************************************
        * \brief   Orientation of the hypernode.
        * 
@@ -94,7 +94,7 @@ class Cubic
        * edges are assumed to have the correct orientation and this array is irrelevant. However, 
        * this is possible to change for different applications.
        ********************************************************************************************/
-      std::array<unsigned int, 2*hyperedge_dim> correct_hypernode_orientation_;
+      std::array<unsigned int, 2*hyEdge_dim> correct_hypernode_orientation_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -106,7 +106,7 @@ class Cubic
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyperedge(const hyperedge_index_type index,
+      hyperedge(const hyEdge_index_t index,
                 const std::array<unsigned int, space_dim>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return indices of hypernodes adjacent to the hyperedge.
@@ -115,7 +115,7 @@ class Cubic
        *
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
-      const std::array<hypernode_index_type, 2*hyperedge_dim>& get_hypernode_indices() const;    
+      const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hypernode_indices() const;    
   }; // end of class hyperedge
   
   private:
@@ -132,7 +132,7 @@ class Cubic
      * through all hyperedges and execute some code. The number of hyperedges can be computed from
      * the \c std::array \c num_elements_.
      **********************************************************************************************/
-    hyperedge_index_type n_hyperedges_;
+    hyEdge_index_t n_hyperedges_;
     /*!*********************************************************************************************
      * \brief   Total amount of hypernodes.
      *
@@ -140,7 +140,7 @@ class Cubic
      * appropriate version of a \c HyperNodeFactory. It can be vomputed from the \c std::array
      * \c num_elements_.
      **********************************************************************************************/
-    hypernode_index_type n_hypernodes_;
+    hyNode_index_t n_hypernodes_;
   public:
     /*!*********************************************************************************************
      * \brief   Defines the return value of the class.
@@ -192,7 +192,7 @@ class Cubic
      *
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
-    Cubic(const Cubic<hyperedge_dim,space_dim>& other);
+    Cubic(const Cubic<hyEdge_dim,space_dim>& other);
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
@@ -203,7 +203,7 @@ class Cubic
      * \param   index           The index of the hyperedge to be returned.
      * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyperedge get_hyperedge(const hyperedge_index_type index) const;
+    const hyperedge get_hyperedge(const hyEdge_index_t index) const;
     /*!*********************************************************************************************
      * \brief   Read the array of elements per dimensions.
      *
@@ -215,20 +215,20 @@ class Cubic
      *
      * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyperedge_index_type n_hyperedges() const;
+    const hyEdge_index_t n_hyperedges() const;
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *
      * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type n_hypernodes() const;
+    const hyNode_index_t n_hypernodes() const;
     
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
      *
-     * \retval  hyperedge_dim   The dimension of a hyperedge.
+     * \retval  hyEdge_dim   The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyperedge_dimension() { return hyperedge_dim; };
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; };
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *

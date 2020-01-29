@@ -37,7 +37,7 @@ class Point
      * 
      * A \c std::array conatining the i-th coordinate of the point as its i-th entry.
      **********************************************************************************************/
-    std::array<point_coord_type, space_dim> coordinates_;
+    std::array<pt_coord_t, space_dim> coordinates_;
   public:
     /*!*********************************************************************************************
      * \brief   Empty constructor for a point.
@@ -52,7 +52,7 @@ class Point
      * 
      * \param   coordinates   A \c std::array containing the coordinates of the point.
      **********************************************************************************************/
-    Point(const std::array<point_coord_type, space_dim>& coordinates);
+    Point(const std::array<pt_coord_t, space_dim>& coordinates);
     
     Point(const Point<space_dim>& other); // copy constructor
     Point(Point<space_dim>&& other) noexcept; // move constructor
@@ -64,19 +64,19 @@ class Point
      * 
      * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
      *                        returned.
-     * \retval  coordinate    A reference to a \c point_coord_type describing the coord_entry'th
+     * \retval  coordinate    A reference to a \c pt_coord_t describing the coord_entry'th
      *                        coordinate.
      **********************************************************************************************/
-    point_coord_type& operator[](const unsigned int coord_entry);
+    pt_coord_t& operator[](const unsigned int coord_entry);
     /*!*********************************************************************************************
      * \brief   Return reference to const single coordinate of a point.
      * 
      * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
      *                        returned.
-     * \retval  coordinate    A reference to a \c point_coord_type describing the coord_entry'th
+     * \retval  coordinate    A reference to a \c pt_coord_t describing the coord_entry'th
      *                        coordinate.
      **********************************************************************************************/
-    point_coord_type coordinate(const unsigned int coord_entry) const;
+    pt_coord_t coordinate(const unsigned int coord_entry) const;
     /*!*********************************************************************************************
      * \brief   Find out whether two points have (exactly) the same coordinates.
      * 
@@ -112,10 +112,10 @@ class Point
      **********************************************************************************************/
     bool operator<(const Point<space_dim>& other_point) const;
     
-    Point<space_dim>& operator*=(const point_coord_type scale_fac);
-    Point<space_dim>& operator/=(const point_coord_type scale_denom);
-    Point<space_dim>& operator+=(const point_coord_type additum);
-    Point<space_dim>& operator-=(const point_coord_type subtractum);
+    Point<space_dim>& operator*=(const pt_coord_t scale_fac);
+    Point<space_dim>& operator/=(const pt_coord_t scale_denom);
+    Point<space_dim>& operator+=(const pt_coord_t additum);
+    Point<space_dim>& operator-=(const pt_coord_t subtractum);
     
     Point<space_dim>& operator+=(const Point<space_dim>& other);
     Point<space_dim>& operator-=(const Point<space_dim>& other);
@@ -128,10 +128,10 @@ class Point
 
 
 template<unsigned int space_dim>
-point_coord_type norm_2(const Point<space_dim>& point); 
+pt_coord_t norm_2(const Point<space_dim>& point); 
 
 
 template<unsigned int space_dim>
-point_coord_type distance_2(const Point<space_dim>& left, const Point<space_dim>& right);
+pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right);
 
 #endif // end of ifndef POINT_HXX
