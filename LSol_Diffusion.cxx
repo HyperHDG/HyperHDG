@@ -254,7 +254,7 @@ inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) *
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
 assemble_loc_mat() const
 {
-  double hyperedge_area = 1.;
+  double hyEdge_area = 1.;
   array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_mat;
   local_mat.fill(0.);
   
@@ -264,7 +264,7 @@ assemble_loc_mat() const
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += 
-            quad_weights_[q] * hyperedge_area * trials_quad_[i][q] * trials_quad_[j][q];
+            quad_weights_[q] * hyEdge_area * trials_quad_[i][q] * trials_quad_[j][q];
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
           local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -=

@@ -217,8 +217,8 @@ array<hyNode_index_t, 6> cube_to_square_index(const array<unsigned int, space_di
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-UnitCube<hyEdge_dim,space_dim>::hyperedge::
-hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
+UnitCube<hyEdge_dim,space_dim>::hyEdge::
+hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
 {
   if constexpr ( hyEdge_dim == 1 )
   {
@@ -249,7 +249,7 @@ hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_
 }
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyperedge::
+Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyEdge::
 point(unsigned int index) const
 {
   return points_[index];
@@ -257,7 +257,7 @@ point(unsigned int index) const
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyperedge::
+Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyEdge::
 normal(unsigned int index) const
 {
   Point<space_dim> normal;
@@ -318,9 +318,9 @@ UnitCube(const constructor_value_type& num_elements)
 
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
-const typename UnitCube<hyEdge_dim, space_dim>::hyperedge
+const typename UnitCube<hyEdge_dim, space_dim>::hyEdge
 UnitCube<hyEdge_dim,space_dim>::
-get_hyperedge(const hyEdge_index_t index) const
+get_hyEdge(const hyEdge_index_t index) const
 {
-  return hyperedge(index, num_elements_);
+  return hyEdge(index, num_elements_);
 }

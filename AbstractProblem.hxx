@@ -52,11 +52,11 @@
  * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
  *        (With explanation, I mean this definition and the following function explanations, etc.)
  *
- * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -159,7 +159,7 @@ class AbstractProblem
       constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyperedge_hypernodes;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hypernodes;
       
       std::array
       < std::array
@@ -167,29 +167,29 @@ class AbstractProblem
           compute_n_dofs_per_node( hyEdge_dim, poly_degree,
                                    LocalSolverT::solution_dimension_hypernode() ) 
         > , 2  * hyEdge_dim 
-      > hyperedge_dofs;
+      > hyEdge_dofs;
       
-      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyperedge)
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
       {
-        // Fill x_vec's degrees of freedom of a hyperedge into hyperedge_dofs array
-        hyperedge_hypernodes = hyperedge.topology.get_hypernode_indices();
-        for ( unsigned int hypernode = 0 ; hypernode < hyperedge_hypernodes.size() ; ++hypernode )
-          hyperedge_dofs[hypernode] = 
-            hyper_graph_.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], x_vec);
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array
+        hyEdge_hypernodes = hyEdge.topology.get_hypernode_indices();
+        for ( unsigned int hypernode = 0 ; hypernode < hyEdge_hypernodes.size() ; ++hypernode )
+          hyEdge_dofs[hypernode] = 
+            hyper_graph_.hypernode_factory().get_dof_values(hyEdge_hypernodes[hypernode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax
         if constexpr ( LocalSolverT::need_geometry_processing() )
         {
-          auto solver_dofs    = local_solver_.preprocess_data(hyperedge_dofs, hyperedge.geometry);
+          auto solver_dofs    = local_solver_.preprocess_data(hyEdge_dofs, hyEdge.geometry);
           auto solver_result  = local_solver_.numerical_flux_from_lambda(solver_dofs);
-          hyperedge_dofs      = local_solver_.postprocess_data(solver_result, hyperedge.geometry);
+          hyEdge_dofs      = local_solver_.postprocess_data(solver_result, hyEdge.geometry);
         }
-        else  hyperedge_dofs  = local_solver_.numerical_flux_from_lambda(hyperedge_dofs);
+        else  hyEdge_dofs  = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
         
-        // Fill hyperedge_dofs array degrees of freedom into vec_Ax
-        for ( unsigned int hypernode = 0 ; hypernode < hyperedge_hypernodes.size() ; ++hypernode )
+        // Fill hyEdge_dofs array degrees of freedom into vec_Ax
+        for ( unsigned int hypernode = 0 ; hypernode < hyEdge_hypernodes.size() ; ++hypernode )
           hyper_graph_.hypernode_factory().add_to_dof_values
-            (hyperedge_hypernodes[hypernode], vec_Ax, hyperedge_dofs[hypernode]);
+            (hyEdge_hypernodes[hypernode], vec_Ax, hyEdge_dofs[hypernode]);
       });
       
       for ( dof_index_type i = 0 ; i < dirichlet_indices_.size() ; ++i )
@@ -281,11 +281,11 @@ class AbstractProblem
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
  * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
  *
- * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -302,11 +302,11 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
  *
  * \todo    This has not yet been fully implemented!
  *
- * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree     The polynomial degree of test and trial functions.
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.

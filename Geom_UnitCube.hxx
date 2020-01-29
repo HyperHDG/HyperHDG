@@ -53,10 +53,10 @@ namespace Geometry
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dim.
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for 
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -84,7 +84,7 @@ class UnitCube
    * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
    * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
    **************************************************************************************************/
-  class hyperedge
+  class hyEdge
   {
     private:
       /*!*******************************************************************************************
@@ -104,7 +104,7 @@ class UnitCube
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyperedge(const hyEdge_index_t index,
+      hyEdge(const hyEdge_index_t index,
                                const std::array<unsigned int, space_dim>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
@@ -139,7 +139,7 @@ class UnitCube
      * the solver class). Thus, its main purpose is to provide a structure that administrates the
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
-    typedef hyperedge value_type;
+    typedef hyEdge value_type;
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
@@ -178,7 +178,7 @@ class UnitCube
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyperedge get_hyperedge(const hyEdge_index_t index) const;
+    const hyEdge get_hyEdge(const hyEdge_index_t index) const;
       
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
