@@ -72,7 +72,7 @@ class ElasticitySolver_RegularQuad
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
     static constexpr unsigned int solution_dimension_hyEdge() { return hyEdge_dim; }
-    static constexpr unsigned int solution_dimension_hypernode() { return space_dim; }
+    static constexpr unsigned int solution_dimension_hyNode() { return space_dim; }
     static constexpr bool need_geometry_processing() { return true; }
 };
 

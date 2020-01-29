@@ -269,9 +269,9 @@ normal(unsigned int index) const
 
 /*
 const array<hyNode_index_t, 2*hyEdge_dim>&
-UnitCube<hyEdge_dim,space_dim>::get_hypernode_indices() const
+UnitCube<hyEdge_dim,space_dim>::get_hyNode_indices() const
 {
-  return hypernode_indices_;
+  return hyNode_indices_;
 }
 
 

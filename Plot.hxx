@@ -244,16 +244,16 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
     
   std::array< std::array<double, HyperGraphT::n_dof_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
-  std::array<unsigned int, 2*hyEdge_dim> hyEdge_hypernodes;
+  std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
   std::array<double, compute_n_corners_of_cube(hyEdge_dim)> local_primal;
   std::array< std::array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) >
     local_dual;
   
   for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
   {
-    hyEdge_hypernodes = hyper_graph.hyEdge_topology(he_number).get_hypernode_indices();
-    for (unsigned int hypernode = 0; hypernode < hyEdge_hypernodes.size(); ++hypernode)
-      hyEdge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyEdge_hypernodes[hypernode], lambda);
+    hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
+    for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
     local_dual = local_solver.dual_in_corners_from_lambda(hyEdge_dofs);
     myfile << "      ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
@@ -271,9 +271,9 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   
   for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
   {
-    hyEdge_hypernodes = hyper_graph.hyEdge_topology(he_number).get_hypernode_indices();
-    for (unsigned int hypernode = 0; hypernode < hyEdge_hypernodes.size(); ++hypernode)
-      hyEdge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyEdge_hypernodes[hypernode], lambda);
+    hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
+    for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
     local_primal = local_solver.primal_in_corners_from_lambda(hyEdge_dofs);
     myfile << "        ";
     for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)

@@ -83,7 +83,7 @@ class Cubic
        *
        * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
        ********************************************************************************************/
-      std::array<hyNode_index_t, 2*hyEdge_dim> hypernode_indices_;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyNode_indices_;
       /*!*******************************************************************************************
        * \brief   Orientation of the hypernode.
        * 
@@ -94,7 +94,7 @@ class Cubic
        * edges are assumed to have the correct orientation and this array is irrelevant. However, 
        * this is possible to change for different applications.
        ********************************************************************************************/
-      std::array<unsigned int, 2*hyEdge_dim> correct_hypernode_orientation_;
+      std::array<unsigned int, 2*hyEdge_dim> correct_hyNode_orientation_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -115,7 +115,7 @@ class Cubic
        *
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
-      const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hypernode_indices() const;    
+      const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hyNode_indices() const;    
   }; // end of class hyperedge
   
   private:
@@ -140,7 +140,7 @@ class Cubic
      * appropriate version of a \c HyperNodeFactory. It can be vomputed from the \c std::array
      * \c num_elements_.
      **********************************************************************************************/
-    hyNode_index_t n_hypernodes_;
+    hyNode_index_t n_hyNodes_;
   public:
     /*!*********************************************************************************************
      * \brief   Defines the return value of the class.
@@ -221,7 +221,7 @@ class Cubic
      *
      * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hyNode_index_t n_hypernodes() const;
+    const hyNode_index_t n_hyNodes() const;
     
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
