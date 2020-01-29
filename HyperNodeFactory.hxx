@@ -48,7 +48,7 @@ class HyperNodeFactory
      * the correct size, to check whether a vector has the appropriate size, and to check whether a
      * degree of freedom has a valid index.
      **********************************************************************************************/
-    const hypernode_index_type n_hypernodes_;
+    const hyNode_index_t n_hypernodes_;
   public:
     /*!*********************************************************************************************
      * 
@@ -56,7 +56,7 @@ class HyperNodeFactory
      * 
      * \param   n_hypernodes   Total number of hypernodes.
      **********************************************************************************************/
-    HyperNodeFactory(const hypernode_index_type n_hypernodes);
+    HyperNodeFactory(const hyNode_index_t n_hypernodes);
     /*!*********************************************************************************************
      * \brief   Copy constructot for HypernodeFactory.
      * 
@@ -73,7 +73,7 @@ class HyperNodeFactory
      * 
      * \retval  n_hypernodes        The total amount of hypernodes in the considered hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type n_hypernodes() const;
+    const hyNode_index_t n_hypernodes() const;
     /*!*********************************************************************************************
      * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
@@ -89,7 +89,7 @@ class HyperNodeFactory
      *                              of freedom.
      **********************************************************************************************/
     std::array<dof_index_type, n_dofs_per_node> get_dof_indices
-      (const hypernode_index_type hypernode_index) const;
+      (const hyNode_index_t hypernode_index) const;
     /*!*********************************************************************************************
      * \brief   Evaluate values of degrees of freedom related to a hypernode.
      * 
@@ -97,9 +97,9 @@ class HyperNodeFactory
      * \retval  dof_values          A \c std::array containing the values of related degrees of
      *                              freedom.
      **********************************************************************************************/
-    std::array<dof_value_type, n_dofs_per_node> get_dof_values
-      (const hypernode_index_type hypernode_index,
-       const std::vector<dof_value_type>& global_dof_vector) const;
+    std::array<dof_value_t, n_dofs_per_node> get_dof_values
+      (const hyNode_index_t hypernode_index,
+       const std::vector<dof_value_t>& global_dof_vector) const;
     /*!*********************************************************************************************
      * \brief   Addy different values to values of degrees of freedom related to a hypernode.
      * 
@@ -113,8 +113,8 @@ class HyperNodeFactory
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
     void add_to_dof_values
-      (const hypernode_index_type hypernode_index, std::vector<dof_value_type>& global_dof_vector,
-       const std::array<dof_value_type, n_dofs_per_node>& local_dof_vector) const;
+      (const hyNode_index_t hypernode_index, std::vector<dof_value_t>& global_dof_vector,
+       const std::array<dof_value_t, n_dofs_per_node>& local_dof_vector) const;
     /*!*********************************************************************************************
      * \brief   Set all values of degrees of freedom of a hypernode to a predefined value.
      * 
@@ -123,8 +123,8 @@ class HyperNodeFactory
      * \param   value               The future value of related degrees of freedom.
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
-    void set_dof_values(const hypernode_index_type hypernode_index,
-      std::vector<dof_value_type>& global_dof_vector, const dof_value_type value) const;
+    void set_dof_values(const hyNode_index_t hypernode_index,
+      std::vector<dof_value_t>& global_dof_vector, const dof_value_t value) const;
     
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the amount of dofs per node.
@@ -138,13 +138,13 @@ class HyperNodeFactory
  * \brief   Calculate the amount of local degrees of freedom of a hypernode at compile time.
  * 
  * Naive implementation without math packages of
- * "amount = solution_dim * (poly_degree ^ (hyperedge_dim - 1))"!
+ * "amount = solution_dim * (poly_degree ^ (hyEdge_dim - 1))"!
  * 
  * Theis function is a constexpr which gives the amount of degrees of freedom associated to one 
  * hypernode (which is assumed to be the same for all hypernodes). It is usually used in combination
  * with the class \c HyperNodeFactory.
  * 
- * \param   hyperedge_dim       The dimension of a hyperedge (1 for graphs).
+ * \param   hyEdge_dim       The dimension of a hyperedge (1 for graphs).
  * \param   poly_degree         The local polynomial degree of test functions.
  * \param   solution_dim        The dimension of the solution (1 for scalar equations).
  * \retval  n_dofs_per_node     The amount of degrees of freedom per hypernode.
@@ -152,11 +152,11 @@ class HyperNodeFactory
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyperedge_dim,
+constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyEdge_dim,
   const unsigned int poly_degree, const unsigned int solution_dim = 1 )
 {
   unsigned int amount = 1;
-  for (unsigned int iteration = 0; iteration < hyperedge_dim - 1; ++ iteration)
+  for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)
     amount *= poly_degree + 1;
   amount *= solution_dim;
   return amount;

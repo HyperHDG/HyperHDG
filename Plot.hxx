@@ -161,19 +161,19 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	      const std::vector<double>& lambda,
 	      const PlotOptions& plotOpt)
 {
-  constexpr unsigned int hyperedge_dim = HyperGraphT::hyperedge_dimension();
+  constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
   constexpr unsigned int space_dim = HyperGraphT::space_dimension();
   
-  const hyperedge_index_type n_hyperedges = hyper_graph.n_hyperedges();
-  const unsigned int points_per_hyperedge = 1 << hyperedge_dim;
+  const hyEdge_index_t n_hyperedges = hyper_graph.n_hyperedges();
+  const unsigned int points_per_hyperedge = 1 << hyEdge_dim;
   
-  point_index_type n_points = points_per_hyperedge * n_hyperedges;
+  pt_index_t n_points = points_per_hyperedge * n_hyperedges;
   
-  static_assert (hyperedge_dim <= 3);
+  static_assert (hyEdge_dim <= 3);
   unsigned int element_id;
-  if constexpr (hyperedge_dim == 1)       element_id = 3;
-  else if constexpr (hyperedge_dim == 2)  element_id = 8;
-  else if constexpr (hyperedge_dim == 3)  element_id = 11;
+  if constexpr (hyEdge_dim == 1)       element_id = 3;
+  else if constexpr (hyEdge_dim == 2)  element_id = 8;
+  else if constexpr (hyEdge_dim == 3)  element_id = 11;
   
   Point<space_dim> point;
   std::ofstream myfile;
@@ -194,7 +194,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "      <Points>" << std::endl;
   myfile << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
   
-  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
+  for (hyEdge_index_t he_number = 0; he_number < n_hyperedges; ++he_number)
   {
     auto hyperedge_geometry = hyper_graph.hyperedge_geometry(he_number);
     for (unsigned int pt_number = 0; pt_number < points_per_hyperedge; ++pt_number)
@@ -215,7 +215,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	myfile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-	for (point_index_type pt_number = 0; pt_number < n_points; ++pt_number)
+	for (pt_index_t pt_number = 0; pt_number < n_points; ++pt_number)
     myfile << "  " << pt_number;
   myfile << std::endl;
   
@@ -223,7 +223,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-  for (point_index_type pt_number = points_per_hyperedge; pt_number <= n_points;
+  for (pt_index_t pt_number = points_per_hyperedge; pt_number <= n_points;
        pt_number += points_per_hyperedge)
     myfile << "  " << pt_number;
   myfile << std::endl;
@@ -232,7 +232,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	myfile << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
   myfile << "        ";
   
-  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
+  for (hyEdge_index_t he_number = 0; he_number < n_hyperedges; ++he_number)
     myfile << "  " << element_id;
   myfile << std::endl;
   
@@ -241,25 +241,25 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   
   
   myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
-  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyperedge_dim << "\" format=\"ascii\">" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
     
-  std::array< std::array<double, HyperGraphT::n_dof_per_node() > , 2*hyperedge_dim > hyperedge_dofs;
-  std::array<unsigned int, 2*hyperedge_dim> hyperedge_hypernodes;
-  std::array<double, compute_n_corners_of_cube(hyperedge_dim)> local_primal;
-  std::array< std::array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) >
+  std::array< std::array<double, HyperGraphT::n_dof_per_node() > , 2*hyEdge_dim > hyperedge_dofs;
+  std::array<unsigned int, 2*hyEdge_dim> hyperedge_hypernodes;
+  std::array<double, compute_n_corners_of_cube(hyEdge_dim)> local_primal;
+  std::array< std::array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) >
     local_dual;
   
-  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
+  for (hyEdge_index_t he_number = 0; he_number < n_hyperedges; ++he_number)
   {
     hyperedge_hypernodes = hyper_graph.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_dual = local_solver.dual_in_corners_from_lambda(hyperedge_dofs);
     myfile << "      ";
-    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
+    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
     {
       myfile << "  ";
-      for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
         myfile << "  " << local_dual[corner][dim];
     }
     myfile << std::endl;
@@ -269,14 +269,14 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   
   
-  for (hyperedge_index_type he_number = 0; he_number < n_hyperedges; ++he_number)
+  for (hyEdge_index_t he_number = 0; he_number < n_hyperedges; ++he_number)
   {
     hyperedge_hypernodes = hyper_graph.hyperedge_topology(he_number).get_hypernode_indices();
     for (unsigned int hypernode = 0; hypernode < hyperedge_hypernodes.size(); ++hypernode)
       hyperedge_dofs[hypernode] = hyper_graph.hypernode_factory().get_dof_values(hyperedge_hypernodes[hypernode], lambda);
     local_primal = local_solver.primal_in_corners_from_lambda(hyperedge_dofs);
     myfile << "        ";
-    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
+    for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
       myfile << "  " << local_primal[corner];
     myfile << std::endl;
   }

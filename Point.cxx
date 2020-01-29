@@ -18,9 +18,9 @@ using namespace std;
 
 
 template<unsigned int space_dim>
-point_coord_type norm_2(const Point<space_dim>& point)
+pt_coord_t norm_2(const Point<space_dim>& point)
 {
-  point_coord_type norm = 0.;
+  pt_coord_t norm = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     norm += point.coordinate(dim) * point.coordinate(dim);
   return sqrt(norm);
@@ -28,9 +28,9 @@ point_coord_type norm_2(const Point<space_dim>& point)
 
 
 template<unsigned int space_dim>
-point_coord_type distance_2(const Point<space_dim>& left, const Point<space_dim>& right)
+pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right)
 {
-  point_coord_type distance = 0.;
+  pt_coord_t distance = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     distance += (left.coordinate(dim) - right.coordinate(dim)) 
                 * (left.coordinate(dim) - right.coordinate(dim));
@@ -46,7 +46,7 @@ Point<space_dim>::Point()
 
 
 template<unsigned int space_dim>
-Point<space_dim>::Point (const array<point_coord_type, space_dim>& coordinates)
+Point<space_dim>::Point (const array<pt_coord_t, space_dim>& coordinates)
 : coordinates_(coordinates)
 {
   static_assert( 0 < space_dim && space_dim < 4 ,
@@ -100,7 +100,7 @@ Point<space_dim>& Point<space_dim>::operator= (Point<space_dim>&& other) noexcep
 
 
 template<unsigned int space_dim>
-point_coord_type& Point<space_dim>::operator[] (const unsigned int coord_entry)
+pt_coord_t& Point<space_dim>::operator[] (const unsigned int coord_entry)
 {
   hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
              "You can only access entries of a point's coordinates that have a non-negaitive index "
@@ -111,7 +111,7 @@ point_coord_type& Point<space_dim>::operator[] (const unsigned int coord_entry)
 
 
 template<unsigned int space_dim>
-point_coord_type Point<space_dim>::coordinate(const unsigned int coord_entry) const
+pt_coord_t Point<space_dim>::coordinate(const unsigned int coord_entry) const
 {
   hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
              "You can only access entries of a point's coordinates that have a non-negaitive index "
@@ -150,7 +150,7 @@ bool Point<space_dim>::operator<(const Point<space_dim>& other_point) const
 
 
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator*=(const point_coord_type scale_fac)
+Point<space_dim>& Point<space_dim>::operator*=(const pt_coord_t scale_fac)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     coordinates_[dim] *= scale_fac;
@@ -159,7 +159,7 @@ Point<space_dim>& Point<space_dim>::operator*=(const point_coord_type scale_fac)
 
 
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator/=(const point_coord_type scale_denom)
+Point<space_dim>& Point<space_dim>::operator/=(const pt_coord_t scale_denom)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     coordinates_[dim] /= scale_denom;
@@ -168,7 +168,7 @@ Point<space_dim>& Point<space_dim>::operator/=(const point_coord_type scale_deno
 
 
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator+=(const point_coord_type additum)
+Point<space_dim>& Point<space_dim>::operator+=(const pt_coord_t additum)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     coordinates_[dim] += additum;
@@ -177,7 +177,7 @@ Point<space_dim>& Point<space_dim>::operator+=(const point_coord_type additum)
 
 
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator-=(const point_coord_type subtractum)
+Point<space_dim>& Point<space_dim>::operator-=(const pt_coord_t subtractum)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     coordinates_[dim] -= subtractum;

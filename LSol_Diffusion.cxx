@@ -41,17 +41,17 @@ inline vector< vector<double> > double_dyadic_product(const vector< vector<doubl
 }
 
 
-inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge_dim, const unsigned int max_poly_degree, const unsigned int dimension, const unsigned int ansatz)
+inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyEdge_dim, const unsigned int max_poly_degree, const unsigned int dimension, const unsigned int ansatz)
 {
   vector<double> unity_vec(max_poly_degree+1, 1.);
   vector<double> ansatz_vec(max_poly_degree+1, 0.);
   hy_assert( ansatz < ansatz_vec.size() , "Ansatz function index in one dimension must be smaller than maximal degree + 1." );
   ansatz_vec[ansatz] = 1;
   vector<double> result;
-  if( hyperedge_dim == 1 )  result = unity_vec;
+  if( hyEdge_dim == 1 )  result = unity_vec;
   else                      result = ansatz_vec;
   
-  for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+  for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
     if (dim == 1 && dimension == 0)  result = dyadic_product(unity_vec, result);
     else if (dim == dimension)       result = dyadic_product(result, unity_vec);
     else                             result = dyadic_product(result, ansatz_vec);
@@ -60,8 +60,8 @@ inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyperedge
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
 DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
 : tau_(tau)
 { 
@@ -77,7 +77,7 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
 //    derivs_at_bdr1D = derivs_of_trial_at_boundaries<max_poly_degree>();
     
   // In the one-dimensional case, we are done now.
-  if constexpr (hyperedge_dim == 1)
+  if constexpr (hyEdge_dim == 1)
   {
     quad_weights_ = quad_weights1D;
     quad_bdr_ = { 1. };
@@ -96,9 +96,9 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
     vector<double> quad_weights_vec(quad_weights1D.begin(), quad_weights1D.end());
     if (quad_bdr_.size() == quad_weights1D_vec.size())
       for (unsigned int i = 0; i < quad_bdr_.size(); ++i)  quad_bdr_[i] = quad_weights1D_vec[i];
-    for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+    for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
     {
-      if (dim == hyperedge_dim - 2)
+      if (dim == hyEdge_dim - 2)
       {
         hy_assert( quad_bdr_.size() == quad_weights_vec.size() ,
                    "Amount of quadrature points should be equal to amount of quadrature weights." );
@@ -119,7 +119,7 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
         trials_in_corners1D_vec[i][j] = trials_at_bdr1D[i][j];
     }
     vector< vector<double> > trials_in_corners_vec = trials_in_corners1D_vec;
-    for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+    for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
       trials_in_corners_vec = double_dyadic_product(trials_in_corners_vec, trials_in_corners1D_vec);
     hy_assert( trials_in_corners_.size() == trials_in_corners_vec.size() ,
                "Size of array and vector that will become array must be equal." );
@@ -140,7 +140,7 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
         trials_at_quad1D_vec[i][j] = trials_at_quad1D[i][j];
     }
     vector< vector<double> > trials_at_quad_vec = trials_at_quad1D_vec;
-    for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+    for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
       trials_at_quad_vec = double_dyadic_product(trials_at_quad_vec, trials_at_quad1D_vec);
     hy_assert( trials_quad_.size() == trials_at_quad_vec.size() ,
                "Size of array and vector that will become array must be equal." );
@@ -154,7 +154,7 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
     
     // Deal with boundary trials at quadrature points that remain a vector (func) of vectors (quad).
     vector< vector<double> > bound_trials_at_quad_vec = trials_at_quad1D_vec;
-    for (unsigned int dim = 1; dim < hyperedge_dim - 1; ++dim)
+    for (unsigned int dim = 1; dim < hyEdge_dim - 1; ++dim)
       bound_trials_at_quad_vec = double_dyadic_product(bound_trials_at_quad_vec, trials_at_quad1D_vec);
     hy_assert( bound_trials_quad_.size() == bound_trials_at_quad_vec.size() ,
                "Size of array and vector that will become array must be equal." );
@@ -175,11 +175,11 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
       for (unsigned int j = 0; j < derivs_at_quad1D[i].size(); ++j)
         derivs_at_quad1D_vec[i][j] = derivs_at_quad1D[i][j];
     }
-    vector< vector< vector<double> > > derivs_at_quad_vec(hyperedge_dim);
-    for (unsigned int dim_deriv = 0; dim_deriv < hyperedge_dim; ++dim_deriv)
+    vector< vector< vector<double> > > derivs_at_quad_vec(hyEdge_dim);
+    for (unsigned int dim_deriv = 0; dim_deriv < hyEdge_dim; ++dim_deriv)
     {
       derivs_at_quad_vec[dim_deriv] = trials_at_quad1D_vec;
-      for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+      for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
         if(dim_deriv == 0 && dim == 1)  derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad1D_vec, trials_at_quad1D_vec);
         else if (dim_deriv == dim)      derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], derivs_at_quad1D_vec);
         else                            derivs_at_quad_vec[dim_deriv] = double_dyadic_product(derivs_at_quad_vec[dim_deriv], trials_at_quad1D_vec);
@@ -200,16 +200,16 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
     }
     
     // Deal with trials at boundary which is a vector (boundary) of vectors (function) of vectors (quad).
-    vector< vector< vector<double> > > trials_bound_vec(2 * hyperedge_dim);
+    vector< vector< vector<double> > > trials_bound_vec(2 * hyEdge_dim);
     for (unsigned int side = 0; side < 2; ++side)
     {
       vector< vector<double> > helperling(trials_at_bdr1D.size());
       for (unsigned int i = 0; i < helperling.size(); ++i)
         helperling[i] = vector<double>(1, trials_at_bdr1D[i][side]);
-      for (unsigned int dim_face = 0; dim_face < hyperedge_dim; ++dim_face)
+      for (unsigned int dim_face = 0; dim_face < hyEdge_dim; ++dim_face)
       {
         trials_bound_vec[2*dim_face+side] = trials_at_quad1D_vec;
-        for (unsigned int dim = 1; dim < hyperedge_dim; ++dim)
+        for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)
           if (dim_face == 0 && dim == 1)  trials_bound_vec[2*dim_face+side] = double_dyadic_product(helperling, trials_at_quad1D_vec);
           else if (dim_face == dim)       trials_bound_vec[2*dim_face+side] = double_dyadic_product(trials_bound_vec[2*dim_face+side], helperling);
           else                            trials_bound_vec[2*dim_face+side] = double_dyadic_product(trials_bound_vec[2*dim_face+side], trials_at_quad1D_vec);
@@ -233,32 +233,32 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline unsigned int DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline unsigned int DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
 loc_matrix_index(const unsigned int row, const unsigned int column) const
 {
   hy_assert( 0 <= row ,
              "Row index should be larger than or equal to zero." );
-  hy_assert( row < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) ,
+  hy_assert( row < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim) ,
              "Row index should be smaller than total amount of rows." );
   hy_assert( 0 <= column ,
              "Column index should be larger than or equal to zero." );
-  hy_assert( column < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) ,
+  hy_assert( column < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim) ,
              "Column index should smaller than total amount of columns." );
-  return column * (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim) + row;  // Transposed for LAPACK
+  return column * (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim) + row;  // Transposed for LAPACK
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
 assemble_loc_mat() const
 {
   double hyperedge_area = 1.;
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_> local_mat;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_mat;
   local_mat.fill(0.);
   
-  for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
     for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
     {
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
@@ -267,36 +267,36 @@ assemble_loc_mat() const
             quad_weights_[q] * hyperedge_area * trials_quad_[i][q] * trials_quad_[j][q];
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
-          local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyperedge_dim * num_ansatz_fct_ + j )] -=
+          local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
     }
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+    for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
     {
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
       {
         for (unsigned int q = 0; q < n_quads_; ++q)
-          local_mat[loc_matrix_index( hyperedge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -=
+          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
-          local_mat[loc_matrix_index( hyperedge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] +=
+          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] +=
             + quad_bdr_[q] * trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]
             - quad_bdr_[q] * trials_bound_[2*dim+0][i][q] * trials_bound_[2*dim+0][j][q];
       }
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
-          local_mat[loc_matrix_index( hyperedge_dim * num_ansatz_fct_ + i , hyperedge_dim * num_ansatz_fct_ + j )] +=
+          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] +=
             tau_ * quad_bdr_[q] * (trials_bound_[2*dim+0][i][q] * trials_bound_[2*dim+0][j][q]
                                    + trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]);
     }
   }
 /*  
   cout << endl << endl;
-  for (unsigned int i = 0; i < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim); ++i)
+  for (unsigned int i = 0; i < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim); ++i)
   {
-    for(unsigned int j = 0; j < (hyperedge_dim + 1) * pow((max_poly_degree + 1), hyperedge_dim); ++j)
+    for(unsigned int j = 0; j < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim); ++j)
       cout << local_mat[loc_matrix_index(i,j)] << "  ";
     cout << endl;
   }
@@ -305,21 +305,21 @@ assemble_loc_mat() const
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_> right_hand_side;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side;
   right_hand_side.fill(0.);
   
-  hy_assert( lambda_values.size() == 2 * hyperedge_dim ,
+  hy_assert( lambda_values.size() == 2 * hyEdge_dim ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
-  for (unsigned int i = 0; i < 2 * hyperedge_dim; ++i)
+  for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
     hy_assert( lambda_values[i].size() == num_ansatz_bdr_ ,
                "The size of the lambda values should be the amount of ansatz functions ar boundary." );
   
-  for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
     for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
       for (unsigned int bdr_ans = 0; bdr_ans < num_ansatz_bdr_; ++bdr_ans)
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
@@ -328,10 +328,10 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& la
             - quad_bdr_[q] * lambda_values[2*dim+1][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+1][ansatz][q];
   
   for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
-    for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+    for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       for (unsigned int bdr_ans = 0; bdr_ans < num_ansatz_bdr_; ++bdr_ans)
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
-          right_hand_side[hyperedge_dim * num_ansatz_fct_ + ansatz] += tau_ * quad_bdr_[q] *
+          right_hand_side[hyEdge_dim * num_ansatz_fct_ + ansatz] += tau_ * quad_bdr_[q] *
             ( lambda_values[2*dim+0][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+0][ansatz][q]
             + lambda_values[2*dim+1][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+1][ansatz][q] );
 /*  
@@ -368,11 +368,11 @@ vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const 
 */
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_>& loc_matrix,
-                         array<double, (hyperedge_dim+1) * num_ansatz_fct_>& loc_rhs) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+solve_local_system_of_eq(array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>& loc_matrix,
+                         array<double, (hyEdge_dim+1) * num_ansatz_fct_>& loc_rhs) const
 {
   hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
              "The size of a local matrix should be the size of the right-hand side squared." );
@@ -386,17 +386,17 @@ solve_local_system_of_eq(array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hy
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline auto // array<double, (hyperedge_dim+1) * num_ansatz_fct_>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_ * (hyperedge_dim+1) * num_ansatz_fct_> local_matrix;
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_> right_hand_side;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_matrix;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side;
   right_hand_side = assemble_rhs(lambda_values);
   local_matrix = assemble_loc_mat();
   
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_> solution = solve_local_system_of_eq(local_matrix, right_hand_side);
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = solve_local_system_of_eq(local_matrix, right_hand_side);
 /*  
   cout << endl;
   for (unsigned int i = 0; i < solution.size(); ++i) cout << "  " << solution[i];
@@ -406,14 +406,14 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_di
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
-  array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
   
-  for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
   {
     bdr_values[2*dim].fill(0.);
     bdr_values[2*dim+1].fill(0.);
@@ -430,14 +430,14 @@ dual_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeff
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > 
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > 
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
-  array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
   
-  for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
   {
     bdr_values[2*dim].fill(0.);
     bdr_values[2*dim+1].fill(0.);
@@ -445,8 +445,8 @@ primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coe
       for (unsigned int ansatz = 0; ansatz < num_ansatz_fct_; ++ansatz)
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
         {
-          bdr_values[2*dim+0][bdr_ansatz] += quad_bdr_[q] * coeffs[hyperedge_dim * num_ansatz_fct_ + ansatz] * trials_bound_[2*dim+0][ansatz][q] * bound_trials_quad_[bdr_ansatz][q];
-          bdr_values[2*dim+1][bdr_ansatz] += quad_bdr_[q] * coeffs[hyperedge_dim * num_ansatz_fct_ + ansatz] * trials_bound_[2*dim+1][ansatz][q] * bound_trials_quad_[bdr_ansatz][q];
+          bdr_values[2*dim+0][bdr_ansatz] += quad_bdr_[q] * coeffs[hyEdge_dim * num_ansatz_fct_ + ansatz] * trials_bound_[2*dim+0][ansatz][q] * bound_trials_quad_[bdr_ansatz][q];
+          bdr_values[2*dim+1][bdr_ansatz] += quad_bdr_[q] * coeffs[hyEdge_dim * num_ansatz_fct_ + ansatz] * trials_bound_[2*dim+1][ansatz][q] * bound_trials_quad_[bdr_ansatz][q];
         }
   }
   
@@ -454,14 +454,14 @@ primal_at_boundary(const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coe
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-auto // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values, const array<double, (hyperedge_dim+1) * num_ansatz_fct_>& coeffs) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values, const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
-  array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > bdr_values;
-  array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > primals = primal_at_boundary(coeffs);
-  array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim > duals   = dual_at_boundary(coeffs);
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > primals = primal_at_boundary(coeffs);
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > duals   = dual_at_boundary(coeffs);
   
   for (unsigned int i = 0; i < lambda_values.size(); ++i)
     for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
@@ -478,43 +478,43 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyper
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array<double, compute_n_corners_of_cube(hyperedge_dim)>
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array<double, compute_n_corners_of_cube(hyEdge_dim)>
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array<double, compute_n_corners_of_cube(hyperedge_dim)> primal_in_corners;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array<double, compute_n_corners_of_cube(hyEdge_dim)> primal_in_corners;
   primal_in_corners.fill(0.);
-  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
+  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
-      primal_in_corners[corner] += coefficients[hyperedge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
+      primal_in_corners[corner] += coefficients[hyEdge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
   return primal_in_corners;
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) >
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array< array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) >
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyperedge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array< array<double, hyperedge_dim> , compute_n_corners_of_cube(hyperedge_dim) > dual_in_corners;
-  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyperedge_dim); ++corner)
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array< array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) > dual_in_corners;
+  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
   {
     dual_in_corners[corner].fill(0.);
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
-      for (unsigned int dim = 0; dim < hyperedge_dim; ++dim)
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
         dual_in_corners[corner][dim] += coefficients[dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
   }
   return dual_in_corners;
 }
 
 
-template<unsigned int hyperedge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, compute_n_dofs_per_node(hyperedge_dim, max_poly_degree)> , 2 * hyperedge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyperedge_dim >
-DiffusionSolverNaive_RegularQuad<hyperedge_dim, max_poly_degree, max_quad_degree>::
-numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyperedge_dim >& lambda_values) const
+template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+DiffusionSolverNaive_RegularQuad<hyEdge_dim, max_poly_degree, max_quad_degree>::
+numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));
 }

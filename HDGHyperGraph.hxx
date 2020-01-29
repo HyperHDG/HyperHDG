@@ -173,7 +173,7 @@ class HDGHyperGraph
        * The \c HyperEdge is characterized via its respective \c HDGHypergraph (of which the
        * reference is saved) and its index who need to be members of the \c iterator.
        ********************************************************************************************/
-      hyperedge_index_type index_;
+      hyEdge_index_t index_;
     public:
 /*    
       using iterator_category = std::random_access_iterator_tag;
@@ -191,7 +191,7 @@ class HDGHyperGraph
        * \param   hypergraph    The \c HDGHyperGraph, the iterator refers to.
        * \param   index         Index of the object, the iterator dots at.
        ********************************************************************************************/
-      iterator(const HDGHyperGraph& hypergraph, const hyperedge_index_type index)
+      iterator(const HDGHyperGraph& hypergraph, const hyEdge_index_t index)
       : hypergraph_(hypergraph), index_(index) { }
       /*!*******************************************************************************************
        * \brief   Copy--construct an iterator from another iterator.
@@ -333,7 +333,7 @@ class HDGHyperGraph
       hypergraph_geometry_(construction_data.geometry),
       hypernode_factory_(hypergraph_topology_.n_hypernodes())
     {
-      static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
       hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
@@ -362,7 +362,7 @@ class HDGHyperGraph
     : hypergraph_topology_(construct_topo), hypergraph_geometry_(construct_geom),
       hypernode_factory_(hypergraph_topology_.n_hypernodes())
     {
-      static_assert( TopoT::hyperedge_dimension() == GeomT::hyperedge_dimension() ,
+      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
       hy_assert( hypernode_factory_.n_hypernodes() == hypergraph_topology_.n_hypernodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
@@ -386,7 +386,7 @@ class HDGHyperGraph
      * \param   index                 Index of the \c HyperEdge to be returned.
      * \retval  hyperedge             The \c HyperEdge of the given index.
      **********************************************************************************************/
-    const value_type operator[] (const hyperedge_index_type index) const
+    const value_type operator[] (const hyEdge_index_t index) const
     { return value_type(hyperedge_topology(index), hyperedge_geometry(index)); }
     /*!*********************************************************************************************
      * \brief   Return iterator to first \c HyperEdge of \c HDGHyperGraph.
@@ -436,7 +436,7 @@ class HDGHyperGraph
      * \param   index                 Index of the hyperedge to be returned.
      * \retval  hyperedge_topology    Topological information about hyperedge.
      **********************************************************************************************/
-    const typename TopoT::value_type hyperedge_topology(const hyperedge_index_type index) const
+    const typename TopoT::value_type hyperedge_topology(const hyEdge_index_t index) const
     { return hypergraph_topology_.get_hyperedge(index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
@@ -448,20 +448,20 @@ class HDGHyperGraph
      * \param   index                 Index of the hyperedge to be returned.
      * \retval  hyperedge_geometry    Geometrical information about hyperedge.
      **********************************************************************************************/
-    const typename GeomT::value_type hyperedge_geometry(const hyperedge_index_type index) const
+    const typename GeomT::value_type hyperedge_geometry(const hyEdge_index_t index) const
     { return hypergraph_geometry_.get_hyperedge(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyperedges          The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyperedge_index_type n_hyperedges() const  { return hypergraph_topology_.n_hyperedges(); }
+    const hyEdge_index_t n_hyperedges() const  { return hypergraph_topology_.n_hyperedges(); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *
      * \retval  n_hypernodes          The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hypernode_index_type n_hypernodes() const  { return hypernode_factory_.n_hypernodes(); }
+    const hyNode_index_t n_hypernodes() const  { return hypernode_factory_.n_hypernodes(); }
     /*!*********************************************************************************************
      * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
@@ -473,9 +473,9 @@ class HDGHyperGraph
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
      *
-     * \retval  hyperedge_dim         The dimension of a hyperedge.
+     * \retval  hyEdge_dim         The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyperedge_dimension() { return TopoT::hyperedge_dimension(); }
+    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dimension(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *

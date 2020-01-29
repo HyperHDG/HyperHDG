@@ -13,12 +13,12 @@ template class Point<1>;
 template class Point<2>;
 template class Point<3>;
 
-template point_coord_type norm_2<1>(const Point<1>&);
-template point_coord_type norm_2<2>(const Point<2>&);
-template point_coord_type norm_2<3>(const Point<3>&);
+template pt_coord_t norm_2<1>(const Point<1>&);
+template pt_coord_t norm_2<2>(const Point<2>&);
+template pt_coord_t norm_2<3>(const Point<3>&);
 
 
-template point_coord_type distance_2<1>(const Point<1>& left, const Point<1>& right);
-template point_coord_type distance_2<2>(const Point<2>& left, const Point<2>& right);
-template point_coord_type distance_2<3>(const Point<3>& left, const Point<3>& right);
+template pt_coord_t distance_2<1>(const Point<1>& left, const Point<1>& right);
+template pt_coord_t distance_2<2>(const Point<2>& left, const Point<2>& right);
+template pt_coord_t distance_2<3>(const Point<3>& left, const Point<3>& right);
 

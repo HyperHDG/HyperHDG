@@ -32,18 +32,18 @@ template class UnitCube< 3, 3 >;
 
 
 template<unsigned int space_dim>
-array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& num_lines, const hyperedge_index_type index)
+array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& num_lines, const hyEdge_index_t index)
 {
   hy_assert( num_lines.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
   array<Point<space_dim>, 2> point_indices;
   point_indices.fill(Point<space_dim>());
   
-  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
+  array<hyEdge_index_t, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -59,7 +59,7 @@ array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& 
     hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -85,18 +85,18 @@ array<Point<space_dim>, 2> line_to_points(const array<unsigned int, space_dim>& 
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyperedge_index_type index)
+array<hyNode_index_t, 4> square_to_line_index(const array<unsigned int, space_dim>& num_squares, const hyEdge_index_t index)
 {
   hy_assert( num_squares.size() == space_dim , "The size of the handed over parmeter does not fit!" );
   unsigned int orientation;
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
-  array<hypernode_index_type, 4> line_indices;
+  array<hyNode_index_t, 4> line_indices;
   line_indices.fill(0);
   
-  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
+  array<hyEdge_index_t, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -113,7 +113,7 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
     hy_assert( orientation <= space_dim , "Orientation is a space_dim and connot exceed it." );
   }
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   index_helper -= number_with_lower_orientation;
@@ -127,7 +127,7 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
   }
   hy_assert( index_helper == 0 , "No lines should be left any more!" );
   
-  array<hyperedge_index_type, space_dim> num_lines_with_orientation;
+  array<hyEdge_index_t, space_dim> num_lines_with_orientation;
   num_lines_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -162,17 +162,17 @@ array<hypernode_index_type, 4> square_to_line_index(const array<unsigned int, sp
 
 
 template<unsigned int space_dim>
-array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyperedge_index_type index)
+array<hyNode_index_t, 6> cube_to_square_index(const array<unsigned int, space_dim>& num_cubes, const hyEdge_index_t index)
 {
   hy_assert( num_cubes.size() == space_dim , "The size of the handed over parmeter does not fit!" );
-  hyperedge_index_type num_elements_in_direction;
-  hyperedge_index_type number_with_lower_orientation = 0;
-  hyperedge_index_type index_helper = index;
+  hyEdge_index_t num_elements_in_direction;
+  hyEdge_index_t number_with_lower_orientation = 0;
+  hyEdge_index_t index_helper = index;
   
-  array<hypernode_index_type, 6> square_indices;
+  array<hyNode_index_t, 6> square_indices;
   square_indices.fill(0);
   
-  array<hyperedge_index_type, space_dim> local_indices;
+  array<hyEdge_index_t, space_dim> local_indices;
   local_indices.fill(0);
   
   for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -184,7 +184,7 @@ array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, sp
   }
   hy_assert( index_helper == 0 , "No lines should be left any more!" );
   
-  array<hyperedge_index_type, space_dim> num_squares_with_orientation;
+  array<hyEdge_index_t, space_dim> num_squares_with_orientation;
   num_squares_with_orientation.fill(1);
   
   for (unsigned int dim_m = 0; dim_m < space_dim; ++dim_m)
@@ -216,28 +216,28 @@ array<hypernode_index_type, 6> cube_to_square_index(const array<unsigned int, sp
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-UnitCube<hyperedge_dim,space_dim>::hyperedge::
-hyperedge(const hyperedge_index_type index, const array<unsigned int, space_dim>& num_elements)
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+UnitCube<hyEdge_dim,space_dim>::hyperedge::
+hyperedge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
 {
-  if constexpr ( hyperedge_dim == 1 )
+  if constexpr ( hyEdge_dim == 1 )
   {
     points_ = line_to_points<space_dim>(num_elements, index);
   }
-  else if constexpr ( hyperedge_dim == 2 )
+  else if constexpr ( hyEdge_dim == 2 )
   {
     hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
-    array<hypernode_index_type, 4> line_indices = square_to_line_index<space_dim>(num_elements, index);
+    array<hyNode_index_t, 4> line_indices = square_to_line_index<space_dim>(num_elements, index);
     array<Point<space_dim>, 2> points1 = line_to_points<space_dim>(num_elements, line_indices[0]);
     array<Point<space_dim>, 2> points2 = line_to_points<space_dim>(num_elements, line_indices[1]);
     points_[0] = points1[0];  points_[1] = points1[1];  points_[2] = points2[0];  points_[3] = points2[1];
   }
-  else if constexpr ( hyperedge_dim == 3 )
+  else if constexpr ( hyEdge_dim == 3 )
   {
     hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
-    array<hypernode_index_type, 6> square_indices = cube_to_square_index<space_dim>(num_elements, index);
-    array<hypernode_index_type, 4> line_indices1 = square_to_line_index<space_dim>(num_elements, square_indices[0]);
-    array<hypernode_index_type, 4> line_indices2 = square_to_line_index<space_dim>(num_elements, square_indices[1]);
+    array<hyNode_index_t, 6> square_indices = cube_to_square_index<space_dim>(num_elements, index);
+    array<hyNode_index_t, 4> line_indices1 = square_to_line_index<space_dim>(num_elements, square_indices[0]);
+    array<hyNode_index_t, 4> line_indices2 = square_to_line_index<space_dim>(num_elements, square_indices[1]);
     array<Point<space_dim>, 2> points1 = line_to_points<space_dim>(num_elements, line_indices1[0]);
     array<Point<space_dim>, 2> points2 = line_to_points<space_dim>(num_elements, line_indices1[1]);
     array<Point<space_dim>, 2> points3 = line_to_points<space_dim>(num_elements, line_indices2[0]);
@@ -248,16 +248,16 @@ hyperedge(const hyperedge_index_type index, const array<unsigned int, space_dim>
 //  sort(points_.begin(), points_.end());
 }
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyperedge_dim,space_dim>::hyperedge::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyperedge::
 point(unsigned int index) const
 {
   return points_[index];
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyperedge_dim,space_dim>::hyperedge::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyperedge::
 normal(unsigned int index) const
 {
   Point<space_dim> normal;
@@ -268,15 +268,15 @@ normal(unsigned int index) const
 }
 
 /*
-const array<hypernode_index_type, 2*hyperedge_dim>&
-UnitCube<hyperedge_dim,space_dim>::get_hypernode_indices() const
+const array<hyNode_index_t, 2*hyEdge_dim>&
+UnitCube<hyEdge_dim,space_dim>::get_hypernode_indices() const
 {
   return hypernode_indices_;
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-std::vector<double> UnitCube<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+std::vector<double> UnitCube<hyEdge_dim,space_dim>::
 abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector<double> det_at_quad(local_quadrature.size(), 1.);
@@ -284,8 +284,8 @@ abs_det_of_jacobian_at_quad(const vector<double>& local_quadrature) const
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-vector< vector<double> > UnitCube<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+vector< vector<double> > UnitCube<hyEdge_dim,space_dim>::
 inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
 {
   vector< vector<double> > jac_at_quad(local_quadrature.size());
@@ -303,24 +303,24 @@ inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
  * HyperGraph functions!
  */
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-UnitCube<hyperedge_dim,space_dim>::
-UnitCube(const Topology::Cubic<hyperedge_dim,space_dim>& other)
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+UnitCube<hyEdge_dim,space_dim>::
+UnitCube(const Topology::Cubic<hyEdge_dim,space_dim>& other)
 : num_elements_(other.num_elements()) { }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-UnitCube<hyperedge_dim,space_dim>::
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+UnitCube<hyEdge_dim,space_dim>::
 UnitCube(const constructor_value_type& num_elements)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim];
 }
 
 
-template <unsigned int hyperedge_dim, unsigned int space_dim>
-const typename UnitCube<hyperedge_dim, space_dim>::hyperedge
-UnitCube<hyperedge_dim,space_dim>::
-get_hyperedge(const hyperedge_index_type index) const
+template <unsigned int hyEdge_dim, unsigned int space_dim>
+const typename UnitCube<hyEdge_dim, space_dim>::hyperedge
+UnitCube<hyEdge_dim,space_dim>::
+get_hyperedge(const hyEdge_index_t index) const
 {
   return hyperedge(index, num_elements_);
 }
