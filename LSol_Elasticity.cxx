@@ -526,7 +526,7 @@ template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_
 array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
 preprocess_data( array< array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs,
-                 typename UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const
+                 typename File<hyEdge_dim, space_dim>::value_type& geometry ) const
 {
   array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim > result;
   hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
@@ -550,7 +550,7 @@ template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_
 array< array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
 postprocess_data( array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs,
-                  typename UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const
+                  typename File<hyEdge_dim, space_dim>::value_type& geometry ) const
 {
   std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim > result;
   for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);

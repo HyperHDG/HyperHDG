@@ -13,8 +13,9 @@ from ClassWrapper import PyDiffusionProblemNaive
 from ClassWrapper import PyElasticityProblem
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblemNaive([4,2,2])
-# HDG_wrapper = PyElasticityProblem([4,2,2])
+# HDG_wrapper = PyDiffusionProblemNaive([4,2,2])
+filename = "domains/SimpleTriangle.geo"
+HDG_wrapper = PyElasticityProblem(filename)
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
@@ -26,7 +27,7 @@ vectorDirichlet[0] = 1.
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 12 ]) #, len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 1, 2, 3 ]) #, len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.

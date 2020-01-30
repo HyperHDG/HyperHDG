@@ -25,7 +25,7 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge
 #define ELASTICITYSOLVER_HXX
 
 #include "FuncAndQuad.hxx"
-#include "Geom_UnitCube.hxx"
+#include "Geom.hxx"
 #include "HyperNodeFactory.hxx"
 #include <array>
 
@@ -65,9 +65,9 @@ class ElasticitySolver_RegularQuad
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
     
     std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim >
-      preprocess_data(std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const;
+      preprocess_data(std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::File<hyEdge_dim, space_dim>::value_type& geometry ) const;
     std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim >
-      postprocess_data(std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::UnitCube<hyEdge_dim, space_dim>::value_type& geometry ) const;
+      postprocess_data(std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::File<hyEdge_dim, space_dim>::value_type& geometry ) const;
     
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; }

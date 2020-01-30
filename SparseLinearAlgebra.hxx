@@ -186,7 +186,7 @@ std::vector<dof_value_t> conjugate_gradient
     
     if ( std::sqrt(r_square_new) < tolerance )  
     {
-      n_iterations = k;
+      n_iterations = k+1;
       return x;
     }
   }
