@@ -113,44 +113,6 @@ class HDGHyperGraph
   } value_type; // end of typedef struct hyEdge
   
   /*!***********************************************************************************************
-   * \brief   The type needed to construct an \c HDGHyperGraph.
-   *
-   * This \c typedef \c struct is needed to defaultly construct an \c HDGHyperGraph. It contains
-   * topological and geometrical construction information about the hypergraph. It is therefore
-   * defined as the \c constructor_value_type of class \c HDGHyperGraph.
-   ************************************************************************************************/
-  typedef struct hyGraphConstructor
-  {
-    /*!*********************************************************************************************
-     * \brief   Constructor arguments for topological information of a hypergraph.
-     *
-     * A \c TopoT::constructor_value_type comprising the information to construct topological
-     * information of a hypergraph.
-     **********************************************************************************************/
-    typename TopoT::constructor_value_type topology;
-    /*!*********************************************************************************************
-     * \brief   Constructor arguments for geometrical information of a hypergraph.
-     *
-     * A \c TopoT::constructor_value_type comprising the information to construct geometrical
-     * information of a hypergraph.
-     **********************************************************************************************/
-    typename GeomT::constructor_value_type geometry;
-    /*!*********************************************************************************************
-     * \brief   Construct the \c struct that contains geometrical and topological information to
-     *          construct a hypergraph.
-     *
-     * Construct a \c struct \c hyGraphConstructor which is needed to construct a
-     * \c HDGHyperGraph and contains topolopgical and geometrical information to do so.
-     *
-     * \param   topo    Topological information to construct hypergraph.
-     * \param   geom    Geometrical information to construct hypergraph.
-     **********************************************************************************************/
-    hyGraphConstructor(const typename TopoT::constructor_value_type& topo,
-                       const typename GeomT::constructor_value_type& geom)
-    : topology(topo), geometry(geom) { }
-  } constructor_value_type; // end of typedef struct hyGraphConstructor
-  
-  /*!***********************************************************************************************
    * \brief   Iterator for \c struct \c hyEdge returned by \c operator[].
    *
    * Iterator that allows to go through the hyperedges of a hypergraph forwards and backwards. This
@@ -328,10 +290,10 @@ class HDGHyperGraph
      * \param   constructor           Information needed to deduce topological and geometrical data
      *                                to construct a \c HDGHyperGraph.
      **********************************************************************************************/
-    HDGHyperGraph(const constructor_value_type& construction_data)
-    : hyGraph_topology_(construction_data.topology),
-      hyGraph_geometry_(construction_data.geometry),
-      hyNode_factory_(hyGraph_topology_.n_hyNodes())
+    HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo)
+    : hyGraph_topology_ ( construct_topo ),
+      hyGraph_geometry_ ( hyGraph_topology_ ),
+      hyNode_factory_   ( hyGraph_topology_.n_hyNodes() )
     {
       static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
@@ -359,8 +321,9 @@ class HDGHyperGraph
      **********************************************************************************************/
     HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
                   const typename GeomT::constructor_value_type& construct_geom)
-    : hyGraph_topology_(construct_topo), hyGraph_geometry_(construct_geom),
-      hyNode_factory_(hyGraph_topology_.n_hyNodes())
+    : hyGraph_topology_ ( construct_topo ),
+      hyGraph_geometry_ ( construct_geom ),
+      hyNode_factory_   ( hyGraph_topology_.n_hyNodes() )
     {
       static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );

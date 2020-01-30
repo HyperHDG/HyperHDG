@@ -99,6 +99,27 @@ class AbstractProblem
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     }
     /*!*********************************************************************************************
+     * \brief   Abstract problem constructor.
+     *
+     * Constructor for class containing a HyperGraph and a local solver that solve a PDE on a
+     * hyperedge.
+     *
+     * \param   construct_topo    Information to construct a topology.
+     * \param   construct_loc_sol Information to construct a local solver.
+     **********************************************************************************************/
+    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo,
+                     const typename LocalSolverT::constructor_value_type& construct_loc_sol )
+    : hyper_graph_  ( construct_topo ),
+      local_solver_ ( construct_loc_sol )
+    {
+      static_assert( TopologyT::hyEdge_dimension() == GeometryT::hyEdge_dimension() ,
+                     "Hyperedge dimension of topology and geometry must be equal!" );
+      static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
+                     "Space dimension of topology and geometry must be equal!" );
+      static_assert( TopologyT::hyEdge_dimension() == LocalSolverT::hyEdge_dimension() ,
+                     "Hyperedge dimension of hypergraph and local solver must be equal!" );
+    }
+    /*!*********************************************************************************************
      * \brief   Read indices of Dirichlet type hypernodes/faces.
      *
      * Read the indices ot the hypernodes/faces that are of Dirichlet type and therefore do not
@@ -294,6 +315,25 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
+                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
+                >;
+
+/*!*************************************************************************************************
+ * \brief   This is an example problem.
+ *
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+using DiffusionProblemFileNoGeo = 
+AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
+                  Geometry::File< hyEdge_dim, space_dim >,
                   DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
 

@@ -10,5 +10,6 @@
 #define TOPO_HXX
 
 #include "Topo_Cubic.hxx"
+#include "Topo_File.hxx"
 
 #endif // end of ifndef TOPO_HXX

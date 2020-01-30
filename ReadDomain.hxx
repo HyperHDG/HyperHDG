@@ -21,6 +21,7 @@
 #include "Point.hxx"
 #include "HyAssert.hxx"
 
+#include <algorithm>
 #include <array>
 #include <vector>
 #include <fstream>
@@ -28,16 +29,77 @@
 #include <sstream>
 
 
+template < class T >
+bool is_unique(const std::vector<T>& vec)
+{
+  std::vector<T> x(vec);                                          // Copy vector enabling reorder.
+  std::sort( x.begin(), x.end() );                                // Sort vector in O(N log N).
+  return ( std::adjacent_find( x.begin(), x.end() ) == x.end() ); // Check for duplicates in O(n).
+}
+
+
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 struct DomainInfo
 {
+  hyEdge_index_t                                              n_hyEdges;
   hyNode_index_t                                              n_hyNodes;
+  pt_index_t                                                  n_points;
   std::vector< Point<space_dim> >                             points;
   std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge; // 2 * hyEdge_dim
-  std::vector< std::array< pt_index_t, 1 << hyEdge_dim > >    points_hyEdge;  // 2 ^ (hyEdge_dim-1)
+  std::vector< std::array< pt_index_t, 1 << hyEdge_dim > >    points_hyEdge;  // 2 ^ hyEdge_dim
   
-  DomainInfo (const pt_index_t n_points, const hyEdge_index_t n_hyEdges, const hyNode_index_t n_hyN)
-  : n_hyNodes(n_hyN), points(n_points), hyNodes_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges) { }
+  DomainInfo (const pt_index_t n_points, const hyEdge_index_t n_hyEdge,
+              const hyNode_index_t n_hyNode, const pt_index_t n_point)
+  : n_hyEdges(n_hyEdge), n_hyNodes(n_hyNode), n_points(n_point),
+    points(n_points), hyNodes_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges) { }
+  
+  bool check_consistency()
+  {
+    bool consistent = ( hyNodes_hyEdge.size() == hyNodes_hyEdge.size() );
+    hy_assert( consistent ,
+               "The sizes of hyNodes_hyEdge and hyNodes_hyEdge need to be equal!" );
+    
+    std::for_each( hyNodes_hyEdge.begin(), hyNodes_hyEdge.end(),
+                   [&]( std::array< hyNode_index_t, 2 * hyEdge_dim > hyEdge )
+    {
+      for (unsigned int i = 0; i < hyEdge.size(); ++i)
+      {
+        consistent = ( hyEdge[i] < n_hyNodes && hyEdge[i] >= 0 );
+        hy_assert( consistent ,
+                   "At least one hypernode index is invalid!" );
+        if ( !consistent ) return false;
+      }
+    });
+    
+    std::for_each( points_hyEdge.begin(), points_hyEdge.end(),
+                   [&]( std::array< pt_index_t, 1 << hyEdge_dim > hyEdge )
+    {
+      for (unsigned int i = 0; i < hyEdge.size(); ++i)
+      {
+        consistent = ( hyEdge[i] < n_points && hyEdge[i] >= 0 );
+        hy_assert( consistent ,
+                   "At least one point index is invalid!" );
+        if ( !consistent ) return false;
+      }
+    });
+    
+    consistent = is_unique(points);
+    hy_assert( consistent ,
+               "DomainInfo.points contains duplicate points!" );
+    if ( !consistent ) return false;
+    
+    consistent = is_unique(hyNodes_hyEdge);
+    hy_assert( consistent ,
+               "DomainInfo.hyNodes_hyEdge contains duplicate hypernode!" );
+    if ( !consistent ) return false;
+    
+    consistent = is_unique(points_hyEdge);
+    hy_assert( consistent ,
+               "DomainInfo.points_hyEdge contains duplicate points!" );
+    if ( !consistent ) return false;
+    
+    return true;
+  } // end of check_consistency
 }; // end of struct DomainInfo
 
 
@@ -48,7 +110,6 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
              "The given file needs to be a .geo file for this function to be applicable!" );
   
   std::ifstream infile(filename);
-  
   std::istringstream linestream;
   std::string line, keyword, equal_sign;
   
@@ -130,7 +191,7 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   hy_assert( N_HyperEdges != 0 ,
              "The value of N_HyperEdges has not been set correctly!" );
   
-  DomainInfo<hyEdge_dim,space_dim> domain_info(N_Points, N_HyperEdges, N_HyperNodes);
+  DomainInfo<hyEdge_dim,space_dim> domain_info(N_Points, N_HyperEdges, N_HyperNodes, N_Points);
   
   while ( keyword != "POINTS:" && std::getline(infile, line) )
   {
@@ -201,7 +262,15 @@ DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
              "The given file needs to be a .geo file, since no other input file types are currently"
              << " implemented." );
-  return read_domain_geo<hyEdge_dim,space_dim>(filename);
+  
+  DomainInfo<hyEdge_dim,space_dim> domain_info = read_domain_geo<hyEdge_dim,space_dim>(filename);
+  
+  hy_assert( domain_info.check_consistency() ,
+             "Domain info appears to be inconsistent!" << std::endl
+             << "This assertion is never to be thrown since it can only be caused by internal "
+             << "assertions of DomainInfo.check_consistency()!" );
+  
+  return domain_info;
 } // end of read_domain
 
 #endif // end of ifndef READDOMAIN_HXX

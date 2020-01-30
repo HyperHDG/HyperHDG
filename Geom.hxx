@@ -10,5 +10,6 @@
 #define GEOM_HXX
 
 #include "Geom_UnitCube.hxx"
+#include "Geom_File.hxx"
 
 #endif // end of ifndef GEOM_HXX
