@@ -28,6 +28,9 @@ int main(int argc, char *argv[])
   std::string filename = "domains/SimpleTriangle.geo";
   DomainInfo<1,2> di = read_domain<1,2>(filename);
   
+  cout << "Number of hyperNodes: " << di.n_hyNodes;
+  for (unsigned int i = 0; i < di.points.size(); ++i)  cout << di.points[i] << endl;
+  
   cout << "SUCCESS" << endl;
    
   

@@ -3,7 +3,7 @@
  * \brief   This file reads domains from different file types and returns the uniform DomainInfo.
  *
  * \todo    DomainInfo assumes that hyperedges have 2 * hyEdge_dim hyperedges and that every
- *          hyperedge has 2 ^ (hyEdge_dim-1) points/vertices. This does neither allow for triangular
+ *          hyperedge has 2 ^ (hyEdge_dim) points/vertices. This does neither allow for triangular
  *          hypernodes (needed for simplicial hyperedges in 3D) nor for tringular hyperedges (2D)!
  *          Is this ok or should this be generalized?
  * 
@@ -31,12 +31,13 @@
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 struct DomainInfo
 {
-  std::vector< Point<space_dim> > points;
-  std::vector< std::array< pt_index_t, 1 << (hyEdge_dim-1) > > points_hyNode; // 2 ^ (hyEdge_dim-1)
+  hyNode_index_t                                              n_hyNodes;
+  std::vector< Point<space_dim> >                             points;
   std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge; // 2 * hyEdge_dim
+  std::vector< std::array< pt_index_t, 1 << hyEdge_dim > >    points_hyEdge;  // 2 ^ (hyEdge_dim-1)
   
-  DomainInfo ( pt_index_t n_points, hyNode_index_t n_hyNodes, hyEdge_index_t n_hyEdges)
-  : points(n_points), points_hyNode(n_hyNodes), hyNodes_hyEdge(n_hyEdges) { }
+  DomainInfo (const pt_index_t n_points, const hyEdge_index_t n_hyEdges, const hyNode_index_t n_hyN)
+  : n_hyNodes(n_hyN), points(n_points), hyNodes_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges) { }
 }; // end of struct DomainInfo
 
 
@@ -50,17 +51,19 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   
   std::istringstream linestream;
   std::string line, keyword, equal_sign;
-  unsigned int Space_Dim, HyperEdge_Dim;
-  pt_index_t N_Points = 0, pt_iter;
-  hyNode_index_t N_HyperNodes = 0, hyNode_iter;
-  hyEdge_index_t N_HyperEdges = 0, hyEdge_iter;
+  
+  unsigned int    Space_Dim, HyperEdge_Dim;
+  pt_index_t      N_Points = 0, pt_iter;
+  hyEdge_index_t  N_HyperEdges = 0, hyEdge_iter;
+  hyNode_index_t  N_HyperNodes = 0;
   Point<space_dim> pt;
   
   while ( keyword != "Space_Dim" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
-    linestream >> keyword >> equal_sign >> Space_Dim;
+    linestream >> keyword;
   }
+  linestream >> equal_sign >> Space_Dim;
   
   hy_assert( keyword == "Space_Dim" ,
              "The keyword Space_Dim has not been found in the file " << filename << "!" );
@@ -73,8 +76,9 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   while ( keyword != "HyperEdge_Dim" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
-    linestream >> keyword >> equal_sign >> HyperEdge_Dim;
+    linestream >> keyword;
   }
+  linestream >> equal_sign >> HyperEdge_Dim;
   
   hy_assert( keyword == "HyperEdge_Dim" ,
              "The keyword HyperEdge_Dim has not been found in the file " << filename << "!" );
@@ -87,8 +91,9 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   while ( keyword != "N_Points" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
-    linestream >> keyword >> equal_sign >> N_Points;
+    linestream >> keyword;
   }
+  linestream >> equal_sign >> N_Points;
   
   hy_assert( keyword == "N_Points" ,
              "The keyword N_Points has not been found in the file " << filename << "!" );
@@ -100,8 +105,9 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   while ( keyword != "N_HyperNodes" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
-    linestream >> keyword >> equal_sign >> N_HyperNodes;
+    linestream >> keyword;
   }
+  linestream >> equal_sign >> N_HyperNodes;
   
   hy_assert( keyword == "N_HyperNodes" ,
              "The keyword N_Points has not been found in the file " << filename << "!" );
@@ -113,8 +119,9 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   while ( keyword != "N_HyperEdges" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
-    linestream >> keyword >> equal_sign >> N_HyperEdges;
+    linestream >> keyword;
   }
+  linestream >> equal_sign >> N_HyperEdges;
   
   hy_assert( keyword == "N_HyperEdges" ,
              "The keyword N_Points has not been found in the file " << filename << "!" );
@@ -123,7 +130,7 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   hy_assert( N_HyperEdges != 0 ,
              "The value of N_HyperEdges has not been set correctly!" );
   
-  DomainInfo<hyEdge_dim,space_dim> domain_info(N_Points, N_HyperNodes, N_HyperEdges);
+  DomainInfo<hyEdge_dim,space_dim> domain_info(N_Points, N_HyperEdges, N_HyperNodes);
   
   while ( keyword != "POINTS:" && std::getline(infile, line) )
   {
@@ -144,39 +151,41 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   hy_assert( pt_iter == N_Points ,
              "Not all points have been added to the list!" );
   
-  while ( keyword != "HYPERNODES:" && std::getline(infile, line) )
+  while ( keyword != "HYPERNODES_OF_HYPEREDGES:" && std::getline(infile, line) )
   {
     linestream = std::istringstream(line);
     linestream >> keyword;
   }
   
-  hy_assert( keyword == "HYPERNODES:" ,
-             "The keyword 'HYPERNODES:' has not been found in the file " << filename << "!" );
-  
-  for ( hyNode_iter = 0; hyNode_iter < N_HyperNodes && std::getline(infile, line); ++hyNode_iter )
-  {
-    linestream = std::istringstream(line);
-    for (unsigned int i = 0; i < domain_info.points_hyNode[hyNode_iter].size(); ++i)
-      linestream >> domain_info.points_hyNode[hyNode_iter][i];
-  }
-  
-  hy_assert( hyNode_iter == N_HyperNodes ,
-             "Not all hypernodes have been added to the list!" );
-  
-  while ( keyword != "HYPEREDGES:" && std::getline(infile, line) )
-  {
-    linestream = std::istringstream(line);
-    linestream >> keyword;
-  }
-  
-  hy_assert( keyword == "HYPEREDGES:" ,
-             "The keyword 'HYPEREDGES:' has not been found in the file " << filename << "!" );
+  hy_assert( keyword == "HYPERNODES_OF_HYPEREDGES:" ,
+             "The keyword 'HYPERNODES_OF_HYPEREDGES:' has not been found in the file "
+             << filename << "!" );
   
   for ( hyEdge_iter = 0; hyEdge_iter < N_HyperEdges && std::getline(infile, line); ++hyEdge_iter )
   {
     linestream = std::istringstream(line);
     for (unsigned int i = 0; i < domain_info.hyNodes_hyEdge[hyEdge_iter].size(); ++i)
       linestream >> domain_info.hyNodes_hyEdge[hyEdge_iter][i];
+  }
+  
+  hy_assert( hyEdge_iter == N_HyperEdges ,
+             "Not all hyperedges have been added to the list!" );
+  
+  while ( keyword != "POINTS_OF_HYPEREDGES:" && std::getline(infile, line) )
+  {
+    linestream = std::istringstream(line);
+    linestream >> keyword;
+  }
+  
+  hy_assert( keyword == "POINTS_OF_HYPEREDGES:" ,
+             "The keyword 'POINTS_OF_HYPEREDGES:' has not been found in the file "
+             << filename << "!" );
+  
+  for ( hyEdge_iter = 0; hyEdge_iter < N_HyperEdges && std::getline(infile, line); ++hyEdge_iter )
+  {
+    linestream = std::istringstream(line);
+    for (unsigned int i = 0; i < domain_info.points_hyEdge[hyEdge_iter].size(); ++i)
+      linestream >> domain_info.points_hyEdge[hyEdge_iter][i];
   }
   
   hy_assert( hyEdge_iter == N_HyperEdges ,
