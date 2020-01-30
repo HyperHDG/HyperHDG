@@ -226,7 +226,7 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_ele
   }
   else if constexpr ( hyEdge_dim == 2 )
   {
-    hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
+//    hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
     array<hyNode_index_t, 4> line_indices = square_to_line_index<space_dim>(num_elements, index);
     array<Point<space_dim>, 2> points1 = line_to_points<space_dim>(num_elements, line_indices[0]);
     array<Point<space_dim>, 2> points2 = line_to_points<space_dim>(num_elements, line_indices[1]);
@@ -234,7 +234,7 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_ele
   }
   else if constexpr ( hyEdge_dim == 3 )
   {
-    hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
+//    hy_assert( 0 == 1 , "This should not be executed since elasticity is not yet defined for real HYPERgraphs!" );
     array<hyNode_index_t, 6> square_indices = cube_to_square_index<space_dim>(num_elements, index);
     array<hyNode_index_t, 4> line_indices1 = square_to_line_index<space_dim>(num_elements, square_indices[0]);
     array<hyNode_index_t, 4> line_indices2 = square_to_line_index<space_dim>(num_elements, square_indices[1]);
