@@ -28,10 +28,10 @@ class File
       Point<space_dim> normal(const unsigned int index) const
       {
         Point<space_dim> normal;
-        if (index == 0)  normal = hyGraph_geometry_.domain_info_.points[domain_info_.points_hyEdge[index_][0]]
-                                  - hyGraph_geometry_.domain_info_.points[domain_info_.points_hyEdge[index_][1]] ;
-        else             normal = hyGraph_geometry_.domain_info_.points[domain_info_.points_hyEdge[index_][1]]
-                                  - hyGraph_geometry_.domain_info_.points[domain_info_.points_hyEdge[index_][0]] ;
+        if (index == 0)  normal = hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][0]]
+                                  - hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][1]] ;
+        else             normal = hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][1]]
+                                  - hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][0]] ;
         normal /= norm_2(normal);
         return normal;
       }

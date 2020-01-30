@@ -177,7 +177,7 @@ class AbstractProblem
     std::vector<dof_value_t> matrix_vector_multiply( std::vector<dof_value_t> x_vec ) const
     {
       constexpr unsigned int hyEdge_dim  = TopologyT::hyEdge_dimension();
-      constexpr unsigned int poly_degree    = LocalSolverT::polynomial_degree();
+      constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
@@ -355,6 +355,27 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using ElasticityProblemRegular = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
+                  ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
+                >;
+
+/*!*************************************************************************************************
+ * \brief   This is an example problem.
+ *
+ * \todo    This has not yet been fully implemented!
+ *
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+using ElasticityProblemFile = 
+AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
+                  Geometry::File< hyEdge_dim, space_dim >,
                   ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
 

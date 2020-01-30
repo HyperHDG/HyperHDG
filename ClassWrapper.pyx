@@ -28,8 +28,10 @@ cdef class PyDiffusionProblemNaive:
 
 cdef class PyElasticityProblem:
   cdef ElasticityProblem *thisptr      # hold a C++ instance which we're wrapping
-  def __cinit__(self, num_elements):
-    self.thisptr = new ElasticityProblem(num_elements, num_elements, 1.)
+  def __cinit__(self, filename):
+    if isinstance(filename,str): # Python3 version - use unicode for Python 2
+      filename = filename.encode()
+    self.thisptr = new ElasticityProblem(filename, 1.)
   def __dealloc__(self):
     del self.thisptr
   def read_dirichlet_indices(self, indices):
