@@ -482,13 +482,12 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
 
 
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array<double, compute_n_corners_of_cube(hyEdge_dim)>
+vector<double>
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array<double, compute_n_corners_of_cube(hyEdge_dim)> primal_in_corners;
-  primal_in_corners.fill(0.);
+  vector<double> primal_in_corners(compute_n_corners_of_cube(hyEdge_dim), 0.);
   for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
       primal_in_corners[corner] += coefficients[hyEdge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
@@ -497,12 +496,12 @@ primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bd
 
 
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-array< array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) >
+vector< array<double, hyEdge_dim> >
 ElasticitySolver_RegularQuad<hyEdge_dim, space_dim, max_poly_degree, max_quad_degree>::
 dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  array< array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) > dual_in_corners;
+  vector< array<double, hyEdge_dim> > dual_in_corners(compute_n_corners_of_cube(hyEdge_dim));
   for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
   {
     dual_in_corners[corner].fill(0.);

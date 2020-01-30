@@ -245,9 +245,8 @@ void plot_vtu(const HyperGraphT& hyper_graph,
     
   std::array< std::array<double, HyperGraphT::n_dof_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
   std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
-  std::array<double, compute_n_corners_of_cube(hyEdge_dim)> local_primal;
-  std::array< std::array<double, hyEdge_dim> , compute_n_corners_of_cube(hyEdge_dim) >
-    local_dual;
+  std::vector<double> local_primal(compute_n_corners_of_cube(hyEdge_dim)); // CHANGED FOR ABSCISSAS!
+  std::vector< std::array<double, hyEdge_dim>  > local_dual(compute_n_corners_of_cube(hyEdge_dim)); // CHANGED FOR ABSCISSAS!
   
   for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
   {
