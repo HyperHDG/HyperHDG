@@ -6,13 +6,15 @@
 #include <string>
 
 using namespace std;
+using namespace SparseLA;
 
 
 int main(int argc, char *argv[])
 {
   vector<int> num_elements = { 4 , 2 , 2 };
   
-  DiffusionProblemRegularNaive<1,3,1> diffusion_problem(num_elements, num_elements, 1.);
+  std::string filename = "domains/SimpleTriangle.geo";
+  DiffusionProblemFileNoGeo<1,2,1> diffusion_problem(filename, 1.);
   
   vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = 1.;
@@ -24,12 +26,11 @@ int main(int argc, char *argv[])
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
   
+  int num_of_iterations = 0;
+  vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem, num_of_iterations );
+  solution = linear_combination(1., solution, 1., vectorDirichlet);
   
-  std::string filename = "domains/SimpleTriangle.geo";
-  DomainInfo<1,2> di = read_domain<1,2>(filename);
-  
-  cout << "Number of hyperNodes: " << di.n_hyNodes;
-  for (unsigned int i = 0; i < di.points.size(); ++i)  cout << di.points[i] << endl;
+  for (unsigned int i = 0; i < solution.size(); ++i)  cout << solution[i] << endl;
   
   cout << "SUCCESS" << endl;
    

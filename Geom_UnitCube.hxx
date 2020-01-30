@@ -185,13 +185,13 @@ class UnitCube
      *
      * \retval  hyEdge_dim   The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; };
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *
      * \retval  space_dim       The dimension of the space.
      **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return space_dim; };
+    static constexpr unsigned int space_dimension() { return space_dim; }
 }; // end class UnitCube
 
 } // end namespace Geometry

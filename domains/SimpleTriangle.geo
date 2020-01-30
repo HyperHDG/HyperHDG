@@ -22,7 +22,7 @@ POINTS:
 
 HYPERNODES_OF_HYPEREDGES:
 0 1
-1 2
+0 2
 1 2
 
 # After "POINTS_OF_HYPEREDGES: the indices of points belonging to a hyperedge have to appear.
