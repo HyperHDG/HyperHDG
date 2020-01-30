@@ -39,6 +39,15 @@ pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& righ
 
 
 template<unsigned int space_dim>
+ostream& operator<< (ostream& stream, const Point<space_dim>& pt)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+    stream << " " << pt.coordinate(dim) << " ";
+  return stream;
+}
+
+
+template<unsigned int space_dim>
 Point<space_dim>::Point()
 { 
   coordinates_.fill(0.);

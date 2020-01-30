@@ -146,7 +146,7 @@ class HDGHyperGraph
      * \param   geom    Geometrical information to construct hypergraph.
      **********************************************************************************************/
     hyGraphConstructor(const typename TopoT::constructor_value_type& topo,
-                          const typename GeomT::constructor_value_type& geom)
+                       const typename GeomT::constructor_value_type& geom)
     : topology(topo), geometry(geom) { }
   } constructor_value_type; // end of typedef struct hyGraphConstructor
   

@@ -18,20 +18,16 @@ POINTS:
 2.0 0.0
 1.0 1.0
 
-# After "HYPERNODES: the indices of points belonging to a hypernode have to appear. The points need
-# to be ordered according to some to be defined scheme and the number of hypernodes has to be equal
-# to "Number_of_HyperNodes"! TODO!
+# After "HYPERNODES_OF_HYPEREDGES the indices of hypernodes belonging to a hyperedge have to appear.
 
-HYPERNODES:
-0
-1
-2
+HYPERNODES_OF_HYPEREDGES:
+0 1
+1 2
+1 2
 
-# After "HYPEREDGES: the indices of hypernodes belonging to a hyperedge have to appear. These 
-# hypernodespoints need to be ordered according to some to be defined scheme and the number of
-# hyperedges has to be equal to "Number_of_HyperEdges"! TODO!
+# After "POINTS_OF_HYPEREDGES: the indices of points belonging to a hyperedge have to appear.
 
-HYPEREDGES:
+POINTS_OF_HYPEREDGES:
 0 1
 0 2
 1 2

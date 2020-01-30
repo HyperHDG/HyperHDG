@@ -16,6 +16,7 @@
 
 #include "TypeDefs.hxx"
 #include <array>
+#include <ostream>
 
 /*!*************************************************************************************************
  * \brief   This class implements a point in a d-dimensional space.
@@ -56,8 +57,8 @@ class Point
     
     Point(const Point<space_dim>& other); // copy constructor
     Point(Point<space_dim>&& other) noexcept; // move constructor
-    Point<space_dim>& operator=(const Point<space_dim>& other); // copy assignement
-    Point<space_dim>& operator=(Point<space_dim>&& other) noexcept; // move assignment
+    Point<space_dim>& operator= (const Point<space_dim>& other); // copy assignement
+    Point<space_dim>& operator= (Point<space_dim>&& other) noexcept; // move assignment
     
     /*!*********************************************************************************************
      * \brief   Return reference to single coordinate of a point.
@@ -124,6 +125,7 @@ class Point
     Point<space_dim>& operator+(Point<space_dim>&& other) noexcept;
     Point<space_dim> operator-(const Point<space_dim>& other) const;
     Point<space_dim>& operator-(Point<space_dim>&& other) noexcept;
+    
 }; // end of class Point
 
 
@@ -133,5 +135,9 @@ pt_coord_t norm_2(const Point<space_dim>& point);
 
 template<unsigned int space_dim>
 pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right);
+
+
+template<unsigned int space_dim>
+std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt);
 
 #endif // end of ifndef POINT_HXX
