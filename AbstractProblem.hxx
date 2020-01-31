@@ -18,13 +18,15 @@
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
-#include "HDGHyperGraph.hxx"
-#include "LSol.hxx"
-#include "Plot.hxx"
+#include <HDGHyperGraph.hxx>
+#include <Plot.hxx>
+/// \todo Those do not have any business in "AbstractProblem.hxx"
+#include <LSol_Diffusion.hxx>
+#include <LSol_Elasticity.hxx>
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
-#include "HyAssert.hxx"
+#include <HyAssert.hxx>
 #include <algorithm>
 #include <array>
 

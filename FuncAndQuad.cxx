@@ -9,8 +9,8 @@
  */
 
 
-#include "FuncAndQuad.hxx"
-#include "HyAssert.hxx"
+#include <FuncAndQuad.hxx>
+#include <HyAssert.hxx>
 #include <algorithm>
 #include <cmath>
 
