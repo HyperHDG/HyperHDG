@@ -24,6 +24,20 @@ using namespace FuncQuad;
 #include "LSol_Diffusion.inst"
 
 
+template<unsigned int hyEdge_dim, unsigned int poly_deg>
+inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
+{
+  hy_assert( 0 <= row ,
+             "Row index should be larger than or equal to zero." );
+  hy_assert( row < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
+             "Row index should be smaller than total amount of rows." );
+  hy_assert( 0 <= column ,
+             "Column index should be larger than or equal to zero." );
+  hy_assert( column < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
+             "Column index should smaller than total amount of columns." );
+  return column * (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) + row;  // Transposed for LAPACK
+}
+
 inline vector<double> dyadic_product(const vector<double>& left, const vector<double>& right)
 {
   vector<double> result(left.size() * right.size());
@@ -236,21 +250,6 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
 }
 
 
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline unsigned int DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
-loc_matrix_index(const unsigned int row, const unsigned int column) const
-{
-  hy_assert( 0 <= row ,
-             "Row index should be larger than or equal to zero." );
-  hy_assert( row < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
-             "Row index should be smaller than total amount of rows." );
-  hy_assert( 0 <= column ,
-             "Column index should be larger than or equal to zero." );
-  hy_assert( column < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
-             "Column index should smaller than total amount of columns." );
-  return column * (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) + row;  // Transposed for LAPACK
-}
-
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>
@@ -266,11 +265,11 @@ assemble_loc_mat() const
     {
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
-          local_mat[loc_matrix_index( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += 
+          local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += 
             quad_weights_[q] * hyEdge_area * trials_quad_[i][q] * trials_quad_[j][q];
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < n_quads_; ++q)
-          local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -=
+          local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
     }
   
@@ -281,16 +280,16 @@ assemble_loc_mat() const
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
       {
         for (unsigned int q = 0; q < n_quads_; ++q)
-          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -=
+          local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -=
             quad_weights_[q] * derivs_quad_[dim][i][q] * trials_quad_[j][q];
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
-          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] +=
+          local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] +=
             + quad_bdr_[q] * trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]
             - quad_bdr_[q] * trials_bound_[2*dim+0][i][q] * trials_bound_[2*dim+0][j][q];
       }
       for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
-          local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] +=
+          local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] +=
             tau_ * quad_bdr_[q] * (trials_bound_[2*dim+0][i][q] * trials_bound_[2*dim+0][j][q]
                                    + trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]);
     }
@@ -300,7 +299,7 @@ assemble_loc_mat() const
   for (unsigned int i = 0; i < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim); ++i)
   {
     for(unsigned int j = 0; j < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim); ++j)
-      cout << local_mat[loc_matrix_index(i,j)] << "  ";
+      cout << local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(i,j)] << "  ";
     cout << endl;
   }
 */  
@@ -358,7 +357,7 @@ vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const 
   
   for(int i = 0; i < system_size; ++i)
     for(int j = 0; j < system_size; ++j)
-      eigen_matrix(i,j) = loc_matrix[loc_matrix_index(i,j)];
+      eigen_matrix(i,j) = loc_matrix[loc_matrix_index<hyEdge_dim,poly_deg>(i,j)];
       
   for(int i = 0; i < system_size; ++i)  eigen_rhs(i) = loc_rhs[i];
   
@@ -532,34 +531,6 @@ numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
 
 
 
-
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-DiffusionSolverTensorStruc(const constructor_value_type& tau)
-: tau_(tau), q_weights_(quadrature_weights<quad_deg>()),
-  trial_(trial_functions_at_quadrature_points<poly_deg, quad_deg>()),
-  deriv_(derivs_of_trial_at_quadrature_points<poly_deg, quad_deg>()),
-  trial_bdr_(trial_functions_at_boundaries<poly_deg>()){ }
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline unsigned int DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-loc_matrix_index(const unsigned int row, const unsigned int column) const
-{
-  hy_assert( 0 <= row ,
-             "Row index should be larger than or equal to zero." );
-  hy_assert( row < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
-             "Row index should be smaller than total amount of rows." );
-  hy_assert( 0 <= column ,
-             "Column index should be larger than or equal to zero." );
-  hy_assert( column < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) ,
-             "Column index should smaller than total amount of columns." );
-  return column * (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim) + row;  // Transposed for LAPACK
-}
-
-
 template <unsigned int hyEdge_dim>
 inline void index_decompose(unsigned int index, unsigned int range, array<unsigned int, max(hyEdge_dim,1U)>& decomposition)
 {
@@ -576,20 +547,26 @@ inline void index_decompose(unsigned int index, unsigned int range, array<unsign
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-assemble_loc_mat() const
+array<double, (hyEdge_dim+1) * compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1) * (hyEdge_dim+1) * compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1)>
+assemble_loc_matrix(const double tau)
 { 
+  const unsigned int n_quads = compute_n_quad_points(quad_deg);
+  const unsigned int num_ansatz_fct = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1);
+  const std::array<double, n_quads> q_weights = quadrature_weights<quad_deg>();
+  const std::array< std::array<double, n_quads > , poly_deg + 1 > trial = trial_functions_at_quadrature_points<poly_deg, quad_deg>();
+  const std::array< std::array<double, n_quads > , poly_deg + 1 > deriv = derivs_of_trial_at_quadrature_points<poly_deg, quad_deg>();
+  const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr = trial_functions_at_boundaries<poly_deg>();
+  
   array<unsigned int, hyEdge_dim> dec_i, dec_j;
   double integral, integral1D;
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_mat;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct * (hyEdge_dim+1) * num_ansatz_fct> local_mat;
   local_mat.fill(0.);
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < num_ansatz_fct; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
+    for (unsigned int j = 0; j < num_ansatz_fct; ++j)
     {
       index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
       
@@ -598,12 +575,12 @@ assemble_loc_mat() const
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
       {
         integral1D = 0.;
-        for (unsigned int q = 0; q < n_quads_; ++q)
-          integral1D += q_weights_[q] * trial_[dec_j[dim_fct]][q] * trial_[dec_i[dim_fct]][q];
+        for (unsigned int q = 0; q < n_quads; ++q)
+          integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * trial[dec_i[dim_fct]][q];
         integral *= integral1D;
       }
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        local_mat[loc_matrix_index( dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] += integral;
       
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       { 
@@ -613,63 +590,71 @@ assemble_loc_mat() const
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
           integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] * trial_[dec_j[dim_fct]][q] * 
-                          ( ( dim == dim_fct ) ? deriv_[dec_i[dim_fct]][q] : trial_[dec_i[dim_fct]][q] );
+          for (unsigned int q = 0; q < n_quads; ++q)
+            integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * 
+                          ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -= integral;
-        local_mat[loc_matrix_index(  dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(  dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] -= integral;
         
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][1] * trial_bdr_[dec_j[dim_fct]][1])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads; ++q)
+              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] += integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] += integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][0] * trial_bdr_[dec_j[dim_fct]][0])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads; ++q)
+              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , dim * num_ansatz_fct_ + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] -= integral;
         
         // Penalty in lower right diagonal block
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][0] * trial_bdr_[dec_j[dim_fct]][0])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads; ++q)
+              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] += tau_ * integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] += tau * integral;
         // Penalty in lower right diagonal block
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][1] * trial_bdr_[dec_j[dim_fct]][1])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads; ++q)
+              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index( hyEdge_dim * num_ansatz_fct_ + i , hyEdge_dim * num_ansatz_fct_ + j )] += tau_ * integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] += tau * integral;
       }
     }
   }
@@ -679,7 +664,17 @@ assemble_loc_mat() const
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
+DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
+DiffusionSolverTensorStruc(const constructor_value_type& tau)
+: tau_(tau), q_weights_(quadrature_weights<quad_deg>()),
+  trial_(trial_functions_at_quadrature_points<poly_deg, quad_deg>()),
+  trial_bdr_(trial_functions_at_boundaries<poly_deg>()),
+  loc_mat_(assemble_loc_matrix<hyEdge_dim,poly_deg,quad_deg>(tau))
+{ } 
+
+
+template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
+array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_fct_>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
@@ -707,11 +702,13 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][0])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         right_hand_side[dim * num_ansatz_fct_ + i] += lambda_values[2*dim+0][j] * integral;
@@ -720,11 +717,13 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][1])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         right_hand_side[dim * num_ansatz_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
@@ -738,23 +737,19 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
+inline array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_fct_>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_matrix;
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side;
-  right_hand_side = assemble_rhs(lambda_values);
-  local_matrix = assemble_loc_mat();
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_matrix = loc_mat_;
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side = assemble_rhs(lambda_values);
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = lapack_solve<(hyEdge_dim+1) * num_ansatz_fct_>(local_matrix, right_hand_side);
-  
-  return solution;
+  return lapack_solve<(hyEdge_dim+1) * num_ansatz_fct_>(local_matrix, right_hand_side);
 }
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
@@ -781,11 +776,13 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] * 
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][0])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         bdr_values[2*dim+0][j] -= coeffs[dim * num_ansatz_fct_ + i] * integral;
@@ -793,11 +790,13 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][1])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         bdr_values[2*dim+1][j] += coeffs[dim * num_ansatz_fct_ + i] * integral;
@@ -810,7 +809,7 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > 
+inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim > 
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
@@ -837,11 +836,13 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] * 
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][0])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * num_ansatz_fct_ + i] * integral;
@@ -849,11 +850,13 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_; ++q)
-            integral1D += q_weights_[q] *
-                          ( ( dim == dim_fct ) ? (trial_bdr_[dec_i[dim_fct]][1])
-                                               : (trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q]));
+          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
+          else
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_; ++q)
+              integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+          }
           integral *= integral1D;
         }
         bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * num_ansatz_fct_ + i] * integral;
@@ -866,7 +869,7 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values, const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
 {
@@ -982,7 +985,7 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array< array<double, compute_n_dofs_per_node(hyEdge_dim, poly_deg)> , 2 * hyEdge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
