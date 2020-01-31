@@ -93,8 +93,6 @@ class DiffusionSolverTensorStruc
     
     inline std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > dual_at_boundary(const std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const;
     inline std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > primal_at_boundary(const std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const;
-    std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > numerical_flux_at_boundary
-      (const std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >& lambda_values, const std::array<double, (hyEdge_dim + 1) * num_ansatz_fct_>& coeffs) const;
   public:
     typedef double constructor_value_type;
     DiffusionSolverTensorStruc(const constructor_value_type& tau);
