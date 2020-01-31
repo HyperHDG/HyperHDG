@@ -67,8 +67,7 @@ struct DomainInfo
         consistent = ( hyEdge[i] < n_hyNodes && hyEdge[i] >= 0 );
         hy_assert( consistent ,
                    "At least one hypernode index is invalid!" );
-        if ( !consistent ) return false;
-      }
+       }
     });
     
     std::for_each( points_hyEdge.begin(), points_hyEdge.end(),
@@ -79,7 +78,6 @@ struct DomainInfo
         consistent = ( hyEdge[i] < n_points && hyEdge[i] >= 0 );
         hy_assert( consistent ,
                    "At least one point index is invalid!" );
-        if ( !consistent ) return false;
       }
     });
     
