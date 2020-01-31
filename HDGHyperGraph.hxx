@@ -42,6 +42,8 @@
 #include <Geom_UnitCube.hxx>
 #include <Geom_File.hxx>
 
+#include <memory>
+
 /*!*************************************************************************************************
  * \brief   The class template uniting topology and geometry of a hypergraph with the topology of
  *          the skeleton space of the HDG method.
@@ -265,14 +267,14 @@ class HDGHyperGraph
      * This object contains the topology of the hypergraph, i.e., it encodes which hyperedges
      * connect which hypernodes.
      **********************************************************************************************/
-    const TopoT hyGraph_topology_;
+  std::shared_ptr<const TopoT> hyGraph_topology_;
     /*!*********************************************************************************************
      * \brief   Geometry of the hypergraph.
      *
      * This object contains the geometry of the hypergraph, i.e., it encodes the geometry of the
      * various hyperedges.
      **********************************************************************************************/
-    const GeomT hyGraph_geometry_;
+  std::shared_ptr<const GeomT> hyGraph_geometry_;
     /*!*********************************************************************************************
      * \brief   Hypernode factory administrating the access to degrees of freedom.
      *
@@ -296,22 +298,22 @@ class HDGHyperGraph
      *                                to construct a \c HDGHyperGraph.
      **********************************************************************************************/
     HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo)
-    : hyGraph_topology_ ( construct_topo ),
-      hyGraph_geometry_ ( hyGraph_topology_ ),
-      hyNode_factory_   ( hyGraph_topology_.n_hyNodes() )
+      : hyGraph_topology_ (std::make_shared<const TopoT>( construct_topo )),
+	hyGraph_geometry_ ( std::make_shared<const GeomT>( *hyGraph_topology_ )),
+	hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
-      hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_.n_hyNodes() ,
+      hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
                  hyNode_factory_.n_hyNodes() << ", which is not equal to the amount that the"
-                 << " hypergraph assumes, i.e., " << hyGraph_topology_.n_hyNodes() << "." );
+                 << " hypergraph assumes, i.e., " << hyGraph_topology_->n_hyNodes() << "." );
       hy_assert( hyNode_factory_.n_hyNodes() >= 2 ,
                  "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
                  << "consists of " << hyNode_factory_.n_hyNodes() << " hypernodes." );
-      hy_assert( hyGraph_topology_.n_hyEdges() > 0 ,
+      hy_assert( hyGraph_topology_->n_hyEdges() > 0 ,
                  "A hypergraph is supposed to consist of at least one hyperedge. This graph "
-                  << "consists of " << hyGraph_topology_.n_hyEdges() << " hyperedges." );
+                  << "consists of " << hyGraph_topology_->n_hyEdges() << " hyperedges." );
     }
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
@@ -326,22 +328,51 @@ class HDGHyperGraph
      **********************************************************************************************/
     HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
                   const typename GeomT::constructor_value_type& construct_geom)
-    : hyGraph_topology_ ( construct_topo ),
-      hyGraph_geometry_ ( construct_geom ),
-      hyNode_factory_   ( hyGraph_topology_.n_hyNodes() )
+      : hyGraph_topology_ (std::make_shared<const TopoT>(construct_topo)),
+	hyGraph_geometry_ (std::make_shared<const GeomT>(construct_geom)),
+	hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
-      hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_.n_hyNodes() ,
+      hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
                  hyNode_factory_.n_hyNodes() << ", which is not equal to the amount that the"
-                 << " hypergraph assumes, i.e., " << hyGraph_topology_.n_hyNodes() << "." );
+                 << " hypergraph assumes, i.e., " << hyGraph_topology_->n_hyNodes() << "." );
       hy_assert( hyNode_factory_.n_hyNodes() >= 2 ,
                  "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
                  << "consists of " << hyNode_factory_.n_hyNodes() << " hypernodes." );
-      hy_assert( hyGraph_topology_.n_hyEdges() > 0 ,
+      hy_assert( hyGraph_topology_->n_hyEdges() > 0 ,
                  "A hypergraph is supposed to consist of at least one hyperedge. This graph "
-                  << "consists of " << hyGraph_topology_.n_hyEdges() << " hyperedges." );
+                  << "consists of " << hyGraph_topology_->n_hyEdges() << " hyperedges." );
+    }
+     /*!*********************************************************************************************
+     * \brief Construct HDGHyperGraph from existing topology and geometry
+     *
+     * This is one of two standard ways of constructing a hypergraph.
+     * That is, a hypergraph is constructed by providing the necessary data to construct its
+     * topology and its geometry seperately in form of the respective \c constructor_value_type
+     * (plural, two).
+     *
+     * \param   construct_topo        Information needed to deduce topological data.
+     * \param   construct_geom        Information needed to deduce geometrical data.
+     **********************************************************************************************/
+  HDGHyperGraph(std::shared_ptr<const TopoT> topo, std::shared_ptr<const GeomT> geom)
+      : hyGraph_topology_ (topo),
+	hyGraph_geometry_ (geom),
+	hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
+    {
+      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
+                     "The dimension of topology and geometry should be equal!" );
+      hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
+                 "The amount of hypernodes known to the hypernode factory is " <<
+                 hyNode_factory_.n_hyNodes() << ", which is not equal to the amount that the"
+                 << " hypergraph assumes, i.e., " << hyGraph_topology_->n_hyNodes() << "." );
+      hy_assert( hyNode_factory_.n_hyNodes() >= 2 ,
+                 "A hypergraph is assumed to consist of at least two hypernodes. This graph only "
+                 << "consists of " << hyNode_factory_.n_hyNodes() << " hypernodes." );
+      hy_assert( hyGraph_topology_->n_hyEdges() > 0 ,
+                 "A hypergraph is supposed to consist of at least one hyperedge. This graph "
+                  << "consists of " << hyGraph_topology_->n_hyEdges() << " hyperedges." );
     }
     /*!*********************************************************************************************
      * \brief   Subscript operator of a \c HDGHyperGraph.
@@ -405,7 +436,7 @@ class HDGHyperGraph
      * \retval  hyEdge_topology    Topological information about hyperedge.
      **********************************************************************************************/
     const typename TopoT::value_type hyEdge_topology(const hyEdge_index_t index) const
-    { return hyGraph_topology_.get_hyEdge(index); }
+    { return hyGraph_topology_->get_hyEdge(index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
      *
@@ -417,13 +448,13 @@ class HDGHyperGraph
      * \retval  hyEdge_geometry    Geometrical information about hyperedge.
      **********************************************************************************************/
     const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
-    { return hyGraph_geometry_.get_hyEdge(index); }
+    { return hyGraph_geometry_->get_hyEdge(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyEdges          The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyEdge_index_t n_hyEdges() const  { return hyGraph_topology_.n_hyEdges(); }
+    const hyEdge_index_t n_hyEdges() const  { return hyGraph_topology_->n_hyEdges(); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *
