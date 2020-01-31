@@ -90,7 +90,7 @@ examples:
 
 run_examples:
 	make examples
-	./build/C++ExampleBuild/DiffusionPlot1.exe;
+	./build/C++ExampleBuild/Plot1.exe;
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 

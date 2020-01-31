@@ -24,9 +24,9 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
 
-#include "FuncAndQuad.hxx"
-#include "Geom.hxx"
-#include "HyperNodeFactory.hxx"
+#include <FuncAndQuad.hxx>
+#include <Geom_File.hxx>
+#include <HyperNodeFactory.hxx>
 #include <array>
 
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>

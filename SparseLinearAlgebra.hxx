@@ -149,6 +149,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
  * \param   b                   Right-hand side of linear system of equations.
  * \param   problme             Class instantiation to implement matrix vector multiplication.
  * \param   n_iterations        Maximum number of iterations. 0 is default and the size of b.
+ * \todo Why is #n_iterations a reference and why not unsigned?
  * \param   tolerance           Absolute tolerance value in 2 norm. Default is 1e-9.
  * \retval  solution            Vector sufficing Ax = b up to given tolerance if converged.
  * \retval  n_iterations        Number of needed iterations. -1 indicates no convergence.
