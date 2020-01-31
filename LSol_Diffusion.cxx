@@ -869,23 +869,6 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values, const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
-{
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > primals = primal_at_boundary(coeffs);
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > duals   = dual_at_boundary(coeffs);
-  
-  for (unsigned int i = 0; i < lambda_values.size(); ++i)
-    for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-      bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
-       
-  return bdr_values;
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 vector<double>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
@@ -989,5 +972,15 @@ array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>:
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coeffs = solve_local_problem(lambda_values);
+  
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > primals = primal_at_boundary(coeffs);
+  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > duals   = dual_at_boundary(coeffs);
+  
+  for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+      bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
+       
+  return bdr_values;
 }
