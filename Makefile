@@ -3,17 +3,17 @@ PROJECT     	= HDGonHYPERGRAPHS
 								cython_cpp linking examples run_examples new_run_examples
 
 # Predefined directories for output, build files, and doxygen
-SRC_DIR     	= .
-OUTPUT_DIR		= output
-BUILD_DIR   	= build
-DOXY_FILE_DIR	= doxygen
-EXAMPLE_DIR		= examples_c++
+SRC_DIR		= $(PWD)
+OUTPUT_DIR	= $(SRC_DIR)/output
+BUILD_DIR	= $(SRC_DIR)/build
+DOXY_FILE_DIR	= $(SRC_DIR)/doxygen
+EXAMPLE_DIR	= $(SRC_DIR)/examples_c++
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
 EXAMPLE_BUILD	= $(BUILD_DIR)/C++ExampleBuild
 CYTHON_FILE 	= ClassWrapper
-DOXY_DIR			= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
+DOXY_DIR	= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
 
 # Extract relevant Python options, where overall version is chosen by user
 PYTHON_VER		= 3
@@ -33,9 +33,9 @@ endif
 
 # C++ Compiler options
 COMPILER    	= g++
-BASICFLAGS  	= -pthread -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat \
+BASICFLAGS  	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat \
 								-Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC \
-								--std=c++17 -I$(PYTHON_M)
+								--std=c++17
 
 # C++ Linker options
 LINKER      		= g++
@@ -102,7 +102,7 @@ new_run_examples:
 example_objects: $(EXAMPLE_OBJS)
 
 $(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.cxx
-	$(COMPILER) --std=c++17 -c $^ -o $@
+	$(COMPILER) $(BASICFLAGS) -c $^ -o $@
 
 example_linking: $(EXAMPLE_EXES)
 
@@ -127,3 +127,7 @@ linking: $(BUILD_DIR)/$(CYTHON_FILE).so
 
 $(BUILD_DIR)/%.so: $(OBJECT_DIR)/*.o $(CYTHON_DIR)/*.o
 	$(LINKER) $(LINKERPREFLAGS) $^ -o $@ $(LINKERPOSTFLAGS)
+
+print_variables:
+	@echo 'SRC_DIR=    ' $(SRC_DIR)
+	@echo 'OBJECT_DIR= ' $(OBJECT_DIR)

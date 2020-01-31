@@ -137,6 +137,8 @@ class HyperNodeFactory
 /*!*************************************************************************************************
  * \brief   Calculate the amount of local degrees of freedom of a hypernode at compile time.
  * 
+ * \todo This can only be determined by the model, say the local solver. Not here!
+ *
  * Naive implementation without math packages of
  * "amount = solution_dim * (poly_degree ^ (hyEdge_dim - 1))"!
  * 

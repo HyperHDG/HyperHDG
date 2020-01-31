@@ -35,11 +35,12 @@
 #ifndef HDGHYPERGRAPH_HXX
 #define HDGHYPERGRAPH_HXX
 
-#include "TypeDefs.hxx"
-#include "HyperNodeFactory.hxx"
-#include "HyAssert.hxx"
-#include "Topo.hxx"
-#include "Geom.hxx"
+#include <TypeDefs.hxx>
+#include <HyperNodeFactory.hxx>
+#include <HyAssert.hxx>
+#include <Topo.hxx>
+#include <Geom_UnitCube.hxx>
+#include <Geom_File.hxx>
 
 /*!*************************************************************************************************
  * \brief   The class template uniting topology and geometry of a hypergraph with the topology of
@@ -282,6 +283,10 @@ class HDGHyperGraph
   public:
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
+     *
+     * \todo Where does an HDGHyperGraph constructed like this get its geometry from?
+     *
+     * \todo Do not put "\c" in front of class names
      *
      * This is one of two standard ways of constructing a hypergraph.
      * That is, a hypergraph is constructed by providing the necessary data in form of the

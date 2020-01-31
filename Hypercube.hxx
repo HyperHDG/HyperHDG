@@ -10,22 +10,22 @@ template <int dim>
 struct Hypercube
 {
   /// Number of faces of the hypercube
-  constexpr unsigned int n_faces ()
+  static constexpr unsigned int n_faces ()
   {
     return 2*dim;
   }
 
   /// Number of vertices of the hypercube
-  constexpr unsigned int n_vertices ()
+  static constexpr unsigned int n_vertices ()
   {
     return 1 << dim;
   }
   
   /// Return `n` to the power `dim`, which is the size of the `dim`-dimensional tensor of dimension `n`.
-  constexpr unsigned int pow(unsigned int n)
+  static constexpr unsigned int pow(unsigned int n)
   {
     int result = n;
-    for (i=1;i<dim;++i)
+    for (unsigned int i=1;i<dim;++i)
       result *= n;
     return result;
   }
