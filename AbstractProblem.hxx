@@ -315,8 +315,8 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-//                  DiffusionSolverTensorStruc < hyEdge_dim, poly_degree, 2 * poly_degree >
-                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
+                  DiffusionSolverTensorStruc < hyEdge_dim, poly_degree, 2 * poly_degree >
+//                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
 
 /*!*************************************************************************************************

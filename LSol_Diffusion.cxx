@@ -370,7 +370,7 @@ vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const 
 }
 */
 
-
+/*
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
@@ -380,14 +380,11 @@ solve_local_system_of_eq(array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdg
   hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
              "The size of a local matrix should be the size of the right-hand side squared." );
   const int system_size = loc_rhs.size();
-  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data();
-  int info = -1;  
-  lapack_solve(system_size, mat_a, rhs_b, &info);
-  hy_assert( info == 0 ,
-             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
+  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data(); 
+  lapack_solve(system_size, mat_a, rhs_b);
   return loc_rhs;
 }
-
+*/
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
@@ -399,12 +396,7 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >
   right_hand_side = assemble_rhs(lambda_values);
   local_matrix = assemble_loc_mat();
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = solve_local_system_of_eq(local_matrix, right_hand_side);
-/*  
-  cout << endl;
-  for (unsigned int i = 0; i < solution.size(); ++i) cout << "  " << solution[i];
-  cout << endl;
-*/  
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = lapack_solve<(hyEdge_dim+1) * num_ansatz_fct_>(local_matrix, right_hand_side);
   return solution;
 }
 
@@ -573,8 +565,8 @@ inline void index_decompose(unsigned int index, unsigned int range, array<unsign
   {
     for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
     {
-      decomposition[dim] = index % (range+1);
-      index /= range+1;
+      decomposition[dim] = index % range;
+      index /= range;
     }
   }
 }
@@ -601,10 +593,10 @@ assemble_loc_mat() const
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < num_ansatz_fct_; ++j)
     {
-      index_decompose<hyEdge_dim>(j, poly_deg, dec_j);
+      index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
       
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = 1.;
@@ -717,10 +709,10 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg, dec_j);
+      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
         integral = 1.;
@@ -757,24 +749,6 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-solve_local_system_of_eq(array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>& loc_matrix,
-                         array<double, (hyEdge_dim+1) * num_ansatz_fct_>& loc_rhs) const
-{
-  hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
-             "The size of a local matrix should be the size of the right-hand side squared." );
-  const int system_size = loc_rhs.size();
-  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data();
-  int info = -1;  
-  lapack_solve(system_size, mat_a, rhs_b, &info);
-  hy_assert( info == 0 ,
-             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
-  return loc_rhs;
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
@@ -784,7 +758,7 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >
   right_hand_side = assemble_rhs(lambda_values);
   local_matrix = assemble_loc_mat();
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = solve_local_system_of_eq(local_matrix, right_hand_side);
+  array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = lapack_solve<(hyEdge_dim+1) * num_ansatz_fct_>(local_matrix, right_hand_side);
   
   return solution;
 }
@@ -815,10 +789,10 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg, dec_j);
+      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
         integral = 1.;
@@ -877,10 +851,10 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg, dec_j);
+      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
         integral = 1.;
@@ -961,6 +935,7 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
   vector<double> values(n_points, 0.);
   vector< vector<double> > values1D(poly_deg+1);
+  double fct_value;
   
   array<unsigned int, hyEdge_dim> dec_i, dec_q;
   
@@ -973,12 +948,14 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int q = 0; q < n_points; ++q)
     {
-      index_decompose<hyEdge_dim>(q, abscissas.size()-1, dec_q);
+      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
+      fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        values[q] += coefficients[hyEdge_dim * num_ansatz_fct_ + i] * values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+      values[q] += coefficients[hyEdge_dim * num_ansatz_fct_ + i] * fct_value;
     }
   }
 
@@ -996,6 +973,7 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
   vector< array<double, hyEdge_dim> > values(n_points);
   vector< vector<double> > values1D(poly_deg+1);
+  double fct_value;
   
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
   
@@ -1010,18 +988,18 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
   { 
-    index_decompose<hyEdge_dim>(i, poly_deg, dec_i);
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int q = 0; q < n_points; ++q)
     {
-      index_decompose<hyEdge_dim>(q, abscissas.size()-1, dec_q);
+      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
+      fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        {
-          values[q][dim] += coefficients[dim * num_ansatz_fct_ + i] * values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-        }
+        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+        values[q][dim] += coefficients[dim * num_ansatz_fct_ + i] * fct_value;
     }
   }
-
+  
   return values;
 }
 

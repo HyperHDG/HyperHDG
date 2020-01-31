@@ -15,6 +15,8 @@
 #ifndef LAPACKWRAPPER_HXX
 #define LAPACKWRAPPER_HXX
 
+#include <array>
+
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
  *
@@ -33,9 +35,18 @@
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        If \c info is 0, then this is a pointer to the solution of the system of
  *                      equations.
- * \retval info         Describes whether the algorithm has been able to compute the solution.
- *                      0 = success.
  **************************************************************************************************/
-void lapack_solve(int system_size, double *mat_a, double *rhs_b, int *info);
+void lapack_solve(int system_size, double *mat_a, double *rhs_b);
+
+
+
+template<unsigned int system_size> std::array<double, system_size> lapack_solve
+(std::array<double, system_size * system_size>& dense_mat, std::array<double, system_size>& rhs)
+{
+  double *mat_a = dense_mat.data();
+  double *rhs_b = rhs.data();
+  lapack_solve(system_size, mat_a, rhs_b);
+  return rhs;
+}
 
 #endif // end of ifndef LAPACKWRAPPER_HXX

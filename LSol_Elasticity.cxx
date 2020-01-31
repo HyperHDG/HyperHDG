@@ -380,11 +380,8 @@ solve_local_system_of_eq(array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdg
   hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
              "The size of a local matrix should be the size of the right-hand side squared." );
   const int system_size = loc_rhs.size();
-  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data();
-  int info = -1;  
-  lapack_solve(system_size, mat_a, rhs_b, &info);
-  hy_assert( info == 0 ,
-             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
+  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data(); 
+  lapack_solve(system_size, mat_a, rhs_b);
   return loc_rhs;
 }
 
