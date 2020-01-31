@@ -75,19 +75,17 @@ class DiffusionSolverNaive_RegularQuad
 
 
 
-template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int quad_deg>
+template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 class DiffusionSolverTensorStruc
 {
   private:
     static constexpr unsigned int n_quads_        = FuncQuad::compute_n_quad_points(quad_deg),
-                                  num_ansatz_fct_ = compute_n_dofs_per_node(hyEdge_dim, max_poly_degree) * (max_poly_degree + 1),
-                                  num_ansatz_bdr_ = compute_n_dofs_per_node(hyEdge_dim, max_poly_degree);
+                                  num_ansatz_fct_ = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1),
+                                  num_ansatz_bdr_ = compute_n_dofs_per_node(hyEdge_dim, poly_deg);
     const double tau_;
-    
-    
-    
-    std::array< std::array<double, compute_n_corners_of_cube(hyEdge_dim)> , num_ansatz_fct_ > trials_in_corners_;
-
+    const std::array<double, n_quads_> q_weights_;
+    const std::array< std::array<double, n_quads_ > , poly_deg + 1 > trial_, deriv_;
+    const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr_;
     
     inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column) const;
     inline auto assemble_loc_mat() const; // std::array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>
@@ -103,14 +101,14 @@ class DiffusionSolverTensorStruc
     
     std::vector<double> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::vector< std::array<double, hyEdge_dim> > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim >
+    std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, poly_deg)> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
     
     std::vector<double> primal_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::vector< std::array<double,hyEdge_dim> > dual_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
+    static constexpr unsigned int polynomial_degree() { return poly_deg; }
     static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
     static constexpr unsigned int solution_dimension_hyNode() { return 1; }
     static constexpr bool need_geometry_processing() { return false; }
