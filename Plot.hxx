@@ -114,9 +114,6 @@ class PlotOptions
      *
      * Constructs a \c PlotOptions object containing default options and information about the
      * hypergraph and the local solver.
-     * 
-     * \param   hyper_graph     Reference to \c HyperGraphT& representing the hypergraph.
-     * \param   local_solver    Reference to \c LocalSolverT& representing the local solver.
      **********************************************************************************************/
     PlotOptions();
 }; // end of class PlotOptions
@@ -124,7 +121,7 @@ class PlotOptions
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
- * Creates a file according to set plotting options in \c plotOpt. This file contains the solution
+ * Creates a file according to set plotting options in \c plot_options. This file contains the solution
  * of the PDE defined in \c plotOpt having the representation \c lambda in terms of its skeletal
  * degrees of freedom (related to skeletal variable lambda).
  *
@@ -136,7 +133,7 @@ class PlotOptions
  *                          hypergraph.
  * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
- * \param   plotOpt         \c PlotOptions object containing plotting options.
+ * \param   plot_options    PlotOptions object containing plotting options.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -145,7 +142,7 @@ template <class HyperGraphT, class LocalSolverT>
 void plot(const HyperGraphT& hyper_graph,
 	  const LocalSolverT& local_solver,
 	  const std::vector<double>& lambda,
-	  const PlotOptions& plotOpt);
+	  const PlotOptions& plot_options);
 
 
 PlotOptions::PlotOptions()
@@ -154,35 +151,116 @@ PlotOptions::PlotOptions()
     n_subintervals(1)
 {}
 
+/*!**********************************************************************
+ * \brief Auxiliary functions for writing graphics files
+ ***********************************************************************/
+namespace PlotFunctions
+{
+  /*!**********************************************************************
+   * \brief Auxiliary function for writing geometry section VTU files
+   *
+   * This function plots the geometry part of an unstructured mesh in
+   * a VTU file. The typical file structure is
+   *
+   * ```
+   * <Preamble/>
+   * <UnstructuredGrid>
+   * <Geometry/>
+   * <Data/>
+   * </UnstructuredGrid>
+   *
+   * This function writes the `<Geometry>` part of the structure.
+   ************************************************************************/
+  template <class HyperGraphT>
+  void plot_vtu_unstructured_geometry(std::ostream& output,
+				      const HyperGraphT& hyper_graph,
+				      const PlotOptions& plot_options)
+  {
+    constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
+    constexpr unsigned int space_dim = HyperGraphT::space_dimension();
+    
+    const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
+    const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
+    
+    pt_index_t n_points = points_per_hyEdge * n_hyEdges;
+    
+    static_assert (hyEdge_dim <= 3);
+    unsigned int element_id;
+    if constexpr (hyEdge_dim == 1)       element_id = 3;
+    else if constexpr (hyEdge_dim == 2)  element_id = 8;
+    else if constexpr (hyEdge_dim == 3)  element_id = 11;
+    
+    output << "    <Piece NumberOfPoints=\"" << n_points << "\" NumberOfCells= \"" << n_hyEdges << "\">" << std::endl;
+    output << "      <Points>" << std::endl;
+    output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    
+    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+      {
+	auto hyEdge_geometry = hyper_graph.hyEdge_geometry(he_number);
+	for (unsigned int pt_number = 0; pt_number < points_per_hyEdge; ++pt_number)
+	  {
+	    output << "        ";
+	    const Point<space_dim> point = hyEdge_geometry.point(pt_number);
+	    for (unsigned int dim = 0; dim < space_dim; ++dim)
+	      output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
+	    for (unsigned int dim = space_dim; dim < 3; ++dim)
+	      output << "  0.0";
+	    output << std::endl;
+	  }
+      }
+    
+    output << "        </DataArray>" << std::endl;
+    output << "      </Points>" << std::endl;
+    output << "      <Cells>" << std::endl;
+    output << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+    output << "        ";
+    
+    for (pt_index_t pt_number = 0; pt_number < n_points; ++pt_number)
+      output << "  " << pt_number;
+    output << std::endl;
+    
+    output << "        </DataArray>" << std::endl;
+    output << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+    output << "        ";
+    
+    for (pt_index_t pt_number = points_per_hyEdge; pt_number <= n_points;
+	 pt_number += points_per_hyEdge)
+      output << "  " << pt_number;
+    output << std::endl;
+    
+    output << "        </DataArray>" << std::endl;
+    output << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
+    output << "        ";
+    
+    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+      output << "  " << element_id;
+    output << std::endl;
+    
+    output << "        </DataArray>" << std::endl;
+    output << "      </Cells>" << std::endl;
+  }
+}
 
 template <class HyperGraphT, class LocalSolverT>
 void plot_vtu(const HyperGraphT& hyper_graph,
 	      const LocalSolverT& local_solver,
 	      const std::vector<double>& lambda,
-	      const PlotOptions& plotOpt)
+	      const PlotOptions& plot_options)
 {
   constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
-  constexpr unsigned int space_dim = HyperGraphT::space_dimension();
   
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
-  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
-  
-  pt_index_t n_points = points_per_hyEdge * n_hyEdges;
+  //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
   
   static_assert (hyEdge_dim <= 3);
-  unsigned int element_id;
-  if constexpr (hyEdge_dim == 1)       element_id = 3;
-  else if constexpr (hyEdge_dim == 2)  element_id = 8;
-  else if constexpr (hyEdge_dim == 3)  element_id = 11;
   
-  Point<space_dim> point;
   std::ofstream myfile;
   
-  std::string filename = plotOpt.outputDir;
-  filename.append("/"); filename.append(plotOpt.fileName);
-  if(plotOpt.printFileNumber)
+  std::string filename = plot_options.outputDir;
+  filename.append("/"); filename.append(plot_options.fileName);
+  if(plot_options.printFileNumber)
   {
-    filename.append("."); filename.append(std::to_string(plotOpt.fileNumber));
+    filename.append("."); filename.append(std::to_string(plot_options.fileNumber));
   }
   filename.append(".vtu");
   
@@ -190,55 +268,8 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "<?xml version=\"1.0\"?>"  << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" compressor=\"vtkZLibDataCompressor\">" << std::endl;
   myfile << "  <UnstructuredGrid>" << std::endl;
-  myfile << "    <Piece NumberOfPoints=\"" << n_points << "\" NumberOfCells= \"" << n_hyEdges << "\">" << std::endl;
-  myfile << "      <Points>" << std::endl;
-  myfile << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-  
-  for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
-  {
-    auto hyEdge_geometry = hyper_graph.hyEdge_geometry(he_number);
-    for (unsigned int pt_number = 0; pt_number < points_per_hyEdge; ++pt_number)
-    {
-      myfile << "        ";
-      point = hyEdge_geometry.point(pt_number);
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        myfile << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
-      for (unsigned int dim = space_dim; dim < 3; ++dim)
-        myfile << "  0.0";
-      myfile << std::endl;
-    }
-  }
-  
-  myfile << "        </DataArray>" << std::endl;
-  myfile << "      </Points>" << std::endl;
-	myfile << "      <Cells>" << std::endl;
-	myfile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-  myfile << "        ";
-  
-	for (pt_index_t pt_number = 0; pt_number < n_points; ++pt_number)
-    myfile << "  " << pt_number;
-  myfile << std::endl;
-  
-  myfile << "        </DataArray>" << std::endl;
-  myfile << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-  myfile << "        ";
-  
-  for (pt_index_t pt_number = points_per_hyEdge; pt_number <= n_points;
-       pt_number += points_per_hyEdge)
-    myfile << "  " << pt_number;
-  myfile << std::endl;
-  
-  myfile << "        </DataArray>" << std::endl;
-	myfile << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
-  myfile << "        ";
-  
-  for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
-    myfile << "  " << element_id;
-  myfile << std::endl;
-  
-  myfile << "        </DataArray>" << std::endl;
-	myfile << "      </Cells>" << std::endl;
-  
+
+  PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, plot_options);
   
   myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
@@ -267,7 +298,6 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "        </DataArray>" << std::endl;
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   
-  
   for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
   {
     hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
@@ -281,12 +311,11 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   }
 
   myfile << "        </DataArray>" << std::endl;
-  myfile << "      </PointData>" << std::endl;
+  myfile << "      </PointData>" << std::endl;  
   
-
-	myfile << "    </Piece>" << std::endl;
-	myfile << "  </UnstructuredGrid>" << std::endl;
-	myfile << "</VTKFile>" << std::endl;
+  myfile << "    </Piece>" << std::endl;
+  myfile << "  </UnstructuredGrid>" << std::endl;
+  myfile << "</VTKFile>" << std::endl;
   myfile.close();
 } // end of void plot_vtu
 
@@ -295,8 +324,8 @@ void plot_vtu(const HyperGraphT& hyper_graph,
  * 
  * \todo    Plot function has been deactivated for elasticity!
  *
- * Creates a file according to set plotting options in \c plotOpt. This file contains the solution
- * of the PDE defined in \c plotOpt having the representation \c lambda in terms of its skeletal
+ * Creates a file according to set plotting options in \c plot_options. This file contains the solution
+ * of the PDE defined in \c plot_options having the representation \c lambda in terms of its skeletal
  * degrees of freedom (related to skeletal variable lambda).
  *
  * \tparam  HyperGraphT     Template parameter describing the precise class of the \c HDGHyperGraph,
@@ -307,7 +336,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
  *                          hypergraph.
  * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
- * \param   plotOpt         \c PlotOptions object containing plotting options.
+ * \param   plot_options         \c PlotOptions object containing plotting options.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -316,22 +345,21 @@ template <class HyperGraphT, class LocalSolverT>
 void plot(const HyperGraphT& hyper_graph,
 	  const LocalSolverT& local_solver,
 	  const std::vector<double>& lambda,
-	  const PlotOptions& plotOpt)
+	  const PlotOptions& plot_options)
 {
-  hy_assert( plotOpt.fileEnding == "vtu" , 
+  hy_assert( plot_options.fileEnding == "vtu" , 
              "Only file ending vtu is supported at the moment. Your choice has been "
-             << plotOpt.fileEnding << ", which is invalid.");
-  hy_assert( !plotOpt.fileName.empty() , "File name must not be empty!" );
-  hy_assert( !plotOpt.outputDir.empty() , "Ouput directory must not be empty!" );
-  plot_vtu(hyper_graph, local_solver, lambda, plotOpt);
+             << plot_options.fileEnding << ", which is invalid.");
+  hy_assert( !plot_options.fileName.empty() , "File name must not be empty!" );
+  hy_assert( !plot_options.outputDir.empty() , "Ouput directory must not be empty!" );
+  plot_vtu(hyper_graph, local_solver, lambda, plot_options);
 } // end of void plot
-
 
 template<class HyperGraphT, unsigned int hdim, unsigned int sdim, unsigned int pd, unsigned int qd>
 void plot(const HyperGraphT& hyper_graph,
 	  const ElasticitySolver_RegularQuad<hdim,sdim,pd,qd>& local_solver,
 	  const std::vector<double>& lambda,
-	  const PlotOptions& plotOpt)
+	  const PlotOptions& plot_options)
 {
 }
 
