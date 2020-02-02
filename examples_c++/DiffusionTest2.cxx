@@ -32,7 +32,14 @@ using namespace SparseLA;
  **************************************************************************************************/
 int main(int argc, char *argv[])
 {
-  bool successful = true;
+  const unsigned int space_dim = 2;
+  Point<space_dim> a, b, c;
+  a[0] = 1.; b[1] = 1.; c += 1.;
+  std::cout << "Addition!" << endl;  
+  Point<space_dim> res = a - b - c - (a - b); 
+  std::cout << res << std::endl;
+  return 0;
+/*  bool successful = true;
   const double solution_tolerance = 1e-8;
   
   std::string filename = "domains/SimpleTriangle.geo";
@@ -58,7 +65,7 @@ int main(int argc, char *argv[])
   
   for (unsigned int i = 0; i < solution.size(); ++i)
     cout << solution[i] << endl;
-
+*/
 /*  
   const std::vector<double> python_result = 
   { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
@@ -89,6 +96,6 @@ int main(int argc, char *argv[])
     return 0;
   }
   else  cout << "Diffusion test 1 failed!" << endl;
-*/  
+*/
   return -1;
 }

@@ -45,11 +45,11 @@ void test()
   DiffusionSolverNaive_RegularQuad<edge_dim,1,1> lsolver(1.);
 
   PlotOptions pltop;
-  std::string name = "plot1-"
+/*  std::string name = "plot1-"
     name += std::to_string(edge_dim) + std::string("-") + std::to_string(space_dim);
   pltop.fileName = name;
   pltop.printFileNumber = false;
-  plot(hdg_graph, lsolver, vectorDirichlet, pltop);
+  plot(hdg_graph, lsolver, vectorDirichlet, pltop);*/
 }
 
 int main()
@@ -60,4 +60,5 @@ int main()
   test<1,3>();
   test<2,3>();
   test<3,3>();
+  return 0;
 }
