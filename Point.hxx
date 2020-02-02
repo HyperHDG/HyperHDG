@@ -14,8 +14,9 @@
 #ifndef POINT_HXX
 #define POINT_HXX
 
-#include "TypeDefs.hxx"
-#include "HyAssert.hxx"
+#include <TypeDefs.hxx>
+#include <HyAssert.hxx>
+
 #include <cmath>
 #include <array>
 #include <ostream>
@@ -47,7 +48,7 @@ class Point
      * 
      * Fills coordinates of the point with zeros.
      **********************************************************************************************/
-    Point();
+    Point()  { coordinates_.fill(0.); }
     /*!*********************************************************************************************
      * \brief   Construct point from array of coordinates.
      * 
@@ -55,22 +56,26 @@ class Point
      * 
      * \param   coordinates   A \c std::array containing the coordinates of the point.
      **********************************************************************************************/
-    Point(const std::array<pt_coord_t, space_dim>& coordinates);
-    
-    Point(const Point<space_dim>& other); // copy constructor
-    Point(Point<space_dim>&& other) noexcept; // move constructor
-    Point<space_dim>& operator= (const Point<space_dim>& other); // copy assignement
-    Point<space_dim>& operator= (Point<space_dim>&& other) noexcept; // move assignment
-    
+    Point(const std::array<pt_coord_t, space_dim>& coordinates)  : coordinates_(coordinates) { }
     /*!*********************************************************************************************
-     * \brief   Return single coordinate of a constant point.
-     * 
-     * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    \c pt_coord_t describing the coord_entry'th
-     *                        coordinate.
+     * \brief   Copy constructor.
      **********************************************************************************************/
-    pt_coord_t operator[](const unsigned int coord_entry) const;
+    Point(const Point<space_dim>& other)  : coordinates_(other.coordinates_) { }
+    /*!*********************************************************************************************
+     * \brief   Move constructor.
+     **********************************************************************************************/
+    Point(Point<space_dim>&& other) noexcept  : coordinates_(std::move(other.coordinates_)) { }
+    /*!*********************************************************************************************
+     * \brief   Copy assignment.
+     **********************************************************************************************/
+    Point<space_dim>& operator= (const Point<space_dim>& other)
+    { coordinates_ = other.coordinates_; return *this; }
+    /*!*********************************************************************************************
+     * \brief   Move assignment.
+     **********************************************************************************************/
+    Point<space_dim>& operator= (Point<space_dim>&& other) noexcept
+    { std::swap(coordinates_, other.coordinates_); return *this; }
+    
     /*!*********************************************************************************************
      * \brief   Return reference to single coordinate of a point.
      * 
@@ -79,16 +84,30 @@ class Point
      * \retval  coordinate    A reference to a \c pt_coord_t describing the coord_entry'th
      *                        coordinate.
      **********************************************************************************************/
-    pt_coord_t& operator[](const unsigned int coord_entry);
+    pt_coord_t& operator[](const unsigned int coord_entry)
+    {
+      hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
+                 "You can only access entries of a point's coordinates that have a non-negaitive "
+                 << "index that is smaller than the space dimension (which is " << space_dim << ")."
+                 << " However, you tried to access the " << coord_entry << "-th entry." );
+      return coordinates_[coord_entry];
+    }
     /*!*********************************************************************************************
-     * \brief   Return reference to const single coordinate of a point.
+     * \brief   Return single coordinate of a constant point.
      * 
      * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
      *                        returned.
-     * \retval  coordinate    A reference to a \c pt_coord_t describing the coord_entry'th
+     * \retval  coordinate    \c pt_coord_t describing the coord_entry'th
      *                        coordinate.
      **********************************************************************************************/
-    pt_coord_t coordinate(const unsigned int coord_entry) const;
+    const pt_coord_t& operator[](const unsigned int coord_entry) const
+    {
+      hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
+                 "You can only access entries of a point's coordinates that have a non-negaitive "
+                 << "index that is smaller than the space dimension (which is " << space_dim << ")."
+                 << " However, you tried to access the " << coord_entry << "-th entry." );
+      return coordinates_[coord_entry];
+    }
     /*!*********************************************************************************************
      * \brief   Find out whether two points have (exactly) the same coordinates.
      * 
@@ -98,7 +117,12 @@ class Point
      * \param   other_point   Another \c Point<space_dim> that is to be dicriminate from.
      * \retval  isEqual       A \c boolean which is true if both points have the same coordinates.
      **********************************************************************************************/
-    bool operator==(const Point<space_dim>& other_point) const;
+    bool operator==(const Point<space_dim>& other_point) const
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        if (coordinates_[dim] != other_point[dim])  return false;
+      return true;
+    }
     /*!*********************************************************************************************
      * \brief   Find out whether two points have (exactly) the same coordinates.
      * 
@@ -109,7 +133,12 @@ class Point
      * \param   other_point   Another \c Point<space_dim> that is to be dicriminate from.
      * \retval  isEqual       A \c boolean which is false if both points have the same coordinates.
      **********************************************************************************************/
-    bool operator!=(const Point<space_dim>& other_point) const;
+    bool operator!=(const Point<space_dim>& other_point) const
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        if (coordinates_[dim] != other_point[dim])  return true;
+      return false;
+    }
     /*!*********************************************************************************************
      * \brief   Find out whether the point is "smaller than" another point.
      * 
@@ -122,277 +151,204 @@ class Point
      * \retval  isEqual       A \c boolean which is true if the left point is strictly smaller than
      *                        the right one.
      **********************************************************************************************/
-    bool operator<(const Point<space_dim>& other_point) const;
+    bool operator<(const Point<space_dim>& other_point) const
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        if (coordinates_[dim] < other_point[dim])      return true;
+        else if (coordinates_[dim] > other_point[dim]) return false;
+      return false;
+    }
     
-    Point<space_dim>& operator*=(const pt_coord_t scale_fac);
-    Point<space_dim>& operator/=(const pt_coord_t scale_denom);
-    Point<space_dim>& operator+=(const pt_coord_t additum);
-    Point<space_dim>& operator-=(const pt_coord_t subtractum);
+    Point<space_dim>& operator*=(const pt_coord_t scale_fac)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] *= scale_fac;
+      return *this;
+    }
     
-    Point<space_dim>& operator+=(const Point<space_dim>& other);
-    Point<space_dim>& operator-=(const Point<space_dim>& other);
+    Point<space_dim>& operator/=(const pt_coord_t scale_denom)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] /= scale_denom;
+      return *this;
+    }
     
-    Point<space_dim> operator+(const Point<space_dim>& other) const;
-    Point<space_dim>& operator+(Point<space_dim>&& other) noexcept;
-    Point<space_dim> operator-(const Point<space_dim>& other) const;
-    Point<space_dim>& operator-(Point<space_dim>&& other) noexcept;
+    Point<space_dim>& operator+=(const pt_coord_t additum)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] += additum;
+      return *this;
+    }
+
+    Point<space_dim>& operator-=(const pt_coord_t subtractum)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] -= subtractum;
+      return *this;
+    }
+    
+    Point<space_dim>& operator+=(const Point<space_dim>& other)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] += other[dim];
+      return *this;
+    }
+    
+    Point<space_dim>& operator-=(const Point<space_dim>& other)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] -= other[dim];
+      return *this;
+    }
     
 }; // end of class Point
 
+/*!*************************************************************************************************
+ * \brief   Computes Euclidean norm of a \c Point.
+ * 
+ * \todo    Fill information, when details clarified with Guido.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-pt_coord_t norm_2(const Point<space_dim>& point)
+pt_coord_t norm_2(const Point<space_dim>& pt)
 {
   pt_coord_t norm = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    norm += point.coordinate(dim) * point.coordinate(dim);
+    norm += pt[dim] * pt[dim];
   return std::sqrt(norm);
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Computes Euclidean distance between two \c Point.
+ * 
+ * \todo    Fill information, when details clarified with Guido.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
 pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   pt_coord_t distance = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    distance += (left.coordinate(dim) - right.coordinate(dim)) 
-                * (left.coordinate(dim) - right.coordinate(dim));
+    distance += (left[dim] - right[dim]) * (left[dim] - right[dim]);
   return std::sqrt(distance);
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Fill \c stream with \c Point.
+ * 
+ * \todo    Fill information, when details clarified with Guido.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
 std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    stream << " " << pt.coordinate(dim) << " ";
+    stream << " " << pt[dim] << " ";
   return stream;
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Add two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred and why the assert
+ *          in all related functions are never thrown (even if Point a + b + c is artificially added
+ *          in executed code)! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-Point<space_dim>::Point()
-{ 
-  coordinates_.fill(0.);
+Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>& right)
+{
+  Point<space_dim> sum(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += right[dim];
+  return sum;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim>::Point (const std::array<pt_coord_t, space_dim>& coordinates)
-: coordinates_(coordinates)
+Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& right)
 {
-  static_assert( 0 < space_dim && space_dim < 4 ,
-                 "Dimension of a point is supposed to be between 1 and 3 (included), but is not!" );
-  hy_assert( coordinates.size() == space_dim ,
-             "Size of coordinates array is " << coordinates.size() << " and should be equal to the "
-             << "template parameter dimension, which is " << space_dim << "." );
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
+  return left;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim>::Point (const Point<space_dim>& other) // copy constructor
+Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& right)
 {
-  static_assert( 0 < space_dim && space_dim < 4 ,
-                 "Dimension of a point is supposed to be between 1 and 3 (included), but is not!" );
-  hy_assert( coordinates_.size() == space_dim ,
-             "Size of coordinates array is " << coordinates_.size() << " and should be equal to the"
-             << " template parameter dimension, which is " << space_dim << "." );
-  for(unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] = other.coordinate(dim);
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] += left[dim];
+  return right;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim>::Point (Point<space_dim>&& other) noexcept // move constructor
-: coordinates_(std::move(other.coordinates_))
+Point<space_dim> operator+(Point<space_dim>&&left , Point<space_dim>&& right)
 {
-  static_assert( 0 < space_dim && space_dim < 4 ,
-                 "Dimension of a point is supposed to be between 1 and 3 (included), but is not!" );
-  hy_assert( coordinates_.size() == space_dim ,
-             "Size of coordinates array is " << coordinates_.size() << " and should be equal to the"
-             << " template parameter dimension, which is " << space_dim << "." );
-}
-  
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator= (const Point<space_dim>& other) // copy assignement
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] = other.coordinate(dim);
-  return *this;
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
+  return left;
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Subtract two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred and why the assert
+ *          in all related functions are never thrown (even if Point a - b - c is artificially added
+ *          in executed code)! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator= (Point<space_dim>&& other) noexcept // move assignment
+Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>& right)
 {
-  std::swap(coordinates_, other.coordinates_);
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-pt_coord_t Point<space_dim>::operator[] (const unsigned int coord_entry) const
-{
-  hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
-             "You can only access entries of a point's coordinates that have a non-negaitive index "
-             << "that is smaller than the space dimension (which is " << space_dim << "). However, "
-             << "you tried to access the " << coord_entry << "-th entry." );
-  return coordinates_[coord_entry];
-}
-
-
-template<unsigned int space_dim>
-pt_coord_t& Point<space_dim>::operator[] (const unsigned int coord_entry)
-{
-  hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
-             "You can only access entries of a point's coordinates that have a non-negaitive index "
-             << "that is smaller than the space dimension (which is " << space_dim << "). However, "
-             << "you tried to access the " << coord_entry << "-th entry." );
-  return coordinates_[coord_entry];
-}
-
-
-template<unsigned int space_dim>
-pt_coord_t Point<space_dim>::coordinate(const unsigned int coord_entry) const
-{
-  hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
-             "You can only access entries of a point's coordinates that have a non-negaitive index "
-             << "that is smaller than the space dimension (which is " << space_dim << "). However, "
-             << "you tried to access the " << coord_entry << "-th entry." );
-  return coordinates_[coord_entry];
-}
-
-
-template<unsigned int space_dim>
-bool Point<space_dim>::operator== (const Point<space_dim>& other_point) const
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    if (coordinates_[dim] != other_point.coordinates_[dim])  return false;
-  return true;
-}
-
-
-template<unsigned int space_dim>
-bool Point<space_dim>::operator!= (const Point<space_dim>& other_point) const
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    if (coordinates_[dim] != other_point.coordinates_[dim])  return true;
-  return false;
-}
-
-
-template<unsigned int space_dim>
-bool Point<space_dim>::operator<(const Point<space_dim>& other_point) const
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    if (coordinates_[dim] < other_point.coordinates_[dim])      return true;
-    else if (coordinates_[dim] > other_point.coordinates_[dim]) return false;
-  return false;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator*=(const pt_coord_t scale_fac)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] *= scale_fac;
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator/=(const pt_coord_t scale_denom)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] /= scale_denom;
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator+=(const pt_coord_t additum)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] += additum;
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator-=(const pt_coord_t subtractum)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] -= subtractum;
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator+=(const Point<space_dim>& other)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] += other.coordinate(dim);
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator-=(const Point<space_dim>& other)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    coordinates_[dim] -= other.coordinate(dim);
-  return *this;
-}
-
-
-template<unsigned int space_dim>
-Point<space_dim> Point<space_dim>::operator+(const Point<space_dim>& other) const
-{
-  Point difference(coordinates_);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    difference[dim] += other.coordinate(dim);
+  Point<space_dim> difference(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= right[dim];
   return difference;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator+(Point<space_dim>&& other) noexcept
+Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& right)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    other[dim] += coordinates_[dim];
-  return other;
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
+  return left;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim> Point<space_dim>::operator-(const Point<space_dim>& other) const
+Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& right)
 {
-  Point difference(coordinates_);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    difference[dim] -= other.coordinate(dim);
-  return difference;
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] - right[dim];
+  return right;
 }
 
-
 template<unsigned int space_dim>
-Point<space_dim>& Point<space_dim>::operator-(Point<space_dim>&& other) noexcept
+Point<space_dim> operator-(Point<space_dim>&&left , Point<space_dim>&& right)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    other[dim] = coordinates_[dim] - other[dim];
-  return other;
+  hy_assert( 0 == 1 ,
+             "This function is never called, although this way of implementation is recommended on "
+             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
+  return left;
 }
-
-// End of implementation of member functions
-
-template<unsigned int space_dim>
-pt_coord_t norm_2(const Point<space_dim>& point); 
-
-
-template<unsigned int space_dim>
-pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right);
-
-
-template<unsigned int space_dim>
-std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt);
 
 #endif // end of ifndef POINT_HXX
