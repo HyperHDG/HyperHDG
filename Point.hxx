@@ -48,7 +48,10 @@ class Point
      * 
      * Fills coordinates of the point with zeros.
      **********************************************************************************************/
-    Point()  { coordinates_.fill(0.); }
+    Point()
+    {
+      coordinates_.fill(0.);
+    }
     /*!*********************************************************************************************
      * \brief   Construct point from array of coordinates.
      * 
@@ -56,25 +59,34 @@ class Point
      * 
      * \param   coordinates   A \c std::array containing the coordinates of the point.
      **********************************************************************************************/
-    Point(const std::array<pt_coord_t, space_dim>& coordinates)  : coordinates_(coordinates) { }
+    Point(const std::array<pt_coord_t, space_dim>& coordinates)
+    : coordinates_(coordinates) { }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
-    Point(const Point<space_dim>& other)  : coordinates_(other.coordinates_) { }
+    Point(const Point<space_dim>& other)
+    : coordinates_(other.coordinates_) { }
     /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
-    Point(Point<space_dim>&& other) noexcept  : coordinates_(std::move(other.coordinates_)) { }
+    Point(Point<space_dim>&& other) noexcept
+    : coordinates_(std::move(other.coordinates_)) { }
     /*!*********************************************************************************************
      * \brief   Copy assignment.
      **********************************************************************************************/
     Point<space_dim>& operator= (const Point<space_dim>& other)
-    { coordinates_ = other.coordinates_; return *this; }
+    {
+      coordinates_ = other.coordinates_;
+      return *this;
+    }
     /*!*********************************************************************************************
      * \brief   Move assignment.
      **********************************************************************************************/
     Point<space_dim>& operator= (Point<space_dim>&& other) noexcept
-    { std::swap(coordinates_, other.coordinates_); return *this; }
+    {
+      std::swap(coordinates_, other.coordinates_);
+      return *this;
+    }
     
     /*!*********************************************************************************************
      * \brief   Return reference to single coordinate of a point.
@@ -159,6 +171,7 @@ class Point
       return false;
     }
     
+    
     Point<space_dim>& operator*=(const pt_coord_t scale_fac)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -201,6 +214,14 @@ class Point
       return *this;
     }
     
+    pt_coord_t operator*(const Point<space_dim>& other) const
+    {
+      pt_coord_t scalar_product = 0.;
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        scalar_product += coordinates_[dim] * other[dim];
+      return scalar_product;
+    }
+    
 }; // end of class Point
 
 /*!*************************************************************************************************
@@ -214,10 +235,7 @@ class Point
 template<unsigned int space_dim>
 pt_coord_t norm_2(const Point<space_dim>& pt)
 {
-  pt_coord_t norm = 0.;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    norm += pt[dim] * pt[dim];
-  return std::sqrt(norm);
+  return std::sqrt( pt * pt );
 }
 
 /*!*************************************************************************************************
@@ -231,10 +249,7 @@ pt_coord_t norm_2(const Point<space_dim>& pt)
 template<unsigned int space_dim>
 pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right)
 {
-  pt_coord_t distance = 0.;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    distance += (left[dim] - right[dim]) * (left[dim] - right[dim]);
-  return std::sqrt(distance);
+  return norm_2( left - right );
 }
 
 /*!*************************************************************************************************
