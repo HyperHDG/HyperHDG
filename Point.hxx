@@ -172,33 +172,34 @@ class Point
     }
     
     
-    Point<space_dim>& operator*=(const pt_coord_t scale_fac)
+    Point<space_dim>& operator+=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] *= scale_fac;
-      return *this;
-    }
-    
-    Point<space_dim>& operator/=(const pt_coord_t scale_denom)
-    {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] /= scale_denom;
-      return *this;
-    }
-    
-    Point<space_dim>& operator+=(const pt_coord_t additum)
-    {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] += additum;
+        coordinates_[dim] += scalar;
       return *this;
     }
 
-    Point<space_dim>& operator-=(const pt_coord_t subtractum)
+    Point<space_dim>& operator-=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] -= subtractum;
+        coordinates_[dim] -= scalar;
       return *this;
     }
+    
+    Point<space_dim>& operator*=(const pt_coord_t scalar)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] *= scalar;
+      return *this;
+    }
+    
+    Point<space_dim>& operator/=(const pt_coord_t scalar)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] /= scalar;
+      return *this;
+    }
+    
     
     Point<space_dim>& operator+=(const Point<space_dim>& other)
     {
@@ -214,6 +215,21 @@ class Point
       return *this;
     }
     
+    Point<space_dim>& operator*=(const Point<space_dim>& other)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] *= other[dim];
+      return *this;
+    }
+    
+    Point<space_dim>& operator/=(const Point<space_dim>& other)
+    {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        coordinates_[dim] /= other[dim];
+      return *this;
+    }
+    
+    
     pt_coord_t operator*(const Point<space_dim>& other) const
     {
       pt_coord_t scalar_product = 0.;
@@ -221,8 +237,19 @@ class Point
         scalar_product += coordinates_[dim] * other[dim];
       return scalar_product;
     }
-    
+
 }; // end of class Point
+
+
+template<unsigned int space_dim>
+pt_coord_t norm_1(const Point<space_dim>& pt)
+{
+  pt_coord_t norm = 0.;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+    norm += std::abs( pt[dim] );
+  return norm;
+}
+
 
 /*!*************************************************************************************************
  * \brief   Computes Euclidean norm of a \c Point.
@@ -238,18 +265,24 @@ pt_coord_t norm_2(const Point<space_dim>& pt)
   return std::sqrt( pt * pt );
 }
 
-/*!*************************************************************************************************
- * \brief   Computes Euclidean distance between two \c Point.
- * 
- * \todo    Fill information, when details clarified with Guido.
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
+
 template<unsigned int space_dim>
-pt_coord_t distance_2(const Point<space_dim>& left, const Point<space_dim>& right)
+pt_coord_t norm_infty(const Point<space_dim>& pt)
 {
-  return norm_2( left - right );
+  pt_coord_t norm = std::abs( pt[0] );
+  for (unsigned int dim = 1; dim < space_dim; ++dim)
+    norm = std::max( norm, std::abs(pt[dim]) );
+  return norm;
+}
+
+
+template<unsigned int space_dim>
+pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
+{
+  pt_coord_t norm = 0.;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+    norm += std::pow( std::abs(pt[dim]) , power );
+  return std::pow( norm , 1. / power );
 }
 
 /*!*************************************************************************************************
@@ -271,9 +304,7 @@ std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt)
 /*!*************************************************************************************************
  * \brief   Add two \c Point.
  * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred and why the assert
- *          in all related functions are never thrown (even if Point a + b + c is artificially added
- *          in executed code)! Compare the advice in
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
  *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
@@ -290,9 +321,6 @@ Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>&
 template<unsigned int space_dim>
 Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
   return left;
 }
@@ -300,9 +328,6 @@ Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& righ
 template<unsigned int space_dim>
 Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] += left[dim];
   return right;
 }
@@ -310,9 +335,6 @@ Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& righ
 template<unsigned int space_dim>
 Point<space_dim> operator+(Point<space_dim>&&left , Point<space_dim>&& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
   return left;
 }
@@ -320,9 +342,7 @@ Point<space_dim> operator+(Point<space_dim>&&left , Point<space_dim>&& right)
 /*!*************************************************************************************************
  * \brief   Subtract two \c Point.
  * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred and why the assert
- *          in all related functions are never thrown (even if Point a - b - c is artificially added
- *          in executed code)! Compare the advice in
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
  *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
@@ -339,9 +359,6 @@ Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>&
 template<unsigned int space_dim>
 Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
   return left;
 }
@@ -349,9 +366,6 @@ Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& righ
 template<unsigned int space_dim>
 Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] - right[dim];
   return right;
 }
@@ -359,9 +373,6 @@ Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& righ
 template<unsigned int space_dim>
 Point<space_dim> operator-(Point<space_dim>&&left , Point<space_dim>&& right)
 {
-  hy_assert( 0 == 1 ,
-             "This function is never called, although this way of implementation is recommended on "
-             << "https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
   return left;
 }
