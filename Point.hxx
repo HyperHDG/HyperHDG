@@ -241,6 +241,316 @@ class Point
 }; // end of class Point
 
 
+
+
+/*!*************************************************************************************************
+ * \brief   Add two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>& right)
+{
+  Point<space_dim> sum(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += right[dim];
+  return sum;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
+  return left;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] += left[dim];
+  return right;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator+(Point<space_dim>&& left , Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
+  return left;
+}
+
+/*!*************************************************************************************************
+ * \brief   Subtract two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>& right)
+{
+  Point<space_dim> difference(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= right[dim];
+  return difference;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
+  return left;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] - right[dim];
+  return right;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator-(Point<space_dim>&& left , Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
+  return left;
+}
+
+/*!*************************************************************************************************
+ * \brief   Hadamard product of two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> hada_prod(const Point<space_dim>& left, const Point<space_dim>& right)
+{
+  Point<space_dim> product(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= right[dim];
+  return product;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_prod(Point<space_dim>&& left, const Point<space_dim>& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] *= right[dim];
+  return left;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_prod(const Point<space_dim>& left, Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] *= left[dim];
+  return right;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_prod(Point<space_dim>&& left , Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] *= right[dim];
+  return left;
+}
+
+/*!*************************************************************************************************
+ * \brief   Hadamard division two \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>& right)
+{
+  Point<space_dim> quotient(left);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= right[dim];
+  return quotient;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_divi(Point<space_dim>&& left, const Point<space_dim>& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] /= right[dim];
+  return left;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_divi(const Point<space_dim>& left, Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] / right[dim];
+  return right;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> hada_divi(Point<space_dim>&& left , Point<space_dim>&& right)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] /= right[dim];
+  return left;
+}
+
+/*!*************************************************************************************************
+ * \brief   Multiply scalar with \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim>& pt)
+{
+  Point<space_dim> product(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
+  return product;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(pt_coord_t&& scalar, const Point<space_dim>& pt)
+{
+  Point<space_dim> product(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
+  return product;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(const pt_coord_t& scalar, Point<space_dim>&& pt)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
+  return pt;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(pt_coord_t&& scalar , Point<space_dim>&& pt)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
+  return pt;
+}
+
+/*!*************************************************************************************************
+ * \brief   Multiply \c Point with scalar.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator*(const Point<space_dim>& pt, const pt_coord_t& scalar)
+{
+  Point<space_dim> product(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
+  return product;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(const Point<space_dim>& pt, pt_coord_t&& scalar)
+{
+  Point<space_dim> product(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
+  return product;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(Point<space_dim>&& pt, const pt_coord_t& scalar)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
+  return pt;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator*(Point<space_dim>&& pt, pt_coord_t&& scalar)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
+  return pt;
+}
+
+/*!*************************************************************************************************
+ * \brief   Divide scalar by \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
+{
+  Point<space_dim> quotient(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] = scalar / pt[dim];
+  return quotient;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(pt_coord_t&& scalar, const Point<space_dim>& pt)
+{
+  Point<space_dim> quotient(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] = scalar / pt[dim];
+  return quotient;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(const pt_coord_t& scalar, Point<space_dim>&& pt)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] = scalar / pt[dim];
+  return pt;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(pt_coord_t&& scalar , Point<space_dim>&& pt)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] = scalar / pt[dim];
+  return pt;
+}
+
+/*!*************************************************************************************************
+ * \brief   Divide \c Point by scalar.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
+{
+  Point<space_dim> quotient(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
+  return quotient;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(const Point<space_dim>& pt, pt_coord_t&& scalar)
+{
+  Point<space_dim> quotient(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
+  return quotient;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(Point<space_dim>&& pt, const pt_coord_t& scalar)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
+  return pt;
+}
+
+template<unsigned int space_dim>
+Point<space_dim> operator/(Point<space_dim>&& pt, pt_coord_t&& scalar)
+{
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
+  return pt;
+}
+
 template<unsigned int space_dim>
 pt_coord_t norm_1(const Point<space_dim>& pt)
 {
@@ -299,82 +609,6 @@ std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt)
   for (unsigned int dim = 0; dim < space_dim; ++dim)
     stream << " " << pt[dim] << " ";
   return stream;
-}
-
-/*!*************************************************************************************************
- * \brief   Add two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>& right)
-{
-  Point<space_dim> sum(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += right[dim];
-  return sum;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
-  return left;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] += left[dim];
-  return right;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator+(Point<space_dim>&&left , Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
-  return left;
-}
-
-/*!*************************************************************************************************
- * \brief   Subtract two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>& right)
-{
-  Point<space_dim> difference(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= right[dim];
-  return difference;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
-  return left;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] - right[dim];
-  return right;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator-(Point<space_dim>&&left , Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
-  return left;
 }
 
 #endif // end of ifndef POINT_HXX
