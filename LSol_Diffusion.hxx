@@ -23,6 +23,7 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge
 #endif
 
 
+
 #ifndef DIFFUSIONSOLVERNAIVE_HXX
 #define DIFFUSIONSOLVERNAIVE_HXX
 
@@ -35,11 +36,18 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge
 template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class DiffusionSolverNaive_RegularQuad
 {
+  public:
+    static constexpr unsigned int n_glob_dofs_per_node()
+    {
+      unsigned int amount = 1;
+      for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)  amount *= max_poly_degree + 1;
+      return amount;
+    }
   private:
-    static constexpr unsigned int n_quads_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim),
+    static constexpr unsigned int n_quads_        = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim),
                                   num_quad_bdr_   = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim - 1),
-                                  num_ansatz_fct_ = compute_n_dofs_per_node(hyEdge_dim, max_poly_degree) * (max_poly_degree + 1),
-                                  num_ansatz_bdr_ = compute_n_dofs_per_node(hyEdge_dim, max_poly_degree);
+                                  num_ansatz_fct_ = n_glob_dofs_per_node() * (max_poly_degree + 1),
+                                  num_ansatz_bdr_ = n_glob_dofs_per_node();
     const double tau_;
     std::array<double, n_quads_> quad_weights_;
     std::array<double, num_quad_bdr_> quad_bdr_;
@@ -64,13 +72,14 @@ class DiffusionSolverNaive_RegularQuad
     DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau);
     std::vector<double> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::vector< std::array<double, hyEdge_dim> > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim >
+    auto//std::array< std::array<double, n_glob_dofs_per_node()> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
     static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
     static constexpr unsigned int solution_dimension_hyNode() { return 1; }
     static constexpr bool need_geometry_processing() { return false; }
+
 };
 
 
@@ -78,10 +87,17 @@ class DiffusionSolverNaive_RegularQuad
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 class DiffusionSolverTensorStruc
 {
+  public:
+    static constexpr unsigned int n_glob_dofs_per_node()
+    {
+      unsigned int amount = 1;
+      for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)  amount *= poly_deg + 1;
+      return amount;
+    }
   private:
     static constexpr unsigned int n_quads_     = FuncQuad::compute_n_quad_points(quad_deg),
-                                  n_shape_fct_ = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1),
-                                  n_shape_bdr_ = compute_n_dofs_per_node(hyEdge_dim, poly_deg);
+                                  n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1),
+                                  n_shape_bdr_ = n_glob_dofs_per_node();
     const double tau_;
     const std::array<double, n_quads_> q_weights_;
     const std::array< std::array<double, n_quads_ > , poly_deg + 1 > trial_;

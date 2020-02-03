@@ -33,15 +33,22 @@
  * to the global vectors comprising degrees of freedom and is universal to (almost) all kinds of
  * possible equations.
  * 
- * \tparam  n_dofs_per_node   Amount of degrees of freedom associated to an hypernode. This is the
+ * \tparam  n_dofs_per_nodeT  Amount of degrees of freedom associated to an hypernode. This is the
  *                            number of local trial functions for the skeletal variable.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int n_dofs_per_node>
+template <unsigned int n_dofs_per_nodeT>
 class HyperNodeFactory
 {
+  public:
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the amount of dofs per node.
+     *
+     * \retval  n_dofs_per_node     The amount of degrees of freedom per node.
+     **********************************************************************************************/
+    static constexpr unsigned int n_dofs_per_node() { return n_dofs_per_nodeT; }
   private:
     /*!*********************************************************************************************
      * \brief   Amount of hypernodes within hypergraph.
@@ -52,12 +59,6 @@ class HyperNodeFactory
      **********************************************************************************************/
     const hyNode_index_t n_hyNodes_;
   public:
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the amount of dofs per node.
-     *
-     * \retval  n_dofs_per_node     The amount of degrees of freedom per node.
-     **********************************************************************************************/
-    static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; };
     /*!*********************************************************************************************
      * 
      * \brief   Construct HyperNodeFactory from total number of hypernodes. 
@@ -75,7 +76,7 @@ class HyperNodeFactory
      * 
      * \param   hnf                 A \c HyperNodeFactory to be copied.
      **********************************************************************************************/
-    HyperNodeFactory(const HyperNodeFactory<n_dofs_per_node>& hnf) : n_hyNodes_(hnf.n_hyNodes_) { }
+    HyperNodeFactory(const HyperNodeFactory<n_dofs_per_nodeT>& hnf) : n_hyNodes_(hnf.n_hyNodes_) { }
     /*!*********************************************************************************************
      * \brief   Returns the total amount of hypernodes in the considered hypergraph.
      * 
@@ -88,7 +89,7 @@ class HyperNodeFactory
      * \retval  n_global_dofs       The total amount of degreees of freedom in the considered
      *                              hypergraph.
      **********************************************************************************************/
-    const dof_index_type n_global_dofs() const  { return n_hyNodes_ * n_dofs_per_node; }
+    const dof_index_type n_global_dofs() const  { return n_hyNodes_ * n_dofs_per_nodeT; }
     /*!*********************************************************************************************
      * \brief   Calculate global indices of degrees of freedom related to a hypernode.
      * 
@@ -96,12 +97,12 @@ class HyperNodeFactory
      * \retval  dof_indices         A \c std::array containing the global indices of related degrees
      *                              of freedom.
      **********************************************************************************************/
-    std::array<dof_index_type, n_dofs_per_node> get_dof_indices
+    std::array<dof_index_type, n_dofs_per_nodeT> get_dof_indices
       (const hyNode_index_t hyNode_index) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_node;
-      std::array<dof_index_type, n_dofs_per_node> dof_indices;
-      for (unsigned int i = 0; i < n_dofs_per_node; ++i)
+      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      std::array<dof_index_type, n_dofs_per_nodeT> dof_indices;
+      for (unsigned int i = 0; i < n_dofs_per_nodeT; ++i)
         dof_indices[i] = initial_dof_index + i;
       return dof_indices;
     }
@@ -112,17 +113,17 @@ class HyperNodeFactory
      * \retval  dof_values          A \c std::array containing the values of related degrees of
      *                              freedom.
      **********************************************************************************************/
-    std::array<dof_value_t, n_dofs_per_node> get_dof_values
+    std::array<dof_value_t, n_dofs_per_nodeT> get_dof_values
       (const hyNode_index_t hyNode_index, const std::vector<dof_value_t>& global_dof_vector) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_node;
+      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( initial_dof_index >= 0
-                   && initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+                   && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
-                 " Moreover, the final index = " << initial_dof_index + n_dofs_per_node << " must "
+                 " Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT << " must "
                  << "not exceed the size of the vector of global degrees of freedom." );
-      std::array<dof_value_t, n_dofs_per_node> local_dof_values;
-      for (unsigned int index = 0; index < n_dofs_per_node; ++index)
+      std::array<dof_value_t, n_dofs_per_nodeT> local_dof_values;
+      for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
         local_dof_values[index] = global_dof_vector[initial_dof_index + index];
       return local_dof_values;
     }
@@ -140,18 +141,18 @@ class HyperNodeFactory
      **********************************************************************************************/
     void add_to_dof_values
       (const hyNode_index_t hyNode_index, std::vector<dof_value_t>& global_dof_vector,
-       const std::array<dof_value_t, n_dofs_per_node>& local_dof_vector) const
+       const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_node;
-      hy_assert( local_dof_vector.size() == n_dofs_per_node ,
+      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      hy_assert( local_dof_vector.size() == n_dofs_per_nodeT ,
                  "The size of the local dof vector is " << local_dof_vector.size() << ", but should"
-                  << " be equal to the amount of local dofs, which is " << n_dofs_per_node << "." );
+                  << " be equal to the amount of local dofs, which is " << n_dofs_per_nodeT << "." );
       hy_assert( initial_dof_index >= 0
-                   && initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+                   && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
-                 "Moreover, the final index = " << initial_dof_index + n_dofs_per_node << " must "
+                 "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT << " must "
                  << "not exceed the size of the vector of global degrees of freedom." );
-      for(unsigned int index = 0; index < n_dofs_per_node; ++index)
+      for(unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
         global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
     }
     /*!*********************************************************************************************
@@ -165,45 +166,15 @@ class HyperNodeFactory
     void set_dof_values(const hyNode_index_t hyNode_index,
       std::vector<dof_value_t>& global_dof_vector, const dof_value_t value) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_node;
+      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( initial_dof_index >= 0
-                   && initial_dof_index + n_dofs_per_node <= global_dof_vector.size() ,
+                   && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
-                 "Moreover, the final index = " << initial_dof_index + n_dofs_per_node << " must "
+                 "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT << " must "
                  << "not exceed the size of the vector of global degrees of freedom." );
-      for(unsigned int index = 0; index < n_dofs_per_node; ++index)
+      for(unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
         global_dof_vector[initial_dof_index + index] = value;
     }
 }; // end of class HyperNodeFactory
-
-/*!*************************************************************************************************
- * \brief   Calculate the amount of local degrees of freedom of a hypernode at compile time.
- * 
- * \todo This can only be determined by the model, say the local solver. Not here!
- *
- * Naive implementation without math packages of
- * "amount = solution_dim * (poly_degree ^ (hyEdge_dim - 1))"!
- * 
- * Theis function is a constexpr which gives the amount of degrees of freedom associated to one 
- * hypernode (which is assumed to be the same for all hypernodes). It is usually used in combination
- * with the class \c HyperNodeFactory.
- * 
- * \param   hyEdge_dim       The dimension of a hyperedge (1 for graphs).
- * \param   poly_degree         The local polynomial degree of test functions.
- * \param   solution_dim        The dimension of the solution (1 for scalar equations).
- * \retval  n_dofs_per_node     The amount of degrees of freedom per hypernode.
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyEdge_dim,
-  const unsigned int poly_degree, const unsigned int solution_dim = 1 )
-{
-  unsigned int amount = 1;
-  for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)
-    amount *= poly_degree + 1;
-  amount *= solution_dim;
-  return amount;
-} // end of compute_n_dofs_per_node
 
 #endif // end of ifndef HYPERNODEFACTORY_HXX
