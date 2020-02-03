@@ -319,13 +319,13 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+/*template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
 using DiffusionProblemFileNoGeo = 
 AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
                   Geometry::File< hyEdge_dim, space_dim >,
                   DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
-
+*/
 /*!*************************************************************************************************
  * \brief   This is an example problem.
  *

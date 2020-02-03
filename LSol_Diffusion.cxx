@@ -76,7 +76,7 @@ inline vector<double> get_relevant_coeffs_indicator(const unsigned int hyEdge_di
   return result;
 }
 
-
+/*
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
@@ -294,15 +294,7 @@ assemble_loc_mat() const
                                    + trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]);
     }
   }
-/*  
-  cout << endl << endl;
-  for (unsigned int i = 0; i < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim); ++i)
-  {
-    for(unsigned int j = 0; j < (hyEdge_dim + 1) * pow((poly_deg + 1), hyEdge_dim); ++j)
-      cout << local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(i,j)] << "  ";
-    cout << endl;
-  }
-*/  
+
   return local_mat;
 }
 
@@ -336,54 +328,10 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
           right_hand_side[hyEdge_dim * num_ansatz_fct_ + ansatz] += tau_ * quad_bdr_[q] *
             ( lambda_values[2*dim+0][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+0][ansatz][q]
             + lambda_values[2*dim+1][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+1][ansatz][q] );
-/*  
-  cout << endl;
-  for (unsigned int i = 0; i < right_hand_side.size(); ++i)  cout << "  " << right_hand_side[i];
-*/  
+
   return right_hand_side;
 }
 
-
-/*
-template<unsigned int dim, unsigned int unknown_dim>
-vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const vector<double>& loc_matrix, const vector<double>& loc_rhs) const
-{
-  assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() );
-  const int system_size = loc_rhs.size();
-  vector<double> solution(system_size, 0.);
-  
-  Eigen::MatrixXd eigen_matrix(system_size, system_size);
-  Eigen::VectorXd eigen_rhs(system_size), eigen_sol(system_size);
-  
-  for(int i = 0; i < system_size; ++i)
-    for(int j = 0; j < system_size; ++j)
-      eigen_matrix(i,j) = loc_matrix[loc_matrix_index<hyEdge_dim,poly_deg>(i,j)];
-      
-  for(int i = 0; i < system_size; ++i)  eigen_rhs(i) = loc_rhs[i];
-  
-  eigen_sol = eigen_matrix.colPivHouseholderQr().solve(eigen_rhs);
-  
-  for(int i = 0; i < system_size; ++i)  solution[i] = eigen_sol(i);
-  
-  return solution;
-}
-*/
-
-/*
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
-DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
-solve_local_system_of_eq(array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>& loc_matrix,
-                         array<double, (hyEdge_dim+1) * num_ansatz_fct_>& loc_rhs) const
-{
-  hy_assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() ,
-             "The size of a local matrix should be the size of the right-hand side squared." );
-  const int system_size = loc_rhs.size();
-  double *mat_a=loc_matrix.data(), *rhs_b = loc_rhs.data(); 
-  lapack_solve(system_size, mat_a, rhs_b);
-  return loc_rhs;
-}
-*/
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 inline auto // array<double, (hyEdge_dim+1) * num_ansatz_fct_>
@@ -460,14 +408,7 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
   for (unsigned int i = 0; i < lambda_values.size(); ++i)
     for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
       bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
-/*  
-  for(unsigned int i = 0; i < bdr_values.size(); ++i)
-  {
-    for(unsigned int j = 0; j < bdr_values[i].size(); ++j)
-      cout << bdr_values[i][j] << "  ";
-    cout << endl;
-  }
-*/  
+
   return bdr_values;
 }
 
@@ -512,7 +453,7 @@ numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
 {
   return numerical_flux_at_boundary(lambda_values, solve_local_problem(lambda_values));
 }
-
+*/
 
 
 
@@ -866,26 +807,6 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs) c
   }
   
   return bdr_values;
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array<double, Hypercube<hyEdge_dim>::n_vertices()>
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
-{
-  array<double,2> abscissas = {0., 1.};
-  return primal_at_dyadic<2>(abscissas, lambda_values);
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array< array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() >
-DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
-{
-  array<double,2> abscissas = {0., 1.};
-  return dual_at_dyadic<2>(abscissas, lambda_values);
 }
 
 

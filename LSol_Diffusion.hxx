@@ -19,7 +19,7 @@
 
 #include <array>
 
-
+/*
 template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class DiffusionSolverNaive_RegularQuad
 {
@@ -64,7 +64,7 @@ class DiffusionSolverNaive_RegularQuad
     auto//std::array< std::array<double, n_glob_dofs_per_node()> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim 
 };
-
+*/
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
@@ -86,7 +86,7 @@ class DiffusionSolverTensorStruc
     const double tau_;
     const std::array<double, n_quads_> q_weights_;
     const std::array< std::array<double, n_quads_ > , poly_deg + 1 > trial_;
-    const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr_;
+    const std::array< std::array<double, 2 > , poly_deg + 1 > trial_bdr_;
     const std::array<double, (hyEdge_dim+1) * n_shape_fct_ * (hyEdge_dim+1) * n_shape_fct_> loc_mat_;
     
     inline std::array<double, (hyEdge_dim+1) * n_shape_fct_> assemble_rhs(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
@@ -98,16 +98,15 @@ class DiffusionSolverTensorStruc
     typedef double constructor_value_type;
     DiffusionSolverTensorStruc(const constructor_value_type& tau);
     
-    std::array<double, Hypercube<hyEdge_dim>::n_vertices()> primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    // Function for matrix--vector multiply    
     std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     
+    // Plotting functions
     template<unsigned int sizeT> std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)> primal_at_dyadic
       (const std::array<double, sizeT>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     template<unsigned int sizeT> std::array< std::array<double,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > dual_at_dyadic
       (const std::array<double, sizeT>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    
 };
 
 #endif
