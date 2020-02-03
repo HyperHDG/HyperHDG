@@ -88,11 +88,11 @@ class AbstractProblem
     : hyper_graph_  ( construct_topo, construct_geom ),
       local_solver_ ( construct_loc_sol )
     {
-      static_assert( TopologyT::hyEdge_dimension() == GeometryT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dimension() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
+      static_assert( TopologyT::space_dim() == GeometryT::space_dimension() ,
                      "Space dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::hyEdge_dimension() == LocalSolverT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     }
     /*!*********************************************************************************************
@@ -109,11 +109,11 @@ class AbstractProblem
     : hyper_graph_  ( construct_topo ),
       local_solver_ ( construct_loc_sol )
     {
-      static_assert( TopologyT::hyEdge_dimension() == GeometryT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dimension() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::space_dimension() == GeometryT::space_dimension() ,
+      static_assert( TopologyT::space_dim() == GeometryT::space_dimension() ,
                      "Space dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::hyEdge_dimension() == LocalSolverT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     }
     /*!*********************************************************************************************
@@ -173,7 +173,7 @@ class AbstractProblem
      **********************************************************************************************/
     std::vector<dof_value_t> matrix_vector_multiply( std::vector<dof_value_t> x_vec ) const
     {
-      constexpr unsigned int hyEdge_dim  = TopologyT::hyEdge_dimension();
+      constexpr unsigned int hyEdge_dim  = TopologyT::hyEdge_dim();
       constexpr unsigned int poly_degree = LocalSolverT::polynomial_degree();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);

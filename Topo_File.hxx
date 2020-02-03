@@ -10,7 +10,7 @@
 namespace Topology
 {  
 
-template <unsigned int hyEdge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dimT, unsigned int space_dimT>
 class File
 {
   class hyEdge
@@ -21,22 +21,26 @@ class File
     public:
       hyEdge ( const File& hyGraph_topology, const hyEdge_index_t index )
       : hyGraph_topology_(hyGraph_topology), index_(index) { }
-      const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hyNode_indices() const
+      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const
       { return hyGraph_topology_.domain_info_.hyNodes_hyEdge[index_]; }
   }; // end of class hyEdge
   
+  public:
+    static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
+    static constexpr unsigned int space_dim() { return space_dimT; }
+  
   private:
-    const DomainInfo<hyEdge_dim,space_dim> domain_info_;
+    const DomainInfo<hyEdge_dimT,space_dimT> domain_info_;
     
   public:
     typedef hyEdge value_type;
     typedef std::string& constructor_value_type;
     
     File(const constructor_value_type& filename)
-    : domain_info_(read_domain<hyEdge_dim,space_dim>(filename)) { }
-    File(const File<hyEdge_dim,space_dim>& other)
+    : domain_info_(read_domain<hyEdge_dimT,space_dimT>(filename)) { }
+    File(const File<hyEdge_dimT,space_dimT>& other)
     : domain_info_(other.domain_info) { }
-    const hyEdge get_hyEdge(const hyEdge_index_t index) const
+    const value_type operator[](const hyEdge_index_t index) const
     {
       hy_assert( index < domain_info_.n_hyEdges && index >= 0 ,
                  "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<
@@ -45,9 +49,7 @@ class File
     }
     const hyEdge_index_t n_hyEdges() const { return domain_info_.n_hyEdges; }
     const hyNode_index_t n_hyNodes() const { return domain_info_.n_hyNodes; }
-    const DomainInfo<hyEdge_dim,space_dim>& domain_info() const { return domain_info_; }
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; };
-    static constexpr unsigned int space_dimension() { return space_dim; };
+    const DomainInfo<hyEdge_dimT,space_dimT>& domain_info() const { return domain_info_; }
 }; // end of class File
 
 } // end of namespace Topology

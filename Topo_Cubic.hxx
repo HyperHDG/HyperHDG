@@ -43,7 +43,6 @@ namespace Topology
  * \brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs.
  *
  * \todo This is not what brief says. It is one special hypergraph.
- * \todo Do we use \\ or \\? Let us unify doxygen syntax
  *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
@@ -54,15 +53,15 @@ namespace Topology
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \tparam  hyEdge_dim   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dim.
+ * \tparam  space_dimT       The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyEdge_dimT.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dimT, unsigned int space_dimT>
 class Cubic
 {
   
@@ -83,7 +82,7 @@ class Cubic
        *
        * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
        ********************************************************************************************/
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyNode_indices_;
+      std::array<hyNode_index_t, 2*hyEdge_dimT> hyNode_indices_;
       /*!*******************************************************************************************
        * \brief   Orientation of the hypernode.
        * 
@@ -94,7 +93,7 @@ class Cubic
        * edges are assumed to have the correct orientation and this array is irrelevant. However, 
        * this is possible to change for different applications.
        ********************************************************************************************/
-      std::array<unsigned int, 2*hyEdge_dim> correct_hyNode_orientation_;
+      std::array<unsigned int, 2*hyEdge_dimT> correct_hyNode_orientation_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -106,8 +105,7 @@ class Cubic
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index,
-                const std::array<unsigned int, space_dim>& num_elements);
+      hyEdge(const hyEdge_index_t index, const std::array<unsigned int, space_dimT>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return indices of hypernodes adjacent to the hyperedge.
        *
@@ -115,16 +113,29 @@ class Cubic
        *
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
-      const std::array<hyNode_index_t, 2*hyEdge_dim>& get_hyNode_indices() const;    
+      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const;    
   }; // end of class hyEdge
   
+  public:
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * \retval  hyEdge_dimT   The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; };
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of the space.
+     *
+     * \retval  space_dimT       The dimension of the space.
+     **********************************************************************************************/
+    static constexpr unsigned int space_dim() { return space_dimT; };
   private:
     /*!*********************************************************************************************
      * \brief   Number of elements per spatial dimension.
      *
      * A \c std::array comprising the number of elements in each spatial dimension.
      **********************************************************************************************/
-    std::array<unsigned int, space_dim> num_elements_;
+    std::array<unsigned int, space_dimT> num_elements_;
     /*!*********************************************************************************************
      * \brief   Total amount of hyperedges.
      *
@@ -165,9 +176,9 @@ class Cubic
      * \brief   Construct a cubic hypergraph from a \c std::vector.
      *
      * Constructs a hypergraph from a \c std::vector containing the elementens per spatial dimension
-     * which is given as input data. If the input vector is shorter that \c space_dim, the remaining
+     * which is given as input data. If the input vector is shorter that \c space_dimT, the remaining
      * amounts of elemnts are assumed to be equal to zero. If the vector is longer than
-     * \c space_dim, the first \c space_dim entries are considered only.
+     * \c space_dimT, the first \c space_dimT entries are considered only.
      * 
      * \todo    If the vector is too short, an error is thrown in the test program and the behavior
      *          is undefined for Python (most likely an error is thrown, too) at the moment.
@@ -180,11 +191,11 @@ class Cubic
      *
      * Constructs a hypergraph from a \c std::array containing the elementens per spatial dimension
      * which is given as input data. The array has the correct length (as ensured by the involved
-     * template parametzer \c space_dim.
+     * template parametzer \c space_dimT.
      *
      * \param   num_elements    A \c std::array containing number of elements per spatial dimension.
      **********************************************************************************************/
-    Cubic(const std::array<unsigned int, space_dim>& num_elements);
+    Cubic(const std::array<unsigned int, space_dimT>& num_elements);
     /*!*********************************************************************************************
      * \brief   Construct a hypergraph from another hypergraph.
      *
@@ -192,7 +203,7 @@ class Cubic
      *
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
-    Cubic(const Cubic<hyEdge_dim,space_dim>& other);
+    Cubic(const Cubic<hyEdge_dimT,space_dimT>& other);
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
@@ -203,13 +214,13 @@ class Cubic
      * \param   index           The index of the hyperedge to be returned.
      * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyEdge get_hyEdge(const hyEdge_index_t index) const;
+    const value_type operator[](const hyEdge_index_t index) const;
     /*!*********************************************************************************************
      * \brief   Read the array of elements per dimensions.
      *
      * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
      **********************************************************************************************/
-    const std::array<unsigned int, space_dim>& num_elements() const;
+    const std::array<unsigned int, space_dimT>& num_elements() const;
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
@@ -222,19 +233,6 @@ class Cubic
      * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
     const hyNode_index_t n_hyNodes() const;
-    
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of a hyperedge.
-     *
-     * \retval  hyEdge_dim   The dimension of a hyperedge.
-     **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; };
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of the space.
-     *
-     * \retval  space_dim       The dimension of the space.
-     **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return space_dim; };
 }; // end of class Cubic
 
 } // end of namespace Topology
