@@ -11,24 +11,11 @@
  */
 
 
-#ifndef COMPUTE_CORNERS
-#define COMPUTE_CORNERS
-// Naive implementation finding the amount of corners for a hypersquare
-constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge_dim)
-{
-  unsigned int amount = 1;
-  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim) amount *= 2;
-  return amount;
-}
-#endif
+#ifndef LSOL_DIFFUSION_HXX
+#define LSOL_DIFFUSION_HXX
 
+#include <FuncAndQuad.hxx>
 
-
-#ifndef DIFFUSIONSOLVERNAIVE_HXX
-#define DIFFUSIONSOLVERNAIVE_HXX
-
-#include "FuncAndQuad.hxx"
-#include "HyperNodeFactory.hxx"
 #include <array>
 #include <vector>
 
@@ -53,7 +40,7 @@ class DiffusionSolverNaive_RegularQuad
     std::array<double, num_quad_bdr_> quad_bdr_;
     std::array< std::array<double, n_quads_> , num_ansatz_fct_ > trials_quad_;
     std::array< std::array<double, num_quad_bdr_> , num_ansatz_bdr_ > bound_trials_quad_;
-    std::array< std::array<double, compute_n_corners_of_cube(hyEdge_dim)> , num_ansatz_fct_ > trials_in_corners_;
+    std::array< std::array<double, (1 << hyEdge_dim)> , num_ansatz_fct_ > trials_in_corners_;
     std::array< std::array< std::array<double, n_quads_> , num_ansatz_fct_ > , hyEdge_dim > derivs_quad_;
     std::array< std::array< std::array<double, num_quad_bdr_> , num_ansatz_fct_ > , 2 * hyEdge_dim > trials_bound_;
      

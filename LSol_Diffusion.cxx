@@ -478,8 +478,8 @@ DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  vector<double> primal_in_corners(compute_n_corners_of_cube(hyEdge_dim), 0.);
-  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
+  vector<double> primal_in_corners(1 << hyEdge_dim, 0.);
+  for (unsigned int corner = 0; corner < (1 << hyEdge_dim); ++corner)
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
       primal_in_corners[corner] += coefficients[hyEdge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
   return primal_in_corners;
@@ -492,8 +492,8 @@ DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  vector< array<double, hyEdge_dim> > dual_in_corners(compute_n_corners_of_cube(hyEdge_dim));
-  for (unsigned int corner = 0; corner < compute_n_corners_of_cube(hyEdge_dim); ++corner)
+  vector< array<double, hyEdge_dim> > dual_in_corners((1 << hyEdge_dim));
+  for (unsigned int corner = 0; corner < (1 << hyEdge_dim); ++corner)
   {
     dual_in_corners[corner].fill(0.);
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
