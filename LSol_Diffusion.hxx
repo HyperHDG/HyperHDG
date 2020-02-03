@@ -15,9 +15,9 @@
 #define LSOL_DIFFUSION_HXX
 
 #include <FuncAndQuad.hxx>
+#include <Hypercube.hxx>
 
 #include <array>
-#include <vector>
 
 
 template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
@@ -59,8 +59,8 @@ class DiffusionSolverNaive_RegularQuad
   public:
     typedef double constructor_value_type;
     DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau);
-    std::vector<double> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::vector< std::array<double, hyEdge_dim> > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    std::array<double, Hypercube<hyEdge_dim>::n_vertices()> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     auto//std::array< std::array<double, n_glob_dofs_per_node()> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim 
 };
@@ -78,6 +78,12 @@ class DiffusionSolverTensorStruc
       unsigned int amount = 1;
       for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)  amount *= poly_deg + 1;
       return amount;
+    }
+    static constexpr unsigned int dyadic_size (const unsigned int sizeT)
+    {
+      unsigned int size = sizeT;
+      for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)  size *= sizeT;
+      return size;
     }
   private:
     static constexpr unsigned int n_quads_     = FuncQuad::compute_n_quad_points(quad_deg),
@@ -98,13 +104,16 @@ class DiffusionSolverTensorStruc
     typedef double constructor_value_type;
     DiffusionSolverTensorStruc(const constructor_value_type& tau);
     
-    std::vector<double> primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::vector< std::array<double, hyEdge_dim> > dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    std::array<double, Hypercube<hyEdge_dim>::n_vertices()> primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim >
       numerical_flux_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     
-    std::vector<double> primal_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::vector< std::array<double,hyEdge_dim> > dual_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    template<unsigned int sizeT> std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)> primal_at_dyadic
+      (const std::array<double, sizeT>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    template<unsigned int sizeT> std::array< std::array<double,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > dual_at_dyadic
+      (const std::array<double, sizeT>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
+    
 };
 
 #endif

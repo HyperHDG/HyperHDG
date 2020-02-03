@@ -473,13 +473,14 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector<double>
+array<double, Hypercube<hyEdge_dim>::n_vertices()>
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  vector<double> primal_in_corners(1 << hyEdge_dim, 0.);
-  for (unsigned int corner = 0; corner < (1 << hyEdge_dim); ++corner)
+  array<double, Hypercube<hyEdge_dim>::n_vertices()> primal_in_corners;
+  primal_in_corners.fill(0.);
+  for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
       primal_in_corners[corner] += coefficients[hyEdge_dim * num_ansatz_fct_ + ansatz_fct] * trials_in_corners_[ansatz_fct][corner];
   return primal_in_corners;
@@ -487,13 +488,13 @@ primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bd
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector< array<double, hyEdge_dim> >
+array< array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() >
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
-  vector< array<double, hyEdge_dim> > dual_in_corners((1 << hyEdge_dim));
-  for (unsigned int corner = 0; corner < (1 << hyEdge_dim); ++corner)
+  array< array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > dual_in_corners;
+  for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
   {
     dual_in_corners[corner].fill(0.);
     for (unsigned int ansatz_fct = 0; ansatz_fct < num_ansatz_fct_; ++ansatz_fct)
@@ -869,101 +870,22 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs) c
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector<double>
+array<double, Hypercube<hyEdge_dim>::n_vertices()>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  vector<double> abscissas = {0., 1.};
-  return primal_at_dyadic(abscissas, lambda_values);
+  array<double,2> abscissas = {0., 1.};
+  return primal_at_dyadic<2>(abscissas, lambda_values);
 }
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector< array<double, hyEdge_dim> >
+array< array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  vector<double> abscissas = {0., 1.};
-  return dual_at_dyadic(abscissas, lambda_values);
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector<double> DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
-{
-  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
-
-  unsigned int n_points = 1;
-  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
-  vector<double> values(n_points, 0.);
-  vector< vector<double> > values1D(poly_deg+1);
-  double fct_value;
-  
-  array<unsigned int, hyEdge_dim> dec_i, dec_q;
-  
-  for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
-  {
-    values1D[deg].resize(abscissas.size());
-    for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
-  }
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int q = 0; q < n_points; ++q)
-    {
-      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      values[q] += coefficients[hyEdge_dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-
-  return values;
-}
-
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-vector< array<double,hyEdge_dim> > DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
-{
-  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
-  
-  unsigned int n_points = 1;
-  for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
-  vector< array<double, hyEdge_dim> > values(n_points);
-  vector< vector<double> > values1D(poly_deg+1);
-  double fct_value;
-  
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  array<unsigned int, hyEdge_dim> dec_i, dec_q;
-  
-  for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
-  { 
-    values1D[deg].resize(abscissas.size());
-    for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
-  }
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int q = 0; q < n_points; ++q)
-    {
-      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        values[q][dim] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  
-  return values;
+  array<double,2> abscissas = {0., 1.};
+  return dual_at_dyadic<2>(abscissas, lambda_values);
 }
 
 
@@ -983,4 +905,79 @@ numerical_flux_from_lambda(const array< array<double, n_shape_bdr_> , 2*hyEdge_d
       bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
        
   return bdr_values;
+}
+
+
+template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
+template<unsigned int sizeT>
+array<double, Hypercube<hyEdge_dim>::pow(sizeT)>
+DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::primal_at_dyadic
+(const array<double, sizeT>& abscissas, const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
+{
+  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
+  array<double, Hypercube<hyEdge_dim>::pow(sizeT)> values;
+  array< array<double, abscissas.size()>, poly_deg+1 > values1D;
+  double fct_value;
+  
+  values.fill(0.);
+  array<unsigned int, hyEdge_dim> dec_i, dec_q;
+  
+  for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
+  {
+    for (unsigned int q = 0; q < abscissas.size(); ++q)
+      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
+  }
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
+    for (unsigned int q = 0; q < Hypercube<hyEdge_dim>::pow(sizeT); ++q)
+    {
+      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
+      fct_value = 1.;
+      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+      values[q] += coefficients[hyEdge_dim * n_shape_fct_ + i] * fct_value;
+    }
+  }
+
+  return values;
+}
+
+
+template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
+template<unsigned int sizeT>
+array< array<double,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) >
+DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::dual_at_dyadic
+(const array<double, sizeT>& abscissas, const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
+{
+  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
+  array< array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > values;
+  array< array<double, abscissas.size()> , poly_deg+1 > values1D;
+  double fct_value;
+  
+  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
+  array<unsigned int, hyEdge_dim> dec_i, dec_q;
+  
+  for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
+  { 
+    for (unsigned int q = 0; q < abscissas.size(); ++q)
+      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
+  }
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  { 
+    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
+    for (unsigned int q = 0; q < Hypercube<hyEdge_dim>::pow(sizeT); ++q)
+    {
+      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
+      fct_value = 1.;
+      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+        values[q][dim] += coefficients[dim * n_shape_fct_ + i] * fct_value;
+    }
+  }
+  
+  return values;
 }
