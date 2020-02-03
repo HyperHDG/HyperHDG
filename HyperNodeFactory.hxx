@@ -3,13 +3,10 @@
  * \brief   This file is responsible for the mapping of hypernodes to global degrees of freedom.
  * 
  * This file administrates the mapping of topological information (i.e. a hypernode) to information
- * related to the approximation of solutions to PDEs. Thus, it is capable of mapping an hypernode
- * index to the indices and values of degrees of freedom in class \c HyperNodeFactory. This is the 
- * only class to manage the accessto the global vectors comprising degrees of freedom and is
- * universal to (almost) all kinds of possible equations.
- * 
- * The function \c compute_n_dofs_per_node is a constexpr which gives the amount of degrees of
- * freedom associated to one hypernode (which is assumed to be the same for all hypernodes).
+ * related to the approximation of solutions to PDEs. Thus, it is capable of mapping a hypernode
+ * index to the indices and values of degrees of freedom of a \c std::vector in class 
+ * \c HyperNodeFactory. This is the  only class to manage the access to the global vectors
+ * comprising degrees of freedom and is universal to (almost) all kinds of possible equations.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
