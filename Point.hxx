@@ -195,6 +195,8 @@ class Point
     
     Point<space_dim>& operator/=(const pt_coord_t scalar)
     {
+      hy_assert( scalar != 0. ,
+                 "Division by zeros is not well-defined!" );
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         coordinates_[dim] /= scalar;
       return *this;
@@ -225,7 +227,11 @@ class Point
     Point<space_dim>& operator/=(const Point<space_dim>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
+      {
+        hy_assert( other[dim] != 0. ,
+                   "Division by a point with " << dim << "-th component being 0 is prohibited!" );
         coordinates_[dim] /= other[dim];
+      }
       return *this;
     }
     
@@ -370,28 +376,48 @@ template<unsigned int space_dim>
 Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   Point<space_dim> quotient(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= right[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( right[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    quotient[dim] /= right[dim];
+  }
   return quotient;
 }
 
 template<unsigned int space_dim>
 Point<space_dim> hada_divi(Point<space_dim>&& left, const Point<space_dim>& right)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] /= right[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( right[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    left[dim] /= right[dim];
+  }
   return left;
 }
 
 template<unsigned int space_dim>
 Point<space_dim> hada_divi(const Point<space_dim>& left, Point<space_dim>&& right)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] / right[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( right[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    right[dim] = left[dim] / right[dim];
+  }
   return right;
 }
 
 template<unsigned int space_dim>
 Point<space_dim> hada_divi(Point<space_dim>&& left , Point<space_dim>&& right)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] /= right[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( right[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    left[dim] /= right[dim];
+  }
   return left;
 }
 
@@ -486,7 +512,12 @@ template<unsigned int space_dim>
 Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
 {
   Point<space_dim> quotient(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] = scalar / pt[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    quotient[dim] = scalar / pt[dim];
+  }
   return quotient;
 }
 
@@ -494,21 +525,36 @@ template<unsigned int space_dim>
 Point<space_dim> operator/(pt_coord_t&& scalar, const Point<space_dim>& pt)
 {
   Point<space_dim> quotient(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] = scalar / pt[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    quotient[dim] = scalar / pt[dim];
+  }
   return quotient;
 }
 
 template<unsigned int space_dim>
 Point<space_dim> operator/(const pt_coord_t& scalar, Point<space_dim>&& pt)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] = scalar / pt[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    pt[dim] = scalar / pt[dim];
+  }
   return pt;
 }
 
 template<unsigned int space_dim>
 Point<space_dim> operator/(pt_coord_t&& scalar , Point<space_dim>&& pt)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] = scalar / pt[dim];
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] != 0. ,
+               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    pt[dim] = scalar / pt[dim];
+  }
   return pt;
 }
 
@@ -524,6 +570,8 @@ Point<space_dim> operator/(pt_coord_t&& scalar , Point<space_dim>&& pt)
 template<unsigned int space_dim>
 Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
+  hy_assert( scalar != 0. ,
+             "Divison by zero is not allowed!" );
   Point<space_dim> quotient(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
   return quotient;
@@ -532,6 +580,8 @@ Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
 template<unsigned int space_dim>
 Point<space_dim> operator/(const Point<space_dim>& pt, pt_coord_t&& scalar)
 {
+  hy_assert( scalar != 0. ,
+             "Divison by zero is not allowed!" );
   Point<space_dim> quotient(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
   return quotient;
@@ -540,6 +590,8 @@ Point<space_dim> operator/(const Point<space_dim>& pt, pt_coord_t&& scalar)
 template<unsigned int space_dim>
 Point<space_dim> operator/(Point<space_dim>&& pt, const pt_coord_t& scalar)
 {
+  hy_assert( scalar != 0. ,
+             "Divison by zero is not allowed!" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
   return pt;
 }
@@ -547,9 +599,16 @@ Point<space_dim> operator/(Point<space_dim>&& pt, const pt_coord_t& scalar)
 template<unsigned int space_dim>
 Point<space_dim> operator/(Point<space_dim>&& pt, pt_coord_t&& scalar)
 {
+  hy_assert( scalar != 0. ,
+             "Divison by zero is not allowed!" );
   for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
   return pt;
 }
+
+
+
+
+
 
 template<unsigned int space_dim>
 pt_coord_t norm_1(const Point<space_dim>& pt)
@@ -559,7 +618,6 @@ pt_coord_t norm_1(const Point<space_dim>& pt)
     norm += std::abs( pt[dim] );
   return norm;
 }
-
 
 /*!*************************************************************************************************
  * \brief   Computes Euclidean norm of a \c Point.
