@@ -189,13 +189,9 @@ class AbstractProblem
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax
-        if constexpr ( LocalSolverT::need_geometry_processing() )
-        {
-          auto solver_dofs    = local_solver_.preprocess_data(hyEdge_dofs, hyEdge.geometry);
-          auto solver_result  = local_solver_.numerical_flux_from_lambda(solver_dofs);
-          hyEdge_dofs      = local_solver_.postprocess_data(solver_result, hyEdge.geometry);
-        }
-        else  hyEdge_dofs  = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
+        if constexpr ( LocalSolverT::use_geometry() )
+          hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge.geometry);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -342,13 +338,13 @@ AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+/*template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
 using ElasticityProblemRegular = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
                   ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
-
+*/
 /*!*************************************************************************************************
  * \brief   This is an example problem.
  *
@@ -363,11 +359,11 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+/*template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
 using ElasticityProblemFile = 
 AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
                   Geometry::File< hyEdge_dim, space_dim >,
                   ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
-
+*/
 #endif // end of ifndef ABSTRACTPROBLEM_HXX

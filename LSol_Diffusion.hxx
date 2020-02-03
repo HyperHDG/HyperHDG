@@ -25,10 +25,7 @@ class DiffusionSolverNaive_RegularQuad
 {
   public:
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
-    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
-    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
-    static constexpr bool need_geometry_processing() { return false; }
+    static constexpr bool use_geometry() { return false; }
     static constexpr unsigned int n_glob_dofs_per_node()
     {
       unsigned int amount = 1;
@@ -75,10 +72,7 @@ class DiffusionSolverTensorStruc
 {
   public:
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return poly_deg; }
-    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
-    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
-    static constexpr bool need_geometry_processing() { return false; }
+    static constexpr bool use_geometry() { return false; }
     static constexpr unsigned int n_glob_dofs_per_node()
     {
       unsigned int amount = 1;
