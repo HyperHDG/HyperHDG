@@ -21,6 +21,40 @@ constexpr const unsigned int compute_n_corners_of_cube(const unsigned int hyEdge
 }
 #endif
 
+#ifndef COMPUTE_N_DOFS_PER_NODE
+#define COMPUTE_N_DOFS_PER_NODE
+/*!*************************************************************************************************
+ * \brief   Calculate the amount of local degrees of freedom of a hypernode at compile time.
+ * 
+ * \todo This can only be determined by the model, say the local solver. Not here!
+ *
+ * Naive implementation without math packages of
+ * "amount = solution_dim * (poly_degree ^ (hyEdge_dim - 1))"!
+ * 
+ * Theis function is a constexpr which gives the amount of degrees of freedom associated to one 
+ * hypernode (which is assumed to be the same for all hypernodes). It is usually used in combination
+ * with the class \c HyperNodeFactory.
+ * 
+ * \param   hyEdge_dim       The dimension of a hyperedge (1 for graphs).
+ * \param   poly_degree         The local polynomial degree of test functions.
+ * \param   solution_dim        The dimension of the solution (1 for scalar equations).
+ * \retval  n_dofs_per_node     The amount of degrees of freedom per hypernode.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyEdge_dim,
+  const unsigned int poly_degree, const unsigned int solution_dim = 1 )
+{
+  unsigned int amount = 1;
+  for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)
+    amount *= poly_degree + 1;
+  amount *= solution_dim;
+  return amount;
+} // end of compute_n_dofs_per_node
+#endif
+
+
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
 
@@ -74,6 +108,8 @@ class ElasticitySolver_RegularQuad
     static constexpr unsigned int solution_dimension_hyEdge() { return hyEdge_dim; }
     static constexpr unsigned int solution_dimension_hyNode() { return space_dim; }
     static constexpr bool need_geometry_processing() { return true; }
+    static constexpr unsigned int n_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
+    static constexpr unsigned int n_glob_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
 };
 
 #endif

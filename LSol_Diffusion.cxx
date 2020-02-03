@@ -505,7 +505,7 @@ dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array< array<double, compute_n_dofs_per_node(hyEdge_dim, poly_deg)> , 2 * hyEdge_dim > // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
+auto // array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverNaive_RegularQuad<hyEdge_dim, poly_deg, quad_deg>::
 numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
@@ -546,12 +546,12 @@ inline void index_decompose(unsigned int index, unsigned int range, array<unsign
 }
 
 
-template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array<double, (hyEdge_dim+1) * compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1) * (hyEdge_dim+1) * compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1)>
+template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg, unsigned int n_dofs_per_node>
+array<double, (hyEdge_dim+1) * n_dofs_per_node * (poly_deg + 1) * (hyEdge_dim+1) * n_dofs_per_node * (poly_deg + 1)>
 assemble_loc_matrix(const double tau)
 { 
   const unsigned int n_quads = compute_n_quad_points(quad_deg);
-  const unsigned int n_shape_fct = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1);
+  const unsigned int n_shape_fct = n_dofs_per_node * (poly_deg + 1);
   const std::array<double, n_quads> q_weights = quad_weights<quad_deg>();
   const std::array< std::array<double, n_quads > , poly_deg + 1 > trial = shape_fcts_at_quad_points<poly_deg, quad_deg>();
   const std::array< std::array<double, n_quads > , poly_deg + 1 > deriv = shape_ders_at_quad_points<poly_deg, quad_deg>();
@@ -669,7 +669,7 @@ DiffusionSolverTensorStruc(const constructor_value_type& tau)
 : tau_(tau), q_weights_(quad_weights<quad_deg>()),
   trial_(shape_fcts_at_quad_points<poly_deg, quad_deg>()),
   trial_bdr_(shape_fcts_at_bdrs<poly_deg>()),
-  loc_mat_(assemble_loc_matrix<hyEdge_dim,poly_deg,quad_deg>(tau))
+  loc_mat_(assemble_loc_matrix<hyEdge_dim,poly_deg,quad_deg, n_glob_dofs_per_node()>(tau))
 { } 
 
 

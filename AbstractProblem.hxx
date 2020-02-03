@@ -67,12 +67,7 @@ template <class TopologyT, class GeometryT, class LocalSolverT>
 class AbstractProblem
 {
   private:
-    HDGHyperGraph 
-    < compute_n_dofs_per_node
-      ( TopologyT::hyEdge_dimension(), LocalSolverT::polynomial_degree(),
-        LocalSolverT::solution_dimension_hyNode() ),
-      TopologyT, GeometryT
-    > hyper_graph_;
+    HDGHyperGraph < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT > hyper_graph_;
     std::vector<dof_index_type> dirichlet_indices_;
     LocalSolverT  local_solver_;
     PlotOptions   plot_options;
