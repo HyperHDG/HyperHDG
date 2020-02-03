@@ -551,7 +551,7 @@ array<double, (hyEdge_dim+1) * compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (
 assemble_loc_matrix(const double tau)
 { 
   const unsigned int n_quads = compute_n_quad_points(quad_deg);
-  const unsigned int num_ansatz_fct = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1);
+  const unsigned int n_shape_fct = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1);
   const std::array<double, n_quads> q_weights = quad_weights<quad_deg>();
   const std::array< std::array<double, n_quads > , poly_deg + 1 > trial = shape_fcts_at_quad_points<poly_deg, quad_deg>();
   const std::array< std::array<double, n_quads > , poly_deg + 1 > deriv = shape_ders_at_quad_points<poly_deg, quad_deg>();
@@ -560,13 +560,13 @@ assemble_loc_matrix(const double tau)
   array<unsigned int, hyEdge_dim> dec_i, dec_j;
   double integral, integral1D;
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct * (hyEdge_dim+1) * num_ansatz_fct> local_mat;
+  array<double, (hyEdge_dim+1) * n_shape_fct * (hyEdge_dim+1) * n_shape_fct> local_mat;
   local_mat.fill(0.);
   
-  for (unsigned int i = 0; i < num_ansatz_fct; ++i)
+  for (unsigned int i = 0; i < n_shape_fct; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < num_ansatz_fct; ++j)
+    for (unsigned int j = 0; j < n_shape_fct; ++j)
     {
       index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
       
@@ -580,7 +580,7 @@ assemble_loc_matrix(const double tau)
         integral *= integral1D;
       }
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] += integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( dim * n_shape_fct + i , dim * n_shape_fct + j )] += integral;
       
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       { 
@@ -595,8 +595,8 @@ assemble_loc_matrix(const double tau)
                           ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] -= integral;
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(  dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct + i , dim * n_shape_fct + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(  dim * n_shape_fct + i , hyEdge_dim * n_shape_fct + j )] -= integral;
         
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = 1.;
@@ -611,7 +611,7 @@ assemble_loc_matrix(const double tau)
           }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] += integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct + i , dim * n_shape_fct + j )] += integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
@@ -625,7 +625,7 @@ assemble_loc_matrix(const double tau)
           }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , dim * num_ansatz_fct + j )] -= integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct + i , dim * n_shape_fct + j )] -= integral;
         
         // Penalty in lower right diagonal block
         integral = 1.;
@@ -640,7 +640,7 @@ assemble_loc_matrix(const double tau)
           }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] += tau * integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct + i , hyEdge_dim * n_shape_fct + j )] += tau * integral;
         // Penalty in lower right diagonal block
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
@@ -654,7 +654,7 @@ assemble_loc_matrix(const double tau)
           }
           integral *= integral1D;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * num_ansatz_fct + i , hyEdge_dim * num_ansatz_fct + j )] += tau * integral;
+        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct + i , hyEdge_dim * n_shape_fct + j )] += tau * integral;
       }
     }
   }
@@ -674,27 +674,27 @@ DiffusionSolverTensorStruc(const constructor_value_type& tau)
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_fct_>
+array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::n_shape_fct_>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+assemble_rhs(const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   array<unsigned int, hyEdge_dim> dec_i;
   array<unsigned int, max(hyEdge_dim-1,1U)> dec_j;
   double integral, integral1D;
   
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side;
+  array<double, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
   right_hand_side.fill(0.);
   
   hy_assert( lambda_values.size() == 2 * hyEdge_dim ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
   for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
-    hy_assert( lambda_values[i].size() == num_ansatz_bdr_ ,
+    hy_assert( lambda_values[i].size() == n_shape_bdr_ ,
                "The size of the lambda values should be the amount of ansatz functions ar boundary." );
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
       index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
@@ -711,8 +711,8 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
           }
           integral *= integral1D;
         }
-        right_hand_side[dim * num_ansatz_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-        right_hand_side[hyEdge_dim * num_ansatz_fct_ + i] += tau_ * lambda_values[2*dim+0][j] * integral;
+        right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
+        right_hand_side[hyEdge_dim * n_shape_fct_ + i] += tau_ * lambda_values[2*dim+0][j] * integral;
         
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
@@ -726,8 +726,8 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
           }
           integral *= integral1D;
         }
-        right_hand_side[dim * num_ansatz_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-        right_hand_side[hyEdge_dim * num_ansatz_fct_ + i] += tau_ * lambda_values[2*dim+1][j] * integral;
+        right_hand_side[dim * n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
+        right_hand_side[hyEdge_dim * n_shape_fct_ + i] += tau_ * lambda_values[2*dim+1][j] * integral;
       }
     }
   }
@@ -737,27 +737,27 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_fct_>
+inline array<double, (hyEdge_dim+1) * DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::n_shape_fct_>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+solve_local_problem(const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_> local_matrix = loc_mat_;
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> right_hand_side = assemble_rhs(lambda_values);
+  array<double, (hyEdge_dim+1) * n_shape_fct_ * (hyEdge_dim+1) * n_shape_fct_> local_matrix = loc_mat_;
+  array<double, (hyEdge_dim+1) * n_shape_fct_> right_hand_side = assemble_rhs(lambda_values);
   
-  return lapack_solve<(hyEdge_dim+1) * num_ansatz_fct_>(local_matrix, right_hand_side);
+  return lapack_solve<(hyEdge_dim+1) * n_shape_fct_>(local_matrix, right_hand_side);
 }
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
+inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::n_shape_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
+dual_at_boundary(const array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs) const
 {
   array<unsigned int, hyEdge_dim> dec_i;
   array<unsigned int, max(hyEdge_dim-1,1U)> dec_j;
   double integral, integral1D;
   
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
+  array< array<double, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
   
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
   {
@@ -765,10 +765,10 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
     bdr_values[2*dim+1].fill(0.);
   }
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
       index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
@@ -785,7 +785,7 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
           }
           integral *= integral1D;
         }
-        bdr_values[2*dim+0][j] -= coeffs[dim * num_ansatz_fct_ + i] * integral;
+        bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
         
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
@@ -799,7 +799,7 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
           }
           integral *= integral1D;
         }
-        bdr_values[2*dim+1][j] += coeffs[dim * num_ansatz_fct_ + i] * integral;
+        bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
       }
     }
   }
@@ -809,15 +809,15 @@ dual_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) 
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim > 
+inline array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::n_shape_bdr_> , 2 * hyEdge_dim > 
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const
+primal_at_boundary(const array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs) const
 {
   array<unsigned int, hyEdge_dim> dec_i;
   array<unsigned int, max(hyEdge_dim-1,1U)> dec_j;
   double integral, integral1D;
   
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
+  array< array<double, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
   
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
   {
@@ -825,10 +825,10 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
     bdr_values[2*dim+1].fill(0.);
   }
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < num_ansatz_bdr_; ++j)
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
       index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
@@ -845,7 +845,7 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
           }
           integral *= integral1D;
         }
-        bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * num_ansatz_fct_ + i] * integral;
+        bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
         
         integral = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
@@ -859,7 +859,7 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
           }
           integral *= integral1D;
         }
-        bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * num_ansatz_fct_ + i] * integral;
+        bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
       }
     }
   }
@@ -871,7 +871,7 @@ primal_at_boundary(const array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 vector<double>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+primal_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   vector<double> abscissas = {0., 1.};
   return primal_at_dyadic(abscissas, lambda_values);
@@ -881,7 +881,7 @@ primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bd
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 vector< array<double, hyEdge_dim> >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+dual_in_corners_from_lambda(const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
   vector<double> abscissas = {0., 1.};
   return dual_at_dyadic(abscissas, lambda_values);
@@ -890,9 +890,9 @@ dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 vector<double> DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
 
   unsigned int n_points = 1;
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
@@ -909,7 +909,7 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
       values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
   }
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int q = 0; q < n_points; ++q)
@@ -918,7 +918,7 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
       fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      values[q] += coefficients[hyEdge_dim * num_ansatz_fct_ + i] * fct_value;
+      values[q] += coefficients[hyEdge_dim * n_shape_fct_ + i] * fct_value;
     }
   }
 
@@ -928,9 +928,9 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 vector< array<double,hyEdge_dim> > DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coefficients = solve_local_problem(lambda_values);
+  array<double, (hyEdge_dim+1) * n_shape_fct_> coefficients = solve_local_problem(lambda_values);
   
   unsigned int n_points = 1;
   for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)  n_points *= abscissas.size();
@@ -949,7 +949,7 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
       values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
   }
   
-  for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
   { 
     index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int q = 0; q < n_points; ++q)
@@ -959,7 +959,7 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        values[q][dim] += coefficients[dim * num_ansatz_fct_ + i] * fct_value;
+        values[q][dim] += coefficients[dim * n_shape_fct_ + i] * fct_value;
     }
   }
   
@@ -968,15 +968,15 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
 
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::num_ansatz_bdr_> , 2 * hyEdge_dim >
+array< array<double, DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::n_shape_bdr_> , 2 * hyEdge_dim >
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
-numerical_flux_from_lambda(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const
+numerical_flux_from_lambda(const array< array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
 {
-  array<double, (hyEdge_dim+1) * num_ansatz_fct_> coeffs = solve_local_problem(lambda_values);
+  array<double, (hyEdge_dim+1) * n_shape_fct_> coeffs = solve_local_problem(lambda_values);
   
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > bdr_values;
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > primals = primal_at_boundary(coeffs);
-  array< array<double, num_ansatz_bdr_> , 2 * hyEdge_dim > duals   = dual_at_boundary(coeffs);
+  array< array<double, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
+  array< array<double, n_shape_bdr_> , 2 * hyEdge_dim > primals = primal_at_boundary(coeffs);
+  array< array<double, n_shape_bdr_> , 2 * hyEdge_dim > duals   = dual_at_boundary(coeffs);
   
   for (unsigned int i = 0; i < lambda_values.size(); ++i)
     for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
