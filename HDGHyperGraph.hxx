@@ -19,7 +19,7 @@
  * decided by the local solvers of the HDG method applied. The \c Geometry class may use degrees of
  * freedom of the nodes as well.
  *
- * \tparam  n_dofs_per_node The number of degrees of freedom of a single hypernode which is assumed
+ * \tparam  n_dofs_per_nodeT The number of degrees of freedom of a single hypernode which is assumed
  *                          to be the same for all hypernodes.
  * \tparam  TopoT           Class that contains the topology of the hypergraph. This class is needs
  *                          to provide a getter function to the topological information of a
@@ -65,7 +65,7 @@
  * decided by the local solvers of the HDG method applied. The \c Geometry class may use degrees of
  * freedom of the nodes as well.
  *
- * \tparam  n_dofs_per_node The number of degrees of freedom of a single hypernode which is assumed
+ * \tparam  n_dofs_per_nodeT The number of degrees of freedom of a single hypernode which is assumed
  *                          to be the same for all hypernodes.
  * \tparam  TopoT           Class that contains the topology of the hypergraph. This class is needs
  *                          to provide a getter function to the topological information of a
@@ -77,7 +77,7 @@
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_dofs_per_node, class TopoT, class GeomT >
+template < unsigned int n_dofs_per_nodeT, class TopoT, class GeomT >
 class HDGHyperGraph
 {
   
@@ -259,6 +259,25 @@ class HDGHyperGraph
       }
   }; // end of class iterator
   
+  public:
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * \retval  hyEdge_dim            The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dimension(); }
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of the space.
+     *
+     * \retval  space_dim             The dimension of the space.
+     **********************************************************************************************/
+    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); }
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the amount of dofs per node.
+     *
+     * \retval  n_dofs_per_nodeT       The amount of degrees of freedom per node.
+     **********************************************************************************************/
+    static constexpr unsigned int n_dofs_per_node() { return n_dofs_per_nodeT; }
   private:
     /*!*********************************************************************************************
      * \brief   Topology of the hypergraph.
@@ -280,7 +299,7 @@ class HDGHyperGraph
      * A \c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
      * are located in some \c std::vector.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_node> hyNode_factory_;
+    const HyperNodeFactory<n_dofs_per_nodeT> hyNode_factory_;
   public:
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
@@ -394,8 +413,8 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to first \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator begin() const
-    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, 0); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT >::iterator begin() const
+    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT >::iterator(*this, 0); }
     /*!*********************************************************************************************
      * \brief   Return iterator to the end of \c hyEdge list.
      *
@@ -406,8 +425,8 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_node, TopoT, GeomT >::iterator end() const
-    { return HDGHyperGraph< n_dofs_per_node, TopoT, GeomT >::iterator(*this, n_hyEdges()); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT >::iterator end() const
+    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT >::iterator(*this, n_hyEdges()); }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
      *
@@ -421,7 +440,7 @@ class HDGHyperGraph
      *
      * \retval  hypernode_factory     The \c HyperNodeFactory belonging the hypergraph.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_node>& hyNode_factory() const
+    const HyperNodeFactory<n_dofs_per_nodeT>& hyNode_factory() const
     { return hyNode_factory_; }
     /*!*********************************************************************************************
      * \brief   Topological information of prescribed hyperedge.
@@ -466,25 +485,6 @@ class HDGHyperGraph
      *                                hypergraph.
      **********************************************************************************************/
     const dof_index_type n_global_dofs() const  { return hyNode_factory_.n_global_dofs(); }
-    
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of a hyperedge.
-     *
-     * \retval  hyEdge_dim         The dimension of a hyperedge.
-     **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dimension(); }
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of the space.
-     *
-     * \retval  space_dim             The dimension of the space.
-     **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); }
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the amount of dofs per node.
-     *
-     * \retval  n_dofs_per_node       The amount of degrees of freedom per node.
-     **********************************************************************************************/
-    static constexpr unsigned int n_dof_per_node() { return n_dofs_per_node; }
 }; // end of class HDGHyperGraph
 
 #endif // end of ifndef HYPERGRAPH_HXX
