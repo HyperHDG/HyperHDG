@@ -70,7 +70,7 @@ constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_d
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-double trial_function_eval(const unsigned int index, const double x_value);
+double shape_fct_eval(const unsigned int index, const double x_value);
 /*!*************************************************************************************************
  * \brief   Evaluate value of the derivatibe of orthonormal trial function.
  * 
@@ -84,7 +84,7 @@ double trial_function_eval(const unsigned int index, const double x_value);
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-double deriv_of_trial_eval(const unsigned int index, const double x_value);
+double shape_der_eval(const unsigned int index, const double x_value);
 /*!*************************************************************************************************
  * \brief   Gaussian quadrature points on one-dimensional unit interval.
  * 
@@ -98,7 +98,7 @@ double deriv_of_trial_eval(const unsigned int index, const double x_value);
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_quad_degree>
-std::array<double, compute_n_quad_points(max_quad_degree)> quadrature_points();
+std::array<double, compute_n_quad_points(max_quad_degree)> quad_points();
 /*!*************************************************************************************************
  * \brief   Gaussian quadrature weights on one-dimensional unit interval.
  * 
@@ -112,7 +112,7 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quadrature_points();
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_quad_degree>
-std::array<double, compute_n_quad_points(max_quad_degree)> quadrature_weights();
+std::array<double, compute_n_quad_points(max_quad_degree)> quad_weights();
 /*!*************************************************************************************************
  * \brief   Orthonormal trial functions evaluated at Gaussian quadrature points.
  * 
@@ -130,7 +130,7 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quadrature_weights();
  **************************************************************************************************/
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-trial_functions_at_quadrature_points();
+shape_fcts_at_quad_points();
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal trial functions evaluated at Gaussian quadrature points.
  * 
@@ -148,7 +148,7 @@ trial_functions_at_quadrature_points();
  **************************************************************************************************/
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-derivs_of_trial_at_quadrature_points();
+shape_ders_at_quad_points();
 /*!*************************************************************************************************
  * \brief   Orthonormal trial functions evaluated at end points of unit interval.
  * 
@@ -163,7 +163,7 @@ derivs_of_trial_at_quadrature_points();
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree>
-std::array< std::array<double, 2> , max_poly_degree + 1 > trial_functions_at_boundaries();
+std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs();
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal trial functions evaluated at end points of unit interval.
  * 
@@ -178,7 +178,7 @@ std::array< std::array<double, 2> , max_poly_degree + 1 > trial_functions_at_bou
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree>
-std::array< std::array<double, 2> , max_poly_degree + 1 > derivs_of_trial_at_boundaries();
+std::array< std::array<double, 2> , max_poly_degree + 1 > shape_ders_at_bdrs();
 
 } // end of namespace FuncQuad
 

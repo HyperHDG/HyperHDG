@@ -83,15 +83,15 @@ DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau)
 : tau_(tau)
 { 
   array<double, compute_n_quad_points(quad_deg)>
-    quad_weights1D = quadrature_weights<quad_deg>();
+    quad_weights1D = quad_weights<quad_deg>();
   array< array<double, compute_n_quad_points(quad_deg)> , poly_deg + 1 >
-    trials_at_quad1D = trial_functions_at_quadrature_points<poly_deg, quad_deg>();
+    trials_at_quad1D = shape_fcts_at_quad_points<poly_deg, quad_deg>();
   array< array<double, compute_n_quad_points(quad_deg)> , poly_deg + 1 >
-    derivs_at_quad1D = derivs_of_trial_at_quadrature_points<poly_deg, quad_deg>();
+    derivs_at_quad1D = shape_ders_at_quad_points<poly_deg, quad_deg>();
   array< array<double, 2> , poly_deg + 1 >
-    trials_at_bdr1D = trial_functions_at_boundaries<poly_deg>();
+    trials_at_bdr1D = shape_fcts_at_bdrs<poly_deg>();
 //  array< array<double, 2> , poly_deg + 1 >
-//    derivs_at_bdr1D = derivs_of_trial_at_boundaries<poly_deg>();
+//    derivs_at_bdr1D = shape_ders_at_bdrs<poly_deg>();
     
   // In the one-dimensional case, we are done now.
   if constexpr (hyEdge_dim == 1)
@@ -552,10 +552,10 @@ assemble_loc_matrix(const double tau)
 { 
   const unsigned int n_quads = compute_n_quad_points(quad_deg);
   const unsigned int num_ansatz_fct = compute_n_dofs_per_node(hyEdge_dim, poly_deg) * (poly_deg + 1);
-  const std::array<double, n_quads> q_weights = quadrature_weights<quad_deg>();
-  const std::array< std::array<double, n_quads > , poly_deg + 1 > trial = trial_functions_at_quadrature_points<poly_deg, quad_deg>();
-  const std::array< std::array<double, n_quads > , poly_deg + 1 > deriv = derivs_of_trial_at_quadrature_points<poly_deg, quad_deg>();
-  const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr = trial_functions_at_boundaries<poly_deg>();
+  const std::array<double, n_quads> q_weights = quad_weights<quad_deg>();
+  const std::array< std::array<double, n_quads > , poly_deg + 1 > trial = shape_fcts_at_quad_points<poly_deg, quad_deg>();
+  const std::array< std::array<double, n_quads > , poly_deg + 1 > deriv = shape_ders_at_quad_points<poly_deg, quad_deg>();
+  const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr = shape_fcts_at_bdrs<poly_deg>();
   
   array<unsigned int, hyEdge_dim> dec_i, dec_j;
   double integral, integral1D;
@@ -666,9 +666,9 @@ assemble_loc_matrix(const double tau)
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::
 DiffusionSolverTensorStruc(const constructor_value_type& tau)
-: tau_(tau), q_weights_(quadrature_weights<quad_deg>()),
-  trial_(trial_functions_at_quadrature_points<poly_deg, quad_deg>()),
-  trial_bdr_(trial_functions_at_boundaries<poly_deg>()),
+: tau_(tau), q_weights_(quad_weights<quad_deg>()),
+  trial_(shape_fcts_at_quad_points<poly_deg, quad_deg>()),
+  trial_bdr_(shape_fcts_at_bdrs<poly_deg>()),
   loc_mat_(assemble_loc_matrix<hyEdge_dim,poly_deg,quad_deg>(tau))
 { } 
 
@@ -906,7 +906,7 @@ primal_at_dyadic(const vector<double>& abscissas, const std::array< std::array<d
   {
     values1D[deg].resize(abscissas.size());
     for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::trial_function_eval(deg, abscissas[q]);
+      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
   }
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
@@ -946,7 +946,7 @@ dual_at_dyadic(const std::vector<double>& abscissas, const array< array<double, 
   { 
     values1D[deg].resize(abscissas.size());
     for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::trial_function_eval(deg, abscissas[q]);
+      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
   }
   
   for (unsigned int i = 0; i < num_ansatz_fct_; ++i)
