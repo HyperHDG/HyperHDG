@@ -8,7 +8,7 @@
  * Author: Andreas Rupp, University of Heidelberg, 2019
  */
 
-
+/*
 #include "LSol_Elasticity.hxx"
 #include "HyAssert.hxx"
 #include "LapackWrapper.hxx"
@@ -295,15 +295,6 @@ assemble_loc_mat() const
                                    + trials_bound_[2*dim+1][i][q] * trials_bound_[2*dim+1][j][q]);
     }
   }
-/*  
-  cout << endl << endl;
-  for (unsigned int i = 0; i < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim); ++i)
-  {
-    for(unsigned int j = 0; j < (hyEdge_dim + 1) * pow((max_poly_degree + 1), hyEdge_dim); ++j)
-      cout << local_mat[loc_matrix_index(i,j)] << "  ";
-    cout << endl;
-  }
-*/  
   return local_mat;
 }
 
@@ -336,39 +327,11 @@ assemble_rhs(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambd
         for (unsigned int q = 0; q < num_quad_bdr_; ++q)
           right_hand_side[hyEdge_dim * num_ansatz_fct_ + ansatz] += tau_ * quad_bdr_[q] *
             ( lambda_values[2*dim+0][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+0][ansatz][q]
-            + lambda_values[2*dim+1][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+1][ansatz][q] );
-/*  
-  cout << endl;
-  for (unsigned int i = 0; i < right_hand_side.size(); ++i)  cout << "  " << right_hand_side[i];
-*/  
+            + lambda_values[2*dim+1][bdr_ans] * bound_trials_quad_[bdr_ans][q] * trials_bound_[2*dim+1][ansatz][q] ); 
   return right_hand_side;
 }
 
 
-/*
-template<unsigned int dim, unsigned int unknown_dim>
-vector<double> DiffusionSolver<dim,unknown_dim>::solve_local_system_of_eq(const vector<double>& loc_matrix, const vector<double>& loc_rhs) const
-{
-  assert( loc_matrix.size() == loc_rhs.size() * loc_rhs.size() );
-  const int system_size = loc_rhs.size();
-  vector<double> solution(system_size, 0.);
-  
-  Eigen::MatrixXd eigen_matrix(system_size, system_size);
-  Eigen::VectorXd eigen_rhs(system_size), eigen_sol(system_size);
-  
-  for(int i = 0; i < system_size; ++i)
-    for(int j = 0; j < system_size; ++j)
-      eigen_matrix(i,j) = loc_matrix[loc_matrix_index(i,j)];
-      
-  for(int i = 0; i < system_size; ++i)  eigen_rhs(i) = loc_rhs[i];
-  
-  eigen_sol = eigen_matrix.colPivHouseholderQr().solve(eigen_rhs);
-  
-  for(int i = 0; i < system_size; ++i)  solution[i] = eigen_sol(i);
-  
-  return solution;
-}
-*/
 
 
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
@@ -397,11 +360,7 @@ solve_local_problem(const array< array<double, num_ansatz_bdr_> , 2*hyEdge_dim >
   local_matrix = assemble_loc_mat();
   
   array<double, (hyEdge_dim+1) * num_ansatz_fct_> solution = solve_local_system_of_eq(local_matrix, right_hand_side);
-/*  
-  cout << endl;
-  for (unsigned int i = 0; i < solution.size(); ++i) cout << "  " << solution[i];
-  cout << endl;
-*/  
+  
   return solution;
 }
 
@@ -466,14 +425,7 @@ numerical_flux_at_boundary(const array< array<double, num_ansatz_bdr_> , 2*hyEdg
   for (unsigned int i = 0; i < lambda_values.size(); ++i)
     for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
       bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
-/*  
-  for(unsigned int i = 0; i < bdr_values.size(); ++i)
-  {
-    for(unsigned int j = 0; j < bdr_values[i].size(); ++j)
-      cout << bdr_values[i][j] << "  ";
-    cout << endl;
-  }
-*/  
+
   return bdr_values;
 }
 
@@ -559,4 +511,4 @@ postprocess_data( array< array<double, compute_n_dofs_per_node(hyEdge_dim, max_p
   
   return result;
 }
-
+*/

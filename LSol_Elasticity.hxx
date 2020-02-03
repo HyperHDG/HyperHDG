@@ -57,7 +57,7 @@ constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyEdge
 
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
-
+/*
 #include <FuncAndQuad.hxx>
 #include <Geom_File.hxx>
 #include <HyperNodeFactory.hxx>
@@ -66,6 +66,14 @@ constexpr const unsigned int compute_n_dofs_per_node ( const unsigned int hyEdge
 template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class ElasticitySolver_RegularQuad
 {
+  public:
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
+    static constexpr unsigned int solution_dimension_hyEdge() { return hyEdge_dim; }
+    static constexpr unsigned int solution_dimension_hyNode() { return space_dim; }
+    static constexpr bool need_geometry_processing() { return true; }
+    static constexpr unsigned int n_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
+    static constexpr unsigned int n_glob_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
   private:
     static constexpr unsigned int n_quads_    = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim),
                                   num_quad_bdr_   = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim - 1),
@@ -102,14 +110,6 @@ class ElasticitySolver_RegularQuad
       preprocess_data(std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::File<hyEdge_dim, space_dim>::value_type& geometry ) const;
     std::array< std::array<double, space_dim * compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2 * hyEdge_dim >
       postprocess_data(std::array< std::array<double, compute_n_dofs_per_node(hyEdge_dim, max_poly_degree)> , 2*hyEdge_dim >& hyEdge_dofs, typename Geometry::File<hyEdge_dim, space_dim>::value_type& geometry ) const;
-    
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
-    static constexpr unsigned int solution_dimension_hyEdge() { return hyEdge_dim; }
-    static constexpr unsigned int solution_dimension_hyNode() { return space_dim; }
-    static constexpr bool need_geometry_processing() { return true; }
-    static constexpr unsigned int n_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
-    static constexpr unsigned int n_glob_dofs_per_node() { return compute_n_dofs_per_node (hyEdge_dim, max_poly_degree, space_dim); }
 };
-
+*/
 #endif

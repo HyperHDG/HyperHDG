@@ -25,7 +25,7 @@ cdef class PyDiffusionProblemNaive:
     return return_val
   def plot_solution(self, vec):
     self.thisptr.plot_solution(vec)
-
+"""
 cdef class PyElasticityProblem:
   cdef ElasticityProblem *thisptr      # hold a C++ instance which we're wrapping
   def __cinit__(self, filename):
@@ -53,3 +53,4 @@ cdef class PyElasticityProblem:
     return return_val
   def plot_solution(self, vec):
     self.thisptr.plot_solution(vec)
+"""
