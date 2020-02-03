@@ -265,13 +265,13 @@ class HDGHyperGraph
      *
      * \retval  hyEdge_dim            The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dimension(); }
+    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dim(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *
      * \retval  space_dim             The dimension of the space.
      **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return TopoT::space_dimension(); }
+    static constexpr unsigned int space_dimension() { return TopoT::space_dim(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the amount of dofs per node.
      *
@@ -320,7 +320,7 @@ class HDGHyperGraph
       hyGraph_geometry_ ( std::make_shared<const GeomT>( *hyGraph_topology_ )),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
-      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
+      static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
       hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
@@ -350,7 +350,7 @@ class HDGHyperGraph
       hyGraph_geometry_ (std::make_shared<const GeomT>(construct_geom)),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
-      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
+      static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
       hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
@@ -378,7 +378,7 @@ class HDGHyperGraph
     : hyGraph_topology_ ( topo ), hyGraph_geometry_ ( geom ),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes() )
     {
-      static_assert( TopoT::hyEdge_dimension() == GeomT::hyEdge_dimension() ,
+      static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dimension() ,
                      "The dimension of topology and geometry should be equal!" );
       hy_assert( hyNode_factory_.n_hyNodes() == hyGraph_topology_->n_hyNodes() ,
                  "The amount of hypernodes known to the hypernode factory is " <<
@@ -453,7 +453,7 @@ class HDGHyperGraph
      * \retval  hyEdge_topology    Topological information about hyperedge.
      **********************************************************************************************/
     const typename TopoT::value_type hyEdge_topology(const hyEdge_index_t index) const
-    { return hyGraph_topology_->get_hyEdge(index); }
+    { return hyGraph_topology_->operator[](index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
      *

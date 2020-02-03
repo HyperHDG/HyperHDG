@@ -24,6 +24,11 @@ template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max
 class DiffusionSolverNaive_RegularQuad
 {
   public:
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
+    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
+    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
+    static constexpr bool need_geometry_processing() { return false; }
     static constexpr unsigned int n_glob_dofs_per_node()
     {
       unsigned int amount = 1;
@@ -60,13 +65,7 @@ class DiffusionSolverNaive_RegularQuad
     std::vector<double> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::vector< std::array<double, hyEdge_dim> > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     auto//std::array< std::array<double, n_glob_dofs_per_node()> , 2 * hyEdge_dim >
-      numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return max_poly_degree; }
-    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
-    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
-    static constexpr bool need_geometry_processing() { return false; }
-
+      numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim 
 };
 
 
@@ -75,6 +74,11 @@ template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 class DiffusionSolverTensorStruc
 {
   public:
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+    static constexpr unsigned int polynomial_degree() { return poly_deg; }
+    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
+    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
+    static constexpr bool need_geometry_processing() { return false; }
     static constexpr unsigned int n_glob_dofs_per_node()
     {
       unsigned int amount = 1;
@@ -107,12 +111,6 @@ class DiffusionSolverTensorStruc
     
     std::vector<double> primal_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
     std::vector< std::array<double,hyEdge_dim> > dual_at_dyadic(const std::vector<double>& abscissas, const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr unsigned int polynomial_degree() { return poly_deg; }
-    static constexpr unsigned int solution_dimension_hyEdge() { return 1; }
-    static constexpr unsigned int solution_dimension_hyNode() { return 1; }
-    static constexpr bool need_geometry_processing() { return false; }
 };
 
 #endif
