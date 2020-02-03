@@ -79,12 +79,6 @@ class DiffusionSolverTensorStruc
       for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)  amount *= poly_deg + 1;
       return amount;
     }
-    static constexpr unsigned int dyadic_size (const unsigned int sizeT)
-    {
-      unsigned int size = sizeT;
-      for (unsigned int dim = 1; dim < hyEdge_dim; ++dim)  size *= sizeT;
-      return size;
-    }
   private:
     static constexpr unsigned int n_quads_     = FuncQuad::compute_n_quad_points(quad_deg),
                                   n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1),
