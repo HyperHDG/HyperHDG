@@ -69,15 +69,15 @@ ElasticitySolver_RegularQuad(const constructor_value_type& tau)
   static_assert( hyEdge_dim == 1 , "This has only been implemented for one dimensional hyperedges." );
 //  hy_assert( 0 == 1 , "Not yet implemented!" );
   array<double, compute_n_quad_points(max_quad_degree)>
-    quad_weights1D = quadrature_weights<max_quad_degree>();
+    quad_weights1D = quad_weights<max_quad_degree>();
   array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-    trials_at_quad1D = trial_functions_at_quadrature_points<max_poly_degree, max_quad_degree>();
+    trials_at_quad1D = shape_fcts_at_quad_points<max_poly_degree, max_quad_degree>();
   array< array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
-    derivs_at_quad1D = derivs_of_trial_at_quadrature_points<max_poly_degree, max_quad_degree>();
+    derivs_at_quad1D = shape_ders_at_quad_points<max_poly_degree, max_quad_degree>();
   array< array<double, 2> , max_poly_degree + 1 >
-    trials_at_bdr1D = trial_functions_at_boundaries<max_poly_degree>();
+    trials_at_bdr1D = shape_fcts_at_bdrs<max_poly_degree>();
 //  array< array<double, 2> , max_poly_degree + 1 >
-//    derivs_at_bdr1D = derivs_of_trial_at_boundaries<max_poly_degree>();
+//    derivs_at_bdr1D = shape_ders_at_bdrs<max_poly_degree>();
     
   // In the one-dimensional case, we are done now.
   if constexpr (hyEdge_dim == 1)
