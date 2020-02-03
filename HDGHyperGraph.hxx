@@ -8,6 +8,8 @@
  *       DiffusionProblem implementation. I hope that this is even more general, since for_each
  *       is pretty general. What do you think?
  * 
+ * \todo  Adapt notation in Geometries!
+ * 
  * The main class representing a hypergraph. It uses a class \c Topology to represent the collection
  * of nodes and edges as well as a class \c Geometry presenting the physical coordinates of the
  * edges. It behaves like a random access container of hyperedges and has additional access to its
