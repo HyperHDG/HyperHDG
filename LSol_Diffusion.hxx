@@ -67,6 +67,10 @@ class DiffusionSolverNaive_RegularQuad
 */
 
 
+/*!
+ * \todo  Will diffusivity depend on spatial (local or global) coordinates and/or the index of the hyperedge? How should this be encoded?
+ */
+
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 class DiffusionSolverTensorStruc
 {
