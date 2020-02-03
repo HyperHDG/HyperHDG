@@ -180,25 +180,27 @@ class AbstractProblem
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
+      // Do matrix--vector multiplication by iterating over all hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
       {
-        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
         hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyEdge_dofs[hyNode] = 
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
-        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr ( LocalSolverT::use_geometry() )
           hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge.geometry);
         else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
         
-        // Fill hyEdge_dofs array degrees of freedom into vec_Ax
+        // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyper_graph_.hyNode_factory().add_to_dof_values
             (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
       
+      // Set all Dirichlet values to zero.
       for ( dof_index_type i = 0 ; i < dirichlet_indices_.size() ; ++i )
       {
         hy_assert( dirichlet_indices_[i] >= 0 
