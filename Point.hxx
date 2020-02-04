@@ -1,11 +1,9 @@
 /*!*************************************************************************************************
  * \file    Point.hxx
- * \brief   This class implements a point in a d-dimensional space.
+ * \brief   This file implements a point in a d-dimensional space.
  * 
  * This file implements a point in a \f$d\f$-dimensional space, where the \f$d\f$ is given by the
  * template parameter \c space_dim.
- * 
- * \tparam  space_dim           The dimension of the space, the object is located in.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -27,7 +25,7 @@
  * This class implements a point in a \f$d\f$-dimensional space, where the \f$d\f$ is given by the
  * template parameter \c space_dim.
  * 
- * \tparam  space_dim           The dimension of the space, the object is located in.
+ * \tparam  space_dim         The dimension of the space, the object is located in.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -37,7 +35,7 @@ class Point
 {
   private:
     /*!*********************************************************************************************
-     * \brief   Array containint the coordinates of the point.
+     * \brief   Array containing the coordinates of the point.
      * 
      * A \c std::array conatining the i-th coordinate of the point as its i-th entry.
      **********************************************************************************************/
@@ -48,10 +46,7 @@ class Point
      * 
      * Fills coordinates of the point with zeros.
      **********************************************************************************************/
-    Point()
-    {
-      coordinates_.fill(0.);
-    }
+    Point() { coordinates_.fill(0.); }
     /*!*********************************************************************************************
      * \brief   Construct point from array of coordinates.
      * 
@@ -59,35 +54,41 @@ class Point
      * 
      * \param   coordinates   A \c std::array containing the coordinates of the point.
      **********************************************************************************************/
-    Point(const std::array<pt_coord_t, space_dim>& coordinates)
-    : coordinates_(coordinates) { }
+    Point(const std::array<pt_coord_t, space_dim>& coordinates) : coordinates_(coordinates) { }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
-    Point(const Point<space_dim>& other)
-    : coordinates_(other.coordinates_) { }
+    Point(const Point<space_dim>& other) : coordinates_(other.coordinates_) { }
     /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
-    Point(Point<space_dim>&& other) noexcept
-    : coordinates_(std::move(other.coordinates_)) { }
+    Point(Point<space_dim>&& other) noexcept : coordinates_(std::move(other.coordinates_)) { }
     /*!*********************************************************************************************
      * \brief   Copy assignment.
      **********************************************************************************************/
     Point<space_dim>& operator= (const Point<space_dim>& other)
-    {
-      coordinates_ = other.coordinates_;
-      return *this;
-    }
+    { coordinates_ = other.coordinates_; return *this; }
     /*!*********************************************************************************************
      * \brief   Move assignment.
      **********************************************************************************************/
     Point<space_dim>& operator= (Point<space_dim>&& other) noexcept
-    {
-      std::swap(coordinates_, other.coordinates_);
-      return *this;
-    }
+    { std::swap(coordinates_, other.coordinates_); return *this; }
     
+    /*!*********************************************************************************************
+     * \brief   Return single coordinate of a constant point.
+     * 
+     * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
+     *                        returned.
+     * \retval  coordinate    \c pt_coord_t describing the coord_entry'th coordinate.
+     **********************************************************************************************/
+    pt_coord_t operator[](const unsigned int coord_entry) const
+    {
+      hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
+                 "You can only access entries of a point's coordinates that have a non-negaitive "
+                 << "index that is smaller than the space dimension (which is " << space_dim << ")."
+                 << " However, you tried to access the " << coord_entry << "-th entry." );
+      return coordinates_[coord_entry];
+    }
     /*!*********************************************************************************************
      * \brief   Return reference to single coordinate of a point.
      * 
@@ -97,22 +98,6 @@ class Point
      *                        coordinate.
      **********************************************************************************************/
     pt_coord_t& operator[](const unsigned int coord_entry)
-    {
-      hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
-                 "You can only access entries of a point's coordinates that have a non-negaitive "
-                 << "index that is smaller than the space dimension (which is " << space_dim << ")."
-                 << " However, you tried to access the " << coord_entry << "-th entry." );
-      return coordinates_[coord_entry];
-    }
-    /*!*********************************************************************************************
-     * \brief   Return single coordinate of a constant point.
-     * 
-     * \param   coord_entry   An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    \c pt_coord_t describing the coord_entry'th
-     *                        coordinate.
-     **********************************************************************************************/
-    const pt_coord_t& operator[](const unsigned int coord_entry) const
     {
       hy_assert( 0 <= coord_entry && coord_entry < space_dim ,
                  "You can only access entries of a point's coordinates that have a non-negaitive "
@@ -136,7 +121,7 @@ class Point
       return true;
     }
     /*!*********************************************************************************************
-     * \brief   Find out whether two points have (exactly) the same coordinates.
+     * \brief   Find out whether two points do not have (exactly) the same coordinates.
      * 
      * This function compares the point to another point and returns false if and only if both
      * points have exactly (that is not only with respect to some rounding errors) the same
@@ -171,28 +156,48 @@ class Point
       return false;
     }
     
-    
+    /*!*********************************************************************************************
+     * \brief   Add scalar to a given point.
+     * 
+     * \param   scalar        Floating point that is added to all of the point's coordinates.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator+=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         coordinates_[dim] += scalar;
       return *this;
     }
-
+    /*!*********************************************************************************************
+     * \brief   Subtract scalar from a given point.
+     * 
+     * \param   scalar        Floating point that is subtracted from all of the point's coordinates.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator-=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         coordinates_[dim] -= scalar;
       return *this;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Multiply scalar a given point.
+     * 
+     * \param   scalar        Floating point that is multiplied with all of the point's coordinates.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator*=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         coordinates_[dim] *= scalar;
       return *this;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Divide given point by a scalar.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator/=(const pt_coord_t scalar)
     {
       hy_assert( scalar != 0. ,
