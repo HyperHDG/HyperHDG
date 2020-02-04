@@ -4,7 +4,7 @@
  *
  * This file provides a file \c AbstractProblem class defining an abstract problem.
  * 
- * This file is an .hpp file, since class and function are compiled "dynamically" depending on the
+ * This file is an .hxx file, since class and function are compiled "dynamically" depending on the
  * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
  * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
  * and functions of this file are deduced and the needed versions are compiled.
