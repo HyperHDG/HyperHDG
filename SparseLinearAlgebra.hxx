@@ -157,7 +157,7 @@ std::vector<dof_value_t> conjugate_gradient
   int& n_iterations = 0, const dof_value_t tolerance = 1e-9 )
 {
   std::vector<dof_value_t> x (b.size(), 0.);
-  std::vector<dof_value_t> r = b; // Wiki: b - A x (with x = 0)
+  std::vector<dof_value_t> r = b; // b - A * x (with x = 0)
   std::vector<dof_value_t> d = r;
   
   dof_value_t r_square_old;
