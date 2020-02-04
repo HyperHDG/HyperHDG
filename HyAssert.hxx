@@ -1,25 +1,25 @@
 /*!*************************************************************************************************
- * @file    HyAssert.hxx
- * @brief   This file provides the function hy_assert.
+ * \file    HyAssert.hxx
+ * \brief   This file provides the function \c hy_assert.
  *
  * This is a wrapper file to provide a function that allows to use assertions that are similar to
- * those provided by @c <cassert>. That is, we define a macro @c hy_assert that implements assert.
- * If a user wants to use assertions, it is recommended to use @c hy_assert( @c Expr, @c Msg). The
- * use of the function @c __Hy_Assert is @b not recommended.
+ * those provided by \c <cassert>. That is, we define a macro \c hy_assert that implements assert.
+ * If a user wants to use assertions, it is recommended to use \c hy_assert( \c Expr, \c Msg). The
+ * use of the function \c __Hy_Assert is \b not recommended.
  * 
- * Function @c hy_assert takes two arguments. The first argument is evaluated to a @c boolean and
- * if this returns @c true, nothing is done. If the argument is @c false, the running program is
+ * Function \c hy_assert takes two arguments. The first argument is evaluated to a \c boolean and
+ * if this returns \c true, nothing is done. If the argument is \c false, the running program is
  * terminated and the second argument is displayed as part of an error message. Here, the second
- * argument is handled as a @c stringstream (without initial @c <<). Thus, for two integers a and b,
+ * argument is handled as a \c stringstream (without initial \c <<). Thus, for two integers a and b,
  * a function call might look like: hy_assert( a == b , "Integers have not been the same, since a
  * turned out to be " << a << " and b was " << b << "." );
  * 
- * Whether this functionality is active or not can be deduced via setting @c NDEBUG, when the code
+ * Whether this functionality is active or not can be deduced via setting \c NDEBUG, when the code
  * is compiled. Using this functionality makes your program significantly slower. However, usage is
  * highly recommended for testing. 
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
 #ifndef HYASSERT_HXX
@@ -33,13 +33,13 @@
           __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); }
 
 /*!*************************************************************************************************
- * @brief   This function is not (never) to be used.
+ * \brief   This function is not (never) to be used.
  *
- * This function is @b not to be used in regular code. It only / solely is defined to allow the use
- * of function @c hy_assert( @c Expr, @c Msg) which is implemented as a macro (cf. file HyAssert.h).
+ * This function is \b not to be used in regular code. It only / solely is defined to allow the use
+ * of function \c hy_assert( \c Expr, \c Msg) which is implemented as a macro (cf. file HyAssert.h).
  *
- * @authors   Guido Kanschat, University of Heidelberg, 2020.
- * @authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line,
                  std::stringstream& msg);

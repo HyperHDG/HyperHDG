@@ -9,9 +9,9 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#include "../AbstractProblem.hxx"
-#include "../SparseLinearAlgebra.hxx"
-#include "../HyAssert.hxx"
+#include <AbstractProblem.hxx>
+#include <SparseLinearAlgebra.hxx>
+
 #include <iostream>
 
 using namespace std;

@@ -15,8 +15,9 @@
 #ifndef SPARSELINEARALGEBRA_HXX
 #define SPARSELINEARALGEBRA_HXX
 
-#include "HyAssert.hxx"
-#include "TypeDefs.hxx"
+#include <HyAssert.hxx>
+#include <TypeDefs.hxx>
+
 #include <vector>
 #include <cmath>
 
@@ -51,8 +52,8 @@ namespace SparseLA
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-dof_value_t inner_product ( const std::vector<dof_value_t>& left,
-                               const std::vector<dof_value_t>& right )
+dof_value_t inner_product
+( const std::vector<dof_value_t>& left, const std::vector<dof_value_t>& right )
 {
   hy_assert( left.size() == right.size() ,
              "Both vectors of inner product must be of same size!" );
@@ -60,7 +61,7 @@ dof_value_t inner_product ( const std::vector<dof_value_t>& left,
   dof_value_t product = 0.;
   for (dof_index_type i = 0; i < left.size(); ++i)  product += left[i] * right[i];
   return product;
-};
+}
 
 /*!*************************************************************************************************
  * \brief   Evaluate 2 norm of a \c std::vector.
@@ -95,10 +96,9 @@ dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-std::vector<dof_value_t> linear_combination ( const dof_value_t leftFac,
-                                                 const std::vector<dof_value_t>& leftVec,
-                                                 const dof_value_t rightFac,
-                                                 const std::vector<dof_value_t>& rightVec )
+std::vector<dof_value_t> linear_combination
+( const dof_value_t leftFac, const std::vector<dof_value_t>& leftVec,
+  const dof_value_t rightFac, const std::vector<dof_value_t>& rightVec )
 {
   hy_assert( leftVec.size() == rightVec.size() ,
              "Both vectors of linear combination must be of same size!" );
@@ -107,7 +107,7 @@ std::vector<dof_value_t> linear_combination ( const dof_value_t leftFac,
   for (dof_index_type i = 0; i < leftVec.size(); ++i)
     lin_comb[i] = leftFac * leftVec[i] + rightFac * rightVec[i];
   return lin_comb;
-};
+}
 
 /*!*************************************************************************************************
  * \brief   Evaluate linear combination of vectors and return reference to result.
@@ -135,7 +135,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
   
   for (dof_index_type i = 0; i < result.size(); ++i)
     result[i] = leftFac * leftV[i] + rightFac * rightV[i];
-};
+}
 
 /*!*************************************************************************************************
  * \brief   Execute conjugate gradient algorithm to find solution to system of equations.
@@ -199,7 +199,7 @@ std::vector<dof_value_t> conjugate_gradient
              
   n_iterations = -1;
   return x;
-};
+}
 
 } // end of namespace SparseLA
 

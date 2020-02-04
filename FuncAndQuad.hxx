@@ -1,12 +1,20 @@
 /*!*************************************************************************************************
  * \file    FuncAndQuad.hxx
- * \brief   A namespace containing different functions that evaluate the trial functions at
- *          quadrature points.
+ * \brief   Contains functions to evaluate shape functions (e.g. at quadrature points).
  *
- * This namespace aims to ultimately provide the opportunity to choose from several types of trial
- * functions and different quadrature rules by choosing the appropriate \c namesapce. However, at
- * the moment only orthonormal trial functions and Gaussian quadrature are implemented resultin in
- * the currently very general name FuncQuad.
+ * This file provides several functions to evaluate shape functions (and their derivatives) that are
+ * L^2 orthonormal with respect to the unit interval \f$[0,1]\f$. (Obviously, this does not hold for
+ * the derivatives.)
+ * 
+ * From these one-dimensional shape frunctions, multi-dimensional shape functions are constructed by
+ * evaluating tensor / dyadic products. Thus, also the multi-dimensional shape functions are L^2
+ * orthonormal with respect to the unit hypercube  \f$[0,1]^d\f$, where \f$d\f$ denotes the spatial
+ * dimension.
+ * 
+ * Moreover, Gaussian quadrature rules are provided that contain at most nine quadrature points in
+ * one dimension (and therefore are exact for polynomials of degree at most 17). Exploiting the
+ * tensor structure of the reference hypercube allows to also extend these rules to be applicable
+ * in several spatial dimensions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -18,15 +26,21 @@
 #include <array>
 
 /*!*************************************************************************************************
- * \brief   A namespace containing different functions that evaluate the trial functions at
- *          quadrature points.
- * 
- * \todo    Check, whether this construction makes sense.
+ * \brief   Contains functions to evaluate shape functions (e.g. at quadrature points).
  *
- * This namespace aims to ultimately provide the opportunity to choose from several types of trial
- * functions and different quadrature rules by choosing the appropriate \c namesapce. However, at
- * the moment only orthonormal trial functions and Gaussian quadrature are implemented resultin in
- * the currently very general name FuncQuad.
+ * This namespace provides several functions to evaluate shape functions (and their derivatives)
+ * that are L^2 orthonormal with respect to the unit interval \f$[0,1]\f$. (Obviously, this does not
+ * hold for the derivatives.)
+ * 
+ * From these one-dimensional shape frunctions, multi-dimensional shape functions are constructed by
+ * evaluating tensor / dyadic products. Thus, also the multi-dimensional shape functions are L^2
+ * orthonormal with respect to the unit hypercube  \f$[0,1]^d\f$, where \f$d\f$ denotes the spatial
+ * dimension.
+ * 
+ * Moreover, Gaussian quadrature rules are provided that contain at most nine quadrature points in
+ * one dimension (and therefore are exact for polynomials of degree at most 17). Exploiting the
+ * tensor structure of the reference hypercube allows to also extend these rules to be applicable
+ * in several spatial dimensions.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -48,8 +62,8 @@ namespace FuncQuad
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_degree,
-                                                   const unsigned int local_dimensions = 1)
+constexpr const unsigned int compute_n_quad_points
+(const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
 {
   unsigned int amount = 1, amount1D = 1;
   for ( ; 2 * amount1D - 1 < max_quad_degree; ++amount1D ) ;
@@ -58,28 +72,28 @@ constexpr const unsigned int compute_n_quad_points(const unsigned int max_quad_d
 }
 
 /*!*************************************************************************************************
- * \brief   Evaluate value of orthonormal trial function.
+ * \brief   Evaluate value of orthonormal shape function.
  * 
- * Evaluates the value of the \c index orthonormal, one-dimensional trial function on the reference
+ * Evaluates the value of the \c index orthonormal, one-dimensional shape function on the reference
  * interval \f$[0,1]\f$ at abscissa \c x_value.
  * 
- * \param   index               Index of evaluated trial function.
- * \param   x_value             Abscissa of evaluated trial function.
- * \retval  fct_value           Evaluated value of trial function.
+ * \param   index               Index of evaluated shape function.
+ * \param   x_value             Abscissa of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape function.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 double shape_fct_eval(const unsigned int index, const double x_value);
 /*!*************************************************************************************************
- * \brief   Evaluate value of the derivatibe of orthonormal trial function.
+ * \brief   Evaluate value of the derivative of orthonormal shape function.
  * 
- * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional trial function
+ * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional shape function
  * on the reference interval \f$[0,1]\f$ at abscissa \c x_value.
  * 
- * \param   index               Index of evaluated trial function.
- * \param   x_value             Abscissa of evaluated trial function.
- * \retval  fct_value           Evaluated value of trial function's derivative.
+ * \param   index               Index of evaluated shape function.
+ * \param   x_value             Abscissa of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape function's derivative.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -114,16 +128,16 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quad_points();
 template<unsigned int max_quad_degree>
 std::array<double, compute_n_quad_points(max_quad_degree)> quad_weights();
 /*!*************************************************************************************************
- * \brief   Orthonormal trial functions evaluated at Gaussian quadrature points.
+ * \brief   Orthonormal shape functions evaluated at Gaussian quadrature points.
  * 
- * Returns the values of the orthonormal trial functions on \f$[0,1]\f$ of degree at most
+ * Returns the values of the orthonormal shape functions on \f$[0,1]\f$ of degree at most
  * \c max_poly_degree at the quadrature rule with accuracy order \c max_quad_degree on a
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
- *                              quadrature points (the trial functions are evaluated at).
+ *                              quadrature points (the shape functions are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -132,16 +146,16 @@ template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_fcts_at_quad_points();
 /*!*************************************************************************************************
- * \brief   Derivatives of orthonormal trial functions evaluated at Gaussian quadrature points.
+ * \brief   Derivatives of orthonormal shape functions evaluated at Gaussian quadrature points.
  * 
- * Returns the values of the derivatives of orthonormal trial functions on \f$[0,1]\f$ of degree at
+ * Returns the values of the derivatives of orthonormal shape functions on \f$[0,1]\f$ of degree at
  * most \c max_poly_degree at the quadrature rule with accuracy order \c max_quad_degree on a
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
- *                              quadrature points (the trial functions' derivatives are evaluated).
+ *                              quadrature points (the shape functions' derivatives are evaluated).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -150,14 +164,14 @@ template<unsigned int max_poly_degree, unsigned int max_quad_degree>
 std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_ders_at_quad_points();
 /*!*************************************************************************************************
- * \brief   Orthonormal trial functions evaluated at end points of unit interval.
+ * \brief   Orthonormal shape functions evaluated at end points of unit interval.
  * 
- * Returns the values of the orthonormal trial functions on \f$[0,1]\f$ of degree at most
+ * Returns the values of the orthonormal shape functions on \f$[0,1]\f$ of degree at most
  * \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
- *                              corner indices (the trial functions are evaluated at).
+ *                              corner indices (the shape functions are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -165,14 +179,14 @@ shape_ders_at_quad_points();
 template<unsigned int max_poly_degree>
 std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs();
 /*!*************************************************************************************************
- * \brief   Derivatives of orthonormal trial functions evaluated at end points of unit interval.
+ * \brief   Derivatives of orthonormal shape functions evaluated at end points of unit interval.
  * 
- * Returns the values of the orthonormal trial functions' derivatives on \f$[0,1]\f$ of degree at
+ * Returns the values of the orthonormal shape functions' derivatives on \f$[0,1]\f$ of degree at
  * most \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
- *                              corner indices (the trial functions' derivatives are evaluated at).
+ *                              corner indices (the shape functions' derivatives are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.

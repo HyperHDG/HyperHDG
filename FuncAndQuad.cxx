@@ -21,10 +21,10 @@ using namespace std;
 double FuncQuad::shape_fct_eval(const unsigned int index, const double x_value)
 {
   hy_assert( 0 <= index && index <= 5 ,
-             "The index of a trial function must be non-negative and smaller than or equal to 5 at "
+             "The index of a shape function must be non-negative and smaller than or equal to 5 at "
              << "the moment. Your choice has been " << index << "." );
   hy_assert( 0. <= x_value && x_value <= 1. ,
-             "The x value for which the trial function is evaluated has been set to be in the "
+             "The x value for which the shape function is evaluated has been set to be in the "
              << "closed interval [0,1]. Your choice has been " << x_value << "." );
   switch (index)
   {
@@ -34,11 +34,11 @@ double FuncQuad::shape_fct_eval(const unsigned int index, const double x_value)
     case 3:  return sqrt(7) * ( ( (20. * x_value - 30.) * x_value + 12. ) * x_value - 1. );
     case 4:  return sqrt(9) * ( ( ( (70. * x_value - 140.) * x_value + 90. ) * x_value - 20. ) * x_value + 1. );
     case 5:  return sqrt(11)* ( ( ( ( (252. * x_value - 630.) * x_value + 560. ) * x_value - 210. ) * x_value + 30. ) * x_value - 1. );
-    default: hy_assert( 0 == 1 , "This trial function has not yet been implemented. This message "
+    default: hy_assert( 0 == 1 , "This shape function has not yet been implemented. This message "
                                   << "however is never supposed to appear. Something went wrong in "
                                   << "the core of the program." );
   }
-  hy_assert( 0 == 1 , "Something went wrong when evaluating a trial function. This message however "
+  hy_assert( 0 == 1 , "Something went wrong when evaluating a shape function. This message however "
                       << "is never supposed to appear. Something went wrong in the core program." );
   return 0.;
 }
@@ -47,10 +47,10 @@ double FuncQuad::shape_fct_eval(const unsigned int index, const double x_value)
 double FuncQuad::shape_der_eval(const unsigned int index, const double x_value)
 {
   hy_assert( 0 <= index && index <= 5 ,
-             "The index of a trial function must be non-negative and smaller than or equal to 5 at "
+             "The index of a shape function must be non-negative and smaller than or equal to 5 at "
              << "the moment. Your choice has been " << index << "." );
   hy_assert( 0. <= x_value && x_value <= 1. ,
-             "The x value for which the trial function is evaluated has been set to be in the "
+             "The x value for which the shape function is evaluated has been set to be in the "
              << "closed interval [0,1]. Your choice has been " << x_value << "." );
   switch (index)
   {
@@ -60,11 +60,11 @@ double FuncQuad::shape_der_eval(const unsigned int index, const double x_value)
     case 3:  return sqrt(7) * ( (60. * x_value - 60.) * x_value + 12. );
     case 4:  return sqrt(9) * ( ( (280. * x_value - 420.) * x_value + 180. ) * x_value - 20. );
     case 5:  return sqrt(11)* ( ( ( (1260. * x_value - 2520.) * x_value + 1680. ) * x_value - 420. ) * x_value + 30. );
-    default: hy_assert( 0 == 1 , "This trial function has not yet been implemented. This message "
+    default: hy_assert( 0 == 1 , "This shape function has not yet been implemented. This message "
                                   << "however is never supposed to appear. Something went wrong in "
                                   << "the core of the program." );
   }
-  hy_assert( 0 == 1 , "Something went wrong when evaluating a trial function. This message however "
+  hy_assert( 0 == 1 , "Something went wrong when evaluating a shape function. This message however "
                       << "is never supposed to appear. Something went wrong in the core program." );
   return 0.;
 }
