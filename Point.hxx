@@ -266,26 +266,6 @@ Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>&
   return sum;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> operator+(Point<space_dim>&& left, const Point<space_dim>& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
-  return left;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator+(const Point<space_dim>& left, Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] += left[dim];
-  return right;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator+(Point<space_dim>&& left , Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] += right[dim];
-  return left;
-}
 
 /*!*************************************************************************************************
  * \brief   Subtract two \c Point.
@@ -304,26 +284,6 @@ Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>&
   return difference;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> operator-(Point<space_dim>&& left, const Point<space_dim>& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
-  return left;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator-(const Point<space_dim>& left, Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] = left[dim] - right[dim];
-  return right;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator-(Point<space_dim>&& left , Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] -= right[dim];
-  return left;
-}
 
 /*!*************************************************************************************************
  * \brief   Hadamard product of two \c Point.
@@ -342,26 +302,6 @@ Point<space_dim> hada_prod(const Point<space_dim>& left, const Point<space_dim>&
   return product;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> hada_prod(Point<space_dim>&& left, const Point<space_dim>& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] *= right[dim];
-  return left;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> hada_prod(const Point<space_dim>& left, Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  right[dim] *= left[dim];
-  return right;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> hada_prod(Point<space_dim>&& left , Point<space_dim>&& right)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  left[dim] *= right[dim];
-  return left;
-}
 
 /*!*************************************************************************************************
  * \brief   Hadamard division two \c Point.
@@ -385,41 +325,81 @@ Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>&
   return quotient;
 }
 
+
+/*!*************************************************************************************************
+ * \brief   Multiply scalar with \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-Point<space_dim> hada_divi(Point<space_dim>&& left, const Point<space_dim>& right)
+Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim>& pt)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( right[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    left[dim] /= right[dim];
-  }
-  return left;
+  Point<space_dim> sum(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += scalar;
+  return sum;
 }
 
+
+
+/*!*************************************************************************************************
+ * \brief   Multiply \c Point with scalar.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-Point<space_dim> hada_divi(const Point<space_dim>& left, Point<space_dim>&& right)
+Point<space_dim> operator+(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( right[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    right[dim] = left[dim] / right[dim];
-  }
-  return right;
+  Point<space_dim> sum(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += scalar;
+  return sum;
 }
 
+
+/*!*************************************************************************************************
+ * \brief   Multiply scalar with \c Point.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
-Point<space_dim> hada_divi(Point<space_dim>&& left , Point<space_dim>&& right)
+Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim>& pt)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( right[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    left[dim] /= right[dim];
-  }
-  return left;
+  Point<space_dim> difference(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] = scalar - pt[dim];
+  return difference;
 }
+
+
+
+/*!*************************************************************************************************
+ * \brief   Multiply \c Point with scalar.
+ * 
+ * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
+ *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template<unsigned int space_dim>
+Point<space_dim> operator-(const Point<space_dim>& pt, const pt_coord_t& scalar)
+{
+  Point<space_dim> difference(pt);
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= scalar;
+  return difference;
+}
+
+
 
 /*!*************************************************************************************************
  * \brief   Multiply scalar with \c Point.
@@ -438,27 +418,7 @@ Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim>& pt)
   return product;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> operator*(pt_coord_t&& scalar, const Point<space_dim>& pt)
-{
-  Point<space_dim> product(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
-  return product;
-}
 
-template<unsigned int space_dim>
-Point<space_dim> operator*(const pt_coord_t& scalar, Point<space_dim>&& pt)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
-  return pt;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator*(pt_coord_t&& scalar , Point<space_dim>&& pt)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
-  return pt;
-}
 
 /*!*************************************************************************************************
  * \brief   Multiply \c Point with scalar.
@@ -475,28 +435,6 @@ Point<space_dim> operator*(const Point<space_dim>& pt, const pt_coord_t& scalar)
   Point<space_dim> product(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
   return product;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator*(const Point<space_dim>& pt, pt_coord_t&& scalar)
-{
-  Point<space_dim> product(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
-  return product;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator*(Point<space_dim>&& pt, const pt_coord_t& scalar)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
-  return pt;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator*(Point<space_dim>&& pt, pt_coord_t&& scalar)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] *= scalar;
-  return pt;
 }
 
 /*!*************************************************************************************************
@@ -521,42 +459,6 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
   return quotient;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> operator/(pt_coord_t&& scalar, const Point<space_dim>& pt)
-{
-  Point<space_dim> quotient(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( pt[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    quotient[dim] = scalar / pt[dim];
-  }
-  return quotient;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator/(const pt_coord_t& scalar, Point<space_dim>&& pt)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( pt[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    pt[dim] = scalar / pt[dim];
-  }
-  return pt;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator/(pt_coord_t&& scalar , Point<space_dim>&& pt)
-{
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( pt[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    pt[dim] = scalar / pt[dim];
-  }
-  return pt;
-}
 
 /*!*************************************************************************************************
  * \brief   Divide \c Point by scalar.
@@ -577,33 +479,6 @@ Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
   return quotient;
 }
 
-template<unsigned int space_dim>
-Point<space_dim> operator/(const Point<space_dim>& pt, pt_coord_t&& scalar)
-{
-  hy_assert( scalar != 0. ,
-             "Divison by zero is not allowed!" );
-  Point<space_dim> quotient(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
-  return quotient;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator/(Point<space_dim>&& pt, const pt_coord_t& scalar)
-{
-  hy_assert( scalar != 0. ,
-             "Divison by zero is not allowed!" );
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
-  return pt;
-}
-
-template<unsigned int space_dim>
-Point<space_dim> operator/(Point<space_dim>&& pt, pt_coord_t&& scalar)
-{
-  hy_assert( scalar != 0. ,
-             "Divison by zero is not allowed!" );
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  pt[dim] /= scalar;
-  return pt;
-}
 
 
 
