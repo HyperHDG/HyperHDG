@@ -28,208 +28,244 @@ using namespace std;
 template<unsigned int space_dim> bool testPoint ( )
 {
   static_assert( space_dim != 0 , "Space dimension must be strictly larger than zero!" );
-  bool successful = true;
+  bool success = true;
   
-  const unsigned int array_len = 5;
   const pt_coord_t minR = -10.;
   const pt_coord_t maxR = +10.;
-  
-  pt_coord_t randNr, result, aux;
-  Point<space_dim> helper, res;
+
+  Point<space_dim> ptA, ptB, pt;
+  pt_coord_t randNrC, result, helper;
   
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   uniform_real_distribution<pt_coord_t> dis(minR, maxR);
   
-  array< array<pt_coord_t, space_dim>, array_len > coord_array;
-  array< Point<space_dim>, array_len > pt_array;
-  
-  for (unsigned int i = 0; i < array_len; ++i)
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
-    for (unsigned int j = 0; j < space_dim; ++j)
-    {
-      do  coord_array[i][j] = dis(gen);
-      while ( coord_array[i][j] == 0. );
-      hy_assert( pt_array[i][j] == 0. ,
-                 "Initially, all points are supposed to be filled with zeros only!" );
-      if (pt_array[i][j] != 0.)  successful = false;
-    }
-    pt_array[i] = coord_array[i];
-    for (unsigned int dim = 0; dim < space_dim; ++dim)
-      hy_assert( pt_array[0][dim] == coord_array[0][dim] && pt_array[0][dim] != 0. ,
-                 "Point created from array should contain array's coordinates not equal to zero." );
+    hy_assert( ptA[dim] == 0. && ptB[dim] == 0. ,
+               "Initially, all points are supposed to be filled with zeros only!" );
+    if (ptA[dim] != 0. || ptB[dim] != 0.)  success = false;
+    do    ptA[dim] = dis(gen);
+    while ( ptA[dim] == 0. );
+    do    ptB[dim] = dis(gen);
+    while ( ptB[dim] == 0. );
   }
   
-  do  randNr = dis(gen);
-  while ( randNr == 0. );
-  const pt_coord_t randNrC = randNr;
-               
-  Point<space_dim> pt(pt_array[0]);
-  hy_assert( pt == pt_array[0] && !(pt != pt_array[0]) && !(pt < pt_array[0]) ,
-             "Point should be equal to point it is created from and not unequal to that point!" );
-  
-  const Point<space_dim> ptC(coord_array[0]);
-  hy_assert( pt == ptC ,
-             "Points created from same data should be equal even if one is const and one is not!" );
+  do  randNrC = dis(gen);
+  while ( randNrC == 0. );
+
+  const pt_coord_t randNrCC = randNrC;
+  const Point<space_dim> ptAC(ptA), ptBC(ptB);
+
+  hy_assert( ptA == ptAC && !(ptA != ptAC) && !(ptA < ptAC) && !(ptAC < ptA) ,
+             "Points created from same data should be equal even if one is const and one is not! "
+             << "This implies that they are neither unequal nor smaller than one another." );
+  if (ptA != ptAC || !(ptA == ptAC) || ptA < ptAC || ptAC < ptA)  success = false;
+
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] ,
-               "Operator[] should return same values for Point and const Point!" );
+  {
+    hy_assert( ptA[dim] == ptAC[dim] ,
+               "Operator[] must return same values for Point and const Point if they are equal!" );
+    if (ptA[dim] != ptAC[dim])  success = false;
+  }
   
-  Point<space_dim> ptMC( move(pt) );
-  Point<space_dim> ptMA = Point<space_dim>(coord_array[0]);
-  pt = ptC;
+  Point<space_dim> ptMC( move(ptA) );
+  Point<space_dim> ptMA = Point<space_dim>(ptAC);
+  ptA = ptAC;
   
-  hy_assert( ptMC == ptMA && ptMA == pt ,
+  hy_assert( ptMC == ptMA && ptMA == ptA ,
              "Move constructor and move assignment should give the same points!" );
+  if (ptMC != ptMA || ptMA != ptA)  success = false;
   
-  if constexpr (space_dim == 1)       pt[0] -= 1e-5;
-  else if constexpr (space_dim == 2)  pt[1] -= 1e-5;
-  else                              { pt[1] -= 1e-5; pt[2] += 1.; }
-  hy_assert( !(pt == pt_array[0]) && pt != pt_array[0] && pt < pt_array[0] ,
-             "Manipulated point is smaller than old point and therefor unequal!" );
-  hy_assert( pt != ptC && pt != ptMC && pt != ptMA && ptC == ptMC && ptC == ptMA ,
+  if constexpr (space_dim == 1)       ptA[0] -= 1e-5;
+  else if constexpr (space_dim == 2)  ptA[1] -= 1e-5;
+  else                              { ptA[1] -= 1e-5; ptA[2] += 1.; }
+
+  hy_assert( !(ptA == ptAC) && ptA != ptAC && ptA < ptAC && !(ptAC < ptA) ,
+             "Manipulated point is smaller than old point and therefore unequal!" );
+  if (!(ptA != ptAC) || ptA == ptAC || !(ptA < ptAC) || ptAC < ptA)  success = false;
+
+  hy_assert( ptA != ptAC && ptA != ptMC && ptA != ptMA && ptAC == ptMC && ptAC == ptMA ,
              "Other constructors should have created independent points!" )
-  pt = ptC;
+  if (ptA == ptAC || ptA == ptMC || ptA == ptMA || ptAC != ptMC || ptAC != ptMA)  success = false;
+
+  ptA = ptAC;
   
   
-  pt += randNr;
+  ptA += randNrCC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] + randNr ,
-               "Operator+= should add same number to all components!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] + randNrCC , "Operator+= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] + randNrCC)  success = false;
+  }
+  ptA = ptAC;
   
-  pt -= randNr;
+  ptA -= randNrCC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] - randNr ,
-               "Operator-= should subtract same number from all components!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] - randNrCC , "Operator-= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] - randNrCC)  success = false;
+  }
+  ptA = ptAC;
   
-  pt *= randNr;
+  ptA *= randNrCC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] * randNr ,
-               "Operator*= should multiply same number to all components!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] * randNrCC , "Operator*= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] * randNrCC)  success = false;
+  }
+  ptA = ptAC;
   
-  pt /= randNr;
+  ptA /= randNrCC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] / randNr ,
-               "Operator/= divide all components by randNr!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] / randNrCC , "Operator/= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] / randNrCC)  success = false;
+  }
+  ptA = ptAC;
   
   
-  helper = pt_array[1];
-  pt += helper;
+  ptA += ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] + pt_array[1][dim] ,
-               "Operator+= should add up two points without changing the argument!" );
-  hy_assert( helper == pt_array[1] ,
-             "Operator+= should add up two points without changing the argument!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] + ptBC[dim] , "Operator+= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] + ptBC[dim])  success = false;
+  }
+  ptA = ptAC;
   
-  helper = pt_array[2];
-  pt -= helper;
+  ptA -= ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] - pt_array[2][dim] ,
-               "Operator-= should subtract argument without changing it!" );
-  hy_assert( helper == pt_array[2] ,
-             "Operator+= should add up two points without changing the argument!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] - ptBC[dim] , "Operator-= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] - ptBC[dim])  success = false;
+  }
+  ptA = ptAC;
   
-  helper = pt_array[3];
-  pt *= helper;
+  ptA *= ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] * pt_array[3][dim] ,
-               "Operator*= should multiply with the argument without changing it!" );
-  hy_assert( helper == pt_array[3] ,
-             "Operator+= should add up two points without changing the argument!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] * ptBC[dim] , "Operator*= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] * ptBC[dim])  success = false;
+  }
+  ptA = ptAC;
   
-  helper = pt_array[4];
-  pt /= helper;
+  ptA /= ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == ptC[dim] / pt_array[4][dim] ,
-               "Operator/= divide by the argument without changing it!" );
-  hy_assert( helper == pt_array[4] ,
-             "Operator+= should add up two points without changing the argument!" );
-  pt = ptC;
+  {
+    hy_assert( ptA[dim] == ptAC[dim] / ptBC[dim] , "Operator/= failed specified behaviour!" );
+    if (ptA[dim] != ptAC[dim] / ptBC[dim])  success = false;
+  }
+  ptA = ptAC;
   
-  helper = pt_array[1];
-  result = pt * pt_array[1];
-  aux = 0.;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  aux += pt[dim] * helper[dim];
-  hy_assert( result == aux && helper == pt_array[1] && pt == ptC ,
-             "Operator* should determine the scalar product without changing the arguments!" );
+
+  result = ptAC * ptBC;
+  helper = 0.;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  helper += ptA[dim] * ptB[dim];
+  hy_assert( result == helper , "Operator* (scalar product) failed specified behaviour!" );
+  if (result != helper)  success = false;
   
   
-  pt = pt_array[0] + pt_array[1];
+  pt = ptAC + ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == pt_array[0][dim] + pt_array[1][dim] ,
-               "At least one of the operator+ failed!" <<  pt[dim] << "  " << pt_array[0][dim] + (pt_array[1][dim] + pt_array[2][dim]) + pt_array[3][dim] + (pt_array[4][dim] + pt_array[5][dim]));
+  {
+    hy_assert( pt[dim] == ptAC[dim] + ptBC[dim] , "Operator+ failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] + ptBC[dim])  success = false;
+  }
   
-  pt = pt_array[0] - pt_array[1];
+  pt = ptAC - ptBC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == pt_array[0][dim] - pt_array[1][dim] ,
-               "At least one of the operator- failed!" );
+  {
+    hy_assert( pt[dim] == ptAC[dim] - ptBC[dim] , "Operator- failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] - ptBC[dim])  success = false;
+  }
   
-  pt = hada_prod(pt_array[0], pt_array[1]);
+  pt = hada_prod(ptAC, ptBC);
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == pt_array[0][dim] * pt_array[1][dim] ,
-               "At least one of the hada_prod failed!" );
+  {
+    hy_assert( pt[dim] == ptAC[dim] * ptBC[dim] , "hada_prod failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] * ptBC[dim])  success = false;
+  }
   
-  pt = hada_divi(pt_array[0], pt_array[1]);
+  pt = hada_divi(ptAC, ptBC);
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( pt[dim] == pt_array[0][dim] / pt_array[1][dim] ,
-               "At least one of the hada_divi failed!" );
+  {
+    hy_assert( pt[dim] == ptAC[dim] / ptBC[dim] , "hada_divi failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] / ptBC[dim])  success = false;
+  }
   
-  pt = ptC;
-  res = randNr + pt;
+
+  pt = randNrC + ptAC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr + pt[dim] , "One of the scalar multiplications failed!" );
+  {
+    hy_assert( pt[dim] == randNrC + ptAC[dim] , "Operator+ failed specified behaviour!" );
+    if (pt[dim] != randNrC + ptAC[dim])  success = false;
+  }
   
-  pt = ptC;
-  res = pt + randNr;
+  pt = ptAC + randNrC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr + pt[dim] , "One of the scalar multiplications failed!" );
+  {
+    hy_assert( pt[dim] == randNrC + ptAC[dim] , "Operator+ failed specified behaviour!" );
+    if (pt[dim] != randNrC + ptAC[dim])  success = false;
+  }
+  
+  pt = randNrC - ptAC;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] == randNrC - ptAC[dim] , "Operator- failed specified behaviour!" );
+    if (pt[dim] != randNrC - ptAC[dim])  success = false;
+  }
+
+  pt = ptAC - randNrC;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] == ptAC[dim] - randNrC , "Operator- failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] - randNrC)  success = false;
+  }
+
+  pt = randNrC * ptAC;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] == randNrC * ptAC[dim] , "Operator* failed specified behaviour!" );
+    if (pt[dim] != randNrC * ptAC[dim])  success = false;
+  }
+
+  pt = ptAC * randNrC;
+  for (unsigned int dim = 0; dim < space_dim; ++dim)
+  {
+    hy_assert( pt[dim] == randNrC * ptAC[dim] , "Operator* failed specified behaviour!" );
+    if (pt[dim] != randNrC * ptAC[dim])  success = false;
+  }
    
-  
-  pt = ptC;
-  res = randNr - pt;
+  pt = randNrC / ptAC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr - pt[dim] , "One of the scalar multiplications failed!" );
-  
-  
-  pt = ptC;
-  res = pt - randNr;
+  {
+    hy_assert( pt[dim] == randNrC / ptAC[dim] , "Operator/ failed specified behaviour!" );
+    if (pt[dim] != randNrC / ptAC[dim])  success = false;
+  }
+
+  pt = ptAC / randNrC;
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == pt[dim] - randNr , "One of the scalar multiplications failed!" );
+  {
+    hy_assert( pt[dim] == ptAC[dim] / randNrC , "Operator/ failed specified behaviour!" );
+    if (pt[dim] != ptAC[dim] / randNrC)  success = false;
+  }
   
   
-  pt = ptC;
-  res = randNr * pt;
+  hy_assert( norm_1(ptAC) == norm_p(ptAC, 1.) && norm_2(ptAC) == norm_p(ptAC, 2) ,
+             "Norms should be the same indpendent of their implementation!" );
+  if (norm_1(ptAC) != norm_p(ptAC, 1.) || norm_2(ptAC) != norm_p(ptAC, 2))  success = false;
+
   for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr * pt[dim] , "One of the scalar multiplications failed!" );
-  
-  pt = ptC;
-  res = pt * randNr;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr * pt[dim] , "One of the scalar multiplications failed!" );
-   
-  
-  pt = ptC;
-  res = randNr / pt;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == randNr / pt[dim] , "One of the scalar multiplications failed!" );
-  
-  
-  pt = ptC;
-  res = pt / randNr;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    hy_assert( res[dim] == pt[dim] / randNr , "One of the scalar multiplications failed!" );
-  
-  // TODO: Norms and stream
-  
+  {
+    hy_assert( ptAC[dim] <= norm_infty(ptAC) && ptAC[dim] >= -norm_infty(ptAC) ,
+               "Each component (in absolute value) should be smaller than infty norm." );
+    if (ptAC[dim] > norm_infty(ptAC) || ptAC[dim] < -norm_infty(ptAC))  success = false;
+  }
+  hy_assert( norm_infty(ptAC) < norm_p(ptAC, 1000) ,
+             "Infty norm is smallest of all norms!" );
+  if (norm_infty(ptAC) > norm_p(ptAC, 1000))  success = false;
     
-  return successful;
+  return success;
 }
 
 
@@ -276,7 +312,6 @@ int main(int argc, char *argv[])
   worked = testPoint<10>();
   hy_assert( worked , "Testing point implemantation of dimension 10 failed!" );
   if (!worked)  success = false;
-  
-  
-  return !success;
+
+  return success - 1;
 }
