@@ -846,7 +846,7 @@ DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::primal_at_dyadic
   for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
   {
     for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
+      values1D[deg][q] = shape_fct_eval(deg, abscissas[q]);
   }
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -883,7 +883,7 @@ DiffusionSolverTensorStruc<hyEdge_dim, poly_deg, quad_deg>::dual_at_dyadic
   for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
   { 
     for (unsigned int q = 0; q < abscissas.size(); ++q)
-      values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
+      values1D[deg][q] = shape_fct_eval(deg, abscissas[q]);
   }
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
