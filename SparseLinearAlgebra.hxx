@@ -55,14 +55,12 @@ namespace SparseLA
 dof_value_t inner_product
 ( const std::vector<dof_value_t>& left, const std::vector<dof_value_t>& right )
 {
-  hy_assert( left.size() == right.size() ,
-             "Both vectors of inner product must be of same size!" );
+  hy_assert( left.size() == right.size() , "Both vectors of inner product must be of same size!" );
   
   dof_value_t product = 0.;
   for (dof_index_type i = 0; i < left.size(); ++i)  product += left[i] * right[i];
   return product;
 }
-
 /*!*************************************************************************************************
  * \brief   Evaluate 2 norm of a \c std::vector.
  * 
@@ -78,8 +76,7 @@ dof_value_t inner_product
 dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
 {
   return std::sqrt( inner_product(vec,vec) );
-};
-
+}
 /*!*************************************************************************************************
  * \brief   Evaluate linear combination of vectors and return the result.
  * 
@@ -100,15 +97,13 @@ std::vector<dof_value_t> linear_combination
 ( const dof_value_t leftFac, const std::vector<dof_value_t>& leftVec,
   const dof_value_t rightFac, const std::vector<dof_value_t>& rightVec )
 {
-  hy_assert( leftVec.size() == rightVec.size() ,
-             "Both vectors of linear combination must be of same size!" );
+  hy_assert( leftVec.size() == rightVec.size() , "Linear combined vectors must be of same size!" );
   
   std::vector<dof_value_t> lin_comb ( leftVec.size() , 0. );
   for (dof_index_type i = 0; i < leftVec.size(); ++i)
     lin_comb[i] = leftFac * leftVec[i] + rightFac * rightVec[i];
   return lin_comb;
 }
-
 /*!*************************************************************************************************
  * \brief   Evaluate linear combination of vectors and return reference to result.
  * 
@@ -136,7 +131,6 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
   for (dof_index_type i = 0; i < result.size(); ++i)
     result[i] = leftFac * leftV[i] + rightFac * rightV[i];
 }
-
 /*!*************************************************************************************************
  * \brief   Execute conjugate gradient algorithm to find solution to system of equations.
  * 
