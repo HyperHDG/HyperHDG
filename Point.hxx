@@ -164,8 +164,7 @@ class Point
      **********************************************************************************************/
     Point<space_dim>& operator+=(const pt_coord_t scalar)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] += scalar;
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] += scalar;
       return *this;
     }
     /*!*********************************************************************************************
@@ -176,8 +175,7 @@ class Point
      **********************************************************************************************/
     Point<space_dim>& operator-=(const pt_coord_t scalar)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] -= scalar;
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] -= scalar;
       return *this;
     }
     /*!*********************************************************************************************
@@ -188,8 +186,7 @@ class Point
      **********************************************************************************************/
     Point<space_dim>& operator*=(const pt_coord_t scalar)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] *= scalar;
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] *= scalar;
       return *this;
     }
     /*!*********************************************************************************************
@@ -200,35 +197,50 @@ class Point
      **********************************************************************************************/
     Point<space_dim>& operator/=(const pt_coord_t scalar)
     {
-      hy_assert( scalar != 0. ,
-                 "Division by zeros is not well-defined!" );
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] /= scalar;
+      hy_assert( scalar != 0. , "Division by zeros is not well-defined!" );
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] /= scalar;
       return *this;
     }
     
-    
+    /*!*********************************************************************************************
+     * \brief   Add point to given point.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator+=(const Point<space_dim>& other)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] += other[dim];
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] += other[dim];
       return *this;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Subtract other point from point.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator-=(const Point<space_dim>& other)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] -= other[dim];
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] -= other[dim];
       return *this;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Hadamard product with other point.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator*=(const Point<space_dim>& other)
     {
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-        coordinates_[dim] *= other[dim];
+      for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] *= other[dim];
       return *this;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Hadamard division by other point.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     Point<space_dim>& operator/=(const Point<space_dim>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -240,7 +252,12 @@ class Point
       return *this;
     }
     
-    
+    /*!*********************************************************************************************
+     * \brief   Euclidean scalar product with other point.
+     * 
+     * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \retval  this_point    The updated point.
+     **********************************************************************************************/
     pt_coord_t operator*(const Point<space_dim>& other) const
     {
       pt_coord_t scalar_product = 0.;
@@ -248,17 +265,12 @@ class Point
         scalar_product += coordinates_[dim] * other[dim];
       return scalar_product;
     }
-
 }; // end of class Point
 
-
-
+// Elemental functions returning Point from two Points:
 
 /*!*************************************************************************************************
  * \brief   Add two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -267,16 +279,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   Point<space_dim> sum(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += right[dim];
-  return sum;
+  return sum += right;
 }
-
-
 /*!*************************************************************************************************
  * \brief   Subtract two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -285,16 +291,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   Point<space_dim> difference(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= right[dim];
-  return difference;
+  return difference -= right;
 }
-
-
 /*!*************************************************************************************************
  * \brief   Hadamard product of two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -303,16 +303,10 @@ template<unsigned int space_dim>
 Point<space_dim> hada_prod(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   Point<space_dim> product(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= right[dim];
-  return product;
+  return product *= right;
 }
-
-
 /*!*************************************************************************************************
  * \brief   Hadamard division two \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -321,21 +315,13 @@ template<unsigned int space_dim>
 Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>& right)
 {
   Point<space_dim> quotient(left);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-  {
-    hy_assert( right[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
-    quotient[dim] /= right[dim];
-  }
-  return quotient;
+  return quotient /= right;;
 }
 
+// Elemental functions returning Point from a scalar and a Point:
 
 /*!*************************************************************************************************
- * \brief   Multiply scalar with \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * \brief   Add point to scalar.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -344,17 +330,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim>& pt)
 {
   Point<space_dim> sum(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += scalar;
-  return sum;
+  return sum += scalar;
 }
-
-
-
 /*!*************************************************************************************************
- * \brief   Multiply \c Point with scalar.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * \brief   Add scalar to point.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -363,16 +342,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator+(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> sum(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  sum[dim] += scalar;
-  return sum;
+  return sum += scalar;
 }
-
-
 /*!*************************************************************************************************
- * \brief   Multiply scalar with \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * \brief   Subtract point from scalar.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -384,14 +357,8 @@ Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim>& pt)
   for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] = scalar - pt[dim];
   return difference;
 }
-
-
-
 /*!*************************************************************************************************
- * \brief   Multiply \c Point with scalar.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * \brief   Subtract scalar from point.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -400,17 +367,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator-(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> difference(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] -= scalar;
-  return difference;
+  return difference -= scalar;
 }
-
-
-
 /*!*************************************************************************************************
- * \brief   Multiply scalar with \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
+ * \brief   Multiply scalar with point.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -419,18 +379,11 @@ template<unsigned int space_dim>
 Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim>& pt)
 {
   Point<space_dim> product(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
-  return product;
+  return product *= scalar;
 }
-
-
-
 /*!*************************************************************************************************
- * \brief   Multiply \c Point with scalar.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
- * 
+ * \brief   Multiply point with scalar.
+ *  
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
@@ -438,15 +391,10 @@ template<unsigned int space_dim>
 Point<space_dim> operator*(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> product(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  product[dim] *= scalar;
-  return product;
+  return product *= scalar;
 }
-
 /*!*************************************************************************************************
  * \brief   Divide scalar by \c Point.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -463,13 +411,8 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
   }
   return quotient;
 }
-
-
 /*!*************************************************************************************************
  * \brief   Divide \c Point by scalar.
- * 
- * \todo    Discuss with Guido, why this way of implementation is to be preferred! Compare the advice in
- *          https://stackoverflow.com/questions/11726171/numeric-vector-operator-overload-rvalue-reference-parameter
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -477,19 +420,18 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
 template<unsigned int space_dim>
 Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
 {
-  hy_assert( scalar != 0. ,
-             "Divison by zero is not allowed!" );
   Point<space_dim> quotient(pt);
-  for (unsigned int dim = 0; dim < space_dim; ++dim)  quotient[dim] /= scalar;
-  return quotient;
+  return quotient /= scalar;
 }
 
+// Norms of Points:
 
-
-
-
-
-
+/*!*************************************************************************************************
+ * \brief   Absolute sum norm of point.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
 pt_coord_t norm_1(const Point<space_dim>& pt)
 {
@@ -498,9 +440,8 @@ pt_coord_t norm_1(const Point<space_dim>& pt)
     norm += std::abs( pt[dim] );
   return norm;
 }
-
 /*!*************************************************************************************************
- * \brief   Computes Euclidean norm of a \c Point.
+ * \brief   Computes Euclidean norm of a point.
  * 
  * \todo    Fill information, when details clarified with Guido.
  * 
@@ -512,8 +453,12 @@ pt_coord_t norm_2(const Point<space_dim>& pt)
 {
   return std::sqrt( pt * pt );
 }
-
-
+/*!*************************************************************************************************
+ * \brief   Maximum norm of point.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
 pt_coord_t norm_infty(const Point<space_dim>& pt)
 {
@@ -522,8 +467,12 @@ pt_coord_t norm_infty(const Point<space_dim>& pt)
     norm = std::max( norm, std::abs(pt[dim]) );
   return norm;
 }
-
-
+/*!*************************************************************************************************
+ * \brief   p-norm of point.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int space_dim>
 pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
 {
@@ -533,10 +482,10 @@ pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
   return std::pow( norm , 1. / power );
 }
 
+// Output of Point:
+
 /*!*************************************************************************************************
  * \brief   Fill \c stream with \c Point.
- * 
- * \todo    Fill information, when details clarified with Guido.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
