@@ -1,24 +1,3 @@
-/*!*************************************************************************************************
- * \file    HDGHyperGraph.hxx
- * \brief   The class template uniting topology and geometry of a hypergraph with the topology of
- *          the skeleton space of the HDG method.
- * 
- * \todo  Adapt notation in Geometries!
- * 
- * The main class representing a hypergraph. It uses a class Topology to represent the collection of
- * nodes and edges as well as a class Geometry presenting the physical coordinates of the edges. It
- * behaves like a random access container of hyperedges and has additional access to the hypernodes.
- *
- * In our abstraction, nodes only carry degrees of freedom (and nothing more). Thus, they can be
- * obtained from one object HyperNodeFactory for any graph. Their location, if such a notion is
- * reasonable, must be determined by a seperate class Geometry. The meaning of their degrees of 
- * freedom is decided by the local solvers of the HDG method applied. The Geometry class may use the
- * degrees of freedom of the nodes as well.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef HDGHYPERGRAPH_HXX
 #define HDGHYPERGRAPH_HXX
 
