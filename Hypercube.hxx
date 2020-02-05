@@ -24,8 +24,8 @@ struct Hypercube
   /// Return `n` to the power `dim`, which is the size of the `dim`-dimensional tensor of dimension `n`.
   static constexpr unsigned int pow(unsigned int n)
   {
-    int result = n;
-    for (unsigned int i=1;i<dim;++i)
+    int result = 1;
+    for (unsigned int i=0;i<dim;++i)
       result *= n;
     return result;
   }
