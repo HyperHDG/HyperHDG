@@ -11,22 +11,16 @@
 
 #include "HyAssert.hxx"
 #include <iostream>
-#include <string>
 #include <sstream>
 
 
-using namespace std;
-
-
-void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line, stringstream& msg)
+void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line, std::stringstream& msg)
 {
   if (!expr)
   {
-    const string str = msg.str();
-    const char* argument = str.c_str();
-    cerr << "Assert failed:\t" << argument << "\n"
-         << "Expected:\t" << expr_str << "\n"
-         << "Source:\t\t" << file << ", line " << line << "\n";
+    std::cerr << "Assert failed:  " << msg.str() << std::endl
+              << "Expected:       " << expr_str  << std::endl
+              << "Source:         " << file << ", line " << line << std::endl;
     abort();
   }
 }
