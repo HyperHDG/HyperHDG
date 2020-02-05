@@ -154,7 +154,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
 template<class ProblemT>
 std::vector<dof_value_t> conjugate_gradient
 ( const std::vector<dof_value_t>& b, const ProblemT& problem,
-  int& n_iterations = 0, const dof_value_t tolerance = 1e-9 )
+  unsigned int& n_iterations = 0, const dof_value_t tolerance = 1e-9 )
 {
   std::vector<dof_value_t> x (b.size(), 0.);
   std::vector<dof_value_t> r = b; // b - A * x (with x = 0)
@@ -164,6 +164,8 @@ std::vector<dof_value_t> conjugate_gradient
   dof_value_t r_square_new = inner_product(r,r);
   
   if (n_iterations == 0)  n_iterations = b.size();
+  hy_assert( n_iterations > 0 ,
+             "Number of allowed iterations of CG solver must be positive." );
   
   for (unsigned int k = 0; k < n_iterations; ++k)
   {
@@ -191,7 +193,7 @@ std::vector<dof_value_t> conjugate_gradient
              " iterations turned out to be " << std::sqrt(r_square_new) << ", while the needed "
              << "tolerance is " << tolerance << "." );
              
-  n_iterations = -1;
+  n_iterations = 0;
   return x;
 }
 
