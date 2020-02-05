@@ -207,6 +207,9 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
+     *
      * This function returns the hyperedge of the given index, i.e., it returns the topological
      * hyperedge (\b not the geometrical information). The topological informatiom comprises the
      * indices of adjacent hypernodes and information about their respective orientations.
