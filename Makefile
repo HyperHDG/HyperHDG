@@ -33,9 +33,13 @@ endif
 
 # C++ Compiler options
 COMPILER    	= g++
-BASICFLAGS  	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat \
-								-Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC \
-								--std=c++17
+BASICFLAGS_R 	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g \
+								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
+								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
+BASICFLAGS  	= -pthread -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g \
+								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
+								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
+
 
 # C++ Linker options
 LINKER      		= g++

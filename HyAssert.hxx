@@ -25,9 +25,11 @@
 #ifndef HYASSERT_HXX
 #define HYASSERT_HXX
 
-// #ifndef NDEBUG
+#ifndef NDEBUG
 
+#include <iostream>
 #include <sstream>
+
 #define hy_assert(Expr, Msg) \
         { std::stringstream __hy_assertion_text; __hy_assertion_text << Msg; \
           __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); }
@@ -36,16 +38,25 @@
  * \brief   This function is not (never) to be used.
  *
  * This function is \b not to be used in regular code. It only / solely is defined to allow the use
- * of function \c hy_assert( \c Expr, \c Msg) which is implemented as a macro (cf. file HyAssert.h).
+ * of function \c hy_assert( \c Expr, \c Msg) which is implemented as a macro in file HyAssert.hxx.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-void __Hy_Assert(const char* expr_str, bool expr, const char* file, int line,
-                 std::stringstream& msg);
+inline void __Hy_Assert
+( const char* expr_str, bool expr, const char* file, int line, std::stringstream& msg )
+{
+  if (!expr)
+  {
+    std::cerr << "Assert failed:  " << msg.str() << std::endl
+              << "Expected:       " << expr_str  << std::endl
+              << "Source:         " << file << ", line " << line << std::endl;
+    abort();
+  }
+}
 
-// #else // alternative branch of ifndef NDEBUG
-// #define hy_assert(Expr, Msg) ;
-// #endif // end of ifndef NDEBUG
+#else // alternative branch of ifndef NDEBUG
+#define hy_assert(Expr, Msg) ;
+#endif // end of ifndef NDEBUG
 
 #endif // end of ifndef HYASSERT_HXX
