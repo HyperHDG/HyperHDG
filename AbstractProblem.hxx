@@ -67,7 +67,7 @@ template <class TopologyT, class GeometryT, class LocalSolverT>
 class AbstractProblem
 {
   private:
-    HDGHyperGraph < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT > hyper_graph_;
+    HDGHyperGraph<LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT> hyper_graph_;
     std::vector<dof_index_type> dirichlet_indices_;
     LocalSolverT  local_solver_;
     PlotOptions   plot_options;
@@ -131,7 +131,7 @@ class AbstractProblem
      * \param   indices       A \c std::vector containing the (global) indices of Dirichlet type
      *                        hypernodes/faces.
      **********************************************************************************************/
-    void read_dirichlet_indices( std::vector<int> indices )
+    void read_dirichlet_indices( const std::vector<int>& indices )
     {
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)
@@ -154,7 +154,7 @@ class AbstractProblem
      * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
-    std::vector<dof_value_t> return_zero_vector( )
+    std::vector<dof_value_t> return_zero_vector( ) const
     {
       return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.);
     }
@@ -171,7 +171,7 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
-    std::vector<dof_value_t> matrix_vector_multiply( std::vector<dof_value_t> x_vec ) const
+    std::vector<dof_value_t> matrix_vector_multiply( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -226,7 +226,7 @@ class AbstractProblem
      * \retval  n             An \c int which Python needs and actually is a parsed \c unsigned
      *                        \c int.
      **********************************************************************************************/
-    dof_index_type size_of_system()
+    dof_index_type size_of_system() const
     {
       return hyper_graph_.n_global_dofs();
     }
@@ -240,7 +240,7 @@ class AbstractProblem
      *                        If empty, the old value is kept.
      * \retval  opt_value     A \c std::string containing the value of the plot option.
      **********************************************************************************************/
-    std::string plot_option( std::string option, std::string value = "" )
+    std::string& plot_option( const std::string& option, std::string& value = "" )
     {
       if (value == "")                            ;
       else if (option == "outputDir")             plot_options.outputDir = value;
@@ -273,7 +273,7 @@ class AbstractProblem
      * \param   lambda        A vector of unknowns containing the data vector.
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
-    void plot_solution( std::vector<dof_value_t> lambda )
+    void plot_solution( const std::vector<dof_value_t>& lambda ) const
     {
       plot(hyper_graph_, local_solver_, lambda , plot_options );
     }
@@ -304,28 +304,8 @@ using DiffusionProblemRegularNaive =
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
                   DiffusionSolverTensorStruc < hyEdge_dim, poly_degree, 2 * poly_degree >
-//                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
 
-/*!*************************************************************************************************
- * \brief   This is an example problem.
- *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-/*template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using DiffusionProblemFileNoGeo = 
-AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
-                  Geometry::File< hyEdge_dim, space_dim >,
-                  DiffusionSolverNaive_RegularQuad < hyEdge_dim, poly_degree, 2 * poly_degree >
-                >;
-*/
 /*!*************************************************************************************************
  * \brief   This is an example problem.
  *
