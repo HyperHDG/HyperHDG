@@ -2,8 +2,8 @@
 #define HDGHYPERGRAPH_HXX
 
 #include <TypeDefs.hxx>
-#include <HyperNodeFactory.hxx>
 #include <HyAssert.hxx>
+#include <HyperNodeFactory.hxx>
 
 #include <Topo.hxx>
 #include <Geom_UnitCube.hxx>
@@ -355,6 +355,9 @@ class HDGHyperGraph
     /*!*********************************************************************************************
      * \brief   Subscript operator of a \c HDGHyperGraph.
      *
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
+     *
      * The subscript operator takes an index referring to an hyperedge and returns the respective
      * \c hyEdge containing its topological and geometrical information. Thus, this operator can
      * be bypassed by using the functions \c hyEdge_topology (only returning the topological
@@ -406,6 +409,9 @@ class HDGHyperGraph
     /*!*********************************************************************************************
      * \brief   Topological information of prescribed hyperedge.
      *
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
+     *
      * Return the topological information of a specific hyperedge identified via its index. This
      * function can be used to bypass the subscript operator which returns topological and geometric
      * information about a hyperedge of given index.
@@ -417,6 +423,9 @@ class HDGHyperGraph
     { return hyGraph_topology_->operator[](index); }
     /*!*********************************************************************************************
      * \brief   Geometrical information of prescribed hyperedge.
+     *
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
      *
      * Return the geometrical information of a specific hyperedge identified via its index. This
      * function can be used to bypass the subscript operator which returns topological and geometric
