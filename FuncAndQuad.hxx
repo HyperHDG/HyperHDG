@@ -24,9 +24,9 @@
 #define FUNC_AND_QUAD_HXX
 
 #include <HyAssert.hxx>
-#include <cmath>
 
 #include <array>
+#include <cmath>
 
 /*!*************************************************************************************************
  * \brief   Contains functions to evaluate shape functions (e.g. at quadrature points).
