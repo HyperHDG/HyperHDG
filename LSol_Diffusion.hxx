@@ -18,88 +18,6 @@
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
 
-#include <array>
-#include <cmath>
-/*
-template<unsigned int hyEdge_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
-class DiffusionSolverNaive_RegularQuad
-{
-  public:
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    static constexpr bool use_geometry() { return false; }
-    static constexpr unsigned int n_glob_dofs_per_node()
-    {
-      unsigned int amount = 1;
-      for (unsigned int iteration = 0; iteration < hyEdge_dim - 1; ++ iteration)  amount *= max_poly_degree + 1;
-      return amount;
-    }
-  private:
-    static constexpr unsigned int n_quads_1D_        = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim),
-                                  num_quad_bdr_   = FuncQuad::compute_n_quad_points(max_quad_degree, hyEdge_dim - 1),
-                                  num_ansatz_fct_ = n_glob_dofs_per_node() * (max_poly_degree + 1),
-                                  num_ansatz_bdr_ = n_glob_dofs_per_node();
-    const double tau_;
-    std::array<double, n_quads_1D_> quad_weights_;
-    std::array<double, num_quad_bdr_> quad_bdr_;
-    std::array< std::array<double, n_quads_1D_> , num_ansatz_fct_ > trials_quad_;
-    std::array< std::array<double, num_quad_bdr_> , num_ansatz_bdr_ > bound_trials_quad_;
-    std::array< std::array<double, (1 << hyEdge_dim)> , num_ansatz_fct_ > trials_in_corners_;
-    std::array< std::array< std::array<double, n_quads_1D_> , num_ansatz_fct_ > , hyEdge_dim > derivs_quad_;
-    std::array< std::array< std::array<double, num_quad_bdr_> , num_ansatz_fct_ > , 2 * hyEdge_dim > trials_bound_;
-     
-
-    inline auto assemble_loc_mat() const; // std::array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>
-    inline auto assemble_rhs(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>
-//    auto solve_local_system_of_eq // std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>
-//      (std::array<double, (hyEdge_dim+1) * num_ansatz_fct_ * (hyEdge_dim+1) * num_ansatz_fct_>& loc_matrix, std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>& loc_rhs) const;
-    inline auto solve_local_problem(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>
-    inline auto dual_at_boundary(const std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
-    inline auto primal_at_boundary(const std::array<double, (hyEdge_dim+1) * num_ansatz_fct_>& coeffs) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
-    auto numerical_flux_at_boundary // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >
-      (const std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim >& lambda_values, const std::array<double, (hyEdge_dim + 1) * num_ansatz_fct_>& coeffs) const;
-  public:
-    typedef double constructor_value_type;
-    DiffusionSolverNaive_RegularQuad(const constructor_value_type& tau);
-    std::array<double, Hypercube<hyEdge_dim>::n_vertices()> primal_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > dual_in_corners_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const;
-    auto//std::array< std::array<double, n_glob_dofs_per_node()> , 2 * hyEdge_dim >
-      numerical_flux_from_lambda(const std::array< std::array<double, num_ansatz_bdr_> , 2*hyEdge_dim >& lambda_values) const; // std::array< std::array<double, num_ansatz_bdr_> , 2 * hyEdge_dim 
-};
-*/
-
-
-/*!
- * \todo  Will diffusivity depend on spatial (local or global) coordinates and/or the index of the hyperedge? How should this be encoded?
- */
-
-template<unsigned int hyEdge_dim, unsigned int poly_deg>
-inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
-{
-  hy_assert( 0 <= row ,
-             "Row index should be larger than or equal to zero." );
-  hy_assert( row < (hyEdge_dim + 1) * std::pow((poly_deg + 1), hyEdge_dim) ,
-             "Row index should be smaller than total amount of rows." );
-  hy_assert( 0 <= column ,
-             "Column index should be larger than or equal to zero." );
-  hy_assert( column < (hyEdge_dim + 1) * std::pow((poly_deg + 1), hyEdge_dim) ,
-             "Column index should smaller than total amount of columns." );
-  return column * (hyEdge_dim + 1) * std::pow((poly_deg + 1), hyEdge_dim) + row;  // Transposed for LAPACK
-}
-
-template <unsigned int hyEdge_dim>
-inline void index_decompose(unsigned int index, unsigned int range, std::array<unsigned int, std::max(hyEdge_dim,1U)>& decomposition)
-{
-  if ( decomposition.size() == 1 )  decomposition[0] = index;
-  else
-  {
-    for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-    {
-      decomposition[dim] = index % range;
-      index /= range;
-    }
-  }
-}
-
 
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
 class DiffusionSolverTensorStruc
@@ -115,118 +33,151 @@ class DiffusionSolverTensorStruc
     static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node();
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dim+1) * n_shape_fct_;
 
-
-static std::array<double, n_loc_dofs_ * n_loc_dofs_ > assemble_loc_matrix(const double tau)
-{ 
-  const std::array<double, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
-  const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > trial = FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>();
-  const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > deriv = FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg>();
-  const std::array< std::array<double, 2> , poly_deg + 1 > trial_bdr = FuncQuad::shape_fcts_at_bdrs<poly_deg>();
-  
-  std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
-  double integral, integral1D;
-  
-  std::array<double, n_loc_dofs_ * n_loc_dofs_> local_mat;
-  local_mat.fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-    for (unsigned int j = 0; j < n_shape_fct_; ++j)
+    static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
     {
-      index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
-      
-      // Integral_element phi_i phi_j dx in diagonal blocks
-      integral = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+      hy_assert( 0 <= row && row < n_loc_dofs_ ,
+                 "Row index must be >= 0 and smaller than total amount of local dofs." );
+      hy_assert( 0 <= column && column < n_loc_dofs_ ,
+                 "Column index must be >= 0 and smaller than total amount of local dofs." );
+
+      return column * n_loc_dofs_ + row;  // Transposed for LAPACK
+    }
+
+
+    template<unsigned int dimT> static inline void index_decompose ( unsigned int index, 
+      unsigned int range, std::array<unsigned int, std::max(dimT,1U)>& decomposition )
+    {
+      if ( decomposition.size() == 1 )  decomposition[0] = index;
+      else
       {
-        integral1D = 0.;
-        for (unsigned int q = 0; q < n_quads_1D_; ++q)
-          integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * trial[dec_i[dim_fct]][q];
-        integral *= integral1D;
-      }
-      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( dim * n_shape_fct_ + i , dim * n_shape_fct_ + j )] += integral;
-      
-      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-      { 
-        // Integral_element - nabla phi_i \vec phi_j dx = Integral_element - div \vec phi_i phi_j dx
-        // in right upper and left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+        for (unsigned int dim = 0; dim < dimT; ++dim)
         {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_1D_; ++q)
-            integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * 
-                          ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
-          integral *= integral1D;
+          decomposition[dim] = index % range;
+          index /= range;
         }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct_ + i , dim * n_shape_fct_ + j )] -= integral;
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>(  dim * n_shape_fct_ + i , hyEdge_dim * n_shape_fct_ + j )] -= integral;
-        
-        // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct_ + i , dim * n_shape_fct_ + j )] += integral;
-        // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct_ + i , dim * n_shape_fct_ + j )] -= integral;
-        
-        // Penalty in lower right diagonal block
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct_ + i , hyEdge_dim * n_shape_fct_ + j )] += tau * integral;
-        // Penalty in lower right diagonal block
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index<hyEdge_dim,poly_deg>( hyEdge_dim * n_shape_fct_ + i , hyEdge_dim * n_shape_fct_ + j )] += tau * integral;
       }
     }
-  }
+
+
+    static std::array<double, n_loc_dofs_ * n_loc_dofs_ > assemble_loc_matrix(const double tau)
+    { 
+      const std::array<double, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
+      const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > 
+        trial(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>()),
+        deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg>());
+      const std::array< std::array<double, 2> , poly_deg + 1 >
+        trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg>());
   
-  return local_mat;
-}
+      std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
+      double integral, integral1D;
+      
+      std::array<double, n_loc_dofs_ * n_loc_dofs_> local_mat;
+      local_mat.fill(0.);
+  
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      {
+        index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
+        for (unsigned int j = 0; j < n_shape_fct_; ++j)
+        {
+          index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
+          
+          // Integral_element phi_i phi_j dx in diagonal blocks
+          integral = 1.;
+          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+          {
+            integral1D = 0.;
+            for (unsigned int q = 0; q < n_quads_1D_; ++q)
+              integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * trial[dec_i[dim_fct]][q];
+            integral *= integral1D;
+          }
+          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+            local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
+          
+          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+          { 
+            // Integral_element - nabla phi_i \vec phi_j dx 
+            // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
+            integral = 1.;
+            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+            {
+              integral1D = 0.;
+              for (unsigned int q = 0; q < n_quads_1D_; ++q)
+                integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * 
+                  ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
+              integral *= integral1D;
+            }
+            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+            local_mat[loc_matrix_index(dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] -= integral;
+        
+            // Corresponding boundary integrals from integration by parts in left lower blocks
+            integral = 1.;
+            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+            {
+              if (dim == dim_fct)
+                integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
+              else
+              {
+                integral1D = 0.;
+                for (unsigned int q = 0; q < n_quads_1D_; ++q)
+                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+              }
+              integral *= integral1D;
+            }
+            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] += integral;
+            // Corresponding boundary integrals from integration by parts in left lower blocks
+            integral = 1.;
+            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+            {
+              if (dim == dim_fct)
+                integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
+              else
+              {
+                integral1D = 0.;
+                for (unsigned int q = 0; q < n_quads_1D_; ++q)
+                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+              }
+              integral *= integral1D;
+            }
+            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+        
+            // Penalty in lower right diagonal block
+            integral = 1.;
+            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+            {
+              if (dim == dim_fct)
+                integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
+              else
+              {
+                integral1D = 0.;
+                for (unsigned int q = 0; q < n_quads_1D_; ++q)
+                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+              }
+              integral *= integral1D;
+            }
+            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
+              += tau * integral;
+            // Penalty in lower right diagonal block
+            integral = 1.;
+            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+            {
+              if (dim == dim_fct)
+                integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
+              else
+              {
+                integral1D = 0.;
+                for (unsigned int q = 0; q < n_quads_1D_; ++q)
+                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
+              }
+              integral *= integral1D;
+            }
+            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+ j)]
+              += tau * integral;
+          }
+        }
+      }
+  
+      return local_mat;
+    }
 
     const double tau_;
     const std::array<double, n_quads_1D_> q_weights_;
