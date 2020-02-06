@@ -15,8 +15,8 @@
 #include <TypeDefs.hxx>
 #include <HyAssert.hxx>
 
-#include <cmath>
 #include <array>
+#include <cmath>
 #include <ostream>
 
 /*!*************************************************************************************************
