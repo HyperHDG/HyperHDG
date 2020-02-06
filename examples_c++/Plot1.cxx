@@ -42,7 +42,7 @@ void test()
   HDGHyperGraph<1,Topo,Geo> hdg_graph(topo, geo);
   vector<double> vectorDirichlet;// = diffusion_problem.return_zero_vector();
 
-  DiffusionSolverTensorStruc<edge_dim,1,1> lsolver(1.);
+  Diffusion_TensorialUniform<edge_dim,1,1> lsolver(1.);
 
   PlotOptions pltop;
   std::string name = "plot1-";
