@@ -1,15 +1,18 @@
-/* ------------------------------------------------------------------------------------------------------
+/*!*************************************************************************************************
+ * \file    LSol_Diffusion.hxx
+ * \brief   Local solvers for diffusion equation.
  *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
- * 
- * Definition local solver class: In this case for diffusion.
+ * This file contains functions to define and solve the local problems that arise from an HDG
+ * discretization of the diffusion equation, i.e.,
+ * \f[
+ *  - \nabla \cdot \nabla u = 0 \quad \text{ in } \Omega,
+ *  \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * \f]
+ * on a hypergraph.
  *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2019
- */
-
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 
 #ifndef LSOL_DIFFUSION_HXX
 #define LSOL_DIFFUSION_HXX
@@ -18,21 +21,83 @@
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
 
-
+/*!*************************************************************************************************
+ * \brief   Local solver for Poisson's equation on uniform hypergraph.
+ *
+ * This class contains the local solver for Poisson's equation, i.e.,
+ * \f[
+ *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * \f]
+ * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3). For this class, all
+ * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
+ * information is needed by this class.
+ *
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  poly_deg      The polynomial degree of test and trial functions.
+ * \tparam  quad_deg      The order of the quadrature rule.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 template<unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg>
-class DiffusionSolverTensorStruc
+class Diffusion_TensorialUniform
 {
   public:
+    /*!*********************************************************************************************
+     * \brief   Return template parameter \c hyEdge_dim.
+     * 
+     * \retval  hyEdge_dim    Dimension of hypergraph's hyperedges.
+     **********************************************************************************************/
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+    /*!*********************************************************************************************
+     * \brief   Decide whether gemetrical information is needed for local solver.
+     * 
+     * \retval  use_geom      True if geometrical information is used by local solver.
+     **********************************************************************************************/
     static constexpr bool use_geometry() { return false; }
+    /*!*********************************************************************************************
+     * \brief   Evaluate amount of global degrees of freedom per hypernode.
+     * 
+     * This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.
+     *
+     * \retval  n_dofs        Number of global degrees of freedom per hypernode.
+     **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
     { return Hypercube<hyEdge_dim-1>::pow(poly_deg + 1); }
   private:
+    /*!*********************************************************************************************
+     * \brief   Number of quadrature points per spatial dimension.
+     **********************************************************************************************/
     static constexpr unsigned int n_quads_1D_  = FuncQuad::compute_n_quad_points(quad_deg);
+    /*!*********************************************************************************************
+     * \brief   Number of local shape functions (with respect to all spatial dimensions).
+     **********************************************************************************************/
     static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
+    /*!*********************************************************************************************
+     * \brief   Number oflocal  shape functions (with respect to a face / hypernode).
+     **********************************************************************************************/
     static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node();
+    /*!*********************************************************************************************
+     * \brief   Number of (local) degrees of freedom per hyperedge.
+     **********************************************************************************************/
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dim+1) * n_shape_fct_;
-
+    /*!*********************************************************************************************
+     * \brief   Translate row and column indices to local index of entry in matrix.
+     * 
+     * Local \f$ n \times n \f$ matrices are encoded as arrays of size \f$n^2\f$. This function
+     * translates a row and a column index into the index of the long array, where the corresponding
+     * entry is located. Note that this is done column-wise (not row-wise as usually), to have the
+     * correct format for LAPACK.
+     *
+     * The function is static inline, since it is used in the constructor's initializer list.
+     *
+     * \param   row           Row index of local mtatrix entry.
+     * \param   column        Column index of local matrix entry.
+     * \retval  index         Overall index of local matrix entry.
+     **********************************************************************************************/
     static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
     {
       hy_assert( 0 <= row && row < n_loc_dofs_ ,
@@ -42,8 +107,16 @@ class DiffusionSolverTensorStruc
 
       return column * n_loc_dofs_ + row;  // Transposed for LAPACK
     }
-
-
+    /*!*********************************************************************************************
+     * \brief   Decompose index of local tensorial shape function into its (spatial) components.
+     *
+     * The function is static inline, since it is used in the constructor's initializer list.
+     *
+     * \param   index         Index of tensorial shape function.
+     * \param   range         Amount of 1D shape functions (the tensorial is made up from).
+     * \param   decomposition Array to be filled with the decomposition.
+     * \retval  decomposition Array filled with the decomposition.
+     **********************************************************************************************/
     template<unsigned int dimT> static inline void index_decompose ( unsigned int index, 
       unsigned int range, std::array<unsigned int, std::max(dimT,1U)>& decomposition )
     {
@@ -57,8 +130,18 @@ class DiffusionSolverTensorStruc
         }
       }
     }
-
-
+    /*!*********************************************************************************************
+     * \brief  Assemble local matrix for the local solver.
+     *
+     * The local solver neither depends on the geometry, nor on global functions. Thus, its local
+     * matrix is the same for all hyperedges and can be assembled once in the constructor. This is
+     * done in this function.
+     *
+     * The function is static inline, since it is used in the constructor's initializer list.
+     *
+     * \param   tau           Penalty parameter for HDG.
+     * \retval  loc_mat       Matrix of the local solver.
+     **********************************************************************************************/
     static std::array<double, n_loc_dofs_ * n_loc_dofs_ > assemble_loc_matrix(const double tau)
     { 
       const std::array<double, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
@@ -178,11 +261,25 @@ class DiffusionSolverTensorStruc
   
       return local_mat;
     }
-
+    /*!*********************************************************************************************
+     * \brief   (Globally constant) penalty parameter for HDG scheme.
+     **********************************************************************************************/
     const double tau_;
+    /*!*********************************************************************************************
+     * \brief   Quadrature weights per spatial dimension.
+     **********************************************************************************************/
     const std::array<double, n_quads_1D_> q_weights_;
+    /*!*********************************************************************************************
+     * \brief   Trial functions evaluated at quadrature points (per spatial dimensions).
+     **********************************************************************************************/
     const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > trial_;
+    /*!*********************************************************************************************
+     * \brief   Trial functions evaluated at boundaries {0,1} (per spatial dimension).
+     **********************************************************************************************/
     const std::array< std::array<double, 2 > , poly_deg + 1 > trial_bdr_;
+    /*!*********************************************************************************************
+     * \brief   Local matrix for the local solver.
+     **********************************************************************************************/
     const std::array<double, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
     inline std::array<double, n_loc_dofs_ > assemble_rhs
@@ -232,7 +329,7 @@ class DiffusionSolverTensorStruc
               {
                 integral1D = 0.;
                 for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q] * trial_[dec_i[dim_fct]][q] * trial_[dec_j[dim_fct]][q];
+                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
               }
               integral *= integral1D;
             }
@@ -244,17 +341,34 @@ class DiffusionSolverTensorStruc
   
       return right_hand_side;
     }
-
-
+    /*!*********************************************************************************************
+     * \brief  Assemble local right hand for the local solver.
+     *
+     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
+     * constructed individually for every hyperedge.
+     *
+     * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     **********************************************************************************************/
     inline std::array<double, n_loc_dofs_ > solve_local_problem
     ( const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
     {
+      // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
       std::array<double, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
+      // The local right hand side is assembled (and will also be destroyed by LAPACK).
       std::array<double, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
-  
+      // LAPACK solves local_matix * return_value = right_hand_side.
       return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side);
     }
-
+    /*!*********************************************************************************************
+     * \brief   Evaluate primal variable at boundary.
+     *
+     * Function to evaluate primal variable of the solution. This function is needed to calculate
+     * the local numerical fluxes.
+     *
+     * \param   coeffs        Coefficients of the local solution.
+     * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
+     **********************************************************************************************/
     inline std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > primal_at_boundary
     ( const std::array<double, n_loc_dofs_ >& coeffs ) const
     {
@@ -306,7 +420,15 @@ class DiffusionSolverTensorStruc
       
       return bdr_values;
     }
-
+    /*!*********************************************************************************************
+     * \brief   Evaluate dual variable at boundary.
+     *
+     * Function to evaluate dual variable of the solution. This function is needed to calculate the
+     * local numerical fluxes.
+     *
+     * \param   coeffs        Coefficients of the local solution.
+     * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
+     **********************************************************************************************/
     inline std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > dual_at_boundary
     ( const std::array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
     {
@@ -358,18 +480,33 @@ class DiffusionSolverTensorStruc
   
       return bdr_values;
     }
-
   public:
+    /*!*********************************************************************************************
+     * \brief   Class is constructed using a single double indicating the penalty parameter.
+     **********************************************************************************************/
     typedef double constructor_value_type;
-
-    DiffusionSolverTensorStruc(const constructor_value_type& tau)
+    /*!*********************************************************************************************
+     * \brief   Constructor for local solver.
+     *
+     * \param   tau           Penalty parameter of HDG scheme.
+     **********************************************************************************************/
+    Diffusion_TensorialUniform(const constructor_value_type& tau)
     : tau_(tau), q_weights_(FuncQuad::quad_weights<quad_deg>()),
       trial_(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>()),
       trial_bdr_(FuncQuad::shape_fcts_at_bdrs<poly_deg>()),
       loc_mat_(assemble_loc_matrix(tau))
     { } 
-    
-    // Function for matrix--vector multiply    
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to matrix--vector multiplication.
+     *
+     * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+     * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+     * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+     * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+     *
+     * \param   lambda_values Local part of vector x.
+     * \retval  vecAx         Local part of vector A * x.
+     **********************************************************************************************/
     std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > numerical_flux_from_lambda
     (const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
@@ -384,8 +521,17 @@ class DiffusionSolverTensorStruc
        
       return bdr_values;
     }
-    
-    // Plotting functions
+    /*!*********************************************************************************************
+     * \brief   Evaluate discrete function at given points.
+     *
+     * Function to evaluate primal variable of the solution at dyadic product of abscissas. The main
+     * purpose of the function in closely related to plotting.
+     *
+     * \tparam  sizeT         Size of the passed \c std::array containing the abscissas.
+     * \param   abscissas     Coordinates at whose tensor products the function is evaluated.
+     * \param   lambda_values Coefficients of the associated skeletal function.
+     * \retval  fct_val       Evaluation of dual variable at prescribed points.
+     **********************************************************************************************/
     template<unsigned int sizeT> std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)>
     primal_at_dyadic
     ( const std::array<double, sizeT>& abscissas,
@@ -461,6 +607,6 @@ class DiffusionSolverTensorStruc
   
       return values;
     }
-}; // end of class DiffusionSolverTensorStruc
+}; // end of class Diffusion_TensorialUniform
 
-#endif
+#endif // end of ifndef LSOL_DIFFUSION_HXX
