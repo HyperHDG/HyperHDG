@@ -41,6 +41,9 @@ class Point
      **********************************************************************************************/
     std::array<pt_coord_t, space_dim> coordinates_;
   public:
+
+    // Constructors and assignment operators:
+
     /*!*********************************************************************************************
      * \brief   Empty constructor for a point.
      * 
@@ -74,6 +77,8 @@ class Point
     Point<space_dim>& operator= (Point<space_dim>&& other) noexcept
     { std::swap(coordinates_, other.coordinates_); return *this; }
     
+    // Random access operators:
+
     /*!*********************************************************************************************
      * \brief   Return single coordinate of a constant point.
      * 
@@ -105,6 +110,9 @@ class Point
                  << " However, you tried to access the " << coord_entry << "-th entry." );
       return coordinates_[coord_entry];
     }
+
+    // Comparison operators:
+
     /*!*********************************************************************************************
      * \brief   Find out whether two points have (exactly) the same coordinates.
      * 
@@ -156,6 +164,8 @@ class Point
       return false;
     }
     
+    // Operators updating a Point by a scalar:
+
     /*!*********************************************************************************************
      * \brief   Add scalar to a given point.
      * 
@@ -202,6 +212,8 @@ class Point
       return *this;
     }
     
+    // Operators updating a Point by another Point:
+
     /*!*********************************************************************************************
      * \brief   Add point to given point.
      * 
@@ -252,6 +264,8 @@ class Point
       return *this;
     }
     
+    // Fundamental functions returning scalar from two Points:
+
     /*!*********************************************************************************************
      * \brief   Euclidean scalar product with other point.
      * 
@@ -267,7 +281,7 @@ class Point
     }
 }; // end of class Point
 
-// Elemental functions returning Point from two Points:
+// Fundamental functions returning Point from two Points:
 
 /*!*************************************************************************************************
  * \brief   Add two \c Point.
@@ -318,7 +332,7 @@ Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>&
   return quotient /= right;;
 }
 
-// Elemental functions returning Point from a scalar and a Point:
+// Fundamental functions returning Point from a scalar and a Point:
 
 /*!*************************************************************************************************
  * \brief   Add point to scalar.
@@ -436,8 +450,7 @@ template<unsigned int space_dim>
 pt_coord_t norm_1(const Point<space_dim>& pt)
 {
   pt_coord_t norm = 0.;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    norm += std::abs( pt[dim] );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  norm += std::abs( pt[dim] );
   return norm;
 }
 /*!*************************************************************************************************
@@ -463,8 +476,7 @@ template<unsigned int space_dim>
 pt_coord_t norm_infty(const Point<space_dim>& pt)
 {
   pt_coord_t norm = std::abs( pt[0] );
-  for (unsigned int dim = 1; dim < space_dim; ++dim)
-    norm = std::max( norm, std::abs(pt[dim]) );
+  for (unsigned int dim = 1; dim < space_dim; ++dim)  norm = std::max( norm, std::abs(pt[dim]) );
   return norm;
 }
 /*!*************************************************************************************************
@@ -477,8 +489,7 @@ template<unsigned int space_dim>
 pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
 {
   pt_coord_t norm = 0.;
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    norm += std::pow( std::abs(pt[dim]) , power );
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  norm += std::pow( std::abs(pt[dim]) , power );
   return std::pow( norm , 1. / power );
 }
 
@@ -493,8 +504,7 @@ pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
 template<unsigned int space_dim>
 std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt)
 {
-  for (unsigned int dim = 0; dim < space_dim; ++dim)
-    stream << " " << pt[dim] << " ";
+  for (unsigned int dim = 0; dim < space_dim; ++dim)  stream << " " << pt[dim] << " ";
   return stream;
 }
 
