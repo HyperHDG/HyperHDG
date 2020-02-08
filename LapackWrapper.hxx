@@ -16,6 +16,24 @@
 #define LAPACKWRAPPER_HXX
 
 #include <array>
+// #include <exception>
+
+/*!*************************************************************************************************
+ * \brief   Exception to be thrown if LAPACK's solve fails.
+ *
+ * \todo    Is this the way to do it intended by Guido? If so, should we include <exception>? It
+            works perfecly without the include. I suspect that array includes exception?!
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ **************************************************************************************************/
+struct LASolveException : public std::exception
+{
+  const char * what () const throw ()
+  {
+    return "LAPACK's solve failed and the solution of the local problem might be inaccurate.";
+  }
+};
 
 extern "C"
 {
@@ -97,6 +115,7 @@ inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
   dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   hy_assert( info == 0 ,
              "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
+  if (info != 0)  throw LASolveException();
 }
 
 /*!*************************************************************************************************
