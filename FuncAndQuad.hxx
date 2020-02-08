@@ -51,6 +51,8 @@
 namespace FuncQuad
 {
 
+// Constexpr determining template patameters:
+
 /*!*************************************************************************************************
  * \brief   Calculate the amount of quadrature points at compile time.
  * 
@@ -74,10 +76,10 @@ constexpr const unsigned int compute_n_quad_points
   return amount;
 }
 
+// Shape functions & their derivatives (evaluation):
+
 /*!*************************************************************************************************
  * \brief   Evaluate value of orthonormal shape function.
- * 
- * \todo    This function needs to be inline or the linker does not work. Why?
  *
  * Evaluates the value of the \c index orthonormal, one-dimensional shape function on the reference
  * interval \f$[0,1]\f$ at abscissa \c x_value.
@@ -115,8 +117,6 @@ inline double shape_fct_eval(const unsigned int index, const double x_val)
 }
 /*!*************************************************************************************************
  * \brief   Evaluate value of the derivative of orthonormal shape function.
- *
- * \todo    This function needs to be inline or the linker does not work. Why?
  * 
  * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional shape function
  * on the reference interval \f$[0,1]\f$ at abscissa \c x_val.
@@ -153,6 +153,134 @@ inline double shape_der_eval(const unsigned int index, const double x_val)
   return 0.;
 }
 /*!*************************************************************************************************
+ * \brief   Evaluate several values of one orthonormal shape function.
+ *
+ * Evaluates several values of the \c index orthonormal, one-dimensional shape function on the
+ * reference interval \f$[0,1]\f$ at abscissas \c x_value.
+ * 
+ * \param   index               Index of evaluated shape function.
+ * \param   x_value             Abscissas of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape function.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeX>
+inline std::array<double, sizeX> shape_fct_eval
+( const unsigned int index, const std::array<double, sizeX>& x_val)
+{
+  std::array<double, sizeX> result;
+  for (unsigned int k = 0; k < sizeX; ++k)  result[k] = FuncQuad::shape_fct_eval(index, x_val[k]);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Evaluate several values of the derivative of one orthonormal shape function.
+ *
+ * Evaluates several values of the derivative of the \c index orthonormal, one-dimensional shape
+ * function on the reference interval \f$[0,1]\f$ at abscissas \c x_value.
+ * 
+ * \param   index               Index of evaluated shape function.
+ * \param   x_value             Abscissas of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape function's derivative.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeX>
+inline std::array<double, sizeX> shape_der_eval
+( const unsigned int index, const std::array<double, sizeX>& x_val)
+{
+  std::array<double, sizeX> result;
+  for (unsigned int k = 0; k < sizeX; ++k)  result[k] = FuncQuad::shape_der_eval(index, x_val[k]);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Evaluate one value of several orthonormal shape function.
+ *
+ * Evaluates the value of the \c index orthonormal, one-dimensional shape functions on the reference
+ * interval \f$[0,1]\f$ at abscissa \c x_value.
+ * 
+ * \param   index               Indices of evaluated shape functions.
+ * \param   x_value             Abscissa of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape function.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeInd>
+inline std::array<double, sizeInd> shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const double x_val)
+{
+  std::array<double, sizeInd> result;
+  for (unsigned int k = 0; k < sizeInd; ++k)  result[k] = FuncQuad::shape_fct_eval(index[k], x_val);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Evaluate one value of several orthonormal shape functions' derivatives.
+ *
+ * Evaluates the value of the derivatives of \c index orthonormal, one-dimensional shape functions
+ * on the reference interval \f$[0,1]\f$ at abscissa \c x_value.
+ * 
+ * \param   index               Indices of evaluated shape functions.
+ * \param   x_value             Abscissa of evaluated shape function.
+ * \retval  fct_value           Evaluated value of shape functions' derivatives.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeInd>
+inline std::array<double, sizeInd> shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const double x_val)
+{
+  std::array<double, sizeInd> result;
+  for (unsigned int k = 0; k < sizeInd; ++k)  result[k] = FuncQuad::shape_der_eval(index[k], x_val);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Evaluate several values of several orthonormal shape functions.
+ *
+ * Evaluates the values of the \c index orthonormal, one-dimensional shape functions on the
+ * reference interval \f$[0,1]\f$ at abscissas \c x_value.
+ * 
+ * \param   index               Indices of evaluated shape function.
+ * \param   x_value             Abscissas of evaluated shape function.
+ * \retval  fct_value           Evaluated values of shape functions.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeInd, unsigned int sizeX>
+inline std::array< std::array<double, sizeX>, sizeInd > shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<double, sizeX>& x_val)
+{
+  std::array< std::array<double, sizeX>, sizeInd > result;
+  for (unsigned int k = 0; k < sizeInd; ++k)
+    result[k] = FuncQuad::shape_fct_eval<sizeX>(index[k], x_val);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Evaluate several values of several orthonormal shape functions' derivatives.
+ *
+ * Evaluates the values of the \c index orthonormal, one-dimensional shape functions' derivatives on
+ * the reference interval \f$[0,1]\f$ at abscissas \c x_value.
+ * 
+ * \param   index               Indices of evaluated shape function.
+ * \param   x_value             Abscissas of evaluated shape function.
+ * \retval  fct_value           Evaluated values of shape functions' derivatives.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
+template<unsigned int sizeInd, unsigned int sizeX>
+inline std::array< std::array<double, sizeX>, sizeInd > shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<double, sizeX>& x_val)
+{
+  std::array< std::array<double, sizeX>, sizeInd > result;
+  for (unsigned int k = 0; k < sizeInd; ++k)
+    result[k] = FuncQuad::shape_der_eval<sizeX>(index[k], x_val);
+  return result;
+}
+/*!*************************************************************************************************
  * \brief   Gaussian quadrature points on one-dimensional unit interval.
  * 
  * Returns the quadrature points of the quadrature rule with accuracy order \c max_quad_degree on a
@@ -164,6 +292,9 @@ inline double shape_der_eval(const unsigned int index, const double x_val)
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
+
+// Gaussian quadrature:
+
 template<unsigned int max_quad_degree>
 std::array<double, compute_n_quad_points(max_quad_degree)> quad_points()
 {
@@ -272,6 +403,9 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quad_weights()
 
   return quad_weights;
 }
+
+// Shape functions & their derivatives evaluated at Gaussian quadrature's points & boundaries:
+
 /*!*************************************************************************************************
  * \brief   Orthonormal shape functions evaluated at Gaussian quadrature points.
  * 
@@ -292,17 +426,12 @@ std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_pol
 shape_fcts_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
-  static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 , "Maximum polynomial degree is 5!");
-  static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
   
   std::array<double, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
-  std::array< std::array<double, n_points> , max_poly_degree + 1 > fct_val;
+  std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
+  for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-    for (unsigned int j = 0; j < n_points; ++j)
-      fct_val[i][j] = FuncQuad::shape_fct_eval(i, quad_points[j]);
-  
-  return fct_val;
+  return FuncQuad::shape_fct_eval<max_poly_degree + 1,n_points>(poly_deg_index, quad_points);
 }
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal shape functions evaluated at Gaussian quadrature points.
@@ -324,17 +453,12 @@ std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_pol
 shape_ders_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
-  static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 , "Maximum polynomial degree is 5!");
-  static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
   
   std::array<double, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
-  std::array< std::array<double, n_points> , max_poly_degree + 1 > der_val;
+  std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
+  for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-    for (unsigned int j = 0; j < n_points; ++j)
-      der_val[i][j] = FuncQuad::shape_der_eval(i, quad_points[j]);
-  
-  return der_val;
+  return FuncQuad::shape_der_eval<max_poly_degree + 1,n_points>(poly_deg_index, quad_points);
 }
 /*!*************************************************************************************************
  * \brief   Orthonormal shape functions evaluated at end points of unit interval.
@@ -352,16 +476,11 @@ shape_ders_at_quad_points()
 template<unsigned int max_poly_degree>
 std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
 {
-  static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 , "Maximum polynomial degree is 5!");
-  std::array< std::array<double, 2> , max_poly_degree + 1 > fct_val;
+  std::array<double, 2> bdrs = {0., 1.};
+  std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
+  for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-  {
-    fct_val[i][0] = FuncQuad::shape_fct_eval(i, 0.);
-    fct_val[i][1] = FuncQuad::shape_fct_eval(i, 1.);
-  }
-  
-  return fct_val;
+  return FuncQuad::shape_fct_eval<max_poly_degree + 1,2>(poly_deg_index, bdrs);
 }
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal shape functions evaluated at end points of unit interval.
@@ -379,16 +498,11 @@ std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
 template<unsigned int max_poly_degree>
 std::array< std::array<double, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
 {
-  static_assert( 1 <= max_poly_degree && max_poly_degree <= 5 , "Maximum polynomial degree is 5!");
-  std::array< std::array<double, 2> , max_poly_degree + 1 > der_val;
+  std::array<double, 2> bdrs = {0., 1.};
+  std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
+  for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  for (unsigned int i = 0; i < max_poly_degree+1; ++i)
-  {
-    der_val[i][0] = FuncQuad::shape_der_eval(i, 0.);
-    der_val[i][1] = FuncQuad::shape_der_eval(i, 1.);
-  }
-  
-  return der_val;
+  return FuncQuad::shape_der_eval<max_poly_degree + 1,2>(poly_deg_index, bdrs);
 }
 
 } // end of namespace FuncQuad
