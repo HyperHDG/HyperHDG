@@ -538,14 +538,15 @@ class Diffusion_TensorialUniform
       const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
     {
       std::array<double, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
+
       std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)> values;
-      std::array< std::array<double, abscissas.size()>, poly_deg+1 > values1D;
       std::array<unsigned int, hyEdge_dim> dec_i, dec_q;
       double fct_value;
-  
-      for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
-        for (unsigned int q = 0; q < abscissas.size(); ++q)
-          values1D[deg][q] = shape_fct_eval(deg, abscissas[q]);
+
+      std::array<unsigned int, poly_deg+1> poly_indices;
+      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+      std::array< std::array<double, abscissas.size()>, poly_deg+1 > 
+        values1D = FuncQuad::shape_fct_eval(poly_indices, abscissas);
       
       values.fill(0.);
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -580,14 +581,15 @@ class Diffusion_TensorialUniform
       const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
     {
       std::array<double, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
+
       std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > values;
-      std::array< std::array<double, abscissas.size()> , poly_deg+1 > values1D;
       std::array<unsigned int, hyEdge_dim> dec_i, dec_q;
       double fct_value;
       
-      for (unsigned int deg = 0; deg < poly_deg+1; ++deg)
-        for (unsigned int q = 0; q < abscissas.size(); ++q)
-          values1D[deg][q] = FuncQuad::shape_fct_eval(deg, abscissas[q]);
+      std::array<unsigned int, poly_deg+1> poly_indices;
+      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+      std::array< std::array<double, abscissas.size()>, poly_deg+1 > 
+        values1D = FuncQuad::shape_fct_eval(poly_indices, abscissas);
 
       for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
   
