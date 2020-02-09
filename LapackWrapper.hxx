@@ -25,6 +25,7 @@
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
  * \todo    Should we remove the assertion if the exception is there anyways?
+ * \todo    Check for LAPACK for float such that we can use TypeDefs.hxx, here!
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019.
  * \authors   Andreas Rupp, University of Heidelberg, 2019.
@@ -32,9 +33,7 @@
 struct LASolveException : public std::exception
 {
   const char * what () const throw ()
-  {
-    return "LAPACK's solve failed and the solution of the local problem might be inaccurate.";
-  }
+  { return "LAPACK's solve failed and the solution of the local problem might be inaccurate."; }
 };
 
 extern "C"
@@ -115,8 +114,8 @@ inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
   int one = 1, info = -1;
   int ipiv[system_size];
   dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
-  hy_assert( info == 0 ,
-             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
+//  hy_assert( info == 0 ,
+//             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
   if (info != 0)  throw LASolveException();
 }
 

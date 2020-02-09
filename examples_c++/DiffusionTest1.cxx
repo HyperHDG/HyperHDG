@@ -47,14 +47,16 @@ int main(int argc, char *argv[])
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
   
-  unsigned int num_of_iterations = 0;
-  vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem, num_of_iterations );
+  vector<double> solution;
+  try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
+  catch (SparseLASolveException exc)
+  {
+    hy_assert( 0 == 1 , exc.what() );
+    successful = false;
+  }
+  
   solution = linear_combination(1., solution, 1., vectorDirichlet);
-  
-  hy_assert ( num_of_iterations > 0 ,
-              "Conjugate gradient method did not converge." );
-  if ( num_of_iterations == 0 )  successful = false;
-  
+    
   const std::vector<double> python_result = 
   { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
     0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,

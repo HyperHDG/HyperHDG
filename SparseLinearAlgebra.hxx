@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <cmath>
+// #include <exception>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing different functions that implement basic linear algebra
@@ -38,6 +39,18 @@
 namespace SparseLA
 {
 
+/*!*************************************************************************************************
+ * \brief   Exception to be thrown if conjugate gradient fails.
+ *
+ * \todo    Should exception be included and should output be improved?
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ **************************************************************************************************/
+struct SparseLASolveException : public std::exception
+{
+  const char * what () const throw () { return "The sparse CG method did not converge."; }
+};
 /*!*************************************************************************************************
  * \brief   Evaluate the inner product of two \c std::vector.
  * 
@@ -154,7 +167,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
 template<class ProblemT>
 std::vector<dof_value_t> conjugate_gradient
 ( const std::vector<dof_value_t>& b, const ProblemT& problem,
-  unsigned int& n_iterations = 0, const dof_value_t tolerance = 1e-9 )
+  unsigned int n_iterations = 0, const dof_value_t tolerance = 1e-9 )
 {
   std::vector<dof_value_t> x (b.size(), 0.);
   std::vector<dof_value_t> r = b; // b - A * x (with x = 0)
@@ -188,12 +201,13 @@ std::vector<dof_value_t> conjugate_gradient
     }
   }
 
-  hy_assert( 0 == 1 ,
-             "CG method did not converge! The final residual after " << n_iterations <<
-             " iterations turned out to be " << std::sqrt(r_square_new) << ", while the needed "
-             << "tolerance is " << tolerance << "." );
-             
-  n_iterations = 0;
+  throw SparseLA::SparseLASolveException();
+
+//  hy_assert( 0 == 1 ,
+//             "CG method did not converge! The final residual after " << n_iterations <<
+//             " iterations turned out to be " << std::sqrt(r_square_new) << ", while the needed "
+//             << "tolerance is " << tolerance << "." );
+  
   return x;
 }
 

@@ -142,19 +142,20 @@ class Diffusion_TensorialUniform
      * \param   tau           Penalty parameter for HDG.
      * \retval  loc_mat       Matrix of the local solver.
      **********************************************************************************************/
-    static std::array<double, n_loc_dofs_ * n_loc_dofs_ > assemble_loc_matrix(const double tau)
+    static std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ >
+    assemble_loc_matrix ( const lSol_float_t tau )
     { 
-      const std::array<double, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
-      const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > 
+      const std::array<lSol_float_t, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
+      const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > 
         trial(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>()),
         deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg>());
-      const std::array< std::array<double, 2> , poly_deg + 1 >
+      const std::array< std::array<lSol_float_t, 2> , poly_deg + 1 >
         trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg>());
   
       std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
-      double integral, integral1D;
+      lSol_float_t integral, integral1D;
       
-      std::array<double, n_loc_dofs_ * n_loc_dofs_> local_mat;
+      std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_mat;
       local_mat.fill(0.);
   
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -264,32 +265,32 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   (Globally constant) penalty parameter for HDG scheme.
      **********************************************************************************************/
-    const double tau_;
+    const lSol_float_t tau_;
     /*!*********************************************************************************************
      * \brief   Quadrature weights per spatial dimension.
      **********************************************************************************************/
-    const std::array<double, n_quads_1D_> q_weights_;
+    const std::array<lSol_float_t, n_quads_1D_> q_weights_;
     /*!*********************************************************************************************
      * \brief   Trial functions evaluated at quadrature points (per spatial dimensions).
      **********************************************************************************************/
-    const std::array< std::array<double, n_quads_1D_ > , poly_deg + 1 > trial_;
+    const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > trial_;
     /*!*********************************************************************************************
      * \brief   Trial functions evaluated at boundaries {0,1} (per spatial dimension).
      **********************************************************************************************/
-    const std::array< std::array<double, 2 > , poly_deg + 1 > trial_bdr_;
+    const std::array< std::array<lSol_float_t, 2 > , poly_deg + 1 > trial_bdr_;
     /*!*********************************************************************************************
      * \brief   Local matrix for the local solver.
      **********************************************************************************************/
-    const std::array<double, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
+    const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
-    inline std::array<double, n_loc_dofs_ > assemble_rhs
-    ( const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
+    inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
       std::array<unsigned int, hyEdge_dim> dec_i;
       std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      double integral, integral1D;
+      lSol_float_t integral, integral1D;
   
-      std::array<double, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
+      std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
       right_hand_side.fill(0.);
   
       hy_assert( lambda_values.size() == 2 * hyEdge_dim ,
@@ -350,13 +351,13 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    inline std::array<double, n_loc_dofs_ > solve_local_problem
-    ( const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
+    inline std::array<lSol_float_t, n_loc_dofs_ > solve_local_problem
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
       // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
-      std::array<double, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
+      std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
       // The local right hand side is assembled (and will also be destroyed by LAPACK).
-      std::array<double, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
+      std::array<lSol_float_t, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
       // LAPACK solves local_matix * return_value = right_hand_side.
       return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side);
     }
@@ -369,13 +370,13 @@ class Diffusion_TensorialUniform
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > primal_at_boundary
-    ( const std::array<double, n_loc_dofs_ >& coeffs ) const
+    inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > primal_at_boundary
+    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
     {
       std::array<unsigned int, hyEdge_dim> dec_i;
       std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-      double integral, integral1D;
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
+      lSol_float_t integral, integral1D;
     
       for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
   
@@ -429,13 +430,13 @@ class Diffusion_TensorialUniform
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > dual_at_boundary
-    ( const std::array<double, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
+    inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > dual_at_boundary
+    ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
     {
       std::array<unsigned int, hyEdge_dim> dec_i;
       std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-      double integral, integral1D;
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
+      lSol_float_t integral, integral1D;
     
       for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
 
@@ -484,7 +485,7 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
      **********************************************************************************************/
-    typedef double constructor_value_type;
+    typedef lSol_float_t constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Constructor for local solver.
      *
@@ -507,12 +508,12 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > numerical_flux_from_lambda
-    (const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
+    std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > numerical_flux_from_lambda
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
-      std::array<double, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
+      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
       
-      std::array< std::array<double, n_shape_bdr_> , 2 * hyEdge_dim > 
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > 
         bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -532,20 +533,20 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<unsigned int sizeT> std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)>
+    template<unsigned int sizeT> std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)>
     primal_at_dyadic
-    ( const std::array<double, sizeT>& abscissas,
-      const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
+    (const std::array<lSol_float_t, sizeT>& abscissas,
+     const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
-      std::array<double, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
+      std::array<lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
-      std::array<double, Hypercube<hyEdge_dim>::pow(sizeT)> values;
+      std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)> values;
       std::array<unsigned int, hyEdge_dim> dec_i, dec_q;
-      double fct_value;
+      lSol_float_t fct_value;
 
       std::array<unsigned int, poly_deg+1> poly_indices;
       for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-      std::array< std::array<double, abscissas.size()>, poly_deg+1 > 
+      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
         values1D = FuncQuad::shape_fct_eval(poly_indices, abscissas);
       
       values.fill(0.);
@@ -576,19 +577,20 @@ class Diffusion_TensorialUniform
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
     template<unsigned int sizeT>
-    std::array< std::array<double,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > dual_at_dyadic
-    ( const std::array<double, sizeT>& abscissas,
-      const std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values ) const
+    std::array< std::array<lSol_float_t,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > 
+    dual_at_dyadic
+    (const std::array<lSol_float_t, sizeT>& abscissas,
+     const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
-      std::array<double, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
+      std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
 
-      std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > values;
+      std::array< std::array<lSol_float_t, hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > values;
       std::array<unsigned int, hyEdge_dim> dec_i, dec_q;
-      double fct_value;
+      lSol_float_t fct_value;
       
       std::array<unsigned int, poly_deg+1> poly_indices;
       for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-      std::array< std::array<double, abscissas.size()>, poly_deg+1 > 
+      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
         values1D = FuncQuad::shape_fct_eval(poly_indices, abscissas);
 
       for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
