@@ -59,10 +59,6 @@ int main(int argc, char *argv[])
   vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem, num_of_iterations );
   solution = linear_combination(1., solution, 1., vectorDirichlet);
   
-  hy_assert ( num_of_iterations > 0 ,
-              "Conjugate gradient method did not converge." );
-  if ( num_of_iterations == 0 )  successful = false;
-  
   for (unsigned int i = 0; i < solution.size(); ++i)
     cout << solution[i] << endl;
 */

@@ -15,7 +15,7 @@
 #define TYPEDEFS_HXX
 
 typedef unsigned int  hyNode_index_t, hyEdge_index_t, dof_index_type, pt_index_t;
-typedef double        dof_value_t;
+typedef double        dof_value_t, lSol_float_t;
 typedef float         pt_coord_t;
 
 #endif // end of ifndef TYPEDEFS_HXX

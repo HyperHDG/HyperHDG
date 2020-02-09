@@ -24,6 +24,7 @@
 #define FUNC_AND_QUAD_HXX
 
 #include <HyAssert.hxx>
+#include <TypeDefs.hxx>
 
 #include <array>
 #include <cmath>
@@ -91,7 +92,7 @@ constexpr const unsigned int compute_n_quad_points
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-inline double shape_fct_eval(const unsigned int index, const double x_val)
+inline lSol_float_t shape_fct_eval(const unsigned int index, const lSol_float_t x_val)
 {
   hy_assert( 0 <= index && index <= 5 ,
              "The index of a shape function must be non-negative and smaller than or equal to 5 at "
@@ -128,7 +129,7 @@ inline double shape_fct_eval(const unsigned int index, const double x_val)
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-inline double shape_der_eval(const unsigned int index, const double x_val)
+inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t x_val)
 {
   hy_assert( 0 <= index && index <= 5 ,
              "The index of a shape function must be non-negative and smaller than or equal to 5 at "
@@ -166,10 +167,10 @@ inline double shape_der_eval(const unsigned int index, const double x_val)
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeX>
-inline std::array<double, sizeX> shape_fct_eval
-( const unsigned int index, const std::array<double, sizeX>& x_val)
+inline std::array<lSol_float_t, sizeX> shape_fct_eval
+( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
 {
-  std::array<double, sizeX> result;
+  std::array<lSol_float_t, sizeX> result;
   for (unsigned int k = 0; k < sizeX; ++k)  result[k] = FuncQuad::shape_fct_eval(index, x_val[k]);
   return result;
 }
@@ -187,10 +188,10 @@ inline std::array<double, sizeX> shape_fct_eval
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeX>
-inline std::array<double, sizeX> shape_der_eval
-( const unsigned int index, const std::array<double, sizeX>& x_val)
+inline std::array<lSol_float_t, sizeX> shape_der_eval
+( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
 {
-  std::array<double, sizeX> result;
+  std::array<lSol_float_t, sizeX> result;
   for (unsigned int k = 0; k < sizeX; ++k)  result[k] = FuncQuad::shape_der_eval(index, x_val[k]);
   return result;
 }
@@ -208,10 +209,10 @@ inline std::array<double, sizeX> shape_der_eval
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeInd>
-inline std::array<double, sizeInd> shape_fct_eval
-( const std::array<unsigned int, sizeInd>& index, const double x_val)
+inline std::array<lSol_float_t, sizeInd> shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
 {
-  std::array<double, sizeInd> result;
+  std::array<lSol_float_t, sizeInd> result;
   for (unsigned int k = 0; k < sizeInd; ++k)  result[k] = FuncQuad::shape_fct_eval(index[k], x_val);
   return result;
 }
@@ -229,10 +230,10 @@ inline std::array<double, sizeInd> shape_fct_eval
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeInd>
-inline std::array<double, sizeInd> shape_der_eval
-( const std::array<unsigned int, sizeInd>& index, const double x_val)
+inline std::array<lSol_float_t, sizeInd> shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
 {
-  std::array<double, sizeInd> result;
+  std::array<lSol_float_t, sizeInd> result;
   for (unsigned int k = 0; k < sizeInd; ++k)  result[k] = FuncQuad::shape_der_eval(index[k], x_val);
   return result;
 }
@@ -250,10 +251,10 @@ inline std::array<double, sizeInd> shape_der_eval
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeInd, unsigned int sizeX>
-inline std::array< std::array<double, sizeX>, sizeInd > shape_fct_eval
-( const std::array<unsigned int, sizeInd>& index, const std::array<double, sizeX>& x_val)
+inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
 {
-  std::array< std::array<double, sizeX>, sizeInd > result;
+  std::array< std::array<lSol_float_t, sizeX>, sizeInd > result;
   for (unsigned int k = 0; k < sizeInd; ++k)
     result[k] = FuncQuad::shape_fct_eval<sizeX>(index[k], x_val);
   return result;
@@ -272,10 +273,10 @@ inline std::array< std::array<double, sizeX>, sizeInd > shape_fct_eval
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int sizeInd, unsigned int sizeX>
-inline std::array< std::array<double, sizeX>, sizeInd > shape_der_eval
-( const std::array<unsigned int, sizeInd>& index, const std::array<double, sizeX>& x_val)
+inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
 {
-  std::array< std::array<double, sizeX>, sizeInd > result;
+  std::array< std::array<lSol_float_t, sizeX>, sizeInd > result;
   for (unsigned int k = 0; k < sizeInd; ++k)
     result[k] = FuncQuad::shape_der_eval<sizeX>(index[k], x_val);
   return result;
@@ -296,11 +297,11 @@ inline std::array< std::array<double, sizeX>, sizeInd > shape_der_eval
 // Gaussian quadrature:
 
 template<unsigned int max_quad_degree>
-std::array<double, compute_n_quad_points(max_quad_degree)> quad_points()
+std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
-  std::array<double, n_points> quad_points;
+  std::array<lSol_float_t, n_points> quad_points;
   
   if constexpr (n_points == 1)
     quad_points = { 0. };
@@ -358,11 +359,11 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quad_points()
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_quad_degree>
-std::array<double, compute_n_quad_points(max_quad_degree)> quad_weights()
+std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_weights()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
-  std::array<double, n_points> quad_weights;
+  std::array<lSol_float_t, n_points> quad_weights;
   
   if constexpr (n_points == 1)
     quad_weights = { 2. };
@@ -422,12 +423,12 @@ std::array<double, compute_n_quad_points(max_quad_degree)> quad_weights()
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+std::array< std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_fcts_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   
-  std::array<double, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
+  std::array<lSol_float_t, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
@@ -449,12 +450,12 @@ shape_fcts_at_quad_points()
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree, unsigned int max_quad_degree>
-std::array< std::array<double, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+std::array< std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_ders_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   
-  std::array<double, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
+  std::array<lSol_float_t, n_points> quad_points = FuncQuad::quad_points<max_quad_degree>();
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
@@ -474,9 +475,9 @@ shape_ders_at_quad_points()
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree>
-std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
+std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
 {
-  std::array<double, 2> bdrs = {0., 1.};
+  std::array<lSol_float_t, 2> bdrs = {0., 1.};
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
@@ -496,9 +497,9 @@ std::array< std::array<double, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 template<unsigned int max_poly_degree>
-std::array< std::array<double, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
+std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
 {
-  std::array<double, 2> bdrs = {0., 1.};
+  std::array<lSol_float_t, 2> bdrs = {0., 1.};
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   

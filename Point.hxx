@@ -19,6 +19,23 @@
 #include <cmath>
 #include <ostream>
 
+// #include <exception>
+
+/*!*************************************************************************************************
+ * \brief   Exception to be thrown if division by zero appears.
+ *
+ * \todo    Is this the way to do it intended by Guido? If so, should we include <exception>? It
+ *          works perfecly without the include. I suspect that array (or another by that point
+ *          included package includes exception?!
+ * \todo    Should we remove the assertion if the exception is there anyways?
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ **************************************************************************************************/
+struct PointDivByZeroException : public std::exception
+{
+  const char * what () const throw () { return "Attempted division by zero."; }
+};
 /*!*************************************************************************************************
  * \brief   This class implements a point in a d-dimensional space.
  * 
@@ -207,7 +224,8 @@ class Point
      **********************************************************************************************/
     Point<space_dim>& operator/=(const pt_coord_t scalar)
     {
-      hy_assert( scalar != 0. , "Division by zeros is not well-defined!" );
+      if (scalar == 0.)  throw PointDivByZeroException();
+//      hy_assert( scalar != 0. , "Division by zeros is not well-defined!" );
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] /= scalar;
       return *this;
     }
@@ -257,8 +275,9 @@ class Point
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
-        hy_assert( other[dim] != 0. ,
-                   "Division by a point with " << dim << "-th component being 0 is prohibited!" );
+        if (other[dim] == 0.)  throw PointDivByZeroException();
+//        hy_assert( other[dim] != 0. ,
+//                   "Division by a point with " << dim << "-th component being 0 is prohibited!" );
         coordinates_[dim] /= other[dim];
       }
       return *this;
@@ -419,8 +438,9 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
   Point<space_dim> quotient(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
-    hy_assert( pt[dim] != 0. ,
-               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
+    if (pt[dim] == 0.)  throw PointDivByZeroException();
+//    hy_assert( pt[dim] != 0. ,
+//               "Divison by a point whith " << dim << "-th component bein zero is not allowed!" );
     quotient[dim] = scalar / pt[dim];
   }
   return quotient;
