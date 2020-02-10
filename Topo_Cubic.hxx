@@ -171,7 +171,7 @@ class Cubic
      * topology is by default constructed by a std::vector that contains amounts of elements in the
      * different dimensions.
      **********************************************************************************************/
-    typedef std::vector<int> constructor_value_type;
+    typedef std::vector<unsigned int> constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a cubic hypergraph from a \c std::vector.
      *
