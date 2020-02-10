@@ -3,8 +3,8 @@ from libcpp.string cimport string
 
 cdef extern from "AbstractProblem.hxx":
   cdef cppclass DiffusionProblemNaive "DiffusionProblemRegularNaive<2,3,1>":
-    DiffusionProblemNaive(vector[int], vector[int], double) except +
-    void read_dirichlet_indices(vector[int])
+    DiffusionProblemNaive(vector[unsigned int], vector[unsigned int], double) except +
+    void read_dirichlet_indices(vector[unsigned int])
     vector[double] return_zero_vector()
     vector[double] matrix_vector_multiply(vector[double])
     int size_of_system()
@@ -14,7 +14,7 @@ cdef extern from "AbstractProblem.hxx":
 cdef extern from "AbstractProblem.hxx":
   cdef cppclass ElasticityProblem "ElasticityProblemFile<1,2,1>":
     ElasticityProblem(string, double) except +
-    void read_dirichlet_indices(vector[int])
+    void read_dirichlet_indices(vector[unsigned int])
     vector[double] return_zero_vector()
     vector[double] matrix_vector_multiply(vector[double])
     int size_of_system()

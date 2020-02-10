@@ -131,7 +131,7 @@ class AbstractProblem
      * \param   indices       A \c std::vector containing the (global) indices of Dirichlet type
      *                        hypernodes/faces.
      **********************************************************************************************/
-    void read_dirichlet_indices( const std::vector<int>& indices )
+    void read_dirichlet_indices( const std::vector<unsigned int>& indices )
     {
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)

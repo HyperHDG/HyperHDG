@@ -104,8 +104,7 @@ class UnitCube
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index,
-                               const std::array<unsigned int, space_dim>& num_elements);
+      hyEdge(const hyEdge_index_t index, const std::array<unsigned int, space_dim>& num_elements);
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        *
@@ -149,7 +148,7 @@ class UnitCube
      * topology whic is a unit cube is by default constructed by a std::vector that contains amounts
      * of elements in the different dimensions.
      **********************************************************************************************/
-    typedef std::vector<int> constructor_value_type;
+    typedef std::vector<unsigned int> constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
      *
