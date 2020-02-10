@@ -10,26 +10,26 @@ from scipy.sparse.linalg import LinearOperator
 
 # Import C++ wrapper class to use HDG method on graphs.
 from ClassWrapper import PyDiffusionProblemNaive
-# from ClassWrapper import PyElasticityProblem
+from ClassWrapper import PyElasticityProblem
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblemNaive([1,1,1])
-# HDG_wrapper = PyElasticityProblem("domains/SimpleTriangle.geo")
+# HDG_wrapper = PyDiffusionProblemNaive([1,1,1])
+HDG_wrapper = PyElasticityProblem("domains/SimpleTriangle.geo")
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
 # index vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
-vectorDirichlet[2] = 2.
-vectorDirichlet[4] = 3.
-vectorDirichlet[6] = 4.
+vectorDirichlet[2] = 0.
+# vectorDirichlet[4] = 3.
+# vectorDirichlet[6] = 4.
 # vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 1, 2, 3, 4, 5, 6, 7])# len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 1, 2, 3])#, 4, 5, 6, 7])# len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
@@ -56,8 +56,7 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 if num_iter == 0:
   print("Solution:\n", vectorSolution + vectorDirichlet)
 else:
-  print("The linear solver (conjugate gradients) failed with a total number of ",
-        num_iter, " iterations.")
+  print("The linear solver (conjugate gradients) failed (did not converge)!")
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
