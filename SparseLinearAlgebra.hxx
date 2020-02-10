@@ -175,6 +175,12 @@ std::vector<dof_value_t> conjugate_gradient
   
   dof_value_t r_square_old;
   dof_value_t r_square_new = inner_product(r,r);
+
+  if ( std::sqrt(r_square_new) < tolerance )  
+  {
+    n_iterations = 0;
+    return x;
+  }
   
   if (n_iterations == 0)  n_iterations = b.size();
   hy_assert( n_iterations > 0 ,
