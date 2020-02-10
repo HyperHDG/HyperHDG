@@ -98,6 +98,7 @@ run_examples:
 	./build/C++ExampleBuild/PointTest.exe;
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
+	./build/C++ExampleBuild/ElasticityTest1.exe;
 
 new_run_examples:
 	make clean
