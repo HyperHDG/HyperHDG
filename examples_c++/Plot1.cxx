@@ -29,7 +29,7 @@ using namespace std;
 template<int edge_dim, int space_dim>
 void test()
 {
-  vector<int> num_elements;
+  vector<unsigned int> num_elements;
 
   if (space_dim >= 1) num_elements.push_back(4);
   if (space_dim >= 2) num_elements.push_back(3);

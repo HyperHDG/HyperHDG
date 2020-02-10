@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 {
   bool successful = true;
   const double solution_tolerance = 1e-8;
-  const vector<int> num_elements = { 4 , 2 , 2 };
+  const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
   DiffusionProblemRegularNaive<1,3,1> diffusion_problem(num_elements, num_elements, 1.);
   
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   vectorDirichlet[0] = 1.;
   vectorDirichlet[vectorDirichlet.size()-1] = 0.;
   
-  const vector<int> index_vector = { 0 , ((int) vectorDirichlet.size())-1 };
+  const vector<unsigned int> index_vector = { 0 , (unsigned int) vectorDirichlet.size()-1 };
   diffusion_problem.read_dirichlet_indices(index_vector);
   
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
