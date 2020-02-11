@@ -18,6 +18,7 @@
 #ifndef GEOM_UNITCUBE_HXX
 #define GEOM_UNITCUBE_HXX
 
+#include <Hypercube.hxx>
 #include <TypeDefs.hxx>
 #include <Point.hxx>
 #include <Topo_Cubic.hxx>
@@ -92,12 +93,16 @@ class UnitCube
        *
        * A \c std::array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
-      std::array<Point<space_dim>, 2*hyEdge_dim> points_;
+      std::array<Point<space_dim>, Hypercube<hyEdge_dim>::n_vertices()> points_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.
        *
+       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
+       *          A prototype of this function is located in the cxx file, where you could also
+       *          insert the new function.
+       * 
        * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
        * which is given as input data and the index of the hyperedge to be constructed.
        * 
@@ -112,8 +117,13 @@ class UnitCube
        *
        * \retval  point           Point/Vertex of the hyperedge.
        ********************************************************************************************/
-      Point<space_dim> point(const unsigned int index) const;
-    
+      Point<space_dim> point(const unsigned int index) const
+      { return points_[index]; }
+      
+      /*!*******************************************************************************************
+       * \todo    Guido: If you have a clever idea for this, you can implement it. But this, I might
+       *          also be able to do myself ;)
+       ********************************************************************************************/
       Point<space_dim> normal(const unsigned int index) const;
 
 //    std::vector<double> abs_det_of_jacobian_at_quad
@@ -122,6 +132,19 @@ class UnitCube
 //      (const std::vector<double>& local_quadrature) const;
   }; // end of class hyEdge
   
+  public:
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of a hyperedge.
+     *
+     * \retval  hyEdge_dim   The dimension of a hyperedge.
+     **********************************************************************************************/
+    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+    /*!*********************************************************************************************
+     * \brief   Returns the template parameter representing the dimension of the space.
+     *
+     * \retval  space_dim       The dimension of the space.
+     **********************************************************************************************/
+    static constexpr unsigned int space_dimension() { return space_dim; }
   private:
     /*!*********************************************************************************************
      * \brief   Number of elements per spatial dimension.
@@ -157,7 +180,8 @@ class UnitCube
      * 
      * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
-    UnitCube(const constructor_value_type& num_elements);
+    UnitCube(const constructor_value_type& num_elements)
+    { for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim]; }
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
      *
@@ -166,7 +190,8 @@ class UnitCube
      * 
      * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
-    UnitCube(const Topology::Cubic<hyEdge_dim,space_dim>& other);
+    UnitCube(const Topology::Cubic<hyEdge_dim,space_dim>& other)
+    : num_elements_(other.num_elements()) { }
     /*!*********************************************************************************************
      * \brief   Get geometrical hyperedge of given index.
      *
@@ -177,20 +202,8 @@ class UnitCube
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyEdge get_hyEdge(const hyEdge_index_t index) const;
-      
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of a hyperedge.
-     *
-     * \retval  hyEdge_dim   The dimension of a hyperedge.
-     **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
-    /*!*********************************************************************************************
-     * \brief   Returns the template parameter representing the dimension of the space.
-     *
-     * \retval  space_dim       The dimension of the space.
-     **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return space_dim; }
+    const hyEdge get_hyEdge(const hyEdge_index_t index) const
+    { return hyEdge(index, num_elements_); }
 }; // end class UnitCube
 
 } // end namespace Geometry
