@@ -116,7 +116,7 @@ class HyperNodeFactory
       dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( initial_dof_index >= 0
                    && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
-                 "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
+                 "The initial dof index = " << initial_dof_index << ", should be non-negative. " <<
                  " Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT << " must "
                  << "not exceed the size of the vector of global degrees of freedom." );
       std::array<dof_value_t, n_dofs_per_nodeT> local_dof_values;
