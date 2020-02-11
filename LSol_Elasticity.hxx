@@ -582,7 +582,7 @@ class ElasticRods_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<unsigned int sizeT, class GeomT>
+    template<std::size_t sizeT, class GeomT>
     std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)>
     primal_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
@@ -631,7 +631,7 @@ class ElasticRods_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<unsigned int sizeT, class GeomT>
+    template<std::size_t sizeT, class GeomT>
     std::array< std::array<lSol_float_t,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > 
     dual_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
