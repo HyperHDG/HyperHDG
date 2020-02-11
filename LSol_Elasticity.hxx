@@ -399,7 +399,13 @@ class ElasticRods_TensorialUniform
       // The local right hand side is assembled (and will also be destroyed by LAPACK).
       std::array<lSol_float_t, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
       // LAPACK solves local_matix * return_value = right_hand_side.
-      return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side);
+      try { return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side); }
+      catch (LASolveException exc)
+      {
+        hy_assert( 0 == 1 ,
+                   exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
+        throw exc;
+      }
     }
     /*!*********************************************************************************************
      * \brief   Evaluate primal variable at boundary.
