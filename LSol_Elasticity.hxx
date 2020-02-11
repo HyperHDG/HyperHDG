@@ -22,7 +22,7 @@
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
- * \todo    Update doxygen in whole file!
+ * \todo    Update doxygen in whole file!!!
  *
  * This class contains the local solver for Poisson's equation, i.e.,
  * \f[
@@ -284,39 +284,44 @@ class ElasticRods_TensorialUniform
      **********************************************************************************************/
     const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
-template<class GeomT> inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dim >
-node_dof_to_edge_dof(const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dim > lambda, const GeomT& geom) const
-{
-  std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim > result;
-  hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
-  for (unsigned int i = 0; i < result.size(); ++i)
-  {
-    hy_assert( result[i].size() == 1 , "Only implemented in one dimension!" );
-    result[i].fill(0.);
-  }
+    template<class GeomT> 
+    inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dim > node_dof_to_edge_dof
+    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dim > lambda,
+      const GeomT& geom ) const
+    {
+      std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dim > result;
+      hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
+      for (unsigned int i = 0; i < result.size(); ++i)
+      {
+        hy_assert( result[i].size() == 1 , "Only implemented in one dimension!" );
+        result[i].fill(0.);
+      }
   
-  for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
-  {
-    Point<space_dim> normal_vector = geom.normal(1);
-    for (unsigned int dim = 0; dim < space_dim; ++dim)  result[i][0] += normal_vector[dim] * lambda[i][dim];
-  }
+      Point<space_dim> normal_vector = geom.normal(1);
   
-  return result;
-}
+      for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+          result[i][0] += normal_vector[dim] * lambda[i][dim];
+  
+      return result;
+    }
 
-template <class GeomT> inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dim >
-edge_dof_to_node_dof(const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dim > lambda, const GeomT& geom) const
-{
-  hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
-  std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dim > result;
-  Point<space_dim> normal_vector = geom.normal(1);
+    template <class GeomT>
+    inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dim >
+    edge_dof_to_node_dof
+    ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dim > lambda,
+      const GeomT& geom ) const
+    {
+      hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
+      std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dim > result;
+      Point<space_dim> normal_vector = geom.normal(1);
   
-  for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
-    for (unsigned int dim = 0; dim < space_dim; ++dim)
-      result[i][dim] = normal_vector[dim] * lambda[i][0];
+      for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+          result[i][dim] = normal_vector[dim] * lambda[i][0];
   
-  return result;
-}
+      return result;
+    }
 
     inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
@@ -558,10 +563,10 @@ edge_dof_to_node_dof(const std::array< std::array<double, n_shape_bdr_>, 2 * hyE
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > 
         bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
   
-      for (unsigned int i = 0; i < lambda_values.size(); ++i)
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
-       
+      for (unsigned int i = 0; i < lambda.size(); ++i)
+        for (unsigned int j = 0; j < lambda[i].size(); ++j)
+          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
+
       return edge_dof_to_node_dof(bdr_values, geom);
     }
     /*!*********************************************************************************************

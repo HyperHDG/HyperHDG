@@ -50,19 +50,8 @@ int main(int argc, char *argv[])
   
   vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem );
   solution = linear_combination(1., solution, 1., vectorDirichlet);
-  
-  for (unsigned int i = 0; i < solution.size(); ++i)
-    cout << solution[i] << endl;
-/*  
-  const std::vector<double> python_result = 
-  { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
-    0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,
-    0.5,        0.42013223, 0.36123983, 0.72849089, 0.62353531, 0.52383342,
-    0.4428244,  0.39207816, 0.65166809, 0.58551499, 0.5,        0.41448501,
-    0.34833191, 0.60792184, 0.5571756,  0.47616658, 0.37646469, 0.27150911,
-    0.63876017, 0.57986777, 0.5,        0.42013223, 0.36123983, 0.60792184,
-    0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
-    0.44719263, 0.3000305,  0. };
+ 
+  const std::vector<double> python_result = { 1. , 0. , 0. , 0. , 0.5 , 0.5 };
   
   hy_assert ( solution.size() == python_result.size() ,
               "Size of solution of C++ program must be size of reference Python solution." );
@@ -79,10 +68,10 @@ int main(int argc, char *argv[])
   
   if ( successful )
   {
-    cout << "Diffusion test 1 was successful!" << endl;
+    cout << "Elasticity test 1 was successful!" << endl;
     return 0;
   }
-  else  cout << "Diffusion test 1 failed!" << endl;
-*/
+  else  cout << "Elasticity test 1 failed!" << endl;
+
   return -1;
 }
