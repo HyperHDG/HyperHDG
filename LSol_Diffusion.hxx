@@ -283,6 +283,15 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
+    /*!*********************************************************************************************
+     * \brief  Assemble local right hand for the local solver.
+     *
+     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
+     * constructed individually for every hyperedge.
+     *
+     * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     **********************************************************************************************/
     inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
@@ -343,15 +352,12 @@ class Diffusion_TensorialUniform
       return right_hand_side;
     }
     /*!*********************************************************************************************
-     * \brief  Assemble local right hand for the local solver.
-     *
-     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
-     * constructed individually for every hyperedge.
+     * \brief  Solve local problem.
      *
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
-     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
-    inline std::array<lSol_float_t, n_loc_dofs_ > solve_local_problem
+    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
       // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.

@@ -1,14 +1,12 @@
-/* ------------------------------------------------------------------------------------------------------
+/*!*************************************************************************************************
+ * \file    LSol_Elasticity.hxx
+ * \brief   Local solvers for elastic equation.
  *
- * This file is part of EP2 of the STRUCTURES initiative of the University of Heidelberg.
- * It solves a PDE that is solely defined on a graph using the HDG method.
- * 
- * Definition local solver class: In this case for diffusion.
+ * \todo    Details and doxygen!
  *
- * ------------------------------------------------------------------------------------------------------
- *
- * Author: Andreas Rupp, University of Heidelberg, 2019
- */
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
@@ -16,8 +14,6 @@
 #include <FuncAndQuad.hxx>
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
-
-#include <Geom_File.hxx>  // TODO: This is not good!
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -284,6 +280,9 @@ class ElasticRods_TensorialUniform
      **********************************************************************************************/
     const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
+    /*!*********************************************************************************************
+     * \brief  Do the pretprocessing to transfer global to local dofs.
+     **********************************************************************************************/
     template<class GeomT> 
     inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dim > node_dof_to_edge_dof
     ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dim > lambda,
@@ -305,7 +304,9 @@ class ElasticRods_TensorialUniform
   
       return result;
     }
-
+    /*!*********************************************************************************************
+     * \brief  Do the postprocessing to transfer local to global dofs.
+     **********************************************************************************************/
     template <class GeomT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dim >
     edge_dof_to_node_dof
@@ -322,7 +323,15 @@ class ElasticRods_TensorialUniform
   
       return result;
     }
-
+    /*!*********************************************************************************************
+     * \brief  Assemble local right hand for the local solver.
+     *
+     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
+     * constructed individually for every hyperedge.
+     *
+     * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     **********************************************************************************************/
     inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
@@ -383,13 +392,10 @@ class ElasticRods_TensorialUniform
       return right_hand_side;
     }
     /*!*********************************************************************************************
-     * \brief  Assemble local right hand for the local solver.
-     *
-     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
-     * constructed individually for every hyperedge.
+     * \brief  Solve local problem.
      *
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
-     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array<lSol_float_t, n_loc_dofs_ > solve_local_problem
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
@@ -675,6 +681,6 @@ class ElasticRods_TensorialUniform
   
       return values;
     }
-}; // end of class Diffusion_TensorialUniform
+}; // end of class ElasticRods_TensorialUniform
 
 #endif
