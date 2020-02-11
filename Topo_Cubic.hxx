@@ -19,6 +19,7 @@
 #define TOPO_CUBIC_HXX
 
 #include "TypeDefs.hxx"
+#include "HyAssert.hxx"
 #include <array>
 #include <vector>
 
@@ -99,6 +100,10 @@ class Cubic
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.
        *
+       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
+       *          A prototype of this function is located in the cxx file, where you could also
+       *          insert the new function.
+       * 
        * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
        * which is given as input data and the index of the hyperedge to be constructed.
        * 
@@ -113,7 +118,8 @@ class Cubic
        *
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
-      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const;    
+      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const
+      { return hyNode_indices_; }
   }; // end of class hyEdge
   
   public:
@@ -189,6 +195,8 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Construct a cubic hypergraph from a \c std::array.
      *
+     * \todo    Guido: If possible, this function computes the amount of hyperedges and hypernodes.
+     * 
      * Constructs a hypergraph from a \c std::array containing the elementens per spatial dimension
      * which is given as input data. The array has the correct length (as ensured by the involved
      * template parametzer \c space_dimT.
@@ -199,11 +207,15 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Construct a hypergraph from another hypergraph.
      *
+     * \todo    Guido: If possible, this function computes the amount of hyperedges and hypernodes.
+     * 
      * Create a (value based) copy of another hypergraph.
      *
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
-    Cubic(const Cubic<hyEdge_dimT,space_dimT>& other);
+    Cubic(const Cubic<hyEdge_dimT,space_dimT>& other)
+    : num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_),
+      n_hyNodes_(other.n_hyNodes_) { }
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
@@ -217,25 +229,32 @@ class Cubic
      * \param   index           The index of the hyperedge to be returned.
      * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const value_type operator[](const hyEdge_index_t index) const;
+    const value_type operator[](const hyEdge_index_t index) const
+    {
+      hy_assert( index >= 0 && index < n_hyEdges_ ,
+                 "The index of an hyperedge must be non-negative and smaller than the total amount "
+                 << "of hyperedges, which is " << n_hyEdges_ << ". Nonetheless, the " << index <<
+                 "-th hyperedge is tried to be accessed." );
+      return hyEdge(index, num_elements_);
+    }
     /*!*********************************************************************************************
      * \brief   Read the array of elements per dimensions.
      *
      * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
      **********************************************************************************************/
-    const std::array<unsigned int, space_dimT>& num_elements() const;
+    const std::array<unsigned int, space_dimT>& num_elements() const { return num_elements_; }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
-    const hyEdge_index_t n_hyEdges() const;
+    const hyEdge_index_t n_hyEdges() const { return n_hyEdges_; }
     /*!*********************************************************************************************
      * \brief   Returns the number of hypernodes making up the hypergraph.
      *
      * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    const hyNode_index_t n_hyNodes() const;
+    const hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
 }; // end of class Cubic
 
 } // end of namespace Topology

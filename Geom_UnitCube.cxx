@@ -248,13 +248,6 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_ele
 //  sort(points_.begin(), points_.end());
 }
 
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyEdge::
-point(unsigned int index) const
-{
-  return points_[index];
-}
-
 
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyEdge::
@@ -297,23 +290,3 @@ inv_of_transposed_jacobian_at_quad(const vector<double>& local_quadrature) const
   return jac_at_quad;
 }
 */
-
-
-/*
- * HyperGraph functions!
- */
-
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-UnitCube<hyEdge_dim,space_dim>::UnitCube(const Topology::Cubic<hyEdge_dim,space_dim>& other)
-: num_elements_(other.num_elements()) { }
-
-
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-UnitCube<hyEdge_dim,space_dim>::UnitCube(const constructor_value_type& num_elements)
-{ for (unsigned int dim = 0; dim < space_dim; ++dim) num_elements_[dim] = num_elements[dim]; }
-
-
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-const typename UnitCube<hyEdge_dim, space_dim>::hyEdge
-UnitCube<hyEdge_dim,space_dim>::get_hyEdge(const hyEdge_index_t index) const
-{ return hyEdge(index, num_elements_); }

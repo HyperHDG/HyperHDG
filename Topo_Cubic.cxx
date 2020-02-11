@@ -236,14 +236,6 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dimT>& num_el
 }
 
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-const array<hyNode_index_t, 2*hyEdge_dimT>&
-Cubic<hyEdge_dimT,space_dimT>::hyEdge::get_hyNode_indices() const
-{
-  return hyNode_indices_;
-}
-
-
 /*
  * HyperGraph functions!
  */
@@ -400,48 +392,4 @@ Cubic(const constructor_value_type& num_elements)
   }
   else  hy_assert( 0 == 1 , "Internal error when trying to construct a hypergraph topology." );
   hy_assert( n_hyNodes_ > 0 , "An empty hypergraph is being constructed." );
-}
-
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-Cubic<hyEdge_dimT,space_dimT>::
-Cubic(const Cubic<hyEdge_dimT,space_dimT>& other)
-: num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_),
-  n_hyNodes_(other.n_hyNodes_) { }
-
-
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-const typename Cubic<hyEdge_dimT,space_dimT>::value_type
-Cubic<hyEdge_dimT,space_dimT>::operator[](const hyEdge_index_t index) const
-{
-  hy_assert( index >= 0 && index < n_hyEdges_ ,
-             "The index of an hyperedge must be non-negative and smaller than the total amount of "
-             << "hyperedges, which is " << n_hyEdges_ << ". Nonetheless, the " << index <<
-             "-th hyperedge is tried to be accessed." );
-  return hyEdge(index, num_elements_);
-}
-
-
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-const array<unsigned int, space_dimT>& 
-Cubic<hyEdge_dimT,space_dimT>::
-num_elements() const
-{
-  return num_elements_;
-}
-
-
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-const hyEdge_index_t
-Cubic<hyEdge_dimT,space_dimT>::
-n_hyEdges() const
-{
-  return n_hyEdges_;
-}
-
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
-const hyNode_index_t
-Cubic<hyEdge_dimT,space_dimT>::
-n_hyNodes() const
-{
-  return n_hyNodes_;
 }
