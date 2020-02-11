@@ -12,7 +12,6 @@
 #include <AbstractProblem.hxx>
 #include <SparseLinearAlgebra.hxx>
 
-#include <iostream>
 #include <string>
 
 using namespace std;
@@ -66,12 +65,5 @@ int main(int argc, char *argv[])
     if ( abs( solution[i] - python_result[i] ) >= solution_tolerance )  successful = false;
   }
   
-  if ( successful )
-  {
-    cout << "Elasticity test 1 was successful!" << endl;
-    return 0;
-  }
-  else  cout << "Elasticity test 1 failed!" << endl;
-
-  return -1;
+  return successful - 1;
 }

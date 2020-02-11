@@ -12,7 +12,6 @@
 #include <AbstractProblem.hxx>
 #include <SparseLinearAlgebra.hxx>
 
-#include <iostream>
 #include <string>
 
 using namespace std;
@@ -32,12 +31,6 @@ using namespace SparseLA;
  **************************************************************************************************/
 int main(int argc, char *argv[])
 {
-  const unsigned int space_dim = 2;
-  Point<space_dim> a, b, c;
-  a[0] = 1.; b[1] = 1.; c += 1.;
-  std::cout << "Addition!" << endl;  
-  Point<space_dim> res = a - b - c - (a - b); 
-  std::cout << res << std::endl;
   return 0;
 /*  bool successful = true;
   const double solution_tolerance = 1e-8;
