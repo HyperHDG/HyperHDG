@@ -251,6 +251,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
+  const std::array<lSol_float_t, 2> abscissas = {0., 1.};
   
   static_assert (hyEdge_dim <= 3);
   
@@ -271,47 +272,53 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 
   PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, plot_options);
   
-  // myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
-  // myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
+  myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
     
-  // std::array< std::array<double, HyperGraphT::n_dofs_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
-  // std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
-  // std::vector<double> local_primal(Hypercube<hyEdge_dim>::n_vertices()); // CHANGED FOR ABSCISSAS!
-  // std::vector< std::array<double, hyEdge_dim>  > local_dual(Hypercube<hyEdge_dim>::n_vertices()); // CHANGED FOR ABSCISSAS!
+  std::array< std::array<double, HyperGraphT::n_dofs_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
+  std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
+  std::array<double, Hypercube<hyEdge_dim>::n_vertices() > local_primal; // CHANGED FOR ABSCISSAS!
+  std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > local_dual; // CHANGED FOR ABSCISSAS!
   
-  // for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
-  // {
-  //   hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
-  //   for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-  //     hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
-  //   local_dual = local_solver.dual_in_corners_from_lambda(hyEdge_dofs);
-  //   myfile << "      ";
-  //   for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
-  //   {
-  //     myfile << "  ";
-  //     for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-  //       myfile << "  " << local_dual[corner][dim];
-  //   }
-  //   myfile << std::endl;
-  // }
+  for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+  {
+    hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
+    for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
+    if constexpr ( LocalSolverT::use_geometry() )
+      local_dual = local_solver.dual_at_dyadic(abscissas, hyper_graph.hyEdge_geometry(he_number), hyEdge_dofs);
+    else
+      local_dual = local_solver.dual_at_dyadic(abscissas, hyEdge_dofs);
+    myfile << "      ";
+    for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
+    {
+      myfile << "  ";
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+        myfile << "  " << local_dual[corner][dim];
+    }
+    myfile << std::endl;
+  }
 
-  // myfile << "        </DataArray>" << std::endl;
-  // myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+  myfile << "        </DataArray>" << std::endl;
+  myfile << "        <DataArray type=\"Float32\" Name=\"" << "primal" << "\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   
-  // for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
-  // {
-  //   hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
-  //   for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-  //     hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
-  //   local_primal = local_solver.primal_in_corners_from_lambda(hyEdge_dofs);
-  //   myfile << "        ";
-  //   for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
-  //     myfile << "  " << local_primal[corner];
-  //   myfile << std::endl;
-  // }
+  for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+  {
+    hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
+    for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
+    if constexpr ( LocalSolverT::use_geometry() )
+      local_primal = local_solver.primal_at_dyadic(abscissas, hyper_graph.hyEdge_geometry(he_number), hyEdge_dofs);
+    else
+      local_primal = local_solver.primal_at_dyadic(abscissas, hyEdge_dofs);
+    myfile << "        ";
+    for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
+      myfile << "  " << local_primal[corner];
+    myfile << std::endl;
+  }
 
-  // myfile << "        </DataArray>" << std::endl;
-  // myfile << "      </PointData>" << std::endl;  
+  myfile << "        </DataArray>" << std::endl;
+  myfile << "      </PointData>" << std::endl;  
   
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;

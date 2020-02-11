@@ -166,7 +166,7 @@ inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeX>
+template<std::size_t sizeX>
 inline std::array<lSol_float_t, sizeX> shape_fct_eval
 ( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
 {
@@ -187,7 +187,7 @@ inline std::array<lSol_float_t, sizeX> shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeX>
+template<std::size_t sizeX>
 inline std::array<lSol_float_t, sizeX> shape_der_eval
 ( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
 {
@@ -208,7 +208,7 @@ inline std::array<lSol_float_t, sizeX> shape_der_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeInd>
+template<std::size_t sizeInd>
 inline std::array<lSol_float_t, sizeInd> shape_fct_eval
 ( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
 {
@@ -229,7 +229,7 @@ inline std::array<lSol_float_t, sizeInd> shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeInd>
+template<std::size_t sizeInd>
 inline std::array<lSol_float_t, sizeInd> shape_der_eval
 ( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
 {
@@ -250,7 +250,7 @@ inline std::array<lSol_float_t, sizeInd> shape_der_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeInd, unsigned int sizeX>
+template<std::size_t sizeInd, std::size_t sizeX>
 inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
 ( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
 {
@@ -272,7 +272,7 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int sizeInd, unsigned int sizeX>
+template<std::size_t sizeInd, std::size_t sizeX>
 inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
 ( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
 {

@@ -533,7 +533,7 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<unsigned int sizeT> std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)>
+    template<std::size_t sizeT> std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)>
     primal_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas,
      const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
@@ -576,7 +576,7 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<unsigned int sizeT>
+    template<std::size_t sizeT>
     std::array< std::array<lSol_float_t,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > 
     dual_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas,

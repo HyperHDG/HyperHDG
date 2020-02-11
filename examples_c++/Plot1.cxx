@@ -34,13 +34,13 @@ void test()
   if (space_dim >= 1) num_elements.push_back(4);
   if (space_dim >= 2) num_elements.push_back(3);
   if (space_dim >= 3) num_elements.push_back(2);
-
+/*
   typedef Topology::Cubic<edge_dim,space_dim> Topo;
   typedef Geometry::UnitCube<edge_dim,space_dim> Geo;
   auto topo = std::make_shared<const Topo> (num_elements);
   auto geo = std::make_shared<const Geo> (*topo);
-  HDGHyperGraph<1,Topo,Geo> hdg_graph(topo, geo);
-  vector<double> vectorDirichlet;// = diffusion_problem.return_zero_vector();
+  HDGHyperGraph<2,Topo,Geo> hdg_graph(topo, geo); // Must be according to the local solver!
+  vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
 
   Diffusion_TensorialUniform<edge_dim,1,1> lsolver(1.);
 
@@ -50,7 +50,7 @@ void test()
   pltop.fileName = name;
   pltop.printFileNumber = false;
   plot(hdg_graph, lsolver, vectorDirichlet, pltop);
-}
+*/}
 
 int main()
 {
