@@ -13,7 +13,7 @@
 using namespace std;
 using namespace Topology;
 
-typedef unsigned int hyNode_index_t;
+typedef unsigned int hyNode_index_t, hyEdge_index_t;
 
 /*
  * Relevant instances of cubic topology!
@@ -225,9 +225,9 @@ array<hyNode_index_t, 6> cube_to_square_index
 }
 
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyperT>
-Cubic<hyEdge_dimT,space_dimT,hyperT>::hyEdge::
-hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dimT>& num_elements)
+template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyE, typename hyperT>
+Cubic<hyEdge_dimT,space_dimT,hyE, hyperT>::hyEdge::
+hyEdge(const hyE index, const array<unsigned int, space_dimT>& num_elements)
 {
   for (unsigned int local_hyNode = 0; local_hyNode < 2 * hyEdge_dimT; ++local_hyNode)
     correct_hyNode_orientation_[local_hyNode] = 1;
@@ -242,8 +242,8 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dimT>& num_el
  */
 
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyperT>
-Cubic<hyEdge_dimT,space_dimT,hyperT>::
+template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyE, typename hyperT>
+Cubic<hyEdge_dimT,space_dimT,hyE,hyperT>::
 Cubic(const array<unsigned int, space_dimT>& num_elements)
 : num_elements_(num_elements)
 {
@@ -318,8 +318,8 @@ Cubic(const array<unsigned int, space_dimT>& num_elements)
   hy_assert( n_hyNodes_ > 0 , "An empty hypergraph is being constructed." );
 }
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyT>
-Cubic<hyEdge_dimT,space_dimT,hyT>::
+template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyE, typename hyT>
+Cubic<hyEdge_dimT,space_dimT,hyE,hyT>::
 Cubic(const constructor_value_type& num_elements)
 {
   for (unsigned int dim = 0; dim < space_dimT; ++dim) num_elements_[dim] = num_elements[dim];

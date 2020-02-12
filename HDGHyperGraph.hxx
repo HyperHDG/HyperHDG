@@ -38,7 +38,8 @@
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_dofs_per_nodeT, class TopoT, class GeomT >
+template
+< unsigned int n_dofs_per_nodeT, class TopoT, class GeomT, typename hyEdge_index_t = unsigned int >
 class HDGHyperGraph
 {
   
@@ -377,8 +378,8 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to first \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT >::iterator begin() const
-    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT >::iterator(*this, 0); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator begin() const
+    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator(*this, 0); }
     /*!*********************************************************************************************
      * \brief   Return iterator to the end of \c hyEdge list.
      *
@@ -389,8 +390,11 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT >::iterator end() const
-    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT >::iterator(*this, n_hyEdges()); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator end() const
+    { 
+      return
+        HDGHyperGraph<n_dofs_per_nodeT,TopoT,GeomT,hyEdge_index_t>::iterator(*this, n_hyEdges());
+    }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
      *
