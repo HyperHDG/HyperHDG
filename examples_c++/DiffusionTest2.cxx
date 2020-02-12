@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   
   DiffusionProblemRegularNaiveF<1,3,1> diffusion_problem(num_elements, num_elements, 1.f);
   
-  vector<float> vectorDirichlet = diffusion_problem.return_zero_vector();
+  vector<float> vectorDirichlet = diffusion_problem.return_zero_vector<float>();
   vectorDirichlet[0] = 1.;
   vectorDirichlet[vectorDirichlet.size()-1] = 0.;
   

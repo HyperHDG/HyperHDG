@@ -15,7 +15,7 @@ cdef extern from "AbstractProblem.hxx":
   cdef cppclass DiffusionProblemNaiveF "DiffusionProblemRegularNaiveF<2,3,1>":
     DiffusionProblemNaiveF(vector[unsigned int], vector[unsigned int], float) except +
     void read_dirichlet_indices(vector[unsigned int])
-    vector[float] return_zero_vector()
+    vector[float] return_zero_vector[float]()
     vector[float] matrix_vector_multiply(vector[float])
     int size_of_system()
     string plot_option(string, string)
