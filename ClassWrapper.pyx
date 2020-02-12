@@ -35,7 +35,7 @@ cdef class PyDiffusionProblemNaiveF:
   def read_dirichlet_indices(self, indices):
     self.thisptr.read_dirichlet_indices(indices)
   def return_zero_vector(self):
-    return self.thisptr.return_zero_vector()
+    return self.thisptr.return_zero_vector[float]()
   def matrix_vector_multiply(self, vec):
     return self.thisptr.matrix_vector_multiply(vec)
   def size_of_system(self):

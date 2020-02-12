@@ -64,8 +64,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template
-< class TopologyT, class GeometryT, class LocalSolverT,
-  typename dof_index_t = unsigned int, typename dof_value_t = double >
+< class TopologyT, class GeometryT, class LocalSolverT, typename dof_index_t = unsigned int >
 class AbstractProblem
 {
   private:
@@ -156,6 +155,7 @@ class AbstractProblem
      * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
+    template < typename dof_value_t = double >
     std::vector<dof_value_t> return_zero_vector( ) const
     {
       return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.);
@@ -173,7 +173,7 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
-    template < typename hyNode_index_t = unsigned int >
+    template < typename hyNode_index_t = unsigned int, typename dof_value_t = double >
     std::vector<dof_value_t> matrix_vector_multiply( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
@@ -276,6 +276,7 @@ class AbstractProblem
      * \param   lambda        A vector of unknowns containing the data vector.
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
+    template < typename dof_value_t = double >
     void plot_solution( const std::vector<dof_value_t>& lambda ) const
     {
       plot(hyper_graph_, local_solver_, lambda , plot_options );
@@ -306,8 +307,7 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >,
-                  unsigned int, double
+                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
 
 /*!*************************************************************************************************
@@ -334,8 +334,7 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using DiffusionProblemRegularNaiveF = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >,
-                  unsigned int, float
+                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >
                 >;
 
 /*!*************************************************************************************************
