@@ -62,7 +62,9 @@ namespace Topology
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyNode_index_t = unsigned int>
+template
+< unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int,
+  typename hyNode_index_t = unsigned int >
 class Cubic
 {
   

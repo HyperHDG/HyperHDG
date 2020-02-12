@@ -12,7 +12,7 @@
 using namespace std;
 using namespace Geometry;
 
-typedef unsigned int hyNode_index_t;
+typedef unsigned int hyNode_index_t, hyEdge_index_t;
 
 /*
  * Relevant instances of Unit cubes!
@@ -216,10 +216,9 @@ array<hyNode_index_t, 6> cube_to_square_index(const array<unsigned int, space_di
   return square_indices;
 }
 
-
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-UnitCube<hyEdge_dim,space_dim>::hyEdge::
-hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_elements)
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename hyE>
+UnitCube<hyEdge_dim,space_dim, hyE>::hyEdge::
+hyEdge(const hyE index, const array<unsigned int, space_dim>& num_elements)
 {
   if constexpr ( hyEdge_dim == 1 )
   {
@@ -250,8 +249,8 @@ hyEdge(const hyEdge_index_t index, const array<unsigned int, space_dim>& num_ele
 }
 
 
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-Point<space_dim> UnitCube<hyEdge_dim,space_dim>::hyEdge::
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename hyE>
+Point<space_dim> UnitCube<hyEdge_dim,space_dim,hyE>::hyEdge::
 normal(unsigned int index) const
 {
   Point<space_dim> normal;

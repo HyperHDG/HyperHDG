@@ -10,7 +10,7 @@
 namespace Geometry
 {
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT>
+template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int>
 class File
 {
   

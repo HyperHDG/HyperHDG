@@ -62,7 +62,7 @@ namespace Geometry
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename hyEdge_index_t = unsigned int>
 class UnitCube
 {
   
