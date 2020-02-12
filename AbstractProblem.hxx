@@ -64,7 +64,8 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template
-< class TopologyT, class GeometryT, class LocalSolverT, typename dof_index_t = unsigned int >
+< class TopologyT, class GeometryT, class LocalSolverT,
+  typename dof_index_t = unsigned int, typename dof_value_t = double >
 class AbstractProblem
 {
   private:
