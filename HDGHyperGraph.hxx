@@ -4,10 +4,6 @@
 #include <HyAssert.hxx>
 #include <HyperNodeFactory.hxx>
 
-#include <Topo.hxx>
-#include <Geom_UnitCube.hxx>
-#include <Geom_File.hxx>
-
 #include <memory>
 
 /*!*************************************************************************************************
@@ -258,9 +254,10 @@ class HDGHyperGraph
      * \brief   Hypernode factory administrating the access to degrees of freedom.
      *
      * A \c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
-     * are located in some \c std::vector.
+     * are located in some \c std::vector. Note that this HyperNodeFactory has the same index type
+     * for the hypernodes as this class for the hyperedges.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_nodeT> hyNode_factory_;
+    const HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t> hyNode_factory_;
   public:
     /*!*********************************************************************************************
      * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.

@@ -20,9 +20,13 @@
 // These also would ben included when splitted in .C and .h files.
 #include <HDGHyperGraph.hxx>
 #include <Plot.hxx>
+
 /// \todo Those do not have any business in "AbstractProblem.hxx"
 #include <LSol_Diffusion.hxx>
 #include <LSol_Elasticity.hxx>
+#include <Topo.hxx>
+#include <Geom_UnitCube.hxx>
+#include <Geom_File.hxx>
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
