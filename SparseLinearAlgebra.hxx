@@ -172,7 +172,7 @@ std::vector<dof_value_t> conjugate_gradient
 ( const std::vector<dof_value_t>& b, const ProblemT& problem,
   unsigned int n_iterations = 0, const dof_value_t tolerance = 1e-9 )
 {
-  std::vector<dof_value_t> x (b.size(), 0.);
+  std::vector<dof_value_t> x (b.size(), 0.f);
   std::vector<dof_value_t> r = b; // b - A * x (with x = 0)
   std::vector<dof_value_t> d = r;
   
@@ -195,13 +195,13 @@ std::vector<dof_value_t> conjugate_gradient
     r_square_old = r_square_new;
     
     dof_value_t alpha = r_square_old / inner_product(d,z);
-    linear_combination(1.,x, alpha,d,  x);
-    linear_combination(1.,r, -alpha,z, r);
+    linear_combination(1.f,x, alpha,d,  x);
+    linear_combination(1.f,r, -alpha,z, r);
     
     r_square_new = inner_product(r,r);
     
     dof_value_t beta = r_square_new / r_square_old;
-    linear_combination(1., r, beta,d,  d);
+    linear_combination(1.f, r, beta,d,  d);
     
     if ( std::sqrt(r_square_new) < tolerance )  
     {

@@ -136,10 +136,10 @@ class PlotOptions
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template <class HyperGraphT, class LocalSolverT>
+template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot(const HyperGraphT& hyper_graph,
 	  const LocalSolverT& local_solver,
-	  const std::vector<double>& lambda,
+	  const std::vector<dof_value_t>& lambda,
 	  const PlotOptions& plot_options);
 
 
@@ -240,17 +240,18 @@ namespace PlotFunctions
   }
 }
 
-template <class HyperGraphT, class LocalSolverT, typename hyEdge_index_t = unsigned int>
+template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double,
+        typename hyEdge_index_t = unsigned int>
 void plot_vtu(const HyperGraphT& hyper_graph,
 	      const LocalSolverT& local_solver,
-	      const std::vector<double>& lambda,
+	      const std::vector<dof_value_t>& lambda,
 	      const PlotOptions& plot_options)
 {
   constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
   
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
-  const std::array<double, 2> abscissas = {0., 1.};
+  const std::array<dof_value_t, 2> abscissas = {0., 1.};
   
   static_assert (hyEdge_dim <= 3);
   
@@ -274,10 +275,10 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
   myfile << "        <DataArray type=\"Float32\" Name=\"" << "dual" << "\" NumberOfComponents=\"" << hyEdge_dim << "\" format=\"ascii\">" << std::endl;
     
-  std::array< std::array<double, HyperGraphT::n_dofs_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
+  std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
   std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
-  std::array<double, Hypercube<hyEdge_dim>::n_vertices() > local_primal; // CHANGED FOR ABSCISSAS!
-  std::array< std::array<double, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > local_dual; // CHANGED FOR ABSCISSAS!
+  std::array<dof_value_t, Hypercube<hyEdge_dim>::n_vertices() > local_primal; // CHANGED FOR ABSCISSAS!
+  std::array< std::array<dof_value_t, hyEdge_dim> , Hypercube<hyEdge_dim>::n_vertices() > local_dual; // CHANGED FOR ABSCISSAS!
   
   for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
   {
@@ -347,10 +348,10 @@ void plot_vtu(const HyperGraphT& hyper_graph,
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template <class HyperGraphT, class LocalSolverT>
+template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot(const HyperGraphT& hyper_graph,
 	  const LocalSolverT& local_solver,
-	  const std::vector<double>& lambda,
+	  const std::vector<dof_value_t>& lambda,
 	  const PlotOptions& plot_options)
 {
   hy_assert( plot_options.fileEnding == "vtu" , 

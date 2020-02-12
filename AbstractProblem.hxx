@@ -306,7 +306,36 @@ template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg
 using DiffusionProblemRegularNaive = 
 AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
+                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >,
+                  unsigned int, double
+                >;
+
+/*!*************************************************************************************************
+ * \brief   This is an example problem.
+ *
+ * This class contains functions to define and solve Poisson's equation, i.e.,
+ * \f[
+ *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * \f]
+ * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
+ *
+ * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dim     The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dim.
+ * \tparam  poly_degree   The polynomial degree of test and trial functions.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+using DiffusionProblemRegularNaiveF = 
+AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
+                  Geometry::UnitCube< hyEdge_dim, space_dim >,
+                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >,
+                  unsigned int, float
                 >;
 
 /*!*************************************************************************************************
