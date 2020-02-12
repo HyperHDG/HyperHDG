@@ -65,7 +65,7 @@ struct SparseLASolveException : public std::exception
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < typename dof_index_t = unsigned int >
+template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 dof_value_t inner_product
 ( const std::vector<dof_value_t>& left, const std::vector<dof_value_t>& right )
 {
@@ -87,6 +87,7 @@ dof_value_t inner_product
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
+template < typename dof_value_t = double >
 dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
 {
   return std::sqrt( inner_product(vec,vec) );
@@ -107,7 +108,7 @@ dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < typename dof_index_t = unsigned int >
+template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 std::vector<dof_value_t> linear_combination
 ( const dof_value_t leftFac, const std::vector<dof_value_t>& leftVec,
   const dof_value_t rightFac, const std::vector<dof_value_t>& rightVec )
@@ -136,7 +137,7 @@ std::vector<dof_value_t> linear_combination
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < typename dof_index_t = unsigned int >
+template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_value_t>& leftV,
                           const dof_value_t rightFac, const std::vector<dof_value_t>& rightV,
                           std::vector<dof_value_t>& result )
@@ -167,7 +168,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<class ProblemT>
+template<class ProblemT, typename dof_value_t = double >
 std::vector<dof_value_t> conjugate_gradient
 ( const std::vector<dof_value_t>& b, const ProblemT& problem,
   unsigned int n_iterations = 0, const dof_value_t tolerance = 1e-9 )

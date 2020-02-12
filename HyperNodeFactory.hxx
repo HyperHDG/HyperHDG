@@ -112,7 +112,7 @@ class HyperNodeFactory
      * \retval  dof_values          A \c std::array containing the values of related degrees of
      *                              freedom.
      **********************************************************************************************/
-    template < typename dof_index_t = unsigned int >
+    template < typename dof_index_t = unsigned int, typename dof_value_t = double >
     std::array<dof_value_t, n_dofs_per_nodeT> get_dof_values
       (const hyNode_index_t hyNode_index, const std::vector<dof_value_t>& global_dof_vector) const
     {
@@ -139,7 +139,7 @@ class HyperNodeFactory
      *                              global ones.
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
-    template < typename dof_index_t = unsigned int >
+    template < typename dof_index_t = unsigned int, typename dof_value_t = double >
     void add_to_dof_values
       (const hyNode_index_t hyNode_index, std::vector<dof_value_t>& global_dof_vector,
        const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
@@ -164,7 +164,7 @@ class HyperNodeFactory
      * \param   value               The future value of related degrees of freedom.
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
-    template < typename dof_index_t = unsigned int >
+    template < typename dof_index_t = unsigned int, typename dof_value_t = double >
     void set_dof_values(const hyNode_index_t hyNode_index,
       std::vector<dof_value_t>& global_dof_vector, const dof_value_t value) const
     {
