@@ -86,7 +86,8 @@ class HyperNodeFactory
      * \retval  n_global_dofs       The total amount of degreees of freedom in the considered
      *                              hypergraph.
      **********************************************************************************************/
-    const dof_index_type n_global_dofs() const  { return n_hyNodes_ * n_dofs_per_nodeT; }
+    template < typename dof_index_t = unsigned int >
+    const dof_index_t n_global_dofs() const  { return n_hyNodes_ * n_dofs_per_nodeT; }
     /*!*********************************************************************************************
      * \brief   Calculate global indices of degrees of freedom related to a hypernode.
      * 
@@ -94,11 +95,12 @@ class HyperNodeFactory
      * \retval  dof_indices         A \c std::array containing the global indices of related degrees
      *                              of freedom.
      **********************************************************************************************/
-    std::array<dof_index_type, n_dofs_per_nodeT> get_dof_indices
+    template < typename dof_index_t = unsigned int >
+    std::array<dof_index_t, n_dofs_per_nodeT> get_dof_indices
       (const hyNode_index_t hyNode_index) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
-      std::array<dof_index_type, n_dofs_per_nodeT> dof_indices;
+      dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      std::array<dof_index_t, n_dofs_per_nodeT> dof_indices;
       for (unsigned int i = 0; i < n_dofs_per_nodeT; ++i)
         dof_indices[i] = initial_dof_index + i;
       return dof_indices;
@@ -110,10 +112,11 @@ class HyperNodeFactory
      * \retval  dof_values          A \c std::array containing the values of related degrees of
      *                              freedom.
      **********************************************************************************************/
+    template < typename dof_index_t = unsigned int >
     std::array<dof_value_t, n_dofs_per_nodeT> get_dof_values
       (const hyNode_index_t hyNode_index, const std::vector<dof_value_t>& global_dof_vector) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( initial_dof_index >= 0
                    && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << ", should be non-negative. " <<
@@ -136,11 +139,12 @@ class HyperNodeFactory
      *                              global ones.
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
+    template < typename dof_index_t = unsigned int >
     void add_to_dof_values
       (const hyNode_index_t hyNode_index, std::vector<dof_value_t>& global_dof_vector,
        const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( local_dof_vector.size() == n_dofs_per_nodeT ,
                  "The size of the local dof vector is " << local_dof_vector.size() << ", but should"
                   << " be equal to the amount of local dofs, which is " << n_dofs_per_nodeT << "." );
@@ -160,10 +164,11 @@ class HyperNodeFactory
      * \param   value               The future value of related degrees of freedom.
      * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      **********************************************************************************************/
+    template < typename dof_index_t = unsigned int >
     void set_dof_values(const hyNode_index_t hyNode_index,
       std::vector<dof_value_t>& global_dof_vector, const dof_value_t value) const
     {
-      dof_index_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( initial_dof_index >= 0
                    && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << "should be non-negative. " <<

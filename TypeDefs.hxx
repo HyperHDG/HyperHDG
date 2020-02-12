@@ -14,7 +14,7 @@
 #ifndef TYPEDEFS_HXX
 #define TYPEDEFS_HXX
 
-typedef unsigned int  hyEdge_index_t, dof_index_type;
+typedef unsigned int  hyEdge_index_t;
 typedef double        dof_value_t;
 
 #endif // end of ifndef TYPEDEFS_HXX
