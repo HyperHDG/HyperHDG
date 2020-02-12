@@ -455,7 +455,8 @@ class HDGHyperGraph
      * \retval  n_global_dofs         The total amount of degreees of freedom in the considered
      *                                hypergraph.
      **********************************************************************************************/
-    const dof_index_type n_global_dofs() const  { return hyNode_factory_.n_global_dofs(); }
+    template < typename dof_index_t = unsigned int >
+    const dof_index_t n_global_dofs() const  { return hyNode_factory_.n_global_dofs(); }
 }; // end of class HDGHyperGraph
 
 #endif // end of ifndef HYPERGRAPH_HXX

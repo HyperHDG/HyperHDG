@@ -63,12 +63,13 @@
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <class TopologyT, class GeometryT, class LocalSolverT>
+template
+< class TopologyT, class GeometryT, class LocalSolverT, typename dof_index_t = unsigned int >
 class AbstractProblem
 {
   private:
     HDGHyperGraph<LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT> hyper_graph_;
-    std::vector<dof_index_type> dirichlet_indices_;
+    std::vector<dof_index_t> dirichlet_indices_;
     const LocalSolverT  local_solver_;
     PlotOptions   plot_options;
   public:
@@ -136,13 +137,13 @@ class AbstractProblem
       dirichlet_indices_.resize(indices.size());
       for (unsigned int i = 0; i < indices.size(); ++i)
       {
-        hy_assert( (dof_index_type) indices[i] >= 0
-                      && (dof_index_type) indices[i] < hyper_graph_.n_global_dofs(), 
+        hy_assert( (dof_index_t) indices[i] >= 0
+                      && (dof_index_t) indices[i] < hyper_graph_.n_global_dofs(), 
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
                    << "In this case, the index is " << indices[i] << " and the total amount of " <<
                    "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        dirichlet_indices_[i] = (dof_index_type) indices[i];
+        dirichlet_indices_[i] = (dof_index_t) indices[i];
       }
     }
     /*!*********************************************************************************************
@@ -202,7 +203,7 @@ class AbstractProblem
       });
       
       // Set all Dirichlet values to zero.
-      for ( dof_index_type i = 0 ; i < dirichlet_indices_.size() ; ++i )
+      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
       {
         hy_assert( dirichlet_indices_[i] >= 0 
                      && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
@@ -227,7 +228,7 @@ class AbstractProblem
      * \retval  n             An \c int which Python needs and actually is a parsed \c unsigned
      *                        \c int.
      **********************************************************************************************/
-    dof_index_type size_of_system() const
+    dof_index_t size_of_system() const
     {
       return hyper_graph_.n_global_dofs();
     }

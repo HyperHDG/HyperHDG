@@ -65,13 +65,14 @@ struct SparseLASolveException : public std::exception
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
+template < typename dof_index_t = unsigned int >
 dof_value_t inner_product
 ( const std::vector<dof_value_t>& left, const std::vector<dof_value_t>& right )
 {
   hy_assert( left.size() == right.size() , "Both vectors of inner product must be of same size!" );
   
   dof_value_t product = 0.;
-  for (dof_index_type i = 0; i < left.size(); ++i)  product += left[i] * right[i];
+  for (dof_index_t i = 0; i < left.size(); ++i)  product += left[i] * right[i];
   return product;
 }
 /*!*************************************************************************************************
@@ -106,6 +107,7 @@ dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
+template < typename dof_index_t = unsigned int >
 std::vector<dof_value_t> linear_combination
 ( const dof_value_t leftFac, const std::vector<dof_value_t>& leftVec,
   const dof_value_t rightFac, const std::vector<dof_value_t>& rightVec )
@@ -113,7 +115,7 @@ std::vector<dof_value_t> linear_combination
   hy_assert( leftVec.size() == rightVec.size() , "Linear combined vectors must be of same size!" );
   
   std::vector<dof_value_t> lin_comb ( leftVec.size() , 0. );
-  for (dof_index_type i = 0; i < leftVec.size(); ++i)
+  for (dof_index_t i = 0; i < leftVec.size(); ++i)
     lin_comb[i] = leftFac * leftVec[i] + rightFac * rightVec[i];
   return lin_comb;
 }
@@ -134,6 +136,7 @@ std::vector<dof_value_t> linear_combination
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
+template < typename dof_index_t = unsigned int >
 void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_value_t>& leftV,
                           const dof_value_t rightFac, const std::vector<dof_value_t>& rightV,
                           std::vector<dof_value_t>& result )
@@ -141,7 +144,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
   hy_assert( leftV.size() == rightV.size() && leftV.size() == result.size() ,
              "All three vectors of linear combination must be of same size!" );
   
-  for (dof_index_type i = 0; i < result.size(); ++i)
+  for (dof_index_t i = 0; i < result.size(); ++i)
     result[i] = leftFac * leftV[i] + rightFac * rightV[i];
 }
 /*!*************************************************************************************************
