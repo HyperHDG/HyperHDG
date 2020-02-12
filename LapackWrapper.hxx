@@ -25,7 +25,6 @@
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
  * \todo    Should we remove the assertion if the exception is there anyways?
- * \todo    Check for LAPACK for float such that we can use TypeDefs.hxx, here!
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019.
  * \authors   Andreas Rupp, University of Heidelberg, 2019.

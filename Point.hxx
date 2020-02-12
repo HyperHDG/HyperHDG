@@ -12,7 +12,6 @@
 #ifndef POINT_HXX
 #define POINT_HXX
 
-#include <TypeDefs.hxx>
 #include <HyAssert.hxx>
 
 #include <array>
@@ -78,20 +77,21 @@ class Point
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
-    Point(const Point<space_dim>& other) : coordinates_(other.coordinates_) { }
+    Point(const Point<space_dim,pt_coord_t>& other) : coordinates_(other.coordinates_) { }
     /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
-    Point(Point<space_dim>&& other) noexcept : coordinates_(std::move(other.coordinates_)) { }
+    Point(Point<space_dim,pt_coord_t>&& other) noexcept
+    : coordinates_(std::move(other.coordinates_)) { }
     /*!*********************************************************************************************
      * \brief   Copy assignment.
      **********************************************************************************************/
-    Point<space_dim>& operator= (const Point<space_dim>& other)
+    Point<space_dim,pt_coord_t>& operator= (const Point<space_dim,pt_coord_t>& other)
     { coordinates_ = other.coordinates_; return *this; }
     /*!*********************************************************************************************
      * \brief   Move assignment.
      **********************************************************************************************/
-    Point<space_dim>& operator= (Point<space_dim>&& other) noexcept
+    Point<space_dim,pt_coord_t>& operator= (Point<space_dim,pt_coord_t>&& other) noexcept
     { std::swap(coordinates_, other.coordinates_); return *this; }
     
     // Random access operators:
@@ -139,7 +139,7 @@ class Point
      * \param   other_point   Another \c Point<space_dim> that is to be dicriminate from.
      * \retval  isEqual       A \c boolean which is true if both points have the same coordinates.
      **********************************************************************************************/
-    bool operator==(const Point<space_dim>& other_point) const
+    bool operator==(const Point<space_dim,pt_coord_t>& other_point) const
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         if (coordinates_[dim] != other_point[dim])  return false;
@@ -155,7 +155,7 @@ class Point
      * \param   other_point   Another \c Point<space_dim> that is to be dicriminate from.
      * \retval  isEqual       A \c boolean which is false if both points have the same coordinates.
      **********************************************************************************************/
-    bool operator!=(const Point<space_dim>& other_point) const
+    bool operator!=(const Point<space_dim,pt_coord_t>& other_point) const
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         if (coordinates_[dim] != other_point[dim])  return true;
@@ -173,7 +173,7 @@ class Point
      * \retval  isEqual       A \c boolean which is true if the left point is strictly smaller than
      *                        the right one.
      **********************************************************************************************/
-    bool operator<(const Point<space_dim>& other_point) const
+    bool operator<(const Point<space_dim,pt_coord_t>& other_point) const
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
         if (coordinates_[dim] < other_point[dim])      return true;
@@ -189,7 +189,7 @@ class Point
      * \param   scalar        Floating point that is added to all of the point's coordinates.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator+=(const pt_coord_t scalar)
+    Point<space_dim,pt_coord_t>& operator+=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] += scalar;
       return *this;
@@ -200,7 +200,7 @@ class Point
      * \param   scalar        Floating point that is subtracted from all of the point's coordinates.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator-=(const pt_coord_t scalar)
+    Point<space_dim,pt_coord_t>& operator-=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] -= scalar;
       return *this;
@@ -211,7 +211,7 @@ class Point
      * \param   scalar        Floating point that is multiplied with all of the point's coordinates.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator*=(const pt_coord_t scalar)
+    Point<space_dim,pt_coord_t>& operator*=(const pt_coord_t scalar)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] *= scalar;
       return *this;
@@ -222,7 +222,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator/=(const pt_coord_t scalar)
+    Point<space_dim,pt_coord_t>& operator/=(const pt_coord_t scalar)
     {
       if (scalar == 0.)  throw PointDivByZeroException();
 //      hy_assert( scalar != 0. , "Division by zeros is not well-defined!" );
@@ -238,7 +238,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator+=(const Point<space_dim>& other)
+    Point<space_dim,pt_coord_t>& operator+=(const Point<space_dim,pt_coord_t>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] += other[dim];
       return *this;
@@ -249,7 +249,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator-=(const Point<space_dim>& other)
+    Point<space_dim,pt_coord_t>& operator-=(const Point<space_dim,pt_coord_t>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] -= other[dim];
       return *this;
@@ -260,7 +260,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator*=(const Point<space_dim>& other)
+    Point<space_dim,pt_coord_t>& operator*=(const Point<space_dim,pt_coord_t>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)  coordinates_[dim] *= other[dim];
       return *this;
@@ -271,7 +271,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    Point<space_dim>& operator/=(const Point<space_dim>& other)
+    Point<space_dim,pt_coord_t>& operator/=(const Point<space_dim,pt_coord_t>& other)
     {
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
@@ -291,7 +291,7 @@ class Point
      * \param   scalar        Floating point (\f$\neq 0\f$) all coordinates are divided by.
      * \retval  this_point    The updated point.
      **********************************************************************************************/
-    pt_coord_t operator*(const Point<space_dim>& other) const
+    pt_coord_t operator*(const Point<space_dim,pt_coord_t>& other) const
     {
       pt_coord_t scalar_product = 0.;
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -308,10 +308,11 @@ class Point
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>& right)
+template<unsigned int space_dim, typename pt_coord_t >
+Point<space_dim,pt_coord_t> operator+
+(const Point<space_dim,pt_coord_t>& left, const Point<space_dim,pt_coord_t>& right)
 {
-  Point<space_dim> sum(left);
+  Point<space_dim,pt_coord_t> sum(left);
   return sum += right;
 }
 /*!*************************************************************************************************
@@ -320,10 +321,11 @@ Point<space_dim> operator+(const Point<space_dim>& left, const Point<space_dim>&
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>& right)
+template<unsigned int space_dim, typename pt_coord_t >
+Point<space_dim,pt_coord_t> operator-
+(const Point<space_dim,pt_coord_t>& left, const Point<space_dim,pt_coord_t>& right)
 {
-  Point<space_dim> difference(left);
+  Point<space_dim,pt_coord_t> difference(left);
   return difference -= right;
 }
 /*!*************************************************************************************************
@@ -332,10 +334,11 @@ Point<space_dim> operator-(const Point<space_dim>& left, const Point<space_dim>&
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> hada_prod(const Point<space_dim>& left, const Point<space_dim>& right)
+template<unsigned int space_dim, typename pt_coord_t >
+Point<space_dim,pt_coord_t> hada_prod
+(const Point<space_dim,pt_coord_t>& left, const Point<space_dim,pt_coord_t>& right)
 {
-  Point<space_dim> product(left);
+  Point<space_dim,pt_coord_t> product(left);
   return product *= right;
 }
 /*!*************************************************************************************************
@@ -344,10 +347,11 @@ Point<space_dim> hada_prod(const Point<space_dim>& left, const Point<space_dim>&
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>& right)
+template<unsigned int space_dim, typename pt_coord_t >
+Point<space_dim,pt_coord_t> hada_divi
+(const Point<space_dim,pt_coord_t>& left, const Point<space_dim,pt_coord_t>& right)
 {
-  Point<space_dim> quotient(left);
+  Point<space_dim,pt_coord_t> quotient(left);
   return quotient /= right;;
 }
 
@@ -360,9 +364,10 @@ Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>&
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
+Point<space_dim,pt_coord_t> operator+
+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
-  Point<space_dim> sum(pt);
+  Point<space_dim,pt_coord_t> sum(pt);
   return sum += scalar;
 }
 /*!*************************************************************************************************
@@ -372,9 +377,10 @@ Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim,pt_co
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
+Point<space_dim,pt_coord_t> operator+
+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
-  Point<space_dim> sum(pt);
+  Point<space_dim,pt_coord_t> sum(pt);
   return sum += scalar;
 }
 /*!*************************************************************************************************
@@ -384,9 +390,10 @@ Point<space_dim> operator+(const Point<space_dim,pt_coord_t>& pt, const pt_coord
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
+Point<space_dim,pt_coord_t> operator-
+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
-  Point<space_dim> difference(pt);
+  Point<space_dim,pt_coord_t> difference(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] = scalar - pt[dim];
   return difference;
 }
@@ -397,9 +404,10 @@ Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim,pt_co
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator-(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
+Point<space_dim,pt_coord_t> operator-
+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
-  Point<space_dim> difference(pt);
+  Point<space_dim,pt_coord_t> difference(pt);
   return difference -= scalar;
 }
 /*!*************************************************************************************************
@@ -409,9 +417,10 @@ Point<space_dim> operator-(const Point<space_dim,pt_coord_t>& pt, const pt_coord
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
+Point<space_dim,pt_coord_t> operator*
+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
-  Point<space_dim> product(pt);
+  Point<space_dim,pt_coord_t> product(pt);
   return product *= scalar;
 }
 /*!*************************************************************************************************
@@ -421,9 +430,10 @@ Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim,pt_co
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator*(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
+Point<space_dim,pt_coord_t> operator*
+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
-  Point<space_dim> product(pt);
+  Point<space_dim,pt_coord_t> product(pt);
   return product *= scalar;
 }
 /*!*************************************************************************************************
@@ -433,9 +443,10 @@ Point<space_dim> operator*(const Point<space_dim,pt_coord_t>& pt, const pt_coord
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
+Point<space_dim,pt_coord_t> operator/
+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
-  Point<space_dim> quotient(pt);
+  Point<space_dim,pt_coord_t> quotient(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
     if (pt[dim] == 0.)  throw PointDivByZeroException();
@@ -452,9 +463,10 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim,pt_co
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
-Point<space_dim> operator/(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
+Point<space_dim,pt_coord_t> operator/
+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
-  Point<space_dim> quotient(pt);
+  Point<space_dim,pt_coord_t> quotient(pt);
   return quotient /= scalar;
 }
 

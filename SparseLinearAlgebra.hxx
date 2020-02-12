@@ -16,7 +16,6 @@
 #define SPARSELINEARALGEBRA_HXX
 
 #include <HyAssert.hxx>
-#include <TypeDefs.hxx>
 
 #include <vector>
 #include <cmath>

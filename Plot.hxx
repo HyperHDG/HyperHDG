@@ -25,8 +25,6 @@
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.
-#include <HyAssert.hxx>
-#include <TypeDefs.hxx>
 #include <fstream>
 #include <iomanip>
 #include <cmath>
