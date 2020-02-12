@@ -38,8 +38,9 @@
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg,
-          unsigned int quad_deg >
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg,
+  unsigned int quad_deg, typename lSol_float_t=double >
 class ElasticRods_TensorialUniform
 {
   public:

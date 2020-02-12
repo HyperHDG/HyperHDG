@@ -47,7 +47,7 @@ struct PointDivByZeroException : public std::exception
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int space_dim>
+template < unsigned int space_dim, typename pt_coord_t = float >
 class Point
 {
   private:
@@ -359,8 +359,8 @@ Point<space_dim> hada_divi(const Point<space_dim>& left, const Point<space_dim>&
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
   Point<space_dim> sum(pt);
   return sum += scalar;
@@ -371,8 +371,8 @@ Point<space_dim> operator+(const pt_coord_t& scalar, const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator+(const Point<space_dim>& pt, const pt_coord_t& scalar)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator+(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> sum(pt);
   return sum += scalar;
@@ -383,8 +383,8 @@ Point<space_dim> operator+(const Point<space_dim>& pt, const pt_coord_t& scalar)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
   Point<space_dim> difference(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)  difference[dim] = scalar - pt[dim];
@@ -396,8 +396,8 @@ Point<space_dim> operator-(const pt_coord_t& scalar, const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator-(const Point<space_dim>& pt, const pt_coord_t& scalar)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator-(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> difference(pt);
   return difference -= scalar;
@@ -408,8 +408,8 @@ Point<space_dim> operator-(const Point<space_dim>& pt, const pt_coord_t& scalar)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
   Point<space_dim> product(pt);
   return product *= scalar;
@@ -420,8 +420,8 @@ Point<space_dim> operator*(const pt_coord_t& scalar, const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator*(const Point<space_dim>& pt, const pt_coord_t& scalar)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator*(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> product(pt);
   return product *= scalar;
@@ -432,8 +432,8 @@ Point<space_dim> operator*(const Point<space_dim>& pt, const pt_coord_t& scalar)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim,pt_coord_t>& pt)
 {
   Point<space_dim> quotient(pt);
   for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -451,8 +451,8 @@ Point<space_dim> operator/(const pt_coord_t& scalar, const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
+template< unsigned int space_dim, typename pt_coord_t >
+Point<space_dim> operator/(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t& scalar)
 {
   Point<space_dim> quotient(pt);
   return quotient /= scalar;
@@ -466,8 +466,8 @@ Point<space_dim> operator/(const Point<space_dim>& pt, const pt_coord_t& scalar)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-pt_coord_t norm_1(const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+pt_coord_t norm_1(const Point<space_dim,pt_coord_t>& pt)
 {
   pt_coord_t norm = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)  norm += std::abs( pt[dim] );
@@ -481,8 +481,8 @@ pt_coord_t norm_1(const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-pt_coord_t norm_2(const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+pt_coord_t norm_2(const Point<space_dim,pt_coord_t>& pt)
 {
   return std::sqrt( pt * pt );
 }
@@ -492,8 +492,8 @@ pt_coord_t norm_2(const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-pt_coord_t norm_infty(const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+pt_coord_t norm_infty(const Point<space_dim,pt_coord_t>& pt)
 {
   pt_coord_t norm = std::abs( pt[0] );
   for (unsigned int dim = 1; dim < space_dim; ++dim)  norm = std::max( norm, std::abs(pt[dim]) );
@@ -505,8 +505,8 @@ pt_coord_t norm_infty(const Point<space_dim>& pt)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
+template< unsigned int space_dim, typename pt_coord_t >
+pt_coord_t norm_p(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t power)
 {
   pt_coord_t norm = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)  norm += std::pow( std::abs(pt[dim]) , power );
@@ -521,8 +521,8 @@ pt_coord_t norm_p(const Point<space_dim>& pt, const float power)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template<unsigned int space_dim>
-std::ostream& operator<< (std::ostream& stream, const Point<space_dim>& pt)
+template< unsigned int space_dim, typename pt_coord_t >
+std::ostream& operator<< (std::ostream& stream, const Point<space_dim,pt_coord_t>& pt)
 {
   for (unsigned int dim = 0; dim < space_dim; ++dim)  stream << " " << pt[dim] << " ";
   return stream;
