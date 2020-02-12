@@ -251,7 +251,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
-  const std::array<lSol_float_t, 2> abscissas = {0., 1.};
+  const std::array<double, 2> abscissas = {0., 1.};
   
   static_assert (hyEdge_dim <= 3);
   

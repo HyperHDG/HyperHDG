@@ -12,8 +12,6 @@
 #include <AbstractProblem.hxx>
 #include <SparseLinearAlgebra.hxx>
 
-#include <string>
-
 using namespace std;
 using namespace SparseLA;
 
@@ -31,32 +29,33 @@ using namespace SparseLA;
  **************************************************************************************************/
 int main(int argc, char *argv[])
 {
-  return 0;
-/*  bool successful = true;
-  const double solution_tolerance = 1e-8;
+  bool successful = true;
+/*  const double solution_tolerance = 1e-8;
+  const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
-  std::string filename = "domains/SimpleTriangle.geo";
-  ElasticityProblemFile<1,2,1> diffusion_problem(filename, 1.);
-    
-  vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
+  DiffusionProblemRegularNaive<1,3,1> diffusion_problem(num_elements, num_elements, 1.);
+  
+  vector<float> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = 1.;
   vectorDirichlet[vectorDirichlet.size()-1] = 0.;
   
-  const vector<int> index_vector = { 0 , ((int) vectorDirichlet.size())-1 };
+  const vector<unsigned int> index_vector = { 0 , (unsigned int) vectorDirichlet.size()-1 };
   diffusion_problem.read_dirichlet_indices(index_vector);
   
-  vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  vector<float> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
   
-  unsigned int num_of_iterations = 0;
-  vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem, num_of_iterations );
-  solution = linear_combination(1., solution, 1., vectorDirichlet);
+  vector<float> solution;
+  try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
+  catch (SparseLASolveException exc)
+  {
+    hy_assert( 0 == 1 , exc.what() );
+    successful = false;
+  }
   
-  for (unsigned int i = 0; i < solution.size(); ++i)
-    cout << solution[i] << endl;
-*/
-/*  
-  const std::vector<double> python_result = 
+  solution = linear_combination(1., solution, 1., vectorDirichlet);
+    
+  const std::vector<float> python_result = 
   { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
     0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,
     0.5,        0.42013223, 0.36123983, 0.72849089, 0.62353531, 0.52383342,
@@ -78,13 +77,6 @@ int main(int argc, char *argv[])
                "component of the solution vector!" );
     if ( abs( solution[i] - python_result[i] ) >= solution_tolerance )  successful = false;
   }
-  
-  if ( successful )
-  {
-    cout << "Diffusion test 1 was successful!" << endl;
-    return 0;
-  }
-  else  cout << "Diffusion test 1 failed!" << endl;
-*/
-  return -1;
+*/  
+  return successful - 1;
 }

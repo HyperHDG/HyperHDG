@@ -12,6 +12,7 @@
 #include <random>
 
 using namespace std;
+typedef float pt_coord_t;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
@@ -251,9 +252,11 @@ template<unsigned int space_dim> bool testPoint ( )
   }
   
   
-  hy_assert( norm_1(ptAC) == norm_p(ptAC, 1.) && norm_2(ptAC) == norm_p(ptAC, 2) ,
+  hy_assert( norm_1(ptAC) == norm_p(ptAC, (pt_coord_t) 1.) 
+               && norm_2(ptAC) == norm_p(ptAC, (pt_coord_t) 2.) ,
              "Norms should be the same indpendent of their implementation!" );
-  if (norm_1(ptAC) != norm_p(ptAC, 1.) || norm_2(ptAC) != norm_p(ptAC, 2))  success = false;
+  if(norm_1(ptAC) != norm_p(ptAC, (pt_coord_t) 1.) || norm_2(ptAC) != norm_p(ptAC, (pt_coord_t) 2.))
+    success = false;
 
   for (unsigned int dim = 0; dim < space_dim; ++dim)
   {
