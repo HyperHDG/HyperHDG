@@ -30,10 +30,10 @@ using namespace SparseLA;
 int main(int argc, char *argv[])
 {
   bool successful = true;
-/*  const double solution_tolerance = 1e-8;
+  const double solution_tolerance = 1e-6; // Note that this is the minimum due to float
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
-  DiffusionProblemRegularNaive<1,3,1> diffusion_problem(num_elements, num_elements, 1.);
+  DiffusionProblemRegularNaiveF<1,3,1> diffusion_problem(num_elements, num_elements, 1.f);
   
   vector<float> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = 1.;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
   diffusion_problem.read_dirichlet_indices(index_vector);
   
   vector<float> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
-  for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
+  for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.f;
   
   vector<float> solution;
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     successful = false;
   }
   
-  solution = linear_combination(1., solution, 1., vectorDirichlet);
+  solution = linear_combination(1.f, solution, 1.f, vectorDirichlet);
     
   const std::vector<float> python_result = 
   { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
@@ -77,6 +77,6 @@ int main(int argc, char *argv[])
                "component of the solution vector!" );
     if ( abs( solution[i] - python_result[i] ) >= solution_tolerance )  successful = false;
   }
-*/  
+  
   return successful - 1;
 }

@@ -9,7 +9,9 @@
 namespace Topology
 {  
 
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int>
+template
+< unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int,
+  typename hyNode_index_t = unsigned int >
 class File
 {
   class hyEdge
@@ -20,7 +22,6 @@ class File
     public:
       hyEdge ( const File& hyGraph_topology, const hyEdge_index_t index )
       : hyGraph_topology_(hyGraph_topology), index_(index) { }
-      template < typename hyNode_index_t = unsigned int >
       const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const
       { return hyGraph_topology_.domain_info_.hyNodes_hyEdge[index_]; }
   }; // end of class hyEdge
@@ -48,7 +49,6 @@ class File
       return hyEdge(*this, index);
     }
     const hyEdge_index_t n_hyEdges() const { return domain_info_.n_hyEdges; }
-    template < typename hyNode_index_t = unsigned int >
     const hyNode_index_t n_hyNodes() const { return domain_info_.n_hyNodes; }
     const DomainInfo<hyEdge_dimT,space_dimT>& domain_info() const { return domain_info_; }
 }; // end of class File

@@ -44,7 +44,7 @@
  **************************************************************************************************/
 template
 < unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t=double >
+  typename lSol_float_t = double >
 class Diffusion_TensorialUniform
 {
   public:
@@ -147,12 +147,13 @@ class Diffusion_TensorialUniform
     static std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ >
     assemble_loc_matrix ( const lSol_float_t tau )
     { 
-      const std::array<lSol_float_t, n_quads_1D_> q_weights = FuncQuad::quad_weights<quad_deg>();
+      const std::array<lSol_float_t, n_quads_1D_> q_weights
+        = FuncQuad::quad_weights<quad_deg, lSol_float_t>();
       const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > 
-        trial(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>()),
-        deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg>());
+        trial(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg, lSol_float_t>()),
+        deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg, lSol_float_t>());
       const std::array< std::array<lSol_float_t, 2> , poly_deg + 1 >
-        trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg>());
+        trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg, lSol_float_t>());
   
       std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
       lSol_float_t integral, integral1D;
@@ -506,9 +507,9 @@ class Diffusion_TensorialUniform
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
     Diffusion_TensorialUniform(const constructor_value_type& tau)
-    : tau_(tau), q_weights_(FuncQuad::quad_weights<quad_deg>()),
-      trial_(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg>()),
-      trial_bdr_(FuncQuad::shape_fcts_at_bdrs<poly_deg>()),
+    : tau_(tau), q_weights_(FuncQuad::quad_weights<quad_deg,lSol_float_t>()),
+      trial_(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg, lSol_float_t>()),
+      trial_bdr_(FuncQuad::shape_fcts_at_bdrs<poly_deg, lSol_float_t>()),
       loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************
