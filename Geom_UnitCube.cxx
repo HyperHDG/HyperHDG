@@ -12,6 +12,7 @@
 using namespace std;
 using namespace Geometry;
 
+typedef unsigned int hyNode_index_t;
 
 /*
  * Relevant instances of Unit cubes!

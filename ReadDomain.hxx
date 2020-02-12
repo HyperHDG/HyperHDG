@@ -38,7 +38,9 @@ bool is_unique(const std::vector<T>& vec)
 }
 
 
-template < unsigned int hyEdge_dim, unsigned int space_dim >
+template 
+< unsigned int hyEdge_dim, unsigned int space_dim, typename hyNode_index_t = unsigned int,
+  typename pt_index_t = unsigned int >
 struct DomainInfo
 {
   hyEdge_index_t                                              n_hyEdges;
@@ -101,7 +103,9 @@ struct DomainInfo
 }; // end of struct DomainInfo
 
 
-template < unsigned int hyEdge_dim, unsigned int space_dim >
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, typename hyNode_index_t = unsigned int,
+  typename pt_index_t = unsigned int >
 DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
 {
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
