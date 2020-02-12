@@ -404,7 +404,7 @@ class HDGHyperGraph
      *
      * \retval  hypernode_factory     The \c HyperNodeFactory belonging the hypergraph.
      **********************************************************************************************/
-    const HyperNodeFactory<n_dofs_per_nodeT>& hyNode_factory() const
+    const HyperNodeFactory<n_dofs_per_nodeT,hyEdge_index_t>& hyNode_factory() const
     { return hyNode_factory_; }
     /*!*********************************************************************************************
      * \brief   Topological information of prescribed hyperedge.
