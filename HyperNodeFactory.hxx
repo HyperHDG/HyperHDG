@@ -15,7 +15,6 @@
 #ifndef HYPERNODEFACTORY_HXX
 #define HYPERNODEFACTORY_HXX
 
-#include <TypeDefs.hxx>
 #include <HyAssert.hxx>
 
 #include <array>

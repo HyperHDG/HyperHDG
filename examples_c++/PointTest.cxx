@@ -12,7 +12,6 @@
 #include <random>
 
 using namespace std;
-typedef float pt_coord_t;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
@@ -26,7 +25,7 @@ typedef float pt_coord_t;
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template<unsigned int space_dim> bool testPoint ( )
+template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
 {
   static_assert( space_dim != 0 , "Space dimension must be strictly larger than zero!" );
   bool success = true;
@@ -34,7 +33,7 @@ template<unsigned int space_dim> bool testPoint ( )
   const pt_coord_t minR = -10.;
   const pt_coord_t maxR = +10.;
 
-  Point<space_dim> ptA, ptB, pt;
+  Point<space_dim,pt_coord_t> ptA, ptB, pt;
   pt_coord_t randNrC, result, helper;
   
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -56,7 +55,7 @@ template<unsigned int space_dim> bool testPoint ( )
   while ( randNrC == 0. );
 
   const pt_coord_t randNrCC = randNrC;
-  const Point<space_dim> ptAC(ptA), ptBC(ptB);
+  const Point<space_dim,pt_coord_t> ptAC(ptA), ptBC(ptB);
 
   hy_assert( ptA == ptAC && !(ptA != ptAC) && !(ptA < ptAC) && !(ptAC < ptA) ,
              "Points created from same data should be equal even if one is const and one is not! "
@@ -70,8 +69,8 @@ template<unsigned int space_dim> bool testPoint ( )
     if (ptA[dim] != ptAC[dim])  success = false;
   }
   
-  Point<space_dim> ptMC( move(ptA) );
-  Point<space_dim> ptMA = Point<space_dim>(ptAC);
+  Point<space_dim,pt_coord_t> ptMC( move(ptA) );
+  Point<space_dim,pt_coord_t> ptMA = Point<space_dim,pt_coord_t>(ptAC);
   ptA = ptAC;
   
   hy_assert( ptMC == ptMA && ptMA == ptA ,
@@ -276,44 +275,85 @@ int main(int argc, char *argv[])
 {
   bool success = true, worked;
   
-  worked = testPoint<1>();
-  hy_assert( worked , "Testing point implemantation of dimension 1 failed!" );
+  worked = testPoint<1,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 1 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<2>();
-  hy_assert( worked , "Testing point implemantation of dimension 2 failed!" );
+  worked = testPoint<2,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 2 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<3>();
-  hy_assert( worked , "Testing point implemantation of dimension 3 failed!" );
+  worked = testPoint<3,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 3 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<4>();
-  hy_assert( worked , "Testing point implemantation of dimension 4 failed!" );
+  worked = testPoint<4,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 4 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<5>();
-  hy_assert( worked , "Testing point implemantation of dimension 5 failed!" );
+  worked = testPoint<5,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 5 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<6>();
-  hy_assert( worked , "Testing point implemantation of dimension 6 failed!" );
+  worked = testPoint<6,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 6 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<7>();
-  hy_assert( worked , "Testing point implemantation of dimension 7 failed!" );
+  worked = testPoint<7,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 7 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<8>();
-  hy_assert( worked , "Testing point implemantation of dimension 8 failed!" );
+  worked = testPoint<8,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 8 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<9>();
-  hy_assert( worked , "Testing point implemantation of dimension 9 failed!" );
+  worked = testPoint<9,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 9 failed!" );
   if (!worked)  success = false;
   
-  worked = testPoint<10>();
-  hy_assert( worked , "Testing point implemantation of dimension 10 failed!" );
+  worked = testPoint<10,double>();
+  hy_assert( worked , "Testing point implemantation with double precision of dimension 10 failed!");
+  if (!worked)  success = false;
+  
+  
+  worked = testPoint<1,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 1 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<2,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 2 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<3,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 3 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<4,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 4 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<5,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 5 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<6,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 6 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<7,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 7 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<8,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 8 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<9,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 9 failed!" );
+  if (!worked)  success = false;
+  
+  worked = testPoint<10,float>();
+  hy_assert( worked , "Testing point implemantation with float precision of dimension 10 failed!" );
   if (!worked)  success = false;
 
   return success - 1;

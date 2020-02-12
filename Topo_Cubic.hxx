@@ -18,7 +18,6 @@
 #ifndef TOPO_CUBIC_HXX
 #define TOPO_CUBIC_HXX
 
-#include "TypeDefs.hxx"
 #include "HyAssert.hxx"
 #include <array>
 #include <vector>

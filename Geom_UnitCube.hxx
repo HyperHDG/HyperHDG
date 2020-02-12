@@ -19,7 +19,6 @@
 #define GEOM_UNITCUBE_HXX
 
 #include <Hypercube.hxx>
-#include <TypeDefs.hxx>
 #include <Point.hxx>
 #include <Topo_Cubic.hxx>
 #include <array>

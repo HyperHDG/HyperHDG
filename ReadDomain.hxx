@@ -17,9 +17,8 @@
 #ifndef READDOMAIN_HXX
 #define READDOMAIN_HXX
 
-#include "TypeDefs.hxx"
-#include "Point.hxx"
-#include "HyAssert.hxx"
+#include <Point.hxx>
+#include <HyAssert.hxx>
 
 #include <algorithm>
 #include <array>

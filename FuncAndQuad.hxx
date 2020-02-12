@@ -24,7 +24,6 @@
 #define FUNC_AND_QUAD_HXX
 
 #include <HyAssert.hxx>
-#include <TypeDefs.hxx>
 
 #include <array>
 #include <cmath>

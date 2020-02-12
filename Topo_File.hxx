@@ -1,7 +1,6 @@
 #ifndef TOPO_FILE_HXX
 #define TOPO_FILE_HXX
 
-#include "TypeDefs.hxx"
 #include "ReadDomain.hxx"
 #include <array>
 #include <string>
