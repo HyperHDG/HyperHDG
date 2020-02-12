@@ -171,7 +171,7 @@ namespace PlotFunctions
    *
    * This function writes the `<Geometry>` part of the structure.
    ************************************************************************/
-  template <class HyperGraphT>
+  template <class HyperGraphT, typename pt_index_t = unsigned int >
   void plot_vtu_unstructured_geometry(std::ostream& output,
 				      const HyperGraphT& hyper_graph,
 				      const PlotOptions& plot_options)

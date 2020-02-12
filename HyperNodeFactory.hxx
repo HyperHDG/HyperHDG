@@ -36,7 +36,7 @@
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int n_dofs_per_nodeT>
+template < unsigned int n_dofs_per_nodeT, typename hyNode_index_t = unsigned int >
 class HyperNodeFactory
 {
   public:

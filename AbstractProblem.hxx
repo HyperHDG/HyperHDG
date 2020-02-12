@@ -171,6 +171,7 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
+    template < typename hyNode_index_t = unsigned int >
     std::vector<dof_value_t> matrix_vector_multiply( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
