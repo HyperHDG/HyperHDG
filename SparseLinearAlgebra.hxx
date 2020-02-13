@@ -57,6 +57,8 @@ struct SparseLASolveException : public std::exception
  * of the same size. This function is needed to calculate a vector's 2 norm or to implement a CG
  * scheme.
  * 
+ * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+ * \tparam  dof_value_t         Floating point type specification. Default is double.
  * \param   left                Left argument of the inner product.
  * \param   right               Right argument of the inner product.
  * \retval  product             Inner product of the two arguments.
@@ -80,6 +82,7 @@ dof_value_t inner_product
  * Naive implementation of an 2 norm of a vector. This is the square root of the \c inner_product of
  * a vector paired with itself.
  * 
+ * \tparam  dof_value_t         Floating point type specification. Default is double.
  * \param   vec                 Vector whose 2 norm is to be calculates.
  * \retval  norm                2 norm of given vector.
  * 
@@ -98,6 +101,8 @@ dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
  * combination "leftFac * leftVec + rightFac * rightVec" as a new vector (in contrast to just a
  * reference to a vector).
  * 
+ * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+ * \tparam  dof_value_t         Floating point type specification. Default is double.
  * \param   leftFac             Scaling factor of left vector.
  * \param   leftVec             Left vector in linear combination.
  * \param   rightFac            Scaling factor of right vector.
@@ -126,6 +131,8 @@ std::vector<dof_value_t> linear_combination
  * combination "leftFac * leftVec + rightFac * rightVec" as a reference to a vector. This vector
  * needs to be passed to the function
  * 
+ * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+ * \tparam  dof_value_t         Floating point type specification. Default is double.
  * \param   leftFac             Scaling factor of left vector.
  * \param   leftVec             Left vector in linear combination.
  * \param   rightFac            Scaling factor of right vector.
@@ -156,10 +163,10 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
  * assumed to be square and symmetric positive definite.
  * 
  * \tparam  ProblemT            Class to implement matrix vector multiplication.
+ * \tparam  dof_value_t         Floating point type specification. Default is double.
  * \param   b                   Right-hand side of linear system of equations.
  * \param   problme             Class instantiation to implement matrix vector multiplication.
  * \param   n_iterations        Maximum number of iterations. 0 is default and the size of b.
- * \todo Why is #n_iterations a reference and why not unsigned?
  * \param   tolerance           Absolute tolerance value in 2 norm. Default is 1e-9.
  * \retval  solution            Vector sufficing Ax = b up to given tolerance if converged.
  * \retval  n_iterations        Number of needed iterations. -1 indicates no convergence.

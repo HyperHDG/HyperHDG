@@ -2,12 +2,9 @@
  * \file    AbstractProblem.hxx
  * \brief   This file provides the class AbstractProblem.
  *
- * This file provides a file \c AbstractProblem class defining an abstract problem.
- * 
- * This file is an .hxx file, since class and function are compiled "dynamically" depending on the
- * considered problem in Python or C++ code. Dynamically means, that either, when the C++ problem
- * or Python's ClassWrapper are compiled, the relevant template parameters for the respective class
- * and functions of this file are deduced and the needed versions are compiled.
+ * This file provides an AbstractProblem class defining an abstract problem. This abstract problem
+ * serves as interface to Python and will be removed, when the library is fully implemented. At the
+ * moment, it can be used to quickly prototype testcases and others.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -37,15 +34,9 @@
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  * 
- * \todo    Update these descriptions!
- *
- * This class contains functions to define and solve Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
+ * This file provides an AbstractProblem class defining an abstract problem. This abstract problem
+ * serves as interface to Python and will be removed, when the library is fully implemented. At the
+ * moment, it can be used to quickly prototype testcases and others.
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
@@ -58,11 +49,10 @@
  * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
  *        (With explanation, I mean this definition and the following function explanations, etc.)
  *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
+ * \tparam  TopologyT     Class type containing topological information.
+ * \tparam  GeometryT     Class type containing geometrical information.
+ * \tparam  LocalSolverT  Class type of the local solver.
+ * \tparam  dof_index_t   Index type of hyperedges. Default is \c unsigned \c int.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -72,9 +62,21 @@ template
 class AbstractProblem
 {
   private:
+    /*!*********************************************************************************************
+     * \brief   Instantiation of a hypergraph.
+     **********************************************************************************************/
     HDGHyperGraph<LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT> hyper_graph_;
+    /*!*********************************************************************************************
+     * \brief   Vector containing the indices of Dirichlet type nodes.
+     **********************************************************************************************/
     std::vector<dof_index_t> dirichlet_indices_;
+    /*!*********************************************************************************************
+     * \brief   Instantiation of a local solver.
+     **********************************************************************************************/
     const LocalSolverT  local_solver_;
+    /*!*********************************************************************************************
+     * \brief   Struct encoding the options for plotting.
+     **********************************************************************************************/
     PlotOptions   plot_options;
   public:
     /*!*********************************************************************************************
@@ -313,9 +315,8 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
                 >;
-
 /*!*************************************************************************************************
- * \brief   This is an example problem.
+ * \brief   This is an example problem using single precision floating points.
  *
  * This class contains functions to define and solve Poisson's equation, i.e.,
  * \f[
@@ -340,28 +341,6 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
                   Geometry::UnitCube< hyEdge_dim, space_dim >,
                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >
                 >;
-
-/*!*************************************************************************************************
- * \brief   This is an example problem.
- *
- * \todo    This has not yet been fully implemented!
- *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-/*template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using ElasticityProblemRegular = 
-AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
-                  Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  ElasticitySolver_RegularQuad < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
-                >;
-*/
 /*!*************************************************************************************************
  * \brief   This is an example problem.
  *

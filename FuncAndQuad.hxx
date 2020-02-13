@@ -84,6 +84,7 @@ constexpr const unsigned int compute_n_quad_points
  * Evaluates the value of the \c index orthonormal, one-dimensional shape function on the reference
  * interval \f$[0,1]\f$ at abscissa \c x_value.
  * 
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_value             Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
@@ -122,6 +123,7 @@ inline lSol_float_t shape_fct_eval(const unsigned int index, const lSol_float_t 
  * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional shape function
  * on the reference interval \f$[0,1]\f$ at abscissa \c x_val.
  * 
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_val               Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function's derivative.
@@ -160,6 +162,8 @@ inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t 
  * Evaluates several values of the \c index orthonormal, one-dimensional shape function on the
  * reference interval \f$[0,1]\f$ at abscissas \c x_value.
  * 
+ * \tparam  sizeX               Size of array of x values.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_value             Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
@@ -182,6 +186,8 @@ inline std::array<lSol_float_t, sizeX> shape_fct_eval
  * Evaluates several values of the derivative of the \c index orthonormal, one-dimensional shape
  * function on the reference interval \f$[0,1]\f$ at abscissas \c x_value.
  * 
+ * \tparam  sizeX               Size of array of x values.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_value             Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function's derivative.
@@ -204,6 +210,8 @@ inline std::array<lSol_float_t, sizeX> shape_der_eval
  * Evaluates the value of the \c index orthonormal, one-dimensional shape functions on the reference
  * interval \f$[0,1]\f$ at abscissa \c x_value.
  * 
+ * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape functions.
  * \param   x_value             Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
@@ -226,6 +234,8 @@ inline std::array<lSol_float_t, sizeInd> shape_fct_eval
  * Evaluates the value of the derivatives of \c index orthonormal, one-dimensional shape functions
  * on the reference interval \f$[0,1]\f$ at abscissa \c x_value.
  * 
+ * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape functions.
  * \param   x_value             Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape functions' derivatives.
@@ -248,6 +258,9 @@ inline std::array<lSol_float_t, sizeInd> shape_der_eval
  * Evaluates the values of the \c index orthonormal, one-dimensional shape functions on the
  * reference interval \f$[0,1]\f$ at abscissas \c x_value.
  * 
+ * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
+ * \tparam  sizeX               Size of array of x values.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape function.
  * \param   x_value             Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated values of shape functions.
@@ -270,6 +283,9 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
  * Evaluates the values of the \c index orthonormal, one-dimensional shape functions' derivatives on
  * the reference interval \f$[0,1]\f$ at abscissas \c x_value.
  * 
+ * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
+ * \tparam  sizeX               Size of array of x values.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape function.
  * \param   x_value             Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated values of shape functions' derivatives.
@@ -286,6 +302,9 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
     result[k] = FuncQuad::shape_der_eval<sizeX,lSol_float_t>(index[k], x_val);
   return result;
 }
+
+// Gaussian quadrature:
+
 /*!*************************************************************************************************
  * \brief   Gaussian quadrature points on one-dimensional unit interval.
  * 
@@ -293,14 +312,12 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  quad_points         \c std::array containing the quadrature points.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-
-// Gaussian quadrature:
-
 template< unsigned int max_quad_degree, typename lSol_float_t = double >
 std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_points()
 {
@@ -358,6 +375,7 @@ std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_points()
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  quad_weights        \c std::array containing the quadrature weights.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
@@ -421,6 +439,7 @@ std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_weights()
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
  *                              quadrature points (the shape functions are evaluated at).
  * 
@@ -450,6 +469,7 @@ shape_fcts_at_quad_points()
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
  *                              quadrature points (the shape functions' derivatives are evaluated).
  * 
@@ -477,6 +497,7 @@ shape_ders_at_quad_points()
  * \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                              corner indices (the shape functions are evaluated at).
  * 
@@ -499,6 +520,7 @@ std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_fcts_at_bd
  * most \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                              corner indices (the shape functions' derivatives are evaluated at).
  * 

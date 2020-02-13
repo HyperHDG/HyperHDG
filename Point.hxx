@@ -26,7 +26,6 @@
  * \todo    Is this the way to do it intended by Guido? If so, should we include <exception>? It
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
- * \todo    Should we remove the assertion if the exception is there anyways?
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019.
  * \authors   Andreas Rupp, University of Heidelberg, 2019.
@@ -41,6 +40,7 @@ struct PointDivByZeroException : public std::exception
  * This class implements a point in a \f$d\f$-dimensional space, where the \f$d\f$ is given by the
  * template parameter \c space_dim.
  * 
+ * \tparam  pt_coord_t        Floating point type specification. Default is float.
  * \tparam  space_dim         The dimension of the space, the object is located in.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
