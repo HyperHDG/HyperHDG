@@ -24,7 +24,6 @@
  * \todo    Is this the way to do it intended by Guido? If so, should we include <exception>? It
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
- * \todo    Should we remove the assertion if the exception is there anyways?
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019.
  * \authors   Andreas Rupp, University of Heidelberg, 2019.

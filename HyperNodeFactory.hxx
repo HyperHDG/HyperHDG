@@ -31,6 +31,7 @@
  * 
  * \tparam  n_dofs_per_nodeT  Amount of degrees of freedom associated to an hypernode. This is the
  *                            number of local trial functions for the skeletal variable.
+ * \tparam  hyNode_index_t    Unsigned integer type specification. Default is unsigned int.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
@@ -82,6 +83,7 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
      * \retval  n_global_dofs       The total amount of degreees of freedom in the considered
      *                              hypergraph.
      **********************************************************************************************/
@@ -90,6 +92,7 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * \brief   Calculate global indices of degrees of freedom related to a hypernode.
      * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
      * \param   hypernode_index     Index of the considered hypernode.
      * \retval  dof_indices         A \c std::array containing the global indices of related degrees
      *                              of freedom.
@@ -107,6 +110,8 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * \brief   Evaluate values of degrees of freedom related to a hypernode.
      * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+     * \tparam  dof_value_t         Floating point type specification. Default is double.
      * \param   hypernode_index     Index of the considered hypernode.
      * \retval  dof_values          A \c std::array containing the values of related degrees of
      *                              freedom.
@@ -132,6 +137,8 @@ class HyperNodeFactory
      * Add local values of the \c std::array \c local_dof_vector to the respective values of the
      * \c std::vector \c global_dof_vector comprising all degrees of freedom. 
      * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+     * \tparam  dof_value_t         Floating point type specification. Default is double.
      * \param   hypernode_index     Index of the considered hypernode.
      * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      * \param   local_dof_vector    \c std::array containing the local values to be added to the
@@ -158,6 +165,8 @@ class HyperNodeFactory
     /*!*********************************************************************************************
      * \brief   Set all values of degrees of freedom of a hypernode to a predefined value.
      * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+     * \tparam  dof_value_t         Floating point type specification. Default is double.
      * \param   hypernode_index     Index of the considered hypernode.
      * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
      * \param   value               The future value of related degrees of freedom.
