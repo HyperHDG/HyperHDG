@@ -12,7 +12,7 @@
 #include <Topo_Cubic.hxx>
 #include <Geom_UnitCube.hxx>
 #include <HDGHyperGraph.hxx>
-#include <LSol_Diffusion.hxx>
+#include <LSol_Template.hxx>
 #include <Plot.hxx>
 #include <iostream>
 
@@ -40,8 +40,9 @@ void test()
   auto topo = std::make_shared<const Topo> (num_elements);
   auto geo = std::make_shared<const Geo> (*topo);
 
-  Diffusion_TensorialUniform<edge_dim,1,2> lsolver(1.); // Quadrature must be sufficient!
-  HDGHyperGraph<Diffusion_TensorialUniform<edge_dim,1,1>::n_glob_dofs_per_node(),Topo,Geo>
+  typedef LocalSolverTemplate<edge_dim,double> SolverType;
+  SolverType lsolver;
+  HDGHyperGraph<SolverType::n_glob_dofs_per_node(),Topo,Geo>
     hdg_graph(topo, geo); // Must be according to the local solver!
   vector<double> vectorDirichlet(hdg_graph.n_global_dofs());
   

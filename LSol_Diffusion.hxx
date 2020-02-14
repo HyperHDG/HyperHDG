@@ -51,9 +51,10 @@ class Diffusion_TensorialUniform
 {
   public:
     /*!*********************************************************************************************
-     * \brief   Return template parameter \c hyEdge_dim.
+     * \brief Dimension of hyper edge type that this object solves on.
      * 
-     * \retval  hyEdge_dim    Dimension of hypergraph's hyperedges.
+     * \todo Why is this not just called dimension?
+     * \todo The original brief referred to the internal variable only. It should be the other way round: this function is the main access to this number.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     /*!*********************************************************************************************
@@ -65,7 +66,11 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
-     * This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.
+     * \todo Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
+     *
+     * This number must be equal to
+     * HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+     * cooperating with this object.
      *
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
@@ -136,6 +141,8 @@ class Diffusion_TensorialUniform
     }
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
+     *
+     * \todo It is better style to implement this function outside the class declaration.
      *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
      * matrix is the same for all hyperedges and can be assembled once in the constructor. This is
