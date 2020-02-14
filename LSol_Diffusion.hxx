@@ -10,6 +10,8 @@
  * \f]
  * on a hypergraph.
  *
+ * \todo Stop documenting classes in file documentation! Stop documenting files alltogwther if not for particular reason
+ *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
@@ -369,7 +371,7 @@ class Diffusion_TensorialUniform
       std::array<lSol_float_t, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
       // LAPACK solves local_matix * return_value = right_hand_side.
       try { return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side); }
-      catch (LASolveException exc)
+      catch (LASolveException& exc)
       {
         hy_assert( 0 == 1 ,
                    exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
