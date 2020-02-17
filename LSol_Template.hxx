@@ -69,6 +69,8 @@ public:
    * \retval An array of array with outer size system_dimension() and
    * inner size number of quadrature points, containing for each
    * component of the solution the values in each quadrature point.
+   * 
+   * \todo  How about the geometry of the respective element?
    */
   template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()>
