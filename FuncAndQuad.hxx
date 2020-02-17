@@ -1,25 +1,3 @@
-/*!*************************************************************************************************
- * \file    FuncAndQuad.hxx
- * \brief   Contains functions to evaluate shape functions (e.g. at quadrature points).
- *
- * This file provides several functions to evaluate shape functions (and their derivatives) that are
- * L^2 orthonormal with respect to the unit interval \f$[0,1]\f$. (Obviously, this does not hold for
- * the derivatives.)
- * 
- * From these one-dimensional shape frunctions, multi-dimensional shape functions are constructed by
- * evaluating tensor / dyadic products. Thus, also the multi-dimensional shape functions are L^2
- * orthonormal with respect to the unit hypercube  \f$[0,1]^d\f$, where \f$d\f$ denotes the spatial
- * dimension.
- * 
- * Moreover, Gaussian quadrature rules are provided that contain at most nine quadrature points in
- * one dimension (and therefore are exact for polynomials of degree at most 17). Exploiting the
- * tensor structure of the reference hypercube allows to also extend these rules to be applicable
- * in several spatial dimensions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
- **************************************************************************************************/
-
 #ifndef FUNC_AND_QUAD_HXX
 #define FUNC_AND_QUAD_HXX
 

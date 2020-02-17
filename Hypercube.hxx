@@ -1,11 +1,3 @@
-/*!*************************************************************************************************
- * \file    Hypercube.hxx
- * \brief   Helper file containing numbers and functions related to hypercubes.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef HYPERCUBE_HXX
 #define HYPERCUBE_HXX
 

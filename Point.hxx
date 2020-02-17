@@ -1,14 +1,3 @@
-/*!*************************************************************************************************
- * \file    Point.hxx
- * \brief   This file implements a point in a d-dimensional space.
- * 
- * This file implements a point in a \f$d\f$-dimensional space, where the \f$d\f$ is given by the
- * template parameter \c space_dim.
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef POINT_HXX
 #define POINT_HXX
 

@@ -1,15 +1,3 @@
-/*!*************************************************************************************************
- * \file    AbstractProblem.hxx
- * \brief   This file provides the class AbstractProblem.
- *
- * This file provides an AbstractProblem class defining an abstract problem. This abstract problem
- * serves as interface to Python and will be removed, when the library is fully implemented. At the
- * moment, it can be used to quickly prototype testcases and others.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
- **************************************************************************************************/
-
 #ifndef ABSTRACTPROBLEM_HXX
 #define ABSTRACTPROBLEM_HXX
 
