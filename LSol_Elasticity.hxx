@@ -686,8 +686,9 @@ class ElasticRods_TensorialUniform
     bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
 	       const InputArrayType& lambda_values) const
     {
-      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()> helper;
-      return helper;
+      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()> result;
+//      result[0] = primal_at_dyadic(abscissas, lambda_values, geom); ??
+      return result;
     }
     
 }; // end of class ElasticRods_TensorialUniform
