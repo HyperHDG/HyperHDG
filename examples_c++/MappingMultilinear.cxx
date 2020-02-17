@@ -34,7 +34,10 @@ void brick()
       if constexpr (dim>=2) if (i!= 0 && i%np == 0) std::cout << "\n";
       std::cout << "Index ";
       for (auto j: indices) std::cout << j;
-      std::cout << "\tCoord " << mapping(indices) << "\n";
+      auto p1 = mapping(indices);
+      auto p2 = mapping.lexicographic(i);
+      hy_assert(p1==p2, "Points are different!");
+      std::cout << "\tCoord " << p1 << "\n";
     }
 }
 

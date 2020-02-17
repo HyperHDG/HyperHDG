@@ -146,6 +146,19 @@ namespace Tensor
       }
     return result;
   }
+
+  template <int rdim, int ddim, int npts, typename T>
+  Point<rdim>
+  MappingMultilinear<rdim,ddim,npts,T>::lexicographic (unsigned i) const
+  {
+    std::array<unsigned int, ddim> ind;
+    for (unsigned int d=0;d<ddim;++d)
+      {
+	ind[d] = i%npts;
+	i /= npts;
+      }
+    return (*this)(ind);
+  }
 }
 
 #endif
