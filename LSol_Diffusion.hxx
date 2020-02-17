@@ -35,8 +35,13 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
      * 
-     * \todo Why is this not just called dimension?
-     * \todo The original brief referred to the internal variable only. It should be the other way round: this function is the main access to this number.
+     * \todo  Why is this not just called dimension?
+     *        -> E.g. in elasticity there are two important dimensions, the one of the hyperedge and
+     *        the one of the space. Thus, elasticity can return both dimensions, while this class
+     *        only returns the relevant hyperedge dimension.
+     * \todo  The original brief referred to the internal variable only. It should be the other way
+     *        round: this function is the main access to this number.
+     *        -> I agree, this was not on purpose and I have to check for this in other classes!
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
     /*!*********************************************************************************************
@@ -48,10 +53,14 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
-     * \todo Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
+     * \todo  Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
+     *        -> In Elasticity, there are two types of dofs per node. The one that come from outside
+     *        (they are space_dim - dimensional) and the ones that are relevant for the local
+     *        problem (and therefore hyEdge_dim - dimensional). Thus, there is a discrimination
+     *        between global and local amount per dofs in local solvers.
+     * 
      *
-     * This number must be equal to
-     * HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+     * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
      * cooperating with this object.
      *
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
@@ -124,7 +133,10 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
-     * \todo It is better style to implement this function outside the class declaration.
+     * \todo  It is better style to implement this function outside the class declaration.
+     *        -> I agree, but then we have such a function for different local solvers for diffusion
+     *        and different local solvers for diefferent PDEs. All these functions would be globally
+     *        available and I do not have a nice idea to bypass this issue.
      *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
      * matrix is the same for all hyperedges and can be assembled once in the constructor. This is
