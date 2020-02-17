@@ -1,14 +1,3 @@
-/*!*************************************************************************************************
- * \file    examples_c++/DiffusionTest.C
- * \brief   File that tests several aspects of the C++ implementation against a given reference
- *          solution obtained with the Python interface.
- *
- * This file implements an alternative to Executable.py (which usses the Cython interface).
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
- **************************************************************************************************/
-
 #include <AbstractProblem.hxx>
 #include <SparseLinearAlgebra.hxx>
 
