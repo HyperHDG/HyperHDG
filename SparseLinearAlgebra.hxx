@@ -1,17 +1,3 @@
-/*!*************************************************************************************************
- * \file    SparseLinearAlgebra.hxx
- * \brief   A file containing different functions that implement basic linear algebra operations
- *          using large \c std::vector.
- *
- * This namespace provides several functions to implement basic linear algebra operations of (long)
- * \c std::vector in combination with a class providing a function \c matrix_vector_multiply. This
- * is mainly used for C++ examples and test cases that do not use the Python interface and its
- * version of an CG method, for example.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
- **************************************************************************************************/
-
 #ifndef SPARSELINEARALGEBRA_HXX
 #define SPARSELINEARALGEBRA_HXX
 

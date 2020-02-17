@@ -1,13 +1,3 @@
-/*!*************************************************************************************************
- * \file    LSol_Elasticity.hxx
- * \brief   Local solvers for elastic equation.
- *
- * \todo    Details and doxygen!
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
 

@@ -1,21 +1,3 @@
-/*!*************************************************************************************************
- * \file    LSol_Diffusion.hxx
- * \brief   Local solvers for diffusion equation.
- *
- * This file contains functions to define and solve the local problems that arise from an HDG
- * discretization of the diffusion equation, i.e.,
- * \f[
- *  - \nabla \cdot \nabla u = 0 \quad \text{ in } \Omega,
- *  \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * on a hypergraph.
- *
- * \todo Stop documenting classes in file documentation! Stop documenting files alltogwther if not for particular reason
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef LSOL_DIFFUSION_HXX
 #define LSOL_DIFFUSION_HXX
 

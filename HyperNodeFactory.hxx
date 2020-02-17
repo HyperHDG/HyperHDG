@@ -1,17 +1,3 @@
-/*!*************************************************************************************************
- * \file    HyperNodeFactory.hxx
- * \brief   This file is responsible for the mapping of hypernodes to global degrees of freedom.
- * 
- * This file administrates the mapping of topological information (i.e. a hypernode) to information
- * related to the approximation of solutions to PDEs. Thus, it is capable of mapping a hypernode
- * index to the indices and values of degrees of freedom of a \c std::vector in class 
- * \c HyperNodeFactory. This is the  only class to manage the access to the global vectors
- * comprising degrees of freedom and is universal to (almost) all kinds of possible equations.
- * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-
 #ifndef HYPERNODEFACTORY_HXX
 #define HYPERNODEFACTORY_HXX
 
