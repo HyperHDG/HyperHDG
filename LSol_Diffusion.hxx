@@ -67,6 +67,13 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
     { return Hypercube<hyEdge_dim-1>::pow(poly_deg + 1); }
+    
+    
+    static constexpr unsigned int node_value_dimension() { return 1U; }
+    
+    static constexpr unsigned int system_dimension() { return 1U; }
+    
+    
   private:
     /*!*********************************************************************************************
      * \brief   Number of quadrature points per spatial dimension.
@@ -629,6 +636,18 @@ class Diffusion_TensorialUniform
   
       return values;
     }
+    
+    
+    template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()>
+    bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
+	       const InputArrayType& lambda_values) const
+    {
+      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()>
+        helper;
+      return helper;
+    }
+      
 }; // end of class Diffusion_TensorialUniform
 
 /*!*************************************************************************************************
