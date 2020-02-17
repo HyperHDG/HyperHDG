@@ -163,8 +163,9 @@ extern "C"
 inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
 {
   int one = 1, info = -1;
-  int ipiv[system_size];
+  int *ipiv = new int[system_size];
   dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  delete[] ipiv;
 //  hy_assert( info == 0 ,
 //             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
   if (info != 0)  throw LASolveException();
@@ -189,8 +190,9 @@ inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
 inline void lapack_solve(int system_size, float *mat_a, float *rhs_b)
 {
   int one = 1, info = -1;
-  int ipiv[system_size];
+  int *ipiv = new int[system_size];
   sgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  delete[] ipiv;
 //  hy_assert( info == 0 ,
 //             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
   if (info != 0)  throw LASolveException();

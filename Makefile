@@ -39,7 +39,7 @@ BASICFLAGS_R 	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wa
 BASICFLAGS  	= -pthread -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g \
 								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
 								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
-
+# Some additional useful flags: -Wpedantic -Wextra \
 
 # C++ Linker options
 LINKER      		= g++

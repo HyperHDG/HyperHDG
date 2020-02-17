@@ -45,7 +45,7 @@ namespace FuncQuad
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-constexpr const unsigned int compute_n_quad_points
+constexpr unsigned int compute_n_quad_points
 (const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
 {
   unsigned int amount = 1, amount1D = 1;
