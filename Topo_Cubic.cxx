@@ -6,8 +6,9 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 
-#include "Topo_Cubic.hxx"
-#include "HyAssert.hxx"
+#include <Topo_Cubic.hxx>
+#include <HyAssert.hxx>
+
 #include <algorithm>
 
 using namespace std;
