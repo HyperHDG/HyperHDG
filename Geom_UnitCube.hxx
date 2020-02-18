@@ -4,10 +4,11 @@
 #include <Hypercube.hxx>
 #include <Point.hxx>
 #include <Topo_Cubic.hxx>
+#include <tensor_mapping.hxx>
 #include <array>
 
 /*!*************************************************************************************************
- * \brief   A namespace containing different classes describing hypergraph geometries.
+ * \brief   A namespace containing classes describing hypergraph geometries.
  *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
@@ -73,7 +74,9 @@ class UnitCube
       /*!*******************************************************************************************
        * \brief   Points adjacent to the hyperedge.
        *
-       * A \c std::array comprising the vertices (points) of a cubic hyperedge.
+       * \todo In the long run, do not store these.
+       *
+       * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
       std::array<Point<space_dim>, Hypercube<hyEdge_dim>::n_vertices()> points_;
     public:
@@ -92,6 +95,7 @@ class UnitCube
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
       hyEdge(const hyEdge_index_t index, const std::array<unsigned int, space_dim>& num_elements);
+    
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        *
@@ -101,7 +105,17 @@ class UnitCube
        ********************************************************************************************/
       Point<space_dim> point(const unsigned int index) const
       { return points_[index]; }
-      
+
+      /*!*******************************************************************************************
+       * \brief Return data of the mapping in the tensor product of a one-dimensional quadrature set.
+       *
+       * \tparam npts: The number of evaluation points in a single direction
+       * \tparam T: The data type used for this operation
+       ********************************************************************************************/
+    template <std::size_t npts, typename T = double>
+      Tensor::MappingMultilinear<space_dim, hyEdge_dim, npts, T>
+      mapping_tensor(const std::array<T, npts>& points_1d) const;
+    
       /*!*******************************************************************************************
        * \todo    Guido: If you have a clever idea for this, you can implement it. But this, I might
        *          also be able to do myself ;)
@@ -147,6 +161,8 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
+     * \todo Check whether this is till a good idea. It hides important information behind a typedef.
+     *
      * To receive a very general \c AbstractProblem, constructors need to account for the fact that
      * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
      * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
@@ -156,6 +172,8 @@ class UnitCube
     typedef std::vector<unsigned int> constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
+     *
+     *\todo This is copied from the other constructor
      *
      * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per 
      * spatial dimension which is given as by its topology.
@@ -188,6 +206,17 @@ class UnitCube
     { return hyEdge(index, num_elements_); }
 }; // end class UnitCube
 
+  template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>
+  template <std::size_t npts, typename T>
+  Tensor::MappingMultilinear<sdim, edim, npts, T>
+  UnitCube<edim, sdim, hyEdge_index_t>::hyEdge::mapping_tensor(const std::array<T, npts>& points_1d) const
+  {
+    std::array<Point<sdim>, Hypercube<edim>::n_vertices()> vertices;
+    for (unsigned int i=0;i<vertices.size();++i)
+      vertices[i] = point(i);
+
+    return Tensor::MappingMultilinear<sdim, edim, npts, T>(vertices, points_1d);
+  }
 } // end namespace Geometry
 
 #endif // end ifndef GEOM_UNITCUBE_HXX
