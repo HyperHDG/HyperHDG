@@ -77,12 +77,14 @@ namespace Tensor
   /**
    * \brief Mapping by tensor product of linear polynomials
    *
+   * \todo Switch the order of rdim and ddim?
+   *
    * \tparam rdim: the dimension of the space mapped into
    * \tparam ddim: the dimension of the domain
    * \tparam npts: the number of points in each direction
    * \tparam T: the number type
    */
-  template <int rdim, int ddim, int npts, typename T=double>
+  template <int rdim, int ddim, std::size_t npts, typename T=double>
   class MappingMultilinear
   {
   public:
@@ -106,10 +108,11 @@ namespace Tensor
      * Constructor, obtaining the corner points and the one dimensional evaluation points
      */
     template <typename T2>
-    MappingMultilinear(std::array<Point<rdim>, Hypercube<ddim>::n_vertices()>& vertices, std::array<T2, npts>& points);
+    MappingMultilinear(const std::array<Point<rdim>, Hypercube<ddim>::n_vertices()>& vertices,
+		       const std::array<T2, npts>& points);
     
     /// Access to a mapped point with tensor coordinates `indices`
-    Point<rdim> operator() (std::array<unsigned int, ddim> indices) const;
+    Point<rdim> operator() (const std::array<unsigned int, ddim>& indices) const;
 
     /// Access points in lexicographic order, first index fastest
     Point<rdim> lexicographic (unsigned int index) const;
@@ -121,16 +124,16 @@ namespace Tensor
     std::array<T, npts> points_1d;
   };
 
-  template <int rdim, int ddim, int npts, typename T>
+  template <int rdim, int ddim, std::size_t npts, typename T>
   template <typename T2>
-  MappingMultilinear<rdim,ddim,npts,T>::MappingMultilinear(std::array<Point<rdim>,Hypercube<ddim>::n_vertices()>& vertices,
-							   std::array<T2, npts>& points)
+  MappingMultilinear<rdim,ddim,npts,T>::MappingMultilinear(const std::array<Point<rdim>,Hypercube<ddim>::n_vertices()>& vertices,
+							   const std::array<T2, npts>& points)
     : vertices(vertices), points_1d(points)
   {}
   
-  template <int rdim, int ddim, int npts, typename T>
+  template <int rdim, int ddim, std::size_t npts, typename T>
   Point<rdim>
-  MappingMultilinear<rdim,ddim,npts,T>::operator() (std::array<unsigned int, ddim> ind) const
+  MappingMultilinear<rdim,ddim,npts,T>::operator() (const std::array<unsigned int, ddim>& ind) const
   {
     static_assert(ind.size() == ddim);
     Point<rdim> result;
@@ -147,7 +150,7 @@ namespace Tensor
     return result;
   }
 
-  template <int rdim, int ddim, int npts, typename T>
+  template <int rdim, int ddim, std::size_t npts, typename T>
   Point<rdim>
   MappingMultilinear<rdim,ddim,npts,T>::lexicographic (unsigned i) const
   {
