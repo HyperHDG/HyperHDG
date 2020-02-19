@@ -117,6 +117,11 @@ class PlotOptions
      * node is scaled by this factor around its center.
      **********************************************************************************************/
     float scale;
+
+    /*!*********************************************************************************************
+     * \brief Output a cell data array with the number of each edge and/or each node
+     **********************************************************************************************/
+  bool numbers;
     /*!*********************************************************************************************
      * \brief   Construct a \c PlotOptions class object containing default values.
      *
@@ -156,7 +161,7 @@ void plot(const HyperGraphT& hyper_graph,
 PlotOptions::PlotOptions()
   : outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
     printFileNumber(true), incrementFileNumber(true), plot_nodes(false), plot_edges(true),
-    n_subintervals(1), scale(1.)
+    n_subintervals(1), scale(1.), numbers(false)
 {}
 
 /*!**********************************************************************
@@ -232,26 +237,26 @@ namespace PlotFunctions
 				      const std::array<float, n_subpoints>& sub_points,
 				      const PlotOptions& plot_options)
   {
-    constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
+    constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dimension();
     constexpr unsigned int space_dim = HyperGraphT::space_dimension();
     
-    const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
-    const unsigned int points_per_hyEdge = Hypercube<hyEdge_dim>::pow(n_subpoints);
+    const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+    const unsigned int points_per_hyEdge = Hypercube<edge_dim>::pow(n_subpoints);
     
-    const pt_index_t n_plot_points = points_per_hyEdge * n_hyEdges;
-    const pt_index_t n_plot_edges = n_hyEdges * Hypercube<hyEdge_dim>::pow(n_subpoints-1);
+    const pt_index_t n_plot_points = points_per_hyEdge * n_edges;
+    const pt_index_t n_plot_edges = n_edges * Hypercube<edge_dim>::pow(n_subpoints-1);
     
-    static_assert (hyEdge_dim <= 3);
+    static_assert (edge_dim <= 3);
     unsigned int element_id;
-    if constexpr (hyEdge_dim == 1)       element_id = 3;
-    else if constexpr (hyEdge_dim == 2)  element_id = 8;
-    else if constexpr (hyEdge_dim == 3)  element_id = 11;
+    if constexpr (edge_dim == 1)       element_id = 3;
+    else if constexpr (edge_dim == 2)  element_id = 8;
+    else if constexpr (edge_dim == 3)  element_id = 11;
     
     output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" << n_plot_edges << "\">" << std::endl;
     output << "      <Points>" << std::endl;
     output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
 
-    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+    for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
       {
 	auto edge = hyper_graph.hyEdge_geometry(he_number);
 	auto mapping = edge.mapping_tensor(sub_points);
@@ -274,9 +279,9 @@ namespace PlotFunctions
     output << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
 
     pt_index_t offset = 0;
-    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+    for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
       {
-	vtu_sub_cube_connectivity<hyEdge_dim>(output, n_subpoints, offset);
+	vtu_sub_cube_connectivity<edge_dim>(output, n_subpoints, offset);
 	offset += points_per_hyEdge;
       }
     output << "        </DataArray>" << std::endl;
@@ -285,7 +290,7 @@ namespace PlotFunctions
     
     for (hyEdge_index_t he_number = 1; he_number <= n_plot_edges; ++he_number)
       {
-	output << "  " <<  Hypercube<hyEdge_dim>::n_vertices() * he_number;
+	output << "  " <<  Hypercube<edge_dim>::n_vertices() * he_number;
       }
     output << std::endl;
     
@@ -309,17 +314,17 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	      const std::vector<dof_value_t>& lambda,
 	      const PlotOptions& plot_options)
 {
-  constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dimension();
   
-  const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
-  //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  //  const unsigned int points_per_hyEdge = 1 << edge_dim;
 
   // Guido thinks, that here float is always sufficient. Andreas hesitates.
   std::array<float, n_subdivisions+1> abscissas;
   for (unsigned int i=0;i<=n_subdivisions;++i)
     abscissas[i] = plot_options.scale*(1.*i/n_subdivisions-0.5)+0.5;
   
-  static_assert (hyEdge_dim <= 3);
+  static_assert (edge_dim <= 3);
   
   std::ofstream myfile;
   
@@ -338,22 +343,39 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 
   PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, abscissas, plot_options);
 
+  myfile << "      <CellData>" << std::endl;
+  if (plot_options.numbers)
+    {
+      myfile << "        <DataArray type=\"Int32\" Name=\"index\" NumberOfComponents=\"1\" format=\"ascii\">\n";
+      if (plot_options.plot_edges)
+	{
+	  for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
+	    for (unsigned int i=0;i<Hypercube<edge_dim>::pow(n_subdivisions);++i)
+	      myfile << ' ' << he_number;
+	}
+      if (plot_options.plot_nodes)
+	hy_assert(false, "Not yet implemented");
+      
+      myfile << "        </DataArray>";
+    }
+  myfile << "      </CellData>" << std::endl;
+  
+  myfile << "      <PointData>" << std::endl;
   if (LocalSolverT::system_dimension() != 0)
     {
-      myfile << "      <PointData Scalars=\"" << "example_scalar" << "\" Vectors=\"" << "example_vector" << "\">" << std::endl;
       myfile << "        <DataArray type=\"Float32\" Name=\""
 	     << "values"
 	     << "\" NumberOfComponents=\"" << LocalSolverT::system_dimension()
 	     << "\" format=\"ascii\">" << std::endl;
       
-      std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*hyEdge_dim > hyEdge_dofs;
-      std::array<unsigned int, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim > hyEdge_dofs;
+      std::array<unsigned int, 2*edge_dim> hyEdge_hyNodes;
       
       // std::array<std::array<dof_value_t,
       // 			    LocalSolverT::system_dimension()>,
-      // 			    Hypercube<hyEdge_dim>::n_vertices()> local_values;
+      // 			    Hypercube<edge_dim>::n_vertices()> local_values;
       
-      for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+      for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
 	{
 	  hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
 	  for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -363,7 +385,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	  // else
 	  auto local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
 	  myfile << "      ";
-	  for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim>::n_vertices(); ++corner)
+	  for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner)
 	    {
 	      myfile << "  ";
 	      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
@@ -373,8 +395,8 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	}
       
       myfile << "        </DataArray>" << std::endl;
-      myfile << "      </PointData>" << std::endl;  
     }
+  myfile << "      </PointData>" << std::endl;  
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
@@ -417,7 +439,7 @@ void plot(const HyperGraphT& hyper_graph,
   plot_vtu(hyper_graph, local_solver, lambda, plot_options);
 } // end of void plot
 
-template<unsigned int hyEdge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
+template<unsigned int edge_dim, unsigned int space_dim, unsigned int max_poly_degree, unsigned int max_quad_degree>
 class ElasticitySolver_RegularQuad;
 
 template<class HyperGraphT, unsigned int hdim, unsigned int sdim, unsigned int pd, unsigned int qd>
