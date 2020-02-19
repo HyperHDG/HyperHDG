@@ -30,3 +30,14 @@ cdef extern from "AbstractProblem.hxx":
     int size_of_system()
     string plot_option(string, string)
     void plot_solution(vector[double])
+"""
+cdef extern from "AbstractProblem.hxx":
+  cdef cppclass ElasticityBBeam "ElasticityBBeam<1,2,1>":
+    ElasticityBBeam(string, double) except +
+    void read_dirichlet_indices(vector[unsigned int])
+    vector[double] return_zero_vector()
+    vector[double] matrix_vector_multiply(vector[double])
+    int size_of_system()
+    string plot_option(string, string)
+    void plot_solution(vector[double])
+"""
