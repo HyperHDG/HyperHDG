@@ -173,7 +173,7 @@ namespace PlotFunctions
    */
   template <unsigned int dim, typename pt_index_t>
   void
-  vtu_enumerate_cube_vertices(std::ostream& output, unsigned int n, pt_index_t offset)
+  vtu_sub_cube_connectivity(std::ostream& output, unsigned int n, pt_index_t offset)
   {
     if constexpr (dim==1)
       {
@@ -272,28 +272,28 @@ namespace PlotFunctions
     output << "      </Points>" << std::endl;
     output << "      <Cells>" << std::endl;
     output << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-    output << "        ";
 
-    // Remove this when fixed
-    const pt_index_t n_points = n_plot_points;
-    for (pt_index_t pt_number = 0; pt_number < n_points; ++pt_number)
-      output << "  " << pt_number;
-    output << std::endl;
-    
+    pt_index_t offset = 0;
+    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+      {
+	vtu_sub_cube_connectivity<hyEdge_dim>(output, n_subpoints, offset);
+	offset += points_per_hyEdge;
+      }
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
     output << "        ";
     
-    for (pt_index_t pt_number = points_per_hyEdge; pt_number <= n_points;
-	 pt_number += points_per_hyEdge)
-      output << "  " << pt_number;
+    for (hyEdge_index_t he_number = 1; he_number <= n_plot_edges; ++he_number)
+      {
+	output << "  " <<  Hypercube<hyEdge_dim>::n_vertices() * he_number;
+      }
     output << std::endl;
     
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
     output << "        ";
     
-    for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
+    for (hyEdge_index_t he_number = 0; he_number < n_plot_edges; ++he_number)
       output << "  " << element_id;
     output << std::endl;
     
@@ -317,7 +317,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   // Guido thinks, that here float is always sufficient. Andreas hesitates.
   std::array<float, n_subdivisions+1> abscissas;
   for (unsigned int i=0;i<=n_subdivisions;++i)
-    abscissas[i] = plot_options.scale*(i/n_subdivisions-0.5)+0.5;
+    abscissas[i] = plot_options.scale*(1.*i/n_subdivisions-0.5)+0.5;
   
   static_assert (hyEdge_dim <= 3);
   
