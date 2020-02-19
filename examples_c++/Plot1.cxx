@@ -36,6 +36,7 @@ void test()
   vector<double> vectorDirichlet(hdg_graph.n_global_dofs());
   
   PlotOptions pltop;
+  pltop.scale = .9;
   std::string name = "plot1-";
     name += std::to_string(edge_dim) + std::string("-") + std::to_string(space_dim);
   pltop.fileName = name;

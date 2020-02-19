@@ -109,6 +109,14 @@ class PlotOptions
      **********************************************************************************************/
     unsigned int n_subintervals;  
     /*!*********************************************************************************************
+     * \brief A factor for scaling each object of the plot locally
+     *
+     * This factor defaults to 1 in order to produce a plot of a
+     * contiguous domain. If it is chosen less than 1, each edge or
+     * node is scaled by this factor around its center.
+     **********************************************************************************************/
+    float scale;
+    /*!*********************************************************************************************
      * \brief   Construct a \c PlotOptions class object containing default values.
      *
      * Constructs a \c PlotOptions object containing default options and information about the
@@ -147,7 +155,7 @@ void plot(const HyperGraphT& hyper_graph,
 PlotOptions::PlotOptions()
   : outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
     printFileNumber(true), incrementFileNumber(true), plot_nodes(false), plot_edges(true),
-    n_subintervals(1)
+    n_subintervals(1), scale(1.)
 {}
 
 /*!**********************************************************************
@@ -171,18 +179,20 @@ namespace PlotFunctions
    * This function writes the `<Geometry>` part of the structure.
    ************************************************************************/
   template
-  <class HyperGraphT, typename hyEdge_index_t = unsigned int, typename pt_index_t = unsigned int >
+  <class HyperGraphT, std::size_t n_subpoints, typename hyEdge_index_t = unsigned int, typename pt_index_t = unsigned int >
   void plot_vtu_unstructured_geometry(std::ostream& output,
 				      const HyperGraphT& hyper_graph,
+				      const std::array<float, n_subpoints>& sub_points,
 				      const PlotOptions& plot_options)
   {
     constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dimension();
     constexpr unsigned int space_dim = HyperGraphT::space_dimension();
     
     const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
-    const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
+    const unsigned int points_per_hyEdge = Hypercube<hyEdge_dim>::pow(n_subpoints);
     
-    pt_index_t n_points = points_per_hyEdge * n_hyEdges;
+    const pt_index_t n_plot_points = points_per_hyEdge * n_hyEdges;
+    const pt_index_t n_plot_edges = n_hyEdges * Hypercube<hyEdge_dim>::pow(n_subpoints-1);
     
     static_assert (hyEdge_dim <= 3);
     unsigned int element_id;
@@ -190,17 +200,19 @@ namespace PlotFunctions
     else if constexpr (hyEdge_dim == 2)  element_id = 8;
     else if constexpr (hyEdge_dim == 3)  element_id = 11;
     
-    output << "    <Piece NumberOfPoints=\"" << n_points << "\" NumberOfCells= \"" << n_hyEdges << "\">" << std::endl;
+    output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" << n_plot_edges << "\">" << std::endl;
     output << "      <Points>" << std::endl;
     output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
     
     for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
       {
-	auto hyEdge_geometry = hyper_graph.hyEdge_geometry(he_number);
+	auto edge = hyper_graph.hyEdge_geometry(he_number);
+	auto mapping = edge.mapping_tensor(sub_points);
+
 	for (unsigned int pt_number = 0; pt_number < points_per_hyEdge; ++pt_number)
 	  {
 	    output << "        ";
-	    const Point<space_dim> point = hyEdge_geometry.point(pt_number);
+	    const Point<space_dim>& point = mapping.lexicographic(pt_number);
 	    for (unsigned int dim = 0; dim < space_dim; ++dim)
 	      output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
 	    for (unsigned int dim = space_dim; dim < 3; ++dim)
@@ -214,7 +226,9 @@ namespace PlotFunctions
     output << "      <Cells>" << std::endl;
     output << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
     output << "        ";
-    
+
+    // Remove this when fixed
+    const pt_index_t n_points = n_plot_points;
     for (pt_index_t pt_number = 0; pt_number < n_points; ++pt_number)
       output << "  " << pt_number;
     output << std::endl;
@@ -241,7 +255,7 @@ namespace PlotFunctions
   }
 }
 
-template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double,
+template <class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1, typename dof_value_t = double,
         typename hyEdge_index_t = unsigned int>
 void plot_vtu(const HyperGraphT& hyper_graph,
 	      const LocalSolverT& local_solver,
@@ -252,7 +266,11 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
-  const std::array<dof_value_t, 2> abscissas = {0., 1.};
+
+  // Guido thinks, that here float is always sufficient
+  std::array<float, n_subdivisions+1> abscissas;
+  for (unsigned int i=0;i<=n_subdivisions;++i)
+    abscissas[i] = plot_options.scale*(0.5+i)/n_subdivisions;
   
   static_assert (hyEdge_dim <= 3);
   
@@ -271,7 +289,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" compressor=\"vtkZLibDataCompressor\">" << std::endl;
   myfile << "  <UnstructuredGrid>" << std::endl;
 
-  PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, plot_options);
+  PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, abscissas, plot_options);
 
   if (LocalSolverT::system_dimension() != 0)
     {
