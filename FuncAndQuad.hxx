@@ -9,6 +9,8 @@
 /*!*************************************************************************************************
  * \brief   Contains functions to evaluate shape functions (e.g. at quadrature points).
  *
+ * \todo    Update descriptions of template parameters (they have changed)!
+ * 
  * This namespace provides several functions to evaluate shape functions (and their derivatives)
  * that are L^2 orthonormal with respect to the unit interval \f$[0,1]\f$. (Obviously, this does not
  * hold for the derivatives.)
@@ -70,8 +72,8 @@ constexpr unsigned int compute_n_quad_points
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < typename lSol_float_t = double >
-inline lSol_float_t shape_fct_eval(const unsigned int index, const lSol_float_t x_val)
+template < typename return_t, typename input_t >
+inline return_t shape_fct_eval(const unsigned int index, const input_t x_val)
 {
   hy_assert( 0 <= index && index <= 5 ,
              "The index of a shape function must be non-negative and smaller than or equal to 5 at "
@@ -79,15 +81,17 @@ inline lSol_float_t shape_fct_eval(const unsigned int index, const lSol_float_t 
   hy_assert( 0. <= x_val && x_val <= 1. ,
              "The abscissa / x for which the shape function is evaluated has been set to be in the "
              << "closed interval [0,1]. Your choice has been " << x_val << "." );
-
+  
+  const return_t x = (return_t) x_val;
+  
   switch (index)
   {
     case 0: return 1.;
-    case 1: return std::sqrt(3)*(1.-2.*x_val);
-    case 2: return std::sqrt(5)*((6.*x_val-6.)*x_val+1.);
-    case 3: return std::sqrt(7)*(((20.*x_val-30.)*x_val+12.)*x_val-1.);
-    case 4: return std::sqrt(9)*((((70.*x_val-140.)*x_val+90.)*x_val-20.)*x_val+1.);
-    case 5: return std::sqrt(11)*(((((252.*x_val-630.)*x_val+560.)*x_val-210.)*x_val+30.)*x_val-1.);
+    case 1: return std::sqrt(3)*(1.-2.*x);
+    case 2: return std::sqrt(5)*((6.*x-6.)*x+1.);
+    case 3: return std::sqrt(7)*(((20.*x-30.)*x+12.)*x-1.);
+    case 4: return std::sqrt(9)*((((70.*x-140.)*x+90.)*x-20.)*x+1.);
+    case 5: return std::sqrt(11)*(((((252.*x-630.)*x+560.)*x-210.)*x+30.)*x-1.);
     default: hy_assert( 0 == 1 , "This shape function has not yet been implemented." );
   }
 
@@ -109,8 +113,8 @@ inline lSol_float_t shape_fct_eval(const unsigned int index, const lSol_float_t 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < typename lSol_float_t = double >
-inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t x_val)
+template < typename return_t, typename input_t >
+inline return_t shape_der_eval(const unsigned int index, const input_t x_val)
 {
   hy_assert( 0 <= index && index <= 5 ,
              "The index of a shape function must be non-negative and smaller than or equal to 5 at "
@@ -119,14 +123,16 @@ inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t 
              "The abscissa / x for which the shape function is evaluated has been set to be in the "
              << "closed interval [0,1]. Your choice has been " << x_val << "." );
 
+  const return_t x = (return_t) x_val;
+
   switch (index)
   {
     case 0: return 0.;
     case 1: return -std::sqrt(12);
-    case 2: return std::sqrt(5)*(12.*x_val-6.);
-    case 3: return std::sqrt(7)*((60.*x_val-60.)*x_val+12.);
-    case 4: return std::sqrt(9)*(((280.*x_val-420.)*x_val+180.)*x_val-20.);
-    case 5: return std::sqrt(11)*((((1260.*x_val-2520.)*x_val+1680.)*x_val-420.)*x_val+30.);
+    case 2: return std::sqrt(5)*(12.*x-6.);
+    case 3: return std::sqrt(7)*((60.*x-60.)*x+12.);
+    case 4: return std::sqrt(9)*(((280.*x-420.)*x+180.)*x-20.);
+    case 5: return std::sqrt(11)*((((1260.*x-2520.)*x+1680.)*x-420.)*x+30.);
     default: hy_assert( 0 == 1 , "This shape function has not yet been implemented." );
   }
   
@@ -149,13 +155,13 @@ inline lSol_float_t shape_der_eval(const unsigned int index, const lSol_float_t 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeX, typename lSol_float_t = double >
-inline std::array<lSol_float_t, sizeX> shape_fct_eval
-( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
+template< typename return_t, typename input_t, std::size_t sizeX >
+inline std::array<return_t, sizeX> shape_fct_eval
+( const unsigned int index, const std::array<input_t, sizeX>& x_val)
 {
-  std::array<lSol_float_t, sizeX> result;
+  std::array<return_t, sizeX> result;
   for (unsigned int k = 0; k < sizeX; ++k)
-    result[k] = FuncQuad::shape_fct_eval<lSol_float_t>(index, x_val[k]);
+    result[k] = FuncQuad::shape_fct_eval<return_t>(index, x_val[k]);
   return result;
 }
 /*!*************************************************************************************************
@@ -173,13 +179,13 @@ inline std::array<lSol_float_t, sizeX> shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeX, typename lSol_float_t = double >
-inline std::array<lSol_float_t, sizeX> shape_der_eval
-( const unsigned int index, const std::array<lSol_float_t, sizeX>& x_val)
+template< typename return_t, typename input_t, std::size_t sizeX >
+inline std::array<return_t, sizeX> shape_der_eval
+( const unsigned int index, const std::array<input_t, sizeX>& x_val)
 {
-  std::array<lSol_float_t, sizeX> result;
+  std::array<return_t, sizeX> result;
   for (unsigned int k = 0; k < sizeX; ++k)
-    result[k] = FuncQuad::shape_der_eval<lSol_float_t>(index, x_val[k]);
+    result[k] = FuncQuad::shape_der_eval<return_t>(index, x_val[k]);
   return result;
 }
 /*!*************************************************************************************************
@@ -197,13 +203,13 @@ inline std::array<lSol_float_t, sizeX> shape_der_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeInd, typename lSol_float_t = double >
-inline std::array<lSol_float_t, sizeInd> shape_fct_eval
-( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
+template< typename return_t, typename input_t, std::size_t sizeInd >
+inline std::array<return_t, sizeInd> shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const input_t x_val)
 {
-  std::array<lSol_float_t, sizeInd> result;
+  std::array<return_t, sizeInd> result;
   for (unsigned int k = 0; k < sizeInd; ++k)
-    result[k] = FuncQuad::shape_fct_eval<lSol_float_t>(index[k], x_val);
+    result[k] = FuncQuad::shape_fct_eval<return_t>(index[k], x_val);
   return result;
 }
 /*!*************************************************************************************************
@@ -221,13 +227,13 @@ inline std::array<lSol_float_t, sizeInd> shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeInd, typename lSol_float_t = double >
-inline std::array<lSol_float_t, sizeInd> shape_der_eval
-( const std::array<unsigned int, sizeInd>& index, const lSol_float_t x_val)
+template< typename return_t, typename input_t, std::size_t sizeInd >
+inline std::array<return_t, sizeInd> shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const input_t x_val)
 {
-  std::array<lSol_float_t, sizeInd> result;
+  std::array<return_t, sizeInd> result;
   for (unsigned int k = 0; k < sizeInd; ++k)
-    result[k] = FuncQuad::shape_der_eval<lSol_float_t>(index[k], x_val);
+    result[k] = FuncQuad::shape_der_eval<return_t>(index[k], x_val);
   return result;
 }
 /*!*************************************************************************************************
@@ -246,13 +252,13 @@ inline std::array<lSol_float_t, sizeInd> shape_der_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeInd, std::size_t sizeX, typename lSol_float_t = double >
-inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
-( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
+template< typename return_t, typename input_t, std::size_t sizeInd, std::size_t sizeX >
+inline std::array< std::array<return_t, sizeX>, sizeInd > shape_fct_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<input_t, sizeX>& x_val)
 {
-  std::array< std::array<lSol_float_t, sizeX>, sizeInd > result;
+  std::array< std::array<return_t, sizeX>, sizeInd > result;
   for (unsigned int k = 0; k < sizeInd; ++k)
-    result[k] = FuncQuad::shape_fct_eval<sizeX,lSol_float_t>(index[k], x_val);
+    result[k] = FuncQuad::shape_fct_eval<return_t>(index[k], x_val);
   return result;
 }
 /*!*************************************************************************************************
@@ -271,13 +277,13 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_fct_eval
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< std::size_t sizeInd, std::size_t sizeX, typename lSol_float_t = double >
-inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
-( const std::array<unsigned int, sizeInd>& index, const std::array<lSol_float_t, sizeX>& x_val)
+template< typename return_t, typename input_t, std::size_t sizeInd, std::size_t sizeX >
+inline std::array< std::array<return_t, sizeX>, sizeInd > shape_der_eval
+( const std::array<unsigned int, sizeInd>& index, const std::array<input_t, sizeX>& x_val)
 {
-  std::array< std::array<lSol_float_t, sizeX>, sizeInd > result;
+  std::array< std::array<return_t, sizeX>, sizeInd > result;
   for (unsigned int k = 0; k < sizeInd; ++k)
-    result[k] = FuncQuad::shape_der_eval<sizeX,lSol_float_t>(index[k], x_val);
+    result[k] = FuncQuad::shape_der_eval<return_t>(index[k], x_val);
   return result;
 }
 
@@ -290,18 +296,18 @@ inline std::array< std::array<lSol_float_t, sizeX>, sizeInd > shape_der_eval
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  quad_points         \c std::array containing the quadrature points.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< unsigned int max_quad_degree, typename lSol_float_t = double >
-std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_points()
+template< unsigned int max_quad_degree, typename return_t = double >
+std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
-  std::array<lSol_float_t, n_points> quad_points;
+  std::array<return_t, n_points> quad_points;
   
   if constexpr (n_points == 1)
     quad_points = { 0. };
@@ -353,18 +359,18 @@ std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_points()
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  quad_weights        \c std::array containing the quadrature weights.
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< unsigned int max_quad_degree, typename lSol_float_t = double >
-std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_weights()
+template< unsigned int max_quad_degree, typename return_t = double >
+std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_weights()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   static_assert( 1 <= n_points && n_points <= 9 , "Amount of points needs to be smaller than 10!");
-  std::array<lSol_float_t, n_points> quad_weights;
+  std::array<return_t, n_points> quad_weights;
   
   if constexpr (n_points == 1)
     quad_weights = { 2. };
@@ -417,26 +423,25 @@ std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> quad_weights()
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
  *                              quadrature points (the shape functions are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< unsigned int max_poly_degree, unsigned int max_quad_degree, typename lSol_float_t=double >
-std::array< std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+template< unsigned int max_poly_degree, unsigned int max_quad_degree, typename return_t = double >
+std::array< std::array<return_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_fcts_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   
-  std::array<lSol_float_t, n_points> quad_points
-    = FuncQuad::quad_points<max_quad_degree,lSol_float_t>();
+  std::array<return_t, n_points> quad_points
+    = FuncQuad::quad_points<max_quad_degree,return_t>();
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  return 
-    FuncQuad::shape_fct_eval<max_poly_degree + 1,n_points,lSol_float_t>(poly_deg_index,quad_points);
+  return FuncQuad::shape_fct_eval<return_t>(poly_deg_index,quad_points);
 }
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal shape functions evaluated at Gaussian quadrature points.
@@ -447,26 +452,25 @@ shape_fcts_at_quad_points()
  * 
  * \tparam  max_quad_degree     Desired degree of accuracy.
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
  *                              quadrature points (the shape functions' derivatives are evaluated).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< unsigned int max_poly_degree, unsigned int max_quad_degree, typename lSol_float_t=double >
-std::array< std::array<lSol_float_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
+template< unsigned int max_poly_degree, unsigned int max_quad_degree, typename return_t = double >
+std::array< std::array<return_t, compute_n_quad_points(max_quad_degree)> , max_poly_degree + 1 >
 shape_ders_at_quad_points()
 {
   constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
   
-  std::array<lSol_float_t, n_points> quad_points
-    = FuncQuad::quad_points<max_quad_degree,lSol_float_t>();
+  std::array<return_t, n_points> quad_points
+    = FuncQuad::quad_points<max_quad_degree,return_t>();
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  return 
-    FuncQuad::shape_der_eval<max_poly_degree + 1,n_points,lSol_float_t>(poly_deg_index,quad_points);
+  return FuncQuad::shape_der_eval<return_t>(poly_deg_index,quad_points);
 }
 /*!*************************************************************************************************
  * \brief   Orthonormal shape functions evaluated at end points of unit interval.
@@ -475,21 +479,21 @@ shape_ders_at_quad_points()
  * \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                              corner indices (the shape functions are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template< unsigned int max_poly_degree, typename lSol_float_t=double >
-std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
+template< unsigned int max_poly_degree, typename return_t = double >
+std::array< std::array<return_t, 2> , max_poly_degree + 1 > shape_fcts_at_bdrs()
 {
-  std::array<lSol_float_t, 2> bdrs = {0., 1.};
+  std::array<return_t, 2> bdrs = {0., 1.};
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  return FuncQuad::shape_fct_eval<max_poly_degree + 1,2,lSol_float_t>(poly_deg_index, bdrs);
+  return FuncQuad::shape_fct_eval<return_t>(poly_deg_index, bdrs);
 }
 /*!*************************************************************************************************
  * \brief   Derivatives of orthonormal shape functions evaluated at end points of unit interval.
@@ -498,21 +502,21 @@ std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_fcts_at_bd
  * most \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  * 
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t        Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                              corner indices (the shape functions' derivatives are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
-template < unsigned int max_poly_degree, typename lSol_float_t = double >
-std::array< std::array<lSol_float_t, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
+template < unsigned int max_poly_degree, typename return_t = double >
+std::array< std::array<return_t, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
 {
-  std::array<lSol_float_t, 2> bdrs = {0., 1.};
+  std::array<return_t, 2> bdrs = {0., 1.};
   std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
   for (unsigned int i = 0; i < poly_deg_index.size(); ++i)  poly_deg_index[i] = i;
   
-  return FuncQuad::shape_der_eval<max_poly_degree + 1,2,lSol_float_t>(poly_deg_index, bdrs);
+  return FuncQuad::shape_der_eval<return_t>(poly_deg_index, bdrs);
 }
 
 } // end of namespace FuncQuad

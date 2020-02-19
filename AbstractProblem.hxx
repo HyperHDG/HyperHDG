@@ -351,4 +351,12 @@ AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
                   ElasticRods_TensorialUniform < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
 
+/*
+template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+using ElasticityBBeam = 
+AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
+                  Geometry::File< hyEdge_dim, space_dim >,
+                  EulerBernoulliBeam < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
+                >;
+*/
 #endif // end of ifndef ABSTRACTPROBLEM_HXX
