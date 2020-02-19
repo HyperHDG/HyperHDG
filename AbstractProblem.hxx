@@ -29,14 +29,17 @@
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
- *        -> I believe that we have to discuss, how to do this best. Note that the .C file now
- *        contains a for_each loop (cf. HDGHyperGraph.h)!
+ *        -> A: I believe that we have to discuss, how to do this best. Note that the now, there is
+ *        a for_each loop (cf. HDGHyperGraph.hxx)!
  * 
  * \todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
  *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
+ *        -> A: This is the case already. I do not really see the difference.
  * 
  * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
  *        (With explanation, I mean this definition and the following function explanations, etc.)
+ *        -> A: Agreed.
+ *        
  *
  * \tparam  TopologyT     Class type containing topological information.
  * \tparam  GeometryT     Class type containing geometrical information.
