@@ -20,15 +20,15 @@ void test()
 {
   vector<unsigned int> num_elements;
 
-  if (space_dim >= 1) num_elements.push_back(4);
+  if (space_dim >= 1) num_elements.push_back(2);
   if (space_dim >= 2) num_elements.push_back(3);
-  if (space_dim >= 3) num_elements.push_back(2);
+  if (space_dim >= 3) num_elements.push_back(4);
 
   typedef Topology::Cubic<edge_dim,space_dim> Topo;
   typedef Geometry::UnitCube<edge_dim,space_dim> Geo;
   auto topo = std::make_shared<const Topo> (num_elements);
   auto geo = std::make_shared<const Geo> (*topo);
-
+  
   typedef LocalSolverTemplate<edge_dim,double> SolverType;
   SolverType lsolver;
   HDGHyperGraph<SolverType::n_glob_dofs_per_node(),Topo,Geo>
@@ -38,7 +38,7 @@ void test()
   PlotOptions pltop;
   pltop.scale = .9;
   std::string name = "plot1-";
-    name += std::to_string(edge_dim) + std::string("-") + std::to_string(space_dim);
+  name += std::to_string(edge_dim) + std::string("-") + char('a'+ space_dim - edge_dim);
   pltop.fileName = name;
   pltop.printFileNumber = false;
   plot(hdg_graph, lsolver, vectorDirichlet, pltop);

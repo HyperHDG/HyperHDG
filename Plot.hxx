@@ -163,6 +163,52 @@ PlotOptions::PlotOptions()
  ***********************************************************************/
 namespace PlotFunctions
 {
+  /**
+   * \brief Output of the cubes of the subdivision of an edge in lexicographic order
+   *
+   * \param dim: The dimension of the cube
+   * \param n: The number of subdivision points in each direction
+   * \tparam pt_index_t: The index type for global point numbers
+   */
+  template <unsigned int dim, typename pt_index_t>
+  void
+  vtu_enumerate_cube_vertices(std::ostream& output, unsigned int n, pt_index_t offset)
+  {
+    if constexpr (dim==1)
+      {
+	for (unsigned int i=0;i<n-1;++i)
+	  output << offset+i << ' ' << offset+i+1 << "\n";
+	return;
+      }
+    if constexpr (dim==2)
+      {
+	for (unsigned int i=0;i<n-1;++i)
+	  for (unsigned int j=0;j<n-1;++j)
+	    output << offset+i*n+j << ' '
+		   << offset+i*n+j+1 << ' '
+		   << offset+i*n+j+n << ' '
+		   << offset+i*n+j+n+1 << "\n";
+	return;
+      }
+    if constexpr (dim==3)
+      {
+	const unsigned int nn = n*n;
+	for (unsigned int i=0;i<n-1;++i)
+	  for (unsigned int j=0;j<n-1;++j)
+	    for (unsigned int k=0;j<n-1;++j)
+	      output << offset+(i*n+j)*n+k        << ' '
+		     << offset+(i*n+j)*n+k+1      << ' '
+		     << offset+(i*n+j)*n+k+n      << ' '
+		     << offset+(i*n+j)*n+k+n+1    << ' '
+		     << offset+(i*n+j)*n+k+nn     << ' '
+		     << offset+(i*n+j)*n+k+nn+1   << ' '
+		     << offset+(i*n+j)*n+k+nn+n   << ' '
+		     << offset+(i*n+j)*n+k+nn+n+1 << "\n";
+	return;
+      }
+  }
+
+  
   /*!**********************************************************************
    * \brief Auxiliary function for writing geometry section VTU files
    *
@@ -203,7 +249,7 @@ namespace PlotFunctions
     output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" << n_plot_edges << "\">" << std::endl;
     output << "      <Points>" << std::endl;
     output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-    
+
     for (hyEdge_index_t he_number = 0; he_number < n_hyEdges; ++he_number)
       {
 	auto edge = hyper_graph.hyEdge_geometry(he_number);
@@ -267,10 +313,10 @@ void plot_vtu(const HyperGraphT& hyper_graph,
   const hyEdge_index_t n_hyEdges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << hyEdge_dim;
 
-  // Guido thinks, that here float is always sufficient
+  // Guido thinks, that here float is always sufficient. Andreas hesitates.
   std::array<float, n_subdivisions+1> abscissas;
   for (unsigned int i=0;i<=n_subdivisions;++i)
-    abscissas[i] = plot_options.scale*(0.5+i)/n_subdivisions;
+    abscissas[i] = plot_options.scale*(i/n_subdivisions-0.5)+0.5;
   
   static_assert (hyEdge_dim <= 3);
   
