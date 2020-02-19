@@ -58,6 +58,7 @@ class PlotOptions
      * characterizes which applications can read the output files properly. Default and currently
      * only option is "vtu" for Paraview.
      * \todo G recommends to make this an enum. Text matching is always apita
+     *       -> A agrees! Should he do this or is G in this part of the file?
      **********************************************************************************************/
     std::string fileEnding;
     /*!*********************************************************************************************

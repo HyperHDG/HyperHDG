@@ -140,11 +140,6 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
-     * \todo  It is better style to implement this function outside the class declaration.
-     *        -> I agree, but then we have such a function for different local solvers for diffusion
-     *        and different local solvers for diefferent PDEs. All these functions would be globally
-     *        available and I do not have a nice idea to bypass this issue.
-     *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
      * matrix is the same for all hyperedges and can be assembled once in the constructor. This is
      * done in this function.
