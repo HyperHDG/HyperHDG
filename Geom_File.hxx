@@ -2,6 +2,7 @@
 #define GEOM_FILE_HXX
 
 #include <Point.hxx>
+#include <tensor_mapping.hxx>
 #include <array>
 
 
@@ -23,7 +24,17 @@ class File
     public:
       hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
       : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
-                               
+
+    /*!*******************************************************************************************
+     * \brief Return data of the mapping in the tensor product of a one-dimensional quadrature set.
+     *
+     * \tparam npts: The number of evaluation points in a single direction
+     * \tparam T: The data type used for this operation
+     ********************************************************************************************/
+      template <std::size_t npts, typename T = double>
+      Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
+      mapping_tensor(const std::array<T, npts>& points_1d) const;
+
       Point<space_dimT> point(const unsigned int pt_index) const
       { return hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]]; }
       Point<space_dimT> normal(const unsigned int index) const
@@ -57,6 +68,18 @@ class File
       return hyEdge(*this, index);
     }
 }; // end class File
+
+  template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>
+  template <std::size_t npts, typename T>
+  Tensor::MappingMultilinear<sdim, edim, npts, T>
+  File<edim, sdim, hyEdge_index_t>::hyEdge::mapping_tensor(const std::array<T, npts>& points_1d) const
+  {
+    std::array<Point<sdim>, Hypercube<edim>::n_vertices()> vertices;
+    for (unsigned int i=0;i<vertices.size();++i)
+      vertices[i] = point(i);
+
+    return Tensor::MappingMultilinear<sdim, edim, npts, T>(vertices, points_1d);
+  }
 
 } // end namespace Geometry
 

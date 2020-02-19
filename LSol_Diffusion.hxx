@@ -645,7 +645,7 @@ class Diffusion_TensorialUniform
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()>
         result;
-      result[0] = primal_at_dyadic(abscissas, lambda_values);
+      //result[0] = primal_at_dyadic(abscissas, lambda_values);
       return result;
     }
       
