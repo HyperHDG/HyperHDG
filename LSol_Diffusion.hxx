@@ -1,6 +1,8 @@
 #ifndef LSOL_DIFFUSION_HXX
 #define LSOL_DIFFUSION_HXX
 
+#include <ShapeFun.hxx>
+#include <Quadrature.hxx>
 #include <FuncAndQuad.hxx>
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
@@ -303,6 +305,7 @@ std::array
 Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
+  const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   const std::array<lSol_float_t, n_quads_1D_> q_weights 
     = FuncQuad::quad_weights<quad_deg, lSol_float_t>();
   const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > 
@@ -310,7 +313,9 @@ assemble_loc_matrix ( const lSol_float_t tau )
     deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg, lSol_float_t>());
   const std::array< std::array<lSol_float_t, 2> , poly_deg + 1 >
     trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg, lSol_float_t>());
-  
+
+  std::array<unsigned int, 2> double_int;
+  std::array<unsigned int, 1> single_int1, single_int2;
   std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
   lSol_float_t integral, integral1D;
   
@@ -328,10 +333,11 @@ assemble_loc_matrix ( const lSol_float_t tau )
       integral = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
       {
-        integral1D = 0.;
-        for (unsigned int q = 0; q < n_quads_1D_; ++q)
-          integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * trial[dec_i[dim_fct]][q];
-        integral *= integral1D;
+        
+        double_int[0] = dec_j[dim_fct];
+        double_int[1] = dec_i[dim_fct];
+        
+        integral *= integrator.integrate1D(double_int);
       }
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
         local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
@@ -656,7 +662,7 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
   std::array<unsigned int, poly_deg+1> poly_indices;
   for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
   std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = FuncQuad::shape_fct_eval<lSol_float_t>(poly_indices, abscissas);
+    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
       
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
   
