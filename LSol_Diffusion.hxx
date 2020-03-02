@@ -174,6 +174,8 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
     
+    const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
+    
     /*!*********************************************************************************************
      * \brief  Assemble local right hand for the local solver.
      *
@@ -306,39 +308,18 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
-  const std::array<lSol_float_t, n_quads_1D_> q_weights 
-    = FuncQuad::quad_weights<quad_deg, lSol_float_t>();
-  const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > 
-    trial(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg, lSol_float_t>()),
-    deriv(FuncQuad::shape_ders_at_quad_points<poly_deg, quad_deg, lSol_float_t>());
-  const std::array< std::array<lSol_float_t, 2> , poly_deg + 1 >
-    trial_bdr(FuncQuad::shape_fcts_at_bdrs<poly_deg, lSol_float_t>());
-
-  std::array<unsigned int, 2> double_int;
-  std::array<unsigned int, 1> single_int1, single_int2;
-  std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
-  lSol_float_t integral, integral1D;
+  lSol_float_t integral;
   
   std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_mat;
   local_mat.fill(0.);
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
-      index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
       
       // Integral_element phi_i phi_j dx in diagonal blocks
-      integral = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-      {
-        
-        double_int[0] = dec_j[dim_fct];
-        double_int[1] = dec_i[dim_fct];
-        
-        integral *= integrator.integrate1D(double_int);
-      }
+      integral = integrator.template integrate_vol_phiphi<hyEdge_dim>(i, j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
         local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
       
@@ -346,80 +327,21 @@ assemble_loc_matrix ( const lSol_float_t tau )
       { 
         // Integral_element - nabla phi_i \vec phi_j dx 
         // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          integral1D = 0.;
-          for (unsigned int q = 0; q < n_quads_1D_; ++q)
-            integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * 
-              ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_vol_Dphiphi<hyEdge_dim>(i, j, dim);
         local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
         local_mat[loc_matrix_index(dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] -= integral;
     
         // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)
-            integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phiphi<hyEdge_dim>(i, j, 2 * dim + 1);
         local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] += integral;
-        // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)
-            integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
-    
-        // Penalty in lower right diagonal block
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)
-            integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        // and from the penalty in the lower right diagonal block
         local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
           += tau * integral;
-        // Penalty in lower right diagonal block
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)
-            integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
-        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+ j)]
+        // Corresponding boundary integrals from integration by parts in left lower blocks
+        integral = integrator.template integrate_bdr_phiphi<hyEdge_dim>(i, j, 2 * dim + 0);
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+        // and from the penalty in the lower right diagonal block
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
           += tau * integral;
       }
     }
@@ -440,9 +362,7 @@ inline std::array
 Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dim >& lambda_values) const
 {
-  std::array<unsigned int, hyEdge_dim> dec_i;
-  std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-  lSol_float_t integral, integral1D;
+  lSol_float_t integral;
 
   std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
   right_hand_side.fill(0.);
@@ -455,41 +375,17 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::assemble_
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
         right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j]*integral;
+        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
     
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
         right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j]*integral;
+        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
       }
     }
   }
@@ -516,47 +412,21 @@ inline std::array
 Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::primal_at_boundary
 ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
-  std::array<unsigned int, hyEdge_dim> dec_i;
-  std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-  lSol_float_t integral, integral1D;
+  lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
         bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
         
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
         bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
       }
     }
@@ -599,32 +469,10 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::dual_at_b
       index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
         bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
         
-        integral = 1.;
-        for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-        {
-          if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-          else
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-          }
-          integral *= integral1D;
-        }
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
         bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
       }
     }

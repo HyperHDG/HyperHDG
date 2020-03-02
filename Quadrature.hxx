@@ -251,6 +251,27 @@ class IntegratorTensorial
       max_poly_degree + 1
     >
     shape_fcts_at_quad_, shape_ders_at_quad_;
+    
+    const std::array< std::array<return_t, 2> , max_poly_degree + 1 > trial_bdr_;
+    
+    
+    
+    template<unsigned int dimT, unsigned int range = max_poly_degree + 1> 
+    static inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned int index )
+    {
+      std::array<unsigned int, std::max(dimT,1U)> decomposition;
+      if ( decomposition.size() == 1 )  decomposition[0] = index;
+      else
+      {
+        for (unsigned int dim = 0; dim < dimT; ++dim)
+        {
+          decomposition[dim] = index % range;
+          index /= range;
+        }
+      }
+      return decomposition;
+    }
+    
   public:
     IntegratorTensorial()
     : quad_points_(quadrature_t::template quad_points<max_quad_degree,return_t>()),
@@ -258,28 +279,112 @@ class IntegratorTensorial
       shape_fcts_at_quad_(shape_fcts_at_quad_points
         <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
       shape_ders_at_quad_(shape_ders_at_quad_points
-        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>())
+        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
+      trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>())
     { }
     
-    template < std::size_t size_fct, std::size_t size_der = 0 >
-    return_t integrate1D
-    ( std::array<unsigned int, size_fct> fct_ind,
-      std::array<unsigned int, size_der> der_ind = { } ) const
+    return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
     {
-      return_t result = 0., helper;
+      return_t result = 0.;
       
       for (unsigned int q = 0; q < quad_weights_.size(); ++q)
-      {
-        helper = 1.;
-        for (unsigned int i = 0; i < fct_ind.size(); ++i)
-          helper *= shape_fcts_at_quad_[fct_ind[i]][q];
-        for (unsigned int i = 0; i < der_ind.size(); ++i)
-          helper *= shape_ders_at_quad_[der_ind[i]][q];
-        result += quad_weights_[q] * helper;
-      }
+        result += quad_weights_[q] * shape_fcts_at_quad_[i][q] * shape_fcts_at_quad_[j][q];
       
       return result;
     }
+    
+    return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
+    {
+      return_t result = 0.;
+      
+      for (unsigned int q = 0; q < quad_weights_.size(); ++q)
+        result += quad_weights_[q] * shape_fcts_at_quad_[i][q] * shape_ders_at_quad_[j][q];
+      
+      return result;
+    }
+    
+    return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
+    {
+      return_t result = 0.;
+      
+      for (unsigned int q = 0; q < quad_weights_.size(); ++q)
+        result += quad_weights_[q] * shape_ders_at_quad_[i][q] * shape_fcts_at_quad_[j][q];
+      
+      return result;
+    }
+    
+    return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
+    {
+      return_t result = 0.;
+      
+      for (unsigned int q = 0; q < quad_weights_.size(); ++q)
+        result += quad_weights_[q] * shape_ders_at_quad_[i][q] * shape_ders_at_quad_[j][q];
+      
+      return result;
+    }
+    
+    template < unsigned int dimT >
+    return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral;
+    }
+    
+    template < unsigned int dimT >  return_t integrate_vol_phiDphi
+    ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        if ( dim == dim_fct )  integral *= integrate_1D_phiDphi(dec_i[dim_fct], dec_j[dim_fct]);
+        else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral;
+    }
+    
+    template < unsigned int dimT >  return_t integrate_vol_Dphiphi
+    ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        if ( dim == dim_fct )  integral *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
+        else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral;
+    }
+    
+    template < unsigned int dimT > return_t integrate_bdr_phiphi
+    ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        if (dim == dim_fct)
+          integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind] * trial_bdr_[dec_j[dim_fct]][bdr_ind];
+        else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral;
+    }
+    
+    template < unsigned int dimT > return_t integrate_bdr_phipsi
+    ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, std::max(dimT-1,1U)> dec_j = index_decompose<dimT-1>(j);
+      unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        if (dim == dim_fct)  integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
+        else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
+      return integral;
+    }
+    
 }; // end of class Integrator
 
 #endif // end of ifndef QUADRATURE_HXX
