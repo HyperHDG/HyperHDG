@@ -1,6 +1,6 @@
 
 #include <tensor_mapping.hxx>
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 #include <Hypercube.hxx>
 
 template <unsigned int dim, unsigned int np>
