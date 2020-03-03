@@ -1,5 +1,5 @@
-#ifndef SHAPE_FUN_HXX
-#define SHAPE_FUN_HXX
+#ifndef SHAPE_FUN_1D_HXX
+#define SHAPE_FUN_1D_HXX
 
 #include <HyAssert.hxx>
 
@@ -332,4 +332,4 @@ std::array< std::array<return_t, 2> , max_poly_degree + 1 > shape_ders_at_bdrs()
   return shape_der_eval<return_t, shape_t>(poly_deg_index, bdrs);
 }
 
-#endif // end of ifndef SHAPE_FUN_HXX
+#endif // end of ifndef SHAPE_FUN_1D_HXX
