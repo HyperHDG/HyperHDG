@@ -273,10 +273,28 @@ class IntegratorTensorial
     
     const std::array< std::array<return_t, 2> , max_poly_degree + 1 > trial_bdr_;
     
-    
+  public:
+    IntegratorTensorial()
+    : quad_points_(quadrature_t::template quad_points<max_quad_degree,return_t>()),
+      quad_weights_(quadrature_t::template quad_weights<max_quad_degree,return_t>()),
+      shape_fcts_at_quad_(shape_fcts_at_quad_points
+        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
+      shape_ders_at_quad_(shape_ders_at_quad_points
+        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
+      trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>())
+    {
+      hy_assert( quad_weights_.size() == quad_points_.size() ,
+                 "Number of quadrature weights and points must be equal!" );
+      hy_assert( shape_fcts_at_quad_.size() == shape_ders_at_quad_.size() ,
+                 "Number of shape functions and their derivatives must be equal!" );
+      for (unsigned int i = 0; i < shape_fcts_at_quad_.size(); ++i)
+        hy_assert ( quad_points_.size() == shape_fcts_at_quad_[i].size()
+                      && shape_fcts_at_quad_[i].size() == shape_ders_at_quad_[i].size() ,
+                    "Number of quadrature points needs to be equal in all cases!" );
+    }
     
     template<unsigned int dimT, unsigned int range = max_poly_degree + 1> 
-    static inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned int index )
+    inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned int index ) const
     {
       std::array<unsigned int, std::max(dimT,1U)> decomposition;
       if ( decomposition.size() == 1 )  decomposition[0] = index;
@@ -291,19 +309,10 @@ class IntegratorTensorial
       return decomposition;
     }
     
-  public:
-    IntegratorTensorial()
-    : quad_points_(quadrature_t::template quad_points<max_quad_degree,return_t>()),
-      quad_weights_(quadrature_t::template quad_weights<max_quad_degree,return_t>()),
-      shape_fcts_at_quad_(shape_fcts_at_quad_points
-        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
-      shape_ders_at_quad_(shape_ders_at_quad_points
-        <max_poly_degree, max_quad_degree, quadrature_t, shape_t, return_t>()),
-      trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>())
-    { }
-    
     return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
     {
+      hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
+                 "Indices of shape functions must be smaller than amount of shape functions." );
       return_t result = 0.;
       
       for (unsigned int q = 0; q < quad_weights_.size(); ++q)
@@ -314,6 +323,8 @@ class IntegratorTensorial
     
     return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
     {
+      hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
+                 "Indices of shape functions must be smaller than amount of shape functions." );
       return_t result = 0.;
       
       for (unsigned int q = 0; q < quad_weights_.size(); ++q)
@@ -324,6 +335,8 @@ class IntegratorTensorial
     
     return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
     {
+      hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
+                 "Indices of shape functions must be smaller than amount of shape functions." );
       return_t result = 0.;
       
       for (unsigned int q = 0; q < quad_weights_.size(); ++q)
@@ -334,6 +347,8 @@ class IntegratorTensorial
     
     return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
     {
+      hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
+                 "Indices of shape functions must be smaller than amount of shape functions." );
       return_t result = 0.;
       
       for (unsigned int q = 0; q < quad_weights_.size(); ++q)
