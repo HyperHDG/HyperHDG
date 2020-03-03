@@ -18,7 +18,7 @@
 #define READDOMAIN_HXX
 
 #include <Point.hxx>
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <algorithm>
 #include <array>

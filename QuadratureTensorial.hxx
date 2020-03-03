@@ -1,7 +1,7 @@
 #ifndef QUADRATURE_TENSORIAL_HXX
 #define QUADRATURE_TENSORIAL_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <array>
 #include <cmath>

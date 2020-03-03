@@ -1,7 +1,7 @@
 #ifndef HDGHYPERGRAPH_HXX
 #define HDGHYPERGRAPH_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 #include <HyperHDG/HyperNodeFactory.hxx>
 
 #include <memory>

@@ -1,7 +1,7 @@
 #ifndef TENSOR_GEOMETRY_HXX
 #define TENSOR_GEOMETRY_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 #include <Point.hxx>
 #include <Hypercube.hxx>
 

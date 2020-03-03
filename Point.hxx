@@ -1,7 +1,7 @@
 #ifndef POINT_HXX
 #define POINT_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <array>
 #include <cmath>
