@@ -116,29 +116,6 @@ class Diffusion_TensorialUniform
       return column * n_loc_dofs_ + row;  // Transposed for LAPACK
     }
     /*!*********************************************************************************************
-     * \brief   Decompose index of local tensorial shape function into its (spatial) components.
-     *
-     * The function is static inline, since it is used in the constructor's initializer list.
-     *
-     * \param   index         Index of tensorial shape function.
-     * \param   range         Amount of 1D shape functions (the tensorial is made up from).
-     * \param   decomposition Array to be filled with the decomposition.
-     * \retval  decomposition Array filled with the decomposition.
-     **********************************************************************************************/
-    template<unsigned int dimT> static inline void index_decompose ( unsigned int index, 
-      unsigned int range, std::array<unsigned int, std::max(dimT,1U)>& decomposition )
-    {
-      if ( decomposition.size() == 1 )  decomposition[0] = index;
-      else
-      {
-        for (unsigned int dim = 0; dim < dimT; ++dim)
-        {
-          decomposition[dim] = index % range;
-          index /= range;
-        }
-      }
-    }
-    /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
@@ -156,18 +133,6 @@ class Diffusion_TensorialUniform
      * \brief   (Globally constant) penalty parameter for HDG scheme.
      **********************************************************************************************/
     const lSol_float_t tau_;
-    /*!*********************************************************************************************
-     * \brief   Quadrature weights per spatial dimension.
-     **********************************************************************************************/
-    const std::array<lSol_float_t, n_quads_1D_> q_weights_;
-    /*!*********************************************************************************************
-     * \brief   Trial functions evaluated at quadrature points (per spatial dimensions).
-     **********************************************************************************************/
-    const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > trial_;
-    /*!*********************************************************************************************
-     * \brief   Trial functions evaluated at boundaries {0,1} (per spatial dimension).
-     **********************************************************************************************/
-    const std::array< std::array<lSol_float_t, 2 > , poly_deg + 1 > trial_bdr_;
     /*!*********************************************************************************************
      * \brief   Local matrix for the local solver.
      **********************************************************************************************/
@@ -242,10 +207,7 @@ class Diffusion_TensorialUniform
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
     Diffusion_TensorialUniform(const constructor_value_type& tau)
-    : tau_(tau), q_weights_(quad_weights<quad_deg,Gaussian,lSol_float_t>()),
-      trial_(shape_fcts_at_quad_points<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t>()),
-      trial_bdr_(shape_fcts_at_bdrs<poly_deg, Legendre, lSol_float_t>()),
-      loc_mat_(assemble_loc_matrix(tau))
+    : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
@@ -511,10 +473,10 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   { 
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
+    dec_i = integrator.template index_decompose<hyEdge_dim>(i);
     for (unsigned int q = 0; q < Hypercube<hyEdge_dim>::pow(sizeT); ++q)
     {
-      index_decompose<hyEdge_dim>(q, abscissas.size(), dec_q);
+      dec_q = integrator.template index_decompose<hyEdge_dim, abscissas.size()>(q);
       fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
