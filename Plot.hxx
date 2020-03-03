@@ -20,7 +20,7 @@
 #ifndef PLOT_HXX
 #define PLOT_HXX
 
-#include <HDGHyperGraph.hxx>
+#include <HyperHDG/HDGHyperGraph.hxx>
 #include <Hypercube.hxx>
 #include <HyperHDG/Point.hxx>
 
