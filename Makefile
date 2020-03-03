@@ -8,6 +8,7 @@ OUTPUT_DIR	= $(SRC_DIR)/output
 BUILD_DIR	= $(SRC_DIR)/build
 DOXY_FILE_DIR	= $(SRC_DIR)/doxygen
 EXAMPLE_DIR	= $(SRC_DIR)/tests_c++
+INCLUDE_DIR = $(SRC_DIR)/include
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
@@ -33,10 +34,10 @@ endif
 
 # C++ Compiler options
 COMPILER    	= g++
-BASICFLAGS_R 	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g \
-								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
+BASICFLAGS_R 	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 \
+								-Wall -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
 								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
-BASICFLAGS  	= -pthread -g  -I$(PYTHON_M) -I$(SRC_DIR) -fwrapv -O2 -Wall -g \
+BASICFLAGS  	= -pthread -g  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 -Wall -g \
 								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
 								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
 # Some additional useful flags: -Wpedantic -Wextra \

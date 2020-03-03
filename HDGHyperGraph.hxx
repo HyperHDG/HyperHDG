@@ -2,7 +2,7 @@
 #define HDGHYPERGRAPH_HXX
 
 #include <HyAssert.hxx>
-#include <HyperNodeFactory.hxx>
+#include <HyperHDG/HyperNodeFactory.hxx>
 
 #include <memory>
 
