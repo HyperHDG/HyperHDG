@@ -1,7 +1,7 @@
 #ifndef LSOL_DIFFUSION_HXX
 #define LSOL_DIFFUSION_HXX
 
-#include <ShapeFun1D.hxx>
+#include <HyperHDG/ShapeFun1D.hxx>
 #include <QuadratureTensorial.hxx>
 #include <Hypercube.hxx>
 #include <HyperHDG/LapackWrapper.hxx>
