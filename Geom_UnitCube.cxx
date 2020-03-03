@@ -7,7 +7,7 @@
  **************************************************************************************************/
 
 #include <Geom_UnitCube.hxx>
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 using namespace std;
 using namespace Geometry;

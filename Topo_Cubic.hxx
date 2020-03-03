@@ -1,7 +1,7 @@
 #ifndef TOPO_CUBIC_HXX
 #define TOPO_CUBIC_HXX
 
-#include "HyAssert.hxx"
+#include <HyperHDG/HyAssert.hxx>
 #include <array>
 #include <vector>
 

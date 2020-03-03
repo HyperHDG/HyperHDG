@@ -1,7 +1,7 @@
 #ifndef SHAPE_FUN_1D_HXX
 #define SHAPE_FUN_1D_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <array>
 #include <cmath>

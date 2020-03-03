@@ -1,7 +1,7 @@
 #ifndef SPARSELINEARALGEBRA_HXX
 #define SPARSELINEARALGEBRA_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <vector>
 #include <cmath>

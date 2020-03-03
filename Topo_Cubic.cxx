@@ -7,7 +7,7 @@
  **************************************************************************************************/
 
 #include <Topo_Cubic.hxx>
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <algorithm>
 

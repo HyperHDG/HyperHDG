@@ -1,7 +1,7 @@
 #ifndef HYPERNODEFACTORY_HXX
 #define HYPERNODEFACTORY_HXX
 
-#include <HyAssert.hxx>
+#include <HyperHDG/HyAssert.hxx>
 
 #include <array>
 #include <vector>
@@ -139,7 +139,7 @@ class HyperNodeFactory
       dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
       hy_assert( local_dof_vector.size() == n_dofs_per_nodeT ,
                  "The size of the local dof vector is " << local_dof_vector.size() << ", but should"
-                  << " be equal to the amount of local dofs, which is " << n_dofs_per_nodeT << "." );
+                 << " be equal to the amount of local dofs, which is " << n_dofs_per_nodeT << "." );
       hy_assert( initial_dof_index >= 0
                    && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
                  "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
