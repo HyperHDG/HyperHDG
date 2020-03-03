@@ -156,6 +156,25 @@ struct Gaussian
   }
 }; // end of struct Gaussian
 
+// Calculate number of quadrature points
+
+template < typename quadrature_t >
+constexpr unsigned int compute_n_quad_points
+(const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
+{ return quadrature_t::compute_n_quad_points(max_quad_degree, local_dimensions); }
+
+// Return quadrature points
+
+template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
+std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_points()
+{ return quadrature_t::template quad_points<max_quad_degree,return_t>(); }
+
+// Return quadrature weights
+
+template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
+std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_weights()
+{ return quadrature_t::template quad_weights<max_quad_degree,return_t>(); }
+
 // Shape functions & their derivatives evaluated at quadrature's points:
 
 /*!*************************************************************************************************

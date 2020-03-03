@@ -3,7 +3,6 @@
 
 #include <ShapeFun.hxx>
 #include <Quadrature.hxx>
-#include <FuncAndQuad.hxx>
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
 
@@ -80,7 +79,7 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Number of quadrature points per spatial dimension.
      **********************************************************************************************/
-    static constexpr unsigned int n_quads_1D_  = FuncQuad::compute_n_quad_points(quad_deg);
+    static constexpr unsigned int n_quads_1D_  = compute_n_quad_points<Gaussian>(quad_deg);
     /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
@@ -243,9 +242,9 @@ class Diffusion_TensorialUniform
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
     Diffusion_TensorialUniform(const constructor_value_type& tau)
-    : tau_(tau), q_weights_(FuncQuad::quad_weights<quad_deg,lSol_float_t>()),
-      trial_(FuncQuad::shape_fcts_at_quad_points<poly_deg, quad_deg, lSol_float_t>()),
-      trial_bdr_(FuncQuad::shape_fcts_at_bdrs<poly_deg, lSol_float_t>()),
+    : tau_(tau), q_weights_(quad_weights<quad_deg,Gaussian,lSol_float_t>()),
+      trial_(shape_fcts_at_quad_points<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t>()),
+      trial_bdr_(shape_fcts_at_bdrs<poly_deg, Legendre, lSol_float_t>()),
       loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************
@@ -454,19 +453,15 @@ inline std::array
 Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::dual_at_boundary
 ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
 {
-  std::array<unsigned int, hyEdge_dim> dec_i;
-  std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-  lSol_float_t integral, integral1D;
+  lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
     {
-      index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
