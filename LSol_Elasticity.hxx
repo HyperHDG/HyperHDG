@@ -1,8 +1,8 @@
 #ifndef ELASTICITYSOLVER_HXX
 #define ELASTICITYSOLVER_HXX
 
-#include <ShapeFun.hxx>
-#include <Quadrature.hxx>
+#include <ShapeFun1D.hxx>
+#include <QuadratureTensorial.hxx>
 #include <Hypercube.hxx>
 #include <LapackWrapper.hxx>
 

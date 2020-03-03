@@ -1,5 +1,5 @@
-#ifndef QUADRATURE_HXX
-#define QUADRATURE_HXX
+#ifndef QUADRATURE_TENSORIAL_HXX
+#define QUADRATURE_TENSORIAL_HXX
 
 #include <HyAssert.hxx>
 
@@ -406,4 +406,4 @@ class IntegratorTensorial
     
 }; // end of class Integrator
 
-#endif // end of ifndef QUADRATURE_HXX
+#endif // end of ifndef QUADRATURE_TENSORIAL_HXX
