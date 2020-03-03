@@ -278,7 +278,6 @@ assemble_loc_matrix ( const lSol_float_t tau )
   {
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
-      
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = integrator.template integrate_vol_phiphi<hyEdge_dim>(i, j);
       for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
