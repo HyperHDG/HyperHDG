@@ -17,7 +17,7 @@
 #ifndef READDOMAIN_HXX
 #define READDOMAIN_HXX
 
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 #include <HyperHDG/HyAssert.hxx>
 
 #include <algorithm>

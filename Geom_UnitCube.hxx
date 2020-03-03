@@ -2,7 +2,7 @@
 #define GEOM_UNITCUBE_HXX
 
 #include <Hypercube.hxx>
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 #include <Topo_Cubic.hxx>
 #include <tensor_mapping.hxx>
 #include <array>

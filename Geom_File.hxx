@@ -1,7 +1,7 @@
 #ifndef GEOM_FILE_HXX
 #define GEOM_FILE_HXX
 
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 #include <tensor_mapping.hxx>
 #include <array>
 

@@ -22,7 +22,7 @@
 
 #include <HDGHyperGraph.hxx>
 #include <Hypercube.hxx>
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.

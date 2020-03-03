@@ -2,7 +2,7 @@
 #define TENSOR_GEOMETRY_HXX
 
 #include <HyperHDG/HyAssert.hxx>
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 #include <Hypercube.hxx>
 
 #include <array>

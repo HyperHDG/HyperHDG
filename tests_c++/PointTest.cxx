@@ -6,7 +6,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#include <Point.hxx>
+#include <HyperHDG/Point.hxx>
 
 #include <array>
 #include <random>
