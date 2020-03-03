@@ -1,5 +1,5 @@
 #include <AbstractProblem.hxx>
-#include <SparseLinearAlgebra.hxx>
+#include <HyperHDG/SparseLinearAlgebra.hxx>
 
 using namespace std;
 using namespace SparseLA;
