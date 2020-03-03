@@ -3,7 +3,7 @@
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
-#include <HDGHyperGraph.hxx>
+#include <HyperHDG/HDGHyperGraph.hxx>
 #include <Plot.hxx>
 
 /// \todo Those do not have any business in "AbstractProblem.hxx"

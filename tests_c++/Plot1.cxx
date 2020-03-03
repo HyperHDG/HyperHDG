@@ -1,6 +1,6 @@
 #include <Topo_Cubic.hxx>
 #include <Geom_UnitCube.hxx>
-#include <HDGHyperGraph.hxx>
+// #include <HDGHyperGraph.hxx>
 #include <LSol_Template.hxx>
 #include <Plot.hxx>
 #include <iostream>
