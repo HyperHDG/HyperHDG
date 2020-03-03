@@ -7,7 +7,7 @@ SRC_DIR		= $(PWD)
 OUTPUT_DIR	= $(SRC_DIR)/output
 BUILD_DIR	= $(SRC_DIR)/build
 DOXY_FILE_DIR	= $(SRC_DIR)/doxygen
-EXAMPLE_DIR	= $(SRC_DIR)/examples_c++
+EXAMPLE_DIR	= $(SRC_DIR)/tests_c++
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
@@ -86,24 +86,25 @@ with_PythonCompileOptions:
 	mkdir -p $(OUTPUT_DIR)
 	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
-examples:
+tests:
 	make
 	mkdir -p $(EXAMPLE_BUILD)
 	make example_objects
 	make example_linking
 
-run_examples:
-	make examples
+run_tests:
+	make tests
 	./build/C++ExampleBuild/Plot1.exe;
 	./build/C++ExampleBuild/Plot2.exe;
 	./build/C++ExampleBuild/PointTest.exe;
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
+	PYTHONPATH=$(BUILD_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
 
-new_run_examples:
+new_run_tests:
 	make clean
-	make run_examples
+	make run_tests
 
 
 example_objects: $(EXAMPLE_OBJS)
