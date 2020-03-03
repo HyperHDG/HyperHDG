@@ -4,7 +4,7 @@
 #include <ShapeFun1D.hxx>
 #include <QuadratureTensorial.hxx>
 #include <Hypercube.hxx>
-#include <LapackWrapper.hxx>
+#include <HyperHDG/LapackWrapper.hxx>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
