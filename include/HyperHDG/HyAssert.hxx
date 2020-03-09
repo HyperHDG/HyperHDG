@@ -22,8 +22,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef HYASSERT_HXX
-#define HYASSERT_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #ifndef NDEBUG
 
@@ -58,5 +57,3 @@ inline void __Hy_Assert
 #else // alternative branch of ifndef NDEBUG
 #define hy_assert(Expr, Msg) ;
 #endif // end of ifndef NDEBUG
-
-#endif // end of ifndef HYASSERT_HXX

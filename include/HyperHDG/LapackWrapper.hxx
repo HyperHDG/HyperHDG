@@ -12,8 +12,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2019.
  **************************************************************************************************/
 
-#ifndef LAPACKWRAPPER_HXX
-#define LAPACKWRAPPER_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <array>
 // #include <exception>
@@ -249,5 +248,3 @@ template<unsigned int system_size> std::array<float, system_size> lapack_solve
   lapack_solve(system_size, mat_a, rhs_b);
   return rhs;
 }
-
-#endif // end of ifndef LAPACKWRAPPER_HXX

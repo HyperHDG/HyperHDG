@@ -1,5 +1,4 @@
-#ifndef HYPERNODEFACTORY_HXX
-#define HYPERNODEFACTORY_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 
@@ -173,4 +172,3 @@ class HyperNodeFactory
     }
 }; // end of class HyperNodeFactory
 
-#endif // end of ifndef HYPERNODEFACTORY_HXX

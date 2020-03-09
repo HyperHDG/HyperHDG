@@ -1,5 +1,4 @@
-#ifndef SPARSELINEARALGEBRA_HXX
-#define SPARSELINEARALGEBRA_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 
@@ -214,5 +213,3 @@ std::vector<dof_value_t> conjugate_gradient
 }
 
 } // end of namespace SparseLA
-
-#endif // end of ifndef SPARSELINEARALGEBRA_HXX

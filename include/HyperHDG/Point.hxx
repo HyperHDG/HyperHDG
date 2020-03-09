@@ -1,5 +1,4 @@
-#ifndef POINT_HXX
-#define POINT_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 
@@ -528,5 +527,3 @@ std::ostream& operator<< (std::ostream& stream, const Point<space_dim,pt_coord_t
   for (unsigned int dim = 0; dim < space_dim; ++dim)  stream << " " << pt[dim] << " ";
   return stream;
 }
-
-#endif // end of ifndef POINT_HXX
