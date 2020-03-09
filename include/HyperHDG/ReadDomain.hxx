@@ -1,19 +1,3 @@
-/*!*************************************************************************************************
- * \file    ReadDomain.hxx
- * \brief   This file reads domains from different file types and returns the uniform DomainInfo.
- *
- * \todo    DomainInfo assumes that hyperedges have 2 * hyEdge_dim hyperedges and that every
- *          hyperedge has 2 ^ (hyEdge_dim) points/vertices. This does neither allow for triangular
- *          hypernodes (needed for simplicial hyperedges in 3D) nor for tringular hyperedges (2D)!
- *          Is this ok or should this be generalized?
- * 
- * \todo    Do the remaining doxygen for this file (when corresponding topology and geometry are
- *          available) and ensure compatability with the rest of the code.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
- **************************************************************************************************/
-
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/Point.hxx>
@@ -23,10 +7,22 @@
 #include <array>
 #include <vector>
 #include <fstream>
-#include <string>
 #include <sstream>
 
-
+/*!*************************************************************************************************
+ * \brief   Chech whether a \c std::vector does not contain duplicate entries.
+ *
+ * This function returns true if the \c std::vector \c vec does not contain duplicates, and false if
+ * it contains duplicates.
+ * 
+ * \tparam  T               Class template for vector elements.
+ * 
+ * \param   vec             General vector to be checked for duplicates.
+ * \retval  is_unique       True if vector does not contain duplicates and false otherwise.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template < class T >
 bool is_unique(const std::vector<T>& vec)
 {
@@ -35,24 +31,61 @@ bool is_unique(const std::vector<T>& vec)
   return ( std::adjacent_find( x.begin(), x.end() ) == x.end() ); // Check for duplicates in O(n).
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Hold all topological and geometrical information of a hypergraph.
+ *
+ * This struct holds all topological and geometrical information of a hypergraph that has been read
+ * from a file. Here, the hyperedges are supposed to be hypercuboids, i.e., we do not allow for
+ * simplicial structures here. These have not yet been implemented.
+ * 
+ * \tparam  hyEdge_dim      The local dimension of a hyperedge.
+ * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
+ * \tparam  pt_index_t      The index type for points. Default is \c unsigned \c int.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template 
 < unsigned int hyEdge_dim, unsigned int space_dim, typename hyEdge_index_t = unsigned int,
   typename hyNode_index_t = unsigned int, typename pt_index_t = unsigned int >
 struct DomainInfo
 {
+  /*!***********************************************************************************************
+   * \brief   Total amount of hyperedges.
+   ************************************************************************************************/
   hyEdge_index_t                                              n_hyEdges;
+  /*!***********************************************************************************************
+   * \brief   Total amount of hypernodes.
+   ************************************************************************************************/
   hyNode_index_t                                              n_hyNodes;
+  /*!***********************************************************************************************
+   * \brief   Total amount of points.
+   ************************************************************************************************/
   pt_index_t                                                  n_points;
+  /*!***********************************************************************************************
+   * \brief   Vector containing points.
+   ************************************************************************************************/
   std::vector< Point<space_dim> >                             points;
+  /*!***********************************************************************************************
+   * \brief   Vector containing hypernode indices per hyperedge.
+   ************************************************************************************************/
   std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge; // 2 * hyEdge_dim
+  /*!***********************************************************************************************
+   * \brief   Vector containing vertex indices per hyperedge.
+   ************************************************************************************************/
   std::vector< std::array< pt_index_t, 1 << hyEdge_dim > >    points_hyEdge;  // 2 ^ hyEdge_dim
-  
+  /*!***********************************************************************************************
+   * \brief   Constructor of DomainInfo struct.
+   ************************************************************************************************/
   DomainInfo (const pt_index_t n_points, const hyEdge_index_t n_hyEdge,
               const hyNode_index_t n_hyNode, const pt_index_t n_point)
   : n_hyEdges(n_hyEdge), n_hyNodes(n_hyNode), n_points(n_point),
     points(n_points), hyNodes_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges) { }
-  
+  /*!***********************************************************************************************
+   * \brief   Check, whether DomainInfo is in a consistent state.
+   ************************************************************************************************/
   bool check_consistency()
   {
     bool consistent = ( hyNodes_hyEdge.size() == hyNodes_hyEdge.size() );
@@ -100,7 +133,24 @@ struct DomainInfo
   } // end of check_consistency
 }; // end of struct DomainInfo
 
-
+/*!*************************************************************************************************
+ * \brief   Function to read geo file.
+ *
+ * Function to read self-defined .geo files are supported. These files are supposed to comprise
+ * hypergraphs consisting of hypercuboids only. Other versions have not yet been implemented.
+ * 
+ * \tparam  hyEdge_dim      The local dimension of a hyperedge.
+ * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
+ * \tparam  pt_index_t      The index type for points. Default is \c unsigned \c int.
+ * 
+ * \param   filename        Name of the .geo file to be read.
+ * \retval  domain_info     Topological and geometrical information of hypergraph.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template
 < unsigned int hyEdge_dim, unsigned int space_dim, typename hyEdge_index_t = unsigned int,
   typename hyNode_index_t = unsigned int, typename pt_index_t = unsigned int >
@@ -255,7 +305,21 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   return domain_info;
 } // end of read_domain_geo
 
-
+/*!*************************************************************************************************
+ * \brief   General Function to read domain from input file.
+ *
+ * At the moment, only self-defined .geo files are supported. These files are supposed to comprise
+ * hypergraphs consisting of hypercuboids only. Other versions have not yet been implemented.
+ * 
+ * \tparam  hyEdge_dim      The local dimension of a hyperedge.
+ * \tparam  space_dim       The dimension of the surrounding space.
+ * 
+ * \param   filename        Name of the .geo file to be read.
+ * \retval  domain_info     Topological and geometrical information of hypergraph.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
 {
