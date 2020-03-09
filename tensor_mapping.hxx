@@ -1,5 +1,4 @@
-#ifndef TENSOR_GEOMETRY_HXX
-#define TENSOR_GEOMETRY_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 #include <HyperHDG/Point.hxx>
@@ -163,5 +162,3 @@ namespace Tensor
     return (*this)(ind);
   }
 }
-
-#endif

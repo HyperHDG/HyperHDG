@@ -1,5 +1,4 @@
-#ifndef ABSTRACTPROBLEM_HXX
-#define ABSTRACTPROBLEM_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 // Includes needed for external communication.
 // These also would ben included when splitted in .C and .h files.
@@ -362,4 +361,3 @@ AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
                   EulerBernoulliBeam < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
                 >;
 */
-#endif // end of ifndef ABSTRACTPROBLEM_HXX

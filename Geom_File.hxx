@@ -1,5 +1,4 @@
-#ifndef GEOM_FILE_HXX
-#define GEOM_FILE_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/Point.hxx>
 #include <tensor_mapping.hxx>
@@ -82,5 +81,3 @@ class File
   }
 
 } // end namespace Geometry
-
-#endif // end ifndef GEOM_FILE_HXX

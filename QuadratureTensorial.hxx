@@ -1,5 +1,4 @@
-#ifndef QUADRATURE_TENSORIAL_HXX
-#define QUADRATURE_TENSORIAL_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 
@@ -420,5 +419,3 @@ class IntegratorTensorial
     }
     
 }; // end of class Integrator
-
-#endif // end of ifndef QUADRATURE_TENSORIAL_HXX

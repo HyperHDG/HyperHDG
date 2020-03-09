@@ -14,8 +14,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef READDOMAIN_HXX
-#define READDOMAIN_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/Point.hxx>
 #include <HyperHDG/HyAssert.hxx>
@@ -273,5 +272,3 @@ DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
   
   return domain_info;
 } // end of read_domain
-
-#endif // end of ifndef READDOMAIN_HXX

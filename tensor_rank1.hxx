@@ -1,5 +1,4 @@
-#ifndef TENSOR_RANK1
-#define TENSOR_RANK1
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <initializer_list>
 #include <array>
@@ -88,5 +87,3 @@ namespace Tensor
     return data[i];
   }
 }
-
-#endif

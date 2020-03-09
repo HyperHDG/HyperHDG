@@ -1,5 +1,4 @@
-#ifndef HYPERCUBE_HXX
-#define HYPERCUBE_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 /*!*************************************************************************************************
  * \brief   Helper class containing numbers and functions related to hypercubes.
@@ -33,5 +32,3 @@ struct Hypercube
     return result;
   }
 }; // end of struct Hypercube
-
-#endif // end of ifndef HYPERCUBE_HXX
