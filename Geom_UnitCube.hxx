@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <Hypercube.hxx>
+#include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/Point.hxx>
 #include <Topo_Cubic.hxx>
 #include <tensor_mapping.hxx>

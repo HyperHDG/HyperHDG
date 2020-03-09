@@ -1,7 +1,7 @@
 
 #include <tensor_mapping.hxx>
 #include <HyperHDG/Point.hxx>
-#include <Hypercube.hxx>
+#include <HyperHDG/Hypercube.hxx>
 
 template <unsigned int dim, unsigned int np>
 void brick()

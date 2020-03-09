@@ -2,7 +2,7 @@
 
 #include <HyperHDG/HyAssert.hxx>
 #include <HyperHDG/Point.hxx>
-#include <Hypercube.hxx>
+#include <HyperHDG/Hypercube.hxx>
 
 #include <array>
 

@@ -2,7 +2,7 @@
 
 #include <HyperHDG/ShapeFun1D.hxx>
 #include <QuadratureTensorial.hxx>
-#include <Hypercube.hxx>
+#include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/LapackWrapper.hxx>
 
 /*!*************************************************************************************************
