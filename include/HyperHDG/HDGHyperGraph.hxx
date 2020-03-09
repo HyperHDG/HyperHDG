@@ -1,5 +1,4 @@
-#ifndef HDGHYPERGRAPH_HXX
-#define HDGHYPERGRAPH_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 #include <HyperHDG/HyperNodeFactory.hxx>
@@ -459,5 +458,3 @@ class HDGHyperGraph
     template < typename dof_index_t = unsigned int >
     const dof_index_t n_global_dofs() const  { return hyNode_factory_.n_global_dofs(); }
 }; // end of class HDGHyperGraph
-
-#endif // end of ifndef HYPERGRAPH_HXX
