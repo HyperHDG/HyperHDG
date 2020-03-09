@@ -3,8 +3,6 @@
 /*!*************************************************************************************************
  * \brief   Helper class containing numbers and functions related to hypercubes.
  * 
- * \todo    All functions related to dim-dimensional tensor can go here.
- * 
  * \tparam  dim     Unsigned integer indicating the dimension of the considered hypercube.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
@@ -22,13 +20,13 @@ struct Hypercube
    ************************************************************************************************/ 
   static constexpr unsigned int n_vertices () { return 1 << dim; }
   /*!***********************************************************************************************
-   * \brief   Return `n` to the power `dim`, which is the size of the `dim`-dimensional tensor of
-   *          dimension `n`.
+   * \brief   Return \c n to the power \c dim, which is the size of the dim-dimensional tensor of
+   *          dimension n.
    ************************************************************************************************/ 
-  static constexpr unsigned int pow(unsigned int n)
+  static constexpr unsigned int pow (unsigned int n)
   {
-    int result = 1;
-    for (unsigned int i=0;i<dim;++i)  result *= n;
+    unsigned int result = 1;
+    for (unsigned int i = 0; i < dim; ++i)  result *= n;
     return result;
   }
 }; // end of struct Hypercube

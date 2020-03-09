@@ -20,7 +20,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HDGHyperGraph.hxx>
-#include <Hypercube.hxx>
+#include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/Point.hxx>
 
 // Includes solely needed for implementation of the different functions.
