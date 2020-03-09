@@ -1,5 +1,4 @@
-#ifndef TOPO_CUBIC_HXX
-#define TOPO_CUBIC_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
@@ -242,5 +241,3 @@ class Cubic
 }; // end of class Cubic
 
 } // end of namespace Topology
-
-#endif // end of ifndef TOPO_CUBIC_HXX

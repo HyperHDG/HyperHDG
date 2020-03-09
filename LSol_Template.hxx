@@ -1,6 +1,4 @@
-#ifndef LSOL_TEMPLATE_HXX
-#define LSOL_TEMPLATE_HXX
-
+#pragma once // Ensure that file is included only once in a single compilation.
 
 /**
  * \brief Implementation the interface of local solvers needed by enclosing objects in a minimal way.
@@ -82,5 +80,3 @@ public:
 			system_dimension()> ();
     }
 };
-
-#endif

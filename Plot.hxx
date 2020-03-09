@@ -17,8 +17,7 @@
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
  **************************************************************************************************/
 
-#ifndef PLOT_HXX
-#define PLOT_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HDGHyperGraph.hxx>
 #include <Hypercube.hxx>
@@ -449,6 +448,3 @@ void plot(const HyperGraphT& hyper_graph,
 	  const PlotOptions& plot_options)
 {
 }
-
-
-#endif // end of ifndef PLOT_HXX

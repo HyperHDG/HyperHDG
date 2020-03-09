@@ -1,5 +1,4 @@
-#ifndef LSOL_DIFFUSION_HXX
-#define LSOL_DIFFUSION_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/ShapeFun1D.hxx>
 #include <QuadratureTensorial.hxx>
@@ -486,6 +485,3 @@ Diffusion_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
   
   return values;
 } // end of Diffusion_TensorialUniform::bulk_values
-
-
-#endif // end of ifndef LSOL_DIFFUSION_HXX

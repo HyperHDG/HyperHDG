@@ -1,5 +1,4 @@
-#ifndef ELASTICITYSOLVER_HXX
-#define ELASTICITYSOLVER_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/ShapeFun1D.hxx>
 #include <QuadratureTensorial.hxx>
@@ -1450,7 +1449,3 @@ class ElasticRods_TensorialUniform
     //~ }
     
 //~ }; // end of class ElasticRods_TensorialUniform
-
-
-
-#endif

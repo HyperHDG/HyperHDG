@@ -1,5 +1,4 @@
-#ifndef GEOM_UNITCUBE_HXX
-#define GEOM_UNITCUBE_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <Hypercube.hxx>
 #include <HyperHDG/Point.hxx>
@@ -218,5 +217,3 @@ class UnitCube
     return Tensor::MappingMultilinear<sdim, edim, npts, T>(vertices, points_1d);
   }
 } // end namespace Geometry
-
-#endif // end ifndef GEOM_UNITCUBE_HXX

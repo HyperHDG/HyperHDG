@@ -1,5 +1,4 @@
-#ifndef TOPO_FILE_HXX
-#define TOPO_FILE_HXX
+#pragma once // Ensure that file is included only once in a single compilation.
 
 #include <ReadDomain.hxx>
 
@@ -55,5 +54,3 @@ class File
 }; // end of class File
 
 } // end of namespace Topology
-
-#endif // end of ifndef TOPO_FILE_HXX
