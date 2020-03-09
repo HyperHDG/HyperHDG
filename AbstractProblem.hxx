@@ -6,7 +6,7 @@
 #include <Plot.hxx>
 
 /// \todo Those do not have any business in "AbstractProblem.hxx"
-#include <LSol_Diffusion.hxx>
+#include <HyperHDG/LocalSolver/Diffusion.hxx>
 #include <LSol_Elasticity.hxx>
 #include "Topo_Cubic.hxx"
 #include <HyperHDG/Topology/File.hxx>
