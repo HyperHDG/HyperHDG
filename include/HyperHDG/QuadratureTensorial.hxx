@@ -155,21 +155,53 @@ struct Gaussian
   }
 }; // end of struct Gaussian
 
-// Calculate number of quadrature points
-
+/*!*************************************************************************************************
+ * \brief   Calculate the amount of quadrature points.
+ * 
+ * \tparam  quadrature_t        The quadrature rule applied.
+ * 
+ * \param   max_quad_degree   Desired degree of accuracy.
+ * \param   local_dimensions  Dimension of the underlying domain. Defaullt is one.
+ * \retval  n_quad_points     Amount of needed quadrature points.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template < typename quadrature_t >
 constexpr unsigned int compute_n_quad_points
 (const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
 { return quadrature_t::compute_n_quad_points(max_quad_degree, local_dimensions); }
-
-// Return quadrature points
-
+/*!*************************************************************************************************
+ * \brief   Quadrature points on one-dimensional unit interval.
+ * 
+ * Returns the quadrature points of the quadrature rule with accuracy order \c max_quad_degree on
+ * a one-dimensional unit interval \f$[0,1]\f$.
+ * 
+ * \tparam  max_quad_degree   Desired degree of accuracy.
+ * \tparam  quadrature_t      The quadrature rule applied.
+ * \tparam  return_t          Floating type specification. Default is double.
+ * \retval  quad_points       \c std::array containing the quadrature points.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
 std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_points()
 { return quadrature_t::template quad_points<max_quad_degree,return_t>(); }
-
-// Return quadrature weights
-
+/*!*************************************************************************************************
+ * \brief   Quadrature weights on one-dimensional unit interval.
+ * 
+ * Returns the quadrature weights of the quadrature rule with accuracy order \c max_quad_degree on
+ * a one-dimensional unit interval \f$[0,1]\f$.
+ * 
+ * \tparam  max_quad_degree   Desired degree of accuracy.
+ * \tparam  quadrature_t      The quadrature rule applied.
+ * \tparam  return_t          Floating type specification. Default is double.
+ * \retval  quad_weights      \c std::array containing the quadrature weights.
+ * 
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
 std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_weights()
 { return quadrature_t::template quad_weights<max_quad_degree,return_t>(); }
@@ -177,17 +209,19 @@ std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_
 // Shape functions & their derivatives evaluated at quadrature's points:
 
 /*!*************************************************************************************************
- * \brief   Orthonormal shape functions evaluated at Gaussian quadrature points.
+ * \brief   Shape functions evaluated at quadrature points.
  * 
- * Returns the values of the orthonormal shape functions on \f$[0,1]\f$ of degree at most
+ * Returns the values of the shape functions on \f$[0,1]\f$ of degree at most
  * \c max_poly_degree at the quadrature rule with accuracy order \c max_quad_degree on a
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
- * \tparam  max_quad_degree     Desired degree of accuracy.
- * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  return_t        Floating type specification. Default is double.
- * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
- *                              quadrature points (the shape functions are evaluated at).
+ * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
+ * \tparam  max_quad_degree   Desired degree of accuracy.
+ * \tparam  quadrature_t      The quadrature rule applied.
+ * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam  return_t          Floating type specification. Default is double.
+ * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of 
+ *                            quadrature points (the shape functions are evaluated at).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -214,17 +248,19 @@ shape_fcts_at_quad_points()
   return shape_fct_eval<return_t, shape_t>(poly_deg_index,quad_points);
 }
 /*!*************************************************************************************************
- * \brief   Derivatives of orthonormal shape functions evaluated at Gaussian quadrature points.
+ * \brief   Derivatives of shape functions evaluated at quadrature points.
  * 
  * Returns the values of the derivatives of orthonormal shape functions on \f$[0,1]\f$ of degree at
  * most \c max_poly_degree at the quadrature rule with accuracy order \c max_quad_degree on a
  * one-dimensional unit interval \f$[0,1]\f$.
  * 
- * \tparam  max_quad_degree     Desired degree of accuracy.
- * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
- * \tparam  return_t        Floating type specification. Default is double.
- * \retval  quad_vals           \c std::array of polynomial degrees containing \c std::array of 
- *                              quadrature points (the shape functions' derivatives are evaluated).
+ * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
+ * \tparam  max_quad_degree   Desired degree of accuracy.
+ * \tparam  quadrature_t      The quadrature rule applied.
+ * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam  return_t          Floating type specification. Default is double.
+ * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of 
+ *                            quadrature points (the shape functions' derivatives are evaluated).
  * 
  * \authors   Guido Kanschat, University of Heidelberg, 2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2020.
@@ -251,8 +287,18 @@ shape_ders_at_quad_points()
   return shape_der_eval<return_t, shape_t>(poly_deg_index,quad_points);
 }
 
-// General integrator class
-
+/*!*************************************************************************************************
+ * \brief   General integrator class on tensorial hypergraphs.
+ * 
+ * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
+ * \tparam  max_quad_degree   Desired degree of accuracy.
+ * \tparam  quadrature_t      The quadrature rule applied.
+ * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam  return_t          Floating type specification. Default is double.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ **************************************************************************************************/
 template
 < 
   unsigned int max_poly_degree, unsigned int max_quad_degree,
@@ -268,11 +314,12 @@ class IntegratorTensorial
       std::array < return_t, quadrature_t::compute_n_quad_points(max_quad_degree) > , 
       max_poly_degree + 1
     >
-    shape_fcts_at_quad_, shape_ders_at_quad_;
-    
+      shape_fcts_at_quad_, shape_ders_at_quad_;
     const std::array< std::array<return_t, 2> , max_poly_degree + 1 > trial_bdr_;
-    
   public:
+    /*!*********************************************************************************************
+     * \brief   Constructor for general integrator class.
+     **********************************************************************************************/
     IntegratorTensorial()
     : quad_points_(quadrature_t::template quad_points<max_quad_degree,return_t>()),
       quad_weights_(quadrature_t::template quad_weights<max_quad_degree,return_t>()),
@@ -291,7 +338,18 @@ class IntegratorTensorial
                       && shape_fcts_at_quad_[i].size() == shape_ders_at_quad_[i].size() ,
                     "Number of quadrature points needs to be equal in all cases!" );
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Decompose index of local shape functions with respect to the local dimension.
+     *
+     * Since the shape functions are assumed to be tensor products of one-dimensional shape
+     * functions, the index of the shape function needs to be decomposed into dim indices of one-
+     * dimensional shape functions (to evaluate the shape function appropriately).
+     *
+     * \tparam  dimT          Local dimension of the shape function's domain.
+     * \tparam  range         Range (maximum) of the local indices.
+     * \param   index         Local index of the shape function.
+     * \param   decomposition Array consisiting of respective one-dimensional indices.
+     **********************************************************************************************/
     template<unsigned int dimT, unsigned int range = max_poly_degree + 1> 
     inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned int index ) const
     {
@@ -307,7 +365,13 @@ class IntegratorTensorial
       }
       return decomposition;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of one-dimensional shape functions.
+     *
+     * \param   i             Local index of local one-dimensional shape function.
+     * \param   j             Local index of local one-dimensional shape function.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
@@ -319,7 +383,13 @@ class IntegratorTensorial
       
       return result;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of one-dimensional shape function and one derivative.
+     *
+     * \param   i             Local index of local one-dimensional shape function.
+     * \param   j             Local index of local one-dimensional shape function (with derivative).
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
@@ -331,7 +401,13 @@ class IntegratorTensorial
       
       return result;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of one-dimensional shape function and one derivative.
+     *
+     * \param   i             Local index of local one-dimensional shape function (with derivative).
+     * \param   j             Local index of local one-dimensional shape function.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
@@ -343,7 +419,13 @@ class IntegratorTensorial
       
       return result;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of one-dimensional shape function and one derivative.
+     *
+     * \param   i             Local index of local one-dimensional shape function (with derivative).
+     * \param   j             Local index of local one-dimensional shape function (with derivative).
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
@@ -355,7 +437,14 @@ class IntegratorTensorial
       
       return result;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape functions over dimT-dimensional volume.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \param   i             Local index of local shape function.
+     * \param   j             Local index of local shape function.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     template < unsigned int dimT >
     return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j) const
     {
@@ -366,7 +455,15 @@ class IntegratorTensorial
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape functions over dimT-dimensional volume.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \param   i             Local index of local shape function.
+     * \param   j             Local index of local shape function (with derivative).
+     * \param   dim           Dimension of the derivative.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     template < unsigned int dimT >  return_t integrate_vol_phiDphi
     ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
     {
@@ -378,7 +475,15 @@ class IntegratorTensorial
         else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape functions over dimT-dimensional volume.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \param   i             Local index of local shape function (with derivative).
+     * \param   j             Local index of local shape function.
+     * \param   dim           Dimension of the derivative.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     template < unsigned int dimT >  return_t integrate_vol_Dphiphi
     ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
     {
@@ -390,7 +495,15 @@ class IntegratorTensorial
         else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape functions over dimT-dimensional volume's boundary.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \param   i             Local index of local shape function.
+     * \param   j             Local index of local shape function.
+     * \param   bdr           Boundary face index.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     template < unsigned int dimT > return_t integrate_bdr_phiphi
     ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
     {
@@ -404,7 +517,16 @@ class IntegratorTensorial
         else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape function of volume times shape function of volume's face
+     *          over dimT-dimensional volume's boundary.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \param   i             Local index of local volume shape function.
+     * \param   j             Local index of local boundary shape function.
+     * \param   bdr           Boundary face index.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
     template < unsigned int dimT > return_t integrate_bdr_phipsi
     ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
     {
@@ -417,5 +539,4 @@ class IntegratorTensorial
         else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
       return integral;
     }
-    
 }; // end of class Integrator
