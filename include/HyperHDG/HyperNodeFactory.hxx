@@ -171,4 +171,3 @@ class HyperNodeFactory
         global_dof_vector[initial_dof_index + index] = value;
     }
 }; // end of class HyperNodeFactory
-
