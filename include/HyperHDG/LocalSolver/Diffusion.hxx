@@ -1,7 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/ShapeFun1D.hxx>
-#include <QuadratureTensorial.hxx>
+#include <HyperHDG/QuadratureTensorial.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/LapackWrapper.hxx>
 
