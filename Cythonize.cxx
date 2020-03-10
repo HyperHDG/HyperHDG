@@ -1,8 +1,8 @@
-#include <fstream>
 #include <algorithm>
-#include <sstream>
 #include <vector>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include <chrono>
 #include <experimental/filesystem>
@@ -10,8 +10,28 @@
 #include <HyperHDG/HyAssert.hxx>
 
 using namespace std;
-namespace fs = std::experimental::filesystem;
+namespace fs = experimental::filesystem;
 
+/*!*************************************************************************************************
+ * \brief   Function serving as C++ counterpart of just-in-time compilation.
+ * 
+ * In HyperHDG, a Python script can be executed using the libraries functions (which have been
+ * implemented in C++ utilizing templates). Thus, we provide a just-in-time compilation framework
+ * that allows to use the scripts without prior compilation of the used classes. In contrast, we
+ * provide our own import function \c hyImport (cf. hyImport.py), which is the Python counterpart
+ * to this function hyCythonize.
+ * 
+ * If hyImport is called with a vector of strings (file name and class name plus possible template
+ * specifications), it uses Cython based interfaces to call hyCythnoize which itself builds
+ * Cython based interfaces and compiles the respective files, i.e. a .hxx/.cxx, a .pxd, and a .pyx
+ * file to a .so file which is needed by the overall Python script.
+ *        
+ * \param   names     Vector containing specifying names.
+ * \retval  name      Name associated to created .so file.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 string hyCythonize( const vector<string>& names )
 {
   hy_assert( names.size() >= 2 ,
@@ -156,7 +176,12 @@ string hyCythonize( const vector<string>& names )
   return python_name;
 }
 
-
+/*!*************************************************************************************************
+ * \brief   Main function builds hyCythonize function using itself.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
 int main()
 {
   hyCythonize({ "hyCythonize" , "hyCythonizer" });
