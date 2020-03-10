@@ -4,9 +4,13 @@
 #include <vector>
 #include <iostream>
 
+#include <chrono>
+#include <experimental/filesystem>
+
 #include <HyperHDG/HyAssert.hxx>
 
 using namespace std;
+namespace fs = std::experimental::filesystem;
 
 string hyCythonize( const vector<string>& names )
 {
@@ -44,7 +48,7 @@ string hyCythonize( const vector<string>& names )
     -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 "
     + outfileName + ".o "
     + "-o build/" + python_name + ".so \
-    -llapack";
+    -llapack -lstdc++fs";
   
   // Introduce auxiliary variables needed for copying files and substituting keywords.
   
@@ -52,6 +56,48 @@ string hyCythonize( const vector<string>& names )
   std::istringstream linestream;
   ifstream infile;
   ofstream outfile;
+  
+  // Check whether or not file needs to be recompiled
+  
+  bool success = true;
+  infile.open(infileName + ".pxd");
+  std::getline(infile, line);
+  linestream = std::istringstream(line);
+  infile.close();
+  
+  linestream >> word; if (word != "#")     success = false;
+  linestream >> word; if (word != "C++:")  success = false;
+  linestream >> word;
+  
+  if (success)
+  {
+    fs::path so_file  = fs::current_path().string() + "/build/" + python_name + ".so";
+    if (exists(so_file))
+    {
+      fs::path pyx_file = fs::current_path().string() + "/cython/" + names[0] + ".pyx";
+      hy_assert( exists(pyx_file) , "File needs to exist!" );
+      fs::path pxd_file = fs::current_path().string() + "/cython/" + names[0] + ".pxd";
+      hy_assert( exists(pxd_file) , "File needs to exist!" );
+      fs::path cxx_file = fs::current_path().string() + "/" + word;
+      hy_assert( exists(cxx_file) , "File needs to exist!" );
+      
+      auto so_time  = fs::last_write_time(so_file);
+      auto pyx_time = fs::last_write_time(pyx_file);
+      auto pxd_time = fs::last_write_time(pxd_file);
+      auto cxx_time = fs::last_write_time(cxx_file);
+      
+      std::time_t so_t = decltype(so_time)::clock::to_time_t(so_time);
+      std::time_t pyx_t = decltype(pyx_time)::clock::to_time_t(pyx_time);
+      std::time_t pxd_t = decltype(pxd_time)::clock::to_time_t(pxd_time);
+      std::time_t cxx_t = decltype(cxx_time)::clock::to_time_t(cxx_time);
+      
+      if (so_t > pyx_t && so_t > pxd_t && so_t > cxx_t)
+      {
+        cout << " DONE without recompilation." << endl;
+        return python_name;
+      }
+    }
+  }
   
   // Copy .pxd file to build location.
   
@@ -105,7 +151,7 @@ string hyCythonize( const vector<string>& names )
   system(compileCommand.c_str());
   system(linkCommand.c_str());
   
-  cout << " DONE." << endl;
+  cout << " DONE with compilation." << endl;
   
   return python_name;
 }
