@@ -9,10 +9,10 @@ using namespace std;
 
 void hyCython( vector<string> names )
 {
-  hy_assert( names.size() >= 3 ,
+  hy_assert( names.size() >= 2 ,
              "The size of the names vector must be large enough for all needed compile options!" );
   
-  cout << "Cythonizing " << names[2] << " ... " << flush;
+  cout << "Cythonizing " << names[1] << " ... " << flush;
   
   // Define names of input file and output file, and define system command to cythonize files.
   
@@ -100,10 +100,12 @@ void hyCython( vector<string> names )
 }
 
 
-int main(int argc, char **argv)
+int main()
 {
   vector<string> names;
-  for (unsigned int i = 0; i < argc; ++i)  names.push_back(argv[i]);
+  names.push_back("Cython");
+  names.push_back("xxx");
+  names.push_back("importer");
   hyCython(names);
   return 0;
 }
