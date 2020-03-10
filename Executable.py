@@ -12,7 +12,7 @@ from scipy.sparse.linalg import LinearOperator
 
 
 from HyperImporter import importer
-PyDP = importer(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>", "PyDiffusionProblem"])
+PyDP = importer(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP([1,1,1])
