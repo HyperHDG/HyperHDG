@@ -9,15 +9,13 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Import C++ wrapper class to use HDG method on graphs.
-#from ClassWrapper import PyDiffusionProblemNaive
-#from ClassWrapper import PyDiffusionProblemNaiveF
-#from ClassWrapper import PyElasticityProblem
+
 
 from HyperImporter import importer
-PyDiffusionProblem = importer()
+PyDP = importer(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>", "PyDiffusionProblem"])
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([1,1,1])
+HDG_wrapper = PyDP([1,1,1])
 # HDG_wrapper = PyElasticityProblem("domains/SimpleTriangle.geo")
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
