@@ -23,21 +23,9 @@ setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = [
         Extension("ClassWrapper", 
-                  sources=["ClassWrapper.pyx",
-                           "HyperEdge.C",
-                           "Topology.C",
-                           "DiffusionProblem.C",
-                           "DiffusionSolver.C",
-                           "FuncAndQuad.C",
-                           "HyperGraph.C",
-                           "HyperNodeFactory.C",
-                           "HyperEdge_Geometry.C",
-                           "Geometry.C",
-                           "Plotter.C",
-                           "Point.C"
-                       ],
+                  sources=["ClassWrapper.pyx"],
                   language="c++",                   # remove this if C and not C++
-                  extra_compile_args=["--std=c++17"],
+                  extra_compile_args=["-Iinclude", "-I.", "--std=c++17"],
                   extra_link_args=["-llapack"]
              )
         ]
