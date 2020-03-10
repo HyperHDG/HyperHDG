@@ -2,4 +2,4 @@ from libcpp.vector cimport vector
 from libcpp.string cimport string
 
 cdef extern from "Cythonize.cxx" :
-  cdef string hyCython(vector[string])
+  cdef string hyCythonize(vector[string])

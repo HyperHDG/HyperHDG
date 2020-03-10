@@ -8,7 +8,7 @@
 
 using namespace std;
 
-string hyCython( vector<string> names )
+string hyCythonize( vector<string> names )
 {
   hy_assert( names.size() >= 2 ,
              "The size of the names vector must be large enough for all needed compile options!" );
@@ -112,9 +112,6 @@ string hyCython( vector<string> names )
 
 int main()
 {
-  vector<string> names;
-  names.push_back("Cython");
-  names.push_back("importer");
-  hyCython(names);
+  hyCythonize({ "hyCythonize" , "hyCythonizer" });
   return 0;
 }
