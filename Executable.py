@@ -9,10 +9,8 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Import C++ wrapper class to use HDG method on graphs.
-
-
-from HyperImporter import importer
-PyDP = importer(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
+from hyImport import hyImport
+PyDP = hyImport(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP([1,1,1])
