@@ -58,13 +58,9 @@ EXAMPLE_OBJS	:= $(foreach src, $(EXAMPLE_HELP), $(subst $(EXAMPLE_DIR),$(EXAMPLE
 EXAMPLE_EXES	:= $(foreach src, $(EXAMPLE_OBJS), $(src:.e=.exe))
 TEST_EXES			:= $(foreach src, $(EXAMPLE_BUILD), $(wildcard $(EXAMPLE_BUILD)/*.exe))
 
-
-default:
-	mkdir -p $(OUTPUT_DIR) $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR)
-	make object_files
-	make cython_cpp
-	make linking
-
+make:
+	make run
+	
 clean:
 	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR)
 
@@ -81,10 +77,6 @@ new:
 
 run:
 	PYTHONPATH=$(BUILD_DIR) $(PYTHON) Executable.py
-
-with_PythonCompileOptions:
-	mkdir -p $(OUTPUT_DIR)
-	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
@@ -116,24 +108,6 @@ example_linking: $(EXAMPLE_EXES)
 $(EXAMPLE_BUILD)/%.exe: $(EXAMPLE_BUILD)/%.e
 	$(LINKER) $^ -o $@ $(LINKERPOSTFLAGS)
 
-object_files: $(OBJECTS)
-
-$(OBJECT_DIR)/%.o: $(SRC_DIR)/%.cxx
-	$(COMPILER) $(BASICFLAGS) -c $^ -o $@
-
-cython_cpp: $(CYTHON_DIR)/$(CYTHON_FILE).o
-
-$(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd
-	rm -rf $(CYTHON_DIR)/*
-	cp $(SRC_DIR)/$(CYTHON_FILE).pyx $(CYTHON_DIR)/$(CYTHON_FILE).pyx
-	cp $(SRC_DIR)/$(CYTHON_FILE).pxd $(CYTHON_DIR)/$(CYTHON_FILE).pxd
-	cd $(CYTHON_DIR); $(CYTHONIZE) $(CYTHONFLAGS) $(CYTHON_FILE).pyx
-	cd $(CYTHON_DIR); $(COMPILER) $(BASICFLAGS) -c $(CYTHON_FILE).cpp -o $(CYTHON_FILE).o
-
-linking: $(BUILD_DIR)/$(CYTHON_FILE).so
-
-$(BUILD_DIR)/%.so: $(CYTHON_DIR)/*.o
-	$(LINKER) $(LINKERPREFLAGS) $^ -o $@ $(LINKERPOSTFLAGS)
 
 print_variables:
 	@echo 'SRC_DIR=    ' $(SRC_DIR)
