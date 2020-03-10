@@ -7,7 +7,7 @@
 
 using namespace std;
 
-int hyCython( vector<string> names )
+void hyCython( vector<string> names )
 {
   hy_assert( names.size() >= 3 ,
              "The size of the names vector must be large enough for all needed compile options!" );
@@ -97,17 +97,13 @@ int hyCython( vector<string> names )
   system(linkCommand.c_str());
   
   cout << " DONE." << endl;
-  
-  return 0;
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
   vector<string> names;
-  names.push_back("AbstractProblem");
-  names.push_back("DiffusionProblemRegularNaive<1,3,1>");
-  names.push_back("PyDiffusionProblem");
+  for (unsigned int i = 0; i < argc; ++i)  names.push_back(argv[i]);
   hyCython(names);
   return 0;
 }
