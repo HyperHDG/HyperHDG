@@ -9,7 +9,8 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Import C++ wrapper class to use HDG method on graphs.
-from ClassWrapper import PyDiffusionProblemNaive
+from hyImport import hyImport
+PyDiffusionProblemNaive = hyImport(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
 
 # Define tolerance
 tolerance = 1e-8

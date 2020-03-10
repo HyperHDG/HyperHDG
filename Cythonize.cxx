@@ -8,7 +8,7 @@
 
 using namespace std;
 
-string hyCythonize( vector<string> names )
+string hyCythonize( const vector<string>& names )
 {
   hy_assert( names.size() >= 2 ,
              "The size of the names vector must be large enough for all needed compile options!" );
@@ -28,10 +28,11 @@ string hyCythonize( vector<string> names )
   string outfileName = "./build/CythonFiles/" + python_name;
   
   string cythonCommand = "cd ./build/CythonFiles/; cython -3 --cplus " + python_name + ".pyx";
-  // TODO: Make automatic adaption to latest python version.
+  // TODO: Make automatic adaption to latest python version. Now solved with python3.*. This gives
+  // a warning.
   string compileCommand = "g++ \
     -pthread -g  -I\
-    /usr/include/python3.6 \
+    /usr/include/python3.* \
     -I. -Iinclude -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
     -fPIC --std=c++17 \

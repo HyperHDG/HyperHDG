@@ -87,7 +87,6 @@ with_PythonCompileOptions:
 	$(PYTHON) PythonCompileOptions.py build_ext --inplace
 
 tests:
-	make
 	mkdir -p $(EXAMPLE_BUILD)
 	make example_objects
 	make example_linking
@@ -100,7 +99,7 @@ run_tests:
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
-	PYTHONPATH=$(BUILD_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
+	PYTHONPATH=$(BUILD_DIR):$(SRC_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
 
 new_run_tests:
 	make clean
@@ -114,7 +113,7 @@ $(EXAMPLE_BUILD)/%.e: $(EXAMPLE_DIR)/%.cxx
 
 example_linking: $(EXAMPLE_EXES)
 
-$(EXAMPLE_BUILD)/%.exe: $(OBJECT_DIR)/*.o $(EXAMPLE_BUILD)/%.e
+$(EXAMPLE_BUILD)/%.exe: $(EXAMPLE_BUILD)/%.e
 	$(LINKER) $^ -o $@ $(LINKERPOSTFLAGS)
 
 object_files: $(OBJECTS)
