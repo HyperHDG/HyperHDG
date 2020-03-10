@@ -80,7 +80,6 @@ new:
 	make
 
 run:
-	make
 	PYTHONPATH=$(BUILD_DIR) $(PYTHON) Executable.py
 
 with_PythonCompileOptions:
@@ -134,7 +133,7 @@ $(CYTHON_DIR)/%.o: $(SRC_DIR)/$(CYTHON_FILE).pyx $(SRC_DIR)/$(CYTHON_FILE).pxd
 
 linking: $(BUILD_DIR)/$(CYTHON_FILE).so
 
-$(BUILD_DIR)/%.so: $(OBJECT_DIR)/*.o $(CYTHON_DIR)/*.o
+$(BUILD_DIR)/%.so: $(CYTHON_DIR)/*.o
 	$(LINKER) $(LINKERPREFLAGS) $^ -o $@ $(LINKERPOSTFLAGS)
 
 print_variables:
