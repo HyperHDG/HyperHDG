@@ -13,7 +13,8 @@ from scipy.sparse.linalg import LinearOperator
 #from ClassWrapper import PyDiffusionProblemNaiveF
 #from ClassWrapper import PyElasticityProblem
 
-from PyDiffusionProblem import PyDiffusionProblem
+from HyperImporter import importer
+PyDiffusionProblem = importer()
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDiffusionProblem([1,1,1])
