@@ -37,11 +37,12 @@ string GetStdOutFromCommand(string cmd)
   cmd.append(" 2>&1");
 
   stream = popen(cmd.c_str(), "r");
-  if (stream) {
-    while (!feof(stream))
-      if (fgets(buffer, max_buffer, stream) != NULL)  data.append(buffer);
+  if (stream)
+  {
+    while (!feof(stream))  if (fgets(buffer, max_buffer, stream) != NULL)  data.append(buffer);
     pclose(stream);
   }
+  
   return data;
 }
 /*!*************************************************************************************************
@@ -211,7 +212,9 @@ string hyCythonize( const vector<string>& names )
   system(compileCommand.c_str());  
   system(linkCommand.c_str());
   
-  #pragma GCC diagnostic pop 
+  #pragma GCC diagnostic pop
+  
+  // Finish program.
   
   cout << " DONE with compilation." << endl;
   
