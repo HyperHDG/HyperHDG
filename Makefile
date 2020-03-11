@@ -76,7 +76,7 @@ new:
 	make
 
 run:
-	PYTHONPATH=$(BUILD_DIR) $(PYTHON) Executable.py
+	PYTHONPATH=$(BUILD_DIR)/SharedObjects $(PYTHON) Executable.py
 
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
@@ -91,7 +91,7 @@ run_tests:
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
-	PYTHONPATH=$(BUILD_DIR):$(SRC_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
+	PYTHONPATH=$(BUILD_DIR)/SharedObjects:$(SRC_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
 
 new_run_tests:
 	make clean
