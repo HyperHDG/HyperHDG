@@ -1,10 +1,12 @@
+#define HY_PYTHON_VERSION 3
+
 #include <algorithm>
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
-#include <chrono>
+// #include <chrono>
 #include <experimental/filesystem>
 
 #include <HyperHDG/HyAssert.hxx>
@@ -12,6 +14,36 @@
 using namespace std;
 namespace fs = experimental::filesystem;
 
+
+/*!*************************************************************************************************
+ * \brief   Function to capture output of a shell command.
+ * 
+ * This function is inspired (almost copied, retrieved March 11, 2020) from 
+ * https://www.jeremymorgan.com/
+ * tutorials/c-programming/how-to-capture-the-output-of-a-linux-command-in-c/
+ *         
+ * \param   cmd       Shell command.
+ * \retval  return    Return string of the shell command.
+ *
+ * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
+ * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ **************************************************************************************************/
+string GetStdOutFromCommand(string cmd)
+{
+  string data;
+  FILE *stream;
+  const int max_buffer = 256;
+  char buffer[max_buffer];
+  cmd.append(" 2>&1");
+
+  stream = popen(cmd.c_str(), "r");
+  if (stream) {
+    while (!feof(stream))
+      if (fgets(buffer, max_buffer, stream) != NULL)  data.append(buffer);
+    pclose(stream);
+  }
+  return data;
+}
 /*!*************************************************************************************************
  * \brief   Function serving as C++ counterpart of just-in-time compilation.
  * 
@@ -46,28 +78,33 @@ string hyCythonize( const vector<string>& names )
   replace( python_name.begin(), python_name.end(), '>', '_' );
   replace( python_name.begin(), python_name.end(), ',', '_' );
   
-  // Define names of input file and output file, and define system command to cythonize files.
+  // Define names of input file and output file.
   
   string infileName = "./cython/" + names[0];
   string outfileName = "./build/CythonFiles/" + python_name;
   
+  // Find used python version.
+  
+  int ver_start, ver_end;
+  string pyVersion = GetStdOutFromCommand("python" + to_string(HY_PYTHON_VERSION) + " --version");
+  ver_start = pyVersion.find(to_string(HY_PYTHON_VERSION));
+  ver_end = pyVersion.find('.', ver_start);
+  ver_end = pyVersion.find('.', ver_end+1);
+  hy_assert( ver_start != ver_end && ver_end != -1 , "Found python version is invalid." );
+  pyVersion = pyVersion.substr(ver_start, ver_end - ver_start);
+  
+  // Define commands to compile, cythonize, and link files.
+  
   string cythonCommand = "cd ./build/CythonFiles/; cython -3 --cplus " + python_name + ".pyx";
-  // TODO: Make automatic adaption to latest python version. Now solved with python3.*. This gives
-  // a warning.
   string compileCommand = "g++ \
-    -pthread -g  -I\
-    /usr/include/python3.* \
-    -I. -Iinclude -fwrapv -O2 -Wall -g \
+    -pthread -g  -I/usr/include/python" + pyVersion + " -I. -Iinclude -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
-    -fPIC --std=c++17 \
-    -c " + outfileName + ".cpp \
-    -o " + outfileName + ".o";
+    -fPIC --std=c++17 -c " + outfileName + ".cpp -o " + outfileName + ".o";
   string linkCommand = "g++ \
     -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
     -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 "
-    + outfileName + ".o "
-    + "-o build/" + python_name + ".so \
+    + outfileName + ".o " + "-o build/SharedObjects/" + python_name + ".so \
     -llapack -lstdc++fs";
   
   // Introduce auxiliary variables needed for copying files and substituting keywords.
@@ -91,7 +128,7 @@ string hyCythonize( const vector<string>& names )
   
   if (success)
   {
-    fs::path so_file  = fs::current_path().string() + "/build/" + python_name + ".so";
+    fs::path so_file  = fs::current_path().string() + "/build/SharedObjects/" + python_name + ".so";
     if (exists(so_file))
     {
       fs::path pyx_file = fs::current_path().string() + "/cython/" + names[0] + ".pyx";
@@ -105,13 +142,13 @@ string hyCythonize( const vector<string>& names )
       auto pyx_time = fs::last_write_time(pyx_file);
       auto pxd_time = fs::last_write_time(pxd_file);
       auto cxx_time = fs::last_write_time(cxx_file);
-      
+/*      
       std::time_t so_t = decltype(so_time)::clock::to_time_t(so_time);
       std::time_t pyx_t = decltype(pyx_time)::clock::to_time_t(pyx_time);
       std::time_t pxd_t = decltype(pxd_time)::clock::to_time_t(pxd_time);
       std::time_t cxx_t = decltype(cxx_time)::clock::to_time_t(cxx_time);
-      
-      if (so_t > pyx_t && so_t > pxd_t && so_t > cxx_t)
+*/      
+      if (so_time > pyx_time && so_time > pxd_time && so_time > cxx_time)
       {
         cout << " DONE without recompilation." << endl;
         return python_name;
@@ -167,15 +204,19 @@ string hyCythonize( const vector<string>& names )
   
   // Execute system commands to cythonize, compile, and link class.
   
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-result" 
+  
   system(cythonCommand.c_str());
-  system(compileCommand.c_str());
+  system(compileCommand.c_str());  
   system(linkCommand.c_str());
+  
+  #pragma GCC diagnostic pop 
   
   cout << " DONE with compilation." << endl;
   
   return python_name;
 }
-
 /*!*************************************************************************************************
  * \brief   Main function builds hyCythonize function using itself.
  *
