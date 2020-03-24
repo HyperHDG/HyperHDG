@@ -1,20 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-// Includes needed for external communication.
-// These also would ben included when splitted in .C and .h files.
 #include <HyperHDG/HDGHyperGraph.hxx>
 #include <Plot.hxx>
-
-/// \todo Those do not have any business in "AbstractProblem.hxx"
-//#include <HyperHDG/LocalSolver/Diffusion.hxx>
-//#include <LSol_Elasticity.hxx>
-//#include "Topo_Cubic.hxx"
-//#include <HyperHDG/Topology/File.hxx>
-//#include <Geom_UnitCube.hxx>
-//#include <Geom_File.hxx>
-
-// Includes solely needed for implementation of the different functions.
-// These would not be included when splitted in .C and .h files.
 #include <HyperHDG/HyAssert.hxx>
 #include <algorithm>
 #include <array>
@@ -279,85 +266,3 @@ class AbstractProblem
       plot(hyper_graph_, local_solver_, lambda , plot_options );
     }
 }; // end of class AbstractProblem
-
-/*!*************************************************************************************************
- * \brief   This is an example problem.
- *
- * This class contains functions to define and solve Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
- *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-// using DiffusionProblemRegularNaive = 
-// AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
-//                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-//                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
-//                 >;
-/*!*************************************************************************************************
- * \brief   This is an example problem using single precision floating points.
- *
- * This class contains functions to define and solve Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dim = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dim = 2) or volumes (\c hyEdge_dim = 3).
- *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-// using DiffusionProblemRegularNaiveF = 
-// AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
-//                   Geometry::UnitCube< hyEdge_dim, space_dim >,
-//                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >
-//                 >;
-/*!*************************************************************************************************
- * \brief   This is an example problem.
- *
- * \todo    This has not yet been fully implemented!
- *
- * \tparam  hyEdge_dim    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dim     The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dim.
- * \tparam  poly_degree   The polynomial degree of test and trial functions.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-// using ElasticityProblemFile = 
-// AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
-//                   Geometry::File< hyEdge_dim, space_dim >,
-//                   ElasticRods_TensorialUniform < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
-//                 >;
-
-/*
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using ElasticityBBeam = 
-AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
-                  Geometry::File< hyEdge_dim, space_dim >,
-                  EulerBernoulliBeam < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
-                >;
-*/
