@@ -1,4 +1,5 @@
 import os
+import sys
 import importlib
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
@@ -28,13 +29,16 @@ import importlib
 #  \authors   Andreas Rupp, University of Heidelberg, 2020.
 def hyImport(names):
   if not os.path.isfile("build/cythonize"):
-    if not os.path.exists("build/CythonFiles"):
-      print("\nFull build path is not available. The program corrects this and eventually dies.")
-      print("Afterwards, it can be restarted and should work out!\n")
     os.system("mkdir -p build build/CythonFiles build/SharedObjects")
     os.system("g++ Cythonize.cxx -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
     os.system("./build/cythonize")
-  from hyCythonizer import hyPyCythonize
+
+  try:
+    from hyCythonizer import hyPyCythonize
+  except ImportError as error:
+    sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
+    from hyCythonizer import hyPyCythonize
+
   retval = hyPyCythonize(names)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)
