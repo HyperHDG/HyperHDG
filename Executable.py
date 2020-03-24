@@ -13,10 +13,11 @@ problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
          +                ">"
+filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
-PyDP = hyImport(["AbstractProblem", problem])
+PyDP = hyImport(["AbstractProblem", problem], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP([1,1,1])

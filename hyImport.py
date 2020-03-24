@@ -26,7 +26,7 @@ import importlib
 #
 #  \authors   Guido Kanschat, University of Heidelberg, 2020.
 #  \authors   Andreas Rupp, University of Heidelberg, 2020.
-def hyImport(names):
+def hyImport(names, filenames = []):
   ver_major = sys.version_info.major
   ver_minor = sys.version_info.minor
 
@@ -46,6 +46,6 @@ def hyImport(names):
     sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
     from hyCythonizer import hyPyCythonize
 
-  retval = hyPyCythonize(names, ver_major, ver_minor)
+  retval = hyPyCythonize(names, filenames, ver_major, ver_minor)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)

@@ -3,8 +3,7 @@
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 
-cdef extern from "<Geom_UnitCube.hxx>" : pass
-cdef extern from "<HyperHDG/LocalSolver/Diffusion.hxx>" : pass
+IncludeFiles
 
 cdef extern from "<AbstractProblem.hxx>" :
   cdef cppclass CythonClassName C++ClassName :
