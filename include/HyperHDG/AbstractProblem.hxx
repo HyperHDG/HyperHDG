@@ -10,8 +10,8 @@
  * \brief   This is an abstract example problem class.
  * 
  * This file provides an AbstractProblem class defining an abstract problem. This abstract problem
- * serves as interface to Python and will be removed, when the library is fully implemented. At the
- * moment, it can be used to quickly prototype testcases and others.
+ * serves as one possible, simple interface to Python. At the moment, it can be used to quickly
+ * prototype testcases and others.
  *
  * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
  *        solvers, right? Dirichlet boundary conditions? Post filtering!
@@ -26,7 +26,6 @@
  *        (With explanation, I mean this definition and the following function explanations, etc.)
  *        -> A: Agreed.
  *        
- *
  * \tparam  TopologyT     Class type containing topological information.
  * \tparam  GeometryT     Class type containing geometrical information.
  * \tparam  LocalSolverT  Class type of the local solver.

@@ -125,6 +125,7 @@ string hyCythonize
       fs::path pxd_file = fs::current_path().string() + "/cython/" + names[0] + ".pxd";
       hy_assert( exists(pxd_file) , "File needs to exist!" );
       fs::path cxx_file = fs::current_path().string() + "/" + word;
+      if ( !exists(cxx_file) )  cxx_file = fs::current_path().string() + "/include/" + word;
       hy_assert( exists(cxx_file) , "File needs to exist!" );
       
       auto so_time  = fs::last_write_time(so_file);
