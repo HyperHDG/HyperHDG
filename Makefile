@@ -76,7 +76,7 @@ new:
 	make
 
 run:
-	PYTHONPATH=$(BUILD_DIR)/SharedObjects $(PYTHON) Executable.py
+	$(PYTHON) Executable.py
 
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
