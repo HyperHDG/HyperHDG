@@ -1,4 +1,7 @@
-#include <AbstractProblem.hxx>
+#include <HyperHDG/AbstractProblem.hxx>
+#include <HyperHDG/Topology/File.hxx>
+#include <Geom_File.hxx>
+#include <LSol_Elasticity.hxx>
 #include <HyperHDG/SparseLinearAlgebra.hxx>
 
 #include <string>
@@ -24,8 +27,9 @@ int main(int argc, char *argv[])
   const double solution_tolerance = 1e-8;
   
   std::string filename = "domains/SimpleTriangle.geo";
-  ElasticityProblemFile<1,2,1> diffusion_problem(filename, 1.);
-    
+  AbstractProblem< Topology::File<1,2>, Geometry::File<1,2>, ElasticRods_TensorialUniform<1,2,1,2> >
+    diffusion_problem(filename, 1.);
+
   vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = 1.;
   vectorDirichlet[2] = 0.;
