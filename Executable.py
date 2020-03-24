@@ -11,7 +11,7 @@ from scipy.sparse.linalg import LinearOperator
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
-         +                  " Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
+         +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
          +                ">"
 
 # Import C++ wrapper class to use HDG method on graphs.
