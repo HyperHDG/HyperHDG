@@ -27,9 +27,17 @@ import importlib
 #  \authors   Guido Kanschat, University of Heidelberg, 2020.
 #  \authors   Andreas Rupp, University of Heidelberg, 2020.
 def hyImport(names):
+  ver_major = sys.version_info.major
+  ver_minor = sys.version_info.minor
+
   if not os.path.isfile("build/cythonize"):
+    if not os.path.isfile("/usr/include/python"+str(ver_major)+"."+str(ver_minor)+"/Python.h"):
+      print("\nThe current Python version seems not to have an include file.\n")
+      print("This will most likely result in an error!\n")
+      print("Check your Python version to be not of m or dm type which is not fully supported.\n\n")
     os.system("mkdir -p build build/CythonFiles build/SharedObjects")
-    os.system("g++ Cythonize.cxx -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
+    os.system("g++ Cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" + str(ver_minor) +
+              " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
     os.system("./build/cythonize")
 
   try:
@@ -38,6 +46,6 @@ def hyImport(names):
     sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
     from hyCythonizer import hyPyCythonize
 
-  retval = hyPyCythonize(names)
+  retval = hyPyCythonize(names, ver_major, ver_minor)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)

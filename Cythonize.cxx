@@ -1,4 +1,11 @@
-#define HY_PYTHON_VERSION 3
+#ifndef PYVERMAJ
+#define PYVERMAJ -1
+#endif
+
+#ifndef PYVERMIN
+#define PYVERMIN -1
+#endif
+
 
 #include <algorithm>
 #include <vector>
@@ -15,34 +22,6 @@ using namespace std;
 namespace fs = experimental::filesystem;
 
 
-/*!*************************************************************************************************
- * \brief   Function to capture output of a shell command.
- * 
- * This function is inspired (almost copied, retrieved March 11, 2020) from 
- * https://www.jeremymorgan.com/
- * tutorials/c-programming/how-to-capture-the-output-of-a-linux-command-in-c/
- *         
- * \param   cmd       Shell command.
- * \retval  return    Return string of the shell command.
- *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
- **************************************************************************************************/
-string GetStdOutFromCommand(string cmd)
-{
-  string data;
-  FILE *stream;
-  const int max_buffer = 256;
-  char buffer[max_buffer];
-  cmd.append(" 2>&1");
-
-  stream = popen(cmd.c_str(), "r");
-  if (stream)
-    while (!feof(stream))  if (fgets(buffer, max_buffer, stream) != NULL)  data.append(buffer);
-  pclose(stream);
-  
-  return data;
-}
 /*!*************************************************************************************************
  * \brief   Function serving as C++ counterpart of just-in-time compilation.
  * 
@@ -63,8 +42,16 @@ string GetStdOutFromCommand(string cmd)
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-string hyCythonize( const vector<string>& names )
+string hyCythonize
+( const vector<string>& names, const unsigned int ver_maj, const unsigned int ver_min )
 {
+  static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
+                 "Python verion needs to be set as compile flags!" );
+
+  hy_assert( ver_maj == PYVERMAJ && ver_min == PYVERMIN ,
+             "The Python version, this program is executed under needs to be the same as the one "
+             << "the program has been compiled with. This seems not to be the case." );
+
   hy_assert( names.size() >= 2 ,
              "The size of the names vector must be large enough for all needed compile options!" );
   
@@ -82,15 +69,9 @@ string hyCythonize( const vector<string>& names )
   string infileName = "./cython/" + names[0];
   string outfileName = "./build/CythonFiles/" + python_name;
   
-  // Find used python version.
-  
-  int ver_start, ver_end;
-  string pyVersion = GetStdOutFromCommand("python" + to_string(HY_PYTHON_VERSION) + " --version");
-  ver_start = pyVersion.find(to_string(HY_PYTHON_VERSION));
-  ver_end = pyVersion.find('.', ver_start);
-  ver_end = pyVersion.find('.', ver_end+1);
-  hy_assert( ver_start != ver_end && ver_end != -1 , "Found python version is invalid." );
-  pyVersion = pyVersion.substr(ver_start, ver_end - ver_start);
+  // String defining current Python version.
+
+  string pyVersion = to_string(PYVERMAJ) + "." + to_string(PYVERMIN);
   
   // Define commands to compile, cythonize, and link files.
   
@@ -98,7 +79,8 @@ string hyCythonize( const vector<string>& names )
   string compileCommand = "g++ \
     -pthread -g  -I/usr/include/python" + pyVersion + " -I. -Iinclude -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
-    -fPIC --std=c++17 -c " + outfileName + ".cpp -o " + outfileName + ".o";
+    -fPIC --std=c++17 -DPYVERMAJ=" + to_string(PYVERMAJ) + " -DPYVERMIN=" + to_string(PYVERMIN) +
+    " -c " + outfileName + ".cpp -o " + outfileName + ".o";
   string linkCommand = "g++ \
     -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
@@ -226,6 +208,6 @@ string hyCythonize( const vector<string>& names )
  **************************************************************************************************/
 int main()
 {
-  hyCythonize({ "hyCythonize" , "hyCythonizer" });
+  hyCythonize({ "hyCythonize" , "hyCythonizer" } , PYVERMAJ , PYVERMIN );
   return 0;
 }
