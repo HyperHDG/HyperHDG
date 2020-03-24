@@ -300,12 +300,12 @@ class AbstractProblem
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using DiffusionProblemRegularNaive = 
-AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
-                  Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
-                >;
+// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+// using DiffusionProblemRegularNaive = 
+// AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
+//                   Geometry::UnitCube< hyEdge_dim, space_dim >,
+//                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree >
+//                 >;
 /*!*************************************************************************************************
  * \brief   This is an example problem using single precision floating points.
  *
@@ -326,12 +326,12 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using DiffusionProblemRegularNaiveF = 
-AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
-                  Geometry::UnitCube< hyEdge_dim, space_dim >,
-                  Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >
-                >;
+// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+// using DiffusionProblemRegularNaiveF = 
+// AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
+//                   Geometry::UnitCube< hyEdge_dim, space_dim >,
+//                   Diffusion_TensorialUniform < hyEdge_dim, poly_degree, 2 * poly_degree, float >
+//                 >;
 /*!*************************************************************************************************
  * \brief   This is an example problem.
  *
@@ -346,12 +346,12 @@ AbstractProblem < Topology::Cubic< hyEdge_dim, space_dim >,
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
-using ElasticityProblemFile = 
-AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
-                  Geometry::File< hyEdge_dim, space_dim >,
-                  ElasticRods_TensorialUniform < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
-                >;
+// template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
+// using ElasticityProblemFile = 
+// AbstractProblem < Topology::File< hyEdge_dim, space_dim >,
+//                   Geometry::File< hyEdge_dim, space_dim >,
+//                   ElasticRods_TensorialUniform < hyEdge_dim, space_dim, poly_degree, 2*poly_degree >
+//                 >;
 
 /*
 template <unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_degree>
