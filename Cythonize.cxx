@@ -60,6 +60,11 @@ string hyCythonize
   // Auxiliary string for name of internal Python class
   
   string python_name = names[1];
+  python_name.erase(std::remove(python_name.begin(), python_name.end(), ' '), python_name.end());
+  replace( python_name.begin(), python_name.end(), '+', '_' );
+  replace( python_name.begin(), python_name.end(), '-', '_' );
+  replace( python_name.begin(), python_name.end(), '*', '_' );
+  replace( python_name.begin(), python_name.end(), ':', '_' );
   replace( python_name.begin(), python_name.end(), '<', '_' );
   replace( python_name.begin(), python_name.end(), '>', '_' );
   replace( python_name.begin(), python_name.end(), ',', '_' );
