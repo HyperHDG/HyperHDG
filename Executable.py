@@ -8,9 +8,15 @@ import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
+# Predefine problem to be solved.
+problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
+         +                  "Geometry::UnitCube< 1, 3 >, " \
+         +                  " Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
+         +                ">"
+
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
-PyDP = hyImport(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
+PyDP = hyImport(["AbstractProblem", problem])
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP([1,1,1])
