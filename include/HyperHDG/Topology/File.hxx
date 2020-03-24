@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <include/HyperHDG/ReadDomain.hxx>
+#include <HyperHDG/ReadDomain.hxx>
 
 #include <array>
 #include <string>
