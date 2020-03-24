@@ -1,4 +1,6 @@
-#include <AbstractProblem.hxx>
+#include <HyperHDG/AbstractProblem.hxx>
+#include <Geom_UnitCube.hxx>
+#include <HyperHDG/LocalSolver/Diffusion.hxx>
 #include <HyperHDG/SparseLinearAlgebra.hxx>
 
 using namespace std;
@@ -22,7 +24,9 @@ int main(int argc, char *argv[])
   const double solution_tolerance = 1e-6; // Note that this is the minimum due to float
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
-  DiffusionProblemRegularNaiveF<1,3,1> diffusion_problem(num_elements, num_elements, 1.f);
+  AbstractProblem< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, 
+                   Diffusion_TensorialUniform<1,1,2,float>
+                 >  diffusion_problem(num_elements, num_elements, 1.f);
   
   vector<float> vectorDirichlet = diffusion_problem.return_zero_vector<float>();
   vectorDirichlet[0] = 1.;

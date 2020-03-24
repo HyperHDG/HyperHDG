@@ -8,15 +8,22 @@ import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
+# Predefine problem to be solved.
+problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
+         +                  "Geometry::UnitCube< 1, 3 >, " \
+         +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
+         +                ">"
+filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
+
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
-PyDiffusionProblemNaive = hyImport(["AbstractProblem", "DiffusionProblemRegularNaive<1,3,1>"])
+PyDiffusionProblem = hyImport(["AbstractProblem", problem], filenames)
 
 # Define tolerance
 tolerance = 1e-8
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblemNaive([4,2,2])
+HDG_wrapper = PyDiffusionProblem([4,2,2])
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
