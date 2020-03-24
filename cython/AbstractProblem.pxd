@@ -3,7 +3,10 @@
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 
-cdef extern from "AbstractProblem.hxx" :
+cdef extern from "<Geom_UnitCube.hxx>" : pass
+cdef extern from "<HyperHDG/LocalSolver/Diffusion.hxx>" : pass
+
+cdef extern from "<AbstractProblem.hxx>" :
   cdef cppclass CythonClassName C++ClassName :
     CythonClassName (vector[unsigned int], vector[unsigned int], double) except +
     void read_dirichlet_indices (vector[unsigned int])
