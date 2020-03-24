@@ -6,12 +6,12 @@
 #include <Plot.hxx>
 
 /// \todo Those do not have any business in "AbstractProblem.hxx"
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
-#include <LSol_Elasticity.hxx>
-#include "Topo_Cubic.hxx"
-#include <HyperHDG/Topology/File.hxx>
-#include <Geom_UnitCube.hxx>
-#include <Geom_File.hxx>
+//#include <HyperHDG/LocalSolver/Diffusion.hxx>
+//#include <LSol_Elasticity.hxx>
+//#include "Topo_Cubic.hxx"
+//#include <HyperHDG/Topology/File.hxx>
+//#include <Geom_UnitCube.hxx>
+//#include <Geom_File.hxx>
 
 // Includes solely needed for implementation of the different functions.
 // These would not be included when splitted in .C and .h files.

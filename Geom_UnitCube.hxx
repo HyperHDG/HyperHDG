@@ -66,7 +66,7 @@ class UnitCube
    * 
    * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
    * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
-   **************************************************************************************************/
+   ************************************************************************************************/
   class hyEdge
   {
     private:
