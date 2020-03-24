@@ -43,7 +43,10 @@ namespace fs = experimental::filesystem;
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
  **************************************************************************************************/
 string hyCythonize
-( const vector<string>& names, const unsigned int ver_maj, const unsigned int ver_min )
+( 
+  const vector<string>& names, const vector<string>& filenames,
+  const unsigned int ver_maj, const unsigned int ver_min
+)
 {
   static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
                  "Python verion needs to be set as compile flags!" );
@@ -154,10 +157,13 @@ string hyCythonize
     while ( !linestream.eof() && ! line.empty() )
     {
       linestream >> word;
-      if (word == "C++ClassName")     word = "\"" + names[1] + "\"";
-      if (word == "CythonClassName")  word = python_name + "_Cython";
-      if (word == "PythonClassName")  word = python_name;
-      outfile << word << " ";
+      if      (word == "C++ClassName")     word = "\"" + names[1] + "\"";
+      else if (word == "CythonClassName")  word = python_name + "_Cython";
+      else if (word == "PythonClassName")  word = python_name;
+      if (word == "IncludeFiles")
+        for (unsigned int i = 0; i < filenames.size(); ++i)
+          outfile << "cdef extern from \"<" << filenames[i] << ">\" : pass" << endl;
+      else  outfile << word << " ";
     }
     outfile << endl;
   }
@@ -213,6 +219,6 @@ string hyCythonize
  **************************************************************************************************/
 int main()
 {
-  hyCythonize({ "hyCythonize" , "hyCythonizer" } , PYVERMAJ , PYVERMIN );
+  hyCythonize({ "hyCythonize" , "hyCythonizer" } , { } , PYVERMAJ , PYVERMIN );
   return 0;
 }
