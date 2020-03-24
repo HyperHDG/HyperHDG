@@ -91,7 +91,7 @@ run_tests:
 	./build/C++ExampleBuild/DiffusionTest1.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
-	PYTHONPATH=$(BUILD_DIR)/SharedObjects:$(SRC_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
+	PYTHONPATH=$(SRC_DIR) $(PYTHON) tests_python/Executable_Diffusion.py
 
 new_run_tests:
 	make clean
