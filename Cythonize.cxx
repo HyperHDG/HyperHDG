@@ -1,12 +1,3 @@
-#ifndef PYVERMAJ
-#define PYVERMAJ -1
-#endif
-
-#ifndef PYVERMIN
-#define PYVERMIN -1
-#endif
-
-
 #include <algorithm>
 #include <vector>
 #include <fstream>
@@ -21,6 +12,20 @@
 using namespace std;
 namespace fs = experimental::filesystem;
 
+/*!*************************************************************************************************
+ * \brief   Macro to be set by a compiler flag, when this file is compiled. It is the major part of
+ *          the current Python version.
+ **************************************************************************************************/
+#ifndef PYVERMAJ
+#define PYVERMAJ -1
+#endif
+/*!*************************************************************************************************
+ * \brief   Macro to be set by a compiler flag, when this file is compiled. It is the minor part of
+ *          the current Python version.
+ **************************************************************************************************/
+#ifndef PYVERMIN
+#define PYVERMIN -1
+#endif
 
 /*!*************************************************************************************************
  * \brief   Function serving as C++ counterpart of just-in-time compilation.
