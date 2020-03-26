@@ -72,9 +72,9 @@ class AbstractProblem
     : hyper_graph_  ( construct_topo, construct_geom ),
       local_solver_ ( construct_loc_sol )
     {
-      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::space_dim() == GeometryT::space_dimension() ,
+      static_assert( TopologyT::space_dim() == GeometryT::space_dim() ,
                      "Space dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
@@ -93,9 +93,9 @@ class AbstractProblem
     : hyper_graph_  ( construct_topo ),
       local_solver_ ( construct_loc_sol )
     {
-      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dimension() ,
+      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
-      static_assert( TopologyT::space_dim() == GeometryT::space_dimension() ,
+      static_assert( TopologyT::space_dim() == GeometryT::space_dim() ,
                      "Space dimension of topology and geometry must be equal!" );
       static_assert( TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dimension() ,
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
