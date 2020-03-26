@@ -172,7 +172,7 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
      *
-     *\todo This is copied from the other constructor
+     * \todo This is copied from the other constructor
      *
      * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per 
      * spatial dimension which is given as by its topology.
@@ -201,7 +201,7 @@ class UnitCube
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const hyEdge get_hyEdge(const hyEdge_index_t index) const
+    const value_type operator[](const hyEdge_index_t index) const
     { return hyEdge(index, num_elements_); }
 }; // end class UnitCube
 

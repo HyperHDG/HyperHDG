@@ -435,7 +435,7 @@ class HDGHyperGraph
      * \retval  hyEdge_geometry    Geometrical information about hyperedge.
      **********************************************************************************************/
     const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
-    { return hyGraph_geometry_->get_hyEdge(index); }
+    { return hyGraph_geometry_->operator[](index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
