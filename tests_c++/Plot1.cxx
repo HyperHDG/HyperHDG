@@ -2,7 +2,7 @@
 #include <Geom_UnitCube.hxx>
 // #include <HDGHyperGraph.hxx>
 #include <LSol_Template.hxx>
-#include <Plot.hxx>
+#include <HyperHDG/Plot.hxx>
 #include <iostream>
 
 #include <memory>
