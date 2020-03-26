@@ -36,13 +36,16 @@ namespace fs = experimental::filesystem;
  * provide our own import function \c hyImport (cf. hyImport.py), which is the Python counterpart
  * to this function hyCythonize.
  * 
- * If hyImport is called with a vector of strings (file name and class name plus possible template
- * specifications), it uses Cython based interfaces to call hyCythnoize which itself builds
- * Cython based interfaces and compiles the respective files, i.e. a .hxx/.cxx, a .pxd, and a .pyx
- * file to a .so file which is needed by the overall Python script.
+ * If hyImport is called with a vector of strings denoted names. It includes file name and class
+ * name plus possible template specifications), it uses Cython based interfaces to call hyCythnoize
+ * which itself builds Cython based interfaces and compiles the respective files, i.e. a .hxx/.cxx, 
+ * a .pxd, and a .pyx file to a .so file which is needed by the overall Python script.
  *        
- * \param   names     Vector containing specifying names.
- * \retval  name      Name associated to created .so file.
+ * \param   names       Vector containing specifying names.
+ * \param   filenames   Vector containing names of additional files that need to be included.
+ * \param   ver_maj     Python version's major part.
+ * \param   ver_min     Python version's minor part.
+ * \retval  name        Name associated to created .so file.
  *
  * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
  * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.

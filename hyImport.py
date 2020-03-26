@@ -10,6 +10,12 @@ import importlib
 #  that is to be imported (and is defined in the C++ file). Further strings might refer to embedded
 #  template parameters. This has, however, not yet been fully implemented.
 #
+#  Additionally, a vector of filenames can be specified. These filenames refer to files that need
+#  to be imported/included to allow the C++ classes to be compilable. For example, if the class
+#  AbstractProblem is to be cythonized it receives a Topology, a Geometry, and a Local Solver as
+#  template parameters. The files in which the specified Topology, Geometry, and Local Solver are
+#  defined need to be available to the compiler and therefore be added in the filelist.
+#
 #  First, the method checks whether the build and build/CythonFiles directories are present. If the
 #  build directory is not present, the Python program will construct both  needed directories. If 
 #  this has beed done, the program compiles the Cythonize.cxx file that does all the work:
@@ -21,8 +27,9 @@ import importlib
 #  to the Python script that started the function. By this, the class is also imported to that
 #  script.
 #
-#  \param   names   Vector containing names of class to be imported.
-#  \retval  class   The C++ class (not class member) to be used in the Python code.
+#  \param   names       Vector containing names of class to be imported.
+#  \param   filenames   Vector containing names of files that need to be included. Default is empty.
+#  \retval  class       The C++ class (not class member) to be used in the Python code.
 #
 #  \authors   Guido Kanschat, University of Heidelberg, 2020.
 #  \authors   Andreas Rupp, University of Heidelberg, 2020.
