@@ -1,7 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HDGHyperGraph.hxx>
-#include <Plot.hxx>
+#include <HyperHDG/Plot.hxx>
 #include <HyperHDG/HyAssert.hxx>
 #include <algorithm>
 #include <array>
