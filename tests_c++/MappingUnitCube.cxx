@@ -22,7 +22,7 @@ void test()
   
   for (unsigned int i=0;i<n;++i)
     {
-      auto edge = geometry.get_hyEdge(i);
+      auto edge = geometry[i];
       auto mapping = edge.mapping_tensor(p1d);
 
       std::cout << "Cell " << i << "\n";
