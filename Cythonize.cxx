@@ -47,8 +47,8 @@ namespace fs = experimental::filesystem;
  * \param   ver_min     Python version's minor part.
  * \retval  name        Name associated to created .so file.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 string hyCythonize
 ( 
@@ -223,8 +223,8 @@ string hyCythonize
 /*!*************************************************************************************************
  * \brief   Main function builds hyCythonize function using itself.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 int main()
 {

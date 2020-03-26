@@ -17,8 +17,8 @@
  * is mainly used for C++ examples and test cases that do not use the Python interface and its
  * version of an CG method, for example.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 namespace SparseLA
 {
@@ -28,8 +28,8 @@ namespace SparseLA
  *
  * \todo    Should exception be included and should output be improved?
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019.
- * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ * \authors   Guido Kanschat, Heidelberg University, 2019.
+ * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
 struct SparseLASolveException : public std::exception
 {
@@ -48,8 +48,8 @@ struct SparseLASolveException : public std::exception
  * \param   right               Right argument of the inner product.
  * \retval  product             Inner product of the two arguments.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 dof_value_t inner_product
@@ -71,8 +71,8 @@ dof_value_t inner_product
  * \param   vec                 Vector whose 2 norm is to be calculates.
  * \retval  norm                2 norm of given vector.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < typename dof_value_t = double >
 dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
@@ -94,8 +94,8 @@ dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
  * \param   rightVec            Right vector in linear combination.
  * \retval  lin_comb            Linear combination of vectors with respective coefficients.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 std::vector<dof_value_t> linear_combination
@@ -125,8 +125,8 @@ std::vector<dof_value_t> linear_combination
  * \param   result              Reference to vector whicb is supposed to contain the result.
  * \retval  result              Linear combination of vectors with respective coefficients.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < typename dof_index_t = unsigned int, typename dof_value_t = double >
 void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_value_t>& leftV,
@@ -156,8 +156,8 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
  * \retval  solution            Vector sufficing Ax = b up to given tolerance if converged.
  * \retval  n_iterations        Number of needed iterations. -1 indicates no convergence.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template<class ProblemT, typename dof_value_t = double >
 std::vector<dof_value_t> conjugate_gradient

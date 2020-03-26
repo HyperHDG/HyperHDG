@@ -11,8 +11,8 @@
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 struct PlotOptions
 {
@@ -122,8 +122,8 @@ struct PlotOptions
  *                          representation of the unique solution.
  * \param   plot_options    PlotOptions object containing plotting options.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot

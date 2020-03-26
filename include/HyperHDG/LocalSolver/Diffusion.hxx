@@ -23,8 +23,8 @@
  * \tparam  poly_deg      The polynomial degree of test and trial functions.
  * \tparam  quad_deg      The order of the quadrature rule.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
 < unsigned int hyEdge_dim, unsigned int poly_deg, unsigned int quad_deg,

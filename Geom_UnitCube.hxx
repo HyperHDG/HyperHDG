@@ -18,8 +18,8 @@
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 namespace Geometry
 {
@@ -41,8 +41,8 @@ namespace Geometry
  * \tparam  space_dimT     The dimension of the space, the object is located in. This number should
  *                        be larger than or equal to hyEdge_dimT.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int>
 class UnitCube
@@ -64,8 +64,8 @@ class UnitCube
    * \todo    The points/vertices are computed when the HyperEdge is constructed. Lazy evaluation
    *          might be a relevant aspect here. What do you think?
    * 
-   * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
    ************************************************************************************************/
   class hyEdge
   {

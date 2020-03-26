@@ -16,8 +16,8 @@
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 namespace Geometry
 {
@@ -34,8 +34,8 @@ namespace Geometry
  *                          be larger than or equal to hyEdge_dimT.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int>
 class File
