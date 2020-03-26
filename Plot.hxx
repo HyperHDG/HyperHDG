@@ -236,8 +236,8 @@ namespace PlotFunctions
 				      const std::array<float, n_subpoints>& sub_points,
 				      const PlotOptions& plot_options)
   {
-    constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dimension();
-    constexpr unsigned int space_dim = HyperGraphT::space_dimension();
+    constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+    constexpr unsigned int space_dim = HyperGraphT::space_dim();
     
     const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
     const unsigned int points_per_hyEdge = Hypercube<edge_dim>::pow(n_subpoints);
@@ -313,7 +313,7 @@ void plot_vtu(const HyperGraphT& hyper_graph,
 	      const std::vector<dof_value_t>& lambda,
 	      const PlotOptions& plot_options)
 {
-  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dimension();
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
   
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
   //  const unsigned int points_per_hyEdge = 1 << edge_dim;
