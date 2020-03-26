@@ -19,8 +19,8 @@ struct Gaussian
    * \param   local_dimensions    Dimension of the underlying domain.
    * \retval  n_quad_points       Amount of needed quadrature points.
    * 
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   static constexpr unsigned int compute_n_quad_points
   (const unsigned int max_quad_degree, const unsigned int local_dimensions = 1)
@@ -40,8 +40,8 @@ struct Gaussian
    * \tparam  return_t            Floating type specification. Default is double.
    * \retval  quad_points         \c std::array containing the quadrature points.
    * 
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template< unsigned int max_quad_degree, typename return_t = double >
   static inline std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_points()
@@ -104,8 +104,8 @@ struct Gaussian
    * \tparam  return_t        Floating type specification. Default is double.
    * \retval  quad_weights        \c std::array containing the quadrature weights.
    * 
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template< unsigned int max_quad_degree, typename return_t = double >
   static inline std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_weights()
@@ -164,8 +164,8 @@ struct Gaussian
  * \param   local_dimensions  Dimension of the underlying domain. Defaullt is one.
  * \retval  n_quad_points     Amount of needed quadrature points.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < typename quadrature_t >
 constexpr unsigned int compute_n_quad_points
@@ -182,8 +182,8 @@ constexpr unsigned int compute_n_quad_points
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_points       \c std::array containing the quadrature points.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
 std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_points()
@@ -199,8 +199,8 @@ std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_weights      \c std::array containing the quadrature weights.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template< unsigned int max_quad_degree, typename quadrature_t, typename return_t = double >
 std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_weights()
@@ -223,8 +223,8 @@ std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                            quadrature points (the shape functions are evaluated at).
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template
 < 
@@ -262,8 +262,8 @@ shape_fcts_at_quad_points()
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of 
  *                            quadrature points (the shape functions' derivatives are evaluated).
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template
 < 
@@ -296,8 +296,8 @@ shape_ders_at_quad_points()
  * \param   shape_t           Type of one-dimensional shape functions.
  * \tparam  return_t          Floating type specification. Default is double.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template
 < 

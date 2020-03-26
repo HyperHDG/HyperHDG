@@ -8,8 +8,8 @@
  * functions, one is chosen to be used in the remainder of the code (i.e., \c dgesv_ cf. LAPACK
  * manual for further details).
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019.
- * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ * \authors   Guido Kanschat, Heidelberg University, 2019.
+ * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
 
 #pragma once // Ensure that file is included only once in a single compilation.
@@ -24,8 +24,8 @@
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019.
- * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ * \authors   Guido Kanschat, Heidelberg University, 2019.
+ * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
 struct LASolveException : public std::exception
 {
@@ -41,8 +41,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void daxpy_(int* n, double* alpha, double* dx, int* incx, double* dy, int* incy);
   /*!***********************************************************************************************
@@ -51,8 +51,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   double dnrm2_(int* n, double* x, int* incx);
 
@@ -62,8 +62,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
   /*!***********************************************************************************************
@@ -72,8 +72,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void dgetrs_
     (char* C, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
@@ -83,8 +83,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
   
@@ -94,8 +94,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void saxpy_(int* n, float* alpha, float* dx, int* incx, float* dy, int* incy);
   /*!***********************************************************************************************
@@ -104,8 +104,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   double snrm2_(int* n, float* x, int* incx);
 
@@ -115,8 +115,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void sgetrf_(int* M, int *N, float* A, int* lda, int* IPIV, int* INFO);
   /*!***********************************************************************************************
@@ -125,8 +125,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void sgetrs_
     (char* C, int* N, int* NRHS, float* A, int* LDA, int* IPIV, float* B, int* LDB, int* INFO);
@@ -136,8 +136,8 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the 
    * use of functions \c lapack_solve that will be implemented below.
    *
-   * \authors   Guido Kanschat, University of Heidelberg, 2020.
-   * \authors   Andreas Rupp, University of Heidelberg, 2020.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv, float *b, int *ldb, int *info);
 } // end of extern "C"

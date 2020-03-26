@@ -5,8 +5,8 @@
  * 
  * \tparam  dim     Unsigned integer indicating the dimension of the considered hypercube.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int dim>
 struct Hypercube

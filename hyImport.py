@@ -31,8 +31,8 @@ import importlib
 #  \param   filenames   Vector containing names of files that need to be included. Default is empty.
 #  \retval  class       The C++ class (not class member) to be used in the Python code.
 #
-#  \authors   Guido Kanschat, University of Heidelberg, 2020.
-#  \authors   Andreas Rupp, University of Heidelberg, 2020.
+#  \authors   Guido Kanschat, Heidelberg University, 2020.
+#  \authors   Andreas Rupp, Heidelberg University, 2020.
 def hyImport(names, filenames = []):
   ver_major = sys.version_info.major
   ver_minor = sys.version_info.minor

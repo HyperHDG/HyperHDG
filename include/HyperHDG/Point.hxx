@@ -15,8 +15,8 @@
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019.
- * \authors   Andreas Rupp, University of Heidelberg, 2019.
+ * \authors   Guido Kanschat, Heidelberg University, 2019.
+ * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
 struct PointDivByZeroException : public std::exception
 {
@@ -31,8 +31,8 @@ struct PointDivByZeroException : public std::exception
  * \tparam  pt_coord_t        Floating point type specification. Default is float.
  * \tparam  space_dim         The dimension of the space, the object is located in.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dim, typename pt_coord_t = float >
 class Point
@@ -293,8 +293,8 @@ class Point
 /*!*************************************************************************************************
  * \brief   Add two \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template<unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator+
@@ -306,8 +306,8 @@ Point<space_dim,pt_coord_t> operator+
 /*!*************************************************************************************************
  * \brief   Subtract two \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template<unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator-
@@ -319,8 +319,8 @@ Point<space_dim,pt_coord_t> operator-
 /*!*************************************************************************************************
  * \brief   Hadamard product of two \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template<unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> hada_prod
@@ -332,8 +332,8 @@ Point<space_dim,pt_coord_t> hada_prod
 /*!*************************************************************************************************
  * \brief   Hadamard division two \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template<unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> hada_divi
@@ -348,8 +348,8 @@ Point<space_dim,pt_coord_t> hada_divi
 /*!*************************************************************************************************
  * \brief   Add point to scalar.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator+
@@ -361,8 +361,8 @@ Point<space_dim,pt_coord_t> operator+
 /*!*************************************************************************************************
  * \brief   Add scalar to point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator+
@@ -374,8 +374,8 @@ Point<space_dim,pt_coord_t> operator+
 /*!*************************************************************************************************
  * \brief   Subtract point from scalar.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator-
@@ -388,8 +388,8 @@ Point<space_dim,pt_coord_t> operator-
 /*!*************************************************************************************************
  * \brief   Subtract scalar from point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator-
@@ -401,8 +401,8 @@ Point<space_dim,pt_coord_t> operator-
 /*!*************************************************************************************************
  * \brief   Multiply scalar with point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator*
@@ -414,8 +414,8 @@ Point<space_dim,pt_coord_t> operator*
 /*!*************************************************************************************************
  * \brief   Multiply point with scalar.
  *  
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator*
@@ -427,8 +427,8 @@ Point<space_dim,pt_coord_t> operator*
 /*!*************************************************************************************************
  * \brief   Divide scalar by \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator/
@@ -447,8 +447,8 @@ Point<space_dim,pt_coord_t> operator/
 /*!*************************************************************************************************
  * \brief   Divide \c Point by scalar.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 Point<space_dim,pt_coord_t> operator/
@@ -463,8 +463,8 @@ Point<space_dim,pt_coord_t> operator/
 /*!*************************************************************************************************
  * \brief   Absolute sum norm of point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 pt_coord_t norm_1(const Point<space_dim,pt_coord_t>& pt)
@@ -478,8 +478,8 @@ pt_coord_t norm_1(const Point<space_dim,pt_coord_t>& pt)
  * 
  * \todo    Fill information, when details clarified with Guido.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 pt_coord_t norm_2(const Point<space_dim,pt_coord_t>& pt)
@@ -489,8 +489,8 @@ pt_coord_t norm_2(const Point<space_dim,pt_coord_t>& pt)
 /*!*************************************************************************************************
  * \brief   Maximum norm of point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 pt_coord_t norm_infty(const Point<space_dim,pt_coord_t>& pt)
@@ -502,8 +502,8 @@ pt_coord_t norm_infty(const Point<space_dim,pt_coord_t>& pt)
 /*!*************************************************************************************************
  * \brief   p-norm of point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 pt_coord_t norm_p(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t power)
@@ -518,8 +518,8 @@ pt_coord_t norm_p(const Point<space_dim,pt_coord_t>& pt, const pt_coord_t power)
 /*!*************************************************************************************************
  * \brief   Fill \c stream with \c Point.
  * 
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template< unsigned int space_dim, typename pt_coord_t >
 std::ostream& operator<< (std::ostream& stream, const Point<space_dim,pt_coord_t>& pt)

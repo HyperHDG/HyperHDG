@@ -31,8 +31,8 @@
  * \tparam  LocalSolverT  Class type of the local solver.
  * \tparam  dof_index_t   Index type of hyperedges. Default is \c unsigned \c int.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2019--2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2019--2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
 < class TopologyT, class GeometryT, class LocalSolverT, typename dof_index_t = unsigned int >

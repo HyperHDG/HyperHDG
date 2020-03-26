@@ -20,8 +20,8 @@
  * \param   vec             General vector to be checked for duplicates.
  * \retval  is_unique       True if vector does not contain duplicates and false otherwise.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < class T >
 bool is_unique(const std::vector<T>& vec)
@@ -44,8 +44,8 @@ bool is_unique(const std::vector<T>& vec)
  * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
  * \tparam  pt_index_t      The index type for points. Default is \c unsigned \c int.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template 
 < unsigned int hyEdge_dim, unsigned int space_dim, typename hyEdge_index_t = unsigned int,
@@ -148,8 +148,8 @@ struct DomainInfo
  * \param   filename        Name of the .geo file to be read.
  * \retval  domain_info     Topological and geometrical information of hypergraph.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template
 < unsigned int hyEdge_dim, unsigned int space_dim, typename hyEdge_index_t = unsigned int,
@@ -317,8 +317,8 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
  * \param   filename        Name of the .geo file to be read.
  * \retval  domain_info     Topological and geometrical information of hypergraph.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )

@@ -18,8 +18,8 @@
  * is compiled. Using this functionality makes your program significantly slower. However, usage is
  * highly recommended for testing. 
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
 #pragma once // Ensure that file is included only once in a single compilation.
@@ -39,8 +39,8 @@
  * This function is \b not to be used in regular code. It only / solely is defined to allow the use
  * of function \c hy_assert( \c Expr, \c Msg) which is implemented as a macro in file HyAssert.hxx.
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 inline void __Hy_Assert
 ( const char* expr_str, bool expr, const char* file, int line, std::stringstream& msg )

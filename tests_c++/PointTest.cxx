@@ -2,8 +2,8 @@
  * \file    examples_c++/PointTest.C
  * \brief   File that tests several aspects of the C++ implementation of Point (NOT FINISHED YET).
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
 #include <HyperHDG/Point.hxx>
@@ -22,8 +22,8 @@ using namespace std;
  * 
  * This function implements an alternative to Executable.py (which usses the Cython interface).
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
 {

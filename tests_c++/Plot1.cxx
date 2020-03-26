@@ -12,8 +12,8 @@ using namespace std;
 /*!*************************************************************************************************
  * \brief   Output cubic geometries
  *
- * \authors   Guido Kanschat, University of Heidelberg, 2020.
- * \authors   Andreas Rupp, University of Heidelberg, 2020.
+ * \authors   Guido Kanschat, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template<int edge_dim, int space_dim>
 void test()
