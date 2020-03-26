@@ -222,13 +222,13 @@ class HDGHyperGraph
      *
      * \retval  hyEdge_dim            The dimension of a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int hyEdge_dimension() { return TopoT::hyEdge_dim(); }
+    static constexpr unsigned int hyEdge_dim() { return TopoT::hyEdge_dim(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of the space.
      *
      * \retval  space_dim             The dimension of the space.
      **********************************************************************************************/
-    static constexpr unsigned int space_dimension() { return TopoT::space_dim(); }
+    static constexpr unsigned int space_dim() { return TopoT::space_dim(); }
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the amount of dofs per node.
      *
