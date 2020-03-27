@@ -31,15 +31,15 @@ HDG_wrapper = PyDP( "domains/SimpleTriangle.geo", "domains/SimpleTriangle.geo", 
 # index vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
-vectorDirichlet[2] = 2.
-vectorDirichlet[4] = 3.
-vectorDirichlet[6] = 4.
+vectorDirichlet[1] = 0.
+vectorDirichlet[2] = 0.
+vectorDirichlet[3] = 0.
 # vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 1, 2, 3, 4, 5, 6, 7])# len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 1, 2, 3 ])# len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
