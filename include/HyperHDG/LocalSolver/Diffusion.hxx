@@ -18,7 +18,7 @@
  * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
  * information is needed by this class.
  *
- * \tparam  hyEdge_dimT    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
  *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  poly_deg      The polynomial degree of test and trial functions.
  * \tparam  quad_deg      The order of the quadrature rule.
@@ -149,7 +149,7 @@ class Diffusion_TensorialUniform
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const;
+    (const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
     
     /*!*********************************************************************************************
      * \brief  Solve local problem.
@@ -158,7 +158,7 @@ class Diffusion_TensorialUniform
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >& lambda_values) const
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
     {
       // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
       std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
@@ -219,8 +219,8 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > numerical_flux_from_lambda
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >& lambda_values) const
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT > numerical_flux_from_lambda
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
       
@@ -317,7 +317,7 @@ assemble_loc_matrix ( const lSol_float_t tau )
 template
 < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
 inline std::array
-< lSol_float_t, Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ >
+<lSol_float_t, Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_>
 Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
@@ -458,7 +458,7 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()> values;
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
   lSol_float_t fct_value;
  
