@@ -205,7 +205,7 @@ class Diffusion_TensorialUniform
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    Diffusion_TensorialUniform(const constructor_value_type& tau)
+    Diffusion_TensorialUniform(const constructor_value_type& tau = 1.)
     : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************

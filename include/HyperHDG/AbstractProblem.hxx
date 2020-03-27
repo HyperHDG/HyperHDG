@@ -101,6 +101,24 @@ class AbstractProblem
                      "Hyperedge dimension of hypergraph and local solver must be equal!" );
     }
     /*!*********************************************************************************************
+     * \brief   Abstract problem constructor.
+     *
+     * Constructor for class containing a HyperGraph and a local solver that solve a PDE on a
+     * hyperedge.
+     *
+     * \param   construct_topo    Information to construct a topology.
+     **********************************************************************************************/
+    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo )
+    : hyper_graph_  ( construct_topo )
+    {
+      static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
+                     "Hyperedge dimension of topology and geometry must be equal!" );
+      static_assert( TopologyT::space_dim() == GeometryT::space_dim() ,
+                     "Space dimension of topology and geometry must be equal!" );
+      static_assert( TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim() ,
+                     "Hyperedge dimension of hypergraph and local solver must be equal!" );
+    }
+    /*!*********************************************************************************************
      * \brief   Read indices of Dirichlet type hypernodes/faces.
      *
      * Read the indices ot the hypernodes/faces that are of Dirichlet type and therefore do not
