@@ -12,16 +12,16 @@
  *
  * \todo Add functions for naming and structuring VTK output of ode and edge values
  */
-template <int hyEdge_dim, typename lSol_float_t>
+template <int hyEdge_dimT, typename lSol_float_t>
 class LocalSolverTemplate
 {
 public:
   /**
-   * \brief   Return template parameter \c hyEdge_dim.
+   * \brief   Return template parameter \c hyEdge_dimT.
    * 
-   * \retval  hyEdge_dim    Dimension of hypergraph's hyperedges.
+   * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
    */
-  static constexpr unsigned int hyEdge_dimension() { return hyEdge_dim; }
+  static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
   
   /**
    * \brief   Decide whether gemetrical information is needed for local solver.
@@ -55,10 +55,10 @@ public:
   /**
    * \brief The local solver as needed by the HDG method
    */
-  std::array< std::array<lSol_float_t, 0> , 2 * hyEdge_dim > numerical_flux_from_lambda
-  (const std::array< std::array<lSol_float_t, 0> , 2*hyEdge_dim >& lambda_values) const
+  std::array< std::array<lSol_float_t, 0> , 2 * hyEdge_dimT > numerical_flux_from_lambda
+  (const std::array< std::array<lSol_float_t, 0> , 2*hyEdge_dimT >& lambda_values) const
   {
-    return std::array< std::array<lSol_float_t, 0> , 2 * hyEdge_dim > ();
+    return std::array< std::array<lSol_float_t, 0> , 2 * hyEdge_dimT > ();
   }
 
   /**
@@ -71,12 +71,12 @@ public:
    * \todo  How about the geometry of the respective element?
    */
   template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(AbscissaSize)>,system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()>
   bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
 	       const InputArrayType& lambda_values) const
     {
       return std::array<std::array<lSol_float_t,
-				   Hypercube<hyEdge_dim>::pow(AbscissaSize)>,
+				   Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
 			system_dimension()> ();
     }
 };
