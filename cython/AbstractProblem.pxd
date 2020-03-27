@@ -7,7 +7,7 @@ IncludeFiles
 
 cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
   cdef cppclass CythonClassName C++ClassName :
-    CythonClassName (vector[unsigned int], vector[unsigned int], double) except +
+    CythonClassName ( CyReplace01 , CyReplace02 , double) except +
     void read_dirichlet_indices (vector[unsigned int])
     vector[double] return_zero_vector ()
     vector[double] matrix_vector_multiply (vector[double])

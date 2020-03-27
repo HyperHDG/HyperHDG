@@ -9,19 +9,22 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Predefine problem to be solved.
-problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
-         +                  "Geometry::UnitCube< 1, 3 >, " \
-         +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
-         +                ">"
-filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
+# problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
+#          +                  "Geometry::UnitCube< 1, 3 >, " \
+#          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
+#          +                ">"
+# filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
+problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, " \
+         +                  "ElasticRods_TensorialUniform<1,2,1,2> > "
+filenames = [ "HyperHDG/Topology/File.hxx" , "HyperHDG/Geometry/File.hxx" , "LSol_Elasticity.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
-PyDP = hyImport(["AbstractProblem", problem], filenames)
+PyDP = hyImport(["AbstractProblem", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDP([1,1,1])
-# HDG_wrapper = PyElasticityProblem("domains/SimpleTriangle.geo")
+#HDG_wrapper = PyDP([1,1,1])
+HDG_wrapper = PyDP( "domains/SimpleTriangle.geo", "domains/SimpleTriangle.geo", 1. )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
