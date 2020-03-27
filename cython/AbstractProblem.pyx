@@ -2,17 +2,24 @@
 
 cdef class PythonClassName :
   cdef CythonClassName *thisptr # hold a C++ instance which we're wrapping
-  def __cinit__(self, topo_constr, geom_constr, tau):
-    if topo_constr == geom_constr:
+  def __cinit__(self, topo_constr, geom_constr = 'default', tau = 'default'):
+    if geom_constr == 'default':
       if isinstance(topo_constr,str): # Python3 version - use unicode for Python 2
         topo_constr = topo_constr.encode()
-      self.thisptr = new CythonClassName (topo_constr, tau)
+      if tau == 'default':
+        self.thisptr = new CythonClassName (topo_constr)
+      else:
+        self.thisptr = new CythonClassName (topo_constr, tau)
     else:
       if isinstance(topo_constr,str): # Python3 version - use unicode for Python 2
         topo_constr = topo_constr.encode()
       if isinstance(geom_constr,str): # Python3 version - use unicode for Python 2
         geom_constr = geom_constr.encode()
-      self.thisptr = new CythonClassName (topo_constr, geom_constr, tau)
+      if tau == 'default':
+        print("Python defaults tau to 1 and might overwrite C++ settings at this point.\n")
+        self.thisptr = new CythonClassName (topo_constr, geom_constr, 1.)
+      else:
+        self.thisptr = new CythonClassName (topo_constr, geom_constr, tau)
   def __dealloc__(self):
     del self.thisptr
   def read_dirichlet_indices(self, indices):
