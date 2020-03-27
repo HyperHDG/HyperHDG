@@ -30,7 +30,7 @@
  **************************************************************************************************/
 template
 < unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg,
-  unsigned int quad_deg, typename lSol_float_t=double >
+  unsigned int quad_deg, typename lSol_float_t = double >
 class ElasticRods_TensorialUniform
 {
   public:
@@ -49,7 +49,8 @@ class ElasticRods_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
-     * This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.
+     * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+     * cooperating with this object.
      *
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
@@ -103,29 +104,6 @@ class ElasticRods_TensorialUniform
       return column * n_loc_dofs_ + row;  // Transposed for LAPACK
     }
     /*!*********************************************************************************************
-     * \brief   Decompose index of local tensorial shape function into its (spatial) components.
-     *
-     * The function is static inline, since it is used in the constructor's initializer list.
-     *
-     * \param   index         Index of tensorial shape function.
-     * \param   range         Amount of 1D shape functions (the tensorial is made up from).
-     * \param   decomposition Array to be filled with the decomposition.
-     * \retval  decomposition Array filled with the decomposition.
-     **********************************************************************************************/
-    template<unsigned int dimT> static inline void index_decompose ( unsigned int index, 
-      unsigned int range, std::array<unsigned int, std::max(dimT,1U)>& decomposition )
-    {
-      if ( decomposition.size() == 1 )  decomposition[0] = index;
-      else
-      {
-        for (unsigned int dim = 0; dim < dimT; ++dim)
-        {
-          decomposition[dim] = index % range;
-          index /= range;
-        }
-      }
-    }
-    /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
@@ -138,145 +116,18 @@ class ElasticRods_TensorialUniform
      * \retval  loc_mat       Matrix of the local solver.
      **********************************************************************************************/
     static std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ >
-    assemble_loc_matrix ( const lSol_float_t tau )
-    { 
-      const std::array<lSol_float_t, n_quads_1D_> q_weights = quad_weights<quad_deg,Gaussian>();
-      const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > 
-        trial(shape_fcts_at_quad_points<poly_deg, quad_deg, Gaussian, Legendre>()),
-        deriv(shape_ders_at_quad_points<poly_deg, quad_deg, Gaussian, Legendre>());
-      const std::array< std::array<lSol_float_t, 2> , poly_deg + 1 >
-        trial_bdr(shape_fcts_at_bdrs<poly_deg, Legendre>());
-  
-      std::array<unsigned int, hyEdge_dim> dec_i, dec_j;
-      lSol_float_t integral, integral1D;
-      
-      std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_mat;
-      local_mat.fill(0.);
-  
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-        for (unsigned int j = 0; j < n_shape_fct_; ++j)
-        {
-          index_decompose<hyEdge_dim>(j, poly_deg+1, dec_j);
-          
-          // Integral_element phi_i phi_j dx in diagonal blocks
-          integral = 1.;
-          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-          {
-            integral1D = 0.;
-            for (unsigned int q = 0; q < n_quads_1D_; ++q)
-              integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * trial[dec_i[dim_fct]][q];
-            integral *= integral1D;
-          }
-          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-            local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
-          
-          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-          { 
-            // Integral_element - nabla phi_i \vec phi_j dx 
-            // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              integral1D = 0.;
-              for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                integral1D += q_weights[q] * trial[dec_j[dim_fct]][q] * 
-                  ( ( dim == dim_fct ) ? deriv[dec_i[dim_fct]][q] : trial[dec_i[dim_fct]][q] );
-              integral *= integral1D;
-            }
-            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
-            local_mat[loc_matrix_index(dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] -= integral;
-        
-            // Corresponding boundary integrals from integration by parts in left lower blocks
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)
-                integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] += integral;
-            // Corresponding boundary integrals from integration by parts in left lower blocks
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)
-                integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
-        
-            // Penalty in lower right diagonal block
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)
-                integral1D = trial_bdr[dec_i[dim_fct]][0] * trial_bdr[dec_j[dim_fct]][0];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
-              += tau * integral;
-            // Penalty in lower right diagonal block
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)
-                integral1D = trial_bdr[dec_i[dim_fct]][1] * trial_bdr[dec_j[dim_fct]][1];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights[q] * trial[dec_i[dim_fct]][q] * trial[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+ j)]
-              += tau * integral;
-          }
-        }
-      }
-  
-      return local_mat;
-    }
+    assemble_loc_matrix ( const lSol_float_t tau );
     /*!*********************************************************************************************
      * \brief   (Globally constant) penalty parameter for HDG scheme.
      **********************************************************************************************/
     const lSol_float_t tau_;
     /*!*********************************************************************************************
-     * \brief   Quadrature weights per spatial dimension.
-     **********************************************************************************************/
-    const std::array<lSol_float_t, n_quads_1D_> q_weights_;
-    /*!*********************************************************************************************
-     * \brief   Trial functions evaluated at quadrature points (per spatial dimensions).
-     **********************************************************************************************/
-    const std::array< std::array<lSol_float_t, n_quads_1D_ > , poly_deg + 1 > trial_;
-    /*!*********************************************************************************************
-     * \brief   Trial functions evaluated at boundaries {0,1} (per spatial dimension).
-     **********************************************************************************************/
-    const std::array< std::array<lSol_float_t, 2 > , poly_deg + 1 > trial_bdr_;
-    /*!*********************************************************************************************
      * \brief   Local matrix for the local solver.
      **********************************************************************************************/
     const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
+    
+
+    const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
     
     /*!*********************************************************************************************
      * \brief  Do the pretprocessing to transfer global to local dofs.
@@ -331,71 +182,15 @@ class ElasticRods_TensorialUniform
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
-    {
-      std::array<unsigned int, hyEdge_dim> dec_i;
-      std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      lSol_float_t integral, integral1D;
-  
-      std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
-      right_hand_side.fill(0.);
-  
-      hy_assert( lambda_values.size() == 2 * hyEdge_dim ,
-                  "The size of the lambda values should be twice the dimension of a hyperedge." );
-      for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
-        hy_assert( lambda_values[i].size() == n_shape_bdr_ ,
-                   "The size of lambda should be the amount of ansatz functions at boundary." );
-  
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
-          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-          {
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-            right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j]*integral;
-        
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-            right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j]*integral;
-          }
-        }
-      }
-  
-      return right_hand_side;
-    }
+    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dim >& lambda_values) const;
+    
     /*!*********************************************************************************************
      * \brief  Solve local problem.
      *
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
-    inline std::array<lSol_float_t, n_loc_dofs_ > solve_local_problem
+    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
     (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dim >& lambda_values) const
     {
       // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
@@ -421,56 +216,7 @@ class ElasticRods_TensorialUniform
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > primal_at_boundary
-    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
-    {
-      std::array<unsigned int, hyEdge_dim> dec_i;
-      std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-      lSol_float_t integral, integral1D;
-    
-      for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
-  
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
-          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-          {
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
-        
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
-          }
-        }
-      }
-      
-      return bdr_values;
-    }
+    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
      *
@@ -481,56 +227,7 @@ class ElasticRods_TensorialUniform
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > dual_at_boundary
-    ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
-    {
-      std::array<unsigned int, hyEdge_dim> dec_i;
-      std::array<unsigned int, std::max(hyEdge_dim-1,1U)> dec_j;
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
-      lSol_float_t integral, integral1D;
-    
-      for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
-
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        index_decompose<hyEdge_dim>(i, poly_deg+1, dec_i);
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          index_decompose<hyEdge_dim - 1>(j, poly_deg+1, dec_j);
-          for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
-          {
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][0];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
-            
-            integral = 1.;
-            for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
-            {
-              if (dim == dim_fct)  integral1D = trial_bdr_[dec_i[dim_fct]][1];
-              else
-              {
-                integral1D = 0.;
-                for (unsigned int q = 0; q < n_quads_1D_; ++q)
-                  integral1D += q_weights_[q]*trial_[dec_i[dim_fct]][q]*trial_[dec_j[dim_fct]][q];
-              }
-              integral *= integral1D;
-            }
-            bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
-          }
-        }
-      }
-  
-      return bdr_values;
-    }
+    ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const;
   public:
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
@@ -542,10 +239,7 @@ class ElasticRods_TensorialUniform
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
     ElasticRods_TensorialUniform(const constructor_value_type& tau)
-    : tau_(tau), q_weights_(quad_weights<quad_deg, Gaussian>()),
-      trial_(shape_fcts_at_quad_points<poly_deg, quad_deg, Gaussian, Legendre>()),
-      trial_bdr_(shape_fcts_at_bdrs<poly_deg, Legendre>()),
-      loc_mat_(assemble_loc_matrix(tau))
+    : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
@@ -592,7 +286,7 @@ class ElasticRods_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<std::size_t sizeT, class GeomT>
+/*    template<std::size_t sizeT, class GeomT>
     std::array<lSol_float_t, Hypercube<hyEdge_dim>::pow(sizeT)>
     primal_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
@@ -627,7 +321,7 @@ class ElasticRods_TensorialUniform
       }
 
       return values;
-    }
+    }*/
     /*!*********************************************************************************************
      * \brief   Evaluate discrete function at given points.
      *
@@ -641,7 +335,7 @@ class ElasticRods_TensorialUniform
      * \param   lambda_values Coefficients of the associated skeletal function.
      * \retval  fct_val       Evaluation of dual variable at prescribed points.
      **********************************************************************************************/
-    template<std::size_t sizeT, class GeomT>
+/*    template<std::size_t sizeT, class GeomT>
     std::array< std::array<lSol_float_t,hyEdge_dim> , Hypercube<hyEdge_dim>::pow(sizeT) > 
     dual_at_dyadic
     (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
@@ -678,7 +372,7 @@ class ElasticRods_TensorialUniform
       }
   
       return values;
-    }
+    }*/
     
     
     template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
@@ -695,7 +389,255 @@ class ElasticRods_TensorialUniform
 
 
 
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF ElasticRods_TensorialUniform
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
+
+// -------------------------------------------------------------------------------------------------
+// assemble_loc_matrix
+// -------------------------------------------------------------------------------------------------
+
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t >
+std::array
+< 
+  lSol_float_t,
+  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ *
+  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_
+>
+ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+assemble_loc_matrix ( const lSol_float_t tau )
+{ 
+  const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
+  lSol_float_t integral;
+  
+  std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_mat;
+  local_mat.fill(0.);
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    for (unsigned int j = 0; j < n_shape_fct_; ++j)
+    {
+      // Integral_element phi_i phi_j dx in diagonal blocks
+      integral = integrator.template integrate_vol_phiphi<hyEdge_dim>(i, j);
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+        local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
+      
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+      { 
+        // Integral_element - nabla phi_i \vec phi_j dx 
+        // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
+        integral = integrator.template integrate_vol_Dphiphi<hyEdge_dim>(i, j, dim);
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+        local_mat[loc_matrix_index(dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] -= integral;
+    
+        // Corresponding boundary integrals from integration by parts in left lower blocks
+        integral = integrator.template integrate_bdr_phiphi<hyEdge_dim>(i, j, 2 * dim + 1);
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] += integral;
+        // and from the penalty in the lower right diagonal block
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
+          += tau * integral;
+        // Corresponding boundary integrals from integration by parts in left lower blocks
+        integral = integrator.template integrate_bdr_phiphi<hyEdge_dim>(i, j, 2 * dim + 0);
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+        // and from the penalty in the lower right diagonal block
+        local_mat[loc_matrix_index(hyEdge_dim*n_shape_fct_+i , hyEdge_dim*n_shape_fct_+j)] 
+          += tau * integral;
+      }
+    }
+  }
+  
+  return local_mat;
+} // end of ElasticRods_TensorialUniform::assemble_loc_matrix
+
+
+// -------------------------------------------------------------------------------------------------
+// assemble_rhs
+// -------------------------------------------------------------------------------------------------
+
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t >
+inline std::array
+< lSol_float_t, 
+  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ >
+ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
+(const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dim >& lambda_values) const
+{
+  lSol_float_t integral;
+
+  std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_> right_hand_side;
+  right_hand_side.fill(0.);
+
+  hy_assert( lambda_values.size() == 2 * hyEdge_dim ,
+             "The size of the lambda values should be twice the dimension of a hyperedge." );
+  for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
+    hy_assert( lambda_values[i].size() == n_shape_bdr_ ,
+               "The size of lambda should be the amount of ansatz functions at boundary." );
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+    {
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+      {
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
+        right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
+        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
+    
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
+        right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
+        right_hand_side[hyEdge_dim*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
+      }
+    }
+  }
+  
+  return right_hand_side;
+} // end of ElasticRods_TensorialUniform::assemble_rhs
+
+
+// -------------------------------------------------------------------------------------------------
+// primal_at_boundary
+// -------------------------------------------------------------------------------------------------
+
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t >
+inline std::array
+< 
+  std::array
+  <
+    lSol_float_t,
+    ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+  > ,
+  2 * hyEdge_dim
+>
+ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
+{
+  std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
+  lSol_float_t integral;
+
+  for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
+
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+    {
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+      {
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
+        bdr_values[2*dim+0][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
+        
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
+        bdr_values[2*dim+1][j] += coeffs[hyEdge_dim * n_shape_fct_ + i] * integral;
+      }
+    }
+  }
+  
+  return bdr_values;
+} // end of ElasticRods_TensorialUniform::primal_at_boundary
+
+
+// -------------------------------------------------------------------------------------------------
+// dual_at_boundary
+// -------------------------------------------------------------------------------------------------
+
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t >
+inline std::array
+< 
+  std::array
+  <
+    lSol_float_t,
+    ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+  > ,
+  2 * hyEdge_dim
+>
+ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
+{
+  std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
+  lSol_float_t integral;
+
+  for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dim; ++dim_n)  bdr_values[dim_n].fill(0.);
+
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+    {
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim)
+      {
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 0);
+        bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
+        
+        integral = integrator.template integrate_bdr_phipsi<hyEdge_dim>(i, j, 2 * dim + 1);
+        bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
+      }
+    }
+  }
+  
+  return bdr_values;
+} // end of ElasticRods_TensorialUniform::dual_at_boundary
+
+
+// -------------------------------------------------------------------------------------------------
+// bulk_values
+// -------------------------------------------------------------------------------------------------
+/*
+template
+< unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t >
+std::array
+<
+  std::array
+  <
+    lSol_float_t,
+    Hypercube<hyEdge_dim>::pow(sizeT)
+  > ,
+  ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+>
+ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
+(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const
+{
+  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
+
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dim>::pow(sizeT)>, system_dimension()> values;
+  std::array<unsigned int, hyEdge_dim> dec_i, dec_q;
+  lSol_float_t fct_value;
+ 
+  std::array<unsigned int, poly_deg+1> poly_indices;
+  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
+    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
+      
+  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  { 
+    dec_i = integrator.template index_decompose<hyEdge_dim>(i);
+    for (unsigned int q = 0; q < Hypercube<hyEdge_dim>::pow(sizeT); ++q)
+    {
+      dec_q = integrator.template index_decompose<hyEdge_dim, abscissas.size()>(q);
+      fct_value = 1.;
+      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dim; ++dim_fct)
+        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
+        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
+    }
+  }
+  
+  return values;
+} // end of ElasticRods_TensorialUniform::bulk_values
+*/
 
 
 
