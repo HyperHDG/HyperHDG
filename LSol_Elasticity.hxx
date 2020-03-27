@@ -31,7 +31,7 @@
 template
 < unsigned int hyEdge_dim, unsigned int space_dim, unsigned int poly_deg,
   unsigned int quad_deg, typename lSol_float_t = double >
-class ElasticRods_TensorialUniform
+class LengtheningBeam
 {
   public:
     /*!*********************************************************************************************
@@ -238,7 +238,7 @@ class ElasticRods_TensorialUniform
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    ElasticRods_TensorialUniform(const constructor_value_type& tau)
+    LengtheningBeam(const constructor_value_type& tau)
     : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
     { } 
     /*!*********************************************************************************************
@@ -385,14 +385,14 @@ class ElasticRods_TensorialUniform
       return result;
     }
     
-}; // end of class ElasticRods_TensorialUniform
+}; // end of class LengtheningBeam
 
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF ElasticRods_TensorialUniform
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF LengtheningBeam
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -408,10 +408,10 @@ template
 std::array
 < 
   lSol_float_t,
-  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ *
-  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_
+  LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ *
+  LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_
 >
-ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
@@ -454,7 +454,7 @@ assemble_loc_matrix ( const lSol_float_t tau )
   }
   
   return local_mat;
-} // end of ElasticRods_TensorialUniform::assemble_loc_matrix
+} // end of LengtheningBeam::assemble_loc_matrix
 
 
 // -------------------------------------------------------------------------------------------------
@@ -466,8 +466,8 @@ template
   typename lSol_float_t >
 inline std::array
 < lSol_float_t, 
-  ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ >
-ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
+  LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ >
+LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dim >& lambda_values) const
 {
   lSol_float_t integral;
@@ -499,7 +499,7 @@ ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t
   }
   
   return right_hand_side;
-} // end of ElasticRods_TensorialUniform::assemble_rhs
+} // end of LengtheningBeam::assemble_rhs
 
 
 // -------------------------------------------------------------------------------------------------
@@ -514,11 +514,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dim
 >
-ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
 primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
@@ -542,7 +542,7 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
   }
   
   return bdr_values;
-} // end of ElasticRods_TensorialUniform::primal_at_boundary
+} // end of LengtheningBeam::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -557,11 +557,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dim
 >
-ElasticRods_TensorialUniform<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
+LengtheningBeam<hyEdge_dim,space_dim,poly_deg,quad_deg,lSol_float_t>::
 dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>& coeffs ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dim > bdr_values;
@@ -585,7 +585,7 @@ dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dim+1) * n_shape_fct_>
   }
   
   return bdr_values;
-} // end of ElasticRods_TensorialUniform::dual_at_boundary
+} // end of LengtheningBeam::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -603,9 +603,9 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dim>::pow(sizeT)
   > ,
-  ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+  LengtheningBeam<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
 >
-ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
+LengtheningBeam<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
@@ -636,7 +636,7 @@ ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_va
   }
   
   return values;
-} // end of ElasticRods_TensorialUniform::bulk_values
+} // end of LengtheningBeam::bulk_values
 */
 
 
@@ -1390,4 +1390,4 @@ ElasticRods_TensorialUniform<hyEdge_dim,poly_deg,quad_deg,lSol_float_t>::bulk_va
       //~ return result;
     //~ }
     
-//~ }; // end of class ElasticRods_TensorialUniform
+//~ }; // end of class LengtheningBeam
