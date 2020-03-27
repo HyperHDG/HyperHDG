@@ -17,13 +17,14 @@ filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
-PyDiffusionProblem = hyImport(["AbstractProblem", problem], filenames)
+PyDiffusionProblem = \
+  hyImport(["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames)
 
 # Define tolerance
 tolerance = 1e-8
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([4,2,2])
+HDG_wrapper = PyDiffusionProblem([4,2,2], [4,2,2], 1.)
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the

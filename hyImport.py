@@ -8,7 +8,10 @@ import importlib
 #  of the .pyx and .pxd files located in the cython directory. Each of the .pxd files is clearly
 #  associated to one and only one C++ file (.hxx or .cxx). The second string refers to the class
 #  that is to be imported (and is defined in the C++ file). Further strings might refer to embedded
-#  template parameters. This has, however, not yet been fully implemented.
+#  template parameters or other strings that need to be substituted. Thus, if a .pxd file contains
+#  the key word \c CyReplace followed by a two digit number (witout space between word and number),
+#  it is replace by the \c vector name's number + 2 entry (the first two names have predefined
+#  meaning, cf. above).
 #
 #  Additionally, a vector of filenames can be specified. These filenames refer to files that need
 #  to be imported/included to allow the C++ classes to be compilable. For example, if the class

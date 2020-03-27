@@ -169,6 +169,14 @@ string hyCythonize
       if      (word == "C++ClassName")     word = "\"" + names[1] + "\"";
       else if (word == "CythonClassName")  word = python_name + "_Cython";
       else if (word == "PythonClassName")  word = python_name;
+      else if (word.size() == 11 && word.substr(0,9) == "CyReplace")
+      {
+        unsigned int replace_number = stoi(word.substr(9,11));
+        hy_assert( names.size() > replace_number + 1 && replace_number >= 1 && replace_number <= 99,
+                   "The vector names must contain enough entries to ensure proper replacements "
+                   << "and the replace number must be in [01,99]." );
+        word = names[replace_number + 1];
+      }
       if (word == "IncludeFiles")
         for (unsigned int i = 0; i < filenames.size(); ++i)
           outfile << "cdef extern from \"<" << filenames[i] << ">\" : pass" << endl;
