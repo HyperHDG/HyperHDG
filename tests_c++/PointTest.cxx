@@ -78,6 +78,14 @@ template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
              "Move constructor and move assignment should give the same points!" );
   if (ptMC != ptMA || ptMA != ptA)  success = false;
   
+  Point<space_dim,pt_coord_t> ptCA_array = ptA.data();
+  Point<space_dim,pt_coord_t> ptMC_array( move(ptA.data()) );
+  Point<space_dim,pt_coord_t> ptMA_array = Point<space_dim,pt_coord_t>(ptAC.data());
+
+  hy_assert( ptCA_array == ptMC_array && ptMC_array == ptMA_array && ptMA_array == ptA ,
+             "Move constructor and move assignment from array should give the same points!" );
+  if (ptCA_array != ptMC_array || ptMC_array != ptMA_array || ptMA_array != ptA)  success = false;
+
   if constexpr (space_dim == 1)       ptA[0] -= 1e-5;
   else if constexpr (space_dim == 2)  ptA[1] -= 1e-5;
   else                              { ptA[1] -= 1e-5; ptA[2] += 1.; }

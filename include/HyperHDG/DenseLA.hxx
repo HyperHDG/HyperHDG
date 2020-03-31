@@ -107,18 +107,6 @@ class SmallMat
     SmallMat(std::array<mat_entry_t, size()>&& entries) noexcept
     : entries_(std::move(entries)) { }
     /*!*********************************************************************************************
-     * \brief   Copy assignment from array.
-     **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator=
-    ( const std::array<mat_entry_t, size()>& entries )
-    { entries_ = entries; return *this; }
-    /*!*********************************************************************************************
-     * \brief   Move assignment from array.
-     **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator=
-    ( std::array<mat_entry_t, size()>&& entries ) noexcept
-    { std::swap(entries_, entries); return *this; }
-    /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
     SmallMat(const SmallMat<n_rows,n_cols,mat_entry_t>& other) : entries_(other.entries_) { }
