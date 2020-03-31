@@ -40,11 +40,11 @@ class SmallVec
 {
   private:
     /*!*********************************************************************************************
-     * \brief   Array containing the coordinates of the SmallVec.
+     * \brief   Array containing the entries of the SmallVec.
      * 
      * A \c std::array conatining the i-th coordinate of the SmallVec as its i-th entry.
      **********************************************************************************************/
-    std::array<vec_entry_t, vec_dim> coordinates_;
+    std::array<vec_entry_t, vec_dim> entries_;
   public:
 
     // Constructors and assignment operators:
@@ -52,79 +52,79 @@ class SmallVec
     /*!*********************************************************************************************
      * \brief   Empty constructor for a SmallVec.
      * 
-     * Fills coordinates of the SmallVec with zeros.
+     * Fills entries of the SmallVec with zeros.
      **********************************************************************************************/
-    SmallVec() { coordinates_.fill(0.); }
+    SmallVec() { entries_.fill(0.); }
     /*!*********************************************************************************************
-     * \brief   Construct SmallVec from array of coordinates.
+     * \brief   Construct SmallVec from array of entries.
      * 
-     * Fills the SmallVec's array of coordinates with the input parameter. 
+     * Fills the SmallVec's array of entries with the input parameter. 
      * 
-     * \param   coordinates   A \c std::array containing the coordinates of the SmallVec.
+     * \param   entries   A \c std::array containing the entries of the SmallVec.
      **********************************************************************************************/
-    SmallVec(const std::array<vec_entry_t, vec_dim>& coordinates) : coordinates_(coordinates) { }
+    SmallVec(const std::array<vec_entry_t, vec_dim>& entries) : entries_(entries) { }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
-    SmallVec(const SmallVec<vec_dim,vec_entry_t>& other) : coordinates_(other.coordinates_) { }
+    SmallVec(const SmallVec<vec_dim,vec_entry_t>& other) : entries_(other.entries_) { }
     /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
     SmallVec(SmallVec<vec_dim,vec_entry_t>&& other) noexcept
-    : coordinates_(std::move(other.coordinates_)) { }
+    : entries_(std::move(other.entries_)) { }
     /*!*********************************************************************************************
      * \brief   Copy assignment.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator= (const SmallVec<vec_dim,vec_entry_t>& other)
-    { coordinates_ = other.coordinates_; return *this; }
+    { entries_ = other.entries_; return *this; }
     /*!*********************************************************************************************
      * \brief   Move assignment.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator= (SmallVec<vec_dim,vec_entry_t>&& other) noexcept
-    { std::swap(coordinates_, other.coordinates_); return *this; }
+    { std::swap(entries_, other.entries_); return *this; }
     
     // Random access operators:
 
     /*!*********************************************************************************************
      * \brief   Return single coordinate of a constant SmallVec.
      * 
-     * \param   coord_entry     An \c unsigned \c int referring to the coordinate that is to be
+     * \param   index           An \c unsigned \c int referring to the coordinate that is to be
      *                          returned.
      * \retval  coordinate      \c vec_entry_t describing the coord_entry'th coordinate.
      **********************************************************************************************/
-    vec_entry_t operator[](const unsigned int coord_entry) const
+    vec_entry_t operator[](const unsigned int index) const
     {
-      hy_assert( 0 <= coord_entry && coord_entry < vec_dim ,
-                 "You can only access entries of a SmallVec's coordinates that have non-negaitive "
+      hy_assert( 0 <= index && index < vec_dim ,
+                 "You can only access entries of a SmallVec's entries that have non-negaitive "
                  << "index that is smaller than the space dimension (which is " << vec_dim << ")."
-                 << " However, you tried to access the " << coord_entry << "-th entry." );
-      return coordinates_[coord_entry];
+                 << " However, you tried to access the " << index << "-th entry." );
+      return entries_[index];
     }
     /*!*********************************************************************************************
      * \brief   Return reference to single coordinate of a SmallVec.
      * 
-     * \param   coord_entry     An \c unsigned \c int referring to the coordinate that is to be
+     * \param   index           An \c unsigned \c int referring to the coordinate that is to be
      *                          returned.
      * \retval  coordinate      A reference to a \c vec_entry_t describing the coord_entry'th
      *                          coordinate.
      **********************************************************************************************/
-    vec_entry_t& operator[](const unsigned int coord_entry)
+    vec_entry_t& operator[](const unsigned int index)
     {
-      hy_assert( 0 <= coord_entry && coord_entry < vec_dim ,
-                 "You can only access entries of a SmallVec's coordinates that have non-negaitive "
+      hy_assert( 0 <= index && index < vec_dim ,
+                 "You can only access entries of a SmallVec's entries that have non-negaitive "
                  << "index that is smaller than the space dimension (which is " << vec_dim << ")."
-                 << " However, you tried to access the " << coord_entry << "-th entry." );
-      return coordinates_[coord_entry];
+                 << " However, you tried to access the " << index << "-th entry." );
+      return entries_[index];
     }
 
     // Comparison operators:
 
     /*!*********************************************************************************************
-     * \brief   Find out whether two SmallVecs have (exactly) the same coordinates.
+     * \brief   Find out whether two SmallVecs have (exactly) the same entries.
      * 
      * This function compares the SmallVec to another SmallVec and returns true if and only if both
      * SmallVecs have exactly (that is not only with respect to some rounding errors) the same
-     * coordinates.
+     * entries.
      * 
      * \param   other_SmallVec  Another \c SmallVec<vec_dim> that is to be dicriminate from.
      * \retval  isEqual         A \c boolean which is true if both SmallVecs have the same coords.
@@ -132,15 +132,15 @@ class SmallVec
     bool operator==(const SmallVec<vec_dim,vec_entry_t>& other_SmallVec) const
     {
       for (unsigned int dim = 0; dim < vec_dim; ++dim)
-        if (coordinates_[dim] != other_SmallVec[dim])  return false;
+        if (entries_[dim] != other_SmallVec[dim])  return false;
       return true;
     }
     /*!*********************************************************************************************
-     * \brief   Find out whether two SmallVecs do not have (exactly) the same coordinates.
+     * \brief   Find out whether two SmallVecs do not have (exactly) the same entries.
      * 
      * This function compares the SmallVec to another SmallVec and returns false if and only if both
      * SmallVecs have exactly (that is not only with respect to some rounding errors) the same
-     * coordinates.
+     * entries.
      * 
      * \param   other_SmallVec  Another \c SmallVec<vec_dim> that is to be dicriminate from.
      * \retval  isEqual         A \c boolean which is false if both SmallVecs have the same coords.
@@ -148,7 +148,7 @@ class SmallVec
     bool operator!=(const SmallVec<vec_dim,vec_entry_t>& other_SmallVec) const
     {
       for (unsigned int dim = 0; dim < vec_dim; ++dim)
-        if (coordinates_[dim] != other_SmallVec[dim])  return true;
+        if (entries_[dim] != other_SmallVec[dim])  return true;
       return false;
     }
     /*!*********************************************************************************************
@@ -166,8 +166,8 @@ class SmallVec
     bool operator<(const SmallVec<vec_dim,vec_entry_t>& other_SmallVec) const
     {
       for (unsigned int dim = 0; dim < vec_dim; ++dim)
-        if (coordinates_[dim] < other_SmallVec[dim])      return true;
-        else if (coordinates_[dim] > other_SmallVec[dim]) return false;
+        if (entries_[dim] < other_SmallVec[dim])      return true;
+        else if (entries_[dim] > other_SmallVec[dim]) return false;
       return false;
     }
     
@@ -176,48 +176,48 @@ class SmallVec
     /*!*********************************************************************************************
      * \brief   Add scalar to a given SmallVec.
      * 
-     * \param   scalar          Floating point that is added to all of the SmallVec's coordinates.
+     * \param   scalar          Floating point that is added to all of the SmallVec's entries.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator+=(const vec_entry_t scalar)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] += scalar;
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] += scalar;
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Subtract scalar from a given SmallVec.
      * 
      * \param   scalar          Floating point that is subtracted from all of the SmallVec's
-     *                          coordinates.
+     *                          entries.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator-=(const vec_entry_t scalar)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] -= scalar;
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] -= scalar;
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Multiply scalar a given SmallVec.
      * 
      * \param   scalar          Floating point that is multiplied with all of the SmallVec's
-     *                          coordinates.
+     *                          entries.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator*=(const vec_entry_t scalar)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] *= scalar;
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] *= scalar;
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Divide given SmallVec by a scalar.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator/=(const vec_entry_t scalar)
     {
       if (scalar == 0.)  throw SmallVecDivByZeroException();
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] /= scalar;
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] /= scalar;
       return *this;
     }
     
@@ -226,40 +226,40 @@ class SmallVec
     /*!*********************************************************************************************
      * \brief   Add SmallVec to given SmallVec.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator+=(const SmallVec<vec_dim,vec_entry_t>& other)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] += other[dim];
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] += other[dim];
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Subtract other SmallVec from SmallVec.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator-=(const SmallVec<vec_dim,vec_entry_t>& other)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] -= other[dim];
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] -= other[dim];
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Hadamard product with other SmallVec.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator*=(const SmallVec<vec_dim,vec_entry_t>& other)
     {
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)  coordinates_[dim] *= other[dim];
+      for (unsigned int dim = 0; dim < vec_dim; ++dim)  entries_[dim] *= other[dim];
       return *this;
     }
     /*!*********************************************************************************************
      * \brief   Hadamard division by other SmallVec.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     SmallVec<vec_dim,vec_entry_t>& operator/=(const SmallVec<vec_dim,vec_entry_t>& other)
@@ -267,7 +267,7 @@ class SmallVec
       for (unsigned int dim = 0; dim < vec_dim; ++dim)
       {
         if (other[dim] == 0.)  throw SmallVecDivByZeroException();
-        coordinates_[dim] /= other[dim];
+        entries_[dim] /= other[dim];
       }
       return *this;
     }
@@ -277,14 +277,14 @@ class SmallVec
     /*!*********************************************************************************************
      * \brief   Euclidean scalar product with other SmallVec.
      * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all coordinates are divided by.
+     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallVec   The updated SmallVec.
      **********************************************************************************************/
     vec_entry_t operator*(const SmallVec<vec_dim,vec_entry_t>& other) const
     {
       vec_entry_t scalar_product = 0.;
       for (unsigned int dim = 0; dim < vec_dim; ++dim)
-        scalar_product += coordinates_[dim] * other[dim];
+        scalar_product += entries_[dim] * other[dim];
       return scalar_product;
     }
 }; // end of class SmallVec
