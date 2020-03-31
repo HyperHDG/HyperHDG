@@ -86,7 +86,7 @@ class SmallVec
     // Random access operators:
 
     /*!*********************************************************************************************
-     * \brief   Return single coordinate of a constant SmallVec.
+     * \brief   Return single entry of a constant SmallVec.
      * 
      * \param   index           An \c unsigned \c int referring to the coordinate that is to be
      *                          returned.
@@ -101,7 +101,7 @@ class SmallVec
       return entries_[index];
     }
     /*!*********************************************************************************************
-     * \brief   Return reference to single coordinate of a SmallVec.
+     * \brief   Return reference to single entry of a SmallVec.
      * 
      * \param   index           An \c unsigned \c int referring to the coordinate that is to be
      *                          returned.
@@ -116,6 +116,15 @@ class SmallVec
                  << " However, you tried to access the " << index << "-th entry." );
       return entries_[index];
     }
+
+    // Standard vector properties:
+
+    /*!*********************************************************************************************
+     * \brief   Return size a SmallVec.
+     * 
+     * \retval  size            Length of vector, which is entries_.size() == vec_dim.
+     **********************************************************************************************/
+    unsigned int size() const  { return vec_dim; }
 
     // Comparison operators:
 
