@@ -123,6 +123,13 @@ class SmallMat
     ( SmallMat<n_rows,n_cols,mat_entry_t>&& other ) noexcept
     { std::swap(entries_, other.entries_); return *this; }
     
+    // Return array with data:
+
+    /*!*********************************************************************************************
+     * \brief   Return data array.
+     **********************************************************************************************/
+    std::array<mat_entry_t, size()>& data()  { return entries_; }
+
     // Random access operators:
 
     /*!*********************************************************************************************
@@ -440,7 +447,7 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
 template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
 ( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
-{ return lapack_solve<n_rowsA,n_colsB>(A, b); }
+{ return lapack_solve<n_rowsA,n_colsB>(A.data(), b.data()); }
 /*!*************************************************************************************************
  * \brief   Standard matrix vector multiplication.
  * 
