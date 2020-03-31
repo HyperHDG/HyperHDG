@@ -6,7 +6,7 @@
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
-#include <HyperHDG/Point.hxx>
+#include <HyperHDG/SmallVec.hxx>
 
 #include <array>
 #include <random>
@@ -33,7 +33,8 @@ template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
   const pt_coord_t minR = -10.;
   const pt_coord_t maxR = +10.;
 
-  Point<space_dim,pt_coord_t> ptA, ptB, pt;
+  Point<space_dim,pt_coord_t> ptB, pt;
+  SmallVec<space_dim,pt_coord_t> ptA;
   pt_coord_t randNrC, result, helper;
   
   std::random_device rd;  //Will be used to obtain a seed for the random number engine

@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/Point.hxx>
+#include <HyperHDG/SmallVec.hxx>
 #include <HyperHDG/HyAssert.hxx>
 
 #include <algorithm>
