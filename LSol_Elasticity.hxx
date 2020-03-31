@@ -239,8 +239,7 @@ class LengtheningBeam
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
     LengtheningBeam(const constructor_value_type& tau = 1.)
-    : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
-    { } 
+    : tau_(tau), loc_mat_(assemble_loc_matrix(tau))  { }
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
      *
