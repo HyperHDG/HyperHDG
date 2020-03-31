@@ -157,8 +157,8 @@ class LengtheningBeam
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const;
+    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
+    (const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
     
     /*!*********************************************************************************************
      * \brief  Solve local problem.
@@ -167,18 +167,9 @@ class LengtheningBeam
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >& lambda_values) const
+    (const std::array<std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values) const
     {
-      // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
- //     std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
-      // The local right hand side is assembled (and will also be destroyed by LAPACK).
-      std::array<lSol_float_t, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
-      // LAPACK solves local_matix * return_value = right_hand_side.
-      
-//      SmallMat<n_loc_dofs_, n_loc_dofs_, lSol_float_t> mat(loc_mat_);
-      SmallVec<n_loc_dofs_, lSol_float_t> rhs(right_hand_side);
-
-      try { return (rhs / loc_mat_).data(); }
+      try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
       catch (LASolveException& exc)
       {
         hy_assert( 0 == 1 ,
@@ -438,16 +429,14 @@ assemble_loc_matrix ( const lSol_float_t tau )
 template
 < unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t >
-inline std::array
-< lSol_float_t, 
-  LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ >
+inline SmallVec
+< LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t >
 LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
   lSol_float_t integral;
 
-  std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> right_hand_side;
-  right_hand_side.fill(0.);
+  SmallVec<(hyEdge_dimT+1) * n_shape_fct_, lSol_float_t> right_hand_side;
 
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );

@@ -129,6 +129,10 @@ class SmallMat
      * \brief   Return data array.
      **********************************************************************************************/
     std::array<mat_entry_t, size()>& data()  { return entries_; }
+    /*!*********************************************************************************************
+     * \brief   Return data array.
+     **********************************************************************************************/
+    const std::array<mat_entry_t, size()>& data() const  { return entries_; }
 
     // Random access operators:
 
