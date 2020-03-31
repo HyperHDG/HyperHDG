@@ -159,7 +159,7 @@ template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
   ptA = ptAC;
   
 
-  result = ptAC * ptBC;
+  result = scalar_product(ptAC, ptBC);
   helper = 0.;
   for (unsigned int dim = 0; dim < space_dim; ++dim)  helper += ptA[dim] * ptB[dim];
   hy_assert( result == helper , "Operator* (scalar product) failed specified behaviour!" );
