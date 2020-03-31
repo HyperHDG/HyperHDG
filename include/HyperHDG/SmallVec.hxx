@@ -281,22 +281,25 @@ class SmallVec
       return *this;
     }
     
-    // Fundamental functions returning scalar from two SmallVecs:
-
-    /*!*********************************************************************************************
-     * \brief   Euclidean scalar product with other SmallVec.
-     * 
-     * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallVec   The updated SmallVec.
-     **********************************************************************************************/
-    vec_entry_t operator*(const SmallVec<vec_dim,vec_entry_t>& other) const
-    {
-      vec_entry_t scalar_product = 0.;
-      for (unsigned int dim = 0; dim < vec_dim; ++dim)
-        scalar_product += entries_[dim] * other[dim];
-      return scalar_product;
-    }
 }; // end of class SmallVec
+
+
+ // Fundamental functions returning scalar from two SmallVecs:
+
+/*!*************************************************************************************************
+ * \brief   Euclidean scalar product with other SmallVec.
+ * 
+ * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
+ * \retval  this_SmallVec   The updated SmallVec.
+ **************************************************************************************************/
+template < unsigned int vec_dim, typename vec_entry_t >
+vec_entry_t scalar_product
+( const SmallVec<vec_dim,vec_entry_t>& left, const SmallVec<vec_dim,vec_entry_t>& right )
+{
+  vec_entry_t scalar_product = 0.;
+  for (unsigned int dim = 0; dim < vec_dim; ++dim)  scalar_product += left[dim] * right[dim];
+  return scalar_product;
+}
 
 // Fundamental functions returning SmallVec from two SmallVecs:
 
@@ -492,7 +495,7 @@ vec_entry_t norm_1(const SmallVec<vec_dim,vec_entry_t>& pt)
 template< unsigned int vec_dim, typename vec_entry_t >
 vec_entry_t norm_2(const SmallVec<vec_dim,vec_entry_t>& pt)
 {
-  return std::sqrt( pt * pt );
+  return std::sqrt( scalar_product(pt, pt) );
 }
 /*!*************************************************************************************************
  * \brief   Maximum norm of SmallVec.
