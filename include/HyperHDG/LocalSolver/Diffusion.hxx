@@ -3,7 +3,7 @@
 #include <HyperHDG/ShapeFun1D.hxx>
 #include <HyperHDG/QuadratureTensorial.hxx>
 #include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/LapackWrapper.hxx>
+#include <HyperHDG/DenseLA.hxx>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -92,29 +92,6 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+1) * n_shape_fct_;
     /*!*********************************************************************************************
-     * \brief   Translate row and column indices to local index of entry in matrix.
-     * 
-     * Local \f$ n \times n \f$ matrices are encoded as arrays of size \f$n^2\f$. This function
-     * translates a row and a column index into the index of the long array, where the corresponding
-     * entry is located. Note that this is done column-wise (not row-wise as usually), to have the
-     * correct format for LAPACK.
-     *
-     * The function is static inline, since it is used in the constructor's initializer list.
-     *
-     * \param   row           Row index of local mtatrix entry.
-     * \param   column        Column index of local matrix entry.
-     * \retval  index         Overall index of local matrix entry.
-     **********************************************************************************************/
-    static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
-    {
-      hy_assert( 0 <= row && row < n_loc_dofs_ ,
-                 "Row index must be >= 0 and smaller than total amount of local dofs." );
-      hy_assert( 0 <= column && column < n_loc_dofs_ ,
-                 "Column index must be >= 0 and smaller than total amount of local dofs." );
-
-      return column * n_loc_dofs_ + row;  // Transposed for LAPACK
-    }
-    /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
      * The local solver neither depends on the geometry, nor on global functions. Thus, its local
@@ -126,8 +103,7 @@ class Diffusion_TensorialUniform
      * \param   tau           Penalty parameter for HDG.
      * \retval  loc_mat       Matrix of the local solver.
      **********************************************************************************************/
-    static std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ >
-    assemble_loc_matrix ( const lSol_float_t tau );
+    static SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix ( const lSol_float_t tau );
     /*!*********************************************************************************************
      * \brief   (Globally constant) penalty parameter for HDG scheme.
      **********************************************************************************************/
@@ -135,7 +111,7 @@ class Diffusion_TensorialUniform
     /*!*********************************************************************************************
      * \brief   Local matrix for the local solver.
      **********************************************************************************************/
-    const std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_ > loc_mat_;
+    const SmallSquareMat<n_loc_dofs_, lSol_float_t> loc_mat_;
     
     const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
     
@@ -148,7 +124,7 @@ class Diffusion_TensorialUniform
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    inline std::array<lSol_float_t, n_loc_dofs_ > assemble_rhs
+    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
     (const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
     
     /*!*********************************************************************************************
@@ -160,12 +136,7 @@ class Diffusion_TensorialUniform
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
     (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
     {
-      // A copy of loc_mat_ is created, since LAPACK will destroy the matrix values.
-      std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_matrix = loc_mat_;
-      // The local right hand side is assembled (and will also be destroyed by LAPACK).
-      std::array<lSol_float_t, n_loc_dofs_> right_hand_side = assemble_rhs(lambda_values);
-      // LAPACK solves local_matix * return_value = right_hand_side.
-      try { return lapack_solve<n_loc_dofs_>(local_matrix, right_hand_side); }
+      try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
       catch (LASolveException& exc)
       {
         hy_assert( 0 == 1 ,
@@ -258,20 +229,15 @@ class Diffusion_TensorialUniform
 
 template
 < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
-std::array
-< 
-  lSol_float_t,
-  Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_ *
-  Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_
->
+SmallSquareMat
+<Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
 Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   lSol_float_t integral;
   
-  std::array<lSol_float_t, n_loc_dofs_ * n_loc_dofs_> local_mat;
-  local_mat.fill(0.);
+  SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -280,27 +246,27 @@ assemble_loc_matrix ( const lSol_float_t tau )
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        local_mat[loc_matrix_index( dim*n_shape_fct_+i , dim*n_shape_fct_+j )] += integral;
+        local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
       
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
         // Integral_element - nabla phi_i \vec phi_j dx 
         // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
         integral = integrator.template integrate_vol_Dphiphi<hyEdge_dimT>(i, j, dim);
-        local_mat[loc_matrix_index(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
-        local_mat[loc_matrix_index(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j)] -= integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
+        local_mat(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) -= integral;
     
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        local_mat[loc_matrix_index(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j)] += integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) += integral;
         // and from the penalty in the lower right diagonal block
-        local_mat[loc_matrix_index(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j)] 
+        local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        local_mat[loc_matrix_index(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j)] -= integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
         // and from the penalty in the lower right diagonal block
-        local_mat[loc_matrix_index(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j)] 
+        local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
       }
     }
@@ -316,15 +282,14 @@ assemble_loc_matrix ( const lSol_float_t tau )
 
 template
 < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
-inline std::array
-<lSol_float_t, Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_>
+inline SmallVec
+<Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
 Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
   lSol_float_t integral;
 
-  std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> right_hand_side;
-  right_hand_side.fill(0.);
+  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
 
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
