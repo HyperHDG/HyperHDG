@@ -1,6 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/LapackWrapper.hxx>
 
 #include <array>
 #include <cmath>
@@ -436,28 +437,24 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
-( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_colsA,mat_entry_t>& A )
-{
-  return b;
-}
+( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
+{ return lapack_solve<n_rowsA,n_colsB>(A, b); }
 /*!*************************************************************************************************
  * \brief   Standard matrix vector multiplication.
  * 
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
-( const SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, const SmallMat<n_rowsA,n_colsA,mat_entry_t>& A )
+( const SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, const SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
 {
   SmallMat<n_rowsA,n_colsB,mat_entry_t> helperb(b);
-  SmallMat<n_rowsA,n_colsA,mat_entry_t> helperA(A);
+  SmallMat<n_rowsA,n_rowsA,mat_entry_t> helperA(A);
   return helperb / helperA;
 }
-
-
 
 // Fundamental functions returning SmallMat from a scalar and a SmallMat:
 
