@@ -662,6 +662,15 @@ std::ostream& operator<< (std::ostream& stream, const SmallMat<n_rows,n_cols,mat
 // Derived classes:
 
 /*!*************************************************************************************************
+ * \brief   A SmallSquareMat is a SmallMat, which is square.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rows, typename mat_entry_t = double >
+using SmallSquareMat = SmallMat<n_rows, n_rows, mat_entry_t>;
+
+/*!*************************************************************************************************
  * \brief   A SmallVec is a SmallMat, where the standard mat_entry_t is float.
  * 
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
