@@ -1,6 +1,6 @@
 
 #include <tensor_mapping.hxx>
-#include <HyperHDG/SmallVec.hxx>
+#include <HyperHDG/DenseLA.hxx>
 #include <HyperHDG/Hypercube.hxx>
 
 template <unsigned int dim, unsigned int np>

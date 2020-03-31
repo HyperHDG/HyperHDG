@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/SmallVec.hxx>
+#include <HyperHDG/DenseLA.hxx>
 #include <tensor_mapping.hxx>
 #include <array>
 

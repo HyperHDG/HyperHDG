@@ -2,7 +2,7 @@
 
 #include <HyperHDG/HDGHyperGraph.hxx>
 #include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/SmallVec.hxx>
+#include <HyperHDG/DenseLA.hxx>
 
 #include <fstream>
 #include <iomanip>
