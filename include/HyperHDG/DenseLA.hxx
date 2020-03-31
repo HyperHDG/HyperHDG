@@ -406,8 +406,58 @@ SmallMat<n_rows,n_cols,mat_entry_t> hada_divi
 (const SmallMat<n_rows,n_cols,mat_entry_t>& left, const SmallMat<n_rows,n_cols,mat_entry_t>& right)
 {
   SmallMat<n_rows,n_cols,mat_entry_t> quotient(left);
-  return quotient /= right;;
+  return quotient /= right;
 }
+
+// Standard matrix matrix multiplication and sove linear systems of equations:
+
+/*!*************************************************************************************************
+ * \brief   Standard matrix vector multiplication.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
+( const SmallMat<n_rowsA,n_colsA,mat_entry_t>& A, const SmallMat<n_colsA,n_colsB,mat_entry_t>& B )
+{
+  SmallMat<n_rowsA,n_colsB,mat_entry_t> result;
+  for (unsigned int colB = 0; colB < n_colsB; ++colB)
+    for (unsigned int colA = 0; colA < n_colsA; ++colA)
+      for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
+        result(rowA,colB) += A(rowA,colA) * B(colA,colB);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Standard matrix vector multiplication.
+ * 
+ * \todo    Implement this.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
+( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_colsA,mat_entry_t>& A )
+{
+  return b;
+}
+/*!*************************************************************************************************
+ * \brief   Standard matrix vector multiplication.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
+( const SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, const SmallMat<n_rowsA,n_colsA,mat_entry_t>& A )
+{
+  SmallMat<n_rowsA,n_colsB,mat_entry_t> helperb(b);
+  SmallMat<n_rowsA,n_colsA,mat_entry_t> helperA(A);
+  return helperb / helperA;
+}
+
+
 
 // Fundamental functions returning SmallMat from a scalar and a SmallMat:
 

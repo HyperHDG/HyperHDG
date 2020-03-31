@@ -159,11 +159,11 @@ extern "C"
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
  **************************************************************************************************/
-inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
+inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double *rhs_b)
 {
-  int one = 1, info = -1;
+  int info = -1;
   int *ipiv = new int[system_size];
-  dgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  dgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
 //  hy_assert( info == 0 ,
 //             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
@@ -186,11 +186,11 @@ inline void lapack_solve(int system_size, double *mat_a, double *rhs_b)
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
  **************************************************************************************************/
-inline void lapack_solve(int system_size, float *mat_a, float *rhs_b)
+inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *rhs_b)
 {
-  int one = 1, info = -1;
+  int info = -1;
   int *ipiv = new int[system_size];
-  sgesv_(&system_size, &one, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  sgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
 //  hy_assert( info == 0 ,
 //             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
@@ -213,12 +213,16 @@ inline void lapack_solve(int system_size, float *mat_a, float *rhs_b)
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
-template<unsigned int system_size> std::array<double, system_size> lapack_solve
-(std::array<double, system_size * system_size>& dense_mat, std::array<double, system_size>& rhs)
+template < unsigned int system_size, unsigned int n_rhs_cols = 1>
+std::array<double, system_size * n_rhs_cols> lapack_solve
+( 
+  std::array<double, system_size * system_size>& dense_mat,
+  std::array<double, system_size * n_rhs_cols>& rhs
+)
 {
   double *mat_a = dense_mat.data();
   double *rhs_b = rhs.data();
-  lapack_solve(system_size, mat_a, rhs_b);
+  lapack_solve(system_size, n_rhs_cols, mat_a, rhs_b);
   return rhs;
 }
 /*!*************************************************************************************************
@@ -240,11 +244,15 @@ template<unsigned int system_size> std::array<double, system_size> lapack_solve
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
-template<unsigned int system_size> std::array<float, system_size> lapack_solve
-(std::array<float, system_size * system_size>& dense_mat, std::array<float, system_size>& rhs)
+template < unsigned int system_size, unsigned int n_rhs_cols = 1 >
+std::array<float, system_size * n_rhs_cols> lapack_solve
+( 
+  std::array<float, system_size * system_size>& dense_mat, 
+  std::array<float, system_size * n_rhs_cols>& rhs
+)
 {
   float *mat_a = dense_mat.data();
   float *rhs_b = rhs.data();
-  lapack_solve(system_size, mat_a, rhs_b);
+  lapack_solve(system_size, n_rhs_cols, mat_a, rhs_b);
   return rhs;
 }
