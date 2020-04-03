@@ -260,13 +260,13 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
-/*template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qrDecompositionQ
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_rows> lapack_qrQ
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  SmallMat<n_rows, n_rows, lapack_float_t> matQ = diagonal(1.);
+  SmallMat<n_rows, n_rows, lapack_float_t> matQ = diagonal<n_rows, n_rows, lapack_float_t>(1.);
   SmallVec<n_rows, lapack_float_t> vec;
 
   lapack_qrDecomposition(n_rows, n_cols, dense_mat.data(), tau.data());
@@ -277,8 +277,8 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qrDecompositionQ
       if (j < i)        vec[j] = 0.;
       else if (j == i)  vec[j] = 1.;
       else              vec[j] = dense_mat(j,i);
-    matQ = matQ * ( diagonal(1.) - tau[i] * dyadic_product( vec, vec ) );
+    matQ = matQ * ( diagonal<n_rows, n_rows, lapack_float_t>(1.) - tau[i] * dyadic_product<n_rows, n_rows, lapack_float_t>( vec, vec ) );
   }
 
   return matQ.data();
-}*/
+}

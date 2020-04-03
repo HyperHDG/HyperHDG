@@ -1,7 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
-#include <HyperHDG/LapackWrapper.hxx>
 
 #include <array>
 #include <cmath>
@@ -467,7 +466,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> hada_divi
   return quotient /= right;
 }
 
-// Standard matrix matrix multiplication and sove linear systems of equations:
+// Standard matrix matrix multiplication:
 
 /*!*************************************************************************************************
  * \brief   Standard matrix vector multiplication.
@@ -485,32 +484,6 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
       for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
         result(rowA,colB) += A(rowA,colA) * B(colA,colB);
   return result;
-}
-/*!*************************************************************************************************
- * \brief   Standard matrix vector multiplication.
- * 
- * \todo    Implement this.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
-SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
-( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
-{ return lapack_solve<n_rowsA,n_colsB>(A.data(), b.data()); }
-/*!*************************************************************************************************
- * \brief   Standard matrix vector multiplication.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
-SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
-( const SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, const SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
-{
-  SmallMat<n_rowsA,n_colsB,mat_entry_t> helperb(b);
-  SmallMat<n_rowsA,n_rowsA,mat_entry_t> helperA(A);
-  return helperb / helperA;
 }
 
 // Fundamental functions returning SmallMat from a scalar and a SmallMat:
@@ -737,3 +710,39 @@ using SmallVec = SmallMat<n_rows, 1, mat_entry_t>;
  **************************************************************************************************/
 template < unsigned int n_rows, typename mat_entry_t = float >
 using Point = SmallVec<n_rows, mat_entry_t>;
+
+
+// -------------------------------------------------------------------------------------------------
+// Functions that require the LAPACK library:
+// -------------------------------------------------------------------------------------------------
+
+#include <HyperHDG/LapackWrapper.hxx>
+// Here, since prior include violates use of SmallMat, SmallVec, ... within the functions that are
+// introduced in LapackWrapper.hxx!
+
+/*!*************************************************************************************************
+ * \brief   Solve linear system of equations.
+ * 
+ * \todo    Do the doxygen.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
+( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
+{ return lapack_solve<n_rowsA,n_colsB>(A.data(), b.data()); }
+/*!*************************************************************************************************
+ * \brief   Solve linear system of equations.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
+( const SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, const SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
+{
+  SmallMat<n_rowsA,n_colsB,mat_entry_t> helperb(b);
+  SmallMat<n_rowsA,n_rowsA,mat_entry_t> helperA(A);
+  return helperb / helperA;
+}
