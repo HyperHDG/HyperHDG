@@ -52,7 +52,6 @@ extern "C"
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   double dnrm2_(int* n, double* x, int* incx);
-
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
@@ -84,7 +83,6 @@ extern "C"
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
-  
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
@@ -94,7 +92,7 @@ extern "C"
    * \authors   Guido Kanschat, Heidelberg University, 2020.
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
-  void dgeqr2_(int *m, int *n, double *a, int *lda, double *tau, double *work, int *info);   
+  void dgeqr2_(int *m, int *n, double *a, int *lda, double *tau, double *work, int *info);
   
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
@@ -116,7 +114,6 @@ extern "C"
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   double snrm2_(int* n, float* x, int* incx);
-
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
@@ -148,6 +145,16 @@ extern "C"
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv, float *b, int *ldb, int *info);
+  /*!***********************************************************************************************
+   * \brief   This function is not (never) to be used.
+   *
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * use of functions \c lapack_solve that will be implemented below.
+   *
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   ************************************************************************************************/
+  void sgeqr2_(int *m, int *n, float *a, int *lda, float *tau, float *work, int *info);
 } // end of extern "C"
 
 /*!*************************************************************************************************
@@ -175,7 +182,6 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
   delete[] ipiv;
   if (info != 0)  throw LAPACKexception();
 }
-
 /*!*************************************************************************************************
  * \brief   QR decomposition.
  *
@@ -186,7 +192,7 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
  **************************************************************************************************/
-inline void lapack_qrDecomposition(int n_rows, int n_cols, double *mat_a, double *tau)
+inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
 {
   int info = -1;
   double *work = new double[n_cols];
@@ -220,6 +226,26 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
   delete[] ipiv;
   if (info != 0)  throw LAPACKexception();
 }
+/*!*************************************************************************************************
+ * \brief   QR decomposition.
+ *
+ * \todo
+ *
+ * \param  system_size  Size of the system of equations.
+ * \param  mat_a        Pointer to the matrix describing the linear system of equations.
+ * \param  rhs_b        Pointer to the right-hand side of the system.
+ * \retval rhs_b        Pointer to the solution of the system of equations.
+ **************************************************************************************************/
+inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
+{
+  int info = -1;
+  float *work = new float[n_cols];
+  sgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
+  delete[] work;
+  if (info != 0)  throw LAPACKexception();
+}
+
+
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
  *
@@ -270,10 +296,10 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qrQ
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  SmallMat<n_rows, n_rows, lapack_float_t> matQ = diagonal<n_rows, n_rows, lapack_float_t>(1.);
+  SmallMat matQ = diagonal<n_rows, n_rows, lapack_float_t>(1.);
   SmallVec<n_rows, lapack_float_t> vec;
 
-  lapack_qrDecomposition(n_rows, n_cols, dense_mat.data(), tau.data());
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
   
   for (unsigned int i = 0; i < rank; ++i)
   {
@@ -281,7 +307,8 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qrQ
       if (j < i)        vec[j] = 0.;
       else if (j == i)  vec[j] = 1.;
       else              vec[j] = dense_mat(j,i);
-    matQ = matQ * ( diagonal<n_rows, n_rows, lapack_float_t>(1.) - tau[i] * dyadic_product<n_rows, n_rows, lapack_float_t>( vec, vec ) );
+    matQ = matQ * 
+             ( diagonal<n_rows, n_rows, lapack_float_t>(1.) - tau[i] * dyadic_product(vec, vec) );
   }
 
   return matQ.data();
