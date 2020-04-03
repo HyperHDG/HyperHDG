@@ -147,6 +147,27 @@ class SmallMat
     // Random access operators:
 
     /*!*********************************************************************************************
+     * \brief   Return a column of a  SmallMat.
+     * 
+     * \param   col           An \c unsigned \c int referring to the column's index.
+     * \retval  column        SmallMat that consists of the column.
+     **********************************************************************************************/
+    SmallMat<n_rows,1,mat_entry_t> get_column(const unsigned int col) const
+    { 
+      SmallMat<n_rows,1,mat_entry_t> column;
+      for (unsigned int i = 0; i < n_rows; ++i)  column[i] = operator()(i,col);
+      return column;
+    }
+    /*!*********************************************************************************************
+     * \brief   Return reference to single entry of a SmallMat.
+     * 
+     * \param   col           An \c unsigned \c int referring to the column's index.
+     * \param   col_vec       The column that should be located at the position \c col.
+     **********************************************************************************************/
+    void set_column(const unsigned int col, const SmallMat<n_rows,1,mat_entry_t> col_vec)
+    { for (unsigned int i = 0; i < n_rows; ++i)  operator()(i,col) = col_vec[i]; }
+
+    /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
      * 
      * \param   index         An \c unsigned \c int referring to the coordinate that is to be
