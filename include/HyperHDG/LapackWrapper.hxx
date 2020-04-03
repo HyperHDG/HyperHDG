@@ -14,7 +14,9 @@
 
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/DenseLA.hxx>
 #include <array>
+
 // #include <exception>
 
 /*!*************************************************************************************************
@@ -251,27 +253,32 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
  *
- * \todo
+ * \todo    All
  *
  * \tparam system_size  Size of the system of equations.
  * \param  mat_a        Array comprising the matrix describing the linear system of equations.
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
-/*template < unsigned int n_rows, unsigned int n_cols >
-std::array<double, n_rows * n_rows> lapack_qrDecompositionQ
-( 
-  std::array<double, n_rows * n_cols>& dense_mat,
-)
+/*template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_rows> lapack_qrDecompositionQ
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
-  unsigned int k = min(n_rows, n_cols);
-  std::array<double, k> tau;
-  std::array<double, n_rows * n_rows> matQ;
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  SmallMat<n_rows, n_rows, lapack_float_t> matQ = diagonal(1.);
+  SmallVec<n_rows, lapack_float_t> vec;
 
-  double *mat_a = dense_mat.data();
-  double *vec_tau = tau.data();
-  lapack_qrDecomposition(n_rows, n_cols, mat_a, vec_tau);
+  lapack_qrDecomposition(n_rows, n_cols, dense_mat.data(), tau.data());
   
+  for (unsigned int i = 0; i < rank; ++i)
+  {
+    for (unsigned int j = 0; j < n_rows; ++j)
+      if (j < i)        vec[j] = 0.;
+      else if (j == i)  vec[j] = 1.;
+      else              vec[j] = dense_mat(j,i);
+    matQ = matQ * ( diagonal(1.) - tau[i] * dyadic_product( vec, vec ) );
+  }
 
-  return rhs;
+  return matQ.data();
 }*/
