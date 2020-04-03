@@ -27,11 +27,8 @@
  * \authors   Guido Kanschat, Heidelberg University, 2019.
  * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
-struct LASolveException : public std::exception
-{
-  const char * what () const throw ()
-  { return "LAPACK's solve failed and the solution of the local problem might be inaccurate."; }
-};
+struct LAPACKexception : public std::exception
+{ const char * what () const throw ()  { return "LAPACK's function failed!"; } };
 
 extern "C"
 {
@@ -87,6 +84,17 @@ extern "C"
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
+  
+  /*!***********************************************************************************************
+   * \brief   This function is not (never) to be used.
+   *
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * use of functions \c lapack_solve that will be implemented below.
+   *
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   ************************************************************************************************/
+  void dgeqr2_(int *m, int *n, double *a, int *lda, double *tau, double *work, int *info);   
   
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
@@ -165,10 +173,28 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
   int *ipiv = new int[system_size];
   dgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
-//  hy_assert( info == 0 ,
-//             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
-  if (info != 0)  throw LASolveException();
+  if (info != 0)  throw LAPACKexception();
 }
+
+/*!*************************************************************************************************
+ * \brief   QR decomposition.
+ *
+ * \todo
+ *
+ * \param  system_size  Size of the system of equations.
+ * \param  mat_a        Pointer to the matrix describing the linear system of equations.
+ * \param  rhs_b        Pointer to the right-hand side of the system.
+ * \retval rhs_b        Pointer to the solution of the system of equations.
+ **************************************************************************************************/
+inline void lapack_qrDecomposition(int n_rows, int n_cols, double *mat_a, double *tau)
+{
+  int info = -1;
+  double *work = new double[n_cols];
+  dgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
+  delete[] work;
+  if (info != 0)  throw LAPACKexception();
+}
+
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
  *
@@ -192,9 +218,7 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
   int *ipiv = new int[system_size];
   sgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
-//  hy_assert( info == 0 ,
-//             "LAPACK's solve failed and the solution of the local problem might be inaccurate." );
-  if (info != 0)  throw LASolveException();
+  if (info != 0)  throw LAPACKexception();
 }
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
@@ -213,46 +237,41 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
-template < unsigned int system_size, unsigned int n_rhs_cols = 1>
-std::array<double, system_size * n_rhs_cols> lapack_solve
+template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
+std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
 ( 
-  std::array<double, system_size * system_size>& dense_mat,
-  std::array<double, system_size * n_rhs_cols>& rhs
+  std::array<lapack_float_t, system_size * system_size>& dense_mat,
+  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs
 )
 {
+  lapack_solve(system_size, n_rhs_cols, dense_mat.data(), rhs.data());
+  return rhs;
+}
+
+/*!*************************************************************************************************
+ * \brief   Solve local system of equations.
+ *
+ * \todo
+ *
+ * \tparam system_size  Size of the system of equations.
+ * \param  mat_a        Array comprising the matrix describing the linear system of equations.
+ * \param  rhs_b        Array comprising the right-hand side of the system.
+ * \retval rhs_b        Array comprising the solution of the system of equations.
+ **************************************************************************************************/
+/*template < unsigned int n_rows, unsigned int n_cols >
+std::array<double, n_rows * n_rows> lapack_qrDecompositionQ
+( 
+  std::array<double, n_rows * n_cols>& dense_mat,
+)
+{
+  unsigned int k = min(n_rows, n_cols);
+  std::array<double, k> tau;
+  std::array<double, n_rows * n_rows> matQ;
+
   double *mat_a = dense_mat.data();
-  double *rhs_b = rhs.data();
-  lapack_solve(system_size, n_rhs_cols, mat_a, rhs_b);
+  double *vec_tau = tau.data();
+  lapack_qrDecomposition(n_rows, n_cols, mat_a, vec_tau);
+  
+
   return rhs;
-}
-/*!*************************************************************************************************
- * \brief   Solve local system of equations.
- *
- * \todo    This has not been tested, yet!
- * 
- * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
- * matrix, which enters as a \c std::array of \c double, \f$n\f$ is provided via \c system_size, and
- * the \c std::array of \c double \c rhs_b is both, input (i.e., \f$b\f$) and output (i.e., \f$x\f$)
- * of the function.
- *
- * Independent of \c const expressions of functions using \c lapack_solve one should not use
- * \c mat_a after calling this function. The input that has been within \c rhs_b will have been
- * replaced by the solution of the system of equations.
- *
- * \tparam system_size  Size of the system of equations.
- * \param  mat_a        Array comprising the matrix describing the linear system of equations.
- * \param  rhs_b        Array comprising the right-hand side of the system.
- * \retval rhs_b        Array comprising the solution of the system of equations.
- **************************************************************************************************/
-template < unsigned int system_size, unsigned int n_rhs_cols = 1 >
-std::array<float, system_size * n_rhs_cols> lapack_solve
-( 
-  std::array<float, system_size * system_size>& dense_mat, 
-  std::array<float, system_size * n_rhs_cols>& rhs
-)
-{
-  float *mat_a = dense_mat.data();
-  float *rhs_b = rhs.data();
-  lapack_solve(system_size, n_rhs_cols, mat_a, rhs_b);
-  return rhs;
-}
+}*/
