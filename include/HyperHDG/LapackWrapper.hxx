@@ -291,7 +291,7 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qrQ
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
