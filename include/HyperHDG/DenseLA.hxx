@@ -94,6 +94,12 @@ class SmallMat
      **********************************************************************************************/
     SmallMat() { entries_.fill(0.); }
     /*!*********************************************************************************************
+     * \brief   Construct SmallMat that contains specified value.
+     * 
+     * Fills entries of the SmallMat with given value.
+     **********************************************************************************************/
+    SmallMat(const mat_entry_t entry_value) { entries_.fill(entry_value); }
+    /*!*********************************************************************************************
      * \brief   Construct SmallMat from array of entries.
      * 
      * Fills the SmallMat's array of entries with the input parameter. 
@@ -352,6 +358,24 @@ class SmallMat
       return *this;
     }
 }; // end of class SmallMat
+
+
+// Create fundamental matrices:
+
+/*!*************************************************************************************************
+ * \brief   Create SmallMat that is a diagonal matrix with specified value on diagonal.
+ * 
+ * \param   diag_value      Diagonal value.
+ * \retval  diag_mat        Diagonal matrix.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+SmallMat<n_rows,n_cols,mat_entry_t> UniformDiagonal(const mat_entry_t diag_value)
+{
+  SmallMat<n_rows,n_cols,mat_entry_t> diag_mat;
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  for (unsigned int i = 0; i < rank; ++i)  diag_mat(i,i) = diag_value;
+  return diag_mat;
+}
 
  // Fundamental functions returning scalar from two SmallVecs:
 
