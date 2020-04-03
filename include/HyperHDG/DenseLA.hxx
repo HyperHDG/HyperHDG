@@ -369,12 +369,30 @@ class SmallMat
  * \retval  diag_mat        Diagonal matrix.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
-SmallMat<n_rows,n_cols,mat_entry_t> UniformDiagonal(const mat_entry_t diag_value)
+SmallMat<n_rows,n_cols,mat_entry_t> uniform_diagonal(const mat_entry_t diag_value)
 {
   SmallMat<n_rows,n_cols,mat_entry_t> diag_mat;
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   for (unsigned int i = 0; i < rank; ++i)  diag_mat(i,i) = diag_value;
   return diag_mat;
+}
+
+/*!*************************************************************************************************
+ * \brief   Create dyadic product of two small vectors.
+ * 
+ * \param   left            Left vector in dyadic product.
+ * \param   right           Right vector in dyadic product.
+ * \retval  dyad_prod       Dyadic product of both vectors.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+SmallMat<n_rows,n_cols,mat_entry_t> dyadic_product
+(const SmallMat<n_rows,1,mat_entry_t>& left, const SmallMat<n_cols,1,mat_entry_t>& right)
+{
+  SmallMat<n_rows,n_cols,mat_entry_t> dyad_prod;
+  for (unsigned int j = 0; j < n_cols; ++j)
+    for (unsigned int i = 0; i < n_rows; ++i)
+      dyad_prod(i,j) = left[i] * right[j];
+  return dyad_prod;
 }
 
  // Fundamental functions returning scalar from two SmallVecs:
