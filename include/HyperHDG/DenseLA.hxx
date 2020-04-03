@@ -778,7 +778,7 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( SmallMat<n_rows,n_cols,mat_entry_t>& mat )
-{ return lapack_qr_decomp_q(mat.data()); }
+{ return lapack_qr_decomp_q<n_rows,n_cols>(mat.data()); }
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations.
  * 
