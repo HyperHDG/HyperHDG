@@ -13,6 +13,9 @@
 
 using namespace std;
 
+template<typename pt_coord_t>
+bool almost_equal(pt_coord_t a, pt_coord_t b) { return (a - b < 1e-5 && b - a < 1e-5); }
+
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
  *          solution obtained with the Python interface.
@@ -272,9 +275,31 @@ template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
                "Each component (in absolute value) should be smaller than infty norm." );
     if (ptAC[dim] > norm_infty(ptAC) || ptAC[dim] < -norm_infty(ptAC))  success = false;
   }
-//  hy_assert( norm_infty(ptAC) < norm_p(ptAC, 10) ,
-//             "Infty norm is smallest of all norms!" );
-//  if (norm_infty(ptAC) > norm_p(ptAC, 1000))  success = false;
+
+  SmallMat<space_dim, 2, pt_coord_t> matrix;
+  matrix.set_column(0, ptA);
+  matrix.set_column(1, ptB);
+  SmallMat<space_dim, space_dim, pt_coord_t> mat_q = qr_decomp_q (matrix);
+
+  hy_assert( norm_2(ptA / norm_2(ptA) - mat_q.get_column(0)) < 1e-5 
+               || norm_2(ptA / norm_2(ptA) + mat_q.get_column(0)) < 1e-5 , 
+             "The first column of Q should be the normalized starting vector!" );
+  if ( norm_2(ptA / norm_2(ptA) - mat_q.get_column(0)) > 1e-5
+         && norm_2(ptA / norm_2(ptA) + mat_q.get_column(0)) > 1e-5)  success = false;
+
+  for (unsigned int i = 0; i < space_dim; ++i)
+  {
+    Point<space_dim,pt_coord_t> pt = mat_q.get_column(i);
+    hy_assert( almost_equal(norm_2(pt), (pt_coord_t) 1.) ,
+               "The norms of the columns of an orthogonal matrix should 1!" );
+    if (!almost_equal(norm_2(pt), (pt_coord_t) 1.))  success = false;
+    for (unsigned int j = 0; j < i; ++j)
+    {
+      hy_assert( almost_equal(scalar_product(pt,mat_q.get_column(j)), (pt_coord_t) 0.) ,
+                 "Columns of the matrix should be orthogonal!" );
+      if (!almost_equal(scalar_product(pt,mat_q.get_column(j)), (pt_coord_t) 0.))  success = false;
+    }
+  }
     
   return success;
 }
