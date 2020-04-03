@@ -369,14 +369,13 @@ class SmallMat
  * \retval  diag_mat        Diagonal matrix.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
-SmallMat<n_rows,n_cols,mat_entry_t> uniform_diagonal(const mat_entry_t diag_value)
+SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
 {
-  SmallMat<n_rows,n_cols,mat_entry_t> diag_mat;
   constexpr unsigned int rank = std::min(n_rows, n_cols);
+  SmallMat<n_rows,n_cols,mat_entry_t> diag_mat;
   for (unsigned int i = 0; i < rank; ++i)  diag_mat(i,i) = diag_value;
   return diag_mat;
 }
-
 /*!*************************************************************************************************
  * \brief   Create dyadic product of two small vectors.
  * 
