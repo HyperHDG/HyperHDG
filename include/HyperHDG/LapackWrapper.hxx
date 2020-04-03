@@ -14,9 +14,7 @@
 
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/DenseLA.hxx>
 #include <array>
-
 // #include <exception>
 
 /*!*************************************************************************************************
@@ -250,8 +248,14 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
   return rhs;
 }
 
+// -------------------------------------------------------------------------------------------------
+// Functions that require a dense linear algebra implementation:
+// -------------------------------------------------------------------------------------------------
+
+#include <HyperHDG/DenseLA.hxx>
+
 /*!*************************************************************************************************
- * \brief   Solve local system of equations.
+ * \brief   QR decomposition.
  *
  * \todo    All
  *
