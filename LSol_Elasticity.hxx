@@ -170,7 +170,7 @@ class LengtheningBeam
     (const std::array<std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values) const
     {
       try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
-      catch (LASolveException& exc)
+      catch (LAPACKexception& exc)
       {
         hy_assert( 0 == 1 ,
                    exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
