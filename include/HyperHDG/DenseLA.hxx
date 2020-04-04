@@ -632,10 +632,23 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_1(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
 {
-  static_assert( n_cols == 1 , "This is only implemented for vectors." );
-  mat_entry_t norm = 0.;
-  for (unsigned int index = 0; index < mat.size(); ++index)  norm += std::abs( mat[index] );
-  return norm;
+  if constexpr (n_cols == 1)
+  {
+    mat_entry_t norm = 0.;
+    for (unsigned int index = 0; index < n_rows; ++index)  norm += std::abs( mat[index] );
+    return norm;
+  }
+  else
+  {
+    mat_entry_t max_norms = 0., norm;
+    for (unsigned int col = 0; col < n_cols; ++col)
+    {
+      norm = 0.;
+      for (unsigned int row = 0; row < n_rows; ++row)  norm += std::abs( mat(row,col) );
+      if (norm > max_norms)  max_norms = norm;
+    }
+    return max_norms;
+  }
 }
 /*!*************************************************************************************************
  * \brief   Computes Euclidean norm of a SmallMat.
@@ -660,11 +673,24 @@ mat_entry_t norm_2(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_infty(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
 {
-  static_assert( n_cols == 1 , "This is only implemented for vectors." );
-  mat_entry_t norm = std::abs( mat[0] );
-  for (unsigned int index = 1; index < mat.size(); ++index)
-    norm = std::max( norm, std::abs(mat[index]) );
-  return norm;
+  if constexpr (n_cols == 1)
+  {
+    mat_entry_t norm = std::abs( mat[0] );
+    for (unsigned int index = 1; index < mat.size(); ++index)
+      norm = std::max( norm, std::abs(mat[index]) );
+    return norm;
+  }
+  else
+  {
+    mat_entry_t max_norms = 0., norm;
+    for (unsigned int row = 0; row < n_rows; ++row)
+    {
+      norm = 0.;
+      for (unsigned int col = 0; col < n_cols; ++col)  norm += std::abs( mat(row,col) );
+      if (norm > max_norms)  max_norms = norm;
+    }
+    return max_norms;
+  }
 }
 /*!*************************************************************************************************
  * \brief   p-norm of SmallMat.
@@ -693,11 +719,18 @@ mat_entry_t norm_p(const SmallMat<n_rows,n_cols,mat_entry_t>& mat, const mat_ent
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 std::ostream& operator<< (std::ostream& stream, const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
 {
-  for (unsigned int row = 0; row < n_rows; ++row)
+  if constexpr (n_cols == 1)
   {
-    for (unsigned int col = 0; col < n_cols; ++col)
-        stream << " " << mat(row,col) << " ";
+    for (unsigned int row = 0; row < n_rows; ++row)  stream << " " << mat[row] << " ";
     stream << std::endl;
+  }
+  else
+  {
+    for (unsigned int row = 0; row < n_rows; ++row)
+    {
+      for (unsigned int col = 0; col < n_cols; ++col)  stream << " " << mat(row,col) << " ";
+      stream << std::endl;
+    }
   }
   return stream;
 }

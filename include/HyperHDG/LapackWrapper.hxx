@@ -336,7 +336,6 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
   return matQ.data();
 }
 
-// This function is stated for the sake of completeness and needs to be tested!
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
@@ -355,4 +354,15 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
   return get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau);
+}
+
+// This still needs to be tested!
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_cols> lapack_qr_decomp_r
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+{
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  return get_r_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat);
 }
