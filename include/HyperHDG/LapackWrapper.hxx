@@ -324,9 +324,9 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.), matQ = unity;
   SmallVec<n_rows, lapack_float_t> vec;
 
-  for (unsigned int i = 0; i < rank; ++i)
+  for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
   {
-    for (unsigned int j = 0; j < n_rows; ++j)
+    for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
       if (j < i)        vec[j] = 0.;
       else if (j == i)  vec[j] = 1.;
       else              vec[j] = dense_mat[i * n_rows + j];
@@ -336,12 +336,13 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
   return matQ.data();
 }
 
+// This function is stated for the sake of completeness and needs to be tested!
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
-  for (unsigned int i = 0; i < n_cols; ++i)
-    for (unsigned int j = 0; j < n_rows; ++j)
+  for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
+    for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
       if (j > i)  dense_mat[i * n_rows + j] = 0.;
   return dense_mat;
 }
