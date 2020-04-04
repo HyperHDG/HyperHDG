@@ -274,22 +274,45 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
   return rhs;
 }
 
-// -------------------------------------------------------------------------------------------------
-// Functions that require a dense linear algebra implementation:
-// -------------------------------------------------------------------------------------------------
 
-#include <HyperHDG/DenseLA.hxx>
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// Definition of functions that require a dense linear algebra implementation:
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   QR decomposition.
  *
- * \todo    All
+ * \todo    All + note that dense_mat will be destroyed and cannot be used afterwards.
  *
  * \tparam system_size  Size of the system of equations.
  * \param  mat_a        Array comprising the matrix describing the linear system of equations.
  * \param  rhs_b        Array comprising the right-hand side of the system.
  * \retval rhs_b        Array comprising the solution of the system of equations.
  **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// Implementation of functions that require a dense linear algebra implementation:
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+#include <HyperHDG/DenseLA.hxx>
+
+
+// -------------------------------------------------------------------------------------------------
+// lapack_qr_decomp_q:
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
