@@ -313,17 +313,17 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
 // lapack_qr_decomp_q:
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+
+template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
+inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
+( 
+  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  const std::array<lapack_float_t, rank>& tau
+)
 {
-  constexpr unsigned int rank = std::min(n_rows, n_cols);
-  std::array<lapack_float_t, rank> tau;
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.), matQ = unity;
   SmallVec<n_rows, lapack_float_t> vec;
 
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
-  
   for (unsigned int i = 0; i < rank; ++i)
   {
     for (unsigned int j = 0; j < n_rows; ++j)
@@ -334,4 +334,24 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
   }
 
   return matQ.data();
+}
+
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+{
+  for (unsigned int i = 0; i < n_cols; ++i)
+    for (unsigned int j = 0; j < n_rows; ++j)
+      if (j > i)  dense_mat[i * n_rows + j] = 0.;
+  return dense_mat;
+}
+
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+{
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  return get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau);
 }
