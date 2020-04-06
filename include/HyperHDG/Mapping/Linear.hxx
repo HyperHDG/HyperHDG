@@ -47,6 +47,17 @@ class Parallelopipedon
     )
     : translation_(translation), matrix_(matrix) { }
     
+    map_float_t Haussdorf_hyEdge() const
+    { return std::sqrt(std::abs(determinant( transposed_mat_times_mat(matrix_, matrix_) ))); }
+
+    map_float_t Haussdorf_hyNode(const unsigned int index) const
+    {
+      SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
+        mat_face.set_column(i - (i > index), matrix_.get_column(i));
+      return std::sqrt(std::abs(determinant( transposed_mat_times_mat(mat_face, mat_face) )));
+    }
+
     Point<space_dimT,map_float_t> inner_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,
@@ -58,9 +69,8 @@ class Parallelopipedon
       SmallMat<space_dimT,space_dimT-1,map_float_t> other_vectors;
       for (unsigned int i = 0; i < space_dimT-hyEdge_dimT; ++i)
         other_vectors.set_column(i, outer_normal(i));
-      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-        if (i != index)
-          other_vectors.set_column(i + space_dimT-hyEdge_dimT - (i > index), matrix_.get_column(i));
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
+        other_vectors.set_column(i + space_dimT-hyEdge_dimT - (i > index), matrix_.get_column(i));
 
       normal = qr_decomp_q(other_vectors).get_column(space_dimT-1);
       map_float_t scalar_pdct = scalar_product(normal, matrix_.get_column(index));
