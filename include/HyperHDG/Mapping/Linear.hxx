@@ -31,26 +31,26 @@ class Parallelopipedon
     static constexpr unsigned int space_dim() { return space_dimT; }
 
   private:
-    const Point<space_dimT,map_float_t>& translation_;
+    const Point<space_dimT,map_float_t> translation_;
     
-    const SmallMat<space_dimT,hyEdge_dimT,map_float_t>& matrix_;
+    const SmallMat<space_dimT,hyEdge_dimT,map_float_t> matrix_;
 
     SmallMat<space_dimT,hyEdge_dimT, map_float_t> inner_normals_;
     SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> outer_normals_;
 
   public:
-    
+
     Parallelopipedon
     ( 
       const Point<space_dimT,map_float_t>& translation,
       const SmallMat<space_dimT,hyEdge_dimT,map_float_t>& matrix
     )
     : translation_(translation), matrix_(matrix) { }
-    
-    map_float_t Haussdorf_hyEdge() const
+
+    map_float_t haussdorff_hyEdge() const
     { return std::sqrt(std::abs(determinant( transposed_mat_times_mat(matrix_, matrix_) ))); }
 
-    map_float_t Haussdorf_hyNode(const unsigned int index) const
+    map_float_t haussdorfh_hyNode(const unsigned int index) const
     {
       SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
