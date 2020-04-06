@@ -89,7 +89,10 @@ class Parallelopipedon
       Point<space_dimT,map_float_t> normal = outer_normals_.get_column(index);
       for (unsigned int i = 0; i < normal.size(); ++i)  if (normal[i] != 0.)  return normal;
 
-      outer_normals_ = qr_decomp_q(matrix_);
+      SmallMat<space_dimT,space_dimT,map_float_t> helper = qr_decomp_q(matrix_);
+      for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
+        outer_normals_.set_column(i, helper.get_column(i + hyEdge_dimT));
+
       normal = outer_normals_.get_column(index);
       return normal;
     }
