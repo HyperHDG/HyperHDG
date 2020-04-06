@@ -42,7 +42,8 @@ namespace Geometry
  **************************************************************************************************/
 template 
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT,// typename mapping_t = Parallelopipedon,
+  unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
+  typename mapping_t = Parallelopipedon<hyEdge_dimT,space_dimT,pt_coord_t>,
   typename hyEdge_index_t = unsigned int
 >
 class File
@@ -200,10 +201,10 @@ class File
 // mapping_tensor
 // -------------------------------------------------------------------------------------------------
 
-template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>
+template <unsigned int edim, unsigned int sdim, typename a , typename mapping_t, typename hyEdge_index_t>
 template <std::size_t npts, typename T>
 Tensor::MappingMultilinear<sdim, edim, npts, T>
-File<edim, sdim, hyEdge_index_t>::hyEdge::mapping_tensor(const std::array<T, npts>& points_1d) const
+File<edim, sdim, a, mapping_t,hyEdge_index_t>::hyEdge::mapping_tensor(const std::array<T, npts>& points_1d) const
 {
   std::array<Point<sdim>, Hypercube<edim>::n_vertices()> vertices;
   for (unsigned int i=0;i<vertices.size();++i)  vertices[i] = point(i);
