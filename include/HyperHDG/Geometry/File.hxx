@@ -2,6 +2,9 @@
 
 #include <HyperHDG/DenseLA.hxx>
 #include <tensor_mapping.hxx>
+
+#include <HyperHDG/Mapping/Linear.hxx>
+
 #include <array>
 
 /*!*************************************************************************************************
@@ -37,7 +40,11 @@ namespace Geometry
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int>
+template 
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dimT,// typename mapping_t = Parallelopipedon,
+  typename hyEdge_index_t = unsigned int
+>
 class File
 {
   
@@ -64,6 +71,10 @@ class File
        * \brief   Index of the hyperedge within the hypergraph
        ********************************************************************************************/
       const hyEdge_index_t index_;
+      /*!*******************************************************************************************
+       * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
+       ********************************************************************************************/
+//      mapping_t mapping;
     public:
       /*!*******************************************************************************************
        * \brief   Construct hyperedge from hypergraph and index.
