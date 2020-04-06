@@ -43,7 +43,7 @@ namespace Geometry
  **************************************************************************************************/
 template 
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = float,
+  unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
   typename mapping_t = Parallelopipedon<hyEdge_dimT,space_dimT,pt_coord_t>,
   typename hyEdge_index_t = unsigned int
 >
@@ -77,13 +77,9 @@ class File
        * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
        ********************************************************************************************/
       std::shared_ptr<mapping_t> mapping;
-    public:
       /*!*******************************************************************************************
-       * \brief   Construct hyperedge from hypergraph and index.
+       * \brief   Prepare lazy evaluation of mapping.
        ********************************************************************************************/
-      hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
-      : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
-
       inline void generate_mapping_if_needed()
       {
         if (mapping) return;
@@ -93,6 +89,13 @@ class File
           matrix.set_column(dim, point(1<<dim) - translation);
         mapping = std::make_shared<mapping_t>(translation, matrix);
       }
+    public:
+      /*!*******************************************************************************************
+       * \brief   Construct hyperedge from hypergraph and index.
+       ********************************************************************************************/
+      hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
+      : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
+
       /*!*******************************************************************************************
        * \brief Return data of the mapping in the tensor product of a 1-dimensional quadrature set.
        *
@@ -105,7 +108,7 @@ class File
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int pt_index) const
+      Point<space_dimT,pt_coord_t> point(const unsigned int pt_index) const
       { 
         return hyGraph_geometry_.domain_info_.
                  points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
@@ -115,17 +118,13 @@ class File
        *
        * \todo    This function works only if hyperedge_dim == 1, so far.
        ********************************************************************************************/
-      Point<space_dimT> normal(const unsigned int index) const
+      Point<space_dimT,pt_coord_t> normal(const unsigned int index)
       {
         hy_assert( hyEdge_dimT == 1 , "This function has only been implemented for 1D edges." );
-        hy_assert( index < 2 , "One dimensional edges can only have two normals." );
-
-        Point<space_dimT> normal = 
-          hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.
-            domain_info_.points_hyEdge[index_][0]]
-          - hyGraph_geometry_.domain_info_.points[hyGraph_geometry_.
-            domain_info_.points_hyEdge[index_][1]] ;
-        normal /= norm_2(normal) * (2 * (index == 0) - 1);
+        
+        generate_mapping_if_needed();
+        Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index / 2);
+        if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
   }; // end of class hyEdge
@@ -189,7 +188,7 @@ class File
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const value_type operator[](const hyEdge_index_t index) const
+    value_type operator[](const hyEdge_index_t index) const
     {
       hy_assert( index < domain_info_.n_hyEdges && index >= 0 ,
                  "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<

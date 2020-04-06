@@ -111,7 +111,7 @@ class LengtheningBeam
     template<class GeomT> 
     inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
     ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
-      const GeomT& geom ) const
+      GeomT& geom ) const
     {
       std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dimT > result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
@@ -121,7 +121,7 @@ class LengtheningBeam
         result[i].fill(0.);
       }
   
-      Point<space_dim> normal_vector = geom.normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = geom.normal(1);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -136,11 +136,11 @@ class LengtheningBeam
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
     ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
-      const GeomT& geom ) const
+      GeomT& geom ) const
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
-      Point<space_dim> normal_vector = geom.normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = geom.normal(1);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -228,7 +228,7 @@ class LengtheningBeam
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, const GeomT& geom ) const
+      lambda_values, GeomT& geom ) const
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, geom);

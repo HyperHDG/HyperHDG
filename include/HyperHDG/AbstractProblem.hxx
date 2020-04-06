@@ -185,7 +185,7 @@ class AbstractProblem
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Do matrix--vector multiplication by iterating over all hyperedges.
-      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](const auto hyEdge)
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
         hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();

@@ -116,6 +116,12 @@ class SmallMat
      **********************************************************************************************/
     SmallMat(const SmallMat<n_rows,n_cols,mat_entry_t>& other) : entries_(other.entries_) { }
     /*!*********************************************************************************************
+     * \brief   Conversion between different floating points artithmetics.
+     **********************************************************************************************/
+    template<typename other_entry_t>
+    SmallMat(const SmallMat<n_rows,n_cols,other_entry_t>& other)
+    { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
+    /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
     SmallMat(SmallMat<n_rows,n_cols,mat_entry_t>&& other) noexcept
