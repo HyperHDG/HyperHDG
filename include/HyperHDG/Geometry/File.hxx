@@ -6,6 +6,7 @@
 #include <HyperHDG/Mapping/Linear.hxx>
 
 #include <array>
+#include <memory>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
@@ -42,7 +43,7 @@ namespace Geometry
  **************************************************************************************************/
 template 
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
+  unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = float,
   typename mapping_t = Parallelopipedon<hyEdge_dimT,space_dimT,pt_coord_t>,
   typename hyEdge_index_t = unsigned int
 >
@@ -75,13 +76,23 @@ class File
       /*!*******************************************************************************************
        * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
        ********************************************************************************************/
-//      mapping_t mapping;
+      std::shared_ptr<mapping_t> mapping;
     public:
       /*!*******************************************************************************************
        * \brief   Construct hyperedge from hypergraph and index.
        ********************************************************************************************/
       hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
       : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
+
+      inline void generate_mapping_if_needed()
+      {
+        if (mapping) return;
+        Point<space_dimT,pt_coord_t> translation = point(0);
+        SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          matrix.set_column(dim, point(1<<dim) - translation);
+        mapping = std::make_shared<mapping_t>(translation, matrix);
+      }
       /*!*******************************************************************************************
        * \brief Return data of the mapping in the tensor product of a 1-dimensional quadrature set.
        *
