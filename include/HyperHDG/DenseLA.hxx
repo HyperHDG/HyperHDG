@@ -507,6 +507,20 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
   return result;
 }
 
+
+template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
+SmallMat<n_colsA,n_colsB,mat_entry_t> transposed_mat_times_mat
+( const SmallMat<n_rowsA,n_colsA,mat_entry_t>& A, const SmallMat<n_colsA,n_colsB,mat_entry_t>& B )
+{
+  SmallMat<n_colsA,n_colsB,mat_entry_t> result;
+  for (unsigned int colB = 0; colB < n_colsB; ++colB)
+    for (unsigned int colA = 0; colA < n_colsA; ++colA)
+      for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
+        result(colA,colB) += A(rowA,colA) * B(rowA,colB);
+  return result;
+}
+
+
 // Fundamental functions returning SmallMat from a scalar and a SmallMat:
 
 /*!*************************************************************************************************
@@ -823,4 +837,28 @@ SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( const SmallMat<n_rows,n_cols,m
 {
   SmallMat<n_rows,n_cols,mat_entry_t> helper(mat);
   return qr_decomp_q(helper);
+}
+
+/*!*************************************************************************************************
+ * \brief   Determinant of matrix.
+ * 
+ * \todo    Do the doxygen.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int system_size, typename mat_entry_t >
+mat_entry_t determinant ( SmallMat<system_size,system_size,mat_entry_t>& mat )
+{ return lapack_det<system_size>(mat.data()); }
+/*!*************************************************************************************************
+ * \brief   Determinant of matrix.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int system_size, typename mat_entry_t >
+mat_entry_t determinant ( const SmallMat<system_size,system_size,mat_entry_t>& mat )
+{
+  SmallMat<system_size,system_size,mat_entry_t> helper(mat);
+  return determinant(helper);
 }

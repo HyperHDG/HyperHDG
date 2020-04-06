@@ -274,6 +274,23 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
   return rhs;
 }
 
+/*!*************************************************************************************************
+ * \brief   Determinant of a square system.
+ *
+ * \todo    All! 
+ **************************************************************************************************/
+template < unsigned int system_size, typename lapack_float_t >
+lapack_float_t lapack_det ( std::array<lapack_float_t, system_size * system_size>& dense_mat )
+{
+  lapack_float_t determinant = 1.;
+  std::array<lapack_float_t, system_size> tau;
+  
+  lapack_qr(system_size, system_size, dense_mat.data(), tau.data());
+  for (unsigned int i = 0; i < system_size; ++i)  determinant *= -dense_mat[i * (system_size + 1)];
+  return determinant;
+}
+
+
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
