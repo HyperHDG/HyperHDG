@@ -748,7 +748,7 @@ class BernoulliBendingBeam
       }
   
       Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
-  
+
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
           result[i][0] += normal_vector[dim] * lambda[i][dim];
@@ -1043,8 +1043,8 @@ assemble_loc_matrix ( const lSol_float_t tau )
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
         local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) += integral;
-        // local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j)
-        //   += integral;  // Removing to enforce Neumann zero!
+        local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j)
+          += integral;  // Removing to enforce Neumann zero!
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
@@ -1053,8 +1053,8 @@ assemble_loc_matrix ( const lSol_float_t tau )
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 0);
         local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
-        // local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j)
-        //   -= integral; // Removing to enforce Neumann zero!
+        local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j)
+           -= integral; // Removing to enforce Neumann zero!
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
@@ -1101,13 +1101,13 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
+//        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
         right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
           += tau_*lambda_values[2*dim+0][j] * integral;
     
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
+//        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
         right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
           += tau_*lambda_values[2*dim+1][j] * integral;
       }
