@@ -95,16 +95,6 @@ class File
        ********************************************************************************************/
       hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
       : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
-
-      /*!*******************************************************************************************
-       * \brief Return data of the mapping in the tensor product of a 1-dimensional quadrature set.
-       *
-       * \tparam  npts  The number of evaluation points in a single direction
-       * \tparam  T     The data type used for this operation
-       ********************************************************************************************/
-      template <std::size_t npts, typename T = double>
-      Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
-      mapping_tensor(const std::array<T, npts>& points_1d) const;
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        ********************************************************************************************/
@@ -118,15 +108,41 @@ class File
        *
        * \todo    This function works only if hyperedge_dim == 1, so far.
        ********************************************************************************************/
-      Point<space_dimT,pt_coord_t> normal(const unsigned int index)
+      Point<space_dimT,pt_coord_t> inner_normal(const unsigned int index)
       {
-        hy_assert( hyEdge_dimT == 1 , "This function has only been implemented for 1D edges." );
+        hy_assert( index < 2 * hyEdge_dimT ,
+                   "A hyperedge has 2 * dim(hyEdge) inner normals." );
         
         generate_mapping_if_needed();
         Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index / 2);
         if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
+      /*!*******************************************************************************************
+       * \brief   Return normal of specified index of a hyperedge.
+       *
+       * \todo    This function works only if hyperedge_dim == 1, so far.
+       ********************************************************************************************/
+      Point<space_dimT,pt_coord_t> outer_normal(const unsigned int index)
+      {
+        hy_assert( index < space_dimT - hyEdge_dimT ,
+                   "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
+                   << "which are orthogonal to the hyperedge." );
+        
+        generate_mapping_if_needed();
+        Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index);
+        return normal;
+      }
+
+      /*!*******************************************************************************************
+       * \brief Return data of the mapping in the tensor product of a 1-dimensional quadrature set.
+       *
+       * \tparam  npts  The number of evaluation points in a single direction
+       * \tparam  T     The data type used for this operation
+       ********************************************************************************************/
+      template <std::size_t npts, typename T = double>
+      Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
+      mapping_tensor(const std::array<T, npts>& points_1d) const;
   }; // end of class hyEdge
   
   public:
