@@ -1,7 +1,9 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/DenseLA.hxx>
+
 #include <array>
+#include <memory>
 
 /*!*************************************************************************************************
  * \brief   Mapping of a unit square to a parallelopipedon.
@@ -35,8 +37,8 @@ class Parallelopipedon
     
     const SmallMat<space_dimT,hyEdge_dimT,map_float_t> matrix_;
 
-    SmallMat<space_dimT,hyEdge_dimT, map_float_t> inner_normals_;
-    SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> outer_normals_;
+    std::shared_ptr< SmallMat<space_dimT,hyEdge_dimT, map_float_t> > inner_normals_;
+    std::shared_ptr< SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> > outer_normals_;
 
   public:
 
@@ -63,7 +65,10 @@ class Parallelopipedon
       hy_assert( index < hyEdge_dimT ,
                  "The index of the inner normal must not be bigger than their amount." );
 
-      Point<space_dimT,map_float_t> normal = inner_normals_.get_column(index);
+      if (!inner_normals_)
+        inner_normals_ = std::make_shared< SmallMat<space_dimT,hyEdge_dimT, map_float_t> > ();
+
+      Point<space_dimT,map_float_t> normal = inner_normals_->get_column(index);
       for (unsigned int i = 0; i < normal.size(); ++i)  if (normal[i] != 0.)  return normal;
 
       SmallMat<space_dimT,space_dimT-1,map_float_t> other_vectors;
@@ -77,7 +82,7 @@ class Parallelopipedon
       hy_assert( scalar_pdct != 0. , "Scalar product must not be zero." );
       if (scalar_pdct < 0)  normal *= -1.;
 
-      inner_normals_.set_column(index, normal);
+      inner_normals_->set_column(index, normal);
       return normal;
     }
     
@@ -86,14 +91,15 @@ class Parallelopipedon
       hy_assert( index < space_dimT-hyEdge_dimT ,
                  "The index of the outer normal must not be bigger than their amount." );
 
-      Point<space_dimT,map_float_t> normal = outer_normals_.get_column(index);
-      for (unsigned int i = 0; i < normal.size(); ++i)  if (normal[i] != 0.)  return normal;
+      if (!outer_normals_)
+      {
+        outer_normals_ = 
+          std::make_shared< SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> > ();
+        SmallMat<space_dimT,space_dimT,map_float_t> helper = qr_decomp_q(matrix_);
+        for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
+          outer_normals_->set_column(i, helper.get_column(i + hyEdge_dimT));
+      }
 
-      SmallMat<space_dimT,space_dimT,map_float_t> helper = qr_decomp_q(matrix_);
-      for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
-        outer_normals_.set_column(i, helper.get_column(i + hyEdge_dimT));
-
-      normal = outer_normals_.get_column(index);
-      return normal;
+      return outer_normals_->get_column(index);;
     }
 }; // end class File
