@@ -60,6 +60,16 @@ class Parallelopipedon
       return std::sqrt(std::abs(determinant( transposed_mat_times_mat(mat_face, mat_face) )));
     }
 
+    template<unsigned int n_vec>
+    SmallMat<space_dimT,n_vec,map_float_t> map_reference_to_physical
+    ( const SmallMat<hyEdge_dimT,n_vec,map_float_t>& mat ) const
+    { return matrix_ * mat + translation_; }
+
+    template<unsigned int n_vec>
+    SmallMat<hyEdge_dimT,n_vec,map_float_t> map_reference_to_physical
+    ( const SmallMat<space_dimT,n_vec,map_float_t>& mat ) const
+    { return (mat - translation_) / matrix_; }
+
     Point<space_dimT,map_float_t> inner_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,
