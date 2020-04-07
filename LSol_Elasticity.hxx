@@ -824,7 +824,7 @@ class BernoulliBendingBeam
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > dual_at_boundary
-    ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs ) const;
+    ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const;
   public:
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
@@ -857,7 +857,7 @@ class BernoulliBendingBeam
       lambda_values, GeomT& geom ) const
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
-        lambda = node_dof_to_edge_dof(lambda_values, geom);
+        lambda = node_dof_to_edge_dof(lambda_values, geom, 0);
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
@@ -867,7 +867,7 @@ class BernoulliBendingBeam
         for (unsigned int j = 0; j < lambda[i].size(); ++j)
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
 
-      return edge_dof_to_node_dof(bdr_values, geom);
+      return edge_dof_to_node_dof(bdr_values, geom, 0);
     }
     /*!*********************************************************************************************
      * \brief   Evaluate discrete function at given points.
@@ -1179,7 +1179,7 @@ inline std::array
   2 * hyEdge_dimT
 >
 BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
-dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs ) const
+dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
