@@ -130,7 +130,7 @@ class File
                    << "which are orthogonal to the hyperedge." );
         
         generate_mapping_if_needed();
-        Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index);
+        Point<space_dimT,pt_coord_t> normal = mapping->outer_normal(index);
         return normal;
       }
 
