@@ -337,10 +337,20 @@ class SmallMat
      * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
+    template<unsigned int n_cols_other>
     SmallMat<n_rows,n_cols,mat_entry_t>& operator+=
-    ( const SmallMat<n_rows,n_cols,mat_entry_t>& other )
+    ( const SmallMat<n_rows,n_cols_other,mat_entry_t>& other )
     {
-      for (unsigned int index = 0; index < size(); ++index)  entries_[index] += other[index];
+      static_assert( n_cols_other == n_cols || n_cols_other == 1,
+                     "Addition is only defined for equal matrices or matrix plus vector." );
+
+      if constexpr (n_cols_other == n_cols) 
+        for (unsigned int index = 0; index < size(); ++index)  entries_[index] += other[index];
+      else if constexpr (n_cols_other == 1)
+        for (unsigned int j = 0; j < n_cols; ++j)
+          for (unsigned int i = 0; i < n_rows; ++i)
+            this->operator()(i,j) += other[i];
+      
       return *this;
     }
     /*!*********************************************************************************************
@@ -349,10 +359,20 @@ class SmallMat
      * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
+    template<unsigned int n_cols_other>
     SmallMat<n_rows,n_cols,mat_entry_t>& operator-=
-    ( const SmallMat<n_rows,n_cols,mat_entry_t>& other )
+    ( const SmallMat<n_rows,n_cols_other,mat_entry_t>& other )
     {
-      for (unsigned int index = 0; index < size(); ++index)  entries_[index] -= other[index];
+      static_assert( n_cols_other == n_cols || n_cols_other == 1,
+                     "Subtration is only defined for equal matrices or matrix plus vector." );
+
+      if constexpr (n_cols_other == n_cols)
+        for (unsigned int index = 0; index < size(); ++index)  entries_[index] -= other[index];
+      else if constexpr (n_cols_other == 1)
+        for (unsigned int j = 0; j < n_cols; ++j)
+          for (unsigned int i = 0; i < n_rows; ++i)
+            this->operator()(i,j) -= other[i];
+      
       return *this;
     }
     /*!*********************************************************************************************
@@ -446,12 +466,27 @@ mat_entry_t scalar_product
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
-SmallMat<n_rows,n_cols,mat_entry_t> operator+
-(const SmallMat<n_rows,n_cols,mat_entry_t>& left, const SmallMat<n_rows,n_cols,mat_entry_t>& right)
+template
+< unsigned int n_rows, unsigned int n_cols_left, unsigned int n_cols_right, typename mat_entry_t >
+SmallMat<n_rows,std::max(n_cols_left,n_cols_right),mat_entry_t> operator+
+(
+  const SmallMat<n_rows,n_cols_left,mat_entry_t>& left,
+  const SmallMat<n_rows,n_cols_right,mat_entry_t>& right
+)
 {
-  SmallMat<n_rows,n_cols,mat_entry_t> sum(left);
-  return sum += right;
+  static_assert( n_cols_left == n_cols_right || n_cols_left == 1 || n_cols_right == 1 ,
+                 "Function only implemented for these three cases." );
+
+  if constexpr (n_cols_left == n_cols_right || n_cols_right == 1)
+  {
+    SmallMat<n_rows,n_cols_left,mat_entry_t> sum(left);
+    return sum += right;
+  }
+  else if constexpr (n_cols_left == 1)
+  {
+    SmallMat<n_rows,n_cols_right,mat_entry_t> sum(right);
+    return sum += left;
+  }
 }
 /*!*************************************************************************************************
  * \brief   Subtract two \c SmallMat.
@@ -459,12 +494,29 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator+
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
-SmallMat<n_rows,n_cols,mat_entry_t> operator-
-(const SmallMat<n_rows,n_cols,mat_entry_t>& left, const SmallMat<n_rows,n_cols,mat_entry_t>& right)
+template
+< unsigned int n_rows, unsigned int n_cols_left, unsigned int n_cols_right, typename mat_entry_t >
+SmallMat<n_rows,std::max(n_cols_left,n_cols_right),mat_entry_t> operator-
+(
+  const SmallMat<n_rows,n_cols_left,mat_entry_t>& left,
+  const SmallMat<n_rows,n_cols_right,mat_entry_t>& right
+)
 {
-  SmallMat<n_rows,n_cols,mat_entry_t> difference(left);
-  return difference -= right;
+  static_assert( n_cols_left == n_cols_right || n_cols_left == 1 || n_cols_right == 1 ,
+                 "Function only implemented for these three cases." );
+
+  if constexpr (n_cols_left == n_cols_right || n_cols_right == 1)
+  {
+    SmallMat<n_rows,n_cols_left,mat_entry_t> difference(left);
+    return difference -= right;
+  }
+  else if constexpr (n_cols_left == 1)
+  {
+    SmallMat<n_rows,n_cols_right,mat_entry_t> difference;
+    for (unsigned int i = 0; i < n_cols_right; ++i)
+      difference.set_column(i, left - right.get_column(i));
+    return difference;
+  }
 }
 /*!*************************************************************************************************
  * \brief   Hadamard product of two \c SmallMat.
