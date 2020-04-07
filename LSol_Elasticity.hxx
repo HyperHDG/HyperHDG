@@ -121,7 +121,7 @@ class LengtheningBeam
         result[i].fill(0.);
       }
   
-      Point<space_dim,lSol_float_t> normal_vector = geom.normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -140,7 +140,7 @@ class LengtheningBeam
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
-      Point<space_dim,lSol_float_t> normal_vector = geom.normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
