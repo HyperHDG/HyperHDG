@@ -1194,7 +1194,7 @@ class LengtheningBernoulliBendingBeam
       for (unsigned int i = 0; i < system_dimension(); ++i)
         for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
           result[i][j] += auxiliary[i][j];
-      
+
       return result;
     }
     
