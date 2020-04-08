@@ -374,7 +374,11 @@ void plot_vtu
 	    // 		 local_values = local_solver.bulk_values
       //                      (abscissas, hyper_graph.hyEdge_geometry(he_number), hyEdge_dofs);
 	    // else
-      std::array< std::array< dof_value_t, LocalSolverT::system_dimension()>, Hypercube<edge_dim>::n_vertices()> local_values;
+      std::array
+      < 
+        std::array< dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions+1)> ,
+        LocalSolverT::system_dimension()
+      > local_values;
       if constexpr ( LocalSolverT::use_geometry() )
       {
         auto geometry =  hyper_graph[he_number].geometry;
