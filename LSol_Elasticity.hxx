@@ -856,18 +856,29 @@ class BernoulliBendingBeam
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
       lambda_values, GeomT& geom ) const
     {
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
-        lambda = node_dof_to_edge_dof(lambda_values, geom, 0);
-      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
-      
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
-        bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
-  
-      for (unsigned int i = 0; i < lambda.size(); ++i)
-        for (unsigned int j = 0; j < lambda[i].size(); ++j)
-          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)  result[i].fill(0.);
 
-      return edge_dof_to_node_dof(bdr_values, geom, 0);
+      for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
+      {
+        std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
+          lambda = node_dof_to_edge_dof(lambda_values, geom, dim);
+        std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
+      
+        std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
+          bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
+  
+        for (unsigned int i = 0; i < lambda.size(); ++i)
+          for (unsigned int j = 0; j < lambda[i].size(); ++j)
+            bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
+
+        aux = edge_dof_to_node_dof(bdr_values, geom, dim);
+        for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+          for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+            result[i][j] += aux[i][j];
+      }
+
+      return result;
     }
     /*!*********************************************************************************************
      * \brief   Evaluate discrete function at given points.
@@ -988,14 +999,14 @@ class BernoulliBendingBeam
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF LengtheningBeam
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF BernoulliBendingBeam
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
 
 // -------------------------------------------------------------------------------------------------
-// assemble_loc_matrix
+// assemble_loc_matrix: With artificial $\Delta u = 0 \text{ on } \partial \elem$
 // -------------------------------------------------------------------------------------------------
 
 template
@@ -1048,6 +1059,8 @@ assemble_loc_matrix ( const lSol_float_t tau )
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
+          += tau * integral;
         local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
@@ -1058,6 +1071,8 @@ assemble_loc_matrix ( const lSol_float_t tau )
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
+          += tau * integral;
         local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
       }
@@ -1065,7 +1080,7 @@ assemble_loc_matrix ( const lSol_float_t tau )
   }
   
   return local_mat;
-} // end of LengtheningBeam::assemble_loc_matrix
+} // end of BernoulliBendingBeam::assemble_loc_matrix
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1101,13 +1116,13 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-//        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
+        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
         right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
           += tau_*lambda_values[2*dim+0][j] * integral;
     
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-//        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
+        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
         right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
           += tau_*lambda_values[2*dim+1][j] * integral;
       }
@@ -1115,7 +1130,7 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
   }
   
   return right_hand_side;
-} // end of LengtheningBeam::assemble_rhs
+} // end of BernoulliBendingBeam::assemble_rhs
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1159,7 +1174,7 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
   }
   
   return bdr_values;
-} // end of LengtheningBeam::primal_at_boundary
+} // end of BernoulliBendingBeam::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1202,7 +1217,7 @@ dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
   }
   
   return bdr_values;
-} // end of LengtheningBeam::dual_at_boundary
+} // end of BernoulliBendingBeam::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1253,5 +1268,5 @@ LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
   }
   
   return values;
-} // end of LengtheningBeam::bulk_values
+} // end of BernoulliBendingBeam::bulk_values
 */
