@@ -560,7 +560,7 @@ class BernoulliBendingBeam
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
-    { return space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
     static constexpr unsigned int node_value_dimension() { return space_dim; }
@@ -614,15 +614,15 @@ class BernoulliBendingBeam
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
     template<class GeomT> 
-    inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
+    inline std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
     ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
       GeomT& geom, const unsigned int outer_index ) const
     {
-      std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dimT > result;
+      std::array< std::array<double, 2 * n_shape_bdr_> , 2*hyEdge_dimT > result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
       for (unsigned int i = 0; i < result.size(); ++i)
       {
-        hy_assert( result[i].size() == 1 , "Only implemented in one dimension!" );
+        hy_assert( result[i].size() == 2 , "Only implemented in one dimension!" );
         result[i].fill(0.);
       }
   
@@ -630,7 +630,10 @@ class BernoulliBendingBeam
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
+        {
           result[i][0] += normal_vector[dim] * lambda[i][dim];
+          result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim];
+        }
   
       return result;
     }
@@ -640,7 +643,7 @@ class BernoulliBendingBeam
     template <class GeomT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
-    ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
+    ( const std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
       GeomT& geom, const unsigned int outer_index ) const
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
@@ -649,7 +652,10 @@ class BernoulliBendingBeam
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
+        {
           result[i][dim] = normal_vector[dim] * lambda[i][0];
+          result[i][space_dim + dim] = normal_vector[dim] * lambda[i][1];
+        }
   
       return result;
     }
@@ -663,7 +669,7 @@ class BernoulliBendingBeam
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
-    (const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
+    (const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
     
     /*!*********************************************************************************************
      * \brief  Solve local problem.
@@ -672,7 +678,7 @@ class BernoulliBendingBeam
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    (const std::array<std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values) const
+    (const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values) const
     {
       try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
       catch (LAPACKexception& exc)
@@ -691,7 +697,7 @@ class BernoulliBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > primal_at_boundary
+    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > primal_at_boundary
     ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
@@ -702,7 +708,7 @@ class BernoulliBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > dual_at_boundary
+    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > dual_at_boundary
     ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const;
   public:
     /*!*********************************************************************************************
@@ -740,11 +746,11 @@ class BernoulliBendingBeam
 
       for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
       {
-        std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
+        std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2*hyEdge_dimT >
           lambda = node_dof_to_edge_dof(lambda_values, geom, dim);
         std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
-        std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
+        std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > 
           bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
   
         for (unsigned int i = 0; i < lambda.size(); ++i)
@@ -868,7 +874,7 @@ inline SmallVec
   lSol_float_t
 >
 BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
-(const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
+(const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   lSol_float_t integral;
@@ -877,7 +883,7 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
   for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    hy_assert( lambda_values[i].size() == n_shape_bdr_ ,
+    hy_assert( lambda_values[i].size() == 2 * n_shape_bdr_ ,
                "The size of lambda should be the amount of ansatz functions at boundary." );
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -887,16 +893,16 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
+        right_hand_side[dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
-          += tau_*lambda_values[2*dim+0][j] * integral;
+        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] += lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
     
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
+        right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
-          += tau_*lambda_values[2*dim+1][j] * integral;
+        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
       }
     }
   }
@@ -917,7 +923,7 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    2 * BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
@@ -925,7 +931,7 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
-  std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+  std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
@@ -937,10 +943,14 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        bdr_values[2*dim+0][j] += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
-        
+        bdr_values[2*dim+0][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+0][n_shape_bdr_ + j] 
+          += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
+
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        bdr_values[2*dim+1][j] += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+1][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+1][n_shape_bdr_ + j]
+          += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
       }
     }
   }
@@ -961,14 +971,15 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    2 * BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
 BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
 {
-  std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
@@ -981,9 +992,13 @@ dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+0][n_shape_bdr_ + j]
+          -= coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
         
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+1][n_shape_bdr_ + j]
+          += coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
       }
     }
   }
@@ -1107,7 +1122,7 @@ class LengtheningBernoulliBendingBeam
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
-    { return space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
     static constexpr unsigned int node_value_dimension() { return space_dim; }
@@ -1180,13 +1195,6 @@ class LengtheningBernoulliBendingBeam
         for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
           result[i][j] += auxiliary[i][j];
       
-for (unsigned int i = 0; i < system_dimension(); ++i)
-{
-  for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
-    std::cout << result[i][j] << "  ";
-  std::cout << std::endl;
-}
-
       return result;
     }
     
