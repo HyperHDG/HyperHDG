@@ -15,7 +15,7 @@ from scipy.sparse.linalg import LinearOperator
 #          +                ">"
 # filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, " \
-         +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
+         +                  "LengtheningBeam<1,2,1,2> > "
 filenames = [ "HyperHDG/Topology/File.hxx" , "HyperHDG/Geometry/File.hxx" , "LSol_Elasticity.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
