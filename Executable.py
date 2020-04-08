@@ -15,7 +15,7 @@ from scipy.sparse.linalg import LinearOperator
 #          +                ">"
 # filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, " \
-         +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
+         +                  "LengtheningBeam<1,2,1,2> > "
 filenames = [ "HyperHDG/Topology/File.hxx" , "HyperHDG/Geometry/File.hxx" , "LSol_Elasticity.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
@@ -39,7 +39,7 @@ vectorDirichlet[3] = 0.
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 1, 2, 3 ])# len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 1, 2, 3, 4, 5, 6, 7 ])# len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
