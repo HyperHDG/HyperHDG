@@ -60,7 +60,7 @@ class LengtheningBeam
     
     static constexpr unsigned int node_value_dimension() { return space_dim; }
     
-    static constexpr unsigned int system_dimension() { return hyEdge_dimT; }
+    static constexpr unsigned int system_dimension() { return space_dim; }
     
     
   private:
@@ -243,117 +243,17 @@ class LengtheningBeam
 
       return edge_dof_to_node_dof(bdr_values, geom);
     }
-    /*!*********************************************************************************************
-     * \brief   Evaluate discrete function at given points.
-     *
-     * \todo    Include static asserts to check for correct dimensions.
-     *
-     * Function to evaluate primal variable of the solution at dyadic product of abscissas. The main
-     * purpose of the function in closely related to plotting.
-     *
-     * \tparam  sizeT         Size of the passed \c std::array containing the abscissas.
-     * \param   abscissas     Coordinates at whose tensor products the function is evaluated.
-     * \param   lambda_values Coefficients of the associated skeletal function.
-     * \retval  fct_val       Evaluation of dual variable at prescribed points.
-     **********************************************************************************************/
-/*    template<std::size_t sizeT, class GeomT>
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>
-    primal_at_dyadic
-    (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
-     const std::array< std::array<lSol_float_t, GeomT::space_dim() * n_shape_bdr_> , 2*hyEdge_dimT >&
-      lambda_values) const
-    {
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
-        lambda = node_dof_to_edge_dof(lambda_values, geom);
-      std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> coeffs = solve_local_problem(lambda);
-      
-      std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)> values;
-      std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-      lSol_float_t fct_value;
 
-      std::array<unsigned int, poly_deg+1> poly_indices;
-      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-        values1D = shape_fct_eval<Legendre>(poly_indices, abscissas);
-      
-      values.fill(0.);
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        index_decompose<hyEdge_dimT>(i, poly_deg+1, dec_i);
-        for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-        {
-          index_decompose<hyEdge_dimT>(q, abscissas.size(), dec_q);
-          fct_value = 1.;
-          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-            fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-          values[q] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
-        }
-      }
-
-      return values;
-    }*/
-    /*!*********************************************************************************************
-     * \brief   Evaluate discrete function at given points.
-     *
-     * \todo    Include static asserts to check for correct dimensions.
-     *
-     * Function to evaluate dual variable / part of the solution at dyadic product of abscissas. The
-     * main purpose of the function in closely related to plotting.
-     *
-     * \tparam  sizeT         Size of the passed \c std::array containing the abscissas.
-     * \param   abscissas     Coordinates at whose tensor products the function is evaluated.
-     * \param   lambda_values Coefficients of the associated skeletal function.
-     * \retval  fct_val       Evaluation of dual variable at prescribed points.
-     **********************************************************************************************/
-/*    template<std::size_t sizeT, class GeomT>
-    std::array< std::array<lSol_float_t,hyEdge_dimT> , Hypercube<hyEdge_dimT>::pow(sizeT) > 
-    dual_at_dyadic
-    (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
-     const std::array< std::array<lSol_float_t, GeomT::space_dim() * n_shape_bdr_> , 2*hyEdge_dimT >&
-      lambda_values) const
-    {
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
-        lambda = node_dof_to_edge_dof(lambda_values, geom);
-      std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> coeffs = solve_local_problem(lambda);
-      
-      std::array< std::array<lSol_float_t, hyEdge_dimT> , Hypercube<hyEdge_dimT>::pow(sizeT) > values;
-      std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-      lSol_float_t fct_value;
-      
-      std::array<unsigned int, poly_deg+1> poly_indices;
-      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-        values1D = shape_fct_eval<Legendre>(poly_indices, abscissas);
-
-      for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      { 
-        index_decompose<hyEdge_dimT>(i, poly_deg+1, dec_i);
-        for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-        {
-          index_decompose<hyEdge_dimT>(q, abscissas.size(), dec_q);
-          fct_value = 1.;
-          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-            fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          values[q][dim] += coeffs[dim * n_shape_fct_ + i] * fct_value;
-        }
-      }
-  
-      return values;
-    }*/
-    
-    
-    template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()>
-    bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
-	       const InputArrayType& lambda_values) const
-    {
-      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()> result;
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+      LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+    bulk_values
+    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+     GeomT& geom) const;
+//      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()> result;
 //      result[0] = primal_at_dyadic(abscissas, lambda_values, geom); ??
-      return result;
-    }
+//      return result;
+//    }
     
 }; // end of class LengtheningBeam
 
@@ -554,11 +454,11 @@ dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_
 // -------------------------------------------------------------------------------------------------
 // bulk_values
 // -------------------------------------------------------------------------------------------------
-/*
+
 template
 < unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t >
-template < typename abscissa_float_t, std::size_t sizeT, class input_array_t >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
 std::array
 <
   std::array
@@ -566,12 +466,14 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dimT>::pow(sizeT)
   > ,
-  LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+  LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
 >
-LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
-(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const
+LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
+( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+  GeomT& geom) const
 {
-  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
+  std::array< lSol_float_t, n_loc_dofs_ > coefficients
+    = solve_local_problem(node_dof_to_edge_dof(lambda_values, geom));
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
@@ -579,6 +481,7 @@ LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
  
   std::array<unsigned int, poly_deg+1> poly_indices;
   for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+  Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
   std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
     values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
       
@@ -594,13 +497,13 @@ LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
       for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
+        values[dim][q] += normal_vector[dim] * coefficients[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
     }
   }
   
   return values;
 } // end of LengtheningBeam::bulk_values
-*/
+
 
 
 
