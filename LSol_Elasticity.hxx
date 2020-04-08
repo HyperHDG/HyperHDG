@@ -55,7 +55,7 @@ class LengtheningBeam
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
-    { return space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
     static constexpr unsigned int node_value_dimension() { return space_dim; }
@@ -835,8 +835,6 @@ assemble_loc_matrix ( const lSol_float_t tau )
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
-        local_mat(hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
-          += tau * integral;
         local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
@@ -846,8 +844,6 @@ assemble_loc_matrix ( const lSol_float_t tau )
            -= integral; // Removing to enforce Neumann zero!
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
-          += tau * integral;
-        local_mat(hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
         local_mat(n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j) 
           += tau * integral;
