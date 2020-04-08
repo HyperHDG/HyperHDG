@@ -611,26 +611,6 @@ LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
@@ -1270,3 +1250,266 @@ LengtheningBeam<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
   return values;
 } // end of BernoulliBendingBeam::bulk_values
 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*!*************************************************************************************************
+ * \brief   Local solver for Poisson's equation on uniform hypergraph.
+ *
+ * \todo    Update doxygen in whole file!!!
+ *
+ * This class contains the local solver for Poisson's equation, i.e.,
+ * \f[
+ *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ * \f]
+ * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
+ * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
+ * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3). For this class, all
+ * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
+ * information is needed by this class.
+ *
+ * \tparam  hyEdge_dimT    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
+ *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  poly_deg      The polynomial degree of test and trial functions.
+ * \tparam  quad_deg      The order of the quadrature rule.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template
+< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
+  unsigned int quad_deg, typename lSol_float_t = double >
+class LengtheningBernoulliBendingBeam
+{
+  public:
+    /*!*********************************************************************************************
+     * \brief   Return template parameter \c hyEdge_dimT.
+     * 
+     * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
+     **********************************************************************************************/
+    static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
+    /*!*********************************************************************************************
+     * \brief   Decide whether gemetrical information is needed for local solver.
+     * 
+     * \retval  use_geom      True if geometrical information is used by local solver.
+     **********************************************************************************************/
+    static constexpr bool use_geometry() { return true; }
+    /*!*********************************************************************************************
+     * \brief   Evaluate amount of global degrees of freedom per hypernode.
+     * 
+     * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+     * cooperating with this object.
+     *
+     * \retval  n_dofs        Number of global degrees of freedom per hypernode.
+     **********************************************************************************************/
+    static constexpr unsigned int n_glob_dofs_per_node()
+    { return space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    
+    
+    static constexpr unsigned int node_value_dimension() { return space_dim; }
+    
+    static constexpr unsigned int system_dimension() { return hyEdge_dimT; }
+    
+    
+  private:
+    
+    const lSol_float_t tau_;
+
+    const LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t> len_beam;
+    const BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t> ben_beam;
+
+  public:
+    /*!*********************************************************************************************
+     * \brief   Class is constructed using a single double indicating the penalty parameter.
+     **********************************************************************************************/
+    typedef lSol_float_t constructor_value_type;
+    /*!*********************************************************************************************
+     * \brief   Constructor for local solver.
+     *
+     * \param   tau           Penalty parameter of HDG scheme.
+     **********************************************************************************************/
+    LengtheningBernoulliBendingBeam(const constructor_value_type& tau = 1.)
+    : tau_(tau), len_beam(tau), ben_beam(tau)  { }
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to matrix--vector multiplication.
+     *
+     * \todo    Include static asserts to check for correct dimensions.
+     *
+     * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+     * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+     * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+     * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+     *
+     * \param   lambda_values Local part of vector x.
+     * \retval  vecAx         Local part of vector A * x.
+     **********************************************************************************************/
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_lambda
+    (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
+      lambda_values, GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
+      
+      result = len_beam.numerical_flux_from_lambda(lambda_values, geom);
+      aux = ben_beam.numerical_flux_from_lambda(lambda_values, geom);
+
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+          result[i][j] += aux[i][j];
+
+      return result;
+    }
+    /*!*********************************************************************************************
+     * \brief   Evaluate discrete function at given points.
+     *
+     * \todo    Include static asserts to check for correct dimensions.
+     *
+     * Function to evaluate primal variable of the solution at dyadic product of abscissas. The main
+     * purpose of the function in closely related to plotting.
+     *
+     * \tparam  sizeT         Size of the passed \c std::array containing the abscissas.
+     * \param   abscissas     Coordinates at whose tensor products the function is evaluated.
+     * \param   lambda_values Coefficients of the associated skeletal function.
+     * \retval  fct_val       Evaluation of dual variable at prescribed points.
+     **********************************************************************************************/
+/*    template<std::size_t sizeT, class GeomT>
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>
+    primal_at_dyadic
+    (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
+     const std::array< std::array<lSol_float_t, GeomT::space_dim() * n_shape_bdr_> , 2*hyEdge_dimT >&
+      lambda_values) const
+    {
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
+        lambda = node_dof_to_edge_dof(lambda_values, geom);
+      std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> coeffs = solve_local_problem(lambda);
+      
+      std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)> values;
+      std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
+      lSol_float_t fct_value;
+
+      std::array<unsigned int, poly_deg+1> poly_indices;
+      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
+        values1D = shape_fct_eval<Legendre>(poly_indices, abscissas);
+      
+      values.fill(0.);
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      {
+        index_decompose<hyEdge_dimT>(i, poly_deg+1, dec_i);
+        for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
+        {
+          index_decompose<hyEdge_dimT>(q, abscissas.size(), dec_q);
+          fct_value = 1.;
+          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
+            fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+          values[q] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
+        }
+      }
+
+      return values;
+    }*/
+    /*!*********************************************************************************************
+     * \brief   Evaluate discrete function at given points.
+     *
+     * \todo    Include static asserts to check for correct dimensions.
+     *
+     * Function to evaluate dual variable / part of the solution at dyadic product of abscissas. The
+     * main purpose of the function in closely related to plotting.
+     *
+     * \tparam  sizeT         Size of the passed \c std::array containing the abscissas.
+     * \param   abscissas     Coordinates at whose tensor products the function is evaluated.
+     * \param   lambda_values Coefficients of the associated skeletal function.
+     * \retval  fct_val       Evaluation of dual variable at prescribed points.
+     **********************************************************************************************/
+/*    template<std::size_t sizeT, class GeomT>
+    std::array< std::array<lSol_float_t,hyEdge_dimT> , Hypercube<hyEdge_dimT>::pow(sizeT) > 
+    dual_at_dyadic
+    (const std::array<lSol_float_t, sizeT>& abscissas, const GeomT& geom,
+     const std::array< std::array<lSol_float_t, GeomT::space_dim() * n_shape_bdr_> , 2*hyEdge_dimT >&
+      lambda_values) const
+    {
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
+        lambda = node_dof_to_edge_dof(lambda_values, geom);
+      std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_> coeffs = solve_local_problem(lambda);
+      
+      std::array< std::array<lSol_float_t, hyEdge_dimT> , Hypercube<hyEdge_dimT>::pow(sizeT) > values;
+      std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
+      lSol_float_t fct_value;
+      
+      std::array<unsigned int, poly_deg+1> poly_indices;
+      for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+      std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
+        values1D = shape_fct_eval<Legendre>(poly_indices, abscissas);
+
+      for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
+  
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      { 
+        index_decompose<hyEdge_dimT>(i, poly_deg+1, dec_i);
+        for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
+        {
+          index_decompose<hyEdge_dimT>(q, abscissas.size(), dec_q);
+          fct_value = 1.;
+          for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
+            fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          values[q][dim] += coeffs[dim * n_shape_fct_ + i] * fct_value;
+        }
+      }
+  
+      return values;
+    }*/
+    
+    
+    template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()>
+    bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
+           const InputArrayType& lambda_values) const
+    {
+      std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()> result;
+//      result[0] = primal_at_dyadic(abscissas, lambda_values, geom); ??
+      return result;
+    }
+    
+}; // end of class LengtheningBernoulliBendingBeam
