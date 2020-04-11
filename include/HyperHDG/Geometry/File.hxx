@@ -44,7 +44,7 @@ namespace Geometry
 template 
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
-  typename mapping_t = Parallelopipedon<hyEdge_dimT,space_dimT,pt_coord_t>,
+  typename mapping_t = Mapping::Linear<hyEdge_dimT,space_dimT,pt_coord_t>,
   typename hyEdge_index_t = unsigned int
 >
 class File

@@ -5,8 +5,11 @@
 #include <array>
 #include <memory>
 
+namespace Mapping
+{
+
 /*!*************************************************************************************************
- * \brief   Mapping of a unit square to a parallelopipedon.
+ * \brief   Mapping of a unit square to a Linear.
  *
  * \todo    Some functions of this class only work for one-dimensional hyperedges. These need to be
  *          generalized to arbitrary domensions of hyperedges.
@@ -16,7 +19,7 @@
  **************************************************************************************************/
 template 
 < unsigned int hyEdge_dimT, unsigned int space_dimT, typename map_float_t >
-class Parallelopipedon
+class Linear
 {
   public:
     /*!*********************************************************************************************
@@ -42,17 +45,17 @@ class Parallelopipedon
 
   public:
 
-    Parallelopipedon
+    Linear
     ( 
       const Point<space_dimT,map_float_t>& translation,
       const SmallMat<space_dimT,hyEdge_dimT,map_float_t>& matrix
     )
     : translation_(translation), matrix_(matrix) { }
 
-    map_float_t haussdorff_hyEdge() const
+    map_float_t functional_determinant_hyEdge() const
     { return std::sqrt(std::abs(determinant( transposed_mat_times_mat(matrix_, matrix_) ))); }
 
-    map_float_t haussdorfh_hyNode(const unsigned int index) const
+    map_float_t functional_determinant_hyNode(const unsigned int index) const
     {
       SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
@@ -113,3 +116,5 @@ class Parallelopipedon
       return outer_normals_->get_column(index);;
     }
 }; // end class File
+
+} // end of namespace Mapping
