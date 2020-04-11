@@ -1289,7 +1289,7 @@ class TimoschenkoBendingBeam
      * \retval  n_dofs        Number of global degrees of freedom per hypernode.
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
-    { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    { return 3 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
     static constexpr unsigned int node_value_dimension() { return space_dim; }
@@ -1343,7 +1343,7 @@ class TimoschenkoBendingBeam
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
     template<class GeomT> 
-    inline std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
+    inline std::array< std::array<double, 3 * n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
     ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
       GeomT& geom, const unsigned int outer_index ) const
     {
@@ -1360,8 +1360,9 @@ class TimoschenkoBendingBeam
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
         {
-          result[i][0] += normal_vector[dim] * lambda[i][dim];
-          result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim];
+          result[i][0] += normal_vector[dim] * lambda[i][0 * space_dim + dim];  // Displacement
+          result[i][1] += normal_vector[dim] * lambda[i][1 * space_dim + dim];  // Laplacian
+          result[i][2] += normal_vector[dim] * lambda[i][2 * space_dim + dim];  // Torsion
         }
   
       return result;
@@ -1382,8 +1383,9 @@ class TimoschenkoBendingBeam
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
         {
-          result[i][dim] = normal_vector[dim] * lambda[i][0];
-          result[i][space_dim + dim] = normal_vector[dim] * lambda[i][1];
+          result[i][0 * space_dim + dim] = normal_vector[dim] * lambda[i][0];  // Displacement
+          result[i][1 * space_dim + dim] = normal_vector[dim] * lambda[i][1];  // Laplacian
+          result[i][2 * space_dim + dim] = normal_vector[dim] * lambda[i][2];  // Torsion
         }
   
       return result;
@@ -1398,7 +1400,7 @@ class TimoschenkoBendingBeam
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
-    ( const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values )
+    ( const std::array<std::array<lSol_float_t, 3 * n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values )
     const;
     
     /*!*********************************************************************************************
@@ -1408,7 +1410,7 @@ class TimoschenkoBendingBeam
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    ( const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values )
+    ( const std::array<std::array<lSol_float_t, 3 * n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values )
     const
     {
       try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
@@ -1428,7 +1430,7 @@ class TimoschenkoBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT >
+    inline std::array< std::array<lSol_float_t, 3 * n_shape_bdr_> , 2 * hyEdge_dimT >
     primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
@@ -1439,7 +1441,7 @@ class TimoschenkoBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT >
+    inline std::array< std::array<lSol_float_t, 3 * n_shape_bdr_> , 2 * hyEdge_dimT >
     dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const;
   public:
     /*!*********************************************************************************************
@@ -1502,7 +1504,8 @@ class TimoschenkoBendingBeam
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+      TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
+        system_dimension()
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
@@ -1570,6 +1573,10 @@ assemble_loc_matrix ( const lSol_float_t tau )
           -= integral;
         local_mat(n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j)
           -= integral;
+
+        // Advection terms that need additional boundary conditions!
+        local_mat(n_dofs_lap + i , n_dofs_lap + j) += integral;
+        local_mat(n_dofs_lap  + n_shape_fct_+i , n_dofs_lap + n_shape_fct_+j) -= integral;
     
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
@@ -1635,18 +1642,18 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::as
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         right_hand_side[dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i]
-          += lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
-          += tau_*lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
+        
+        right_hand_side[n_dofs_lap + i] -= lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + n_shape_fct_ + i]
+          += lambda_values[2*dim+0][2 * n_shape_bdr_ + j] * integral;
     
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i]
-          -= lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
-          += tau_*lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
+        
+        right_hand_side[n_dofs_lap + i] += lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + n_shape_fct_ + i]
+          -= lambda_values[2*dim+1][2 * n_shape_bdr_ + j] * integral;
       }
     }
   }
@@ -1689,14 +1696,14 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        bdr_values[2*dim+0][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
-        bdr_values[2*dim+0][n_shape_bdr_ + j] 
-          += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+0][0*n_shape_bdr_ + j] += coeffs[hyEdge_dimT*n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+0][1*n_shape_bdr_ + j] += coeffs[n_dofs_lap + i] * integral;
+        bdr_values[2*dim+0][2*n_shape_bdr_ + j] += coeffs[n_dofs_lap + n_shape_bdr_ + i] * integral;
 
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        bdr_values[2*dim+1][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
-        bdr_values[2*dim+1][n_shape_bdr_ + j]
-          += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+1][0*n_shape_bdr_ + j] += coeffs[hyEdge_dimT*n_shape_fct_ + i] * integral;
+        bdr_values[2*dim+1][1*n_shape_bdr_ + j] += coeffs[n_dofs_lap + i] * integral;
+        bdr_values[2*dim+1][2*n_shape_bdr_ + j] += coeffs[n_dofs_lap + n_shape_bdr_ + i] * integral;
       }
     }
   }
