@@ -29,8 +29,10 @@
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
-  unsigned int quad_deg, typename lSol_float_t = double >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
+  unsigned int quad_deg, typename lSol_float_t = double
+>
 class LengtheningBeam
 {
   public:
@@ -254,7 +256,6 @@ class LengtheningBeam
 }; // end of class LengtheningBeam
 
 
-
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
@@ -269,8 +270,10 @@ class LengtheningBeam
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 SmallSquareMat
 <LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
 LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
@@ -323,8 +326,10 @@ assemble_loc_matrix ( const lSol_float_t tau )
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline SmallVec
 < LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t >
 LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
@@ -366,8 +371,10 @@ LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline std::array
 < 
   std::array
@@ -409,8 +416,10 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline std::array
 < 
   std::array
@@ -452,8 +461,10 @@ dual_at_boundary ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
 std::array
 <
@@ -471,7 +482,7 @@ LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
     = solve_local_problem(node_dof_to_edge_dof(lambda_values, geom));
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()> values;
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
   lSol_float_t fct_value;
  
@@ -493,7 +504,8 @@ LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
       for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += normal_vector[dim] * coefficients[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
+        values[dim][q] +=
+          normal_vector[dim] * coefficients[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
     }
   }
   
@@ -534,8 +546,10 @@ LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
-  unsigned int quad_deg, typename lSol_float_t = double >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
+  unsigned int quad_deg, typename lSol_float_t = double
+>
 class BernoulliBendingBeam
 {
   public:
@@ -669,7 +683,8 @@ class BernoulliBendingBeam
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
-    (const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values) const;
+    ( const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT>& lambda_values )
+    const;
     
     /*!*********************************************************************************************
      * \brief  Solve local problem.
@@ -678,7 +693,8 @@ class BernoulliBendingBeam
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    (const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values) const
+    ( const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_> , 2*hyEdge_dimT>& lambda_values )
+    const
     {
       try { return (assemble_rhs(lambda_values) / loc_mat_).data(); }
       catch (LAPACKexception& exc)
@@ -697,8 +713,8 @@ class BernoulliBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > primal_at_boundary
-    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
+    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT >
+    primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
      *
@@ -708,8 +724,8 @@ class BernoulliBendingBeam
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > dual_at_boundary
-    ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const;
+    inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT >
+    dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const;
   public:
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
@@ -768,11 +784,14 @@ class BernoulliBendingBeam
     
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+    std::array
+    <
+      std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+      BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+    >
     bulk_values
-    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     GeomT& geom) const;
+    ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+      GeomT& geom ) const;
     
 }; // end of class BernoulliBendingBeam
 
@@ -792,8 +811,10 @@ class BernoulliBendingBeam
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 SmallSquareMat
 <
   BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_,
@@ -866,8 +887,10 @@ assemble_loc_matrix ( const lSol_float_t tau )
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+<
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline SmallVec
 < 
   BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_,
@@ -895,14 +918,18 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         right_hand_side[dim*n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] += lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i]
+          += lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
+          += tau_*lambda_values[2*dim+0][n_shape_bdr_ + j] * integral;
     
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
-        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + dim*n_shape_fct_ + i]
+          -= lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
+          += tau_*lambda_values[2*dim+1][n_shape_bdr_ + j] * integral;
       }
     }
   }
@@ -916,8 +943,10 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::asse
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline std::array
 < 
   std::array
@@ -964,8 +993,10 @@ primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) cons
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 inline std::array
 < 
   std::array
@@ -1012,8 +1043,10 @@ dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
 // -------------------------------------------------------------------------------------------------
 
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
-  typename lSol_float_t >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
+  typename lSol_float_t
+>
 template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
 std::array
 <
@@ -1026,9 +1059,9 @@ std::array
 >
 BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  GeomT& geom) const
+  GeomT& geom ) const
 {
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()> values;
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
   
   for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
@@ -1055,7 +1088,8 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
           fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
         for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-          values[dim][q] += normal_vector[dim] * coefficients[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
+          values[dim][q]
+            += normal_vector[dim] * coefficients[hyEdge_dimT * n_shape_fct_ + i] * fct_value;
       }
     }
   }
@@ -1096,8 +1130,10 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
-  unsigned int quad_deg, typename lSol_float_t = double >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
+  unsigned int quad_deg, typename lSol_float_t = double
+>
 class LengtheningBernoulliBendingBeam
 {
   public:
