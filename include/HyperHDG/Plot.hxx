@@ -247,12 +247,11 @@ namespace PlotFunctions
     for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
     {
       auto edge = hyper_graph.hyEdge_geometry(he_number);
-      auto mapping = edge.mapping_tensor(sub_points);
 
       for (unsigned int pt_number = 0; pt_number < points_per_hyEdge; ++pt_number)
       {
         output << "        ";
-        const Point<space_dim>& point = mapping.lexicographic(pt_number);
+        const Point<space_dim> point = edge.template lexicographic<n_subpoints>(pt_number);
         for (unsigned int dim = 0; dim < space_dim; ++dim)
           output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
         for (unsigned int dim = space_dim; dim < 3; ++dim)

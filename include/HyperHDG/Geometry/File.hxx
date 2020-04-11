@@ -134,15 +134,24 @@ class File
         return normal;
       }
 
-      /*!*******************************************************************************************
-       * \brief Return data of the mapping in the tensor product of a 1-dimensional quadrature set.
-       *
-       * \tparam  npts  The number of evaluation points in a single direction
-       * \tparam  T     The data type used for this operation
-       ********************************************************************************************/
-      template <std::size_t npts, typename T = double>
-      Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
-      mapping_tensor(const std::array<T, npts>& points_1d) const;
+      template<unsigned int n_sub_points>
+      Point<space_dimT,pt_coord_t> lexicographic(unsigned int index)
+      {
+        static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
+        hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
+                   "The index must niot exceed the number of prescribed lexicographic points." );
+
+        generate_mapping_if_needed();
+        Point<hyEdge_dimT,pt_coord_t> lex_point(0.5);
+        if constexpr (n_sub_points > 1)
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          {
+            lex_point[dim] = (pt_coord_t) (index % n_sub_points) / 
+                               (pt_coord_t) (n_sub_points - 1); // dim coord in unit cube
+            index /= n_sub_points; // get to higher dim coordinate
+          }
+        return mapping->map_reference_to_physical(lex_point);
+      }
   }; // end of class hyEdge
   
   public:
@@ -212,29 +221,5 @@ class File
       return hyEdge(*this, index);
     }
 }; // end class File
-
-
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-//
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF Geometry::File
-//
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-
-
-// -------------------------------------------------------------------------------------------------
-// mapping_tensor
-// -------------------------------------------------------------------------------------------------
-
-template <unsigned int edim, unsigned int sdim, typename a , typename mapping_t, typename hyEdge_index_t>
-template <std::size_t npts, typename T>
-Tensor::MappingMultilinear<sdim, edim, npts, T>
-File<edim, sdim, a, mapping_t,hyEdge_index_t>::hyEdge::mapping_tensor(const std::array<T, npts>& points_1d) const
-{
-  std::array<Point<sdim>, Hypercube<edim>::n_vertices()> vertices;
-  for (unsigned int i=0;i<vertices.size();++i)  vertices[i] = point(i);
-  return Tensor::MappingMultilinear<sdim, edim, npts, T>(vertices, points_1d);
-}
 
 } // end namespace Geometry
