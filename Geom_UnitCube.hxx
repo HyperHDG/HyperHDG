@@ -115,6 +115,18 @@ class UnitCube
       Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
       mapping_tensor(const std::array<T, npts>& points_1d) const;
     
+      template<unsigned int n_sub_points>
+      Point<space_dimT> lexicographic(unsigned int index)
+      {
+        std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> vertices;
+        for (unsigned int i=0;i<vertices.size();++i)  vertices[i] = point(i);
+    
+        std::array<double,n_sub_points> helper;
+        Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, n_sub_points, double>
+          mapping(vertices, helper);
+        return mapping.lexicographic(index);
+      }
+
       /*!*******************************************************************************************
        * \todo    Guido: If you have a clever idea for this, you can implement it. But this, I might
        *          also be able to do myself ;)
