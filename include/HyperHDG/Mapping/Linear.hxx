@@ -11,8 +11,8 @@ namespace Mapping
 /*!*************************************************************************************************
  * \brief   Mapping of a unit square to a Linear.
  *
- * \todo    Some functions of this class only work for one-dimensional hyperedges. These need to be
- *          generalized to arbitrary domensions of hyperedges.
+ * \todo    Update doxygen in this whole file!!!
+ * \todo    Maybe add more template parameters for matrix and vector implementations?!?!
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
