@@ -1313,7 +1313,7 @@ class TimoschenkoBendingBeam
     /*!*********************************************************************************************
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int n_loc_dofs_  = 2 * (hyEdge_dimT+1) * n_shape_fct_;
+    static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+3) * n_shape_fct_;
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
@@ -1538,7 +1538,7 @@ SmallSquareMat
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
-  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  constexpr unsigned int n_dofs_lap = (hyEdge_dimT+3) * n_shape_fct_;
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   lSol_float_t integral;
   
@@ -1550,7 +1550,9 @@ assemble_loc_matrix ( const lSol_float_t tau )
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
-      local_mat( hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j ) -= integral;
+      local_mat( hyEdge_dimT*n_shape_fct_+i , n_dofs_lap +j ) -= integral;
+      local_mat( n_dofs_lap + n_shape_fct_ +i , hyEdge_dimT*n_shape_fct_ +j ) -= integral;
+      local_mat( n_dofs_lap + n_shape_fct_ +i , n_dofs_lap +j ) += integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
@@ -1614,7 +1616,7 @@ inline SmallVec
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
-  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
   lSol_float_t integral;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
 
@@ -1674,7 +1676,7 @@ inline std::array
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
-  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
   std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
@@ -1724,7 +1726,7 @@ inline std::array
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
 {
-  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
   std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
