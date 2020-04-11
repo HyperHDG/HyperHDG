@@ -1,8 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/DenseLA.hxx>
-#include <tensor_mapping.hxx>
-
 #include <HyperHDG/Mapping/Linear.hxx>
 
 #include <array>
@@ -29,8 +27,7 @@ namespace Geometry
 /*!*************************************************************************************************
  * \brief   Hypergraph geometry based on an input file.
  *
- * \todo    Some functions of this class only work for one-dimensional hyperedges. These need to be
- *          generalized to arbitrary domensions of hyperedges.
+ * \todo    Update doxygen of this whole file!!!
  *
  * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
