@@ -57,6 +57,7 @@ class Linear
 
     map_float_t functional_determinant_hyNode(const unsigned int index) const
     {
+      if constexpr ( hyEdge_dimT == 1 )  return 1.;
       SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         mat_face.set_column(i - (i > index), matrix_.get_column(i));

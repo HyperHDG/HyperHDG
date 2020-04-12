@@ -1621,7 +1621,7 @@ inline SmallVec
   lSol_float_t
 >
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
-(const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
+(const std::array< std::array<lSol_float_t, 3 * n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
   constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
   lSol_float_t integral;
@@ -1676,7 +1676,7 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2 * TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    3 * TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
@@ -1684,7 +1684,7 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 primal_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
   constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
-  std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+  std::array< std::array<lSol_float_t, 3 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
@@ -1726,7 +1726,7 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2 * TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    3 * TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
@@ -1734,7 +1734,7 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::
 dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
 {
   constexpr unsigned int n_dofs_lap = (hyEdge_dimT+1) * n_shape_fct_;
-  std::array< std::array<lSol_float_t, 2 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+  std::array< std::array<lSol_float_t, 3 * n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
@@ -1747,13 +1747,9 @@ dual_at_boundary ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs ) const
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
-        bdr_values[2*dim+0][n_shape_bdr_ + j]
-          -= coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
-        
+
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
-        bdr_values[2*dim+1][n_shape_bdr_ + j]
-          += coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
       }
     }
   }
