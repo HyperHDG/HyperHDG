@@ -717,12 +717,12 @@ assemble_loc_matrix ( const lSol_float_t tau )
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      for (unsigned int dim_i = 0; dim_i < hyEdge_dimT; ++dim_i)
+/*      for (unsigned int dim_i = 0; dim_i < hyEdge_dimT; ++dim_i)
         for (unsigned int dim_j = 0; dim_j < hyEdge_dimT; ++dim_j)
           local_mat( dim_i*n_shape_fct_+i , dim_j*n_shape_fct_+j )
             += integrator.template 
                 integrate_vol_phiphifunc<hyEdge_dimT,fun_value>(i, j);
-      
+*/      
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
         // Integral_element - nabla phi_i \vec phi_j dx 
