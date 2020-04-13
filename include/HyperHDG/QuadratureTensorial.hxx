@@ -549,7 +549,7 @@ class IntegratorTensorial
      * \param   j             Local index of local shape function.
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    template < unsigned int dimT , typename func >
+    template < unsigned int dimT, return_t fun(const Point<dimT>&) >
     return_t integrate_vol_phiphifunc(const unsigned int i, const unsigned int j) const
     {
       return_t integral = 0., quad_val;
@@ -568,7 +568,7 @@ class IntegratorTensorial
           quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]]
                         * shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
         }
-        integral += func(quad_pt) * quad_val;
+        integral += fun(quad_pt) * quad_val;
       }
       return integral;
     }

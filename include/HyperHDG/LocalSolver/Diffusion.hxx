@@ -462,10 +462,10 @@ template
 >
 struct DiffusionParameters
 {
-  static SmallSquareMat<hyEdge_dimT,param_float_t> inverse_diffusion_tensor(Point<space_dimT>& pt)
+  static SmallSquareMat<hyEdge_dimT,param_float_t> inverse_diffusion_tensor(const Point<space_dimT>& pt)
   { return diagonal<hyEdge_dimT,param_float_t>(1.); }
-  static param_float_t right_hand_side( Point<space_dimT>& pt ) { return 0.; }
-  static param_float_t neumann_boundary_data( Point<space_dimT>& pt ) { return 0.; }
+  static param_float_t right_hand_side( const Point<hyEdge_dimT>& pt ) { return 1.; } // Needs to be corrected
+  static param_float_t neumann_boundary_data( const Point<space_dimT>& pt ) { return 0.; }
 };
 
 
@@ -710,17 +710,18 @@ assemble_loc_matrix ( const lSol_float_t tau )
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   lSol_float_t integral;
-  
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
-  
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
+      for (unsigned int dim_i = 0; dim_i < hyEdge_dimT; ++dim_i)
+        for (unsigned int dim_j = 0; dim_j < hyEdge_dimT; ++dim_j)
+          local_mat( dim_i*n_shape_fct_+i , dim_j*n_shape_fct_+j )
+            += integrator.template 
+                integrate_vol_phiphifunc<hyEdge_dimT,fun_value>(i, j);
       
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
