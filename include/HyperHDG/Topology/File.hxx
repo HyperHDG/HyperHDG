@@ -37,8 +37,10 @@ namespace Topology
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int,
-  typename hyNode_index_t = hyEdge_index_t >
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int,
+  typename hyNode_index_t = hyEdge_index_t
+>
 class File
 {
   
@@ -47,6 +49,8 @@ class File
    ************************************************************************************************/
   class hyEdge
   {
+    public:
+      static constexpr unsigned int n_hyNodes() { return 2 * hyEdge_dimT; }
     private:
       /*!*******************************************************************************************
        * \brief   Reference to parent hypergraph.

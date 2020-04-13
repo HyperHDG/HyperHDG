@@ -539,4 +539,37 @@ class IntegratorTensorial
         else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
       return integral;
     }
+
+    /*!*********************************************************************************************
+     * \brief   Integrate product of shape functions over dimT-dimensional volume.
+     *
+     * \tparam  dimT          Dimension of the volume.
+     * \tparam  func          Function the is also to be integrated;
+     * \param   i             Local index of local shape function.
+     * \param   j             Local index of local shape function.
+     * \retval  integral      Integral of product of both shape functions.
+     **********************************************************************************************/
+    template < unsigned int dimT , typename func >
+    return_t integrate_vol_phiphifunc(const unsigned int i, const unsigned int j) const
+    {
+      return_t integral = 0., quad_val;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_q;
+      Point<dimT, return_t> quad_pt;
+
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), dimT); ++q)
+      {
+        dec_q = index_decompose<dimT,quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_val = 1.;
+        for (unsigned int dim = 0; dim < dimT; ++dim)
+        {
+          quad_pt[dim] = quad_points_[dec_q[dim]];
+          quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]]
+                        * shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
+        }
+        integral += func(quad_pt) * quad_val;
+      }
+      return integral;
+    }
 }; // end of class Integrator
