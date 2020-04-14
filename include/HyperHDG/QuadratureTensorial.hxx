@@ -571,6 +571,6 @@ class IntegratorTensorial
         }
         integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
       }
-      return integral;
+      return integral * geom.area();
     }
 }; // end of class Integrator
