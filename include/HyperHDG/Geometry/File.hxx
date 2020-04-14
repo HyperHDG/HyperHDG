@@ -100,6 +100,16 @@ class File
         return hyGraph_geometry_.domain_info_.
                  points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
       }
+
+      Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT, pt_coord_t>& pt)
+      {
+        for (unsigned int dim = 0; dim < space_dimT; ++dim)
+          hy_assert( Point[dim] >= 0. && Point[dim] <= 1. ,
+                     "Point must lie in reference square!");
+        generate_mapping_if_needed();
+        return mapping->map_reference_to_physical(pt);
+      }
+
       /*!*******************************************************************************************
        * \brief   Return normal of specified index of a hyperedge.
        *
