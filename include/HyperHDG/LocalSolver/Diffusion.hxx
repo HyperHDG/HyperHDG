@@ -734,7 +734,7 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
       { 
         // Integral_element - nabla phi_i \vec phi_j dx 
         // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-        integral = integrator.template integrate_vol_Dphiphi<hyEdge_dimT>(i, j, dim);
+        integral = integrator.template integrate_vol_Dphiphi<GeomT>(i, j, dim, geom); // Todo: consider transformations for Laplace-Beltrami
         local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
         local_mat(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) -= integral;
     
