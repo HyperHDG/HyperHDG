@@ -110,6 +110,14 @@ class File
         return mapping->map_reference_to_physical(pt);
       }
 
+      Point<space_dimT, pt_coord_t> span_vec(const unsigned int index)
+      {
+        hy_assert( index < hyEdge_dimT,
+                   "There are only " << hyEdge_dimT << " spanning vectors." );
+        generate_mapping_if_needed();
+        return mapping->get_column(index);
+      }
+
       /*!*******************************************************************************************
        * \brief   Return normal of specified index of a hyperedge.
        *

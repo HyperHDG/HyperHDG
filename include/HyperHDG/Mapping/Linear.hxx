@@ -64,12 +64,15 @@ class Linear
       return std::sqrt(std::abs(determinant( transposed_mat_times_mat(mat_face, mat_face) )));
     }
 
+    SmallVec<space_dimT,map_float_t> matrix_column(const unsigned int col) const
+    { return matrix_.get_column(col); }
+
     template<unsigned int n_vec>
     SmallMat<space_dimT,n_vec,map_float_t> map_reference_to_physical
     ( const SmallMat<hyEdge_dimT,n_vec,map_float_t>& mat ) const
     { return matrix_ * mat + translation_; }
 
-    template<unsigned int n_vec>
+    template<unsigned int n_vec> // Todo: Implement matrix solution via qr deconposition for this
     SmallMat<hyEdge_dimT,n_vec,map_float_t> map_reference_to_physical
     ( const SmallMat<space_dimT,n_vec,map_float_t>& mat ) const
     { return (mat - translation_) / matrix_; }
