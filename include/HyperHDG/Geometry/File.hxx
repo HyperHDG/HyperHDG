@@ -125,6 +125,13 @@ class File
         if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
+
+      pt_coord_t area()
+      {
+        generate_mapping_if_needed();
+        return mapping->functional_determinant_hyEdge();
+      }
+
       /*!*******************************************************************************************
        * \brief   Return normal of specified index of a hyperedge.
        *

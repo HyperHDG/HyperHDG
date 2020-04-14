@@ -83,6 +83,7 @@ class UnitCube
       static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
       Point<space_dimT> map_ref_to_phys(const Point<hyEdge_dimT>& pt) const
       {Point<space_dimT> a; return a;}
+      double area() const { return 1.; }
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.
