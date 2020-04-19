@@ -37,11 +37,22 @@ class Linear
 
   private:
     const Point<space_dimT,map_float_t> translation_;
-    
     const SmallMat<space_dimT,hyEdge_dimT,map_float_t> matrix_;
 
+    std::shared_ptr< SmallSquareMat<space_dimT,map_float_t> > matrix_q_;
+    std::shared_ptr< SmallSquareMat<hyEdge_dimT,map_float_t> > matrix_r_;
+
     std::shared_ptr< SmallMat<space_dimT,hyEdge_dimT, map_float_t> > inner_normals_;
-    std::shared_ptr< SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> > outer_normals_;
+
+    void make_qr_if_needed()
+    {
+      if (matrix_q_ && matrix_r_)  return;
+      hy_assert ( !matrix_q_ && !matrix_r_ ,
+                  "Construction of only one matrix has not been implemented, yet!" );
+      matrix_q_ = std::make_shared< SmallSquareMat<space_dimT,map_float_t> > ();
+      matrix_r_ = std::make_shared< SmallSquareMat<hyEdge_dimT,map_float_t> > ();
+      qr_decomp( matrix_ , *matrix_q_, *matrix_r_ );
+    }
 
   public:
 
@@ -52,8 +63,13 @@ class Linear
     )
     : translation_(translation), matrix_(matrix) { }
 
-    map_float_t functional_determinant_hyEdge() const
-    { return std::sqrt(std::abs(determinant( transposed_mat_times_mat(matrix_, matrix_) ))); }
+    map_float_t functional_determinant_hyEdge()
+    { 
+      make_qr_if_needed();
+      map_float_t determinant = 1.;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant[i] *= matrix_r_(i,i);
+      return determinant;
+    }
 
     map_float_t functional_determinant_hyNode(const unsigned int index) const
     {
@@ -61,7 +77,7 @@ class Linear
       SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         mat_face.set_column(i - (i > index), matrix_.get_column(i));
-      return std::sqrt(std::abs(determinant( transposed_mat_times_mat(mat_face, mat_face) )));
+      return std::sqrt(determinant( transposed_mat_times_mat(mat_face, mat_face) ));
     }
 
     SmallVec<space_dimT,map_float_t> matrix_column(const unsigned int col) const
@@ -108,16 +124,8 @@ class Linear
       hy_assert( index < space_dimT-hyEdge_dimT ,
                  "The index of the outer normal must not be bigger than their amount." );
 
-      if (!outer_normals_)
-      {
-        outer_normals_ = 
-          std::make_shared< SmallMat<space_dimT,space_dimT-hyEdge_dimT, map_float_t> > ();
-        SmallMat<space_dimT,space_dimT,map_float_t> helper = qr_decomp_q(matrix_);
-        for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
-          outer_normals_->set_column(i, helper.get_column(i + hyEdge_dimT));
-      }
-
-      return outer_normals_->get_column(index);;
+      make_qr_if_needed();
+      return matrix_q_->get_column(index + hyEdge_dimT);;
     }
 }; // end class File
 

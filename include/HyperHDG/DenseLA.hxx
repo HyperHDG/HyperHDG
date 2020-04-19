@@ -898,6 +898,62 @@ SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( const SmallMat<n_rows,n_cols,m
 }
 
 /*!*************************************************************************************************
+ * \brief   Solve linear system of equations.
+ * 
+ * \todo    Do the doxygen.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+void qr_decomp
+( 
+  SmallMat<n_rows,n_cols,mat_entry_t>& mat,
+  SmallSquareMat<n_rows,mat_entry_t>& mat_q, SmallSquareMat<n_cols,mat_entry_t>& mat_r
+)
+{ 
+  static_assert( n_cols <= n_rows, "Function only defined for these matrices!" );
+  lapack_qr_decomp<n_rows,n_cols>(mat.data(), mat_q.data(), mat_r.data());
+  SmallVec<n_rows,mat_entry_t> factors(1.);
+  bool switch_necessary = false;
+
+  if (n_rows % 2 == 1)
+  {
+    if (n_cols == n_rows)  factors[0] *= -1.;
+    else                   factors[n_rows - 1] *= -1.;
+  }
+  
+  for (unsigned int i = 0; i < n_cols; ++i)  if (mat_r(i,i) < 0.)
+  {
+    factors[i] *= -1.;
+    switch_necessary = !switch_necessary;
+  }
+  if (switch_necessary)  factors[0] *= -1.;
+
+  for (unsigned int i = 0; i < n_rows; ++i)  if (factors[i] < 0.)
+    for (unsigned int j = 0; j < n_rows; ++j)  mat_q(j,i) *= factors[i];
+
+  for (unsigned int i = 0; i < n_cols; ++i)  if (factors[i] < 0.)
+    for (unsigned int j  = 0; j < n_cols; ++j)  mat_r(i,j) *= factors[i];
+}
+/*!*************************************************************************************************
+ * \brief   Solve linear system of equations.
+ * 
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+void qr_decomp
+( 
+  const SmallMat<n_rows,n_cols,mat_entry_t>& mat,
+  SmallSquareMat<n_rows,mat_entry_t>& mat_q, SmallSquareMat<n_cols,mat_entry_t>& mat_r
+)
+{
+  SmallMat<n_rows,n_cols,mat_entry_t> helper(mat);
+  return qr_decomp(helper, mat_q, mat_r);
+}
+
+/*!*************************************************************************************************
  * \brief   Determinant of matrix.
  * 
  * \todo    Do the doxygen.
