@@ -917,22 +917,30 @@ void qr_decomp
   SmallVec<n_rows,mat_entry_t> factors(1.);
   bool switch_necessary = false;
 
+  // Q should have determinant = +1 and not -1 (as it has for odd dimensions)!
   if (n_rows % 2 == 1)
   {
     if (n_cols == n_rows)  factors[0] *= -1.;
     else                   factors[n_rows - 1] *= -1.;
   }
   
-  for (unsigned int i = 0; i < n_cols; ++i)  if (mat_r(i,i) < 0.)
+  // Diagonal entries (but first) should be positive!
+  // The switch might be necessary to ensure that det(Q) = +1.
+  for (unsigned int i = 1; i < n_cols; ++i)  if (mat_r(i,i) < 0.)
   {
     factors[i] *= -1.;
     switch_necessary = !switch_necessary;
   }
+
+  // If there is a non-positive entry, this is only allowed to be the index (0,0)!
+  // This step ensures that Q remains with determinant = +1.
   if (switch_necessary)  factors[0] *= -1.;
 
+  // Multuply Q column-wise with the factors!
   for (unsigned int i = 0; i < n_rows; ++i)  if (factors[i] < 0.)
     for (unsigned int j = 0; j < n_rows; ++j)  mat_q(j,i) *= factors[i];
 
+  // Multiply R row-wise with the factors!
   for (unsigned int i = 0; i < n_cols; ++i)  if (factors[i] < 0.)
     for (unsigned int j  = 0; j < n_cols; ++j)  mat_r(i,j) *= factors[i];
 }
