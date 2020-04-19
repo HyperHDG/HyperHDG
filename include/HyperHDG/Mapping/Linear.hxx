@@ -93,6 +93,13 @@ class Linear
     ( const SmallMat<space_dimT,n_vec,map_float_t>& mat ) const
     { return (mat - translation_) / matrix_; }
 
+    const SmallSquareMat<hyEdge_dimT,map_float_t>& mat_r()
+    {
+      make_qr_if_needed();
+      return *matrix_r_;
+    }
+
+
     Point<space_dimT,map_float_t> inner_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,

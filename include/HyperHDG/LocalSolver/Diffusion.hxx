@@ -719,6 +719,7 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   lSol_float_t integral;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
+  SmallVec<hyEdge_dimT, lSol_float_t> helper_vec;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -730,13 +731,13 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
 
+      // Integral_element - nabla phi_i \vec phi_j dx 
+      // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
+      helper_vec = integrator.template integrate_vol_nablaphiphi<GeomT>(i, j, geom); 
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
-        // Integral_element - nabla phi_i \vec phi_j dx 
-        // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-        integral = integrator.template integrate_vol_Dphiphi<GeomT>(i, j, dim, geom); // Todo: consider transformations for Laplace-Beltrami
-        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
-        local_mat(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) -= integral;
+        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= helper_vec[dim];
+        local_mat(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) -= helper_vec[dim];
     
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);

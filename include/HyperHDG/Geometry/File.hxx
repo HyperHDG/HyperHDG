@@ -118,6 +118,12 @@ class File
         return mapping->get_column(index);
       }
 
+      const SmallSquareMat<hyEdge_dimT,pt_coord_t>& mat_r()
+      {
+        generate_mapping_if_needed();
+        return mapping->mat_r();
+      }
+
       /*!*******************************************************************************************
        * \brief   Return normal of specified index of a hyperedge.
        *
@@ -137,7 +143,7 @@ class File
       pt_coord_t area()
       {
         generate_mapping_if_needed();
-        return mapping->functional_determinant_hyEdge();
+        return std::abs(mapping->functional_determinant_hyEdge());
       }
 
       /*!*******************************************************************************************
