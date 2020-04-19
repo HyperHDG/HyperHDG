@@ -124,6 +124,33 @@ class File
         return mapping->mat_r();
       }
 
+      pt_coord_t area()
+      {
+        generate_mapping_if_needed();
+        return std::abs(mapping->functional_determinant_hyEdge());
+      }
+
+      pt_coord_t face_area(const unsigned int  index)
+      {
+        hy_assert( index < 2 * hyEdge_dimT ,
+                   "A hyperedge has 2 * dim(hyEdge) faces." );
+
+        generate_mapping_if_needed();
+        return std::abs(mapping->functional_determinant_hyNode(index / 2));
+      }
+
+
+      Point<hyEdge_dimT,pt_coord_t> hyEdge_dim_normal(const unsigned int index)
+      {
+        hy_assert( index < 2 * hyEdge_dimT ,
+                   "A hyperedge has 2 * dim(hyEdge) inner normals." );
+        
+        generate_mapping_if_needed();
+        Point<hyEdge_dimT,pt_coord_t> normal = mapping->hyEdge_dim_normal(index / 2);
+        if (index % 2 == 0)  normal *= -1.;
+        return normal;
+      }
+
       /*!*******************************************************************************************
        * \brief   Return normal of specified index of a hyperedge.
        *
@@ -138,12 +165,6 @@ class File
         Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index / 2);
         if (index % 2 == 0)  normal *= -1.;
         return normal;
-      }
-
-      pt_coord_t area()
-      {
-        generate_mapping_if_needed();
-        return std::abs(mapping->functional_determinant_hyEdge());
       }
 
       /*!*******************************************************************************************

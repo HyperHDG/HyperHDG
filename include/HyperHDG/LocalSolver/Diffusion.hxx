@@ -717,40 +717,38 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
-  lSol_float_t integral;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
-  SmallVec<hyEdge_dimT, lSol_float_t> helper_vec;
+  lSol_float_t vol_integral, face_integral, helper;
+  SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      integral = integrator.template integrate_vol_phiphifunc
-                   < GeomT, parameters::inverse_diffusion_coeff > (i, j, geom);
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
-
+      vol_integral = integrator.template integrate_vol_phiphifunc
+                        < GeomT, parameters::inverse_diffusion_coeff > (i, j, geom);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      helper_vec = integrator.template integrate_vol_nablaphiphi<GeomT>(i, j, geom); 
+      grad_int_vec = integrator.template integrate_vol_nablaphiphi<GeomT>(i, j, geom);       
+
+      face_integral = 0.;
+      normal_int_vec = 0.;
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      {
+        helper = integrator.template integrate_bdr_phiphi<GeomT>(i, j, face, geom);
+        face_integral += helper;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          normal_int_vec[dim] += geom.hyEdge_dim_normal(face).operator[](dim) * helper; 
+      }
+
+      local_mat( hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
-        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= helper_vec[dim];
-        local_mat(dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) -= helper_vec[dim];
-    
-        // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) += integral;
-        // and from the penalty in the lower right diagonal block
-        local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
-          += tau * integral;
-        // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        local_mat(hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j) -= integral;
-        // and from the penalty in the lower right diagonal block
-        local_mat(hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j) 
-          += tau * integral;
+        local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += vol_integral;
+        local_mat( hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j ) -= grad_int_vec[dim];
+        local_mat( dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) -= grad_int_vec[dim];
+        local_mat( hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j ) += normal_int_vec[dim];
       }
     }
   }
