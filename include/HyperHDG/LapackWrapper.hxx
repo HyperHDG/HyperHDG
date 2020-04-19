@@ -275,18 +275,19 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
 }
 
 /*!*************************************************************************************************
- * \brief   Determinant of a square system.
+ * \brief   Determinant of a rectangular system.
  *
  * \todo    All! 
  **************************************************************************************************/
-template < unsigned int system_size, typename lapack_float_t >
-lapack_float_t lapack_det ( std::array<lapack_float_t, system_size * system_size>& dense_mat )
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+
   lapack_float_t determinant = 1.;
-  std::array<lapack_float_t, system_size> tau;
-  
-  lapack_qr(system_size, system_size, dense_mat.data(), tau.data());
-  for (unsigned int i = 0; i < system_size; ++i)  determinant *= -dense_mat[i * (system_size + 1)];
+  for (unsigned int i = 0; i < rank; ++i)  determinant *= -dense_mat[i * (n_rows + 1)];
   return determinant;
 }
 
