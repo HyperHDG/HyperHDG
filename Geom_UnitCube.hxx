@@ -86,6 +86,7 @@ class UnitCube
       double area() const { return 1.; }
       Point<space_dimT> span_vec(const unsigned int index)
       {Point<space_dimT> a(1.); return a;}
+      const SmallSquareMat<hyEdge_dimT> mat_r() { SmallSquareMat<hyEdge_dimT> a = diagonal<hyEdge_dimT,hyEdge_dimT,double>(1.); return a; }
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.

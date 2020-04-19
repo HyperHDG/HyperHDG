@@ -574,16 +574,22 @@ class IntegratorTensorial
       return integral * geom.area();
     }
 
-    template < typename GeomT >  return_t integrate_vol_Dphiphi
-    ( const unsigned int i, const unsigned int j, const unsigned int dim, GeomT& geom ) const
+    template < typename GeomT >
+    SmallVec<GeomT::hyEdge_dim(), return_t> integrate_vol_nablaphiphi
+    ( const unsigned int i, const unsigned int j, GeomT& geom ) const
     {
-      return_t integral = 1.;
+      SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim()>(j);
-      for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
-        if ( dim == dim_fct )  integral *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
-        else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-      return integral * geom.area() / norm_2(geom.span_vec(dim));
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+        for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+          if (dim == dim_fct)  integral[dim] *= integrate_1D_Dphiphi(dec_i[dim_fct],dec_j[dim_fct]);
+          else                 integral[dim] *= integrate_1D_phiphi(dec_i[dim_fct],dec_j[dim_fct]);
+      SmallSquareMat<GeomT::hyEdge_dim(), return_t> mat_r_transposed;
+      for (unsigned int i = 0; i < GeomT::hyEdge_dim(); ++i)
+        for (unsigned int j = 0; j < GeomT::hyEdge_dim(); ++j)
+          mat_r_transposed(i,j) = geom.mat_r().operator()(j,i);
+      return integral / mat_r_transposed;
     }
 
 }; // end of class Integrator
