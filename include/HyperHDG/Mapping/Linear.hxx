@@ -67,7 +67,7 @@ class Linear
     { 
       make_qr_if_needed();
       map_float_t determinant = 1.;
-      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant[i] *= matrix_r_(i,i);
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant[i] *= matrix_r_->operator()(i,i);
       return determinant;
     }
 
