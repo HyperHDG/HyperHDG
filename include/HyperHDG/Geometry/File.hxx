@@ -104,7 +104,7 @@ class File
       Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT, pt_coord_t>& pt)
       {
         for (unsigned int dim = 0; dim < space_dimT; ++dim)
-          hy_assert( Point[dim] >= 0. && Point[dim] <= 1. ,
+          hy_assert( pt[dim] >= 0. && pt[dim] <= 1. ,
                      "Point must lie in reference square!");
         generate_mapping_if_needed();
         return mapping->map_reference_to_physical(pt);

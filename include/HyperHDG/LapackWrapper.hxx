@@ -353,6 +353,31 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
   return matQ.data();
 }
 
+template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
+inline void get_q_from_lapack_qr_result
+( 
+  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  const std::array<lapack_float_t, rank>& tau,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+)
+{
+  SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.);
+  SmallMat<n_rows, n_rows, lapack_float_t> matQ(std::move(mat_q));
+  SmallVec<n_rows, lapack_float_t> vec;
+  matQ = unity;
+
+  for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
+  {
+    for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
+      if (j < i)        vec[j] = 0.;
+      else if (j == i)  vec[j] = 1.;
+      else              vec[j] = dense_mat[i * n_rows + j];
+    matQ = matQ * ( unity - tau[i] * dyadic_product(vec, vec) );
+  }
+
+  mat_q = std::move(matQ.data());
+}
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
@@ -361,6 +386,20 @@ inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
     for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
       if (j > i)  dense_mat[i * n_rows + j] = 0.;
   return dense_mat;
+}
+
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+inline void get_r_from_lapack_qr_result
+( 
+  const std::array<lapack_float_t, n_rows * n_cols>& lapack_mat,
+  std::array<lapack_float_t, n_cols * n_cols >& mat_r
+)
+{
+  static_assert( n_rows >= n_cols, "Function only defined for these matrices!" );
+  for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
+    for (unsigned int j = 0; j < n_cols; ++j)  // j is row index, here!
+      if (j > i)  mat_r[i * n_rows + j] = 0.;
+      else        mat_r[i * n_cols + j] = lapack_mat[i * n_rows + j];
 }
 
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
@@ -382,4 +421,20 @@ std::array<lapack_float_t, n_rows * n_cols> lapack_qr_decomp_r
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
   return get_r_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat);
+}
+
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+void lapack_qr_decomp
+( 
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q,
+  std::array<lapack_float_t, n_cols * n_cols >& mat_r
+)
+{
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+
+  get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau, mat_q);
+  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat, mat_r);
 }
