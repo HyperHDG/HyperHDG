@@ -105,15 +105,24 @@ class Linear
       
       make_qr_if_needed();
       SmallMat<hyEdge_dimT,hyEdge_dimT-1,map_float_t> other_vectors;
+      Point<hyEdge_dimT,map_float_t> normal;
+
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         other_vectors.set_column(i - (i > index), matrix_r_->get_column(i));
-      Point<hyEdge_dimT,map_float_t> normal = qr_decomp_q(other_vectors).get_column(hyEdge_dimT-1);
+      normal = qr_decomp_q(other_vectors).get_column(hyEdge_dimT-1);
       map_float_t scalar_pdct = scalar_pdct(normal, matrix_r_->get_column(index));
       hy_assert( scalar_pdct != 0., "Scalar product must not be zero!" );
       if (scalar_pdct < 0.)  normal *= -1.;
       return normal;
     }
 
+
+    /*!*********************************************************************************************
+     * \todo  Discuss with Guido!!!
+     *        It seems that Point<space_dimT, map_float_t> normal = qr_decomp_q ... is invalid
+     *        because the code cannot transform the floats to double, here. There is no compile
+     *        error, but the CG method does not converge if this is done.
+     **********************************************************************************************/
     Point<space_dimT,map_float_t> inner_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,
@@ -121,13 +130,14 @@ class Linear
       if constexpr (space_dimT == 1)  return SmallVec<space_dimT,map_float_t>(1.);
 
       SmallMat<space_dimT,space_dimT-1,map_float_t> other_vectors;
-      
+      Point<space_dimT, map_float_t> normal;
+
       for (unsigned int i = 0; i < space_dimT-hyEdge_dimT; ++i)
         other_vectors.set_column(i, outer_normal(i));
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         other_vectors.set_column(i + space_dimT-hyEdge_dimT - (i > index), matrix_.get_column(i));
 
-      Point<space_dimT, map_float_t> normal = qr_decomp_q(other_vectors).get_column(space_dimT-1);
+      normal = qr_decomp_q(other_vectors).get_column(space_dimT-1);
       map_float_t scalar_pdct = scalar_product(normal, matrix_.get_column(index));
       hy_assert( scalar_pdct != 0. , "Scalar product must not be zero." );
       if (scalar_pdct < 0)  normal *= -1.;
