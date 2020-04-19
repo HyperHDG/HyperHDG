@@ -77,7 +77,7 @@ class Linear
       SmallMat<space_dimT,hyEdge_dimT-1,map_float_t> mat_face;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         mat_face.set_column(i - (i > index), matrix_.get_column(i));
-      return std::sqrt(determinant( transposed_mat_times_mat(mat_face, mat_face) ));
+      return determinant( mat_face );
     }
 
     SmallVec<space_dimT,map_float_t> matrix_column(const unsigned int col) const

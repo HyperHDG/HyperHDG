@@ -857,7 +857,7 @@ using Point = SmallVec<n_rows, mat_entry_t>;
 template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
 ( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
-{ return lapack_solve<n_rowsA,n_colsB>(A.data(), b.data()); }
+{ return lapack_solve<n_rowsA,n_colsB,mat_entry_t>(A.data(), b.data()); }
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations.
  * 
@@ -883,7 +883,7 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( SmallMat<n_rows,n_cols,mat_entry_t>& mat )
-{ return lapack_qr_decomp_q<n_rows,n_cols>(mat.data()); }
+{ return lapack_qr_decomp_q<n_rows,n_cols,mat_entry_t>(mat.data()); }
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations.
  * 
@@ -913,7 +913,7 @@ void qr_decomp
 )
 { 
   static_assert( n_cols <= n_rows, "Function only defined for these matrices!" );
-  lapack_qr_decomp<n_rows,n_cols>(mat.data(), mat_q.data(), mat_r.data());
+  lapack_qr_decomp<n_rows,n_cols,mat_entry_t>(mat.data(), mat_q.data(), mat_r.data());
   SmallVec<n_rows,mat_entry_t> factors(1.);
   bool switch_necessary = false;
 
@@ -961,18 +961,18 @@ void qr_decomp
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int system_size, typename mat_entry_t >
-mat_entry_t determinant ( SmallMat<system_size,system_size,mat_entry_t>& mat )
-{ return lapack_det<system_size>(mat.data()); }
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+mat_entry_t determinant ( SmallMat<n_rows,n_cols,mat_entry_t>& mat )
+{ return lapack_det<n_rows,n_cols,mat_entry_t>(mat.data()); }
 /*!*************************************************************************************************
  * \brief   Determinant of matrix.
  * 
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int system_size, typename mat_entry_t >
-mat_entry_t determinant ( const SmallMat<system_size,system_size,mat_entry_t>& mat )
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+mat_entry_t determinant ( const SmallMat<n_rows,n_cols,mat_entry_t>& mat )
 {
-  SmallMat<system_size,system_size,mat_entry_t> helper(mat);
+  SmallMat<n_rows,n_cols,mat_entry_t> helper(mat);
   return determinant(helper);
 }
