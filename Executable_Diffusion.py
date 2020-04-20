@@ -18,7 +18,7 @@ filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
 PyDiffusionProblem = \
-  hyImport(["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames)
+  hyImport(["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]", "double"], filenames)
 
 # Define tolerance
 tolerance = 1e-8
