@@ -50,11 +50,11 @@ class AbstractProblem
     /*!*********************************************************************************************
      * \brief   Instantiation of a local solver.
      **********************************************************************************************/
-    const LocalSolverT  local_solver_;
+    const LocalSolverT local_solver_;
     /*!*********************************************************************************************
      * \brief   Struct encoding the options for plotting.
      **********************************************************************************************/
-    PlotOptions   plot_options;
+    PlotOptions plot_options;
   public:
     /*!*********************************************************************************************
      * \brief   Abstract problem constructor.
@@ -66,11 +66,13 @@ class AbstractProblem
      * \param   construct_geom    Information to construct a geometry.
      * \param   construct_loc_sol Information to construct a local solver.
      **********************************************************************************************/
-    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo,
-                     const typename GeometryT::constructor_value_type& construct_geom,
-                     const typename LocalSolverT::constructor_value_type& construct_loc_sol )
-    : hyper_graph_  ( construct_topo, construct_geom ),
-      local_solver_ ( construct_loc_sol )
+    AbstractProblem
+    ( 
+      const typename TopologyT::constructor_value_type& construct_topo,
+      const typename GeometryT::constructor_value_type& construct_geom,
+      const typename LocalSolverT::constructor_value_type& construct_loc_sol
+    )
+    : hyper_graph_  ( construct_topo, construct_geom ), local_solver_ ( construct_loc_sol )
     {
       static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -88,10 +90,12 @@ class AbstractProblem
      * \param   construct_topo    Information to construct a topology.
      * \param   construct_loc_sol Information to construct a local solver.
      **********************************************************************************************/
-    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo,
-                     const typename LocalSolverT::constructor_value_type& construct_loc_sol )
-    : hyper_graph_  ( construct_topo ),
-      local_solver_ ( construct_loc_sol )
+    AbstractProblem
+    ( 
+      const typename TopologyT::constructor_value_type& construct_topo,
+      const typename LocalSolverT::constructor_value_type& construct_loc_sol
+    )
+    : hyper_graph_  ( construct_topo ), local_solver_ ( construct_loc_sol )
     {
       static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -108,7 +112,7 @@ class AbstractProblem
      *
      * \param   construct_topo    Information to construct a topology.
      **********************************************************************************************/
-    AbstractProblem( const typename TopologyT::constructor_value_type& construct_topo )
+    AbstractProblem ( const typename TopologyT::constructor_value_type& construct_topo )
     : hyper_graph_  ( construct_topo )
     {
       static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
@@ -156,11 +160,8 @@ class AbstractProblem
      * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
      *                        problem.
      **********************************************************************************************/
-    template < typename dof_value_t = double >
-    std::vector<dof_value_t> return_zero_vector( ) const
-    {
-      return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.);
-    }
+    template < typename dof_value_t = double >  std::vector<dof_value_t> return_zero_vector () const
+    { return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.); }
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
      * 
@@ -174,8 +175,8 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/
-    template < typename hyNode_index_t = unsigned int, typename dof_value_t = double >
-    std::vector<dof_value_t> matrix_vector_multiply( const std::vector<dof_value_t>& x_vec ) const
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    std::vector<dof_value_t> matrix_vector_multiply ( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -218,9 +219,19 @@ class AbstractProblem
     
       return vec_Ax;
     }
-
-    template < typename hyNode_index_t = unsigned int, typename dof_value_t = double >
-    void add_rhs( std::vector<dof_value_t>& x_vec ) const
+    /*!*********************************************************************************************
+     * \brief   Add global right-hand side vector to vec_x.
+     * 
+     * \todo    Decide whether \c auto \c hyperedge should be const!
+     *
+     * Function that evaluates the global right-hand side (implemented wthin the local solver) and
+     * adds the result to the function argument.
+     *
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  x_vec         A \c std::vector containing the input plus the global right-hand side.
+     **********************************************************************************************/
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    void add_rhs ( std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -273,9 +284,7 @@ class AbstractProblem
      *                        \c int.
      **********************************************************************************************/
     dof_index_t size_of_system() const
-    {
-      return hyper_graph_.n_global_dofs();
-    }
+    { return hyper_graph_.n_global_dofs(); }
     /*!*********************************************************************************************
      * \brief   Set plot option and return old plot option.
      *
@@ -319,9 +328,7 @@ class AbstractProblem
      * \param   lambda        A vector of unknowns containing the data vector.
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
-    template < typename dof_value_t = double >
+    template < typename dof_value_t >
     void plot_solution( const std::vector<dof_value_t>& lambda ) const
-    {
-      plot(hyper_graph_, local_solver_, lambda , plot_options );
-    }
+    { plot(hyper_graph_, local_solver_, lambda , plot_options ); }
 }; // end of class AbstractProblem
