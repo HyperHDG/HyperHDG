@@ -101,13 +101,15 @@ class File
                  points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
       }
 
-      Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT, pt_coord_t>& pt)
+      template < unsigned int n_vec >
+      SmallMat<space_dimT, n_vec, pt_coord_t> map_ref_to_phys
+      (const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& pts)
       {
-        for (unsigned int dim = 0; dim < space_dimT; ++dim)
-          hy_assert( pt[dim] >= 0. && pt[dim] <= 1. ,
+        for (unsigned int i = 0; i < pts.size(); ++i)
+          hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
                      "Point must lie in reference square!");
         generate_mapping_if_needed();
-        return mapping->map_reference_to_physical(pt);
+        return mapping->map_reference_to_physical(pts);
       }
 
       Point<space_dimT, pt_coord_t> span_vec(const unsigned int index)
