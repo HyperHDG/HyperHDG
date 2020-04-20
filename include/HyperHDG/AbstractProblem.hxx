@@ -218,6 +218,48 @@ class AbstractProblem
     
       return vec_Ax;
     }
+
+    template < typename hyNode_index_t = unsigned int, typename dof_value_t = double >
+    void add_rhs( std::vector<dof_value_t>& x_vec ) const
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
+      
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+      
+      // Do matrix--vector multiplication by iterating over all hyperedges.
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr ( LocalSolverT::use_geometry() )
+          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge.geometry);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_rhs();
+        
+        // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyper_graph_.hyNode_factory().add_to_dof_values
+            (hyEdge_hyNodes[hyNode], x_vec, hyEdge_dofs[hyNode]);
+      });
+      
+      // Set all Dirichlet values to zero.
+      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
+      {
+        hy_assert( dirichlet_indices_[i] >= 0 
+                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
+                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
+                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
+        x_vec[dirichlet_indices_[i]] = 0.;
+      }
+    }
     /*!*********************************************************************************************
      * \brief   Determine size of condensed system for the skeletal unknowns.
      *
