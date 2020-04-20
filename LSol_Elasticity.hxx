@@ -246,6 +246,16 @@ class LengtheningBeam
       return edge_dof_to_node_dof(bdr_values, geom);
     }
 
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+      return result;
+    }
+
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
@@ -782,6 +792,15 @@ class BernoulliBendingBeam
       return result;
     }
     
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+      return result;
+    }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
     std::array
@@ -1206,7 +1225,17 @@ class LengtheningBernoulliBendingBeam
           result[i][j] += aux[i][j];
 
       return result;
-    }    
+    }
+
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+      return result;
+    }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
@@ -1496,6 +1525,16 @@ class TimoschenkoBendingBeam
             result[i][j] += aux[i][j];
       }
 
+      return result;
+    }
+
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       return result;
     }
     
@@ -1926,7 +1965,17 @@ class LengtheningTimoschenkoBendingBeam
           result[i][j] += aux[i][j];
 
       return result;
-    }    
+    }
+
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
+    numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
+      return result;
+    }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
