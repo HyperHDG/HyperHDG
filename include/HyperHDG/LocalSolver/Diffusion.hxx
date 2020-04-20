@@ -456,16 +456,13 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 
 
 
-template
-< 
-  unsigned int space_dimT, typename param_float_t = double
->
+template < unsigned int space_dimT, typename param_float_t = double >
 struct DiffusionParameters
 {
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT,param_float_t>& pt)
   { return 1.;  }
-  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt ) { return 0.; }
-  static param_float_t neumann_boundary_data( const Point<space_dimT,param_float_t>& pt ) { return 0.; }
+  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
 };
 
 
@@ -595,6 +592,9 @@ class Diffusion
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
     ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
       GeomT& geom ) const;
+
+    template < typename GeomT >
+    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_global_rhs ( GeomT& geom ) const;
     
     /*!*********************************************************************************************
      * \brief  Solve local problem.
@@ -798,6 +798,31 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::ass
   
   return right_hand_side;
 } // end of Diffusion::assemble_rhs
+
+
+// -------------------------------------------------------------------------------------------------
+// assemble_rhs_from_global_rhs
+// -------------------------------------------------------------------------------------------------
+
+template
+< 
+  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  typename parameters, typename lSol_float_t
+>
+template < typename GeomT >
+inline SmallVec
+<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_loc_dofs_, lSol_float_t>
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::
+assemble_rhs_from_global_rhs ( GeomT& geom ) const
+{
+  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+  
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+    right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
+      = integrator.template integrate_vol_phifunc<GeomT,parameters::right_hand_side>(i, geom);
+  
+  return right_hand_side;
+} // end of Diffusion::assemble_rhs_from_global_rhs
 
 
 // -------------------------------------------------------------------------------------------------
