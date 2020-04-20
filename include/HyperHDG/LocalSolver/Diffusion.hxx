@@ -462,10 +462,10 @@ template
 >
 struct DiffusionParameters
 {
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT>& pt)
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT,param_float_t>& pt)
   { return 1.;  }
-  static param_float_t right_hand_side( const Point<space_dimT>& pt ) { return 0.; }
-  static param_float_t neumann_boundary_data( const Point<space_dimT>& pt ) { return 0.; }
+  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt ) { return 0.; }
+  static param_float_t neumann_boundary_data( const Point<space_dimT,param_float_t>& pt ) { return 0.; }
 };
 
 

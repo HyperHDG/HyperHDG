@@ -81,8 +81,9 @@ class UnitCube
     public:
       static constexpr unsigned int space_dim() { return space_dimT; }
       static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-      Point<space_dimT> map_ref_to_phys(const Point<hyEdge_dimT>& pt) const
-      {Point<space_dimT> a; return a;}
+      template <typename pt_coord_t>
+      Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT,pt_coord_t>& pt) const
+      {Point<space_dimT,pt_coord_t> a; return a;}
       double area() const { return 1.; }
       Point<space_dimT> span_vec(const unsigned int index)
       {Point<space_dimT> a(1.); return a;}

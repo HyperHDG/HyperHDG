@@ -97,7 +97,7 @@ class File
        ********************************************************************************************/
       Point<space_dimT,pt_coord_t> point(const unsigned int pt_index) const
       { 
-        return hyGraph_geometry_.domain_info_.
+        return (Point<space_dimT,pt_coord_t>) hyGraph_geometry_.domain_info_.
                  points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
       }
 
