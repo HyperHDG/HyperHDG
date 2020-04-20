@@ -549,7 +549,7 @@ class IntegratorTensorial
      * \param   j             Local index of local shape function.
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    template < typename GeomT, return_t fun(const Point<GeomT::space_dim()>&) >
+    template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
     return_t integrate_vol_phiphifunc(const unsigned int i, const unsigned int j, GeomT& geom) const
     {
       return_t integral = 0., quad_val;
