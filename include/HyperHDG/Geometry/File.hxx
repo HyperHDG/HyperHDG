@@ -142,13 +142,13 @@ class File
       }
 
 
-      Point<hyEdge_dimT,pt_coord_t> hyEdge_dim_normal(const unsigned int index)
+      Point<hyEdge_dimT,pt_coord_t> local_normal(const unsigned int index)
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
         
         generate_mapping_if_needed();
-        Point<hyEdge_dimT,pt_coord_t> normal = mapping->hyEdge_dim_normal(index / 2);
+        Point<hyEdge_dimT,pt_coord_t> normal = mapping->local_normal(index / 2);
         if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
