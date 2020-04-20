@@ -627,8 +627,9 @@ class Diffusion
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
+    template < typename GeomT >
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT > primal_at_boundary
-    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const;
+    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, GeomT& geom ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
      *
@@ -638,8 +639,9 @@ class Diffusion
      * \param   coeffs        Coefficients of the local solution.
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
+    template < typename GeomT >
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT > dual_at_boundary
-    ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs ) const;
+    ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const;
   public:
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
@@ -669,12 +671,13 @@ class Diffusion
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values, geom);
       
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
-        bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
+        primals(primal_at_boundary(coeffs,geom)), duals(dual_at_boundary(coeffs,geom));
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
+          bdr_values[i][j] 
+            = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j] * geom.face_area(i);
        
       return bdr_values;
     }
@@ -806,6 +809,7 @@ template
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
   typename parameters, typename lSol_float_t
 >
+template < typename GeomT >
 inline std::array
 < 
   std::array
@@ -816,27 +820,18 @@ inline std::array
   2 * hyEdge_dimT
 >
 Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::primal_at_boundary
-( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
+( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, GeomT& geom ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
-  lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-    {
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-      {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        bdr_values[2*dim+0][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
-        
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        bdr_values[2*dim+1][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
-      }
-    }
-  }
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        bdr_values[face][j] 
+          += coeffs[hyEdge_dimT * n_shape_fct_ + i] 
+              * integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
   
   return bdr_values;
 } // end of Diffusion::primal_at_boundary
@@ -851,6 +846,7 @@ template
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
   typename parameters, typename lSol_float_t
 >
+template < typename GeomT >
 inline std::array
 < 
   std::array
@@ -861,7 +857,7 @@ inline std::array
   2 * hyEdge_dimT
 >
 Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::dual_at_boundary
-( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs ) const
+( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
@@ -869,19 +865,15 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::dua
   for (unsigned int dim_n = 0; dim_n < 2*hyEdge_dimT; ++dim_n)  bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-    {
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        bdr_values[2*dim+0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
-        
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        bdr_values[2*dim+1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
+        integral = integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          bdr_values[face][j] 
+            += geom.hyEdge_dim_normal(face).operator[](dim) * integral
+                 * coeffs[dim * n_shape_fct_ + i];
       }
-    }
-  }
   
   return bdr_values;
 } // end of Diffusion::dual_at_boundary
