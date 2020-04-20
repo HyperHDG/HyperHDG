@@ -773,32 +773,25 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::ass
 ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
   GeomT& geom ) const
 {
-  lSol_float_t integral;
-
-  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
-
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
   for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     hy_assert( lambda_values[i].size() == n_shape_bdr_ ,
                "The size of lambda should be the amount of ansatz functions at boundary." );
+
+  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+  lSol_float_t integral;
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-    {
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
-        right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2*dim+0][j] * integral;
-        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+0][j] * integral;
-    
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
-        right_hand_side[dim*n_shape_fct_ + i] -= lambda_values[2*dim+1][j] * integral;
-        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_*lambda_values[2*dim+1][j] * integral;
+        integral = integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
+        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          right_hand_side[dim * n_shape_fct_ + i]
+            += geom.hyEdge_dim_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
       }
-    }
-  }
   
   return right_hand_side;
 } // end of Diffusion::assemble_rhs

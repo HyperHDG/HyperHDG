@@ -603,6 +603,20 @@ class IntegratorTensorial
         if (dim == dim_fct)
           integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind] * trial_bdr_[dec_j[dim_fct]][bdr_ind];
         else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-      return integral / geom.face_area(bdr);
+      return integral * geom.face_area(bdr);
+    }
+
+    template < typename GeomT > return_t integrate_bdr_phipsi
+    ( const unsigned int i, const unsigned int j, const unsigned int bdr, GeomT& geom ) const
+    {
+      return_t integral = 1.;
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+      std::array<unsigned int, std::max(GeomT::hyEdge_dim()-1,1U)> dec_j
+        = index_decompose<GeomT::hyEdge_dim()-1>(j);
+      unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
+      for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+        if (dim == dim_fct)  integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
+        else  integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
+      return integral * geom.face_area(bdr);
     }
 }; // end of class Integrator
