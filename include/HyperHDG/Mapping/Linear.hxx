@@ -16,7 +16,7 @@ namespace Mapping
  * for different types of normals:
  * 
  * - The normals of the unit square in \c hyEdge_dimT dimensions.
- * - The normals of R times the unit square in \c hyEdge_dimT dimensions (called hyEdge_dim_normal).
+ * - The normals of R times the unit square in \c hyEdge_dimT dimensions (called local_normal).
  * - The normals of QR times the unit square within the planar spanned by the columns of the
  *   transformation matrix (denoted inner normals) in \c space_dimT dimensions.
  * - The orthogonal vectors to the planar spanned by the transformation matrix (outer normals).
@@ -163,8 +163,16 @@ class Linear
       make_qr_if_needed();
       return *matrix_r_;
     }
-
-    SmallVec<hyEdge_dimT,map_float_t> hyEdge_dim_normal(const unsigned int index)
+    /*!*********************************************************************************************
+     * \brief   Return local normal of given index.
+     *
+     * Return outer unit normal with respect to the hypernode which is spanned by all columns of R,
+     * but the column of the given index. This is an element of the same dimension as the reference
+     * square.
+     *
+     * \param   index         Index of the vector in the matrix which is \b not related to the node.
+     **********************************************************************************************/
+    SmallVec<hyEdge_dimT,map_float_t> local_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,
                  "The index of the searched normal must not be bigger than their amount." );
@@ -182,7 +190,16 @@ class Linear
       if (scalar_pdct < 0.)  normal *= -1.;
       return normal;
     }
-
+    /*!*********************************************************************************************
+     * \brief   Return inner normal of given index.
+     *
+     * Return outer unit normal with respect to the hypernode which is spanned by all columns of the
+     * transformation matrix but the column of the given index. The vector has to be in the span of
+     * the columns of the transformation matrix. This is an element of the same dimension as the
+     * full space
+     *
+     * \param   index         Index of the vector in the matrix which is \b not related to the node.
+     **********************************************************************************************/
     SmallVec<space_dimT,map_float_t> inner_normal(const unsigned int index)
     {
       hy_assert( index < hyEdge_dimT ,
@@ -202,7 +219,13 @@ class Linear
       if (scalar_pdct < 0)  normal *= -1.;
       return normal;
     }
-    
+    /*!*********************************************************************************************
+     * \brief   Return outer normal of given index.
+     *
+     * Return unit normal with respect to the hyperedge within the full space.
+     *
+     * \param   index         Index of the normal.
+     **********************************************************************************************/
     SmallVec<space_dimT,map_float_t> outer_normal(const unsigned int index)
     {
       hy_assert( index < space_dimT-hyEdge_dimT ,

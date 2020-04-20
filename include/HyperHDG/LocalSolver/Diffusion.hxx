@@ -773,7 +773,7 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
         helper = integrator.template integrate_bdr_phiphi<GeomT>(i, j, face, geom);
         face_integral += helper;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          normal_int_vec[dim] += geom.hyEdge_dim_normal(face).operator[](dim) * helper; 
+          normal_int_vec[dim] += geom.local_normal(face).operator[](dim) * helper; 
       }
 
       local_mat( hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
@@ -824,7 +824,7 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::ass
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i]
-            += geom.hyEdge_dim_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
+            += geom.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
       }
   
   return right_hand_side;
@@ -927,7 +927,7 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::dua
         integral = integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           bdr_values[face][j] 
-            += geom.hyEdge_dim_normal(face).operator[](dim) * integral
+            += geom.local_normal(face).operator[](dim) * integral
                  * coeffs[dim * n_shape_fct_ + i];
       }
   
