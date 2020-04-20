@@ -11,8 +11,9 @@ cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
     CythonClassName ( CyReplace01 , double) except +
     CythonClassName ( CyReplace01 ) except +
     void read_dirichlet_indices (vector[unsigned int])
-    vector[double] return_zero_vector ()
-    vector[double] matrix_vector_multiply (vector[double])
+    vector[ CyReplace03 ] return_zero_vector ()
+    vector[ CyReplace03 ] matrix_vector_multiply (vector[ CyReplace03 ])
+    void add_rhs (vector[ CyReplace03 ])
     int size_of_system ()
     string plot_option (string, string)
-    void plot_solution (vector[double])
+    void plot_solution (vector[ CyReplace03 ])
