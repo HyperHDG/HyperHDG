@@ -618,6 +618,21 @@ class Diffusion
         throw exc;
       }
     }
+
+    template < typename GeomT >
+    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs( GeomT& geom ) const
+    {
+      try
+      {
+        return (assemble_rhs_from_global_rhs(geom) / assemble_loc_matrix(tau_, geom)).data();
+      }
+      catch (LAPACKexception& exc)
+      {
+        hy_assert( 0 == 1 ,
+                   exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
+        throw exc;
+      }
+    }
     /*!*********************************************************************************************
      * \brief   Evaluate primal variable at boundary.
      *
@@ -667,7 +682,7 @@ class Diffusion
     template <class GeomT>
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
     ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
-      GeomT& geom) const
+      GeomT& geom ) const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values, geom);
       
@@ -680,6 +695,14 @@ class Diffusion
             = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j] * geom.face_area(i);
        
       return bdr_values;
+    }
+
+    template <class GeomT>
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( GeomT& geom ) const
+    {
+      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(geom);
+      return dual_at_boundary(coeffs,geom);
     }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
