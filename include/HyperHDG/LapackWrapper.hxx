@@ -349,14 +349,17 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
   if (info != 0)  throw LAPACKexception();
 }
 /*!*************************************************************************************************
- * \brief   QR decomposition in \c double floating point arithmetic.
+ * \brief   QR decomposition in \c double floating point arithmetic --- DO NOT USE.
  *
- * \todo
+ * Perform QR decomposition of a given matrix using Householder transformations. The matrices Q and
+ * R are stored according to the LAPACK function in an encoded way in matrix mat_a and vector tau.
  *
- * \param  system_size  Size of the system of equations.
- * \param  mat_a        Pointer to the matrix describing the linear system of equations.
- * \param  rhs_b        Pointer to the right-hand side of the system.
- * \retval rhs_b        Pointer to the solution of the system of equations.
+ * \param  n_rows       Number of rows of matrix.
+ * \param  n_cols       Number of columns of matrix.
+ * \param  mat_a        Matrix that is to be decomposed.
+ * \param  tau          Space for return value, i.e. vector with auxiliary darta.
+ * \retval mat_a        Encoded QR decomposition of the matrix.
+ * \retval tau          Auxiliary parameters needed to reconstruct matrix Q.
  **************************************************************************************************/
 inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
 {
@@ -367,14 +370,17 @@ inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
   if (info != 0)  throw LAPACKexception();
 }
 /*!*************************************************************************************************
- * \brief   QR decomposition in \c float floating point arithmetic.
+ * \brief   QR decomposition in \c float floating point arithmetic --- DO NOT USE.
  *
- * \todo
+ * Perform QR decomposition of a given matrix using Householder transformations. The matrices Q and
+ * R are stored according to the LAPACK function in an encoded way in matrix mat_a and vector tau.
  *
- * \param  system_size  Size of the system of equations.
- * \param  mat_a        Pointer to the matrix describing the linear system of equations.
- * \param  rhs_b        Pointer to the right-hand side of the system.
- * \retval rhs_b        Pointer to the solution of the system of equations.
+ * \param  n_rows       Number of rows of matrix.
+ * \param  n_cols       Number of columns of matrix.
+ * \param  mat_a        Matrix that is to be decomposed.
+ * \param  tau          Space for return value, i.e. vector with auxiliary darta.
+ * \retval mat_a        Encoded QR decomposition of the matrix.
+ * \retval tau          Auxiliary parameters needed to reconstruct matrix Q.
  **************************************************************************************************/
 inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
 {
