@@ -30,6 +30,147 @@
 struct LAPACKexception : public std::exception
 { const char * what () const throw ()  { return "LAPACK's function failed!"; } };
 
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// FUNCTIONS THAT IMPLEMENT MATRIX OPERATIONS:
+// Only the functions within this section are supposed to be used outside of this file!
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+
+/*!*************************************************************************************************
+ * \brief   Solve local system of equations.
+ *
+ * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
+ * matrix, which enters as a \c std::array of \c double, \f$n\f$ is provided via \c system_size, and
+ * the \c std::array of \c double \c rhs_b is both, input (i.e., \f$b\f$) and output (i.e., \f$x\f$)
+ * of the function.
+ *
+ * Independent of \c const expressions of functions using \c lapack_solve one should not use
+ * \c mat_a after calling this function. The input that has been within \c rhs_b will have been
+ * replaced by the solution of the system of equations.
+ *
+ * \tparam  system_size Size of the system of equations.
+ * \tparam  n_rhs_cols  Number of columns of the right hand side matrix. Defaults to 1.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \param   rhs         Array comprising the right-hand side of the system.
+ * \retval  rhs_b       Array comprising the solution of the system of equations.
+ **************************************************************************************************/
+template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
+std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
+( 
+  std::array<lapack_float_t, system_size * system_size>& dense_mat,
+  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs
+);
+/*!*************************************************************************************************
+ * \brief   Determinant of a rectangular system.
+ *
+ * Calculate the generalized determinant of a rectangular matrix. If the matrix is square, this is
+ * the standard determinant. The determinant is determined by doing a QR decomposition based on
+ * Householder transformations. Thus det(Q) = +1, if the number of rows if even and det(Q) = -1, if
+ * the number of rows is odd. This number is multiplied by the diagonal entries of R.
+ *
+ * The matrix is destroyed using this function. Its entries might be used to generate matrices Q and
+ * R of the QR descomposition.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \retval  determinant Generalized determinant of the matrix.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+/*!*************************************************************************************************
+ * \brief   Matrix Q of QR decomposition.
+ *
+ * Return matrix Q of the Householder QR decomposition of the matrix. The matrix is destroyed using
+ * this function. Its entries might be used to generate matrices Q and R of the QR descomposition.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \retval  mat_q       Matrix Q of Householder QR decomposition.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+/*!*************************************************************************************************
+ * \brief   Matrix R of QR decomposition.
+ *
+ * Return matrix R of the Householder QR decomposition of the matrix. The matrix is destroyed using
+ * this function. Its entries are the same as the ones of R of the QR descomposition.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \retval  dense_mat   Matrix R of Householder QR decomposition.
+ * \retval  mat_r       Matrix R of Householder QR decomposition.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
+( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+/*!*************************************************************************************************
+ * \brief   Matrices Q and R of QR decomposition.
+ *
+ * Return matriices Q and R of the Householder QR decomposition of the matrix.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \retval  dense_mat   Matrix R of Householder QR decomposition.
+ * \retval  mat_q       Matrix Q of Householder QR decomposition.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+void lapack_qr_decomp
+( 
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+);
+/*!*************************************************************************************************
+ * \brief   Matrices Q and R of QR decomposition.
+ *
+ * Return matriices Q and R of the Householder QR decomposition of the matrix.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \retval  dense_mat   Matrix R of Householder QR decomposition.
+ * \retval  mat_q       Matrix Q of Householder QR decomposition.
+ * \retval  mat_r       Square system of size n_cols that contains respective part of R.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+void lapack_qr_decomp
+( 
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q,
+  std::array<lapack_float_t, n_cols * n_cols>& mat_r
+);
+
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// FUNCTIONS THAT DIRECTLY USE LAPACK ROUTINES: Not to be used outside of this file!
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+
 extern "C"
 {
   /*!***********************************************************************************************
@@ -158,7 +299,7 @@ extern "C"
 } // end of extern "C"
 
 /*!*************************************************************************************************
- * \brief   Solve local system of equations.
+ * \brief   Solve local system of equations with \c double floating point numbers --- DO NOT USE.
  *
  * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
  * matrix, which enters as a pointer to \c double, \f$n\f$ is provided via \c system_size, and the
@@ -183,30 +324,11 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
   if (info != 0)  throw LAPACKexception();
 }
 /*!*************************************************************************************************
- * \brief   QR decomposition.
- *
- * \todo
- *
- * \param  system_size  Size of the system of equations.
- * \param  mat_a        Pointer to the matrix describing the linear system of equations.
- * \param  rhs_b        Pointer to the right-hand side of the system.
- * \retval rhs_b        Pointer to the solution of the system of equations.
- **************************************************************************************************/
-inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
-{
-  int info = -1;
-  double *work = new double[n_cols];
-  dgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
-  delete[] work;
-  if (info != 0)  throw LAPACKexception();
-}
-
-/*!*************************************************************************************************
- * \brief   Solve local system of equations.
+ * \brief   Solve local system of equations with \c float floating point numbers --- DO NOT USE.
  *
  * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
- * matrix, which enters as a pointer to \c double, \f$n\f$ is provided via \c system_size, and the
- * \c double pointer \c rhs_b is both, input (i.e., \f$b\f$) and output (i.e., \f$x\f$) of the
+ * matrix, which enters as a pointer to \c float, \f$n\f$ is provided via \c system_size, and the
+ * \c float pointer \c rhs_b is both, input (i.e., \f$b\f$) and output (i.e., \f$x\f$) of the
  * function.
  *
  * Independent of \c const expressions of functions using \c lapack_solve one should not use
@@ -227,7 +349,25 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
   if (info != 0)  throw LAPACKexception();
 }
 /*!*************************************************************************************************
- * \brief   QR decomposition.
+ * \brief   QR decomposition in \c double floating point arithmetic.
+ *
+ * \todo
+ *
+ * \param  system_size  Size of the system of equations.
+ * \param  mat_a        Pointer to the matrix describing the linear system of equations.
+ * \param  rhs_b        Pointer to the right-hand side of the system.
+ * \retval rhs_b        Pointer to the solution of the system of equations.
+ **************************************************************************************************/
+inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
+{
+  int info = -1;
+  double *work = new double[n_cols];
+  dgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
+  delete[] work;
+  if (info != 0)  throw LAPACKexception();
+}
+/*!*************************************************************************************************
+ * \brief   QR decomposition in \c float floating point arithmetic.
  *
  * \todo
  *
@@ -246,23 +386,20 @@ inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
 }
 
 
-/*!*************************************************************************************************
- * \brief   Solve local system of equations.
- *
- * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
- * matrix, which enters as a \c std::array of \c double, \f$n\f$ is provided via \c system_size, and
- * the \c std::array of \c double \c rhs_b is both, input (i.e., \f$b\f$) and output (i.e., \f$x\f$)
- * of the function.
- *
- * Independent of \c const expressions of functions using \c lapack_solve one should not use
- * \c mat_a after calling this function. The input that has been within \c rhs_b will have been
- * replaced by the solution of the system of equations.
- *
- * \tparam system_size  Size of the system of equations.
- * \param  mat_a        Array comprising the matrix describing the linear system of equations.
- * \param  rhs_b        Array comprising the right-hand side of the system.
- * \retval rhs_b        Array comprising the solution of the system of equations.
- **************************************************************************************************/
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// IMPLEMENTATION OF FUNCTIONS THAT DO NOT NEED A DENSE LINEAR ALGEBRA IMPLEMENTATION:
+// Functions have been declared above and are only implemented here!
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+
+// -------------------------------------------------------------------------------------------------
+// lapack_solve
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
 std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
 ( 
@@ -274,11 +411,11 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
   return rhs;
 }
 
-/*!*************************************************************************************************
- * \brief   Determinant of a rectangular system.
- *
- * \todo    All! 
- **************************************************************************************************/
+
+// -------------------------------------------------------------------------------------------------
+// lapack_det
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
@@ -292,30 +429,6 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
 }
 
 
-
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-//
-// Definition of functions that require a dense linear algebra implementation:
-//
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-
-/*!*************************************************************************************************
- * \brief   QR decomposition.
- *
- * \todo    All + note that dense_mat will be destroyed and cannot be used afterwards.
- *
- * \tparam system_size  Size of the system of equations.
- * \param  mat_a        Array comprising the matrix describing the linear system of equations.
- * \param  rhs_b        Array comprising the right-hand side of the system.
- * \retval rhs_b        Array comprising the solution of the system of equations.
- **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
-
-
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
@@ -323,6 +436,7 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
+
 
 #include <HyperHDG/DenseLA.hxx>
 
@@ -380,7 +494,7 @@ inline void get_q_from_lapack_qr_result
 }
 
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-inline std::array<lapack_float_t, n_rows * n_cols> get_r_from_lapack_qr_result
+inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
   for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
@@ -393,7 +507,7 @@ template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline void get_r_from_lapack_qr_result
 ( 
   const std::array<lapack_float_t, n_rows * n_cols>& lapack_mat,
-  std::array<lapack_float_t, n_cols * n_cols >& mat_r
+  std::array<lapack_float_t, n_cols * n_cols>& mat_r
 )
 {
   static_assert( n_rows >= n_cols, "Function only defined for these matrices!" );
@@ -415,7 +529,7 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
 
 // This still needs to be tested!
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_cols> lapack_qr_decomp_r
+std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
 ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
@@ -428,8 +542,23 @@ template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 void lapack_qr_decomp
 ( 
   std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+)
+{
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  std::array<lapack_float_t, rank> tau;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+
+  get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau, mat_q);
+  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat);
+}
+
+template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
+void lapack_qr_decomp
+( 
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
   std::array<lapack_float_t, n_rows * n_rows>& mat_q,
-  std::array<lapack_float_t, n_cols * n_cols >& mat_r
+  std::array<lapack_float_t, n_cols * n_cols>& mat_r
 )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
@@ -438,4 +567,5 @@ void lapack_qr_decomp
 
   get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau, mat_q);
   get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat, mat_r);
+  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat);
 }
