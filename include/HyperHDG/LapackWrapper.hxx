@@ -34,7 +34,7 @@ struct LAPACKexception : public std::exception
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// FUNCTIONS THAT IMPLEMENT MATRIX OPERATIONS:
+// MAIN FUNCTIONS THAT IMPLEMENT MATRIX OPERATIONS:
 // Only the functions within this section are supposed to be used outside of this file!
 //
 // -------------------------------------------------------------------------------------------------
@@ -64,8 +64,8 @@ struct LAPACKexception : public std::exception
 template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
 std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
 ( 
-  std::array<lapack_float_t, system_size * system_size>& dense_mat,
-  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs
+  std::array<lapack_float_t, system_size * system_size> &   dense_mat,
+  std::array<lapack_float_t, system_size * n_rhs_cols>  &   rhs
 );
 /*!*************************************************************************************************
  * \brief   Determinant of a rectangular system.
@@ -102,7 +102,7 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat );
 /*!*************************************************************************************************
  * \brief   Matrix R of QR decomposition.
  *
@@ -119,7 +119,7 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat );
 /*!*************************************************************************************************
  * \brief   Matrices Q and R of QR decomposition.
  *
@@ -136,8 +136,8 @@ std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 void lapack_qr_decomp
 ( 
-  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows> &   mat_q
 );
 /*!*************************************************************************************************
  * \brief   Matrices Q and R of QR decomposition.
@@ -156,16 +156,16 @@ void lapack_qr_decomp
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 void lapack_qr_decomp
 ( 
-  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows>& mat_q,
-  std::array<lapack_float_t, n_cols * n_cols>& mat_r
+  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows> &   mat_q,
+  std::array<lapack_float_t, n_cols * n_cols> &   mat_r
 );
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// FUNCTIONS THAT DIRECTLY USE LAPACK ROUTINES: Not to be used outside of this file!
+// AUXILIARY FUNCTIONS THAT DIRECTLY USE LAPACK ROUTINES: Not to be used outside of this file!
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -395,7 +395,7 @@ inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF FUNCTIONS THAT DO NOT NEED A DENSE LINEAR ALGEBRA IMPLEMENTATION:
+// IMPLEMENTATION OF MAIN FUNCTIONS THAT DO NOT NEED A DENSE LINEAR ALGEBRA IMPLEMENTATION:
 // Functions have been declared above and are only implemented here!
 //
 // -------------------------------------------------------------------------------------------------
@@ -438,25 +438,35 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// Implementation of functions that require a dense linear algebra implementation:
+// IMPLEMENTATION OF AUXILIARY FUNCTIONS THAT REQUIRE A DENSE LA IMPLEMENTATION:
+// Do not use these functions outside of this file.
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
 
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/DenseLA.hxx> // Dense linear algebra that is utilized in the following.
 
-
-// -------------------------------------------------------------------------------------------------
-// lapack_qr_decomp_q:
-// -------------------------------------------------------------------------------------------------
-
-
+/*!*************************************************************************************************
+ * \brief   Matrix Q of QR decomposition --- DO NOT USE.
+ *
+ * Return matrix Q of the Householder QR decomposition of the matrix. The matrix is supposed to
+ * contain the Householder QR decomposition which is encoded in the style of LAPACK. The function
+ * returns matrix Q in standard encoding.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the QR decomposed matrix.
+ * \param   tau         Auxiliary data from LAPACK to encode matrix Q.
+ * \retval  mat_q       Matrix Q of Householder QR decomposition.
+ **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
 inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
 ( 
-  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  const std::array<lapack_float_t, rank>& tau
+  const std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  const std::array<lapack_float_t, rank>            &   tau
 )
 {
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.), matQ = unity;
@@ -473,13 +483,31 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
 
   return matQ.data();
 }
-
+/*!*************************************************************************************************
+ * \brief   Matrix Q of QR decomposition --- DO NOT USE.
+ *
+ * \todo    Check whether the implementation is correct, since I am not perfectly sure about the two
+ *          \c std::move statements to do exactly, what I want.
+ *
+ * Return matrix Q of the Householder QR decomposition of the matrix. The matrix is supposed to
+ * contain the Householder QR decomposition which is encoded in the style of LAPACK. The function
+ * returns matrix Q in standard encoding.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the QR decomposed matrix.
+ * \param   tau         Auxiliary data from LAPACK to encode matrix Q.
+ * \param   mat_q       Matrix to be filled with entries of the return value.
+ * \retval  mat_q       Matrix Q of Householder QR decomposition.
+ **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
 inline void get_q_from_lapack_qr_result
 ( 
-  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  const std::array<lapack_float_t, rank>& tau,
-  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+  const std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  const std::array<lapack_float_t, rank>            &   tau,
+        std::array<lapack_float_t, n_rows * n_rows> &   mat_q
 )
 {
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.);
@@ -498,22 +526,51 @@ inline void get_q_from_lapack_qr_result
 
   mat_q = std::move(matQ.data());
 }
-
+/*!*************************************************************************************************
+ * \brief   Matrix R of QR decomposition --- DO NOT USE.
+ *
+ * Return matrix R of the Householder QR decomposition of the matrix. The matrix is supposed to
+ * contain the Householder QR decomposition which is encoded in the style of LAPACK. The function
+ * returns matrix R in standard encoding.
+ *
+ * The function also manipulates the input matrix to be R.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the QR decomposed matrix.
+ * \retval  mat_r       Matrix R of Householder QR decomposition.
+ **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
 {
   for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
     for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
       if (j > i)  dense_mat[i * n_rows + j] = 0.;
   return dense_mat;
 }
-
+/*!*************************************************************************************************
+ * \brief   Matrix R of QR decomposition --- DO NOT USE.
+ *
+ * Return matrix R of the Householder QR decomposition of the matrix. The matrix is supposed to
+ * contain the Householder QR decomposition which is encoded in the style of LAPACK. The function
+ * returns matrix R in standard encoding, but with dimensions \c n_cols times \c n_cols.
+ *
+ * \tparam  n_rows      Number of rows of the matrix whose determinant should be calculated.
+ * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
+ * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
+ *                      \c double are supported.
+ * \param   dense_mat   Array comprising the QR decomposed matrix.
+ * \param   mat_r       Matrix to be filled with the entries of the return value.
+ * \retval  mat_r       Matrix R of Householder QR decomposition.
+ **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 inline void get_r_from_lapack_qr_result
 ( 
-  const std::array<lapack_float_t, n_rows * n_cols>& lapack_mat,
-  std::array<lapack_float_t, n_cols * n_cols>& mat_r
+  const std::array<lapack_float_t, n_rows * n_cols> &   lapack_mat,
+        std::array<lapack_float_t, n_cols * n_cols> &   mat_r
 )
 {
   static_assert( n_rows >= n_cols, "Function only defined for these matrices!" );
@@ -523,9 +580,24 @@ inline void get_r_from_lapack_qr_result
       else        mat_r[i * n_cols + j] = lapack_mat[i * n_rows + j];
 }
 
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// IMPLEMENTATION OF MAIN FUNCTIONS THAT NEED A DENSE LINEAR ALGEBRA IMPLEMENTATION:
+// Functions have been declared above and are only implemented here!
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+
+// -------------------------------------------------------------------------------------------------
+// lapack_qr_decomp_q
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
@@ -533,10 +605,14 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
   return get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau);
 }
 
-// This still needs to be tested!
+
+// -------------------------------------------------------------------------------------------------
+// lapack_qr_decomp_r
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
-( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
@@ -544,11 +620,16 @@ std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
   return get_r_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat);
 }
 
+
+// -------------------------------------------------------------------------------------------------
+// lapack_qr_decomp
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 void lapack_qr_decomp
 ( 
-  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows>& mat_q
+  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows> &   mat_q
 )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
@@ -559,12 +640,17 @@ void lapack_qr_decomp
   get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat);
 }
 
+
+// -------------------------------------------------------------------------------------------------
+// lapack_qr_decomp
+// -------------------------------------------------------------------------------------------------
+
 template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
 void lapack_qr_decomp
 ( 
-  std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows>& mat_q,
-  std::array<lapack_float_t, n_cols * n_cols>& mat_r
+  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
+  std::array<lapack_float_t, n_rows * n_rows> &   mat_q,
+  std::array<lapack_float_t, n_cols * n_cols> &   mat_r
 )
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
