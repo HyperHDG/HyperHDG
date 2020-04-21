@@ -93,7 +93,9 @@ class SmallMat
     }
   public:
 
+    // ---------------------------------------------------------------------------------------------
     // Constructors and assignment operators:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Empty constructor for a SmallMat.
@@ -158,7 +160,9 @@ class SmallMat
     ( SmallMat<n_rowsT,n_colsT,mat_entry_t>&& other ) noexcept
     { std::swap(entries_, other.entries_); return *this; }
     
+    // ---------------------------------------------------------------------------------------------
     // Return array with data:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Return data array that allows to manipulate the SmallMat.
@@ -169,7 +173,9 @@ class SmallMat
      **********************************************************************************************/
     const std::array<mat_entry_t, size()>& data() const  { return entries_; }
 
+    // ---------------------------------------------------------------------------------------------
     // Random access operators:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Return a column of a SmallMat.
@@ -238,7 +244,9 @@ class SmallMat
       return entries_[index];
     }
 
+    // ---------------------------------------------------------------------------------------------
     // Comparison operators:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Find out whether two SmallMats have (exactly) the same entries.
@@ -291,7 +299,9 @@ class SmallMat
       return false;
     }
     
+    // ---------------------------------------------------------------------------------------------
     // Operators updating a SmallMat by a scalar:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Add scalar to a given SmallMat.
@@ -339,7 +349,9 @@ class SmallMat
       return *this;
     }
     
+    // ---------------------------------------------------------------------------------------------
     // Operators updating a SmallMat by another SmallMat:
+    // ---------------------------------------------------------------------------------------------
 
     /*!*********************************************************************************************
      * \brief   Add SmallMat to given SmallMat.
@@ -416,13 +428,24 @@ class SmallMat
 }; // end of class SmallMat
 
 
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// STANDARD FUNCTIONS USING SMALL/DENSE MATRICES
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+
+// -------------------------------------------------------------------------------------------------
 // Create fundamental matrices:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   Create SmallMat that is a diagonal matrix with specified value on diagonal.
  * 
- * \param   diag_value      Diagonal value.
- * \retval  diag_mat        Diagonal matrix.
+ * \param   diag_value    Diagonal value.
+ * \retval  diag_mat      Diagonal matrix.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
@@ -435,9 +458,9 @@ SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
 /*!*************************************************************************************************
  * \brief   Create dyadic product of two small vectors.
  * 
- * \param   left            Left vector in dyadic product.
- * \param   right           Right vector in dyadic product.
- * \retval  dyad_prod       Dyadic product of both vectors.
+ * \param   left          Left vector in dyadic product.
+ * \param   right         Right vector in dyadic product.
+ * \retval  dyad_prod     Dyadic product of both vectors.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> dyadic_product
@@ -450,13 +473,13 @@ SmallMat<n_rows,n_cols,mat_entry_t> dyadic_product
   return dyad_prod;
 }
 
- // Fundamental functions returning scalar from two SmallVecs:
+
+// -------------------------------------------------------------------------------------------------
+// Fundamental functions returning scalar from two SmallMats:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Euclidean scalar product with other SmallVec.
- * 
- * \param   scalar          Floating point (\f$\neq 0\f$) all entries are divided by.
- * \retval  this_SmallVec   The updated SmallVec.
+ * \brief   Euclidean scalar product of two SmallVecs / Frobenius scalar product for two SmallMats.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t scalar_product
@@ -468,13 +491,13 @@ mat_entry_t scalar_product
   return scalar_product;
 }
 
+
+// -------------------------------------------------------------------------------------------------
 // Fundamental functions returning SmallMat from two SmallMats:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Add two \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Add two small / dense matrices.
  **************************************************************************************************/
 template
 < unsigned int n_rows, unsigned int n_cols_left, unsigned int n_cols_right, typename mat_entry_t >
@@ -499,10 +522,7 @@ SmallMat<n_rows,std::max(n_cols_left,n_cols_right),mat_entry_t> operator+
   }
 }
 /*!*************************************************************************************************
- * \brief   Subtract two \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Subtract second small/dense matrix from first.
  **************************************************************************************************/
 template
 < unsigned int n_rows, unsigned int n_cols_left, unsigned int n_cols_right, typename mat_entry_t >
@@ -529,10 +549,7 @@ SmallMat<n_rows,std::max(n_cols_left,n_cols_right),mat_entry_t> operator-
   }
 }
 /*!*************************************************************************************************
- * \brief   Hadamard product of two \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Hadamard product of two small/dense matrices.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> hada_prod
@@ -542,10 +559,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> hada_prod
   return product *= right;
 }
 /*!*************************************************************************************************
- * \brief   Hadamard division two \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Divide first small/dense matrix element-wise by second.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> hada_divi
@@ -555,13 +569,13 @@ SmallMat<n_rows,n_cols,mat_entry_t> hada_divi
   return quotient /= right;
 }
 
-// Standard matrix matrix multiplication:
+
+// -------------------------------------------------------------------------------------------------
+// Standard matrix--matrix multiplication:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Standard matrix vector multiplication.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Standard matrix--matrix multiplication.
  **************************************************************************************************/
 template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
@@ -574,8 +588,9 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator*
         result(rowA,colB) += A(rowA,colA) * B(colA,colB);
   return result;
 }
-
-
+/*!*************************************************************************************************
+ * \brief   Transpose first small/dense matrix and multiply it with second.
+ **************************************************************************************************/
 template < unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_colsA,n_colsB,mat_entry_t> transposed_mat_times_mat
 ( const SmallMat<n_rowsA,n_colsA,mat_entry_t>& A, const SmallMat<n_colsA,n_colsB,mat_entry_t>& B )
@@ -589,13 +604,12 @@ SmallMat<n_colsA,n_colsB,mat_entry_t> transposed_mat_times_mat
 }
 
 
+// -------------------------------------------------------------------------------------------------
 // Fundamental functions returning SmallMat from a scalar and a SmallMat:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Add SmallMat to scalar.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Add small/dense matrix to scalar.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator+
@@ -605,10 +619,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator+
   return sum += scalar;
 }
 /*!*************************************************************************************************
- * \brief   Add scalar to SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Add scalar to small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator+
@@ -618,10 +629,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator+
   return sum += scalar;
 }
 /*!*************************************************************************************************
- * \brief   Subtract SmallMat from scalar.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Subtract small/dense matrix from scalar.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator-
@@ -633,10 +641,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator-
   return difference;
 }
 /*!*************************************************************************************************
- * \brief   Subtract scalar from SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Subtract scalar from small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator-
@@ -646,10 +651,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator-
   return difference -= scalar;
 }
 /*!*************************************************************************************************
- * \brief   Multiply scalar with SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Multiply scalar with small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator*
@@ -659,10 +661,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator*
   return product *= scalar;
 }
 /*!*************************************************************************************************
- * \brief   Multiply SmallMat with scalar.
- *  
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Multiply small/dense matrix with scalar.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator*
@@ -672,10 +671,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator*
   return product *= scalar;
 }
 /*!*************************************************************************************************
- * \brief   Divide scalar by \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Divide scalar by small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator/
@@ -690,10 +686,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator/
   return quotient;
 }
 /*!*************************************************************************************************
- * \brief   Divide \c SmallMat by scalar.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Divide small/dense matrix by scalar.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_cols,mat_entry_t> operator/
@@ -703,13 +696,13 @@ SmallMat<n_rows,n_cols,mat_entry_t> operator/
   return quotient /= scalar;
 }
 
+
+// -------------------------------------------------------------------------------------------------
 // Norms of SmallMats:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Absolute sum norm of SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Column sum norm of a small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_1(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
@@ -733,12 +726,7 @@ mat_entry_t norm_1(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
   }
 }
 /*!*************************************************************************************************
- * \brief   Computes Euclidean norm of a SmallMat.
- * 
- * \todo    Fill information, when details clarified with Guido.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Euclidean norm of a small/dense vector.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_2(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
@@ -747,10 +735,7 @@ mat_entry_t norm_2(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
   return std::sqrt( scalar_product(mat, mat) );
 }
 /*!*************************************************************************************************
- * \brief   Maximum norm of SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Row sum norm of a small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_infty(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
@@ -775,10 +760,7 @@ mat_entry_t norm_infty(const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
   }
 }
 /*!*************************************************************************************************
- * \brief   p-norm of SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   p-norm of a small/dense vector.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t norm_p(const SmallMat<n_rows,n_cols,mat_entry_t>& mat, const mat_entry_t power)
@@ -790,13 +772,13 @@ mat_entry_t norm_p(const SmallMat<n_rows,n_cols,mat_entry_t>& mat, const mat_ent
   return std::pow( norm , 1. / power );
 }
 
+
+// -------------------------------------------------------------------------------------------------
 // Output of SmallMat:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Fill \c stream with \c SmallMat.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Fill \c std::ostream with small/dense matrix.
  **************************************************************************************************/
 template< unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 std::ostream& operator<< (std::ostream& stream, const SmallMat<n_rows,n_cols,mat_entry_t>& mat)
@@ -818,61 +800,60 @@ std::ostream& operator<< (std::ostream& stream, const SmallMat<n_rows,n_cols,mat
 }
 
 
-// Derived classes:
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// DERIVED CLASSES
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
 
 /*!*************************************************************************************************
  * \brief   A SmallSquareMat is a SmallMat, which is square.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int n_rows, typename mat_entry_t = double >
 using SmallSquareMat = SmallMat<n_rows, n_rows, mat_entry_t>;
-
 /*!*************************************************************************************************
- * \brief   A SmallVec is a SmallMat, where the standard mat_entry_t is float.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   A SmallVec is a SmallMat of one column, where the standard mat_entry_t is double.
  **************************************************************************************************/
 template < unsigned int n_rows, typename mat_entry_t = double >
 using SmallVec = SmallMat<n_rows, 1, mat_entry_t>;
-
 /*!*************************************************************************************************
- * \brief   A Point is a SmallMat, where the standard mat_entry_t is float.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   A Point is a SmallMat of one column, where the standard mat_entry_t is float.
  **************************************************************************************************/
 template < unsigned int n_rows, typename mat_entry_t = float >
 using Point = SmallVec<n_rows, mat_entry_t>;
 
 
 // -------------------------------------------------------------------------------------------------
-// Functions that require the LAPACK library:
 // -------------------------------------------------------------------------------------------------
+//
+// FUNCTIONS THAT REQUIRE LAPACK LIBRARY
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
 
 #include <HyperHDG/LapackWrapper.hxx>
 // Here, since prior include violates use of SmallMat, SmallVec, ... within the functions that are
 // introduced in LapackWrapper.hxx!
 
+
+// -------------------------------------------------------------------------------------------------
+// Solve linear systems of equations:
+// -------------------------------------------------------------------------------------------------
+
+
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
- * 
- * \todo    Do the doxygen.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Solve linear system of equations A * x = b <=> x = A / b.
  **************************************************************************************************/
 template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
 ( SmallMat<n_rowsA,n_colsB,mat_entry_t>& b, SmallMat<n_rowsA,n_rowsA,mat_entry_t>& A )
 { return lapack_solve<n_rowsA,n_colsB,mat_entry_t>(A.data(), b.data()); }
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Solve linear system of equations A * x = b <=> x = A / b.
  **************************************************************************************************/
 template < unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t >
 SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
@@ -882,6 +863,11 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
   SmallMat<n_rowsA,n_rowsA,mat_entry_t> helperA(A);
   return helperb / helperA;
 }
+
+
+// -------------------------------------------------------------------------------------------------
+// QR decomposition:
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations.
