@@ -870,21 +870,17 @@ SmallMat<n_rowsA,n_colsB,mat_entry_t> operator/
 // -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
- * 
- * \todo    Do the doxygen.
+ * \brief   Matrix Q of Householder QR decomposition.
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * Note that Q might be different from the matrix Q attained from \c qr_decomp.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( SmallMat<n_rows,n_cols,mat_entry_t>& mat )
 { return lapack_qr_decomp_q<n_rows,n_cols,mat_entry_t>(mat.data()); }
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Matrix Q of Householder QR decomposition.
+ *
+ * Note that Q might be different from the matrix Q attained from \c qr_decomp.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( const SmallMat<n_rows,n_cols,mat_entry_t>& mat )
@@ -892,20 +888,26 @@ SmallMat<n_rows,n_rows,mat_entry_t> qr_decomp_q ( const SmallMat<n_rows,n_cols,m
   SmallMat<n_rows,n_cols,mat_entry_t> helper(mat);
   return qr_decomp_q(helper);
 }
-
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
+ * \brief   Normalized QR decomposition.
  * 
- * \todo    Do the doxygen.
+ * Do a QR decomposition of the matrix \c mat and write result into \c mat_q (matrix Q of QR
+ * decomposition), and \c mat (matrix R of QR decomposition). Moreover, \c mat_r is a square matrix
+ * with \c n_cols rows and columns containing R (without some entries).
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \param   mat           Matrix that is to be QR decomposed.
+ * \param   mat_q         Matrix containing space for Q of QR decomposition.
+ * \param   mat_r         Matrix containing space for reduced R of QR decomposition.
+ * \retval  mat           Matrix R of QR decomposition.
+ * \retval  mat_q         Matrix Q of QR decomposition.
+ * \retval  mat_r         Reduced matrix R of QR decomposition.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 void qr_decomp
 ( 
   SmallMat<n_rows,n_cols,mat_entry_t>& mat,
-  SmallSquareMat<n_rows,mat_entry_t>& mat_q, SmallSquareMat<n_cols,mat_entry_t>& mat_r
+  SmallSquareMat<n_rows,mat_entry_t>& mat_q,
+  SmallSquareMat<n_cols,mat_entry_t>& mat_r
 )
 { 
   static_assert( n_cols <= n_rows, "Function only defined for these matrices!" );
@@ -941,10 +943,17 @@ void qr_decomp
     for (unsigned int j  = 0; j < n_cols; ++j)  mat_r(i,j) *= factors[i];
 }
 /*!*************************************************************************************************
- * \brief   Solve linear system of equations.
+ * \brief   Normalized QR decomposition.
  * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * Do a QR decomposition of the matrix \c mat and write result into \c mat_q (matrix Q of QR
+ * decomposition), and \c mat_r is a square matrix with \c n_cols rows and columns containing R
+ * (without some entries).
+ *
+ * \param   mat           Matrix that is to be QR decomposed.
+ * \param   mat_q         Matrix containing space for Q of QR decomposition.
+ * \param   mat_r         Matrix containing space for reduced R of QR decomposition.
+ * \retval  mat_q         Matrix Q of QR decomposition.
+ * \retval  mat_r         Reduced matrix R of QR decomposition.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 void qr_decomp
@@ -957,22 +966,32 @@ void qr_decomp
   return qr_decomp(helper, mat_q, mat_r);
 }
 
+
+// -------------------------------------------------------------------------------------------------
+// Determinant of a rectangular matrix:
+// -------------------------------------------------------------------------------------------------
+
 /*!*************************************************************************************************
- * \brief   Determinant of matrix.
- * 
- * \todo    Do the doxygen.
+ * \brief   Determinant of a rectangular system.
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * Calculate the generalized determinant of a rectangular matrix. If the matrix is square, this is
+ * the standard determinant. The determinant is determined by doing a QR decomposition based on
+ * Householder transformations. Thus det(Q) = +1, if the number of rows if even and det(Q) = -1, if
+ * the number of rows is odd. This number is multiplied by the diagonal entries of R.
+ *
+ * The matrix is destroyed using this function. Its entries might be used to generate matrices Q and
+ * R of the QR descomposition.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t determinant ( SmallMat<n_rows,n_cols,mat_entry_t>& mat )
 { return lapack_det<n_rows,n_cols,mat_entry_t>(mat.data()); }
 /*!*************************************************************************************************
- * \brief   Determinant of matrix.
- * 
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \brief   Determinant of a rectangular system.
+ *
+ * Calculate the generalized determinant of a rectangular matrix. If the matrix is square, this is
+ * the standard determinant. The determinant is determined by doing a QR decomposition based on
+ * Householder transformations. Thus det(Q) = +1, if the number of rows if even and det(Q) = -1, if
+ * the number of rows is odd. This number is multiplied by the diagonal entries of R.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
 mat_entry_t determinant ( const SmallMat<n_rows,n_cols,mat_entry_t>& mat )
