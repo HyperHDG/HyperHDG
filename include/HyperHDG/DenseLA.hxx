@@ -161,18 +161,18 @@ class SmallMat
     // Return array with data:
 
     /*!*********************************************************************************************
-     * \brief   Return data array.
+     * \brief   Return data array that allows to manipulate the SmallMat.
      **********************************************************************************************/
     std::array<mat_entry_t, size()>& data()  { return entries_; }
     /*!*********************************************************************************************
-     * \brief   Return data array.
+     * \brief   Return data array of a constant SmallMat.
      **********************************************************************************************/
     const std::array<mat_entry_t, size()>& data() const  { return entries_; }
 
     // Random access operators:
 
     /*!*********************************************************************************************
-     * \brief   Return a column of a  SmallMat.
+     * \brief   Return a column of a SmallMat.
      * 
      * \param   col       An \c unsigned \c int referring to the column's index.
      * \retval  column    SmallMat that consists of the column.
@@ -184,36 +184,36 @@ class SmallMat
       return column;
     }
     /*!*********************************************************************************************
-     * \brief   Return reference to single entry of a SmallMat.
+     * \brief   Set column of a SmallMat.
      * 
      * \param   col       An \c unsigned \c int referring to the column's index.
      * \param   col_vec   The column that should be located at the position \c col.
      **********************************************************************************************/
     void set_column(const unsigned int col, const SmallMat<n_rowsT,1,mat_entry_t> col_vec)
     { for (unsigned int i = 0; i < n_rowsT; ++i)  operator()(i,col) = col_vec[i]; }
-
     /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
      * 
-     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
-     * \retval  coord     \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   row       Row index of the matrix entry to be returned.
+     * \param   column    Column index of the matrix entry to be returned.
+     * \retval  entry     Matrix entry at given position.
      **********************************************************************************************/
     mat_entry_t operator()(const unsigned int row, const unsigned int column) const
     { return operator[](loc_matrix_index(row, column)); }
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
      * 
-     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
-     * \retval  coord     A reference to a \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   row       Row index of the matrix entry to be returned.
+     * \param   column    Column index of the matrix entry to be returned.
+     * \retval  entry     A reference to a \c mat_entry_t describing the matrix entry.
      **********************************************************************************************/
     mat_entry_t& operator()(const unsigned int row, const unsigned int column)
     { return operator[](loc_matrix_index(row, column)); }
-
     /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
      * 
-     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
-     * \retval  coord     \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   index     An \c unsigned \c int referring to the entry that is to be returned.
+     * \retval  entry     \c mat_entry_t being the entry at given index.
      **********************************************************************************************/
     mat_entry_t operator[](const unsigned int index) const
     {
@@ -226,8 +226,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
      * 
-     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
-     * \retval  coord     A reference to a \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   index     An \c unsigned \c int referring to the entry that is to be returned.
+     * \retval  entry     Reference to \c mat_entry_t being the entry at given index.
      **********************************************************************************************/
     mat_entry_t& operator[](const unsigned int index)
     {
@@ -247,13 +247,13 @@ class SmallMat
      * SmallMats have exactly (that is not only with respect to some rounding errors) the same
      * entries.
      * 
-     * \param   other_SmallMat  Another \c SmallMat<n_rows,n_cols> that is to be dicriminate from.
-     * \retval  isEqual         A \c boolean which is true if both SmallMats have the same coords.
+     * \param   other     Another \c SmallMat<n_rows,n_cols> that is to be dicriminated from.
+     * \retval  isEqual   A \c boolean which is true if both SmallMats have the same entries.
      **********************************************************************************************/
-    bool operator==(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
+    bool operator==(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) const
     {
       for (unsigned int index = 0; index < size(); ++index)
-        if (entries_[index] != other_SmallMat[index])  return false;
+        if (entries_[index] != other[index])  return false;
       return true;
     }
     /*!*********************************************************************************************
@@ -263,32 +263,31 @@ class SmallMat
      * SmallMats have exactly (that is not only with respect to some rounding errors) the same
      * entries.
      * 
-     * \param   other_SmallMat  Another \c SmallMat<n_rows,n_cols> that is to be dicriminate from.
-     * \retval  isEqual         A \c boolean which is false if both SmallMats have the same coords.
+     * \param   other     Another \c SmallMat<n_rows,n_cols> that is to be dicriminated from.
+     * \retval  isEqual   A \c boolean which is false if both SmallMats have the same entries.
      **********************************************************************************************/
-    bool operator!=(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
+    bool operator!=(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) const
     {
       for (unsigned int index = 0; index < size(); ++index)
-        if (entries_[index] != other_SmallMat[index])  return true;
+        if (entries_[index] != other[index])  return true;
       return false;
     }
     /*!*********************************************************************************************
      * \brief   Find out whether the SmallMat is "smaller than" another SmallMat.
      * 
      * This function compares the SmallMat to another SmallMat and returns true if and only if the
-     * lowest ranked coordinate (according to the coordinate index) where the both SmallMats are not
-     * equal of the given SmallMat is smaller than that of the other SmallMat. It is false, if both
-     * SmallMats are equal.
+     * lowest ranked entry (according to the entry index) where the both SmallMats are not equal of 
+     * the given SmallMat is smaller than that of the other SmallMat. It is false, if both SmallMats
+     * are equal.
      * 
-     * \param   other_SmallMat  Another \c SmallMat<n_rows,n_cols> that is to be dicriminate from.
-     * \retval  isEqual         A \c boolean which is true if the left SmallMat is strictly smaller
-     *                          than the right one.
+     * \param   other     Another \c SmallMat<n_rows,n_cols> that is to be dicriminated from.
+     * \retval  smalller  A \c boolean which is true if \¢ this is strictly smaller than \c other.
      **********************************************************************************************/
-    bool operator<(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
+    bool operator<(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) const
     {
       for (unsigned int index = 0; index < size(); ++index)
-        if (entries_[index] < other_SmallMat[index])      return true;
-        else if (entries_[index] > other_SmallMat[index]) return false;
+        if (entries_[index] < other[index])      return true;
+        else if (entries_[index] > other[index]) return false;
       return false;
     }
     
