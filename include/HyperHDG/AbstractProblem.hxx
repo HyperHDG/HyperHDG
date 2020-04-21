@@ -164,8 +164,6 @@ class AbstractProblem
     { return std::vector<dof_value_t>(hyper_graph_.n_global_dofs(), 0.); }
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
-     * 
-     * \todo    Decide whether \c auto \c hyperedge should be const!
      *
      * Function that evaluates the condensed, matrix-free version of the matrix-vector product
      * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
@@ -221,8 +219,6 @@ class AbstractProblem
     }
     /*!*********************************************************************************************
      * \brief   Add global right-hand side vector to vec_x.
-     * 
-     * \todo    Decide whether \c auto \c hyperedge should be const!
      *
      * Function that evaluates the global right-hand side (implemented wthin the local solver) and
      * adds the result to the function argument.
