@@ -41,12 +41,12 @@ namespace Geometry
 template 
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
-  typename mapping_t = Mapping::Linear<hyEdge_dimT,space_dimT,pt_coord_t>,
-  typename hyEdge_index_t = unsigned int
+  template < unsigned int hyEdge_dimTT, unsigned int space_dimTT, typename pt_coord_tt > 
+  typename mapping_tt = Mapping::Linear, typename hyEdge_index_t = unsigned int
 >
 class File
 {
-  
+  using mapping_t = mapping_tt<hyEdge_dimT, space_dimT, pt_coord_t>;
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
    ************************************************************************************************/
