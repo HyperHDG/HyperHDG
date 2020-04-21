@@ -5,11 +5,18 @@
 #include <array>
 #include <memory>
 
+
+/*!*************************************************************************************************
+ * \brief   Namespace for mappings from reference elements to physical elements, etc.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
 namespace Mapping
 {
 
 /*!*************************************************************************************************
- * \brief   Mapping of a unit square to a Linear.
+ * \brief   Mapping of a unit hypercube to a parallelotope --- can also be used for simplices.
  *
  * The affine-linear mapping of a \c hyEdge_dimT dimensional unit square to a subset of the real
  * numbers to the power \c space_dimT heavily relies on QR decomposition. Additionally, there are
@@ -19,13 +26,17 @@ namespace Mapping
  * - The normals of R times the unit square in \c hyEdge_dimT dimensions (called local_normal).
  * - The normals of QR times the unit square within the planar spanned by the columns of the
  *   transformation matrix (denoted inner normals) in \c space_dimT dimensions.
- * - The orthogonal vectors to the planar spanned by the transformation matrix (outer normals).
+ * - The orthonormal vectors to the planar spanned by the transformation matrix (outer normals).
+ *
+ * The QR decomposition has a special normalization, i.e., the matrix Q suffices det(Q) = +1, i.e.
+ * Q describes a movement (no mirrioring), and R has non-negative diagonal entries --- except for
+ * the entry (0,0) which may have negative sign. Thus, the sign of entry (0,0) describes, whether
+ * matrix a is orientation preserving or not.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template 
-< unsigned int hyEdge_dimT, unsigned int space_dimT, typename map_float_t >
+template < unsigned int hyEdge_dimT, unsigned int space_dimT, typename map_float_t >
 class Linear
 {
   public:
@@ -159,10 +170,7 @@ class Linear
      * \brief   Return matrix R of the QR decomposition.
      **********************************************************************************************/
     const SmallSquareMat<hyEdge_dimT,map_float_t>& mat_r()
-    {
-      make_qr_if_needed();
-      return *matrix_r_;
-    }
+    { make_qr_if_needed();  return *matrix_r_; }
     /*!*********************************************************************************************
      * \brief   Return local normal of given index.
      *
@@ -196,7 +204,7 @@ class Linear
      * Return outer unit normal with respect to the hypernode which is spanned by all columns of the
      * transformation matrix but the column of the given index. The vector has to be in the span of
      * the columns of the transformation matrix. This is an element of the same dimension as the
-     * full space
+     * full space.
      *
      * \param   index         Index of the vector in the matrix which is \b not related to the node.
      **********************************************************************************************/
