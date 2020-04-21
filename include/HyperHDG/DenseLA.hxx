@@ -19,12 +19,13 @@
  * \authors   Andreas Rupp, Heidelberg University, 2019.
  **************************************************************************************************/
 struct SmallMatDivByZeroException : public std::exception
-{
-  const char * what () const throw () { return "Attempted division by zero."; }
-};
+{ const char * what () const throw () { return "Division by zero in dense linear algebra."; } };
 
 /*!*************************************************************************************************
- * \brief   This class implements a small matrix..
+ * \brief   This class implements a small/dense matrix.
+ *
+ * \todo    \c std::array has some problems using copy constructor. This has been bypassed now, but
+ *          its correct use has to be checked!
  * 
  * This class implements a SmallMat in a \f$d\f$-dimensional space, where the \f$d\f$ is given by
  * the template parameter \c n_rows,n_cols.
