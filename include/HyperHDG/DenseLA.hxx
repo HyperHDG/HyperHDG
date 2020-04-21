@@ -15,8 +15,8 @@
  *          works perfecly without the include. I suspect that array (or another by that SmallMat
  *          included package includes exception?!
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019.
- * \authors   Andreas Rupp, Heidelberg University, 2019.
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 struct SmallMatDivByZeroException : public std::exception
 { const char * what () const throw () { return "Division by zero in dense linear algebra."; } };
@@ -27,61 +27,69 @@ struct SmallMatDivByZeroException : public std::exception
  * \todo    \c std::array has some problems using copy constructor. This has been bypassed now, but
  *          its correct use has to be checked!
  * 
- * This class implements a SmallMat in a \f$d\f$-dimensional space, where the \f$d\f$ is given by
- * the template parameter \c n_rows,n_cols.
- * 
- * \tparam  mat_entry_t        Floating point type specification. Default is double.
- * \tparam  n_rows,n_cols         The dimension of the space, the object is located in.
+ * \tparam  n_rowsT       Number of rows of the matrix.
+ * \tparam  n_colsT       Number of columns of the matrix. Defaults to create square matrix.
+ * \tparam  mat_entry_t   Floating point type specification. Default is double.
  * 
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols = n_rows, typename mat_entry_t = double >
+template < unsigned int n_rowsT, unsigned int n_colsT = n_rowsT, typename mat_entry_t = double >
 class SmallMat
 {
   public:
     /*!*********************************************************************************************
+     * \brief   Return number of rows of the matrix.
+     * 
+     * \retval  n_rows    Number of rows of the matrix.
+     **********************************************************************************************/
+    static constexpr unsigned int n_rows()  { return n_rowsT; }
+    /*!*********************************************************************************************
+     * \brief   Return number of columns of the matrix.
+     * 
+     * \retval  n_cols    Number of columns of the matrix.
+     **********************************************************************************************/
+    static constexpr unsigned int n_cols()  { return n_colsT; }
+    /*!*********************************************************************************************
      * \brief   Return size a SmallMat.
      * 
-     * \retval  size            Amount of entries that can be stored within the matrix
+     * \retval  size      Amount of entries that can be stored within the matrix
      **********************************************************************************************/
-    static constexpr unsigned int size()  { return n_rows * n_cols; }
+    static constexpr unsigned int size()  { return n_rowsT * n_colsT; }
     /*!*********************************************************************************************
      * \brief   Return dimensions a SmallMat.
      * 
-     * \retval  dimensions      Number of rows and number of columns of the matrix.
+     * \retval  dims      Number of rows and number of columns of the matrix.
      **********************************************************************************************/
     static constexpr std::array<unsigned int, 2> dimensions()
-    { return std::array<unsigned int, 2> {n_rows, n_cols}; }
+    { return std::array<unsigned int, 2> {n_rowsT, n_colsT}; }
   private:
     /*!*********************************************************************************************
      * \brief   Array containing the entries of the SmallMat.
-     * 
-     * A \c std::array conatining the i-th coordinate of the SmallMat as its i-th entry.
      **********************************************************************************************/
     std::array<mat_entry_t, size()> entries_;
     /*!*********************************************************************************************
-     * \brief   Translate row and column indices to local index of entry in matrix.
+     * \brief   Translate row and column indices to local index of entry in matrix' array entries_.
      * 
-     * Local \f$ n \times n \f$ matrices are encoded as arrays of size \f$n^2\f$. This function
+     * Local \f$ m \times n \f$ matrices are encoded as arrays of size \f$mn\f$. This function
      * translates a row and a column index into the index of the long array, where the corresponding
      * entry is located. Note that this is done column-wise (not row-wise as usually), to have the
      * correct format for LAPACK.
      *
      * The function is static inline, since it is used in the constructor's initializer list.
      *
-     * \param   row           Row index of local mtatrix entry.
-     * \param   column        Column index of local matrix entry.
-     * \retval  index         Overall index of local matrix entry.
+     * \param   row       Row index of local mtatrix entry.
+     * \param   column    Column index of local matrix entry.
+     * \retval  index     Overall index of local matrix entry.
      **********************************************************************************************/
     static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
     {
-      hy_assert( 0 <= row && row < n_rows ,
+      hy_assert( 0 <= row && row < n_rowsT ,
                  "Row index must be >= 0 and smaller than number of rows." );
-      hy_assert( 0 <= column && column < n_cols ,
+      hy_assert( 0 <= column && column < n_colsT ,
                  "Column index must be >= 0 and smaller than number of columns." );
 
-      return column * n_rows + row;  // Encoded like this for easy use of LAPACK!
+      return column * n_rowsT + row;  // Encoded like this for easy use of LAPACK!
     }
   public:
 
@@ -102,6 +110,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Construct SmallMat from array of entries.
      * 
+     * \todo    Check, why the commented version sometimes (only(!)) leads to wrong results!
+     *
      * Fills the SmallMat's array of entries with the input parameter. 
      * 
      * \param   entries   A \c std::array containing the entries of the SmallMat.
@@ -115,31 +125,37 @@ class SmallMat
     : entries_(std::move(entries)) { }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
+     *
+     * \todo    Check, why the commented version sometimes (only(!)) leads to wrong results!
      **********************************************************************************************/
-    SmallMat(const SmallMat<n_rows,n_cols,mat_entry_t>& other) // : entries_(other.entries_)
+    SmallMat(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) // : entries_(other.entries_)
     { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
     /*!*********************************************************************************************
      * \brief   Conversion between different floating points artithmetics.
      **********************************************************************************************/
     template<typename other_entry_t>
-    explicit SmallMat(const SmallMat<n_rows,n_cols,other_entry_t>& other)
+    explicit SmallMat(const SmallMat<n_rowsT,n_colsT,other_entry_t>& other)
     { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
     /*!*********************************************************************************************
      * \brief   Move constructor.
      **********************************************************************************************/
-    SmallMat(SmallMat<n_rows,n_cols,mat_entry_t>&& other) noexcept
+    SmallMat(SmallMat<n_rowsT,n_colsT,mat_entry_t>&& other) noexcept
     : entries_(std::move(other.entries_)) { }
     /*!*********************************************************************************************
      * \brief   Copy assignment.
+     *
+     * \todo    In the light of the other todos, check whether this has to be adapted.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator=
-    ( const SmallMat<n_rows,n_cols,mat_entry_t>& other )
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator=
+    ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
     { entries_ = other.entries_; return *this; }
     /*!*********************************************************************************************
      * \brief   Move assignment.
+     *
+     * \todo    In the light of the other todos, check whether this has to be adapted.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator=
-    ( SmallMat<n_rows,n_cols,mat_entry_t>&& other ) noexcept
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator=
+    ( SmallMat<n_rowsT,n_colsT,mat_entry_t>&& other ) noexcept
     { std::swap(entries_, other.entries_); return *this; }
     
     // Return array with data:
@@ -158,40 +174,37 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Return a column of a  SmallMat.
      * 
-     * \param   col           An \c unsigned \c int referring to the column's index.
-     * \retval  column        SmallMat that consists of the column.
+     * \param   col       An \c unsigned \c int referring to the column's index.
+     * \retval  column    SmallMat that consists of the column.
      **********************************************************************************************/
-    SmallMat<n_rows,1,mat_entry_t> get_column(const unsigned int col) const
+    SmallMat<n_rowsT,1,mat_entry_t> get_column(const unsigned int col) const
     { 
-      SmallMat<n_rows,1,mat_entry_t> column;
-      for (unsigned int i = 0; i < n_rows; ++i)  column[i] = operator()(i,col);
+      SmallMat<n_rowsT,1,mat_entry_t> column;
+      for (unsigned int i = 0; i < n_rowsT; ++i)  column[i] = operator()(i,col);
       return column;
     }
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
      * 
-     * \param   col           An \c unsigned \c int referring to the column's index.
-     * \param   col_vec       The column that should be located at the position \c col.
+     * \param   col       An \c unsigned \c int referring to the column's index.
+     * \param   col_vec   The column that should be located at the position \c col.
      **********************************************************************************************/
-    void set_column(const unsigned int col, const SmallMat<n_rows,1,mat_entry_t> col_vec)
-    { for (unsigned int i = 0; i < n_rows; ++i)  operator()(i,col) = col_vec[i]; }
+    void set_column(const unsigned int col, const SmallMat<n_rowsT,1,mat_entry_t> col_vec)
+    { for (unsigned int i = 0; i < n_rowsT; ++i)  operator()(i,col) = col_vec[i]; }
 
     /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
      * 
-     * \param   index         An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
+     * \retval  coord     \c mat_entry_t describing the coord_entry'th coordinate.
      **********************************************************************************************/
     mat_entry_t operator()(const unsigned int row, const unsigned int column) const
     { return operator[](loc_matrix_index(row, column)); }
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
      * 
-     * \param   index         An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    A reference to a \c mat_entry_t describing the coord_entry'th
-     *                        coordinate.
+     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
+     * \retval  coord     A reference to a \c mat_entry_t describing the coord_entry'th coordinate.
      **********************************************************************************************/
     mat_entry_t& operator()(const unsigned int row, const unsigned int column)
     { return operator[](loc_matrix_index(row, column)); }
@@ -199,9 +212,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
      * 
-     * \param   index         An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    \c mat_entry_t describing the coord_entry'th coordinate.
+     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
+     * \retval  coord     \c mat_entry_t describing the coord_entry'th coordinate.
      **********************************************************************************************/
     mat_entry_t operator[](const unsigned int index) const
     {
@@ -214,10 +226,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
      * 
-     * \param   index         An \c unsigned \c int referring to the coordinate that is to be
-     *                        returned.
-     * \retval  coordinate    A reference to a \c mat_entry_t describing the coord_entry'th
-     *                        coordinate.
+     * \param   index     An \c unsigned \c int referring to the coordinate that is to be returned.
+     * \retval  coord     A reference to a \c mat_entry_t describing the coord_entry'th coordinate.
      **********************************************************************************************/
     mat_entry_t& operator[](const unsigned int index)
     {
@@ -240,7 +250,7 @@ class SmallMat
      * \param   other_SmallMat  Another \c SmallMat<n_rows,n_cols> that is to be dicriminate from.
      * \retval  isEqual         A \c boolean which is true if both SmallMats have the same coords.
      **********************************************************************************************/
-    bool operator==(const SmallMat<n_rows,n_cols,mat_entry_t>& other_SmallMat) const
+    bool operator==(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
     {
       for (unsigned int index = 0; index < size(); ++index)
         if (entries_[index] != other_SmallMat[index])  return false;
@@ -256,7 +266,7 @@ class SmallMat
      * \param   other_SmallMat  Another \c SmallMat<n_rows,n_cols> that is to be dicriminate from.
      * \retval  isEqual         A \c boolean which is false if both SmallMats have the same coords.
      **********************************************************************************************/
-    bool operator!=(const SmallMat<n_rows,n_cols,mat_entry_t>& other_SmallMat) const
+    bool operator!=(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
     {
       for (unsigned int index = 0; index < size(); ++index)
         if (entries_[index] != other_SmallMat[index])  return true;
@@ -274,7 +284,7 @@ class SmallMat
      * \retval  isEqual         A \c boolean which is true if the left SmallMat is strictly smaller
      *                          than the right one.
      **********************************************************************************************/
-    bool operator<(const SmallMat<n_rows,n_cols,mat_entry_t>& other_SmallMat) const
+    bool operator<(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other_SmallMat) const
     {
       for (unsigned int index = 0; index < size(); ++index)
         if (entries_[index] < other_SmallMat[index])      return true;
@@ -290,7 +300,7 @@ class SmallMat
      * \param   scalar        Floating SmallMat that is added to all of the SmallMat's entries.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator+=(const mat_entry_t scalar)
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator+=(const mat_entry_t scalar)
     {
       for (unsigned int index = 0; index < size(); ++index)  entries_[index] += scalar;
       return *this;
@@ -302,7 +312,7 @@ class SmallMat
      *                           entries.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator-=(const mat_entry_t scalar)
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator-=(const mat_entry_t scalar)
     {
       for (unsigned int index = 0; index < size(); ++index)  entries_[index] -= scalar;
       return *this;
@@ -314,7 +324,7 @@ class SmallMat
      *                           entries.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator*=(const mat_entry_t scalar)
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator*=(const mat_entry_t scalar)
     {
       for (unsigned int index = 0; index < size(); ++index)  entries_[index] *= scalar;
       return *this;
@@ -325,7 +335,7 @@ class SmallMat
      * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator/=(const mat_entry_t scalar)
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator/=(const mat_entry_t scalar)
     {
       if (scalar == 0.)  throw SmallMatDivByZeroException();
       for (unsigned int index = 0; index < size(); ++index)  entries_[index] /= scalar;
@@ -341,17 +351,17 @@ class SmallMat
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
     template<unsigned int n_cols_other>
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator+=
-    ( const SmallMat<n_rows,n_cols_other,mat_entry_t>& other )
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator+=
+    ( const SmallMat<n_rowsT,n_cols_other,mat_entry_t>& other )
     {
-      static_assert( n_cols_other == n_cols || n_cols_other == 1,
+      static_assert( n_cols_other == n_colsT || n_cols_other == 1,
                      "Addition is only defined for equal matrices or matrix plus vector." );
 
-      if constexpr (n_cols_other == n_cols) 
+      if constexpr (n_cols_other == n_colsT) 
         for (unsigned int index = 0; index < size(); ++index)  entries_[index] += other[index];
       else if constexpr (n_cols_other == 1)
-        for (unsigned int j = 0; j < n_cols; ++j)
-          for (unsigned int i = 0; i < n_rows; ++i)
+        for (unsigned int j = 0; j < n_colsT; ++j)
+          for (unsigned int i = 0; i < n_rowsT; ++i)
             this->operator()(i,j) += other[i];
       
       return *this;
@@ -363,17 +373,17 @@ class SmallMat
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
     template<unsigned int n_cols_other>
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator-=
-    ( const SmallMat<n_rows,n_cols_other,mat_entry_t>& other )
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator-=
+    ( const SmallMat<n_rowsT,n_cols_other,mat_entry_t>& other )
     {
-      static_assert( n_cols_other == n_cols || n_cols_other == 1,
+      static_assert( n_cols_other == n_colsT || n_cols_other == 1,
                      "Subtration is only defined for equal matrices or matrix plus vector." );
 
-      if constexpr (n_cols_other == n_cols)
+      if constexpr (n_cols_other == n_colsT)
         for (unsigned int index = 0; index < size(); ++index)  entries_[index] -= other[index];
       else if constexpr (n_cols_other == 1)
-        for (unsigned int j = 0; j < n_cols; ++j)
-          for (unsigned int i = 0; i < n_rows; ++i)
+        for (unsigned int j = 0; j < n_colsT; ++j)
+          for (unsigned int i = 0; i < n_rowsT; ++i)
             this->operator()(i,j) -= other[i];
       
       return *this;
@@ -384,8 +394,8 @@ class SmallMat
      * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator*=
-    ( const SmallMat<n_rows,n_cols,mat_entry_t>& other )
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator*=
+    ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
     {
       for (unsigned int index = 0; index < size(); ++index)  entries_[index] *= other[index];
       return *this;
@@ -396,8 +406,8 @@ class SmallMat
      * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
      * \retval  this_SmallMat    The updated SmallMat.
      **********************************************************************************************/
-    SmallMat<n_rows,n_cols,mat_entry_t>& operator/=
-    ( const SmallMat<n_rows,n_cols,mat_entry_t>& other )
+    SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator/=
+    ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
     {
       for (unsigned int index = 0; index < size(); ++index)
       {
