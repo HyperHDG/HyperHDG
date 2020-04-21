@@ -296,8 +296,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Add scalar to a given SmallMat.
      * 
-     * \param   scalar        Floating SmallMat that is added to all of the SmallMat's entries.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   scalar    Floating point that is added to all of the SmallMat's entries.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator+=(const mat_entry_t scalar)
     {
@@ -307,9 +307,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Subtract scalar from a given SmallMat.
      * 
-     * \param   scalar           Floating point that is subtracted from all of the SmallMat's
-     *                           entries.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   scalar    Floating point that is subtracted from all of the SmallMat's entries.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator-=(const mat_entry_t scalar)
     {
@@ -317,11 +316,10 @@ class SmallMat
       return *this;
     }
     /*!*********************************************************************************************
-     * \brief   Multiply scalar a given SmallMat.
+     * \brief   Multiply SmallMat by a given scalar.
      * 
-     * \param   scalar           Floating point that is multiplied with all of the SmallMat's
-     *                           entries.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   scalar    Floating point that is multiplied with all of the SmallMat's entries.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator*=(const mat_entry_t scalar)
     {
@@ -331,8 +329,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Divide given SmallMat by a scalar.
      * 
-     * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   scalar    Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator/=(const mat_entry_t scalar)
     {
@@ -346,8 +344,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Add SmallMat to given SmallMat.
      * 
-     * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   other     SmallMat whose entries are added to respective ones of \c this.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     template<unsigned int n_cols_other>
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator+=
@@ -368,8 +366,8 @@ class SmallMat
     /*!*********************************************************************************************
      * \brief   Subtract other SmallMat from SmallMat.
      * 
-     * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   other     SmallMat whose entries are subtracted from the respective ones of \c this.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     template<unsigned int n_cols_other>
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator-=
@@ -388,10 +386,10 @@ class SmallMat
       return *this;
     }
     /*!*********************************************************************************************
-     * \brief   Hadamard product with other SmallMat.
+     * \brief   Hadamard product with given SmallMat.
      * 
-     * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   other     SmallMat whose entries are multiplied by the respective ones of \c this.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator*=
     ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
@@ -400,10 +398,10 @@ class SmallMat
       return *this;
     }
     /*!*********************************************************************************************
-     * \brief   Hadamard division by other SmallMat.
+     * \brief   Hadamard division by given SmallMat.
      * 
-     * \param   scalar        Floating SmallMat (\f$\neq 0\f$) all entries are divided by.
-     * \retval  this_SmallMat    The updated SmallMat.
+     * \param   other     SmallMat whose respective entries of \c this are divided by.
+     * \retval  this      The updated SmallMat.
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator/=
     ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
