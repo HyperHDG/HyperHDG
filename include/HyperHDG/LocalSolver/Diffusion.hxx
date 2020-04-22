@@ -483,6 +483,10 @@ struct DiffusionParametersDefault
   { return 1.;  }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
+  static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
+  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
 };
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -704,7 +708,9 @@ class Diffusion
      * Function to evaluate primal variable of the solution. This function is needed to calculate
      * the local numerical fluxes.
      *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
      * \param   coeffs        Coefficients of the local solution.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
     template < typename GeomT >
@@ -716,13 +722,21 @@ class Diffusion
      * Function to evaluate dual variable of the solution. This function is needed to calculate the
      * local numerical fluxes.
      *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
      * \param   coeffs        Coefficients of the local solution.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
     template < typename GeomT >
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT > dual_at_boundary
     ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const;
+    
   public:
+  
+    // ---------------------------------------------------------------------------------------------
+    // Public functions (and one typedef) to be utilized by external functions.
+    // ---------------------------------------------------------------------------------------------
+    
     /*!*********************************************************************************************
      * \brief   Class is constructed using a single double indicating the penalty parameter.
      **********************************************************************************************/
@@ -741,13 +755,17 @@ class Diffusion
      * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
      * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
      * \param   lambda_values Local part of vector x.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template < class GeomT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
-    ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
-      GeomT& geom ) const
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      GeomT                                                                     & geom
+    )  const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values, geom);
       
@@ -761,16 +779,32 @@ class Diffusion
        
       return bdr_values;
     }
-
-    template <class GeomT>
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
     ( GeomT& geom ) const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(geom);
       return dual_at_boundary(coeffs,geom);
     }
-    
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    /*!*********************************************************************************************
+     * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+     *
+     * \tparam  absc_float_t  Floating type for the abscissa values.
+     * \tparam  sizeT         Size of the array of array of abscissas.
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \param   abscissas     Abscissas of the supporting points.
+     * \param   lambda_values The values of the skeletal variable's coefficients.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
@@ -781,9 +815,31 @@ class Diffusion
       >::system_dimension()
     >
     bulk_values
-    ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      GeomT& geom ) const;
-
+    ( 
+      const std::array<abscissa_float_t,sizeT>  & abscissas,
+      const input_array_t                       & lambda_values,
+      GeomT                                     & geom
+    )  const;
+    /*!*********************************************************************************************
+     * \brief   TODO
+     * \todo    Discuss this with Guido!
+     **********************************************************************************************/
+/*  Needs a loop over all hypernodes!
+    template < unsigned int type, typename GeomT >  void add_bdr_values
+    ( std::array<lSol_float_t, n_shape_bdr_>& hyNode_values, GeomT& geom ) const
+    {
+      static_assert( type < 2 , "Only two types of boundary conditions are defined." );
+      
+      if constexpr ( type == 0 )
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          hyNode_values[i] += integrator.template
+                                integrate_vol_phifunc<GeomT,parameters::dirichlet_value>(i, geom);
+      if constexpr ( type == 1 )
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          hyNode_values[i] += integrator.template
+                                integrate_vol_phifunc<GeomT,parameters::neumann_value>(i, geom);
+    }
+*/
 }; // end of class Diffusion
 
 
