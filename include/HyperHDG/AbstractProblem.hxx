@@ -227,32 +227,33 @@ class AbstractProblem
      * \retval  x_vec         A \c std::vector containing the input plus the global right-hand side.
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    void add_rhs ( std::vector<dof_value_t>& x_vec ) const
+    std::vector<dof_value_t> assemble_rhs ( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
+      std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
-      // Do matrix--vector multiplication by iterating over all hyperedges.
+      // Generate righ-hand side for all hyperedges hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
       {
-        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        // Find hypernodes related to hyperedge.
         hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyEdge_dofs[hyNode] = 
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
-        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        // Generate degrees of freedom of vec_Ax (stored locally).
         if constexpr ( LocalSolverT::use_geometry() )
-          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge.geometry);
-        else  hyEdge_dofs = local_solver_.numerical_flux_from_rhs();
+          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_dofs, hyEdge.geometry);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_dofs);
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyper_graph_.hyNode_factory().add_to_dof_values
-            (hyEdge_hyNodes[hyNode], x_vec, hyEdge_dofs[hyNode]);
+            (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
       
       // Set all Dirichlet values to zero.
@@ -264,9 +265,52 @@ class AbstractProblem
                    << "smaller than the total amount of degrees of freedom." << std::endl
                    << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
                    "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        x_vec[dirichlet_indices_[i]] = 0.;
+        vec_Ax[dirichlet_indices_[i]] = 0.;
       }
+      
+      return vec_Ax;
     }
+    /*!*********************************************************************************************
+     * \brief   Calculate errors.
+     *
+     * Function that evaluates the global right-hand side (implemented wthin the local solver) and
+     * adds the result to the function argument.
+     *
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  error         A \c std::vector containing the errors.
+     **********************************************************************************************/
+/*
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    std::vector<dof_value_t> add_rhs ( const std::vector<dof_value_t>& x_vec ) const
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
+      constexpr unsigned int n_errors         = LocalSolverT::n_comparison_functions();
+      
+      std::vector<dof_value_t> result(n_errors, 0.);
+      std::array<dof_value_t, n_errors> loc_error;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+      
+      // Calculate errors by iteration over all hyperedges.
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into local errors.
+        if constexpr ( LocalSolverT::use_geometry() )
+          loc_error = local_solver_.calc_loc_error(hyEdge.geometry);
+        else  loc_error = local_solver_.calc_loc_error();
+        
+        // Fill the vector of errors.
+        for ( unsigned int err = 0 ; err < n_errors ; ++error )  result[err] += loc_error[err];
+      });
+    }
+*/
     /*!*********************************************************************************************
      * \brief   Determine size of condensed system for the skeletal unknowns.
      *
