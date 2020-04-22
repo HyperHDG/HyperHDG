@@ -31,7 +31,7 @@ HDG_wrapper = PyDiffusionProblem([4,2,2])
 # index vector (next) will cause a wrong representation of the final result.
 vectorDirichlet = HDG_wrapper.return_zero_vector()
 vectorDirichlet[0] = 1.
-# vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
+vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
@@ -45,10 +45,11 @@ HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
+# vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
+vectorRHS = HDG_wrapper.assemble_rhs(vectorDirichlet)
 
 # Print right-hand side vector.
-# print("Right-hand side: ", vectorRHS)
+print("Right-hand side: ", vectorRHS)
 
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
@@ -79,7 +80,7 @@ reference_solution = np.array(
     0.63876017, 0.57986777, 0.5,        0.42013223, 0.36123983, 0.60792184,
     0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
     0.44719263, 0.3000305,  0. ])
-    
+vectorDirichlet[len(vectorDirichlet)-1] = 0.
 if np.linalg.norm(reference_solution - vectorSolution - vectorDirichlet, np.inf) > tolerance:
   print("Diffusion test FAILED!")
 else:
