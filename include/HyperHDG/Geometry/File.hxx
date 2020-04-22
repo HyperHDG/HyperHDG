@@ -46,8 +46,17 @@ namespace Geometry
  *                          be larger than or equal to hyEdge_dimT.
  * \tparam  pt_coord_t      The floating point type in which points/vertices are represented.
  *                          Default is double.
- * \tparam  mapping_tt      The mapping which should depened on the aforementioned three template
+ * \tparam  mapping_tM      The mapping which should depened on the aforementioned three template
  *                          arguments. Default is linear mapping.
+ * \tparam  hyEdge_dimTM    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ *                          Template parameter for the mapping which defaults to hyEdge_dimT.
+ * \tparam  space_dimTM     The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyEdge_dimT.
+ *                          Template parameter for the mapping which defaults to space_dimT.
+ * \tparam  pt_coord_tM     The floating point type in which points/vertices are represented.
+ *                          Default is double.
+ *                          Template parameter for the mapping which defaults to pt_coord_t.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -56,15 +65,16 @@ namespace Geometry
 template 
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
-  template < unsigned int hyEdge_dimTT, unsigned int space_dimTT, typename pt_coord_tt > 
-  typename mapping_tt = Mapping::Linear, typename hyEdge_index_t = unsigned int
+  template < unsigned int, unsigned int, typename >  typename mapping_tM = Mapping::Linear,
+  unsigned int hyEdge_dimTM = hyEdge_dimT, unsigned int space_dimTM = space_dimT,
+  typename pt_coord_tM = pt_coord_t, typename hyEdge_index_t = unsigned int
 >
 class File
 {
   /*!***********************************************************************************************
    * \brief   The mapping type is \c mapping_tt with given template parameters.
    ************************************************************************************************/
-  using mapping_t = mapping_tt<hyEdge_dimT, space_dimT, pt_coord_t>;
+  using mapping_t = mapping_tM<hyEdge_dimTM,space_dimTM,pt_coord_tM>;
   
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
