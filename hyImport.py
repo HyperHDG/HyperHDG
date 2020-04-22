@@ -1,6 +1,4 @@
-import os
-import sys
-import importlib
+import os, sys, importlib
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
 #
@@ -32,11 +30,12 @@ import importlib
 #
 #  \param   names       Vector containing names of class to be imported.
 #  \param   filenames   Vector containing names of files that need to be included. Default is empty.
+#  \param   force_comp  Force recompilation of the C++ class.
 #  \retval  class       The C++ class (not class member) to be used in the Python code.
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
-def hyImport(names, filenames = []):
+def hyImport(names, filenames = [], force_comp = False):
   ver_major = sys.version_info.major
   ver_minor = sys.version_info.minor
 
@@ -56,6 +55,6 @@ def hyImport(names, filenames = []):
     sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
     from hyCythonizer import hyPyCythonize
 
-  retval = hyPyCythonize(names, filenames, ver_major, ver_minor)
+  retval = hyPyCythonize(names, filenames, ver_major, ver_minor, force_comp)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)
