@@ -612,7 +612,7 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   tau           Penalty parameter for HDG.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_mat       Matrix of the local solver.
@@ -633,7 +633,7 @@ class Diffusion
      * to the global right-hand side. This assembles the local right-hand side with respect to the
      * skeletal variable.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
@@ -656,7 +656,7 @@ class Diffusion
      * to the global right-hand side. This assembles the local right-hand side with respect to the
      * global right-hand side. This function implicitly uses the parameters.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
@@ -665,7 +665,7 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from skeletal).
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_sol       Solution of the local problem.
@@ -687,7 +687,7 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from global right-hand side).
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
@@ -708,7 +708,7 @@ class Diffusion
      * Function to evaluate primal variable of the solution. This function is needed to calculate
      * the local numerical fluxes.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   coeffs        Coefficients of the local solution.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
@@ -722,7 +722,7 @@ class Diffusion
      * Function to evaluate dual variable of the solution. This function is needed to calculate the
      * local numerical fluxes.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   coeffs        Coefficients of the local solution.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
@@ -755,7 +755,7 @@ class Diffusion
      * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
      * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   lambda_values Local part of vector x.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vecAx         Local part of vector A * x.
@@ -782,7 +782,7 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
      *
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
@@ -798,7 +798,7 @@ class Diffusion
      *
      * \tparam  absc_float_t  Floating type for the abscissa values.
      * \tparam  sizeT         Size of the array of array of abscissas.
-     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   abscissas     Abscissas of the supporting points.
      * \param   lambda_values The values of the skeletal variable's coefficients.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
