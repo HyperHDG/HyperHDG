@@ -227,14 +227,26 @@ class AbstractProblem
      * \retval  x_vec         A \c std::vector containing the input plus the global right-hand side.
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t> assemble_rhs ( const std::vector<dof_value_t>& x_vec ) const
+    std::vector<dof_value_t> assemble_rhs ( std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
-      std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
+      std::vector<dof_value_t> vec_Ax = return_zero_vector();
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+      
+      // Set all Dirichlet values to one.
+      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
+      {
+        hy_assert( dirichlet_indices_[i] >= 0 
+                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
+                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
+                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
+        x_vec[dirichlet_indices_[i]] = 1.;
+      }
       
       // Generate righ-hand side for all hyperedges hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
