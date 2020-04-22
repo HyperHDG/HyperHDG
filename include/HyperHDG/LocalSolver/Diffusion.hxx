@@ -500,11 +500,17 @@ struct DiffusionParameters
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters = DiffusionParameters<space_dimT,double>,
-  typename lSol_float_t = double
+  template < unsigned int, typename >  typename parametersT = DiffusionParameters,
+  typename lSol_float_t = double,
+  unsigned int space_dimTP = space_dimT, typename lSol_float_tP = lSol_float_t
 >
 class Diffusion
 {
+  /*!***********************************************************************************************
+   * \brief   The mapping type is \c mapping_tt with given template parameters.
+   ************************************************************************************************/
+  using parameters = parametersT<space_dimTP, lSol_float_tP>;
+  
   public:
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
@@ -717,7 +723,7 @@ class Diffusion
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::system_dimension()
+      Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parametersT,lSol_float_t,space_dimTP,lSol_float_tP>::system_dimension()
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
@@ -742,12 +748,13 @@ class Diffusion
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename GeomT >
 inline SmallSquareMat
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::
+<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::
 assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
@@ -798,12 +805,13 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename GeomT >
 inline SmallVec
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::assemble_rhs
+<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::assemble_rhs
 ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
   GeomT& geom ) const
 {
@@ -838,12 +846,13 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::ass
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename GeomT >
 inline SmallVec
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::
+<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::
 assemble_rhs_from_global_rhs ( GeomT& geom ) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -863,7 +872,8 @@ assemble_rhs_from_global_rhs ( GeomT& geom ) const
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename GeomT >
 inline std::array
@@ -871,11 +881,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_shape_bdr_
+    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::primal_at_boundary
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::primal_at_boundary
 ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, GeomT& geom ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
@@ -900,7 +910,8 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::pri
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename GeomT >
 inline std::array
@@ -908,11 +919,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::n_shape_bdr_
+    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::dual_at_boundary
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::dual_at_boundary
 ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
@@ -942,7 +953,8 @@ Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::dua
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  typename parameters, typename lSol_float_t
+  template < unsigned int, typename > typename parameters, typename lSol_float_t,
+  unsigned int space_dimTP, typename lSol_float_tP
 >
 template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename GeomT >
 std::array
@@ -952,9 +964,9 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dimT>::pow(sizeT)
   > ,
-  Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::system_dimension()
+  Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::system_dimension()
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t>::bulk_values
+Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
   GeomT& geom ) const
 {
