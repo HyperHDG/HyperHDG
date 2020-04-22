@@ -461,38 +461,57 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 } // end of Diffusion_TensorialUniform::bulk_values
 
 
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+//
+// GENERAL DIFFUSION PROBLEM AND RELATED CLASSES/STRUCTS
+//
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 
-
+/*!*************************************************************************************************
+ * \brief   Default parameters for the diffusion equation, cf. below.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct DiffusionParameters
+struct DiffusionParametersDefault
 {
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT,param_float_t>& pt)
+  static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
   { return 1.;  }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
-
-
-
-
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
- * This class contains the local solver for Poisson's equation, i.e.,
+ * This class contains the local solver for an isotropic diffusion equation, i.e.,
  * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
+ *  - \nabla \cdot ( d \nabla u = f \quad \text{ in } \Omega, \qquad
+ *  u = u_\textup D \quad \text{ on } \partial \Omega_\textup D}, \qquad
+ *  - d \nabla u \cdot \nu = g_\textup N \quad \text{ on } \partial \Omega_\textup N
  * \f]
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3). For this class, all
- * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
- * information is needed by this class.
+ * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
+ * case of \c hyEdge_dimT > 3). \f$f$\f and \f$d\f$ are scalars defined in the whole domain, the
+ * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
  *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dimT    The dimension of the surrounding space.
  * \tparam  poly_deg      The polynomial degree of test and trial functions.
  * \tparam  quad_deg      The order of the quadrature rule.
+ * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
+ *                        contains static parameter functions.
+ *                        Defaults to above functions included in \c DiffusionParametersDefault.
+ * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
+ * \tparam  space_dimTP   The dimension of the surrounding space.
+ *                        Template parameter for the parameters which defaults to space_dimT.
+ * \tparam  lSol_float_tP The floating point type calculations are executed in. Defaults to double.
+ *                        Template parameter for the parameters which defaults to lSol_float_t.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -500,28 +519,25 @@ struct DiffusionParameters
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT = DiffusionParameters,
+  template < unsigned int, typename >  typename parametersT = DiffusionParametersDefault,
   typename lSol_float_t = double,
   unsigned int space_dimTP = space_dimT, typename lSol_float_tP = lSol_float_t
 >
 class Diffusion
 {
   /*!***********************************************************************************************
-   * \brief   The mapping type is \c mapping_tt with given template parameters.
+   * \brief   The parameters type is \c parametersT with given template parameters.
    ************************************************************************************************/
   using parameters = parametersT<space_dimTP, lSol_float_tP>;
-  
+    
   public:
+  
+    // ---------------------------------------------------------------------------------------------
+    // Public, static constexpr functions
+    // ---------------------------------------------------------------------------------------------
+    
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
-     * 
-     * \todo  Why is this not just called dimension?
-     *        -> E.g. in elasticity there are two important dimensions, the one of the hyperedge and
-     *        the one of the space. Thus, elasticity can return both dimensions, while this class
-     *        only returns the relevant hyperedge dimension.
-     * \todo  The original brief referred to the internal variable only. It should be the other way
-     *        round: this function is the main access to this number.
-     *        -> I agree, this was not on purpose and I have to check for this in other classes!
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
@@ -533,13 +549,6 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
-     * \todo  Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
-     *        -> In Elasticity, there are two types of dofs per node. The one that come from outside
-     *        (they are space_dim - dimensional) and the ones that are relevant for the local
-     *        problem (and therefore hyEdge_dimT - dimensional). Thus, there is a discrimination
-     *        between global and local amount per dofs in local solvers.
-     * 
-     *
      * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
      * cooperating with this object.
      *
@@ -547,14 +556,21 @@ class Diffusion
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
     { return Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
-    
-    
+    /*!*********************************************************************************************
+     * \brief Dimension of of the solution evaluated with respect to a hypernode.
+     **********************************************************************************************/
     static constexpr unsigned int node_value_dimension() { return 1U; }
-    
+    /*!*********************************************************************************************
+     * \brief Dimension of of the solution evaluated with respect to a hyperedge.
+     **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return 1U; }
     
-    
   private:
+  
+    // ---------------------------------------------------------------------------------------------
+    // Private, static constexpr functions
+    // ---------------------------------------------------------------------------------------------
+  
     /*!*********************************************************************************************
      * \brief   Number of quadrature points per spatial dimension.
      **********************************************************************************************/
@@ -571,60 +587,92 @@ class Diffusion
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+1) * n_shape_fct_;
-    /*!*********************************************************************************************
-     * \brief  Assemble local matrix for the local solver.
-     *
-     * The local solver neither depends on the geometry, nor on global functions. Thus, its local
-     * matrix is the same for all hyperedges and can be assembled once in the constructor. This is
-     * done in this function.
-     *
-     * The function is static inline, since it is used in the constructor's initializer list.
-     *
-     * \param   tau           Penalty parameter for HDG.
-     * \retval  loc_mat       Matrix of the local solver.
-     **********************************************************************************************/
-    template < typename GeomT > 
-    inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
-    assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const;
+    
+    // ---------------------------------------------------------------------------------------------
+    // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
+    // ---------------------------------------------------------------------------------------------
+    
     /*!*********************************************************************************************
      * \brief   (Globally constant) penalty parameter for HDG scheme.
      **********************************************************************************************/
     const lSol_float_t tau_;
-    
+    /*!*********************************************************************************************
+     * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
+     **********************************************************************************************/
     const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
     
+    // ---------------------------------------------------------------------------------------------
+    // Private, internal functions for the local solver
+    // ---------------------------------------------------------------------------------------------
+    
     /*!*********************************************************************************************
-     * \brief  Assemble local right hand for the local solver.
+     * \brief  Assemble local matrix for the local solver.
      *
-     * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
-     * constructed individually for every hyperedge.
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \param   tau           Penalty parameter for HDG.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_mat       Matrix of the local solver.
+     **********************************************************************************************/
+    template < typename GeomT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
+    assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const;
+    /*!*********************************************************************************************
+     * \brief  Assemble local right-hand for the local solver (from skeletal).
      *
+     * The right hand side needs the values of the global degrees of freedom. Note that we basically
+     * follow the lines of
+     * 
+     * B. Cockburn, J. Gopalakrishnan, and R. Lazarov.
+     * Unified hybridization of discontinuous Galerkin, mixed, and continuous Galerkin methods for
+     * second order elliptic problems. SIAM Journal on Numerical Analysis, 47(2):1319–1365, 2009
+     * 
+     * and discriminate between local solvers with respect to the skeletal variable and with respect
+     * to the global right-hand side. This assembles the local right-hand side with respect to the
+     * skeletal variable.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     **********************************************************************************************/
+    template < typename GeomT >  inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      GeomT                                                                     & geom 
+    )  const;
+    /*!*********************************************************************************************
+     * \brief  Assemble local right-hand for the local solver (from global right-hand side).
+     *
+     * Note that we basically follow the lines of
+     * 
+     * B. Cockburn, J. Gopalakrishnan, and R. Lazarov.
+     * Unified hybridization of discontinuous Galerkin, mixed, and continuous Galerkin methods for
+     * second order elliptic problems. SIAM Journal on Numerical Analysis, 47(2):1319–1365, 2009
+     * 
+     * and discriminate between local solvers with respect to the skeletal variable and with respect
+     * to the global right-hand side. This assembles the local right-hand side with respect to the
+     * global right-hand side. This function implicitly uses the parameters.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     template < typename GeomT >
-    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
-    ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
-      GeomT& geom ) const;
-
-    template < typename GeomT >
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_global_rhs ( GeomT& geom ) const;
-    
     /*!*********************************************************************************************
-     * \brief  Solve local problem.
+     * \brief  Solve local problem (with right-hand side from skeletal).
      *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
      * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
-    template < typename GeomT >
-    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
-    ( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
-      GeomT& geom ) const
+    template < typename GeomT >  inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      GeomT                                                                     & geom
+    )  const
     {
-      try
-      {
-        return (assemble_rhs(lambda_values, geom) / assemble_loc_matrix(tau_, geom)).data();
-      }
+      try  { return (assemble_rhs(lambda_values, geom) / assemble_loc_matrix(tau_, geom)).data(); }
       catch (LAPACKexception& exc)
       {
         hy_assert( 0 == 1 ,
@@ -632,14 +680,17 @@ class Diffusion
         throw exc;
       }
     }
-
+    /*!*********************************************************************************************
+     * \brief  Solve local problem (with right-hand side from global right-hand side).
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_sol       Solution of the local problem.
+     **********************************************************************************************/
     template < typename GeomT >
     inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs( GeomT& geom ) const
     {
-      try
-      {
-        return (assemble_rhs_from_global_rhs(geom) / assemble_loc_matrix(tau_, geom)).data();
-      }
+      try  { return (assemble_rhs_from_global_rhs(geom) / assemble_loc_matrix(tau_, geom)).data(); }
       catch (LAPACKexception& exc)
       {
         hy_assert( 0 == 1 ,
@@ -723,7 +774,11 @@ class Diffusion
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parametersT,lSol_float_t,space_dimTP,lSol_float_tP>::system_dimension()
+      Diffusion
+      < 
+        hyEdge_dimT, space_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, space_dimTP,
+        lSol_float_tP
+      >::system_dimension()
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
@@ -753,8 +808,13 @@ template
 >
 template < typename GeomT >
 inline SmallSquareMat
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::
+<
+  Diffusion
+  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+  ::n_loc_dofs_, lSol_float_t
+>
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
 assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
@@ -810,10 +870,18 @@ template
 >
 template < typename GeomT >
 inline SmallVec
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::assemble_rhs
-( const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
-  GeomT& geom ) const
+<
+  Diffusion
+  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t, space_dimTP,lSol_float_tP >
+  ::n_loc_dofs_, lSol_float_t
+>
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+assemble_rhs
+( 
+  const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+  GeomT                                                                     & geom 
+)  const
 {
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
              "The size of the lambda values should be twice the dimension of a hyperedge." );
@@ -851,8 +919,13 @@ template
 >
 template < typename GeomT >
 inline SmallVec
-<Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_loc_dofs_, lSol_float_t>
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::
+<
+  Diffusion
+  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+  ::n_loc_dofs_, lSol_float_t
+>
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
 assemble_rhs_from_global_rhs ( GeomT& geom ) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -881,12 +954,19 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_shape_bdr_
+    Diffusion
+    < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+    ::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::primal_at_boundary
-( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, GeomT& geom ) const
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+primal_at_boundary
+( 
+  const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
+  GeomT                                         & geom
+)  const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
 
@@ -919,12 +999,19 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::n_shape_bdr_
+    Diffusion
+    < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+    ::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::dual_at_boundary
-( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+dual_at_boundary
+( 
+  const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>  & coeffs,
+  GeomT                                                           & geom
+)  const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
   lSol_float_t integral;
@@ -964,11 +1051,18 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dimT>::pow(sizeT)
   > ,
-  Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::system_dimension()
+  Diffusion
+  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+  ::system_dimension()
 >
-Diffusion<hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP>::bulk_values
-( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  GeomT& geom ) const
+Diffusion
+< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+bulk_values
+( 
+  const std::array<abscissa_float_t,sizeT>  & abscissas,
+  const input_array_t                       & lambda_values,
+  GeomT                                     & geom
+)  const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values, geom);
 
