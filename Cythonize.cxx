@@ -1,13 +1,11 @@
+#include <HyperHDG/HyAssert.hxx>
+
 #include <algorithm>
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-
-// #include <chrono>
 #include <experimental/filesystem>
-
-#include <HyperHDG/HyAssert.hxx>
 
 using namespace std;
 namespace fs = experimental::filesystem;
@@ -45,6 +43,7 @@ namespace fs = experimental::filesystem;
  * \param   filenames   Vector containing names of additional files that need to be included.
  * \param   ver_maj     Python version's major part.
  * \param   ver_min     Python version's minor part.
+ * \param   force_comp  Force recompilation of Cython class in current execution. Defults to false.
  * \retval  name        Name associated to created .so file.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -53,7 +52,8 @@ namespace fs = experimental::filesystem;
 string hyCythonize
 ( 
   vector<string>& names, const vector<string>& filenames,
-  const unsigned int ver_maj, const unsigned int ver_min
+  const unsigned int ver_maj, const unsigned int ver_min,
+  const bool force_comp = false
 )
 {
   static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
@@ -122,7 +122,7 @@ string hyCythonize
   linestream >> word; if (word != "#")     success = false;
   linestream >> word; if (word != "C++:")  success = false;
   
-  if (success)
+  if (success && !force_comp)
   {
     linestream >> word;
     fs::path so_file  = fs::current_path().string() + "/build/SharedObjects/" + python_name + ".so";
@@ -140,7 +140,8 @@ string hyCythonize
       auto pyx_time = fs::last_write_time(pyx_file);
       auto pxd_time = fs::last_write_time(pxd_file);
       auto cxx_time = fs::last_write_time(cxx_file);
-/*      
+/*
+      // Needs #include <chrono> and makes better time representation.
       std::time_t so_t = decltype(so_time)::clock::to_time_t(so_time);
       std::time_t pyx_t = decltype(pyx_time)::clock::to_time_t(pyx_time);
       std::time_t pxd_t = decltype(pxd_time)::clock::to_time_t(pxd_time);
