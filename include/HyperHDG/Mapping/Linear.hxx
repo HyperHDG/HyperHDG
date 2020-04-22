@@ -20,7 +20,7 @@ namespace Mapping
  *
  * The affine-linear mapping of a \c hyEdge_dimT dimensional unit square to a subset of the real
  * numbers to the power \c space_dimT heavily relies on QR decomposition. Additionally, there are
- * for different types of normals:
+ * four different types of normals:
  * 
  * - The normals of the unit square in \c hyEdge_dimT dimensions.
  * - The normals of R times the unit square in \c hyEdge_dimT dimensions (called local_normal).

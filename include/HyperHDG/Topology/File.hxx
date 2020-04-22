@@ -26,12 +26,17 @@ namespace Topology
 /*!*************************************************************************************************
  * \brief   Hypergraph topology based on an input file.
  *
+ * The topology class File is a set of hyperedges. Each of these tensorial hyperedges is represented
+ * by its hypernodes (given within the file). For consistency, it is assumed that the vertices and 
+ * the hypernodes are assumed to be given in lexicographical order to ensure that geometry and 
+ * topology of all hyperedges fit.
+ * 
  * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyEdge_dimT.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyEdge_index_t.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.

@@ -27,12 +27,27 @@ namespace Geometry
 /*!*************************************************************************************************
  * \brief   Hypergraph geometry based on an input file.
  *
- * \todo    Update doxygen of this whole file!!!
+ * The geometry class File is a set of hyperedges. Each of these tensorial hyperedges is represented
+ * by its vertices (given within the file). For consistency, it is assumed that the vertices are
+ * given in lexicographical order. Also the hypernodes are assumed to be given in lexicographical
+ * order to ensure that geometry and topology of all hyperedges fit.
  *
+ * There are four different types of normals specified (cf. the respective mapping):
+ * - The normals of the reference element.
+ * - The normals of of the transformed element which is still an element of the hyEdge_dimT
+ *   dimensional space, but already has the shape of the physical element (called local_normal).
+ * - The space_dimT dimensional normals of the phyiscal element located within the planar (or curve
+ *   if curved elements are allowed) which is spanned by the element.
+ * - The orthonormal vectors to the planar/curve spanned by phyiscal element (outer normals).
+ * 
  * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyEdge_dimT.
+ * \tparam  pt_coord_t      The floating point type in which points/vertices are represented.
+ *                          Default is double.
+ * \tparam  mapping_tt      The mapping which should depened on the aforementioned three template
+ *                          arguments. Default is linear mapping.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -46,7 +61,11 @@ template
 >
 class File
 {
+  /*!***********************************************************************************************
+   * \brief   The mapping type is \c mapping_tt with given template parameters.
+   ************************************************************************************************/
   using mapping_t = mapping_tt<hyEdge_dimT, space_dimT, pt_coord_t>;
+  
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
    ************************************************************************************************/
@@ -100,7 +119,9 @@ class File
         return (Point<space_dimT,pt_coord_t>) hyGraph_geometry_.domain_info_.
                  points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
       }
-
+      /*!*******************************************************************************************
+       * \brief   Map n_vec points from reference to physical element.
+       ********************************************************************************************/
       template < unsigned int n_vec >
       SmallMat<space_dimT, n_vec, pt_coord_t> map_ref_to_phys
       (const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& pts)
@@ -111,87 +132,102 @@ class File
         generate_mapping_if_needed();
         return mapping->map_reference_to_physical(pts);
       }
-
-      Point<space_dimT, pt_coord_t> span_vec(const unsigned int index)
+      /*!*******************************************************************************************
+       * \brief   Return matrix column of the affine-linear transformation.
+       * 
+       * \param   index   Index of the matrix column to be returned.
+       * \retval  column  The specified matrix column.
+       ********************************************************************************************/
+      SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index)
       {
         hy_assert( index < hyEdge_dimT,
                    "There are only " << hyEdge_dimT << " spanning vectors." );
         generate_mapping_if_needed();
         return mapping->get_column(index);
       }
-
+      /*!*******************************************************************************************
+       * \brief   Return reduced matrix R of the QR decomposition.
+       ********************************************************************************************/
       const SmallSquareMat<hyEdge_dimT,pt_coord_t>& mat_r()
       {
         generate_mapping_if_needed();
         return mapping->mat_r();
       }
-
+      /*!*******************************************************************************************
+       * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
+       ********************************************************************************************/
       pt_coord_t area()
       {
         generate_mapping_if_needed();
         return std::abs(mapping->functional_determinant_hyEdge());
       }
-
+      /*!*******************************************************************************************
+       * \brief   Return Haussdorff measure of the specified hypernode.
+       ********************************************************************************************/
       pt_coord_t face_area(const unsigned int  index)
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) faces." );
-
         generate_mapping_if_needed();
         return std::abs(mapping->functional_determinant_hyNode(index / 2));
       }
-
-
+      /*!*******************************************************************************************
+       * \brief   Return local normal of given index.
+       *
+       * Return outer unit normal with respect to the hypernode which is spanned by the vectors
+       * spanning the phyiscal element, orthogonally projected to a hyEdge_dimT dimensiona space,
+       * but the vector of the given index. This is an element of the same dimension as the 
+       * reference element.
+       ********************************************************************************************/
       Point<hyEdge_dimT,pt_coord_t> local_normal(const unsigned int index)
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        
         generate_mapping_if_needed();
         Point<hyEdge_dimT,pt_coord_t> normal = mapping->local_normal(index / 2);
         if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
-
       /*!*******************************************************************************************
-       * \brief   Return normal of specified index of a hyperedge.
+       * \brief   Return inner normal of given index.
        *
-       * \todo    This function works only if hyperedge_dim == 1, so far.
+       * Return outer unit normal with respect to the hypernode which is spanned by all vectors
+       * spanning the phyiscal element, but the vector of the given index. The vector has to be in 
+       * the span of the columns of the local transformation matrix. This is an element of the same
+       * dimension as the full space.
        ********************************************************************************************/
       Point<space_dimT,pt_coord_t> inner_normal(const unsigned int index)
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        
         generate_mapping_if_needed();
         Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index / 2);
         if (index % 2 == 0)  normal *= -1.;
         return normal;
       }
-
       /*!*******************************************************************************************
-       * \brief   Return normal of specified index of a hyperedge.
+       * \brief   Return outer normal of given index.
        *
-       * \todo    This function works only if hyperedge_dim == 1, so far.
+       * Return unit normal with respect to the hyperedge within the full space.
        ********************************************************************************************/
       Point<space_dimT,pt_coord_t> outer_normal(const unsigned int index)
       {
         hy_assert( index < space_dimT - hyEdge_dimT ,
                    "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
                    << "which are orthogonal to the hyperedge." );
-        
         generate_mapping_if_needed();
         Point<space_dimT,pt_coord_t> normal = mapping->outer_normal(index);
         return normal;
       }
-
+      /*!*******************************************************************************************
+       * \brief   Return lexicographically ordered equidistant tensorial point of given index.
+       ********************************************************************************************/
       template<unsigned int n_sub_points>
       Point<space_dimT,pt_coord_t> lexicographic(unsigned int index)
       {
         static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
         hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
                    "The index must niot exceed the number of prescribed lexicographic points." );
-
         generate_mapping_if_needed();
         Point<hyEdge_dimT,pt_coord_t> lex_point(0.5);
         if constexpr (n_sub_points > 1)
@@ -218,13 +254,11 @@ class File
      * \retval  space_dimT       The dimension of the space.
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
-
   private:
     /*!*********************************************************************************************
      * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
      **********************************************************************************************/
     const DomainInfo<hyEdge_dimT,space_dimT>& domain_info_;
-
   public:
     /*!*********************************************************************************************
      * \brief   Defines the return value of the class.
