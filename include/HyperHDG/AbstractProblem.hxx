@@ -158,8 +158,8 @@ class AbstractProblem
                    << "In this case, the index is " << indices[i] << " and the total amount of " <<
                    "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         dirichlet_indices_[i] = (dof_index_t) indices[i];
-        std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
       }
+      std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
     }
     /*!*********************************************************************************************
      * \brief   Returns vector of appropriate size for the predefined problem.

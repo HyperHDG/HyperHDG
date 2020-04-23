@@ -245,15 +245,19 @@ class LengtheningBeam
 
       return edge_dof_to_node_dof(bdr_values, geom);
     }
-
-    template <class GeomT>
-    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs
-    ( GeomT& geom ) const
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
     {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;            
+      return bdr_values;
     }
 
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
@@ -792,14 +796,19 @@ class BernoulliBendingBeam
       return result;
     }
     
-    template <class GeomT>
-    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs
-    ( GeomT& geom ) const
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
     {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;            
+      return bdr_values;
     }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
@@ -1227,14 +1236,19 @@ class LengtheningBernoulliBendingBeam
       return result;
     }
 
-    template <class GeomT>
-    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs
-    ( GeomT& geom ) const
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
     {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
+      return bdr_values;
     }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
@@ -1528,14 +1542,19 @@ class TimoschenkoBendingBeam
       return result;
     }
 
-    template <class GeomT>
-    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs
-    ( GeomT& geom ) const
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
     {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
+      return bdr_values;
     }
     
     
@@ -1967,14 +1986,19 @@ class LengtheningTimoschenkoBendingBeam
       return result;
     }
 
-    template <class GeomT>
-    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs
-    ( GeomT& geom ) const
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
     {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
+      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
+      return bdr_values;
     }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
