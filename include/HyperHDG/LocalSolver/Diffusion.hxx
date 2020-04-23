@@ -205,6 +205,18 @@ class Diffusion_TensorialUniform
        
       return bdr_values;
     }
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+     *
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond )  const
+    {
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;    
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)  bdr_values[i].fill(0.);        
+      return bdr_values;
+    }
 
     std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT >
     numerical_flux_from_rhs(  ) const
