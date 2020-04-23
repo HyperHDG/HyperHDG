@@ -3,7 +3,7 @@
 #include <HyperHDG/HyAssert.hxx>
 
 #include <vector>
-#include <cmath>
+// #include <cmath>
 // #include <exception>
 
 /*!*************************************************************************************************
@@ -74,11 +74,13 @@ dof_value_t inner_product
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
+/*
 template < typename dof_value_t = double >
 dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
 {
   return std::sqrt( inner_product(vec,vec) );
 }
+*/
 /*!*************************************************************************************************
  * \brief   Evaluate linear combination of vectors and return the result.
  * 
@@ -168,10 +170,10 @@ std::vector<dof_value_t> conjugate_gradient
   std::vector<dof_value_t> r = b; // b - A * x (with x = 0)
   std::vector<dof_value_t> d = r;
   
-  dof_value_t r_square_old;
   dof_value_t r_square_new = inner_product(r,r);
+  dof_value_t r_square_old = r_square_new;
 
-  if ( std::sqrt(r_square_new) < tolerance )  
+  if ( r_square_new < tolerance * tolerance )  
   {
     n_iterations = 0;
     return x;
@@ -195,7 +197,7 @@ std::vector<dof_value_t> conjugate_gradient
     dof_value_t beta = r_square_new / r_square_old;
     linear_combination((dof_value_t) 1., r, beta,d,  d);
     
-    if ( std::sqrt(r_square_new) < tolerance )  
+    if ( r_square_new < tolerance * tolerance )  
     {
       n_iterations = k+1;
       return x;
