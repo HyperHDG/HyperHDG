@@ -26,15 +26,8 @@ tolerance = 1e-8
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDiffusionProblem([4,2,2])
 
-# Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
-# here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
-# index vector (next) will cause a wrong representation of the final result.
-vectorRHS = HDG_wrapper.return_zero_vector()
-
 # Set the hypernodes that are supposed to be of Dirichlet type.
-# Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
-# to keep consistency.
-index_vector = np.array([ 0, len(vectorRHS)-1 ])
+index_vector = np.array([ 0, HDG_wrapper.size_of_system()-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
@@ -43,7 +36,7 @@ HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = HDG_wrapper.assemble_rhs(vectorRHS)
+vectorRHS = HDG_wrapper.assemble_rhs()
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)

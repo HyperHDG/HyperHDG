@@ -7,6 +7,15 @@
 #include <array>
 
 /*!*************************************************************************************************
+ * \bief  Check in reduced complexity whether an element is contained in a \c std::vector.
+ **************************************************************************************************/
+template<class T>
+bool contains(const std::vector<T>& container, const T& v)
+{
+  auto it = std::lower_bound( container.begin(), container.end(), v);
+  return (it != container.end() && *it == v);
+}
+/*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  * 
  * This file provides an AbstractProblem class defining an abstract problem. This abstract problem
@@ -149,6 +158,7 @@ class AbstractProblem
                    << "In this case, the index is " << indices[i] << " and the total amount of " <<
                    "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         dirichlet_indices_[i] = (dof_index_t) indices[i];
+        std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
       }
     }
     /*!*********************************************************************************************
@@ -218,35 +228,20 @@ class AbstractProblem
       return vec_Ax;
     }
     /*!*********************************************************************************************
-     * \brief   Add global right-hand side vector to vec_x.
+     * \brief   Assemble global right-hand side vector to vec_b.
      *
-     * Function that evaluates the global right-hand side (implemented wthin the local solver) and
-     * adds the result to the function argument.
-     *
-     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-     * \retval  x_vec         A \c std::vector containing the input plus the global right-hand side.
+     * \retval  vec_b         A \c std::vector containing the global right-hand side.
      **********************************************************************************************/
-    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t> assemble_rhs ( std::vector<dof_value_t>& x_vec ) const
+    template < typename dof_value_t = double, typename hyNode_index_t = dof_index_t >
+    std::vector<dof_value_t> assemble_rhs ( ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
-      std::vector<dof_value_t> vec_Ax = return_zero_vector();
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::vector<dof_value_t> vec_b = return_zero_vector();
+      std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge_hyNodes;
+      std::array<unsigned int, 2 * hyEdge_dim> hyEdge_bdrCond;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
-      
-      // Set all Dirichlet values to one.
-      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
-      {
-        hy_assert( dirichlet_indices_[i] >= 0 
-                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
-                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                   << "smaller than the total amount of degrees of freedom." << std::endl
-                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
-                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        x_vec[dirichlet_indices_[i]] = 1.;
-      }
       
       // Generate righ-hand side for all hyperedges hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
@@ -254,18 +249,17 @@ class AbstractProblem
         // Find hypernodes related to hyperedge.
         hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
-          hyEdge_dofs[hyNode] = 
-            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+          hyEdge_bdrCond[hyNode] = contains(dirichlet_indices_, hyEdge_hyNodes[hyNode]);
         
-        // Generate degrees of freedom of vec_Ax (stored locally).
+        // Generate degrees of freedom of vec_b (stored locally).
         if constexpr ( LocalSolverT::use_geometry() )
-          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_dofs, hyEdge.geometry);
-        else  hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_dofs);
+          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_bdrCond, hyEdge.geometry);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge_bdrCond);
         
-        // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
+        // Fill hyEdge_dofs array degrees of freedom into vec_b.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyper_graph_.hyNode_factory().add_to_dof_values
-            (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
+            (hyEdge_hyNodes[hyNode], vec_b, hyEdge_dofs[hyNode]);
       });
       
       // Set all Dirichlet values to zero.
@@ -277,10 +271,10 @@ class AbstractProblem
                    << "smaller than the total amount of degrees of freedom." << std::endl
                    << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
                    "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        vec_Ax[dirichlet_indices_[i]] = 0.;
+        vec_b[dirichlet_indices_[i]] = 0.;
       }
       
-      return vec_Ax;
+      return vec_b;
     }
     /*!*********************************************************************************************
      * \brief   Calculate errors.
