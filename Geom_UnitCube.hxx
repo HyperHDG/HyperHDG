@@ -73,7 +73,7 @@ class UnitCube
       /*!*******************************************************************************************
        * \brief   Points adjacent to the hyperedge.
        *
-       * \todo In the long run, do not store these.
+       * \todo    In the long run, do not store these.
        *
        * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
@@ -123,8 +123,7 @@ class UnitCube
        *
        * \retval  point           Point/Vertex of the hyperedge.
        ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int index) const
-      { return points_[index]; }
+      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
 
       /*!*******************************************************************************************
        * \brief Return data of the mapping in the tensor product of a one-dimensional quadrature set.
@@ -132,7 +131,7 @@ class UnitCube
        * \tparam npts: The number of evaluation points in a single direction
        * \tparam T: The data type used for this operation
        ********************************************************************************************/
-    template <std::size_t npts, typename T = double>
+      template <std::size_t npts, typename T = double>
       Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
       mapping_tensor(const std::array<T, npts>& points_1d) const;
     
@@ -154,10 +153,6 @@ class UnitCube
        ********************************************************************************************/
       Point<space_dimT> normal(const unsigned int index) const;
 
-//    std::vector<double> abs_det_of_jacobian_at_quad
-//      (const std::vector<double>& local_quadrature) const;
-//    std::vector< std::vector<double> > inv_of_transposed_jacobian_at_quad
-//      (const std::vector<double>& local_quadrature) const;
   }; // end of class hyEdge
   
   public:
