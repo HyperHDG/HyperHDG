@@ -25,11 +25,11 @@ cdef class PythonClassName :
   def read_dirichlet_indices(self, indices):
     self.thisptr.read_dirichlet_indices (indices)
   def return_zero_vector(self):
-    return self.thisptr.return_zero_vector ()
+    return self.thisptr.return_zero_vector[ CyReplace03 ] ()
   def matrix_vector_multiply(self, vec):
     return self.thisptr.matrix_vector_multiply (vec)
-  def assemble_rhs(self, vec):
-    return self.thisptr.assemble_rhs (vec)
+  def assemble_rhs(self):
+    return self.thisptr.assemble_rhs[ CyReplace03 ] ()
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

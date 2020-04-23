@@ -226,10 +226,46 @@ string hyCythonize
     while ( !linestream.eof() && ! line.empty() )
     {
       linestream >> word;
-      if (word == "C++ClassName")     word = "\"" + names[1] + "\"";
-      if (word == "CythonClassName")  word = python_name + "_Cython";
-      if (word == "PythonClassName")  word = python_name;
-      outfile << word << " ";
+      if      (word == "C++ClassName")     word = "\"" + names[1] + "\"";
+      else if (word == "CythonClassName")  word = python_name + "_Cython";
+      else if (word == "PythonClassName")  word = python_name;
+      else if (word == "#")
+      {
+        outfile << word << " ";
+        linestream >> word;
+        if (word == "CyReplace_Number:")
+        {
+          outfile << word << " ";
+          linestream >> word;
+          unsigned int replace_number = stoi(word);
+          hy_assert ( replace_number + 2 > names.size() && replace_number <= 99 ,
+                      "The number of rplacements must be larger than their given amount." );
+          names.resize( replace_number + 2 );
+        }
+        else if (word.size() == 12 && word.substr(0,9) == "CyReplace" && word.substr(11,12) == ":")
+        {
+          unsigned int replace_number = stoi(word.substr(9,11));
+          hy_assert( names.size() > replace_number + 1
+                       && replace_number >= 1 && replace_number <= 99,
+                     "The vector names must contain enough entries to ensure proper replacements "
+                      << "and the replace number must be in [01,99]." );
+          outfile << word << " ";
+          linestream >> word;
+          if ( names[replace_number + 1] == "" )  names[replace_number + 1] = word;
+        }
+      }
+      else if (word.size() == 11 && word.substr(0,9) == "CyReplace")
+      {
+        unsigned int replace_number = stoi(word.substr(9,11));
+        hy_assert( names.size() > replace_number + 1 && replace_number >= 1 && replace_number <= 99,
+                   "The vector names must contain enough entries to ensure proper replacements "
+                   << "and the replace number must be in [01,99]." );
+        word = names[replace_number + 1];
+      }
+      if (word == "IncludeFiles")
+        for (unsigned int i = 0; i < filenames.size(); ++i)
+          outfile << "cdef extern from \"<" << filenames[i] << ">\" : pass" << endl;
+      else  outfile << word << " ";
     }
     outfile << endl;
   }
