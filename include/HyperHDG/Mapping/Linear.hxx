@@ -195,7 +195,7 @@ class Linear
         = qr_decomp_q(other_vectors).get_column(hyEdge_dimT-1);
       map_float_t scalar_pdct = scalar_pdct(normal, matrix_r_->get_column(index));
       hy_assert( scalar_pdct != 0., "Scalar product must not be zero!" );
-      if (scalar_pdct < 0.)  normal *= -1.;
+      if (scalar_pdct > 0.)  normal *= -1.;
       return normal;
     }
     /*!*********************************************************************************************
@@ -224,7 +224,7 @@ class Linear
         = qr_decomp_q(other_vectors).get_column(space_dimT-1);
       map_float_t scalar_pdct = scalar_product(normal, matrix_.get_column(index));
       hy_assert( scalar_pdct != 0. , "Scalar product must not be zero." );
-      if (scalar_pdct < 0)  normal *= -1.;
+      if (scalar_pdct > 0)  normal *= -1.;
       return normal;
     }
     /*!*********************************************************************************************

@@ -115,6 +115,14 @@ class File
           matrix.set_column(dim, point(1<<dim) - translation);
         mapping = std::make_shared<mapping_t>(translation, matrix);
       }
+      /*!*******************************************************************************************
+       * \brief   Hold an instance of a matrix containing local normals.
+       ********************************************************************************************/
+      std::shared_ptr< SmallSquareMat<hyEdge_dimT,pt_coord_t> > local_normals_;
+      /*!*******************************************************************************************
+       * \brief   Hold an instance of a matrix containing inner and outer normals.
+       ********************************************************************************************/
+      std::shared_ptr< SmallSquareMat<space_dimT,pt_coord_t> > global_normals_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct hyperedge from hypergraph and index.
@@ -194,8 +202,15 @@ class File
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
         generate_mapping_if_needed();
-        Point<hyEdge_dimT,pt_coord_t> normal = mapping->local_normal(index / 2);
-        if (index % 2 == 0)  normal *= -1.;
+        if (!local_normals_)
+          local_normals_ = std::make_shared< SmallSquareMat<hyEdge_dimT,pt_coord_t> > ();
+        Point<hyEdge_dimT,pt_coord_t> normal;// = local_normals_->get_column(index / 2);
+        if (true)//(norm_2(normal) < 0.5)
+        {
+          normal = mapping->local_normal(index / 2);
+//          local_normals_->set_column(index / 2, normal);
+        }
+        if (index % 2 == 1)  normal *= -1.;
         return normal;
       }
       /*!*******************************************************************************************
@@ -211,8 +226,15 @@ class File
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
         generate_mapping_if_needed();
-        Point<space_dimT,pt_coord_t> normal = mapping->inner_normal(index / 2);
-        if (index % 2 == 0)  normal *= -1.;
+        if (!global_normals_)
+          global_normals_ = std::make_shared< SmallSquareMat<space_dimT,pt_coord_t> > ();
+        Point<space_dimT,pt_coord_t> normal;// = global_normals_->get_column(index / 2);
+        if (true)//(norm_2(normal) < 0.5)
+        {
+          normal = mapping->inner_normal(index / 2);
+//          global_normals_->set_column(index / 2, normal);
+        }
+        if (index % 2 == 1)  normal *= -1.;
         return normal;
       }
       /*!*******************************************************************************************
@@ -226,7 +248,14 @@ class File
                    "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
                    << "which are orthogonal to the hyperedge." );
         generate_mapping_if_needed();
-        Point<space_dimT,pt_coord_t> normal = mapping->outer_normal(index);
+        if (!global_normals_)
+          global_normals_ = std::make_shared< SmallSquareMat<space_dimT,pt_coord_t> > ();
+        Point<space_dimT,pt_coord_t> normal;// = global_normals_->get_column(hyEdge_dimT + index);
+        if (true)//(norm_2(normal) < 0.5)
+        {
+          normal = mapping->outer_normal(index);
+//          global_normals_->set_column(hyEdge_dimT + index, normal);
+        }
         return normal;
       }
       /*!*******************************************************************************************
