@@ -678,6 +678,7 @@ class BernoulliBendingBeam
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
@@ -1423,6 +1424,7 @@ class TimoschenkoBendingBeam
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
