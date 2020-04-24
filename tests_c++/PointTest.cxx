@@ -263,10 +263,11 @@ template<unsigned int space_dim, typename pt_coord_t> bool testPoint ( )
   }
   
   
-  hy_assert( norm_1(ptAC) == norm_p(ptAC, (pt_coord_t) 1.) 
-               && norm_2(ptAC) == norm_p(ptAC, (pt_coord_t) 2.) ,
+  hy_assert( almost_equal(norm_1(ptAC), norm_p(ptAC, (pt_coord_t) 1.)) 
+               && almost_equal(norm_2(ptAC), norm_p(ptAC, (pt_coord_t) 2.)) ,
              "Norms should be the same indpendent of their implementation!" );
-  if(norm_1(ptAC) != norm_p(ptAC, (pt_coord_t) 1.) || norm_2(ptAC) != norm_p(ptAC, (pt_coord_t) 2.))
+  if( !almost_equal(norm_1(ptAC), norm_p(ptAC, (pt_coord_t) 1.)) 
+      || !almost_equal(norm_2(ptAC), norm_p(ptAC, (pt_coord_t) 2.)) )
     success = false;
 
   for (unsigned int dim = 0; dim < space_dim; ++dim)
