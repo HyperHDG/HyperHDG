@@ -150,7 +150,7 @@ class SmallMat
      **********************************************************************************************/
     SmallMat<n_rowsT,n_colsT,mat_entry_t>& operator=
     ( const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other )
-    { entries_ = other.entries_; return *this; }
+    { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; return *this; }
     /*!*********************************************************************************************
      * \brief   Move assignment.
      *
