@@ -140,10 +140,11 @@ class LengtheningBeam
     ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
       GeomT& geom ) const
     {
-      hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
+      hy_assert( n_shape_bdr_ == 1 , "This should be 1!" );
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
+      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
-  
+
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
           result[i][dim] = normal_vector[dim] * lambda[i][0];
@@ -234,6 +235,7 @@ class LengtheningBeam
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, geom);
+
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > 
