@@ -435,6 +435,15 @@ class File
      **********************************************************************************************/
     typedef hyEdge value_type;
     /*!*********************************************************************************************
+     * \brief   Defines the return value of hypernodes of the class.
+     *
+     * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
+     * different hyperedges (that actually are constructed everytime access is needed from e.g. the
+     * solver class). Thus, its main purpose is to provide a structure that administrates the
+     * hyperedges that are the return value of this structure.
+     **********************************************************************************************/
+    typedef hyNode hyNode_type;
+    /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
      * To receive a very general \c AbstractProblem, constructors need to account for the fact that
@@ -494,7 +503,7 @@ class File
      * \param   index       The index of the hyperedge to be returned.
      * \retval  hypernode   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    value_type get_hyNode(const hyNode_index_t index) const
+    hyNode_type get_hyNode(const hyNode_index_t index) const
     {
       hy_assert( index < domain_info_.n_hyNodes && index >= 0 ,
                  "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<
