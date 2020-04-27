@@ -133,12 +133,25 @@ class File
      * \todo  Here, we repeatedly return a large object. This is done since the object could be
      *        locally created in regular topologies/geometries! Return shared-pointer?
      *        -> This is not really a large object, is it? I mean, it only consists of a reference
-     *        and an index.
+     *        and an index. I do not really see the advantage of returning a shared pointer. Does
+     *        it make any difference, here?
+     *
+     * This is equivalent to \c get_hyEdge.
      *
      * \param   index           The index of the hyperedge to be returned.
      * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     const value_type operator[](const hyEdge_index_t index) const
+    { return get_hyEdge(index); }
+    /*!*********************************************************************************************
+     * \brief   Get topological hyperedge of given index.
+     *
+     * This is equivalent to \c operator[].
+     *
+     * \param   index           The index of the hyperedge to be returned.
+     * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
+     **********************************************************************************************/
+    value_type get_hyEdge(const hyEdge_index_t index) const
     {
       hy_assert( index < domain_info_.n_hyEdges && index >= 0 ,
                  "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<
