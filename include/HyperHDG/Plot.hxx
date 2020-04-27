@@ -252,7 +252,7 @@ namespace PlotFunctions
       {
         output << "        ";
         const Point<space_dim> point 
-          = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number);
+          = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, sub_points);
         for (unsigned int dim = 0; dim < space_dim; ++dim)
           output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
         for (unsigned int dim = space_dim; dim < 3; ++dim)

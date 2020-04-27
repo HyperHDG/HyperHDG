@@ -261,22 +261,21 @@ class File
       /*!*******************************************************************************************
        * \brief   Return lexicographically ordered equidistant tensorial point of given index.
        ********************************************************************************************/
-      template<unsigned int n_sub_points>
-      Point<space_dimT,pt_coord_t> lexicographic(unsigned int index)
+      template<unsigned int n_sub_points, typename one_dim_float_t>
+      Point<space_dimT,pt_coord_t> lexicographic
+      ( unsigned int index, const std::array<one_dim_float_t, n_sub_points>& points_1d )
       {
         static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
         hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
                    "The index must niot exceed the number of prescribed lexicographic points." );
         generate_mapping_if_needed();
-        Point<hyEdge_dimT,pt_coord_t> lex_point(0.5);
-        if constexpr (n_sub_points > 1)
-          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          {
-            lex_point[dim] = (pt_coord_t) (index % n_sub_points) / 
-                               (pt_coord_t) (n_sub_points - 1); // dim coord in unit cube
-            index /= n_sub_points; // get to higher dim coordinate
-          }
-        return mapping->map_reference_to_physical(lex_point);
+        Point<hyEdge_dimT,pt_coord_t> pt;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        {
+          pt[dim] = (pt_coord_t) points_1d[index % n_sub_points]; 
+          index /= n_sub_points;
+        }
+        return mapping->map_reference_to_physical(pt);
       }
   }; // end of class hyEdge
   
