@@ -1,0 +1,149 @@
+\documentclass[a4paper, english, 12pt, reqno, draft]{amsart}
+
+% ---------------------------------------------------------------------------
+
+% Usepackages recommended in mcom-l-template.tex if needed.
+
+\usepackage{amssymb}
+% \usepackage{graphicx}
+% \usepackage[cmtip,all]{xy}
+
+% ---------------------------------------------------------------------------
+
+% Usepackages inserted by authors.
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz,tikzscale}
+\tikzset{>=latex}
+\usepackage{xcolor}
+\usepackage{enumerate}
+\usepackage{booktabs,multirow}
+
+%%%%%%%%%% Packages to help editing %%%%%%%%%%
+\usepackage[notref,notcite]{showkeys} % Show labels.
+\usepackage[mode=multiuser]{fixme} % Provide note, warning, error, fatal.
+\FXRegisterAuthor{gk}{envgk}{GK}
+\FXRegisterAuthor{ar}{envar}{AR}
+\fxusetheme{color}
+
+% ---------------------------------------------------------------------------
+
+% Theorems in the AMS style.
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\numberwithin{equation}{section}
+
+% ---------------------------------------------------------------------------
+
+% Newcommands by the authors.
+
+\newcommand{\elem}{\ensuremath{T}}
+\newcommand{\mesh}{\ensuremath{\mathcal T}}
+\newcommand{\meshIndex}{\ensuremath{\mathcal I}}
+\newcommand{\faceSet}{\ensuremath{\mathcal F}}
+\newcommand{\faceSetDir}{\ensuremath{\mathcal F^\textup D}}
+\newcommand{\face}{\ensuremath{F}}
+\newcommand{\skeletal}{\ensuremath{\Sigma}}
+\newcommand{\skeletalSpace}{\ensuremath{M}}
+% \newcommand{\skeletalSpaceHDG}{\ensuremath{M}}
+% \newcommand{\contElementSpace}{\ensuremath{V^\textup c}}
+% \newcommand{\contThreeElementSpace}[1]{\ensuremath{V^\textup c_{#1,p+3}}}
+% \newcommand{\linElementSpace}{\ensuremath{\overline V^\textup c}}
+\newcommand{\discElementSpace}{\ensuremath{V}}
+\newcommand{\polynomials}{\ensuremath{\mathcal P}}
+% \newcommand{\level}{\ensuremath{\ell}}
+% \newcommand{\iterMgOuter}{i}%\ensuremath{\nu}}
+% \newcommand{\iterMgInner}{m}%\ensuremath{\eta}}
+
+\newcommand{\Div}{\nabla\!\cdot\!}
+\newcommand{\discLaplacian}{\ensuremath{A}}
+% \newcommand{\extensionOp}{\ensuremath{\mathcal U^\textup c}}
+% \newcommand{\averagingOp}{\ensuremath{I^\textup{avg}}}
+% \newcommand{\restrictionOp}{\ensuremath{I^\textup{res}}}
+\newcommand{\traceOp}{\ensuremath{\gamma_0}}
+% \newcommand{\injectionOp}{\ensuremath{I}}
+% \newcommand{\projectionOp}{\ensuremath{P}}
+% \newcommand{\projectionOrthogonalOP}{\ensuremath{\Pi}}
+% \newcommand{\projectionLinOp}{\ensuremath{\overline P}}
+% \newcommand{\skeletalProj}{\ensuremath{\Pi^\partial}}
+% \newcommand{\contLinProj}{\ensuremath{\overline \Pi^\textup c}}
+% \newcommand{\discProj}{\ensuremath{\Pi^\textup d}}
+% \newcommand{\liftingOp}{\ensuremath{S}}
+
+\renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}}
+\newcommand{\Nu}{\ensuremath{\vec \nu}}
+\newcommand{\dx}{\ensuremath{\, \textup d x}}
+\newcommand{\ds}{\ensuremath{\, \textup d \sigma}}
+\newcommand{\localU}{\ensuremath{\mathcal U}}
+\newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
+\newcommand{\penaltyParam}{\ensuremath{\eta}}
+
+% \newcommand{\tildelambda}{\tilde\lambda}
+% \newcommand{\ureconstructed}{\overline{u}}
+% \newcommand{\projectionBramble}{\ensuremath{\bar B}}
+% \newcommand{\indexDOF}{\ensuremath{i}}
+% \newcommand{\IndexDOF}{\ensuremath{\mathcal I}}
+
+% \newcommand{\llangle}{\ensuremath{\langle \! \langle}}
+% \newcommand{\rrangle}{\ensuremath{\rangle \! \rangle}}
+% \newcommand{\nnorm}{\ensuremath{\vert \! \vert \! \vert}}
+
+% ---------------------------------------------------------------------------
+
+% Usepackage hyperref is the last to be added!
+
+\usepackage[colorlinks = true, linkcolor = blue, citecolor = blue, urlcolor = blue]{hyperref}
+
+% ---------------------------------------------------------------------------
+
+% Document head as described in the template.
+
+\begin{document}
+
+\title{H\MakeLowercase{yper}HDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
+
+\author{Andreas Rupp}
+\address{Interdisciplinary Center for Scientific Computing (IWR), Heidelberg University, Mathematikon, Im Neuenheimer Feld 205, 69120 Heidelberg, Germany}
+% \curraddr{}
+\email{andreas.rupp@fau.de, andreas.rupp@uni-heidelberg.de}
+\thanks{This work is supported by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany's Excellence Strategy EXC 2181/1 - 390900948 (the Heidelberg STRUCTURES Excellence Cluster).}
+
+\author{Guido Kanschat}
+\address{Interdisciplinary Center for Scientific Computing (IWR) and Mathematics Center Heidelberg (MATCH), Heidelberg University, Mathematikon, Im Neuenheimer Feld 205, 69120 Heidelberg, Germany}
+% \curraddr{}
+\email{kanschat@uni-heidelberg.de}
+% \thanks{}
+
+\subjclass[2010]{\textcolor{red}{TODO}}
+
+\date{\today}
+
+% \dedicatory{}
+
+\begin{abstract}
+ \textcolor{red}{\textsc{Todo!}} 
+ \\[1ex] \noindent \textsc{Keywords.}
+ \textcolor{red}{TODO!}
+\end{abstract}
+% 
+\maketitle
+% 
+\section{Introduction}
+% 
+% 
+\bibliographystyle{alpha}
+\bibliography{HyperHDG}
+% 
+\end{document}

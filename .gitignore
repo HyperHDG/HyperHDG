@@ -24,3 +24,13 @@ doxygen/latex
 # TestProgram if created
 TestProgram
 prog
+
+# Ignore standard latex output files
+
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.gz
