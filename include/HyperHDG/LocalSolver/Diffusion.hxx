@@ -573,6 +573,10 @@ class Diffusion
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
     { return Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
+    /***********************************************************************************************
+     * \brief   Number or errors that are evaluated for this local solver.
+     **********************************************************************************************/
+    static constexpr unsigned int n_errors() { return 1; }
     /*!*********************************************************************************************
      * \brief Dimension of of the solution evaluated with respect to a hypernode.
      **********************************************************************************************/
@@ -651,7 +655,8 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    template < typename GeomT >  inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs
+    template < typename GeomT >
+    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
       GeomT                                                                     & geom 
@@ -689,7 +694,11 @@ class Diffusion
       GeomT                                                                     & geom
     )  const
     {
-      try  { return (assemble_rhs(lambda_values, geom) / assemble_loc_matrix(tau_, geom)).data(); }
+      try
+      { 
+        return (assemble_rhs_from_lambda(lambda_values, geom) 
+                 / assemble_loc_matrix(tau_, geom)).data();
+      }
       catch (LAPACKexception& exc)
       {
         hy_assert( 0 == 1 ,
@@ -816,6 +825,17 @@ class Diffusion
             
       return bdr_values;
     }
+    template < class GeomT >
+    std::array< lSol_float_t, n_errors() > calc_loc_error
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      GeomT                                                                     & geom
+    )  const
+    {
+      std::array< lSol_float_t, n_errors() > result;
+      result.fill(0.);
+    }
+
     /*!*********************************************************************************************
      * \brief   Get Dirichlet value coefficients of hyNode.
      *
@@ -936,7 +956,7 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
 
 
 // -------------------------------------------------------------------------------------------------
-// assemble_rhs
+// assemble_rhs_from_lambda
 // -------------------------------------------------------------------------------------------------
 
 template
@@ -954,7 +974,7 @@ inline SmallVec
 >
 Diffusion
 < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-assemble_rhs
+assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
   GeomT                                                                     & geom 
@@ -981,7 +1001,7 @@ assemble_rhs
       }
   
   return right_hand_side;
-} // end of Diffusion::assemble_rhs
+} // end of Diffusion::assemble_rhs_from_lambda
 
 
 // -------------------------------------------------------------------------------------------------
