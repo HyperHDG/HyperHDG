@@ -93,6 +93,16 @@ class HyperNodeFactory
       return dof_indices;
     }
     /*!*********************************************************************************************
+     * \brief   Calculate index of hypernode holding a special degree of freedom.
+     * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+     * \param   dof_index           Global index of related degree of freedom.
+     * \retval  hypernode_index     Index of the considered hypernode.
+     **********************************************************************************************/
+    template < typename dof_index_t = unsigned int >
+    hyNode_index_t get_hyNode_from_dof_index ( const dof_index_t dof_index )  const
+    { return dof_index / n_dofs_per_nodeT; }
+    /*!*********************************************************************************************
      * \brief   Evaluate values of degrees of freedom related to a hypernode.
      * 
      * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.

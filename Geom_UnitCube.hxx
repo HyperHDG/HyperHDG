@@ -349,7 +349,7 @@ class UnitCube
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     const hyNode_type get_hyNode(const hyEdge_index_t index) const
-    { return hyEdge(index, num_elements_); }
+    { return hyNode(index, num_elements_); }
 }; // end class UnitCube
 
   template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>

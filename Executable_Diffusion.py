@@ -30,21 +30,26 @@ HDG_wrapper = PyDiffusionProblem([4,2,2])
 index_vector = np.array([ 0, HDG_wrapper.size_of_system()-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
+# Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
+# fashion.
+system_size = HDG_wrapper.size_of_system()
+A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+
 # Print index vector and vector containing the Dirichlet values.
 # print("Dirichlet indices: ", index_vector)
 # print("Dirichlet values: ", vectorDirichlet)
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = HDG_wrapper.assemble_rhs()
+vectorRHS = HDG_wrapper.return_zero_vector()
+vectorRHS = HDG_wrapper.add_dirichlet(vectorRHS)
+vectorRHS = [-i for i in A * vectorRHS]
+vectorRHS = HDG_wrapper.add_rhs(vectorRHS)
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)
 
-# Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-# fashion.
-system_size = HDG_wrapper.size_of_system()
-A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
