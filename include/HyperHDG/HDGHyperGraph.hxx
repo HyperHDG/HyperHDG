@@ -462,7 +462,7 @@ class HDGHyperGraph
      * \param   index                 Index of the hyperedge to be returned.
      * \retval  hyNode_geometry       Geometrical information about hyperedge.
      **********************************************************************************************/
-    const typename GeomT::value_type hyNode_geometry(const hyEdge_index_t index) const
+    const typename GeomT::hyNode_type hyNode_geometry(const hyEdge_index_t index) const
     { return hyGraph_geometry_->get_hyNode(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.

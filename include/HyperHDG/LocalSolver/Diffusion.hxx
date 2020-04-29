@@ -674,8 +674,7 @@ class Diffusion
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
     template < typename GeomT >
-    inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_global_rhs
-    ( const std::array< unsigned int , 2 * hyEdge_dimT > & bound_cond, GeomT& geom )  const;
+    inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs ( GeomT& geom )  const;
     /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from skeletal).
      *
@@ -706,13 +705,11 @@ class Diffusion
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     template < typename GeomT >
-    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs
-    ( const std::array< unsigned int , 2 * hyEdge_dimT > & bound_cond, GeomT & geom )  const
+    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs ( GeomT & geom )  const
     {
       try 
       { 
-        return (assemble_rhs_from_global_rhs(bound_cond, geom) /
-                 assemble_loc_matrix(tau_, geom)).data();
+        return (assemble_rhs_from_global_rhs(geom) / assemble_loc_matrix(tau_, geom)).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -807,9 +804,9 @@ class Diffusion
      **********************************************************************************************/
     template < class GeomT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( GeomT& geom )  const
     {
-      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(bound_cond, geom);
+      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(geom);
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,geom)), duals(dual_at_boundary(coeffs,geom));
   
@@ -818,6 +815,24 @@ class Diffusion
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
             
       return bdr_values;
+    }
+    /*!*********************************************************************************************
+     * \brief   Get Dirichlet value coefficients of hyNode.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array<lSol_float_t, n_shape_bdr_> dirichlet_coeffs ( GeomT& geom )  const
+    {
+      std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
+  
+      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        bdr_coeffs[i] = integrator.template
+                          integrate_vol_phifunc<GeomT,parameters::dirichlet_value>(i, geom)
+                        / geom.area();
+
+      return bdr_coeffs;
     }
     /*!*********************************************************************************************
      * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -988,26 +1003,12 @@ inline SmallVec
 >
 Diffusion
 < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-assemble_rhs_from_global_rhs
-( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT & geom )  const
+assemble_rhs_from_global_rhs ( GeomT & geom )  const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
-  lSol_float_t integral;
-  
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
-      = -integrator.template integrate_vol_phifunc<GeomT,parameters::right_hand_side>(i, geom);
-    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face) if (bound_cond[face] == 1)
-    {
-      integral = integrator.template 
-                   integrate_bdr_phifunc<GeomT,parameters::dirichlet_value>(i, face, geom);
-      right_hand_side[hyEdge_dimT*n_shape_fct_ + i] -= tau_ * integral;
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        right_hand_side[dim*n_shape_fct_+i] = -geom.local_normal(face).operator[](dim) * integral;
-    }
-  }
-  
+      = integrator.template integrate_vol_phifunc<GeomT,parameters::right_hand_side>(i, geom);
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
 
