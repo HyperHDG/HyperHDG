@@ -321,10 +321,10 @@ class AbstractProblem
       if constexpr ( !LocalSolverT::advanced_functions() )
       {
         hy_assert( false , "This functionality is not implemented for the local solver!" );
+        return x_vec;
       }
       else
       {
-
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
 
       hyNode_index_t hyNode_index, hyNode_index_old = 0;
@@ -362,8 +362,9 @@ class AbstractProblem
 
         x_vec[dirichlet_indices_[i]] += dirichlet_values[dof_index];
       }
-      }
+
       return x_vec;
+      }
     }
     /*!*********************************************************************************************
      * \brief   Adds Neumann values to vector of unknowns.
