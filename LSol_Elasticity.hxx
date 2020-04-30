@@ -49,6 +49,14 @@ class LengtheningBeam
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
+    /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
      * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
@@ -581,6 +589,14 @@ class BernoulliBendingBeam
      * \retval  use_geom      True if geometrical information is used by local solver.
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
+    /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
@@ -1173,6 +1189,14 @@ class LengtheningBernoulliBendingBeam
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
+    /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
      * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
@@ -1326,6 +1350,14 @@ class TimoschenkoBendingBeam
      * \retval  use_geom      True if geometrical information is used by local solver.
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
+    /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
@@ -1923,6 +1955,14 @@ class LengtheningTimoschenkoBendingBeam
      * \retval  use_geom      True if geometrical information is used by local solver.
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
+    /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 

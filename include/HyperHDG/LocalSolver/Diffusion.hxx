@@ -53,6 +53,14 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     static constexpr bool use_geometry() { return false; }
     /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return false; }
+    /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
      * \todo  Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
@@ -498,8 +506,8 @@ struct DiffusionParametersDefault
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
   { Point<space_dimT,param_float_t> a;
     return (pt == a); }
-//  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
-//  { return 0.; }
+  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
 };
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -563,6 +571,14 @@ class Diffusion
      * \retval  use_geom      True if geometrical information is used by local solver.
      **********************************************************************************************/
     static constexpr bool use_geometry() { return true; }
+    /*!*********************************************************************************************
+     * \brief   Specify whether advanced functuions are implemented for this class
+     * 
+     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
+     * 
+     * \todo    Replace this by concept in C++20!
+     **********************************************************************************************/    
+    static constexpr bool advanced_functions() { return true; }
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
@@ -850,6 +866,24 @@ class Diffusion
       for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         bdr_coeffs[i] = integrator.template
                           integrate_vol_phifunc<GeomT,parameters::dirichlet_value>(i, geom)
+                        / geom.area();
+
+      return bdr_coeffs;
+    }
+    /*!*********************************************************************************************
+     * \brief   Get Neumann value coefficients of hyNode.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     **********************************************************************************************/
+    template < class GeomT >
+    std::array<lSol_float_t, n_shape_bdr_> neumann_coeffs ( GeomT& geom )  const
+    {
+      std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
+  
+      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        bdr_coeffs[i] = integrator.template
+                          integrate_vol_phifunc<GeomT,parameters::neumann_value>(i, geom)
                         / geom.area();
 
       return bdr_coeffs;
