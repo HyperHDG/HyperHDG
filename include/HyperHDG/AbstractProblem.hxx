@@ -56,7 +56,7 @@ class AbstractProblem
     /*!*********************************************************************************************
      * \brief   Vector containing the indices of Dirichlet type nodes.
      **********************************************************************************************/
-    std::vector<dof_index_t> dirichlet_indices_;
+    std::vector<dof_index_t> dirichlet_indices_, neumann_indices_;
     /*!*********************************************************************************************
      * \brief   Instantiation of a local solver.
      **********************************************************************************************/
@@ -161,6 +161,36 @@ class AbstractProblem
         dirichlet_indices_[i] = (dof_index_t) indices[i];
       }
       std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
+    }
+    /*!*********************************************************************************************
+     * \brief   Read indices of Neumann type hypernodes/faces.
+     *
+     * Read the indices ot the hypernodes/faces that are of Neumann type and therefore do not
+     * contain degrees of freedom that are allowed to change within iterations of the iterative
+     * solver and other processes. In contrast, these degrees of freedom are set by the user.
+     *
+     * The user creates a vector that contains the coefficients of the corresponding degrees of
+     * freedom (read by this function) and defines the Dirichlet values by this choice. The
+     * remaining elements of the global vector of unknowns (which is \b not the vector \c indices
+     * are supposed to be zero).
+     *
+     * \param   indices       A \c std::vector containing the (global) indices of Dirichlet type
+     *                        hypernodes/faces.
+     **********************************************************************************************/
+    void read_neumann_indices( const std::vector<unsigned int>& indices )
+    {
+      neumann_indices_.resize(indices.size());
+      for (unsigned int i = 0; i < indices.size(); ++i)
+      {
+        hy_assert( (dof_index_t) indices[i] >= 0
+                      && (dof_index_t) indices[i] < hyper_graph_.n_global_dofs(), 
+                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << indices[i] << " and the total amount of " <<
+                   "hypernodes is " << hyper_graph_.n_global_dofs() << "." );
+        neumann_indices_[i] = (dof_index_t) indices[i];
+      }
+      std::sort(neumann_indices_.begin(),neumann_indices_.end());
     }
     /*!*********************************************************************************************
      * \brief   Returns vector of appropriate size for the predefined problem.
@@ -341,7 +371,7 @@ class AbstractProblem
      * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
      * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
      **********************************************************************************************/  
-/*    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t>& add_neumann ( std::vector<dof_value_t>& x_vec ) const
     {
       if constexpr ( !LocalSolverT::advanced_functions() )
@@ -389,7 +419,7 @@ class AbstractProblem
       }
     
       return x_vec;
-    }*/
+    }
     /*!*********************************************************************************************
      * \brief   Calculate errors.
      *
