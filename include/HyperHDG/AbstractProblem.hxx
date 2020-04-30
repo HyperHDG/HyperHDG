@@ -380,7 +380,8 @@ class AbstractProblem
         hy_assert( false , "This functionality is not implemented for the local solver!" );
         return x_vec;
       }
-
+      else
+      {
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
 
       hyNode_index_t hyNode_index, hyNode_index_old = 0;
@@ -420,6 +421,7 @@ class AbstractProblem
       }
     
       return x_vec;
+      }
     }
     /*!*********************************************************************************************
      * \brief   Calculate errors.
