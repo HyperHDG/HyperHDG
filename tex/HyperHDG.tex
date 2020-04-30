@@ -19,6 +19,7 @@
 \usepackage{xcolor}
 \usepackage{enumerate}
 \usepackage{booktabs,multirow}
+\usepackage{amsfonts}
 
 %%%%%%%%%% Packages to help editing %%%%%%%%%%
 \usepackage[notref,notcite]{showkeys} % Show labels.
@@ -49,6 +50,17 @@
 
 % Newcommands by the authors.
 
+\newcommand{\graph}{\ensuremath{\mathcal G}}
+\newcommand{\setEdge}{\ensuremath{\mathcal E}}
+\newcommand{\setNode}{\ensuremath{\mathcal N}}
+\newcommand{\edge}{\ensuremath{E}}
+\newcommand{\node}{\ensuremath{N}}
+\newcommand{\locDim}{\ensuremath{\mathfrak d}}
+\newcommand{\globDim}{\ensuremath{\mathfrak D}}
+
+\newcommand{\IN}{\ensuremath{\mathbb N}}
+\newcommand{\IR}{\ensuremath{\mathbb R}}
+
 \newcommand{\elem}{\ensuremath{T}}
 \newcommand{\mesh}{\ensuremath{\mathcal T}}
 \newcommand{\meshIndex}{\ensuremath{\mathcal I}}
@@ -57,30 +69,30 @@
 \newcommand{\face}{\ensuremath{F}}
 \newcommand{\skeletal}{\ensuremath{\Sigma}}
 \newcommand{\skeletalSpace}{\ensuremath{M}}
-% \newcommand{\skeletalSpaceHDG}{\ensuremath{M}}
-% \newcommand{\contElementSpace}{\ensuremath{V^\textup c}}
-% \newcommand{\contThreeElementSpace}[1]{\ensuremath{V^\textup c_{#1,p+3}}}
-% \newcommand{\linElementSpace}{\ensuremath{\overline V^\textup c}}
+\newcommand{\skeletalSpaceHDG}{\ensuremath{M}}
+\newcommand{\contElementSpace}{\ensuremath{V^\textup c}}
+\newcommand{\contThreeElementSpace}[1]{\ensuremath{V^\textup c_{#1,p+3}}}
+\newcommand{\linElementSpace}{\ensuremath{\overline V^\textup c}}
 \newcommand{\discElementSpace}{\ensuremath{V}}
 \newcommand{\polynomials}{\ensuremath{\mathcal P}}
-% \newcommand{\level}{\ensuremath{\ell}}
-% \newcommand{\iterMgOuter}{i}%\ensuremath{\nu}}
-% \newcommand{\iterMgInner}{m}%\ensuremath{\eta}}
+\newcommand{\level}{\ensuremath{\ell}}
+\newcommand{\iterMgOuter}{i}%\ensuremath{\nu}}
+\newcommand{\iterMgInner}{m}%\ensuremath{\eta}}
 
 \newcommand{\Div}{\nabla\!\cdot\!}
 \newcommand{\discLaplacian}{\ensuremath{A}}
-% \newcommand{\extensionOp}{\ensuremath{\mathcal U^\textup c}}
-% \newcommand{\averagingOp}{\ensuremath{I^\textup{avg}}}
-% \newcommand{\restrictionOp}{\ensuremath{I^\textup{res}}}
+\newcommand{\extensionOp}{\ensuremath{\mathcal U^\textup c}}
+\newcommand{\averagingOp}{\ensuremath{I^\textup{avg}}}
+\newcommand{\restrictionOp}{\ensuremath{I^\textup{res}}}
 \newcommand{\traceOp}{\ensuremath{\gamma_0}}
-% \newcommand{\injectionOp}{\ensuremath{I}}
-% \newcommand{\projectionOp}{\ensuremath{P}}
-% \newcommand{\projectionOrthogonalOP}{\ensuremath{\Pi}}
-% \newcommand{\projectionLinOp}{\ensuremath{\overline P}}
-% \newcommand{\skeletalProj}{\ensuremath{\Pi^\partial}}
-% \newcommand{\contLinProj}{\ensuremath{\overline \Pi^\textup c}}
-% \newcommand{\discProj}{\ensuremath{\Pi^\textup d}}
-% \newcommand{\liftingOp}{\ensuremath{S}}
+\newcommand{\injectionOp}{\ensuremath{I}}
+\newcommand{\projectionOp}{\ensuremath{P}}
+\newcommand{\projectionOrthogonalOP}{\ensuremath{\Pi}}
+\newcommand{\projectionLinOp}{\ensuremath{\overline P}}
+\newcommand{\skeletalProj}{\ensuremath{\Pi^\partial}}
+\newcommand{\contLinProj}{\ensuremath{\overline \Pi^\textup c}}
+\newcommand{\discProj}{\ensuremath{\Pi^\textup d}}
+\newcommand{\liftingOp}{\ensuremath{S}}
 
 \renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}}
 \newcommand{\Nu}{\ensuremath{\vec \nu}}
@@ -90,15 +102,15 @@
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
 \newcommand{\penaltyParam}{\ensuremath{\eta}}
 
-% \newcommand{\tildelambda}{\tilde\lambda}
-% \newcommand{\ureconstructed}{\overline{u}}
-% \newcommand{\projectionBramble}{\ensuremath{\bar B}}
-% \newcommand{\indexDOF}{\ensuremath{i}}
-% \newcommand{\IndexDOF}{\ensuremath{\mathcal I}}
+\newcommand{\tildelambda}{\tilde\lambda}
+\newcommand{\ureconstructed}{\overline{u}}
+\newcommand{\projectionBramble}{\ensuremath{\bar B}}
+\newcommand{\indexDOF}{\ensuremath{i}}
+\newcommand{\IndexDOF}{\ensuremath{\mathcal I}}
 
-% \newcommand{\llangle}{\ensuremath{\langle \! \langle}}
-% \newcommand{\rrangle}{\ensuremath{\rangle \! \rangle}}
-% \newcommand{\nnorm}{\ensuremath{\vert \! \vert \! \vert}}
+\newcommand{\llangle}{\ensuremath{\langle \! \langle}}
+\newcommand{\rrangle}{\ensuremath{\rangle \! \rangle}}
+\newcommand{\nnorm}{\ensuremath{\vert \! \vert \! \vert}}
 
 % ---------------------------------------------------------------------------
 
@@ -142,6 +154,121 @@
 % 
 \section{Introduction}
 % 
+% ---------------------------------------------------------------------
+\section{Hypergraphs}\label{SEC:hypergraph}
+% ---------------------------------------------------------------------
+% 
+\subsection{Topologic aspects of hypergraphs}
+% 
+In the whole manuscript, we consider a \emph{hypergraph} $\graph = (\setNode,\setEdge)$ consisting of a finite set of \emph{hypernodes} $\setNode = \{\node_1, \node_2, \ldots \}$ and a set of \emph{hyperedges} $\setEdge = \{\edge_1, \edge_2, \ldots \}$. All hyperedges $\edge \in \setEdge$ can be interpreted as connecting several nodes and, thus, can be written as $\edge \subset \setNode$.
+
+\paragraph{Cubic and simplicial hypergraphs and local dimension $\locDim$}
+% 
+We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as open hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hypereges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$.
+
+Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ is called simplicial of local dimension $\locDim$.
+
+\paragraph{Cubic/siplicial embeddable hypergraphs and global dimension $\globDim$}
+% 
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. A cubic/simplicial hypergraph can be embedded into $\IR^\globDim$ if there is a way to assemble all hypercubes/simplices (representing the hyperedges) such that for two hyperedges $\edge^+ \neq \edge^-$, we have $\edge^- \cap \edge^+ = \emptyset$.
+
+If additionally for two hypernodes $\node^+ \neq \node^-$ the intersection of their interiors is empty, the hypergraph is denoted \emph{regularly embeddable} to dimension $\globDim$.
+
+\paragraph{Examples for cubic hypergraphs}
+% 
+According to this definition, a graph is both a cubic and a simplicial hypergraph.
+
+% ---------------------------------------------------------------------
+\section{Model equation and discretization}\label{SEC:basics}
+% ---------------------------------------------------------------------
+% 
+We consider the standard diffusion equation in mixed form defined on a polygonally bounded Lipschitz domain $\Omega \subset \mathbb R^d$ with boundary $\partial \Omega$. We assume homogeneous Dirichlet boundary conditions on $\partial\Omega$. Thus, we approximate solutions $(u, \vec q)$ of
+% 
+\begin{subequations}\label{EQ:diffusion_mixed}
+\begin{align}
+ \Div \vec q & = f && \text{ in } \Omega,\\
+ \vec q + \nabla u & = 0 && \text{ in } \Omega,\\
+ u & = 0 && \text{ on } \partial \Omega,%\\
+%  \vec q \cdot \Nu & = g_\text N && \text{ on } \Gamma_\text N,
+\end{align}
+\end{subequations}
+% 
+for a given function $f$. Here, and in the following, $L^2(\Omega)$ denotes the space of square integrable functions on $\Omega$ with inner product and norm
+\begin{equation}
+ (u,v)_0 := \int_\Omega u v \dx, \qquad \text{and} \qquad \| u \|^2_0 := (u,u)_0.
+\end{equation}
+%
+The space $H^k(\Omega)$ is the Sobolev space of $k$-times weakly
+differentiable functions with derivatives in $L^2(\Omega)$.
+% 
+% ---------------------------------------------------------------------
+\subsection{Spaces for the HDG on hypergraphs}
+% ---------------------------------------------------------------------
+%
+Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
+
+By $\faceSet$ we denote the set of faces of $\mesh_\level$.
+The subset of faces on the boundary is
+\begin{gather}
+  \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
+\end{gather}
+Moreover, we define
+$\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
+\partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
+square integrable functions with the inner product
+\begin{gather}
+  \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
+\end{gather}
+and its induced norm
+$\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
+\rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
+commensurate with the $L^2$-inner product in the bulk domain, namely
+\begin{gather}
+  \langle \lambda, \mu \rangle_\level
+  = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
+  \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
+  \int_{\face} \lambda \mu \ds.
+\end{gather}
+Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
+
+Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
+polynomials of degree up to $p$. Then, we define the space of piecewise
+polynomials on the skeleton by
+\begin{gather}
+  \label{EQ:skeletal_space}
+  \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
+    \begin{array}{r@{\,}c@{\,}ll}
+  \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
+  \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
+    \end{array}
+  \right\}.
+\end{gather}
+
+The HDG method involves a local solver on each mesh cell
+$\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
+and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
+equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
+$V_\elem = \polynomials_p$. Then, choosing
+$\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
+and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
+\begin{gather}
+  \label{EQ:dg_spaces}
+  \begin{aligned}
+    \discElementSpace_\level
+    &:=\bigl\{ v \in L^2(\Omega)
+    & \big|\;v_{|\elem} &\in V_\elem,
+    &\forall \elem &\in \mesh_\level \bigr\},\\
+    \vec W_\level
+    &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
+    & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
+    &\forall \elem &\in \mesh_\level \bigr\}.    
+  \end{aligned}
+\end{gather}
+%\begin{alignat}2
+% \end{alignat}
+
+
+
 % 
 \bibliographystyle{alpha}
 \bibliography{HyperHDG}
