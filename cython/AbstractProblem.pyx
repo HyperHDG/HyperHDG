@@ -32,6 +32,8 @@ cdef class PythonClassName :
     return self.thisptr.add_rhs (vec)
   def add_dirichlet(self, vec):
     return self.thisptr.add_dirichlet (vec)
+  def add_neumann(self, vec):
+    return self.thisptr.add_neumann (vec)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):
