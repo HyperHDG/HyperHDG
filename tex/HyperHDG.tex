@@ -53,10 +53,28 @@
 \newcommand{\graph}{\ensuremath{\mathcal G}}
 \newcommand{\setEdge}{\ensuremath{\mathcal E}}
 \newcommand{\setNode}{\ensuremath{\mathcal N}}
+\newcommand{\setNodeDir}{\ensuremath{\setNode_\textup D}}
+\newcommand{\setNodeNeu}{\ensuremath{\setNode_\textup N}}
+\newcommand{\setNodeInt}{\ensuremath{\setNode_\textup I}}
 \newcommand{\edge}{\ensuremath{E}}
 \newcommand{\node}{\ensuremath{N}}
+
+\newcommand{\Graph}{\ensuremath{\boldsymbol{\mathcal G}}}
+\newcommand{\SetEdge}{\ensuremath{\boldsymbol{\mathcal E}}}
+\newcommand{\SetNode}{\ensuremath{\boldsymbol{\mathcal N}}}
+\newcommand{\SetNodeDir}{\ensuremath{\SetNode_\textup D}}
+\newcommand{\SetNodeNeu}{\ensuremath{\SetNode_\textup N}}
+\newcommand{\SetNodeInt}{\ensuremath{\SetNode_\textup I}}
+\newcommand{\Edge}{{\ensuremath{\boldsymbol E}}}
+\newcommand{\Node}{{\ensuremath{\boldsymbol N}}}
+
 \newcommand{\locDim}{\ensuremath{\mathfrak d}}
 \newcommand{\globDim}{\ensuremath{\mathfrak D}}
+
+\newcommand{\Nabla}{\ensuremath{\nabla_\Edge}}
+\newcommand{\Div}{\ensuremath{\Nabla\!\cdot\!}}
+\newcommand{\Normal}{\ensuremath{\mathfrak n_\Edge}}
+
 
 \newcommand{\IN}{\ensuremath{\mathbb N}}
 \newcommand{\IR}{\ensuremath{\mathbb R}}
@@ -79,7 +97,6 @@
 \newcommand{\iterMgOuter}{i}%\ensuremath{\nu}}
 \newcommand{\iterMgInner}{m}%\ensuremath{\eta}}
 
-\newcommand{\Div}{\nabla\!\cdot\!}
 \newcommand{\discLaplacian}{\ensuremath{A}}
 \newcommand{\extensionOp}{\ensuremath{\mathcal U^\textup c}}
 \newcommand{\averagingOp}{\ensuremath{I^\textup{avg}}}
@@ -174,23 +191,26 @@ HyperHDG is a simumlation software to perform numerical experiments on so called
 % 
 In the whole manuscript, we consider a \emph{hypergraph} $\graph = (\setNode,\setEdge)$ consisting of a finite set of \emph{hypernodes} $\setNode = \{\node_1, \node_2, \ldots \}$ and a set of \emph{hyperedges} $\setEdge = \{\edge_1, \edge_2, \ldots \}$. All hyperedges $\edge \in \setEdge$ can be interpreted as connecting several nodes and, thus, can be written as $\edge \subset \setNode$.
 
-Thus, the topology of a hypergraph is a $\graph$ is a pair consisting a set of hyperedges $\setEdge$ and a set of hypernodes $\setNode$. Each hypernodes $\edge \in \setEdge$ is connected to other hypernodes via the set of its adjacent hypernodes. Note that this is exactly the inverted interpretation as compared to standard graph theory, where nodes are interpreted as connected via edges.
+Thus, the topology of a hypergraph $\graph$ is a pair consisting of a set of hyperedges $\setEdge$ and a set of hypernodes $\setNode$. Each hyperedge $\edge \in \setEdge$ is connected to other hyperedges via the set of its adjacent hypernodes. Note that this is exactly the inverted interpretation as compared to the aforementioned definition of a hypergraph, where nodes are interpreted as connected via edges.
 
 \paragraph{Cubic and simplicial hypergraphs, and local dimension $\locDim$}
 % 
-We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as open hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hypereges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$.
+We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as (relatively) open unit hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hypereges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$. In this representation, also the hypernodes are supposed to be (relatively) open sets.
 
 Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ is called simplicial of local dimension $\locDim$.
 
-\paragraph{Cubic/simplicial embeddings of hypergraphs to global dimension $\globDim$}
+\paragraph{Cubic/simplicial (topological) embeddings of hypergraphs to global dimension $\globDim$}
 % 
-If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. A cubic/simplicial hypergraph can be embedded into $\IR^\globDim$ if there is a way to assemble all hypercubes/simplices (representing the hyperedges) such that for two hyperedges $\edge^+ \neq \edge^-$, we have $\edge^- \cap \edge^+ = \emptyset$.
-
-If additionally for two hypernodes $\node^+ \neq \node^-$ the intersection of their interiors is empty, the hypergraph is denoted \emph{regularly cubic/simplicial embeddable} to dimension $\globDim$.
-
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be topologically embedded into $\IR^\globDim$ if
+% 
+\begin{enumerate}
+ \item there is a way to assemble all unit hypercubes/simplices (representing the hyperedges) such that for two hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
+ \item in the aforementioned assembly for all $\node \in \setNode$ and $\edge \in \setEdge$: We have $\Node \cap \Edge \neq \emptyset$ if, and only if, $\node \in \edge$.
+\end{enumerate}
+% 
 \paragraph{Examples for cubic hypergraphs}
 % 
-According to this definition, every graph is both a cubic and a simplicial hypergraph. An illustration which can be interpreted as several hypergraphs---all regularly embedded to $\globDim = 3$---can be found in Figure \ref{FIG:hyG_topo}:
+According to this definition, every graph is both a cubic and a simplicial hypergraph. An illustration which can be interpreted as several hypergraphs---all embedded to $\globDim = 3$---can be found in Figure \ref{FIG:hyG_topo}:
 % 
 \begin{itemize}
  \item Cubic or simplicial hypergraph of $\locDim = 1$ consisting of twelve hypernodes (vertices) and  twenty hyperedges (lines).
@@ -211,7 +231,7 @@ According to this definition, every graph is both a cubic and a simplicial hyper
 % 
 \subsection{Geometrical aspects of hypergraphs}\label{SEC:hypergraph_geometry}
 % 
-Figure \ref{FIG:hyG_topo} already indicates that hypergraphs, especially those with (regular) embeddings might be equipped with geometrical information. This specific example indicates that all lines, squares, cubes are of unit size. However, the hypergraph might also have geometrical information that says it looks like in Figure \ref{FIG:hyG_geom}, where the first picture is valid for all $\locDim$ and the second one is only valid for $\locDim = 3$.
+Figure \ref{FIG:hyG_topo} already indicates that hypergraphs, especially those with embeddings might be equipped with geometrical information. This specific example indicates that all lines, squares, cubes are of unit size. However, the hypergraph might also have geometrical information that says it looks like in Figure \ref{FIG:hyG_geom}, where the first picture is valid for all $\locDim$ and the second one is only valid for $\locDim = 3$. Note that, all sufaces may also be curved, but we restrict to straight representations, here.
 % 
 \begin{figure}[ht]
  \begin{tikzpicture}
@@ -223,110 +243,134 @@ Figure \ref{FIG:hyG_topo} already indicates that hypergraphs, especially those w
  \end{tikzpicture}
  \quad
   \begin{tikzpicture}
+  \path[fill=gray!25] (2,0) -- (3,1) -- (3,3) -- (2,2) -- (2,0);
   \draw (0,0) -- (2,0);
+  \draw[dashed] (2,0) -- (2.25,0.75);
   \draw (2.25,0.75)  -- (4,0) -- (5,1) -- (2.75,1.25);
+  \draw[dashed] (2.75,1.25) -- (3,1);
   \draw (3,1) -- (1,1) -- (0,0) -- (0,2) -- (2,2);
   \draw (2.25,1.75) -- (4,2) -- (5,3) -- (2.75,2.25); 
   \draw (3,3) -- (1,3) -- (0,2);
+  \draw[dashed] (2,2) -- (2.75,2.25);
+  \draw[dashed] (2.25,1.75) -- (3,3);
   \draw (2,0) -- (3,1) -- (3,3) -- (2,2) -- (2,0);
   \draw (2.25,0.75) -- (2.75,1.25) -- (2.75,2.25) -- (2.25,1.75) -- (2.25,0.75);
   \draw (1,1) -- (1,3);
   \draw (4,0) -- (4,2);
   \draw (5,1) -- (5,3);
  \end{tikzpicture}
- \caption{Two possible geometrical representation of the hypergraph in Figure \ref{FIG:hyG_topo}. The second one is only valid for $\locDim = 3$.}\label{FIG:hyG_geom}
+ \caption{Two possible geometrical representation of the hypergraph in Figure \ref{FIG:hyG_topo}. The second one is only valid for $\locDim = 3$---the gray hypernode has different geometrical representations for the two adjacent hyperedges.}\label{FIG:hyG_geom}
 \end{figure}
 
+This motivates the following observation: A hypergraph can, beyond its topological information, carry geometrical information. That is, for all hyperedges, there is a geometry prescribed.
 
+This can lead to the case that for one hypernode, different geometries are prescribed as illustrated gray in the right picture of Figure \ref{FIG:hyG_geom}. The hypernode can also be disorted as illustrated by the dashed lines indicating that the two top vertices have to interchange when reinterpreting the node as face of the one or the other hyperedge. This could not be easily illustrated in the picture if the right version of the hypernode was not smaller than the left version. Thus, the hypernode would look as if no reinterpretation is necessary, although in fact, it is.
+
+If the hypergraph can be topologically embedded to dimension $\globDim$ and carries geometrical information for the hyperedges, such that for all hypernodes, there is a unique geometrical description---excluding that the hypernode is disorted or has different shapes for different hyperedges, then the hypergraph can be \emph{topological and geometrical embedded} (for short, just \emph{embedded}) into $\IR^\globDim$. For the representation of the embeddded hypergraph, we also use the notation with the bold symbols.
 % 
 % ---------------------------------------------------------------------
-\section{Model equation and discretization}\label{SEC:basics}
+\section{Model equation and interpretation}\label{SEC:model_eq}
 % ---------------------------------------------------------------------
 % 
-We consider the standard diffusion equation in mixed form defined on a polygonally bounded Lipschitz domain $\Omega \subset \mathbb R^d$ with boundary $\partial \Omega$. We assume homogeneous Dirichlet boundary conditions on $\partial\Omega$. Thus, we approximate solutions $(u, \vec q)$ of
+Here, we formulate the standard diffusion equation in mixed form defined on a hypergraph $\graph$ that for the moment is assumed to allow an embedding $\Graph$. The differential operators will be rigorously defined in \textcolor{red}{TODO}. Thus, for all $\Edge \in \SetEdge$ we approximate solutions $(u, \vec q)$ of
 % 
 \begin{subequations}\label{EQ:diffusion_mixed}
 \begin{align}
- \Div \vec q & = f && \text{ in } \Omega,\\
- \vec q + \nabla u & = 0 && \text{ in } \Omega,\\
- u & = 0 && \text{ on } \partial \Omega,%\\
-%  \vec q \cdot \Nu & = g_\text N && \text{ on } \Gamma_\text N,
+ \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge.\label{EQ:primal_dual}
+\end{align}
+% 
+for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$.
+
+Additionally, we assume that there is a non-empty set $\setNodeDir \subset \setNode$ of Dirichlet hypernodes, a possibly empty set $\setNodeNeu \subset \setNode\setminus \setNodeDir$ of Neumann hypernodes, and the remainder set $\setNodeInt = \setNode \setminus (\setNodeDir \cup \setNodeNeu)$ of interior hypernodes. The following ideas motivate three different types of closing conditions:
+% 
+\begin{itemize}
+ \item On hypernodes of Dirichlet type, the value of function $u$ is prescribed by function $u_\text D$.
+ \item On hypernodes of Neumann type, outflow of the whole system/hypergraph with rate $g_\textup N$ is prescribed. The outflow of chemical species with respect to a hyperedge is defined via $\vec q \cdot \Normal$. Here, $\Normal$ is the outward unit normal with respect to the hyperedge, cf. \textcolor{red}{TODO}. Thus the sum of outflows of all hyperedges adjacent to the Neumann node should be equal to $g_\textup N$.
+ \item Interior hypernodes are Neumann hypernodes with $g_\textup N \equiv 0$ describing conservation of the chemical species.
+\end{itemize}
+% 
+They can be forulated into the following equations closing the PDE defined on the hypergraph:
+% 
+\begin{align}
+ u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond}\\
+ \sum_{\edge \ni \node} \vec q \cdot \Normal & = g_\textup N && \text{ on } \Node \in \SetNodeNeu,\label{EQ:neu_cond}\\
+ \sum_{\edge \ni \node} \vec q \cdot \Normal & = g_\textup N && \text{ on } \Node \in \SetNodeNeu.\label{EQ:int_cond}
 \end{align}
 \end{subequations}
+% Here, and in the following, $L^2(\Omega)$ denotes the space of square integrable functions on $\Omega$ with inner product and norm
+% \begin{equation}
+%  (u,v)_0 := \int_\Omega u v \dx, \qquad \text{and} \qquad \| u \|^2_0 := (u,u)_0.
+% \end{equation}
+% %
+% The space $H^k(\Omega)$ is the Sobolev space of $k$-times weakly
+% differentiable functions with derivatives in $L^2(\Omega)$.
+% % 
+% % ---------------------------------------------------------------------
+% \subsection{Spaces for the HDG on hypergraphs}
+% % ---------------------------------------------------------------------
+% %
+% Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
 % 
-for a given function $f$. Here, and in the following, $L^2(\Omega)$ denotes the space of square integrable functions on $\Omega$ with inner product and norm
-\begin{equation}
- (u,v)_0 := \int_\Omega u v \dx, \qquad \text{and} \qquad \| u \|^2_0 := (u,u)_0.
-\end{equation}
-%
-The space $H^k(\Omega)$ is the Sobolev space of $k$-times weakly
-differentiable functions with derivatives in $L^2(\Omega)$.
+% By $\faceSet$ we denote the set of faces of $\mesh_\level$.
+% The subset of faces on the boundary is
+% \begin{gather}
+%   \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
+% \end{gather}
+% Moreover, we define
+% $\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
+% \partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
+% square integrable functions with the inner product
+% \begin{gather}
+%   \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
+% \end{gather}
+% and its induced norm
+% $\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
+% \rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
+% commensurate with the $L^2$-inner product in the bulk domain, namely
+% \begin{gather}
+%   \langle \lambda, \mu \rangle_\level
+%   = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
+%   \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
+%   \int_{\face} \lambda \mu \ds.
+% \end{gather}
+% Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
 % 
-% ---------------------------------------------------------------------
-\subsection{Spaces for the HDG on hypergraphs}
-% ---------------------------------------------------------------------
-%
-Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
-
-By $\faceSet$ we denote the set of faces of $\mesh_\level$.
-The subset of faces on the boundary is
-\begin{gather}
-  \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
-\end{gather}
-Moreover, we define
-$\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
-\partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
-square integrable functions with the inner product
-\begin{gather}
-  \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
-\end{gather}
-and its induced norm
-$\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
-\rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
-commensurate with the $L^2$-inner product in the bulk domain, namely
-\begin{gather}
-  \langle \lambda, \mu \rangle_\level
-  = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
-  \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
-  \int_{\face} \lambda \mu \ds.
-\end{gather}
-Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
-
-Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
-polynomials of degree up to $p$. Then, we define the space of piecewise
-polynomials on the skeleton by
-\begin{gather}
-  \label{EQ:skeletal_space}
-  \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
-    \begin{array}{r@{\,}c@{\,}ll}
-  \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
-  \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
-    \end{array}
-  \right\}.
-\end{gather}
-
-The HDG method involves a local solver on each mesh cell
-$\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
-and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
-equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
-$V_\elem = \polynomials_p$. Then, choosing
-$\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
-and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
-\begin{gather}
-  \label{EQ:dg_spaces}
-  \begin{aligned}
-    \discElementSpace_\level
-    &:=\bigl\{ v \in L^2(\Omega)
-    & \big|\;v_{|\elem} &\in V_\elem,
-    &\forall \elem &\in \mesh_\level \bigr\},\\
-    \vec W_\level
-    &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
-    & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
-    &\forall \elem &\in \mesh_\level \bigr\}.    
-  \end{aligned}
-\end{gather}
-%\begin{alignat}2
-% \end{alignat}
+% Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
+% polynomials of degree up to $p$. Then, we define the space of piecewise
+% polynomials on the skeleton by
+% \begin{gather}
+%   \label{EQ:skeletal_space}
+%   \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
+%     \begin{array}{r@{\,}c@{\,}ll}
+%   \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
+%   \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
+%     \end{array}
+%   \right\}.
+% \end{gather}
+% 
+% The HDG method involves a local solver on each mesh cell
+% $\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
+% and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
+% equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
+% $V_\elem = \polynomials_p$. Then, choosing
+% $\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
+% and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
+% \begin{gather}
+%   \label{EQ:dg_spaces}
+%   \begin{aligned}
+%     \discElementSpace_\level
+%     &:=\bigl\{ v \in L^2(\Omega)
+%     & \big|\;v_{|\elem} &\in V_\elem,
+%     &\forall \elem &\in \mesh_\level \bigr\},\\
+%     \vec W_\level
+%     &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
+%     & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
+%     &\forall \elem &\in \mesh_\level \bigr\}.    
+%   \end{aligned}
+% \end{gather}
+% %\begin{alignat}2
+% % \end{alignat}
 
 
 
