@@ -26,6 +26,7 @@
 \usepackage[mode=multiuser]{fixme} % Provide note, warning, error, fatal.
 \FXRegisterAuthor{gk}{envgk}{GK}
 \FXRegisterAuthor{ar}{envar}{AR}
+\FXRegisterAuthor{ss}{envss}{SS}
 \fxusetheme{color}
 
 % ---------------------------------------------------------------------------
@@ -86,37 +87,10 @@
 \newcommand{\IN}{\ensuremath{\mathbb N}}
 \newcommand{\IR}{\ensuremath{\mathbb R}}
 
-\newcommand{\elem}{\ensuremath{T}}
-\newcommand{\mesh}{\ensuremath{\mathcal T}}
-\newcommand{\meshIndex}{\ensuremath{\mathcal I}}
-\newcommand{\faceSet}{\ensuremath{\mathcal F}}
-\newcommand{\faceSetDir}{\ensuremath{\mathcal F^\textup D}}
-\newcommand{\face}{\ensuremath{F}}
 \newcommand{\skeletal}{\ensuremath{\Sigma}}
 \newcommand{\skeletalSpace}{\ensuremath{M}}
-\newcommand{\skeletalSpaceHDG}{\ensuremath{M}}
-\newcommand{\contElementSpace}{\ensuremath{V^\textup c}}
-\newcommand{\contThreeElementSpace}[1]{\ensuremath{V^\textup c_{#1,p+3}}}
-\newcommand{\linElementSpace}{\ensuremath{\overline V^\textup c}}
 \newcommand{\discElementSpace}{\ensuremath{V}}
 \newcommand{\polynomials}{\ensuremath{\mathcal P}}
-\newcommand{\level}{\ensuremath{\ell}}
-\newcommand{\iterMgOuter}{i}%\ensuremath{\nu}}
-\newcommand{\iterMgInner}{m}%\ensuremath{\eta}}
-
-\newcommand{\discLaplacian}{\ensuremath{A}}
-\newcommand{\extensionOp}{\ensuremath{\mathcal U^\textup c}}
-\newcommand{\averagingOp}{\ensuremath{I^\textup{avg}}}
-\newcommand{\restrictionOp}{\ensuremath{I^\textup{res}}}
-\newcommand{\traceOp}{\ensuremath{\gamma_0}}
-\newcommand{\injectionOp}{\ensuremath{I}}
-\newcommand{\projectionOp}{\ensuremath{P}}
-\newcommand{\projectionOrthogonalOP}{\ensuremath{\Pi}}
-\newcommand{\projectionLinOp}{\ensuremath{\overline P}}
-\newcommand{\skeletalProj}{\ensuremath{\Pi^\partial}}
-\newcommand{\contLinProj}{\ensuremath{\overline \Pi^\textup c}}
-\newcommand{\discProj}{\ensuremath{\Pi^\textup d}}
-\newcommand{\liftingOp}{\ensuremath{S}}
 
 \renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}}
 \newcommand{\Nu}{\ensuremath{\vec \nu}}
@@ -124,17 +98,6 @@
 \newcommand{\ds}{\ensuremath{\, \textup d \sigma}}
 \newcommand{\localU}{\ensuremath{\mathcal U}}
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
-\newcommand{\penaltyParam}{\ensuremath{\eta}}
-
-\newcommand{\tildelambda}{\tilde\lambda}
-\newcommand{\ureconstructed}{\overline{u}}
-\newcommand{\projectionBramble}{\ensuremath{\bar B}}
-\newcommand{\indexDOF}{\ensuremath{i}}
-\newcommand{\IndexDOF}{\ensuremath{\mathcal I}}
-
-\newcommand{\llangle}{\ensuremath{\langle \! \langle}}
-\newcommand{\rrangle}{\ensuremath{\rangle \! \rangle}}
-\newcommand{\nnorm}{\ensuremath{\vert \! \vert \! \vert}}
 
 % ---------------------------------------------------------------------------
 
@@ -186,8 +149,17 @@
 % 
 \maketitle
 % 
+
+\begin{envarnote}{Editing!}
+ Dear all,
+ 
+ since we are quite many people, I have included the usepackage ``fixme''. It provides quite powerful tools for editing text. You can use a note, a warning, an error, or a fatal to indicate things in the text. Using the initials it can be tracked who set a comment. Analogously, it works for warnings, errors, and fatals. Thus, using the command \verb|\arnote{This is a note by Andreas Rupp}| creates a note at the margins, where the ar in arnote stands for Andreas Rupp. Moreover, \verb|\begin{envarnote}{Short description} ..... \end{envarnote}| \linebreak will create a short descripton at the margin and a long text (like this) within the standard text.
+\end{envarnote}
+
+% 
 \section{Introduction}
 % 
+\textcolor{red}{TODO!}
 % ---------------------------------------------------------------------
 \section{Hypergraphs}\label{SEC:hypergraph}
 % ---------------------------------------------------------------------
@@ -356,13 +328,13 @@ For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two (
 % 
 \subsection{Differential operators on hyperedges}\label{SEC:diff_op}
 % 
-Consider the smooth function $f: \Edge \to \IR$. Its \emph{directional derivative} in $x \in \Edge$
+Consider the smooth function $f: \Edge \to \IR$. Its \emph{directional derivative} in $x \in \Edge$ and direction $v \in \tangent(x)$ is defined as
 % 
 \begin{equation}\label{EQ:direc_der}
  [\Der f(x)](v) ~:=~ \frac{\textup d}{\textup d \tau} (f \circ \gamma)(\tau)|_{\tau = 0}
 \end{equation}
 % 
-for any smooth curve $\gamma: (-1,1) \to \Edge$ with $\gamma(0) = x$ and $\gamma'(0) = v$. Here, $v$ is called the \emph{direction}.
+for any smooth curve $\gamma: (-1,1) \to \Edge$ with $\gamma(0) = x$ and $\gamma'(0) = v$.
 
 Accordingly, the \emph{derivative} is defined as
 % 
@@ -370,7 +342,7 @@ Accordingly, the \emph{derivative} is defined as
  \Der f(x) \colon \tangent(x) \to \IR, \qquad \text{ \eqref{EQ:direc_der} holds for all $v \in \tangent(x)$.}
 \end{equation*}
 % 
-Thus, $\Der f(x) \in \tangent^\star(x)$ which is the dual space of $\tangent x$ and there is a well-defined mapping $\Der f \colon \Edge \to \tangent^\star(x)$. According to Riesz representation theorem, there is a unique \emph{gradient} $\Nabla f \colon \Edge \to \tangent(x)$ with
+Thus, $\Der f(x) \in \tangent^\star(x)$ which is the dual space of $\tangent (x)$ and there is a well-defined mapping $\Der f \colon \Edge \to \tangent^\star(x)$. According to Riesz representation theorem, there is a unique \emph{gradient} $\Nabla f \colon \Edge \to \tangent(x)$ with
 % 
 \begin{equation*}
  (\Nabla f(x), v) = [\Der f(x)](v) \qquad \forall x \in \Edge, \forall v \in \tangent(x).
@@ -394,14 +366,13 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
 Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
 polynomials of degree up to $p$. Then, we define the space of piecewise polynomials on the skeleton $\skeletal := \bigcup_{\Node \in \SetNode} \Node$ by
 % 
-\begin{gather}
-  \label{EQ:skeletal_space}
-  \skeletalSpace := \left\{ \lambda \in L^2(\skeletal) \;\middle|\;
-    \begin{array}{r@{\,}c@{\,}ll}
+\begin{gather}\label{EQ:skeletal_space}
+ \skeletalSpace := \left\{ \lambda \in L^2(\skeletal) \;\middle|\;
+ \begin{array}{r@{\,}c@{\,}ll}
   \lambda_{|\Node} &\in& \polynomials_p & \forall \Node \in \SetNode\\
   \lambda_{|\Node} &=& 0 & \forall \Node \in \SetNodeDir    
-    \end{array}
-  \right\}.
+ \end{array}
+ \right\}.
 \end{gather}
 % 
 The HDG method involves a local solver on each mesh hyperege
@@ -414,91 +385,70 @@ $\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discon
  \end{aligned}
 \end{gather}
 % 
-The HDG scheme for~\eqref{EQ:diffusion_mixed} on a mesh $\mesh_\level$
-consists of a local solver and a global coupling equation. The local
-solver is defined cellwise by a weak formulation
+The HDG scheme for~\eqref{EQ:diffusion_mixed} on a mesh $\Graph$
+consists of the local solver and a global coupling equation. The local solver is defined hyperedge-wise by a weak formulation
 of~\eqref{EQ:diffusion_mixed} in the discrete spaces
-$V_\elem \times \vec W_\elem$ and defining suitable numerical traces and fluxes. Namely, given
-$\lambda \in \skeletalSpace_\level$ find $u_\elem \in V_\elem$ and
-$\vec q_\elem \in \vec W_\elem$ , such that
+$V_\Edge \times \vec W_\Edge$ and defining suitable numerical traces and fluxes. Namely, given $\lambda \in \skeletalSpace$ find $U_\Edge \in V_\Edge$ and $\vec Q_\Edge \in \vec W_\Edge$ , such that
+% 
 \begin{subequations}\label{EQ:hdg_scheme}
-\begin{align}
-  \int_\elem \vec q_\elem \cdot \vec p_\elem \dx - \int_\elem u_\elem \Div \vec p_\elem \dx
-  & = - \int_{\partial \elem} \lambda \vec p_\elem \cdot \Nu \ds
-    \label{EQ:hdg_primary}
-  \\
-  - \int_\elem \vec q_\elem \cdot \nabla v_\elem \dx  + \int_{\partial \elem} ( \vec q_\elem \cdot \Nu + \tau_\level u_\elem ) v_\elem \ds
-  & = \tau_\level \int_{\partial \elem} \lambda v_\elem \ds \label{EQ:hdg_flux}
-\end{align}
+ \begin{align}
+  \int_\Edge \tfrac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds \label{EQ:hdg_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) v \ds
+  & = \tau \int_{\partial \Edge} \lambda v \ds \label{EQ:hdg_flux}
+ \end{align}
 \end{subequations}
 % 
-hold for all $v_\elem \in V_\elem$, and all $\vec p_\elem \in \vec W_\elem$, and for
-all $\elem \in \mesh_\level$. Here,
-$\Nu$ is the outward unit normal with respect to $\elem$ and $\tau_\level > 0$
-is the penalty coefficient. While the local solvers are implemented
-cell by cell, it is helpful for the analysis to combine them by
-concatenation. Thus, the local solvers define a mapping
+hold for all $v \in V_\Edge$, and all $\vec p \in \vec W_\Edge$, and for all $\Edge \in \SetEdge$. Here, $\tau > 0$ is the penalty coefficient. While the local solvers are implemented hyperedge by hyperedge, it is helpful for the analysis to combine them by concatenation. Thus, the local solvers define a mapping
+% 
 \begin{gather}
-  \begin{split}
-    \skeletalSpace_\level & \to \discElementSpace_\level \times \vec W_\level\\
-   \lambda &\mapsto (\localU_\level \lambda, \localQ_\level \lambda),
+ \begin{split}
+  \skeletalSpace & \to \discElementSpace \times \vec W\\
+  \lambda &\mapsto (\localU \lambda, \localQ \lambda),
  \end{split}
 \end{gather}
-where for each cell $\elem\in \mesh_\level$ holds
-$\localU_\level \lambda = u_\elem$ and
-$ \localQ_\level \lambda = \vec q_\elem$. In the same way, we define
-operators $\localU_\level f$ and $ \localQ_\level f$ for
-$f\in L^2(\Omega)$, where now the local solutions are defined by
-the system
+% 
+where for each hyperedge $\Edge \in \SetEdge$ holds $\localU \lambda = U_\Edge$ and $\localQ \lambda = \vec Q_\Edge$. In the same way, we define operators $\localU u_\textup D$ and $ \localQ u_\textup D$, where in \eqref{EQ:hdg_scheme}, $\lambda$ is replaced by $u_\textup D$ on Dirichlet nodes, and by zero otherwise. Analogously, we set  $\localU f$ and $ \localQ f$ for
+$f\in L^2(\bigcup_{\Edge \in \SetEdge} \Edge)$, where now the local solutions are defined by the system
+% 
 \begin{subequations}\label{EQ:hdg_f}
-  \begin{align}
-    \int_\elem \vec q_\elem \cdot \vec p_\elem \dx - \int_\elem u_\elem \Div \vec p_\elem \dx
-    & = 0
-      \label{EQ:hdg_f_primary}
-    \\
-    - \int_\elem \vec q_\elem \cdot \nabla v_\elem \dx  + \int_{\partial \elem} ( \vec q_\elem \cdot \Nu + \tau_\level u_\elem ) v_\elem \ds
-    & =  \int_{\elem} f v_\elem \dx.
-      \label{EQ:hdg_f_flux}
-\end{align}
+ \begin{align}
+  \int_\Edge \tfrac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = 0 \label{EQ:hdg_f_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau U_\Edge ) v \ds & =  \int_{\Edge} f v \dx\label{EQ:hdg_f_flux}
+ \end{align}
 \end{subequations}
 
 Once $\lambda$ has been computed, the HDG approximation
-to~\eqref{EQ:diffusion_mixed} on mesh $\mesh_\level$ will be computed as
+to \eqref{EQ:diffusion_mixed} on $\Graph$ will be computed as
+% 
 \begin{gather}
   \begin{split}
-    u_\level &= \localU_\level \lambda + \localU_\level f\\
-    \vec q_\level &= \localQ_\level \lambda + \localQ_\level f
+    U &= \localU \lambda + \localU u_\textup D + \localU f\\
+    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f
   \end{split}
 \end{gather}
 
 The global coupling condition is derived through a discontinuous
 Galerkin version of mass balance and reads: Find
-$\lambda \in \skeletalSpace_\level$, such that for all
-$ \mu \in \skeletalSpace_\level$
+$\lambda \in \skeletalSpace$, such that for all
+$ \mu \in \skeletalSpace$
 % 
 \begin{equation}
-  \sum_{\elem \in \mesh_\level}
-  \sum_{\face \in \faceSet^\elem_\level \setminus \faceSetDir_\level}
-   \int_\face \left( \vec q_\level \cdot \Nu
-    + \tau_\level (u_\level - \lambda)\right) \mu \ds = 0.\label{EQ:hdg_global}
+ \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds = \sum_{\node \in \setNodeNeu} \int_\Node g_\textup N \mu \ds.\label{EQ:hdg_global}
 \end{equation}
 
-In~\cite{CockburnGL2009}, it is shown that $\lambda \in \skeletalSpace_\level$ is the solution of the coupled system from~\eqref{EQ:hdg_scheme} to~\eqref{EQ:hdg_global} if and only if it is the solution of
+This can, equivalently be rewritten to finding $\lambda \in \skeletalSpace$ such that
+%
+\begin{equation*}
+ a(\lambda, \mu) ~=~ b(\mu)
+\end{equation*}
 % 
-\begin{subequations}\label{EQ:hdg_condensed}
-\begin{equation}\label{EQ:hdg_condensed_forms}
- a_\level (\lambda, \mu) = b_\level(\mu) \qquad \forall \mu \in \skeletalSpace_\level,
-\end{equation}
+holds for all $\mu \in \skeletalSpace$ with
 % 
-with
-% 
-\begin{align}
- a_\level(\lambda, \mu) = & \int_\Omega \localQ_\level \lambda \localQ_\level \mu \dx + \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \tau_\level (\localU_\level \lambda - \lambda) (\localU_\level \mu - \mu) \ds \label{EQ:bilinear_condensed},\\
- b_\level(\mu) = & \int_\Omega \localU_\level \mu f \dx.
-\end{align}
-\end{subequations}
-% 
-Furthermore, the bilinear form $a_\level(\lambda, \mu)$ is symmetric and positive definite.
+\begin{align*}
+ a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\\
+ b(\mu) ~=~= & \int_\Node g_\textup N \mu \ds \\
+ & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds.
+\end{align*}
 
 
 \newpage
