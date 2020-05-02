@@ -388,70 +388,119 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
  \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \mathcal B} [\Der (f, b)_{\IR^\locDim} (x)](b).
 \end{equation*}
 % ---------------------------------------------------------------------
-\section{HDG methods on hypergraphs}
+\section{HDG method on hypergraphs}
 % ---------------------------------------------------------------------
 %
-Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
-
-By $\faceSet$ we denote the set of faces of $\mesh_\level$.
-The subset of faces on the boundary is
-\begin{gather}
-  \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
-\end{gather}
-Moreover, we define
-$\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
-\partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
-square integrable functions with the inner product
-\begin{gather}
-  \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
-\end{gather}
-and its induced norm
-$\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
-\rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
-commensurate with the $L^2$-inner product in the bulk domain, namely
-\begin{gather}
-  \langle \lambda, \mu \rangle_\level
-  = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
-  \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
-  \int_{\face} \lambda \mu \ds.
-\end{gather}
-Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
-
 Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
-polynomials of degree up to $p$. Then, we define the space of piecewise
-polynomials on the skeleton by
+polynomials of degree up to $p$. Then, we define the space of piecewise polynomials on the skeleton $\skeletal := \bigcup_{\Node \in \SetNode} \Node$ by
+% 
 \begin{gather}
   \label{EQ:skeletal_space}
-  \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
+  \skeletalSpace := \left\{ \lambda \in L^2(\skeletal) \;\middle|\;
     \begin{array}{r@{\,}c@{\,}ll}
-  \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
-  \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
+  \lambda_{|\Node} &\in& \polynomials_p & \forall \Node \in \SetNode\\
+  \lambda_{|\Node} &=& 0 & \forall \Node \in \SetNodeDir    
     \end{array}
   \right\}.
 \end{gather}
-
-The HDG method involves a local solver on each mesh cell
-$\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
-and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
-equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
-$V_\elem = \polynomials_p$. Then, choosing
-$\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
-and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
-\begin{gather}
-  \label{EQ:dg_spaces}
-  \begin{aligned}
-    \discElementSpace_\level
-    &:=\bigl\{ v \in L^2(\Omega)
-    & \big|\;v_{|\elem} &\in V_\elem,
-    &\forall \elem &\in \mesh_\level \bigr\},\\
-    \vec W_\level
-    &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
-    & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
-    &\forall \elem &\in \mesh_\level \bigr\}.    
-  \end{aligned}
+% 
+The HDG method involves a local solver on each mesh hyperege
+$\Edge \in \SetEdge$, producing hyperedge-wise approximations $U_\Edge \in V_\Edge$ and and $\vec Q_\Edge \in \vec W_\Edge$ of the functions $u$ and $\vec q$ in equation~\eqref{EQ:diffusion_mixed}, respectively. We choose $V_\Edge = \polynomials_p$. Then, choosing
+$\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. We will also use the concatenations of the spaces $V_\Edge$ and $\vec W_\Edge$, respectively, as a function space on $\Omega$, namely
+\begin{gather}\label{EQ:dg_spaces}
+ \begin{aligned}
+  \discElementSpace &:=\bigl\{ v \in L^2(\Omega) & \big|\;v_{|\Edge} &\in V_\Edge, &\forall \Edge &\in \SetEdge \bigr\},\\
+  \vec W &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d) & \big|\;\vec q_{|\Edge} &\in \vec W_\Edge, &\forall \Edge &\in \SetEdge \bigr\}.
+ \end{aligned}
 \end{gather}
-%\begin{alignat}2
-% \end{alignat}
+% 
+The HDG scheme for~\eqref{EQ:diffusion_mixed} on a mesh $\mesh_\level$
+consists of a local solver and a global coupling equation. The local
+solver is defined cellwise by a weak formulation
+of~\eqref{EQ:diffusion_mixed} in the discrete spaces
+$V_\elem \times \vec W_\elem$ and defining suitable numerical traces and fluxes. Namely, given
+$\lambda \in \skeletalSpace_\level$ find $u_\elem \in V_\elem$ and
+$\vec q_\elem \in \vec W_\elem$ , such that
+\begin{subequations}\label{EQ:hdg_scheme}
+\begin{align}
+  \int_\elem \vec q_\elem \cdot \vec p_\elem \dx - \int_\elem u_\elem \Div \vec p_\elem \dx
+  & = - \int_{\partial \elem} \lambda \vec p_\elem \cdot \Nu \ds
+    \label{EQ:hdg_primary}
+  \\
+  - \int_\elem \vec q_\elem \cdot \nabla v_\elem \dx  + \int_{\partial \elem} ( \vec q_\elem \cdot \Nu + \tau_\level u_\elem ) v_\elem \ds
+  & = \tau_\level \int_{\partial \elem} \lambda v_\elem \ds \label{EQ:hdg_flux}
+\end{align}
+\end{subequations}
+% 
+hold for all $v_\elem \in V_\elem$, and all $\vec p_\elem \in \vec W_\elem$, and for
+all $\elem \in \mesh_\level$. Here,
+$\Nu$ is the outward unit normal with respect to $\elem$ and $\tau_\level > 0$
+is the penalty coefficient. While the local solvers are implemented
+cell by cell, it is helpful for the analysis to combine them by
+concatenation. Thus, the local solvers define a mapping
+\begin{gather}
+  \begin{split}
+    \skeletalSpace_\level & \to \discElementSpace_\level \times \vec W_\level\\
+   \lambda &\mapsto (\localU_\level \lambda, \localQ_\level \lambda),
+ \end{split}
+\end{gather}
+where for each cell $\elem\in \mesh_\level$ holds
+$\localU_\level \lambda = u_\elem$ and
+$ \localQ_\level \lambda = \vec q_\elem$. In the same way, we define
+operators $\localU_\level f$ and $ \localQ_\level f$ for
+$f\in L^2(\Omega)$, where now the local solutions are defined by
+the system
+\begin{subequations}\label{EQ:hdg_f}
+  \begin{align}
+    \int_\elem \vec q_\elem \cdot \vec p_\elem \dx - \int_\elem u_\elem \Div \vec p_\elem \dx
+    & = 0
+      \label{EQ:hdg_f_primary}
+    \\
+    - \int_\elem \vec q_\elem \cdot \nabla v_\elem \dx  + \int_{\partial \elem} ( \vec q_\elem \cdot \Nu + \tau_\level u_\elem ) v_\elem \ds
+    & =  \int_{\elem} f v_\elem \dx.
+      \label{EQ:hdg_f_flux}
+\end{align}
+\end{subequations}
+
+Once $\lambda$ has been computed, the HDG approximation
+to~\eqref{EQ:diffusion_mixed} on mesh $\mesh_\level$ will be computed as
+\begin{gather}
+  \begin{split}
+    u_\level &= \localU_\level \lambda + \localU_\level f\\
+    \vec q_\level &= \localQ_\level \lambda + \localQ_\level f
+  \end{split}
+\end{gather}
+
+The global coupling condition is derived through a discontinuous
+Galerkin version of mass balance and reads: Find
+$\lambda \in \skeletalSpace_\level$, such that for all
+$ \mu \in \skeletalSpace_\level$
+% 
+\begin{equation}
+  \sum_{\elem \in \mesh_\level}
+  \sum_{\face \in \faceSet^\elem_\level \setminus \faceSetDir_\level}
+   \int_\face \left( \vec q_\level \cdot \Nu
+    + \tau_\level (u_\level - \lambda)\right) \mu \ds = 0.\label{EQ:hdg_global}
+\end{equation}
+
+In~\cite{CockburnGL2009}, it is shown that $\lambda \in \skeletalSpace_\level$ is the solution of the coupled system from~\eqref{EQ:hdg_scheme} to~\eqref{EQ:hdg_global} if and only if it is the solution of
+% 
+\begin{subequations}\label{EQ:hdg_condensed}
+\begin{equation}\label{EQ:hdg_condensed_forms}
+ a_\level (\lambda, \mu) = b_\level(\mu) \qquad \forall \mu \in \skeletalSpace_\level,
+\end{equation}
+% 
+with
+% 
+\begin{align}
+ a_\level(\lambda, \mu) = & \int_\Omega \localQ_\level \lambda \localQ_\level \mu \dx + \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \tau_\level (\localU_\level \lambda - \lambda) (\localU_\level \mu - \mu) \ds \label{EQ:bilinear_condensed},\\
+ b_\level(\mu) = & \int_\Omega \localU_\level \mu f \dx.
+\end{align}
+\end{subequations}
+% 
+Furthermore, the bilinear form $a_\level(\lambda, \mu)$ is symmetric and positive definite.
+
+
 \newpage
 % 
 \bibliographystyle{alpha}
