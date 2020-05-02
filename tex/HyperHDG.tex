@@ -80,8 +80,8 @@
 \newcommand{\NormalOuter}{\ensuremath{\mathfrak n^\perp_\Edge}}
 \newcommand{\jump}[1]{{[\![ #1 ]\!]}}
 \newcommand{\diffeo}{\ensuremath{\Phi}}
-\newcommand{\tangentMapping}{\ensuremath{\Phi_\tangent}}
-
+\newcommand{\tangentMapping}{\ensuremath{\Phi_{\tangent(x)}}}
+\newcommand{\orthProj}{\ensuremath{\Pi_{\tangent(x)}}}
 
 \newcommand{\IN}{\ensuremath{\mathbb N}}
 \newcommand{\IR}{\ensuremath{\mathbb R}}
@@ -295,20 +295,6 @@ Thus, the $\Edge\in \setEdge$ are \emph{Riemannian manifolds}, i.e., they are re
 % 
 and define $\| x \|^2 := (x,x)$ for $x \in \IR^\globDim$.
 
-We can identify $\tangent(x) \subset \IR^\globDim$ with $\IR^\locDim$ using an orthonormal basis of $\tangent(x) - x$, denoted $\{t_1(x), \ldots, t_\locDim (x)\} \subset \IR^\globDim$ and the affine-linear $C^\infty$ diffeomorphism
-% 
-\begin{equation*}
- \tangentMapping: \IR^\locDim \ni y \mapsto A y + x \in \tangent(x), \quad A = (t_1, \ldots, t_\locDim) \in \IR^{\globDim,\locDim}. 
-\end{equation*}
-% 
-
-Due to the regularity of the manifold, there is a function $\Der x$ and $\epsilon > 0$ such that
-% 
-\begin{equation*}
- x + \int_0^\epsilon [\Der x] v = 
-\end{equation*}
-
-
 \paragraph{Linear hypergraphs}
 % 
 A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation is square if and only is $\locDim = \globDim$.
@@ -353,7 +339,7 @@ Thus, \eqref{EQ:diffusion_mixed} is a direct generalization of the standard diff
 % 
 \subsection{The notion of normals}\label{SEC:normals}
 % 
-In the following, we will define different notions of normals with respect to a hyperedge $\Edge \in \SetEdge$. The simplest type of normal is the outer (unit) normal which is defined via
+In the following, we will define different notions of normals with respect to a hyperedge $\Edge \in \SetEdge$. The simplest type of normal is the outer normal which is defined via
 % 
 \begin{equation*}
  \|\NormalOuter(x)\| = 1 \qquad \text{ and } \qquad (\NormalOuter(x), v) = 0 \quad \text{ for all } v \in \tangent(x).
@@ -361,95 +347,111 @@ In the following, we will define different notions of normals with respect to a 
 % 
 The second condition can be abbreviated to $\NormalOuter(x) \perp \tangent(x)$.
 
-For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two ($\locDim = \globDim - 1$) or infinitely many outer normals. Additionally, for $x \in \partial \Edge$, we define the inner (unit) normal $\Normal$ as unique vector with
+For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two ($\locDim = \globDim - 1$) or infinitely many outer normals. Additionally, for $x \in \partial \Edge$, we define the inner normal $\Normal$ as unique, outward pointing vector with
 %
 \begin{equation*}
- \| \Normal \| = 1, \qquad \Normal \in \tangent(x), \qquad \Normal \perp \tangent(x) [\partial \Edge] 
+ \| \Normal \| = 1, \qquad \Normal \in \tangent(x), \qquad \Normal \perp \tangent(x) [\partial \Edge]
 \end{equation*}
 
 % 
 \subsection{Differential operators on hyperedges}\label{SEC:diff_op}
 % 
-We can, analogously to the full dimensional case define, the \emph{total differential} or \emph{exterior derivative} $\Der f(x)$ of a smooth function $f\colon \Edge \to \IR$ at $x \in \Edge$ as the unique element of $\tangent^\star (x)$ (being the dual space of $\tangent (x)$) sufficing
+Consider the smooth function $f: \Edge \to \IR$. Its \emph{directional derivative} in $x \in \Edge$
+% 
+\begin{equation}\label{EQ:direc_der}
+ [\Der f(x)](v) ~:=~ \frac{\textup d}{\textup d \tau} (f \circ \gamma)(\tau)|_{\tau = 0}
+\end{equation}
+% 
+for any smooth curve $\gamma: (-1,1) \to \Edge$ with $\gamma(0) = x$ and $\gamma'(0) = v$. Here, $v$ is called the \emph{direction}.
+
+Accordingly, the \emph{derivative} is defined as
 % 
 \begin{equation*}
- [\Der f(x)] v = \lim_{h \to 0} \frac{1}{h} \sum_{i=1}^\globDim \left[ f(x + h v) - f(x) \right].
+ \Der f(x) \colon \tangent(x) \to \IR, \qquad \text{ \eqref{EQ:direc_der} holds for all $v \in \tangent(x)$.}
+\end{equation*}
+% 
+Thus, $\Der f(x) \in \tangent^\star(x)$ which is the dual space of $\tangent x$ and there is a well-defined mapping $\Der f \colon \Edge \to \tangent^\star(x)$. According to Riesz representation theorem, there is a unique \emph{gradient} $\Nabla f \colon \Edge \to \tangent(x)$ with
+% 
+\begin{equation*}
+ (\Nabla f(x), v) = [\Der f(x)](v) \qquad \forall x \in \Edge, \forall v \in \tangent(x).
+\end{equation*}
+% 
+In terms of muscial isomorphisms, that is
+% 
+\begin{equation*}
+ \Nabla f = (\Der f)^\sharp \qquad \text{ and } \qquad \Der f = (\Nabla f)^\flat.
 \end{equation*}
 
+The definition of the \emph{divergence} of a smooth vector function $\vec f \colon E \to \IR^\locDim$ can be done using an orthonormal basis $\mathcal B$ of $\tangent(x)$---which contains $\locDim$ elements---and setting
+% 
+\begin{equation*}
+ \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \mathcal B} [\Der (f, b)_{\IR^\locDim} (x)](b).
+\end{equation*}
+% ---------------------------------------------------------------------
+\section{HDG methods on hypergraphs}
+% ---------------------------------------------------------------------
+%
+Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
 
-% Here, and in the following, $L^2(\Omega)$ denotes the space of square integrable functions on $\Omeg a$ with inner product and norm
-% \begin{equation}
-%  (u,v)_0 := \int_\Omega u v \dx, \qquad \text{and} \qquad \| u \|^2_0 := (u,u)_0.
-% \end{equation}
-% %
-% The space $H^k(\Omega)$ is the Sobolev space of $k$-times weakly
-% differentiable functions with derivatives in $L^2(\Omega)$.
-% % 
-% % ---------------------------------------------------------------------
-% \subsection{Spaces for the HDG on hypergraphs}
-% % ---------------------------------------------------------------------
-% %
-% Starting out from a subdivision $\graph = (\setEdge, \setNode)$.
-% 
-% By $\faceSet$ we denote the set of faces of $\mesh_\level$.
-% The subset of faces on the boundary is
-% \begin{gather}
-%   \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
-% \end{gather}
-% Moreover, we define
-% $\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
-% \partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
-% square integrable functions with the inner product
-% \begin{gather}
-%   \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
-% \end{gather}
-% and its induced norm
-% $\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
-% \rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
-% commensurate with the $L^2$-inner product in the bulk domain, namely
-% \begin{gather}
-%   \langle \lambda, \mu \rangle_\level
-%   = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
-%   \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
-%   \int_{\face} \lambda \mu \ds.
-% \end{gather}
-% Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
-% 
-% Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
-% polynomials of degree up to $p$. Then, we define the space of piecewise
-% polynomials on the skeleton by
-% \begin{gather}
-%   \label{EQ:skeletal_space}
-%   \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
-%     \begin{array}{r@{\,}c@{\,}ll}
-%   \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
-%   \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
-%     \end{array}
-%   \right\}.
-% \end{gather}
-% 
-% The HDG method involves a local solver on each mesh cell
-% $\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
-% and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
-% equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
-% $V_\elem = \polynomials_p$. Then, choosing
-% $\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
-% and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
-% \begin{gather}
-%   \label{EQ:dg_spaces}
-%   \begin{aligned}
-%     \discElementSpace_\level
-%     &:=\bigl\{ v \in L^2(\Omega)
-%     & \big|\;v_{|\elem} &\in V_\elem,
-%     &\forall \elem &\in \mesh_\level \bigr\},\\
-%     \vec W_\level
-%     &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
-%     & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
-%     &\forall \elem &\in \mesh_\level \bigr\}.    
-%   \end{aligned}
-% \end{gather}
-% %\begin{alignat}2
-% % \end{alignat}
+By $\faceSet$ we denote the set of faces of $\mesh_\level$.
+The subset of faces on the boundary is
+\begin{gather}
+  \faceSetDir_\level := \{\face \in \faceSet_\level : \face \subset \partial \Omega \}.
+\end{gather}
+Moreover, we define
+$\faceSet^\elem_\level := \{ \face \in \faceSet_\level : \face \subset
+\partial \elem \}$ as the set of faces of a cell $\elem\in\mesh_\level$.  On the set of faces, we define the space $L^2(\faceSet_\ell)$ as the space of
+square integrable functions with the inner product
+\begin{gather}
+  \llangle \lambda, \mu \rrangle_\level = \sum_{\elem \in \mesh_\level} \int_{\partial \elem} \lambda\mu\ds,
+\end{gather}
+and its induced norm
+$\nnorm \mu \nnorm^2_\level = \llangle \mu, \mu
+\rrangle_\level$. Note that interior faces appear twice in this definition such that expressions like $\llangle u, \mu \rrangle_\level$ with possibly discontinuous $u|_{\elem} \in H^1(\elem)$ for all $\elem \in \mesh_\level$ and $\mu \in L^2(\faceSet)$ are defined without further ado. Additionally, we define an inner product
+commensurate with the $L^2$-inner product in the bulk domain, namely
+\begin{gather}
+  \langle \lambda, \mu \rangle_\level
+  = \sum_{\elem \in \mesh_\level} \frac{|\elem|}{|\partial \elem|}
+  \int_{\partial \elem} \lambda \mu \ds \cong \sum_{\face \in \faceSet_\level} h_\face
+  \int_{\face} \lambda \mu \ds.
+\end{gather}
+Its induced norm is $ \| \mu \|^2_\level = \langle \mu, \mu \rangle_\level$.
+
+Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
+polynomials of degree up to $p$. Then, we define the space of piecewise
+polynomials on the skeleton by
+\begin{gather}
+  \label{EQ:skeletal_space}
+  \skeletalSpace_\level := \left\{ \lambda \in L^2(\faceSet_\level) \;\middle|\;
+    \begin{array}{r@{\,}c@{\,}ll}
+  \lambda_{|\face} &\in& \polynomials_p & \forall \face \in \faceSet_\level\\
+  \lambda_{|\face} &=& 0 & \forall \face \in \faceSetDir_\level    
+    \end{array}
+  \right\}.
+\end{gather}
+
+The HDG method involves a local solver on each mesh cell
+$\elem \in \mesh_\level$, producing cellwise approximations $u_\elem \in V_\elem$
+and and $\vec q_\elem\in \vec W_\elem$ of the functions $u$ and $\vec q$ in
+equation~\eqref{EQ:diffusion_mixed}, respectively. We choose
+$V_\elem = \polynomials_p$. Then, choosing
+$\vec W_\elem = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. Our current analysis is in fact limited to this case and other choices require a modification of Lemma~\ref{LEM:u_q_bound}. We will also use the concatenations of the spaces $V_\elem$
+and $\vec W_\elem$, respectively, as a function space on $\Omega$, namely
+\begin{gather}
+  \label{EQ:dg_spaces}
+  \begin{aligned}
+    \discElementSpace_\level
+    &:=\bigl\{ v \in L^2(\Omega)
+    & \big|\;v_{|\elem} &\in V_\elem,
+    &\forall \elem &\in \mesh_\level \bigr\},\\
+    \vec W_\level
+    &:=\bigl\{ \vec q \in L^2(\Omega;\mathbb R^d)
+    & \big|\;\vec q_{|\elem} &\in \vec W_\elem,
+    &\forall \elem &\in \mesh_\level \bigr\}.    
+  \end{aligned}
+\end{gather}
+%\begin{alignat}2
+% \end{alignat}
 \newpage
 % 
 \bibliographystyle{alpha}
