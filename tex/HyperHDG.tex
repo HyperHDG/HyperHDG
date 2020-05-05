@@ -20,6 +20,7 @@
 \usepackage{enumerate}
 \usepackage{booktabs,multirow}
 \usepackage{amsfonts}
+\usepackage{dsfont}
 
 %%%%%%%%%% Packages to help editing %%%%%%%%%%
 \usepackage[notref,notcite]{showkeys} % Show labels.
@@ -83,6 +84,12 @@
 \newcommand{\diffeo}{\ensuremath{\Phi}}
 \newcommand{\tangentMapping}{\ensuremath{\Phi_{\tangent(x)}}}
 \newcommand{\orthProj}{\ensuremath{\Pi_{\tangent(x)}}}
+\newcommand{\der}{\ensuremath{\textup D}}
+\newcommand{\funcDet}{\ensuremath{g}}
+\newcommand{\matQ}{\ensuremath{Q}}
+\newcommand{\matR}{\ensuremath{R}}
+\newcommand{\basis}{\ensuremath{\mathcal B}}
+\newcommand{\unity}{\ensuremath{\mathds 1}}
 
 \newcommand{\IN}{\ensuremath{\mathbb N}}
 \newcommand{\IR}{\ensuremath{\mathbb R}}
@@ -93,11 +100,14 @@
 \newcommand{\polynomials}{\ensuremath{\mathcal P}}
 
 \renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}}
+\DeclareMathAlphabet{\mathbfsf}{\encodingdefault}{\sfdefault}{bx}{n}
+\newcommand{\vecc}[1]{\ensuremath{\mathbfsf{#1}}}
 \newcommand{\Nu}{\ensuremath{\vec \nu}}
 \newcommand{\dx}{\ensuremath{\, \textup d x}}
 \newcommand{\ds}{\ensuremath{\, \textup d \sigma}}
 \newcommand{\localU}{\ensuremath{\mathcal U}}
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
+\newcommand{\range}{\ensuremath{\mathcal R}}
 
 % ---------------------------------------------------------------------------
 
@@ -147,6 +157,7 @@
  \textcolor{red}{TODO!}
 \end{abstract}
 % 
+\allowdisplaybreaks
 \maketitle
 % 
 
@@ -180,10 +191,10 @@ Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ is call
 
 \paragraph{Cubic/simplicial (topological) embeddings of hypergraphs to global dimension $\globDim$}
 % 
-If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be topologically embedded into $\IR^\globDim$ if
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be topologically embedded into $\IR^\globDim$ if
 % 
 \begin{enumerate}
- \item there is a way to assemble all unit hypercubes/simplices (representing the hyperedges) such that for two hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
+ \item there is a way to assemble all deformed hypercubes/simplices (representing the hyperedges) such that for two different hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
  \item in the aforementioned assembly for all $\node \in \setNode$ and $\edge \in \setEdge$: We have $\Node \cap \Edge \neq \emptyset$ if, and only if, $\node \in \edge$.
 \end{enumerate}
 % 
@@ -254,7 +265,7 @@ If the hypergraph can be topologically embedded to dimension $\globDim$ and carr
 We assume that all hyperedges $\IR^\globDim \supset \Edge \in \SetEdge$ allow for a $C^\infty$ diffeomorphism
 % 
 \begin{equation*}
- \diffeo \colon \; \IR^\locDim \supset \RefEdge ~\mapsto~ \Edge \subset \IR^\globDim,
+ \diffeo_\Edge \colon \; \IR^\locDim \supset \RefEdge ~\mapsto~ \Edge \subset \IR^\globDim,
 \end{equation*}
 % 
 where the reference element $\RefEdge$ is either a unit simplex of a unit hypercube.
@@ -324,7 +335,6 @@ For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two (
 \begin{equation*}
  \| \Normal \| = 1, \qquad \Normal \in \tangent(x), \qquad \Normal \perp \tangent(x) [\partial \Edge]
 \end{equation*}
-
 % 
 \subsection{Differential operators on hyperedges}\label{SEC:diff_op}
 % 
@@ -354,15 +364,19 @@ In terms of muscial isomorphisms, that is
  \Nabla f = (\Der f)^\sharp \qquad \text{ and } \qquad \Der f = (\Nabla f)^\flat.
 \end{equation*}
 
-The definition of the \emph{divergence} of a smooth vector function $\vec f \colon E \to \IR^\locDim$ can be done using an orthonormal basis $\mathcal B$ of $\tangent(x)$---which contains $\locDim$ elements---and setting
+The definition of the \emph{divergence} of a smooth vector function $\vec f \colon E \to \IR^\locDim$ can be done using an orthonormal basis $\basis$ of $\tangent(x)$---which contains $\locDim$ elements---and setting
 % 
 \begin{equation*}
- \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \mathcal B} [\Der (f, b)_{\IR^\locDim} (x)](b).
+ \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\IR^\locDim} (x)](b).
 \end{equation*}
 % ---------------------------------------------------------------------
 \section{HDG method on hypergraphs}
 % ---------------------------------------------------------------------
 %
+In this section, we discuss the HDG method applied to the diffusion equation on a hypergraph. Thus, we first formulate the method in Section \ref{SEC:HDG_form} and discuss implementation aspects of local problems (including transformation rules for the necessary integrals and differential operators) in Section \ref{SEC:HDG_loc_prob}. At last, we describe an efficient way of solving the global system of equations arising from the HDG discretizaion in Section \ref{SEC:glob_system}.
+% 
+\subsection{HDG formulation}\label{SEC:HDG_form}
+% 
 Let $p\ge 1$ and $\polynomials_p$ be the space of (multivariate)
 polynomials of degree up to $p$. Then, we define the space of piecewise polynomials on the skeleton $\skeletal := \bigcup_{\Node \in \SetNode} \Node$ by
 % 
@@ -435,8 +449,64 @@ $ \mu \in \skeletalSpace$
 \begin{equation}
  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds = \sum_{\node \in \setNodeNeu} \int_\Node g_\textup N \mu \ds.\label{EQ:hdg_global}
 \end{equation}
+% 
+\subsection{Implementation aspects of local problems}\label{SEC:HDG_loc_prob}
+% 
+Trying to implement local problems \eqref{EQ:hdg_scheme} or \eqref{EQ:hdg_f}, we need efficient ways to evaluate integrals with respect to hyperedges or hypernodes, and the differential operators of Section \ref{SEC:diff_op}. We start with an improved way of formulating integrals of the type
+% 
+\begin{equation}
+ \int_\Edge f \ds = \int_\RefEdge \left[f \circ \diffeo^{-1}_\Edge\right] \underbrace{ \sqrt{\det[(\der\diffeo)^T \der \diffeo]} }_{ =: \funcDet }\dx,
+\end{equation}
+% 
+where $\der$ denotes the standard total derivative and $\funcDet$ is the functional determinant. Thus, $g$ can be interpreted as generalization of the determinant of $\der\diffeo$, which in general is not a square matrix. However, via $\matQ\matR$ decomposition
+% 
+\begin{equation}\label{EQ:QR_decomp}
+ \der\diffeo = \matQ_\Edge \matR_\Edge, \qquad \der\diffeo \in \IR^{\globDim,\locDim}, \, \matQ \in \IR^{\globDim,\globDim}, \, \matR \in \IR^{\globDim,\locDim},
+\end{equation}
+% 
+where $\matQ_\Edge$ is an orthogonal (square) matrix with with $\det \matQ_\Edge = 1$ and $\matR$ is an upper triangular matrix with $(\matR_\Edge)_{i,i} \ge 0$ for all $i \ge 2$.  $(\matR_\Edge)_{1,1}$ should be non-negative if this is possible without violating the aforementioned conditions. Note that all enries $(\matR_\Edge)_{i,j} = 0$, for $i > \locDim$ or $j > \locDim$. Thus, we can equivalently calculate
+% 
+\begin{equation}\label{EQ:det_gen}
+ \funcDet = \left| \det\der\diffeo \right|, \qquad \det\der\diffeo := \prod_{i=1}^\locDim (\matR_\Edge)_{i,i}.
+\end{equation}
+% 
+Note that from this representation, we can also deduce whether $\diffeo$ preserves orientation, i.e., $(\matR_\Edge)_{1,1} \ge 0 \Leftrightarrow \det\der\diffeo \ge 0$, or changes orientation, i.e., $(\matR_\Edge) \ge 0$. Thus, we have that $\det$ from \eqref{EQ:det_gen} is a direct generalization of the standard determinant and gives the same value for square matrices. Thus, it carries the same notation. Analogous considerations allow to evaluate integrals with respect to hypernodes.
 
-This can, equivalently be rewritten to finding $\lambda \in \skeletalSpace$ such that
+For the transformation of gradient and divergence, we will investigate the transformation of directional derivatives, first. The general formulas can then be constructed by combining the different directional derivatives, but are not used for implementation, where all directional derivatives are treated independently. We have that
+% 
+\begin{align*}
+ [\der_\RefEdge (f \circ \diffeo) (\hat x)](\hat v) ~=~ & \frac{\textup d}{\textup d \tau} (f \circ \diffeo \circ \gamma) (\tau)|_{\tau = 0} \\
+ ~=~ & [\der_{\diffeo \circ \gamma} f ((\diffeo\circ\gamma) (0))] \cdot [\der_{\gamma} \diffeo(\gamma (0))] \cdot \der_{\tau} \gamma(0)\\
+ ~=~ & [\Der f (x)] \left( \der_{\hat v} \diffeo(\hat x) \right) ~=~[\Der f (x)] (v)
+\end{align*}
+% 
+for $\gamma(0) = \hat x := \diffeo^{-1}_\Edge x$ and $\gamma'(0) = \hat v$ with $v = (\der_{\hat x} \diffeo_\edge(\hat x))\hat v$ (matrix--vector product), and the hat indicating that functions or operators live on the reference element. Here, also $\der_{\hat v} \diffeo(\hat x)$ is the directional derivative and $\cdot$ indicates just a product and that not application of a function is meant. This need not be the scalar product, here. Thus, we formally recover
+% 
+\begin{equation*}
+ [\Der f (x)] (v) = [\der_\RefEdge (f \circ \diffeo) (\hat x)]([\der_{\hat x} \diffeo_\edge(\hat x)]^{-1} v).
+\end{equation*}
+% 
+This is a generalization of the standard transformation formula for directional derivatives. However, the inverse is not well-defined, since the the derivative of $\diffeo$ cannot be assigned to a square matrix. Nonetheless, due to $v \in \range (\der_{\hat x} \diffeo_\edge(\hat x))$, it is well-defined in the sense of a mapping.
+
+To gain an efficient implementation for the gradient and the divergence, we next define a local, orthonormal coordinate system on the tangent $\tangent(x)$ by using the first $\locDim$ column vectors of $\matQ$ from \eqref{EQ:QR_decomp}. This basis, for the sake of implementation, is also used as the basis for the divergence, as described in Section \ref{SEC:diff_op}: $\basis = \{b_1, \ldots, b_\locDim\}$. Thus, we can write
+% 
+\begin{align*}
+ [\Der f (x)] (b_j) ~=~ & [\der_\RefEdge (f \circ \diffeo) (\hat x)]([\der_{\hat x} \diffeo_\edge(\hat x)]^{-1} b_j)\\
+ ~=~ & [\der_\RefEdge (f \circ \diffeo) (\hat x)] (\matR^{-1}_\Edge \matQ^T_\Edge b_j)\\
+ ~=~ & [\der_\RefEdge (f \circ \diffeo) (\hat x)] (r_j)
+\end{align*}
+% 
+where $r_j$ is the $j$th column of $\matR_\Edge^{-1}$. Note that the whole right hand side of this equation can be formulated in $\locDim$ dimensions only, due to our bold choice of orthonormal systems. Using this idea, we can formulate gradient and divergence on an element with respect to the local coordinate system $\basis$, i.e., we set
+% 
+\begin{equation}
+ \Nabla f(x) = \sum_{j=1}^\locDim b_j [\Der f (x)] (b_j) = \sum_{j=1}^\locDim b_j [\der_\RefEdge (f \circ \diffeo) (\hat x)] (r_j),
+\end{equation}
+% 
+and treat the divergence analogously (without the $b_j$ after the sums).
+% 
+\subsection{Global system of equations}\label{SEC:glob_system}
+% 
+Equation \eqref{EQ:hdg_global} can, equivalently be rewritten to finding $\lambda \in \skeletalSpace$ such that
 %
 \begin{equation*}
  a(\lambda, \mu) ~=~ b(\mu)
@@ -447,8 +517,26 @@ holds for all $\mu \in \skeletalSpace$ with
 \begin{align*}
  a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\\
  b(\mu) ~=~= & \int_\Node g_\textup N \mu \ds \\
- & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds.
+ & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds,
 \end{align*}
+% 
+inducing the \emph{statically condensed global system of equations}
+% 
+\begin{equation*}
+ A \vecc x = \vecc b, \quad \text{ where } \quad \vecc A_{i.j} = a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \vecc b_i = b(\mu_i),
+\end{equation*}
+% 
+where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.~2.1]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\vecc A$ is symmetric positive definite.
+
+Thus, for doing a single matrix--vector product $\vecc A \vecc x = \vecc y$, one needs to (assume that $\vecc y = \vecc 0$ initially and) go through all hyperedges and per hyperedge:
+% 
+\begin{enumerate}
+ \item Identify the adjacent hypernodes carrying information about $\lambda$, i.e. the global degrees of freedom---encoded in $\vecc x$.
+ \item Use the gained information to solve local problem \eqref{EQ:hdg_scheme}.
+ \item Calculated $\int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu_i$ based on the result of the local problem, where $i$ is the local index of the degree of freedom.
+ \item Find global index addociated to $i$ and add result to $\vecc y$.
+\end{enumerate}
+
 
 
 \newpage
