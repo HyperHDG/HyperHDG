@@ -69,6 +69,7 @@
 \newcommand{\SetNodeInt}{\ensuremath{\SetNode_\textup I}}
 \newcommand{\Edge}{{\ensuremath{\boldsymbol E}}}
 \newcommand{\RefEdge}{{\ensuremath{\widehat{\boldsymbol e}}}}
+\newcommand{\LocEdge}{{\ensuremath{\boldsymbol e}}}
 \newcommand{\Node}{{\ensuremath{\boldsymbol N}}}
 
 \newcommand{\locDim}{\ensuremath{\mathfrak d}}
@@ -80,6 +81,8 @@
 \newcommand{\tangent}{\ensuremath{{\boldsymbol T}}}
 \newcommand{\Normal}{\ensuremath{\mathfrak n_\Edge}}
 \newcommand{\NormalOuter}{\ensuremath{\mathfrak n^\perp_\Edge}}
+\newcommand{\RefNormal}{\ensuremath{\mathfrak n_\RefEdge}}
+\newcommand{\LocNormal}{\ensuremath{\mathfrak n_\LocEdge}}
 \newcommand{\jump}[1]{{[\![ #1 ]\!]}}
 \newcommand{\diffeo}{\ensuremath{\Phi}}
 \newcommand{\tangentMapping}{\ensuremath{\Phi_{\tangent(x)}}}
@@ -179,7 +182,7 @@ HyperHDG is a simumlation software to perform numerical experiments on so called
 % 
 \subsection{Topologic aspects of hypergraphs}\label{SEC:hypergraph_topology}
 % 
-In the whole manuscript, we consider a \emph{hypergraph} $\graph = (\setNode,\setEdge)$ consisting of a finite set of \emph{hypernodes} $\setNode = \{\node_1, \node_2, \ldots \}$ and a set of \emph{hyperedges} $\setEdge = \{\edge_1, \edge_2, \ldots \}$. All hyperedges $\edge \in \setEdge$ can be interpreted as connecting several nodes and, thus, can be written as $\edge \subset \setNode$.
+In the whole manuscript, we consider a \emph{hypergraph} $\graph = (\setNode,\setEdge)$ consisting of a finite set of \emph{hypernodes} $\setNode = \{\node_1, \node_2, \ldots \}$ and a finite set of \emph{hyperedges} $\setEdge = \{\edge_1, \edge_2, \ldots \}$. All hyperedges $\edge \in \setEdge$ can be interpreted as connecting several nodes and, thus, can be written as $\edge \subset \setNode$.
 
 Thus, the topology of a hypergraph $\graph$ is a pair consisting of a set of hyperedges $\setEdge$ and a set of hypernodes $\setNode$. Each hyperedge $\edge \in \setEdge$ is connected to other hyperedges via the set of its adjacent hypernodes. Note that this is exactly the inverted interpretation as compared to the aforementioned definition of a hypergraph, where nodes are interpreted as connected via edges.
 
@@ -187,11 +190,11 @@ Thus, the topology of a hypergraph $\graph$ is a pair consisting of a set of hyp
 % 
 We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as (relatively) open unit hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hypereges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$. In this representation, also the hypernodes are supposed to be (relatively) open sets.
 
-Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ is called simplicial of local dimension $\locDim$.
+Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ hypernodes is called \emph{simplicial} of local dimension $\locDim$.
 
 \paragraph{Cubic/simplicial (topological) embeddings of hypergraphs to global dimension $\globDim$}
 % 
-If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be topologically embedded into $\IR^\globDim$ if
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be \emph{topologically embedded} into $\IR^\globDim$ if
 % 
 \begin{enumerate}
  \item there is a way to assemble all deformed hypercubes/simplices (representing the hyperedges) such that for two different hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
@@ -270,7 +273,7 @@ We assume that all hyperedges $\IR^\globDim \supset \Edge \in \SetEdge$ allow fo
 % 
 where the reference element $\RefEdge$ is either a unit simplex of a unit hypercube.
 
-Thus, the $\Edge\in \setEdge$ are \emph{Riemannian manifolds}, i.e., they are real, smooth manifolds, and for all $x \in \Edge$, they are equipped with an inner product $(\cdot,\cdot)_{\tangent(x)}$ with respect to the tangent space $\tangent(x)[\Edge] \subset \IR^\globDim$ of the manifold $\Edge$ evaluated at point $x$. If no confusion is possible, the expression $[\Edge]$ is dropped. We set the inner product as standard Euclidean scalar product
+Thus, the $\Edge\in \setEdge$ are \emph{Riemannian manifolds}, i.e., they are real, smooth manifolds, and for all $x \in \Edge$, they are equipped with an inner product $(\cdot,\cdot)_{\tangent(x)}$ with respect to the \emph{tangent space} $\tangent(x)[\Edge] \subset \IR^\globDim$ of the manifold $\Edge$ evaluated at point $x$. If no confusion is possible, the expression $[\Edge]$ is dropped. We set the inner product as standard \emph{Euclidean scalar product}
 % 
 \begin{equation*}
  (a,b)_{\tangent(x)} = (a,b)_{\IR^\globDim} =: (a,b) \qquad \text{ for all } a,b \in \tangent(x) \text{ and } x \in \Edge
@@ -280,17 +283,17 @@ and define $\| x \|^2 := (x,x)$ for $x \in \IR^\globDim$.
 
 \paragraph{Linear hypergraphs}
 % 
-A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation is square if and only is $\locDim = \globDim$.
+A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation matrix is square if and only is $\locDim = \globDim$.
 % ---------------------------------------------------------------------
 \section{Model equation and interpretation}\label{SEC:model_eq}
 % ---------------------------------------------------------------------
 % 
-Here, we formulate the standard diffusion equation in mixed form defined on a hypergraph $\graph$ that for the moment is assumed to allow an embedding $\Graph$. The differential operators will be rigorously defined in Section \ref{SEC:diff_op}. Thus, for all $\Edge \in \SetEdge$ we approximate solutions $(u, \vec q)$ of
+Here, we formulate the standard diffusion equation in mixed form defined on a hypergraph $\graph$ that for the moment is assumed to allow an embedding $\Graph$. The differential operators will be rigorously defined in Section \ref{SEC:diff_op}. Thus, for all $\edge \in \setEdge$ we approximate solutions $(u, \vec q)$ of
 % 
 \begin{subequations}\label{EQ:diffusion_mixed}
 \begin{align}
  \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}\\
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge.\label{EQ:primal_dual}
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual}
 \end{align}
 % 
 for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$.
@@ -306,10 +309,10 @@ Additionally, we assume that there is a non-empty set $\setNodeDir \subset \setN
 For PDEs on manifolds or the full space, the sum of outflows of all hyperedges adjacent to a hypernode consists of either one (at the boundary) or two summands and typically is represented by the notion of a \emph{jump} $\jump{\vec q}$, which can be generalized to
 % 
 \begin{equation*}
- \jump{\vec q} = \sum^{\edge \in \setEdge}_{\edge \ni \node} \vec q_\Edge \cdot \Normal \quad \text{ with } \quad \vec q_\Edge = \vec q|_\Edge,
+ \jump{\vec q}_\Node = \sum^{\edge \in \setEdge}_{\edge \ni \node} \vec q_\Edge \cdot \Normal \quad \text{ with } \quad \vec q_\Edge = \vec q|_\Edge,
 \end{equation*}
 % 
-which turns the vector function $\vec q$ to a scalar and is defined for all hyppernodes. Using this generalization, the closing conditions can be formulated into the following equations:
+turning the vector function $\vec q$ to a scalar and being defined for all hyppernodes. The subscript $\Node$ will be dropped if no confusion is possible. Using this generalization, the closing conditions can be formulated into the following equations:
 % 
 \begin{align}
  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond}\\
@@ -322,19 +325,33 @@ Thus, \eqref{EQ:diffusion_mixed} is a direct generalization of the standard diff
 % 
 \subsection{The notion of normals}\label{SEC:normals}
 % 
-In the following, we will define different notions of normals with respect to a hyperedge $\Edge \in \SetEdge$. The simplest type of normal is the outer normal which is defined via
+In the following, we will define different notions of normals with respect to a hyperedge $\Edge \in \SetEdge$. The simplest type of normal is the \emph{outer normal} $\NormalOuter \in \IR^\globDim$, which is defined via
 % 
 \begin{equation*}
  \|\NormalOuter(x)\| = 1 \qquad \text{ and } \qquad (\NormalOuter(x), v) = 0 \quad \text{ for all } v \in \tangent(x).
 \end{equation*}
 % 
-The second condition can be abbreviated to $\NormalOuter(x) \perp \tangent(x)$.
+The second condition can be abbreviated to $\NormalOuter(x) \perp \tangent(x)$. For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two ($\locDim = \globDim - 1$) or infinitely many outer normals.
 
-For each point $x \in \Edge$ there either exist no ($\locDim = \globDim$), two ($\locDim = \globDim - 1$) or infinitely many outer normals. Additionally, for $x \in \partial \Edge$, we define the inner normal $\Normal$ as unique, outward pointing vector with
+Additionally, for $x \in \partial \Edge$, we define the \emph{inner normal} $\Normal \in \IR^\globDim$ as unique, outward pointing vector with
 %
-\begin{equation*}
+\begin{equation}\label{EQ:inner_const}
  \| \Normal \| = 1, \qquad \Normal \in \tangent(x), \qquad \Normal \perp \tangent(x) [\partial \Edge]
+\end{equation}
+
+Considering the the reference element $\RefEdge \subset \IR^\locDim$, we define the \emph{reference normal} $\RefNormal \subset \IR^\locDim$ on its boundary as as the unit outward pointing normal of the reference edge. Furthermore assuming that $\der \diffeo_\Edge(x) = \matQ_\Edge \matR_\Edge$ is an $\matQ \matR$ decomposition (a specific normalized one will be used in Section \ref{SEC:HDG_loc_prob}), we define the \emph{local normal} $\LocNormal \in \IR^\locDim$ as outward unit normal of
+% 
+\begin{equation*}
+ \LocEdge := \widehat \matR_\Edge \RefEdge,
 \end{equation*}
+% 
+where $\widehat \matR_\Edge \in \IR^{\locDim,\locDim}$ is the upper left $\locDim \times \locDim$ block of $\matR_\Edge$ (containing the non-zero entries). Note that if $\widehat \LocNormal \in \IR^\globDim$ is the vector containing $\LocNormal(\hat x)$ and zeros below its entries, and $\hat x = \diffeo^{-1}_\Edge x \in \partial \RefEdge$, we have
+% 
+\begin{equation}\label{EQ:def_inner}
+ \matQ^T_\Edge \Normal(x) = \widehat \LocNormal.
+\end{equation}
+% 
+This equation actually is used to determine inner normals, since constructing an outward pointing vector sufficing \eqref{EQ:inner_const} is not a trivial task.
 % 
 \subsection{Differential operators on hyperedges}\label{SEC:diff_op}
 % 
@@ -364,10 +381,10 @@ In terms of muscial isomorphisms, that is
  \Nabla f = (\Der f)^\sharp \qquad \text{ and } \qquad \Der f = (\Nabla f)^\flat.
 \end{equation*}
 
-The definition of the \emph{divergence} of a smooth vector function $\vec f \colon E \to \IR^\locDim$ can be done using an orthonormal basis $\basis$ of $\tangent(x)$---which contains $\locDim$ elements---and setting
+The definition of the \emph{divergence} of a smooth vector function $\vec f \colon E \to \tangent(x)$ can be done using an orthonormal basis $\basis$ of $\tangent(x)$---which contains $\locDim$ elements---and setting
 % 
 \begin{equation*}
- \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\IR^\locDim} (x)](b).
+ \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\tangent(x)} (x)](b).
 \end{equation*}
 % ---------------------------------------------------------------------
 \section{HDG method on hypergraphs}
@@ -523,7 +540,7 @@ holds for all $\mu \in \skeletalSpace$ with
 inducing the \emph{statically condensed global system of equations}
 % 
 \begin{equation*}
- A \vecc x = \vecc b, \quad \text{ where } \quad \vecc A_{i.j} = a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \vecc b_i = b(\mu_i),
+ \vecc A \vecc x = \vecc b, \quad \text{ where } \quad \vecc A_{i.j} = a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \vecc b_i = b(\mu_i),
 \end{equation*}
 % 
 where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.~2.1]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\vecc A$ is symmetric positive definite.
