@@ -127,7 +127,7 @@ class Linear
     { 
       make_qr_if_needed();
       map_float_t determinant = 1.;
-      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant[i] *= matrix_r_->operator()(i,i);
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant *= matrix_r_->operator()(i,i);
       return determinant;
     }
     /*!*********************************************************************************************
@@ -193,7 +193,7 @@ class Linear
       
       SmallVec<hyEdge_dimT,map_float_t> normal
         = qr_decomp_q(other_vectors).get_column(hyEdge_dimT-1);
-      map_float_t scalar_pdct = scalar_pdct(normal, matrix_r_->get_column(index));
+      map_float_t scalar_pdct = scalar_product(normal, matrix_r_->get_column(index));
       hy_assert( scalar_pdct != 0., "Scalar product must not be zero!" );
       if (scalar_pdct > 0.)  normal *= -1.;
       return normal;
