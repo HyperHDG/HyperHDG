@@ -600,7 +600,7 @@ class Diffusion
     /*!*********************************************************************************************
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int system_dimension() { return 1U; }
+    static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
     
   private:
   
@@ -984,7 +984,7 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
       }
     }
   }
-  
+
   return local_mat;
 } // end of Diffusion::assemble_loc_matrix
 
@@ -1031,7 +1031,7 @@ assemble_rhs_from_lambda
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i]
-            += geom.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
+            -= geom.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
       }
   
   return right_hand_side;

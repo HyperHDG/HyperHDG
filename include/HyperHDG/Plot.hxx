@@ -391,7 +391,7 @@ void plot_vtu
 	    {
 	      myfile << "  ";
 	      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
-          myfile << "  " << local_values[corner][d];
+          myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
 	    }
       myfile << std::endl;
     }
