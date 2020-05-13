@@ -71,7 +71,7 @@ struct DomainInfo
   /*!***********************************************************************************************
    * \brief   Vector containing hypernode indices per hyperedge.
    ************************************************************************************************/
-  std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge; // 2 * hyEdge_dim
+  std::vector< std::array< hyNode_index_t, 2 * hyEdge_dim > > hyNodes_hyEdge, hyFaces_hyEdge;
   /*!***********************************************************************************************
    * \brief   Vector containing vertex indices per hyperedge.
    ************************************************************************************************/
@@ -82,9 +82,12 @@ struct DomainInfo
   DomainInfo (const pt_index_t n_points, const hyEdge_index_t n_hyEdge,
               const hyNode_index_t n_hyNode, const pt_index_t n_point)
   : n_hyEdges(n_hyEdge), n_hyNodes(n_hyNode), n_points(n_point),
-    points(n_points), hyNodes_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges) { }
+    points(n_points), hyNodes_hyEdge(n_hyEdges), hyFaces_hyEdge(n_hyEdges), points_hyEdge(n_hyEdges)
+  { }
   /*!***********************************************************************************************
    * \brief   Check, whether DomainInfo is in a consistent state.
+   * 
+   * \todo    Extend this to hyperfaces of hyperedges!
    ************************************************************************************************/
   bool check_consistency()
   {
@@ -277,6 +280,26 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
     linestream = std::istringstream(line);
     for (unsigned int i = 0; i < domain_info.hyNodes_hyEdge[hyEdge_iter].size(); ++i)
       linestream >> domain_info.hyNodes_hyEdge[hyEdge_iter][i];
+  }
+  
+  hy_assert( hyEdge_iter == N_HyperEdges ,
+             "Not all hyperedges have been added to the list!" );
+  
+  while ( keyword != "TYPES_OF_HYPERFACES:" && std::getline(infile, line) )
+  {
+    linestream = std::istringstream(line);
+    linestream >> keyword;
+  }
+  
+  hy_assert( keyword == "TYPES_OF_HYPERFACES:" ,
+             "The keyword 'TYPES_OF_HYPERFACES:' has not been found in the file "
+             << filename << "!" );
+  
+  for ( hyEdge_iter = 0; hyEdge_iter < N_HyperEdges && std::getline(infile, line); ++hyEdge_iter )
+  {
+    linestream = std::istringstream(line);
+    for (unsigned int i = 0; i < domain_info.hyFaces_hyEdge[hyEdge_iter].size(); ++i)
+      linestream >> domain_info.hyFaces_hyEdge[hyEdge_iter][i];
   }
   
   hy_assert( hyEdge_iter == N_HyperEdges ,
