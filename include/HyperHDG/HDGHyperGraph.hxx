@@ -72,15 +72,6 @@ class HDGHyperGraph
     hyEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
     : topology(topo), geometry(geom) { }
   } value_type; // end of typedef struct hyEdge
-
-  /*!***********************************************************************************************
-   * \brief   The type for a hypernode returned by \c hyNode_geometry.
-   *
-   * This \c typedef is returned by the \c hyNode_geometry of an \c HDGHyperGraph. It contains
-   * geometrical information about a single hyperedge. It is therefore defined as the \c hyNode_type
-   * of class \c HDGHyperGraph.
-   ************************************************************************************************/
-  typedef typename GeomT::hyNode_type hyNode_type;
   
   /*!***********************************************************************************************
    * \brief   Iterator for \c struct \c hyEdge returned by \c operator[].
@@ -449,21 +440,6 @@ class HDGHyperGraph
      **********************************************************************************************/
     const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
     { return hyGraph_geometry_->operator[](index); }
-    /*!*********************************************************************************************
-     * \brief   Geometrical information of prescribed hypernode.
-     *
-     * \todo  Here, we repeatedly return a large object. This is done since the object could be
-     *        locally created in regular topologies/geometries! Return shared-pointer?
-     *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
-     *        object then?
-     *
-     * Return the geometrical information of a specific hypernode identified via its index.
-     *
-     * \param   index                 Index of the hyperedge to be returned.
-     * \retval  hyNode_geometry       Geometrical information about hyperedge.
-     **********************************************************************************************/
-    const typename GeomT::hyNode_type hyNode_geometry(const hyEdge_index_t index) const
-    { return hyGraph_geometry_->get_hyNode(index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *

@@ -71,17 +71,16 @@ template
   typename hyNode_index_t = hyEdge_index_t
 >
 class File
-{
-  /*!***********************************************************************************************
-   * \brief   The mapping type is \c mapping_tt with given template parameters.
-   ************************************************************************************************/
-  using mapping_t = mapping_tM<hyEdge_dimTM,space_dimTM,pt_coord_tM>;
-  
+{ 
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
    ************************************************************************************************/
   class hyEdge
   {
+    /*!*********************************************************************************************
+     * \brief   The mapping type is \c mapping_tt with given template parameters.
+     **********************************************************************************************/
+    using mapping_t = mapping_tM<hyEdge_dimTM,space_dimTM,pt_coord_tM>;
     public:
       /*!*******************************************************************************************
        * \brief   Returns dimension of the hyperedge.
@@ -280,132 +279,6 @@ class File
       }
   }; // end of class hyEdge
 
-  /*!***********************************************************************************************
-   * \brief   Definition of the geometry of a hypergraph's nodes.
-   ************************************************************************************************/
-  class hyNode
-  {
-    public:
-      /*!*******************************************************************************************
-       * \brief   Returns dimension of the hyperedge.
-       ********************************************************************************************/
-      static constexpr unsigned int hyNode_dim() { return hyEdge_dimT - 1; }
-      /*!*******************************************************************************************
-       * \brief   Returns dimension of the surrounding space.
-       ********************************************************************************************/
-      static constexpr unsigned int space_dim() { return space_dimT; }
-    private:
-      /*!*******************************************************************************************
-       * \brief   Reference to parent hypergraph.
-       ********************************************************************************************/
-      const File& hyGraph_geometry_;
-      /*!*******************************************************************************************
-       * \brief   Index of the hyperedge within the hypergraph
-       ********************************************************************************************/
-      const hyNode_index_t index_;
-      /*!*******************************************************************************************
-       * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
-       ********************************************************************************************/
-      std::shared_ptr<mapping_t> mapping;
-      /*!*******************************************************************************************
-       * \brief   Prepare lazy evaluation of mapping.
-       ********************************************************************************************/
-      inline void generate_mapping_if_needed()
-      {
-        if (mapping) return;
-        Point<space_dimT,pt_coord_t> translation = point(0);
-        SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
-        for (unsigned int dim = 0; dim < hyNode_dim(); ++dim)
-          matrix.set_column(dim, point(1<<dim) - translation);
-        mapping = std::make_shared<mapping_t>(translation, matrix);
-      }
-    public:
-      /*!*******************************************************************************************
-       * \brief   Construct hyperedge from hypergraph and index.
-       ********************************************************************************************/
-      hyNode ( const File& hyGraph_geometry, const hyEdge_index_t index )
-      : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
-      /*!*******************************************************************************************
-       * \brief   Return vertex of specified index of a hyperedge.
-       ********************************************************************************************/
-      Point<space_dimT,pt_coord_t> point(const unsigned int pt_index) const
-      { 
-        return (Point<space_dimT,pt_coord_t>) hyGraph_geometry_.domain_info_.
-                 points[hyGraph_geometry_.domain_info_.points_hyNode[index_][pt_index]];
-      }
-      /*!*******************************************************************************************
-       * \brief   Map n_vec points from reference to physical element.
-       ********************************************************************************************/
-      template < unsigned int n_vec >
-      SmallMat<space_dimT, n_vec, pt_coord_t> map_ref_to_phys
-      (const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& pts)
-      {
-        for (unsigned int i = 0; i < pts.size(); ++i)
-          hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
-                     "Point must lie in reference square!");
-        generate_mapping_if_needed();
-        return mapping->map_reference_to_physical(pts);
-      }
-      /*!*******************************************************************************************
-       * \brief   Return matrix column of the affine-linear transformation.
-       * 
-       * \param   index   Index of the matrix column to be returned.
-       * \retval  column  The specified matrix column.
-       ********************************************************************************************/
-      SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index)
-      {
-        hy_assert( index < hyEdge_dimT,
-                   "There are only " << hyEdge_dimT << " spanning vectors." );
-        generate_mapping_if_needed();
-        return mapping->get_column(index);
-      }
-      /*!*******************************************************************************************
-       * \brief   Return reduced matrix R of the QR decomposition.
-       ********************************************************************************************/
-      const SmallSquareMat<hyEdge_dimT,pt_coord_t>& mat_r()
-      {
-        generate_mapping_if_needed();
-        return mapping->mat_r();
-      }
-      /*!*******************************************************************************************
-       * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
-       ********************************************************************************************/
-      pt_coord_t area()
-      {
-        generate_mapping_if_needed();
-        return std::abs(mapping->functional_determinant_hyEdge());
-      }
-      /*!*******************************************************************************************
-       * \brief   Return Haussdorff measure of the specified hypernode.
-       ********************************************************************************************/
-      pt_coord_t face_area(const unsigned int  index)
-      {
-        hy_assert( index < 2 * hyNode_dim() ,
-                   "A hyperedge has 2 * dim(hyEdge) faces." );
-        generate_mapping_if_needed();
-        return std::abs(mapping->functional_determinant_hyNode(index / 2));
-      }
-      /*!*******************************************************************************************
-       * \brief   Return lexicographically ordered equidistant tensorial point of given index.
-       ********************************************************************************************/
-      template<unsigned int n_sub_points, typename one_dim_float_t>
-      Point<space_dimT,pt_coord_t> lexicographic
-      ( unsigned int index, const std::array<one_dim_float_t, n_sub_points>& points_1d )
-      {
-        static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
-        hy_assert( index < std::pow(n_sub_points, hyNode_dim()) ,
-                   "The index must niot exceed the number of prescribed lexicographic points." );
-        generate_mapping_if_needed();
-        Point<hyNode_dim(),pt_coord_t> pt;
-        for (unsigned int dim = 0; dim < hyNode_dim(); ++dim)
-        {
-          pt[dim] = (pt_coord_t) points_1d[index % n_sub_points]; 
-          index /= n_sub_points;
-        }
-        return mapping->map_reference_to_physical(pt);
-      }
-  }; // end of class hyNode
-
   public:
     /*!*********************************************************************************************
      * \brief   Returns the template parameter representing the dimension of a hyperedge.
@@ -434,15 +307,6 @@ class File
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
     typedef hyEdge value_type;
-    /*!*********************************************************************************************
-     * \brief   Defines the return value of hypernodes of the class.
-     *
-     * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
-     * different hyperedges (that actually are constructed everytime access is needed from e.g. the
-     * solver class). Thus, its main purpose is to provide a structure that administrates the
-     * hyperedges that are the return value of this structure.
-     **********************************************************************************************/
-    typedef hyNode hyNode_type;
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
@@ -492,23 +356,6 @@ class File
                  "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<
                  " (which is the amount of hyperedges). It was " << index << "!" );
       return hyEdge(*this, index);
-    }
-    /*!*********************************************************************************************
-     * \brief   Get geometrical hypernode of given index.
-     *
-     * This function returns the hypernode of the given index, i.e., it returns the geometrical
-     * hypernode (\b not the topological information). The geometrical informatiom comprises the
-     * indices of adjacent vertices (i.e. points) and information about their respective positions.
-     *
-     * \param   index       The index of the hyperedge to be returned.
-     * \retval  hypernode   Geometrical information on the hyperedge (cf. \c value_type).
-     **********************************************************************************************/
-    hyNode_type get_hyNode(const hyNode_index_t index) const
-    {
-      hy_assert( index < domain_info_.n_hyNodes && index >= 0 ,
-                 "Index must be non-negative and smaller than " << domain_info_.n_hyEdges <<
-                 " (which is the amount of hyperedges). It was " << index << "!" );
-      return hyNode(*this, index);
     }
 }; // end class File
 
