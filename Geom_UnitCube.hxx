@@ -153,113 +153,6 @@ class UnitCube
       Point<space_dimT> normal(const unsigned int index) const;
 
   }; // end of class hyEdge
-
-  /*!***********************************************************************************************
-   * \brief   Definition of the topology of a hypergraph's hyperedge --- Edges of cubic HyperGraphs
-   *          that form unit cubes.
-   * 
-   * \todo    We do not use this information for our simulations, but for plotting only. Thus, the
-   *          results do not really show the truth. A HyperGraph consisiting of HyperEdges that are
-   *          unit cubes is calculated and a HyperGraph that is a cube and made up of smaller
-   *          quadrilaterals (in 2D) is plotted!
-   * 
-   * \todo    Functions returning the Jacobian / its det, etc are not yet implemented. Should they
-   *          be implemented in the future or should their interfaces (commented at the moment) be
-   *          removed from this file?
-   * 
-   * \todo    The points/vertices are computed when the HyperEdge is constructed. Lazy evaluation
-   *          might be a relevant aspect here. What do you think?
-   * 
-   * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
-   * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
-   ************************************************************************************************/
-  class hyNode
-  {
-    private:
-      /*!*******************************************************************************************
-       * \brief   Points adjacent to the hyperedge.
-       *
-       * \todo    In the long run, do not store these.
-       *
-       * An array comprising the vertices (points) of a cubic hyperedge.
-       ********************************************************************************************/
-      std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> points_;
-    public:
-      static constexpr unsigned int space_dim() { return space_dimT; }
-      static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-      template <typename pt_coord_t>
-      Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT,pt_coord_t>& pt) const
-      {
-        Point<space_dimT> result = points_[0];
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          result += (float) pt[dim] * (points_[1<<dim] - points_[0]);
-        return (Point<space_dimT,pt_coord_t>) result;
-      }
-      double area() const { return 1.; }
-      Point<space_dimT> span_vec(const unsigned int index)
-      {Point<space_dimT> a(1.); return a;}
-      const SmallSquareMat<hyEdge_dimT> mat_r() { SmallSquareMat<hyEdge_dimT> a = diagonal<hyEdge_dimT,hyEdge_dimT,double>(1.); return a; }
-      Point<hyEdge_dimT> local_normal(const unsigned int face)
-      {
-        Point<hyEdge_dimT> normal;
-        normal[face/2] = 2. * (face % 2) - 1.;
-        return normal;
-      }
-      double face_area(const unsigned int index) {return 1.;}
-      /*!*******************************************************************************************
-       * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
-       *          spatial dimension.
-       *
-       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
-       *          A prototype of this function is located in the cxx file, where you could also
-       *          insert the new function.
-       * 
-       * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
-       * which is given as input data and the index of the hyperedge to be constructed.
-       * 
-       * \param   index           The index of the hyperedge to be created.
-       * \param   num_elements    A \c std::array containing number of elements per dimension.
-       ********************************************************************************************/
-      hyNode(const hyEdge_index_t index, const std::array<unsigned int, space_dimT>& num_elements)
-      {}
-    
-      /*!*******************************************************************************************
-       * \brief   Return vertex of specified index of a hyperedge.
-       *
-       * Return a \c Point describing the position of a vertex of a hyperedge.
-       *
-       * \retval  point           Point/Vertex of the hyperedge.
-       ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
-
-      /*!*******************************************************************************************
-       * \brief Return data of the mapping in the tensor product of a one-dimensional quadrature set.
-       *
-       * \tparam npts: The number of evaluation points in a single direction
-       * \tparam T: The data type used for this operation
-       ********************************************************************************************/
-      template <std::size_t npts, typename T = double>
-      Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, npts, T>
-      mapping_tensor(const std::array<T, npts>& points_1d) const;
-    
-      template<unsigned int n_sub_points, typename float_t>
-      Point<space_dimT> lexicographic(unsigned int index, std::array<float_t, n_sub_points> points)
-      {
-        std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> vertices;
-        for (unsigned int i=0;i<vertices.size();++i)  vertices[i] = point(i);
-    
-        Tensor::MappingMultilinear<space_dimT, hyEdge_dimT, n_sub_points, float_t>
-          mapping(vertices, points);
-        return mapping.lexicographic(index);
-      }
-
-      /*!*******************************************************************************************
-       * \todo    Guido: If you have a clever idea for this, you can implement it. But this, I might
-       *          also be able to do myself ;)
-       ********************************************************************************************/
-      Point<space_dimT> normal(const unsigned int index) const;
-
-  }; // end of class hyEdge
   
   public:
     /*!*********************************************************************************************
@@ -291,7 +184,6 @@ class UnitCube
      * hyperedges that are the return value of this structure.
      **********************************************************************************************/
     typedef hyEdge value_type;
-    typedef hyNode hyNode_type;
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
@@ -338,18 +230,6 @@ class UnitCube
      **********************************************************************************************/
     const value_type operator[](const hyEdge_index_t index) const
     { return hyEdge(index, num_elements_); }
-    /*!*********************************************************************************************
-     * \brief   Get geometrical hyperedge of given index.
-     *
-     * This function returns the hyperedge of the given index, i.e., it returns the geometrical
-     * hyperedge (\b not the topological information). The geometrical informatiom comprises the
-     * indices of adjacent vertices (i.e. points) and information about their respective positions.
-     *
-     * \param   index       The index of the hyperedge to be returned.
-     * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
-     **********************************************************************************************/
-    const hyNode_type get_hyNode(const hyEdge_index_t index) const
-    { return hyNode(index, num_elements_); }
 }; // end class UnitCube
 
   template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>
