@@ -451,8 +451,7 @@ class HDGHyperGraph
      *
      * \retval  n_hypernodes          The total amount of hypernodes of a hypergraph.
      **********************************************************************************************/
-    template < typename hyNode_index_t = unsigned int >
-    const hyNode_index_t n_hyNodes() const  { return hyNode_factory_.n_hyNodes(); }
+    const hyEdge_index_t n_hyNodes() const  { return hyNode_factory_.n_hyNodes(); }
     /*!*********************************************************************************************
      * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
      * 

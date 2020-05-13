@@ -78,9 +78,18 @@ struct PlotOptions
   /*!***********************************************************************************************
    * \brief   Number of subintervals for plotting.
    *
-   * When plotting an interval, it is split into n_subintervals intervals such that higher order
-   * polynomials and other functions can be displayed appropriately. When plotting higher
-   * dimensional objects, this subdivision is applied accordingly.
+   * When plotting an interval, it is split into #n_subintervals
+   * intervals such that higher order polynomials and other functions
+   * can be displayed appropriately. When plotting higher dimensional
+   * objects, this subdivision is applied accordingly in each
+   * direction.
+   *
+   * This functionality is implemented such that higher order
+   * polynomials can be output as piecewise linear functions giving
+   * them sufficient meaning. It will increase the number of cells
+   * seen by the visualization tool, such that the cell boundaries
+   * there are not the actual cell boundaries anymore. You can still
+   * use the parameter #scale below to see the separate edges.
    *
    * Defaults to 1.
    ************************************************************************************************/
@@ -173,10 +182,10 @@ namespace PlotFunctions
   /*!***********************************************************************************************
    * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
    *
+   * \tparam  dim         The dimension of the cube.
    * \tparam  pt_index_t  The index type for global point numbers.
-   *
-   * \param   dim         The dimension of the cube.
    * \param   n           The number of subdivision points in each direction.
+   * \param   offset      The index of the first vertex
    ************************************************************************************************/
   template <unsigned int dim, typename pt_index_t>
   void  vtu_sub_cube_connectivity(std::ostream& output, unsigned int n, pt_index_t offset)
@@ -191,13 +200,13 @@ namespace PlotFunctions
     else if constexpr (dim==3)
     {
       const unsigned int nn = n*n;
-	    for (unsigned int i=0;i<n-1;++i)
+      for (unsigned int i=0;i<n-1;++i)
         for (unsigned int j=0;j<n-1;++j)
-          for (unsigned int k=0;j<n-1;++j)
+          for (unsigned int k=0;k<n-1;++k)
             output << offset+(i*n+j)*n+k        << ' ' << offset+(i*n+j)*n+k+1      << ' '
                    << offset+(i*n+j)*n+k+n      << ' ' << offset+(i*n+j)*n+k+n+1    << ' '
-		               << offset+(i*n+j)*n+k+nn     << ' ' << offset+(i*n+j)*n+k+nn+1   << ' '
-		               << offset+(i*n+j)*n+k+nn+n   << ' ' << offset+(i*n+j)*n+k+nn+n+1 << "\n";
+		   << offset+(i*n+j)*n+k+nn     << ' ' << offset+(i*n+j)*n+k+nn+1   << ' '
+		   << offset+(i*n+j)*n+k+nn+n   << ' ' << offset+(i*n+j)*n+k+nn+n+1 << "\n";
     }
   } // end of vtu_sub_cube_connectivity
   /*!***********************************************************************************************
@@ -227,11 +236,26 @@ namespace PlotFunctions
     constexpr unsigned int space_dim = HyperGraphT::space_dim();
     
     const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
-    const unsigned int points_per_hyEdge = Hypercube<edge_dim>::pow(n_subpoints);
-    
-    const pt_index_t n_plot_points = points_per_hyEdge * n_edges;
+    // The number of cells which are actually plotted. This
+    // is the number of edges in the graph times the number of
+    // cells in an edge due to n_subdivisions
     const pt_index_t n_plot_edges = n_edges * Hypercube<edge_dim>::pow(n_subpoints-1);
+    const unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+
+    const hyEdge_index_t n_nodes = hyper_graph.n_hyNodes();
+    const unsigned int points_per_node = Hypercube<edge_dim-1>::pow(n_subpoints);
+    const pt_index_t n_plot_nodes = n_nodes * Hypercube<edge_dim-1>::pow(n_subpoints-1);
+
+    // The total number of points and cells (using VTK nomenclature)
+    // is the sum of the points for edges and the points for
+    // nodes. Equally, the total number of cells is the sum of the
+    // cells of dimension edge_dim plus those of dimension node_dim.
+    const pt_index_t n_plot_points = (plot_options.plot_edges ? (points_per_edge * n_edges) : 0)
+      + (plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
+    const pt_index_t n_plot_cells = (plot_options.plot_edges ? n_plot_edges : 0)
+      + (plot_options.plot_nodes ? n_plot_nodes : 0);
     
+    // The element id can be found in the VTK file format documentation.
     static_assert (edge_dim <= 3);
     unsigned int element_id;
     if constexpr (edge_dim == 1)       element_id = 3;
@@ -239,16 +263,24 @@ namespace PlotFunctions
     else if constexpr (edge_dim == 3)  element_id = 11;
     
     output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" 
-           << n_plot_edges << "\">" << std::endl;
+           << n_plot_cells << "\">" << std::endl;
     output << "      <Points>" << std::endl;
     output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">"
            << std::endl;
 
+    // We want to compute node coordinates as averages of edge
+    // coordinates. Thus, we have to add them to this vector and then
+    // divide by the total number.
+    std::vector<Point<space_dim>> node_points(plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
+    std::vector<unsigned int> n_edges_per_node(plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
+    std::fill(n_edges_per_node.begin(), n_edges_per_node.end(), 0U);
+    
+    // For each edge, output the corners of the subdivided cells in lexicographic order.
     for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
     {
       auto edge = hyper_graph.hyEdge_geometry(he_number);
 
-      for (unsigned int pt_number = 0; pt_number < points_per_hyEdge; ++pt_number)
+      for (unsigned int pt_number = 0; pt_number < points_per_edge; ++pt_number)
       {
         output << "        ";
         const Point<space_dim> point 
@@ -259,7 +291,21 @@ namespace PlotFunctions
           output << "  0.0";
         output << std::endl;
       }
+      // Accumulating coordinates for nodes should start here
+      if (plot_options.plot_nodes)
+	{}
     }
+
+    // Averaging and outputting node coordinates
+    for (pt_index_t i=0;i<node_points.size();++i)
+      {
+	hy_assert(n_edges_per_node[i]!=0, "Forgotten edge!");
+	const Point<space_dim>& point = node_points[i];
+	for (unsigned int dim = 0; dim < space_dim; ++dim)
+          output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim]/n_edges_per_node[i];
+        for (unsigned int dim = space_dim; dim < 3; ++dim)
+          output << "  0.0";
+      }    
     
     output << "        </DataArray>" << std::endl;
     output << "      </Points>" << std::endl;
@@ -268,11 +314,21 @@ namespace PlotFunctions
            << std::endl;
 
     pt_index_t offset = 0;
-    for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
-    {
-      vtu_sub_cube_connectivity<edge_dim>(output, n_subpoints, offset);
-      offset += points_per_hyEdge;
-    }
+    if (plot_options.plot_edges)
+      for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
+	{
+	  vtu_sub_cube_connectivity<edge_dim>(output, n_subpoints, offset);
+	  offset += points_per_edge;
+	}
+    if (plot_options.plot_nodes)
+      for (pt_index_t i =0; i < n_nodes; ++i)
+	{
+	  vtu_sub_cube_connectivity<edge_dim-1>(output, n_subpoints, offset);
+	  offset += points_per_node;
+	}
+
+    hy_assert(offset == n_plot_points, "We did not write the right number of connectivity data");
+    
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
     output << "        ";
@@ -307,7 +363,7 @@ void plot_vtu
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
   
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
-  //  const unsigned int points_per_hyEdge = 1 << edge_dim;
+  //  const unsigned int n_points_per_edge = 1 << edge_dim;
   
   std::array<float, n_subdivisions+1> abscissas;
   for (unsigned int i=0;i<=n_subdivisions;++i)

@@ -34,10 +34,10 @@ endif
 
 # C++ Compiler options
 COMPILER    	= g++
-BASICFLAGS_R 	= -pthread -DNDEBUG -g  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 \
+BASICFLAGS_R 	= -pthread -DNDEBUG -ggdb  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 \
 								-Wall -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
 								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
-BASICFLAGS  	= -pthread -g  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 -Wall -g \
+BASICFLAGS  	= -pthread -ggdb  -I$(PYTHON_M) -I$(SRC_DIR) -I$(INCLUDE_DIR) -fwrapv -O2 -Wall -g \
 								-fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
 								-D_FORTIFY_SOURCE=2 -fPIC --std=c++17
 # Some additional useful flags: -Wpedantic -Wextra \
