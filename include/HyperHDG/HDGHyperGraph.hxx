@@ -28,13 +28,17 @@
  * \tparam  GeomT           Class that contains the topology of the hypergraph. This class is needs
  *                          to provide a getter function to the topological information of a
  *                          hyperedge of given index and can be arbitrarily implemented.
+ * \tparam  NodeDescT       Class that contains the descriptions of hyperedges' faces.
  * \tparam  hyEdge_index_t  Unsigned integer type specification. Default is unsigned int.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< unsigned int n_dofs_per_nodeT, class TopoT, class GeomT, typename hyEdge_index_t = unsigned int >
+< 
+  unsigned int n_dofs_per_nodeT, class TopoT, class GeomT, class NodeT,
+  typename hyEdge_index_t = unsigned int
+>
 class HDGHyperGraph
 {
   
@@ -60,6 +64,12 @@ class HDGHyperGraph
      **********************************************************************************************/
     typename GeomT::value_type geometry;
     /*!*********************************************************************************************
+     * \brief   Type of nodes information of a hyperedge.
+     *
+     * A \c NodeDescT::value_type comprising the information about faces of a hyperedge.
+     **********************************************************************************************/
+    typename NodeT::value_type node_descriptor;
+    /*!*********************************************************************************************
      * \brief   Construct the \c struct that contains geometrical and topological information on a
      *          hyperedge.
      *
@@ -69,8 +79,13 @@ class HDGHyperGraph
      * \param   topo    Topological information of a hyperedge.
      * \param   geom    Geometrical information of a hyperedge.
      **********************************************************************************************/
-    hyEdge(const typename TopoT::value_type& topo, const typename GeomT::value_type& geom)
-    : topology(topo), geometry(geom) { }
+    hyEdge
+    (
+      const typename TopoT::value_type& topo,
+      const typename GeomT::value_type& geom,
+      const typename NodeT::value_type& node
+    )
+    : topology(topo), geometry(geom), node_descriptor(node) { }
   } value_type; // end of typedef struct hyEdge
   
   /*!***********************************************************************************************
@@ -251,6 +266,12 @@ class HDGHyperGraph
      **********************************************************************************************/
     std::shared_ptr<const GeomT> hyGraph_geometry_;
     /*!*********************************************************************************************
+     * \brief   Node descriptions of the hypergraph.
+     *
+     * This object contains the nodal information of the hypergraph.
+     **********************************************************************************************/
+    std::shared_ptr<const NodeT> hyGraph_node_des_;
+    /*!*********************************************************************************************
      * \brief   Hypernode factory administrating the access to degrees of freedom.
      *
      * A \c HyperNodeFactory allowing to connect nodes of the hypergraph to degrees of freedom which
@@ -273,9 +294,10 @@ class HDGHyperGraph
      * \param   constructor           Information needed to deduce topological and geometrical data
      *                                to construct a \c HDGHyperGraph.
      **********************************************************************************************/
-    HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo)
+    HDGHyperGraph ( const typename TopoT::constructor_value_type& construct_topo )
     : hyGraph_topology_ ( std::make_shared<const TopoT>( construct_topo )),
       hyGraph_geometry_ ( std::make_shared<const GeomT>( *hyGraph_topology_ )),
+      hyGraph_node_des_ ( std::make_shared<const NodeT>( construct_topo )),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dim() ,
@@ -302,10 +324,11 @@ class HDGHyperGraph
      * \param   construct_topo        Information needed to deduce topological data.
      * \param   construct_geom        Information needed to deduce geometrical data.
      **********************************************************************************************/
-    HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
-                  const typename GeomT::constructor_value_type& construct_geom)
-    : hyGraph_topology_ (std::make_shared<const TopoT>(construct_topo)),
-      hyGraph_geometry_ (std::make_shared<const GeomT>(construct_geom)),
+    HDGHyperGraph( const typename TopoT::constructor_value_type& construct_topo,
+                   const typename GeomT::constructor_value_type& construct_geom )
+    : hyGraph_topology_ ( std::make_shared<const TopoT>(construct_topo)),
+      hyGraph_geometry_ ( std::make_shared<const GeomT>(construct_geom)),
+      hyGraph_node_des_ ( std::make_shared<const NodeT>(construct_topo)),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dim() ,
@@ -332,8 +355,12 @@ class HDGHyperGraph
      * \param   construct_topo        Information needed to deduce topological data.
      * \param   construct_geom        Information needed to deduce geometrical data.
      **********************************************************************************************/
-    HDGHyperGraph(std::shared_ptr<const TopoT> topo, std::shared_ptr<const GeomT> geom)
-    : hyGraph_topology_ ( topo ), hyGraph_geometry_ ( geom ),
+    HDGHyperGraph
+    ( std::shared_ptr<const TopoT> topo,
+      std::shared_ptr<const GeomT> geom,
+      std::shared_ptr<const NodeT> node
+    )
+    : hyGraph_topology_ ( topo ), hyGraph_geometry_ ( geom ), hyGraph_node_des_ ( node ),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes() )
     {
       static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dim() ,
@@ -364,7 +391,7 @@ class HDGHyperGraph
      * \retval  hyEdge             The \c hyEdge of the given index.
      **********************************************************************************************/
     const value_type operator[] (const hyEdge_index_t index) const
-    { return value_type(hyEdge_topology(index), hyEdge_geometry(index)); }
+    { return value_type(hyEdge_topology(index), hyEdge_geometry(index), hyNode_descriptor(index)); }
     /*!*********************************************************************************************
      * \brief   Return iterator to first \c hyEdge of \c HDGHyperGraph.
      *
@@ -374,8 +401,8 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to first \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator begin() const
-    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator(*this, 0); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT,NodeT, hyEdge_index_t >::iterator begin() const
+    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator(*this, 0); }
     /*!*********************************************************************************************
      * \brief   Return iterator to the end of \c hyEdge list.
      *
@@ -386,10 +413,10 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, hyEdge_index_t >::iterator end() const
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator end() const
     { 
       return
-        HDGHyperGraph<n_dofs_per_nodeT,TopoT,GeomT,hyEdge_index_t>::iterator(*this, n_hyEdges());
+        HDGHyperGraph<n_dofs_per_nodeT,TopoT,GeomT,NodeT,hyEdge_index_t>::iterator(*this, n_hyEdges());
     }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
@@ -440,6 +467,21 @@ class HDGHyperGraph
      **********************************************************************************************/
     const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
     { return hyGraph_geometry_->operator[](index); }
+    /*!*********************************************************************************************
+     * \brief   Nodal information of prescribed hyperedge.
+     *
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
+     *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
+     *        object then?
+     *
+     * \todo  All
+     *
+     * \param   index                 Index of the hyperedge to be returned.
+     * \retval  hyEdge_geometry    Geometrical information about hyperedge.
+     **********************************************************************************************/
+    const typename NodeT::value_type hyNode_descriptor(const hyEdge_index_t index) const
+    { return hyGraph_node_des_->operator[](index); }
     /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *

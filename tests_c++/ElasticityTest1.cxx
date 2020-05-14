@@ -27,8 +27,9 @@ int main(int argc, char *argv[])
   const double solution_tolerance = 1e-8;
   
   std::string filename = "domains/SimpleTriangle.geo";
-  AbstractProblem< Topology::File<1,2>, Geometry::File<1,2>, LengtheningBeam<1,2,1,2> >
-    diffusion_problem(filename, 1.);
+  AbstractProblem
+  < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, LengtheningBeam<1,2,1,2> >
+  diffusion_problem(filename, 1.);
 
   vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = 1.;

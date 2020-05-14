@@ -11,6 +11,7 @@ from scipy.sparse.linalg import LinearOperator
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
+         +                  "NodeDescriptor::Cubic< 1, 3 >, " \
          +                  "Diffusion< 1, 3, 1, 2 * 1 > " \
          +                ">"
 filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
@@ -42,10 +43,7 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
 vectorRHS = HDG_wrapper.return_zero_vector()
-vectorRHS = HDG_wrapper.add_dirichlet(vectorRHS)
-vectorRHS = A * vectorRHS;
-vectorRHS = HDG_wrapper.add_rhs(vectorRHS)
-vectorRHS = [-i for i in vectorRHS]
+# vectorRHS = HDG_wrapper.add_right_hand_side(vectorRHS)
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)

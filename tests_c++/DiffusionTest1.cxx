@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
   const double solution_tolerance = 1e-8;
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
-  AbstractProblem< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, 
+  AbstractProblem< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, NodeDescriptor::Cubic<1,3>,
                    Diffusion_TensorialUniform<1,1,2>
                  >  diffusion_problem(num_elements, num_elements, 1.);
   

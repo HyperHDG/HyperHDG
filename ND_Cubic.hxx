@@ -173,8 +173,7 @@ class Cubic
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
     Cubic(const Cubic<hyEdge_dimT,space_dimT>& other)
-    : num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_),
-      n_hyNodes_(other.n_hyNodes_) { }
+    : num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_) { }
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
@@ -423,8 +422,6 @@ template <unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyE, typen
 Cubic<hyEdge_dimT,space_dimT,hyE, hyperT>::hyEdge::
 hyEdge(const hyE index, const std::array<unsigned int, space_dimT>& num_elements)
 {
-  for (unsigned int local_hyNode = 0; local_hyNode < 2 * hyEdge_dimT; ++local_hyNode)
-    correct_hyNode_orientation_[local_hyNode] = 1;
   if constexpr ( hyEdge_dimT == 1 )       hyFace_types_ = line_to_point_index<space_dimT>(num_elements, index);
   else if constexpr ( hyEdge_dimT == 2 )  hyFace_types_ = square_to_line_index<space_dimT>(num_elements, index);
   else if constexpr ( hyEdge_dimT == 3 )  hyFace_types_ = cube_to_square_index<space_dimT>(num_elements, index);    
