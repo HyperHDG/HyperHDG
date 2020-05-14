@@ -45,14 +45,18 @@ bool contains(const std::vector<T>& container, const T& v)
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< class TopologyT, class GeometryT, class LocalSolverT, typename dof_index_t = unsigned int >
+< 
+  class TopologyT, class GeometryT, class NodeDescriptorT, class LocalSolverT, 
+  typename dof_index_t = unsigned int
+>
 class AbstractProblem
 {
   private:
     /*!*********************************************************************************************
      * \brief   Instantiation of a hypergraph.
      **********************************************************************************************/
-    HDGHyperGraph<LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT> hyper_graph_;
+    HDGHyperGraph < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT, NodeDescriptorT >
+    hyper_graph_;
     /*!*********************************************************************************************
      * \brief   Vector containing the indices of Dirichlet type nodes.
      **********************************************************************************************/
@@ -257,171 +261,6 @@ class AbstractProblem
       }
     
       return vec_Ax;
-    }
-    /*!*********************************************************************************************
-     * \brief   Assemble global right-hand side vector to vec_b.
-     *
-     * \retval  vec_b         A \c std::vector containing the global right-hand side.
-     **********************************************************************************************/
-    template < typename dof_value_t = double, typename hyNode_index_t = dof_index_t >
-    std::vector<dof_value_t> add_rhs ( std::vector<dof_value_t>& x_vec ) const
-    {
-      if constexpr ( !LocalSolverT::advanced_functions() )
-      {
-        hy_assert( false , "This functionality is not implemented for the local solver!" );
-        return x_vec;
-      }
-
-      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
-      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-      
-      std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge_hyNodes;
-      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
-      
-      // Generate righ-hand side for all hyperedges hyperedges.
-      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
-      {
-        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
-
-        // Generate degrees of freedom of vec_b (stored locally).
-        if constexpr ( LocalSolverT::use_geometry() && LocalSolverT::advanced_functions() )
-          hyEdge_dofs = local_solver_.numerical_flux_from_rhs(hyEdge.geometry);
-        else if constexpr ( LocalSolverT::advanced_functions() )
-          hyEdge_dofs = local_solver_.numerical_flux_from_rhs();
-        
-        // Fill hyEdge_dofs array degrees of freedom into vec_b.
-        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
-          hyper_graph_.hyNode_factory().add_to_dof_values
-            (hyEdge_hyNodes[hyNode], x_vec, hyEdge_dofs[hyNode]);
-      });
-      
-      // Set all Dirichlet values to zero.
-      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
-      {
-        hy_assert( dirichlet_indices_[i] >= 0 
-                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
-                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                   << "smaller than the total amount of degrees of freedom." << std::endl
-                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
-                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-        x_vec[dirichlet_indices_[i]] = 0.;
-      }
-      
-      return x_vec;
-    }
-    /*!*********************************************************************************************
-     * \brief   Adds Dirichlet values to vector of unknowns.
-     *
-     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-     * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
-     **********************************************************************************************/  
-    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t>& add_dirichlet ( std::vector<dof_value_t>& x_vec ) const
-    {
-      if constexpr ( !LocalSolverT::advanced_functions() )
-      {
-        hy_assert( false , "This functionality is not implemented for the local solver!" );
-        return x_vec;
-      }
-      else
-      {
-      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-
-      hyNode_index_t hyNode_index, hyNode_index_old = 0;
-      dof_index_t dof_index;
-      std::array<dof_index_t, n_dofs_per_node> node_dofs;
-      std::array<dof_value_t, n_dofs_per_node> dirichlet_values;
-
-      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
-      {
-        hy_assert( dirichlet_indices_[i] >= 0 
-                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
-                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                   << "smaller than the total amount of degrees of freedom." << std::endl
-                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
-                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-
-        hyNode_index
-          = hyper_graph_.hyNode_factory().get_hyNode_from_dof_index( dirichlet_indices_[i] );
-
-        if ( hyNode_index != hyNode_index_old || i == 0 )
-        {
-          hyNode_index_old = hyNode_index;
-          node_dofs = hyper_graph_.hyNode_factory().get_dof_indices( hyNode_index );
-          auto hyNode = hyper_graph_.hyNode_geometry( hyNode_index );
-          dirichlet_values = local_solver_.dirichlet_coeffs ( hyNode );
-        }
-
-        dof_index = std::distance
-          ( 
-            node_dofs.begin(),
-            std::find(node_dofs.begin(), node_dofs.end(), dirichlet_indices_[i])
-          );
-        hy_assert( dof_index >= 0 && dof_index < node_dofs.size() ,
-                   "dof_index has attened impossible value." << dof_index << "  " << i );
-
-        x_vec[dirichlet_indices_[i]] += dirichlet_values[dof_index];
-      }
-
-      return x_vec;
-      }
-    }
-    /*!*********************************************************************************************
-     * \brief   Adds Neumann values to vector of unknowns.
-     *
-     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-     * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
-     **********************************************************************************************/  
-    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t>& add_neumann ( std::vector<dof_value_t>& x_vec ) const
-    {
-      if constexpr ( !LocalSolverT::advanced_functions() )
-      {
-        hy_assert( false , "This functionality is not implemented for the local solver!" );
-        return x_vec;
-      }
-      else
-      {
-      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-
-      hyNode_index_t hyNode_index, hyNode_index_old = 0;
-      dof_index_t dof_index;
-      std::array<dof_index_t, n_dofs_per_node> node_dofs;
-      std::array<dof_value_t, n_dofs_per_node> neumann_values;
-
-      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
-      {
-        hy_assert( neumann_indices_[i] >= 0 
-                     && neumann_indices_[i] < hyper_graph_.n_global_dofs() ,
-                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                   << "smaller than the total amount of degrees of freedom." << std::endl
-                   << "In this case, the index is " << neumann_indices_[i] << " and the total " <<
-                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
-
-        hyNode_index
-          = hyper_graph_.hyNode_factory().get_hyNode_from_dof_index( neumann_indices_[i] );
-
-        if ( hyNode_index != hyNode_index_old || i == 0 )
-        {
-          hyNode_index_old = hyNode_index;
-          node_dofs = hyper_graph_.hyNode_factory().get_dof_indices( hyNode_index );
-          auto hyNode = hyper_graph_.hyNode_geometry( hyNode_index );
-          neumann_values = local_solver_.neumann_coeffs ( hyNode );
-        }
-
-        dof_index = std::distance
-          ( 
-            node_dofs.begin(),
-            std::find(node_dofs.begin(), node_dofs.end(), dirichlet_indices_[i])
-          );
-        hy_assert( dof_index >= 0 && dof_index < node_dofs.size() ,
-                   "dof_index has attened impossible value." << dof_index << "  " << i );
-
-        x_vec[dirichlet_indices_[i]] += neumann_values[dof_index];
-      }
-    
-      return x_vec;
-      }
     }
     /*!*********************************************************************************************
      * \brief   Calculate errors.

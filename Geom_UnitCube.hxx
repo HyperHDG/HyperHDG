@@ -2,7 +2,10 @@
 
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
+
 #include <Topo_Cubic.hxx>
+#include <ND_Cubic.hxx>
+
 #include <tensor_mapping.hxx>
 #include <array>
 

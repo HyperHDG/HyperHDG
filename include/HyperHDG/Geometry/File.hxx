@@ -1,6 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/Topology/File.hxx>
+#include <HyperHDG/NodeDescriptor/File.hxx>
 #include <HyperHDG/Mapping/Linear.hxx>
 
 #include <array>

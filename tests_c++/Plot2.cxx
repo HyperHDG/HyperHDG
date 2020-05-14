@@ -26,13 +26,16 @@ void test()
 
   typedef Topology::Cubic<edge_dim,space_dim> Topo;
   typedef Geometry::UnitCube<edge_dim,space_dim> Geo;
+  typedef NodeDescriptor::Cubic<edge_dim,space_dim> Node;
+  
   auto topo = std::make_shared<const Topo> (num_elements);
   auto geo = std::make_shared<const Geo> (*topo);
+  auto node = std::make_shared<const Node> (num_elements);
   
   typedef LocalSolverTemplate<edge_dim,double> Solver;
   Solver lsolver;
-  typedef HDGHyperGraph<Solver::n_glob_dofs_per_node(),Topo,Geo>HDG;
-  HDG hdg_graph(topo, geo);
+  typedef HDGHyperGraph<Solver::n_glob_dofs_per_node(),Topo,Geo,Node>HDG;
+  HDG hdg_graph(topo, geo, node);
   vector<double> vectorDirichlet(hdg_graph.n_global_dofs());
   
   PlotOptions pltop;
