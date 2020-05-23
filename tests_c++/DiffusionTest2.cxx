@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   
   vector<float> solution;
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
-  catch (SparseLASolveException exc)
+  catch (SparseLASolveException& exc)
   {
     hy_assert( 0 == 1 , exc.what() );
     successful = false;
