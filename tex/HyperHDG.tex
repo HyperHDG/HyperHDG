@@ -52,6 +52,8 @@
 
 % Newcommands by the authors.
 
+\newcommand{\hyperHDG}{{\fontfamily{pzc}\selectfont \texttt{Hy}\hspace{-1.5pt}perHDG }}
+
 \newcommand{\graph}{\ensuremath{\mathcal G}}
 \newcommand{\setEdge}{\ensuremath{\mathcal E}}
 \newcommand{\setNode}{\ensuremath{\mathcal N}}
@@ -134,7 +136,7 @@
 
 \begin{document}
 
-\title[H\MakeLowercase{yper}HDG --- HDG on hypergraphs]{H\MakeLowercase{yper}HDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
+\title[\hyperHDG --- HDG on hypergraphs]{\hyperHDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
 
 \author{Andreas Rupp}
 \address{Interdisciplinary Center for Scientific Computing (IWR), Heidelberg University, Mathematikon, Im Neuenheimer Feld 205, 69120 Heidelberg, Germany}
@@ -169,7 +171,6 @@
  
  since we are quite many people, I have included the usepackage ``fixme''. It provides quite powerful tools for editing text. You can use a note, a warning, an error, or a fatal to indicate things in the text. Using the initials it can be tracked who set a comment. Analogously, it works for warnings, errors, and fatals. Thus, using the command \verb|\arnote{This is a note by Andreas Rupp}| creates a note at the margins, where the ar in arnote stands for Andreas Rupp. Moreover, \verb|\begin{envarnote}{Short description} ..... \end{envarnote}| \linebreak will create a short descripton at the margin and a long text (like this) within the standard text.
 \end{envarnote}
-
 % 
 \section{Introduction}
 % 
@@ -178,7 +179,7 @@
 \section{Hypergraphs}\label{SEC:hypergraph}
 % ---------------------------------------------------------------------
 % 
-HyperHDG is a simumlation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
+\hyperHDG is a simumlation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
 % 
 \subsection{Topologic aspects of hypergraphs}\label{SEC:hypergraph_topology}
 % 
