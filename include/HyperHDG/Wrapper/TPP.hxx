@@ -14,36 +14,54 @@
 
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <submodules/tensor_product_chain_complex.git/include/tpcc/lexicographic.h>
+#include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
 
 
 /*!*************************************************************************************************
+ * \brief   Type of a tensor product chain complex.
+ **************************************************************************************************/
+template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int >
+using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>;
+/*!*************************************************************************************************
+ * \brief   Type of an element of a tensor product chain complex.
+ **************************************************************************************************/
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+using tpcc_elem_t = TPCC::Element<space_dim, hyEdge_dim, unsigned int, unsigned int>;
+
+/*!*************************************************************************************************
  * \brief   Create a tensor product chain complex.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int >
-auto create_tpcc(const std::array<unsigned int, space_dim>& dimensions)
+tpcc_t < hyEdge_dim, space_dim, index_t >
+create_tpcc( const std::array<unsigned int,space_dim>& dimensions )
 { 
   static_assert( space_dim >= hyEdge_dim , "Hypercube dim must not be bigger than spatial dim!");
-  return Lexicographic<space_dim,hyEdge_dim,index_t>(dimensions);
+  return TPCC::Lexicographic<space_dim,hyEdge_dim,index_t>(dimensions);
 }
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPP.
  **************************************************************************************************/
-auto get_element(const auto& tpcc, const hyEdge_index_t index)
+template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
+tpcc_elem_t < hyEdge_dim, space_dim >
+get_element( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const index_t index )
 {
   hy_assert( index < tpcc.size() ,
-             "Index " + index + " must not be bigger than the TPP size " + tpp.size() + "." );
+             "Index " + index + " must not be bigger than the TPP size " + tpcc.size() + "." );
   return tpcc.operator[](index);
 }
 /*!*************************************************************************************************
  * \brief   Return index of given element within TPP.
  **************************************************************************************************/
-auto get_element_index(const auto& tpcc, const auto& element)
-{ return tpcc.index(element); }
+template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
+index_t get_element_index
+(  const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const tpcc_elem_t<hyEdge_dim,space_dim>& elem )
+{ return tpcc.index(elem); }
 /*!*************************************************************************************************
  * \brief   Return i-th element facet.
  **************************************************************************************************/
-auto get_element_facet(const auto& element, const unsigned int index)
-{ return hyEdge.facet(index); }
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+tpcc_elem_t < hyEdge_dim-1, space_dim >
+get_element_facet ( const tpcc_elem_t<hyEdge_dim, space_dim>& element, const unsigned int index )
+{ return element.facet(index); }
