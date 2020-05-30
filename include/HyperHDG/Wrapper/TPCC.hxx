@@ -1,11 +1,11 @@
 /*!*************************************************************************************************
- * \file    TPP.hxx
- * \brief   This file provides the functions of the submodule TPP.
+ * \file    TPCC.hxx
+ * \brief   This file provides the functions of the submodule TPCC.
  *
  * \todo    The external module does not provide functions that return the template parameters. Why?
  *          If these functins will be provided, we should use them to do consistency checks!
  *
- * This is a wrapper file to provide TPP (tensor product chain complex) based functions. Since this
+ * This is a wrapper file to provide TPCC (tensor product chain complex) based functions. Since this
  * is an external submodule utilized by hyperHDG, this file provides appropriate wrapper functions.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -13,6 +13,11 @@
  **************************************************************************************************/
 
 #pragma once // Ensure that file is included only once in a single compilation.
+
+/*!*************************************************************************************************
+ * \todo  Remove this, when submodule works without it!
+ **************************************************************************************************/
+#include <ostream>               // TO BE REMOVED!
 
 #include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
 #include <HyperHDG/HyAssert.hxx>
@@ -41,18 +46,18 @@ create_tpcc( const std::array<unsigned int,space_dim>& dimensions )
   return TPCC::Lexicographic<space_dim,hyEdge_dim,index_t>(dimensions);
 }
 /*!*************************************************************************************************
- * \brief   Return the element of given index the TPP.
+ * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 tpcc_elem_t < hyEdge_dim, space_dim >
 get_element( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const index_t index )
 {
   hy_assert( index < tpcc.size() ,
-             "Index " + index + " must not be bigger than the TPP size " + tpcc.size() + "." );
+             "Index " + index + " must not be bigger than the TPCC size " + tpcc.size() + "." );
   return tpcc.operator[](index);
 }
 /*!*************************************************************************************************
- * \brief   Return index of given element within TPP.
+ * \brief   Return index of given element within TPCC.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 index_t get_element_index
