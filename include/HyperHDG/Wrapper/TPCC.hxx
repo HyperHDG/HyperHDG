@@ -49,11 +49,16 @@ create_tpcc( const std::array<unsigned int,space_dim>& dimensions )
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
+index_t n_elements( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc ) { return tpcc.size(); }
+/*!*************************************************************************************************
+ * \brief   Return the element of given index the TPCC.
+ **************************************************************************************************/
+template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 tpcc_elem_t < hyEdge_dim, space_dim >
 get_element( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const index_t index )
 {
-  hy_assert( index < tpcc.size() ,
-             "Index " + index + " must not be bigger than the TPCC size " + tpcc.size() + "." );
+  hy_assert( index < n_elements(tpcc) , "Index " << index << " must not be bigger than the TPCC "
+             << "size, which is " << n_elements(tpcc) << "." );
   return tpcc.operator[](index);
 }
 /*!*************************************************************************************************
@@ -62,11 +67,19 @@ get_element( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const index_t ind
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 index_t get_element_index
 (  const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const tpcc_elem_t<hyEdge_dim,space_dim>& elem )
-{ return tpcc.index(elem); }
+{ 
+  index_t index = tpcc.index(elem);
+  hy_assert( index < n_elements(tpcc) , "Returned index is larger than number of elements!" );
+  return index;
+}
 /*!*************************************************************************************************
  * \brief   Return i-th element facet.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 tpcc_elem_t < hyEdge_dim-1, space_dim >
 get_element_facet ( const tpcc_elem_t<hyEdge_dim, space_dim>& element, const unsigned int index )
-{ return element.facet(index); }
+{ 
+  hy_assert ( index < 2 * hyEdge_dim , "An element hast only " << 2 * hyEdge_dim << "facets. "
+              << "You requested number " << index << "." );
+  return element.facet(index);
+}
