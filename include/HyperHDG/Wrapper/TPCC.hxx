@@ -14,15 +14,9 @@
 
 #pragma once // Ensure that file is included only once in a single compilation.
 
-/*!*************************************************************************************************
- * \todo  Remove this, when submodule works without it!
- **************************************************************************************************/
-#include <ostream>               // TO BE REMOVED!
-
 #include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
-
 
 /*!*************************************************************************************************
  * \brief   Type of a tensor product chain complex.
