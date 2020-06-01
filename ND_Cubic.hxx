@@ -172,8 +172,8 @@ class Cubic
      *
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
-    Cubic(const Cubic<hyEdge_dimT,space_dimT>& other)
-    : num_elements_(other.num_elements_), n_hyEdges_(other.n_hyEdges_) { }
+    Cubic(const Topology::Cubic<hyEdge_dimT,space_dimT>& other)
+    : num_elements_(other.num_elements()), n_hyEdges_(other.n_hyEdges()) { }
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
