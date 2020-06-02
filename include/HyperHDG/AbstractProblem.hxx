@@ -310,9 +310,16 @@ class AbstractProblem
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into local errors.
-        if constexpr ( LocalSolverT::use_geometry() )
-          loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge.geometry);
-        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>& )
+          >::value
+        )
+          loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
+        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge.geometry);
         
         // Fill the vector of errors.
         for ( unsigned int err = 0 ; err < n_errors ; ++err )  result[err] += loc_error[err];
