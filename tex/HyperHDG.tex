@@ -109,6 +109,7 @@
 \newcommand{\vecc}[1]{\ensuremath{\mathbfsf{#1}}}
 \newcommand{\Nu}{\ensuremath{\vec \nu}}
 \newcommand{\dx}{\ensuremath{\, \textup d x}}
+\newcommand{\dy}{\ensuremath{\, \textup d y}}
 \newcommand{\ds}{\ensuremath{\, \textup d \sigma}}
 \newcommand{\localU}{\ensuremath{\mathcal U}}
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
@@ -119,6 +120,7 @@
 \newcommand{\torsion}{\ensuremath{\varphi}}
 \newcommand{\force}{\ensuremath{q}}
 \newcommand{\momentum}{\ensuremath{m}}
+\newcommand{\crossSect}{\ensuremath{\mathcal A}}
 
 % ---------------------------------------------------------------------------
 
@@ -566,7 +568,11 @@ Thus, for doing a single matrix--vector product $\vecc A \vecc x = \vecc y$, one
 \section{Elastic beam models}
 % ---------------------------------------------------------------------
 % 
-A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}. Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.~1.4.3]{MeskourisH2013}---be described via
+A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}.
+% 
+\subsection{Two dimensional models}
+% 
+Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.~1.4.3]{MeskourisH2013}---be described via
 % 
 \begin{subequations}\label{EQ:Timo_2D}
  \begin{align}
@@ -576,7 +582,7 @@ A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\glob
  \end{align}
 \end{subequations}
 % 
-where subscript $x$ identifies the longitudinal component (cf.~inner normal), and subscripts $y$ and $z$ the orthogonal components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_y \equiv 0$ is assumed.
+where subscript $x$ identifies the longitudinal / axial component (cf.~inner normal), and subscripts $y$ and $z$ the orthogonal / transverse components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_y \equiv 0$ is assumed.
 
 Assuming that $\torsion = - \partial_x \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
 % 
@@ -589,8 +595,10 @@ Assuming that $\torsion = - \partial_x \crossDef$, i.e., the cross section is or
 % 
 whose equation \eqref{EQ:Ber_2D_cross} is often tributed to J.~Bernoulli, or  L.~Euler and D.~Bernoulli, or G.~Galilei, or L.~da~Vinci.
 
-Here, $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}. In the following considerations, they will be treated as constants and denoted by $c$.
-
+Here, $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}.
+% 
+\subsection{Three dimensional Bernoulli model}
+% 
 Transferring the aformentioned systems of equations into three spatial dimensions for which we follow \cite[Sect.~6.1--6.4]{BauchauC2009} turns \eqref{EQ:Ber_2D} into
 % 
 \begin{equation}\label{EQ:Ber_3D}
@@ -608,14 +616,20 @@ Transferring the aformentioned systems of equations into three spatial dimension
  \end{bmatrix},
 \end{equation}
 % 
-where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. Beyond that, the torque distribution $\momentum_x$ is related to the twist distribution $\torsion$ via
+where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. These quantities, however, only show up since \cite[Sect.~5--8]{BauchauC2009} assume beams to have positive (yet small thickness). The different signs of the momenta stem from the sign convention \cite[Sect.~5.2]{BauchauC2009} and $c_{23} = c_{32}$. Beyond that, the torque distribution $\momentum_x$ is related to the twist distribution $\torsion$ via
 % 
 \begin{equation}
- -\partial_x \bar c \partial_x \torsion_x = \momentum_x,
+ -\partial_x \bar c \partial_x \torsion = \momentum_x,
 \end{equation}
 % 
-where the $c$ (possibly with subscript and/or bar) are material parameters.
-
+where the $c$ (possibly with subscript and/or bar) need further investigation to allow passing to the limit, where the thickness of the beam goes to zero. For a circular beam with radius $\epsilon > 0$ and cross section $\crossSect$, we have
+% 
+\begin{gather*}
+ c_{11} = \int_\crossSect E \, \textup d\crossSect = \epsilon^2 \pi E, \qquad c_{22} = c_{33} = \int_\crossSect E y^2 \, \textup d\crossSect = \epsilon^4 \frac{\pi E}{4}, \\
+ c_{23} = c_{32} = \int_\crossSect E y z \, \textup d\crossSect = 0, \qquad \bar c = \int_\crossSect G r^2 \, \textup d \crossSect = \epsilon^4 \frac{\pi G}{2}.
+\end{gather*}
+% 
+This indicates that we can drop the non-diagonal blocks in \eqref{EQ:Ber_3D}.
 
 
 \newpage
