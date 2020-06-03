@@ -47,12 +47,6 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return false; }
-    /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
      * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
@@ -565,12 +559,6 @@ class Diffusion
      * \brief Dimension of hyper edge type that this object solves on.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-    /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 

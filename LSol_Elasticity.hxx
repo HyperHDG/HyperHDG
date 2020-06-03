@@ -43,12 +43,6 @@ class LengtheningBeam
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
-    /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
      * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
@@ -583,12 +577,6 @@ class BernoulliBendingBeam
      * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-    /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
@@ -1183,12 +1171,6 @@ class LengtheningBernoulliBendingBeam
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
-    /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
      * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
@@ -1344,12 +1326,6 @@ class TimoschenkoBendingBeam
      * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-    /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
@@ -1948,12 +1924,6 @@ class LengtheningTimoschenkoBendingBeam
      * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-    /*!*********************************************************************************************
-     * \brief   Decide whether gemetrical information is needed for local solver.
-     * 
-     * \retval  use_geom      True if geometrical information is used by local solver.
-     **********************************************************************************************/
-    static constexpr bool use_geometry() { return true; }
     /*!*********************************************************************************************
      * \brief   Specify whether advanced functuions are implemented for this class
      * 
