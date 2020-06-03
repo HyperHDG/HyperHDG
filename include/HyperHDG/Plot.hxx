@@ -5,6 +5,7 @@
 #include <HyperHDG/DenseLA.hxx>
 
 #include <fstream>
+#include <filesystem>
 #include <iomanip>
 // #include <cmath>
 
@@ -179,6 +180,7 @@ PlotOptions::PlotOptions()
  **************************************************************************************************/
 namespace PlotFunctions
 {
+
   /*!***********************************************************************************************
    * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
    *
@@ -348,6 +350,22 @@ namespace PlotFunctions
     output << "        </DataArray>" << std::endl;
     output << "      </Cells>" << std::endl;
   } // end of void plot_vtu_unstructured_geometry
+
+  void file_exists(const std::ofstream &output_file, const std::string filename) {
+    if (!output_file.is_open()) {
+      throw std::ios_base::failure("File  " + filename + " could not be opened");
+    }
+  }
+  void check_file_opened(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
+    try {
+      file_exists(output_file, filename);
+    }
+    catch (std::ios_base::failure &e) {
+      std::cerr << e.what() << std::endl;
+      std::cout << "Try to create output directory" << std::endl;
+      std::filesystem::create_directory(plot_options.outputDir);
+    }
+  }
 } // end of namespace PlotFunctions
 
 /*!*************************************************************************************************
