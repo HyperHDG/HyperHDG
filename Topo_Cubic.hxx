@@ -25,8 +25,6 @@ namespace Topology
 /*!*************************************************************************************************
  * \brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs.
  *
- * \todo This is not what brief says. It is one special hypergraph.
- *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
  * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
@@ -37,9 +35,9 @@ namespace Topology
  * periodic domains, for example.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dimT       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dimT.
+ *                        for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dimT    The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dimT.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -52,9 +50,6 @@ class Cubic
   
   /*!***********************************************************************************************
    * \brief   Definition of the topology of a hypergraph's edges --- Cubic HyperGraph's edges.
-   * 
-   * \todo    Both private arrays are filled when the hyperedge is constructed. Lazy evaluation
-   *          might be an important aspect here. What do you think?
    *
    * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
    * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -72,10 +67,6 @@ class Cubic
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.
-       *
-       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
-       *          A prototype of this function is located in the cxx file, where you could also
-       *          insert the new function.
        * 
        * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
        * which is given as input data and the index of the hyperedge to be constructed.
@@ -228,6 +219,7 @@ class Cubic
      *
      * \todo  Here, we repeatedly return a large object. This is done since the object could be
      *        locally created in regular topologies/geometries! Return shared-pointer?
+     *        -> AR: I do not really see the point, but might just be stupid ;)
      *
      * This function returns the hyperedge of the given index, i.e., it returns the topological
      * hyperedge (\b not the geometrical information). The topological informatiom comprises the
