@@ -68,17 +68,6 @@ class Cubic
        * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
        ********************************************************************************************/
       std::array<hyNode_index_t, 2*hyEdge_dimT> hyNode_indices_;
-      /*!*******************************************************************************************
-       * \brief   Orientation of the hypernode.
-       * 
-       * \todo    Do we want to change this (cf. detailed description)? This array also does not
-       *          have a getter function!
-       * 
-       * A \c std::array comprising the orientation of each hypernode. In HyperGraph_Cubic, all
-       * edges are assumed to have the correct orientation and this array is irrelevant. However, 
-       * this is possible to change for different applications.
-       ********************************************************************************************/
-//      std::array<unsigned int, 2*hyEdge_dimT> correct_hyNode_orientation_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -137,9 +126,12 @@ class Cubic
      **********************************************************************************************/
     std::array<unsigned int, space_dimT> num_elements_;
     /*!*********************************************************************************************
-     * \brief   Tensor product chain complex.
+     * \brief   Tensor product chain complex for elements.
      **********************************************************************************************/
     tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+    /*!*********************************************************************************************
+     * \brief   Tensor product chain complex for faces.
+     **********************************************************************************************/
     tpcc_t<hyEdge_dimT-1, space_dimT, hyNode_index_t> tpcc_faces_;
     /*!*********************************************************************************************
      * \brief   Total amount of hyperedges.
@@ -216,7 +208,8 @@ class Cubic
     : num_elements_(num_elements),
       tpcc_elements_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements)),
       tpcc_faces_(tpcc_faces< hyEdge_dimT, space_dimT, hyEdge_index_t >(tpcc_elements_)),
-      n_hyEdges_(n_elements< hyEdge_dimT, space_dimT, hyEdge_index_t >(tpcc_elements_)), n_hyNodes_(n_elements< hyEdge_dimT-1, space_dimT, hyEdge_index_t >(tpcc_faces_))
+      n_hyEdges_(n_elements< hyEdge_dimT, space_dimT, hyEdge_index_t >(tpcc_elements_)),
+      n_hyNodes_(n_elements< hyEdge_dimT-1, space_dimT, hyEdge_index_t >(tpcc_faces_))
     { }
     /*!*********************************************************************************************
      * \brief   Construct a hypergraph from another hypergraph.
