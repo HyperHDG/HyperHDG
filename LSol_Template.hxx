@@ -24,15 +24,6 @@ public:
   static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
   
   /**
-   * \brief   Decide whether gemetrical information is needed for local solver.
-   * 
-   * \retval  use_geom      True if geometrical information is used by local solver.
-   */
-
-  static constexpr bool use_geometry()
-  { return false; }
-  
-  /**
    * \brief Number of degrees of freedom per hypernode.
    * 
    * \note This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.

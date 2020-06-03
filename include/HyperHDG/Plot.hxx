@@ -1,5 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/CompileTimeTricks.hxx>
 #include <HyperHDG/HDGHyperGraph.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
@@ -435,12 +436,20 @@ void plot_vtu
         std::array< dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions+1)> ,
         LocalSolverT::system_dimension()
       > local_values;
-      if constexpr ( LocalSolverT::use_geometry() )
+      if constexpr
+      ( 
+        not_uses_geometry
+        < LocalSolverT,
+          std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim >
+          ( std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim >& )
+        >::value
+      )
+        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
+      else
       {
         auto geometry =  hyper_graph.hyEdge_geometry(he_number);
         local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
       }
-      else local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
 
       myfile << "      ";
       for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner)
