@@ -164,8 +164,8 @@ class Cubic
      * \brief   Construct a cubic hypergraph from a \c std::vector.
      *
      * Constructs a hypergraph from a \c std::vector containing the elementens per spatial dimension
-     * which is given as input data. If the input vector is shorter that \c space_dimT, the remaining
-     * amounts of elemnts are assumed to be equal to zero. If the vector is longer than
+     * which is given as input data. If the input vector is shorter that \c space_dimT, the
+     * remaining amounts of elemnts are assumed to be equal to zero. If the vector is longer than
      * \c space_dimT, the first \c space_dimT entries are considered only.
      * 
      * \todo    If the vector is too short, an error is thrown in the test program and the behavior
