@@ -124,23 +124,3 @@ unsigned int exterior_coordinate
              "There are only " << space_dim - hyEdge_dim << " exterior directions." );
   return elem.across_coordinate(index);
 }
-
-// -------------------------------------------------------------------------------------------------
-// A series of tensor product chain complexes.
-// -------------------------------------------------------------------------------------------------
-
-/*!*************************************************************************************************
- * \brief   A chain of tensor product chain complexes.
- **************************************************************************************************/
-template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int >
-struct tpcc_chain
-{
-  tpcc_t<hyEdge_dim, space_dim, index_t> tpcc;
-  std::shared_ptr< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > link;
-  tpcc_chain (const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc_)  : tpcc(tpcc_)
-  { 
-    if constexpr (hyEdge_dim > 0)
-      link = std::make_shared< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > 
-              ( tpcc_faces< hyEdge_dim, space_dim, index_t >(tpcc) );
-  }
-};

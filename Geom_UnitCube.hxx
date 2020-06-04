@@ -81,6 +81,35 @@ class UnitCube
        * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
       std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> points_;
+      
+      template<unsigned int hyEdge_dimTT, unsigned int space_dimTT>
+      unsigned int fill_points
+      ( 
+        unsigned int corner_index,
+        tpcc_elem_t<hyEdge_dimTT, space_dimTT>& elem/*,
+        const tpcc_t<hyEdge_dimTT, space_dimTT, hyEdge_index_t>& elements*/
+      )
+      {
+        if constexpr ( hyEdge_dimTT == 0 )
+        {
+          Point<space_dimT> pt;
+          for (unsigned int dim = 0; dim < space_dimTT; ++dim)
+            pt[dim] = exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim);
+          points_[corner_index++] = pt;
+        }
+        else
+        {
+   //       const tpcc_t<hyEdge_dimTT-1, space_dimTT, hyEdge_index_t> faces 
+   //         = tpcc_faces<hyEdge_dimTT,space_dimTT,hyEdge_index_t>(elements);
+          for (unsigned int i = 0; i < 2; ++i)
+          {
+            tpcc_elem_t<hyEdge_dimTT-1, space_dimTT> face = get_face<hyEdge_dimTT, space_dimTT>(elem, i);
+            corner_index = fill_points<hyEdge_dimTT-1,space_dimTT>( corner_index, face/*, faces*/ );
+          }
+        }
+        return corner_index;
+      }
+      
     public:
       static constexpr unsigned int space_dim() { return space_dimT; }
       static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
@@ -119,8 +148,12 @@ class UnitCube
        ********************************************************************************************/
       hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
       {
-        
-      };
+        unsigned int corner_index = 0;
+        tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements(geometry.num_elements_);
+        tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
+          = get_element<hyEdge_dimT, space_dimT,unsigned int>(tpcc_elements, index);
+        fill_points<hyEdge_dimT,space_dimT>(corner_index, elem/*, geometry.tpcc_elements_*/);
+      }
     
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
@@ -183,7 +216,7 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Tensor product chain complex for elements.
      **********************************************************************************************/
-    tpcc_chain<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_;
+    tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
   public:
     /*!*********************************************************************************************
      * \brief   Defines the return value of the class.
@@ -217,10 +250,10 @@ class UnitCube
      * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
     UnitCube(const constructor_value_type& num_elements)
-    : tpcc_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements_))
+    : tpcc_elements_(num_elements_)
     { 
       for (unsigned int dim = 0; dim < space_dimT; ++dim) num_elements_[dim] = num_elements[dim];
-      tpcc_ = create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements_);
+      tpcc_elements_ = create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements_);
     }
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
@@ -232,7 +265,7 @@ class UnitCube
      **********************************************************************************************/
     UnitCube(const Topology::Cubic<hyEdge_dimT,space_dimT>& other)
     : num_elements_(other.num_elements()),
-      tpcc_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(other.num_elements()))
+      tpcc_elements_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(other.num_elements()))
     { }
     /*!*********************************************************************************************
      * \brief   Get geometrical hyperedge of given index.
