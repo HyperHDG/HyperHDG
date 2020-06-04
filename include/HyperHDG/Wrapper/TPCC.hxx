@@ -140,6 +140,7 @@ struct tpcc_chain
   tpcc_chain (const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc_)  : tpcc(tpcc_)
   { 
     if constexpr (hyEdge_dim > 0)
-      link = std::make_shared< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > (tpcc_faces(tpcc));
+      link = std::make_shared< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > 
+              ( tpcc_faces< hyEdge_dim, space_dim, index_t >(tpcc) );
   }
 };
