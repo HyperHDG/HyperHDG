@@ -4,7 +4,7 @@
 #include <HyperHDG/DenseLA.hxx>
 #include <HyperHDG/Topology/Cubic.hxx>
 
-#include <ND_Cubic.hxx>
+#include <HyperHDG/NodeDescriptor/Cubic.hxx>
 
 #include <tensor_mapping.hxx>
 #include <array>
