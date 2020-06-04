@@ -74,10 +74,10 @@ class Cubic
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index, const Cubic& topology)
+      hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
       {
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
-          = get_element<hyEdge_dimT, space_dimT,unsigned int>(topology.tpcc_elements_, index);
+          = get_element<hyEdge_dimT, space_dimT,unsigned int>(node_desc.tpcc_elements_, index);
         for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
         {
           tpcc_elem_t<hyEdge_dimT-1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
@@ -85,7 +85,7 @@ class Cubic
           { 
             unsigned int coordinate = exterior_coordinate<hyEdge_dimT-1, space_dimT>(face, dim);
             unsigned int direction  = exterior_direction <hyEdge_dimT-1, space_dimT>(face, dim);
-            if (coordinate == 0 || coordinate == topology.num_elements().operator[](direction))
+            if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
               hyFace_types_[i] = 2 * direction + (coordinate != 0) + 1;
             else hyFace_types_[i] = 0;
           }
