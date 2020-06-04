@@ -117,8 +117,10 @@ class UnitCube
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index, const std::array<unsigned int, space_dimT>& num_elements)
-      {};
+      hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
+      {
+        
+      };
     
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
@@ -243,7 +245,7 @@ class UnitCube
      * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     const value_type operator[](const hyEdge_index_t index) const
-    { return hyEdge(index, num_elements_); }
+    { return hyEdge(index, *this); }
 }; // end class UnitCube
 
   template <unsigned int edim, unsigned int sdim, typename hyEdge_index_t>
