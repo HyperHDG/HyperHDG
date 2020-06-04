@@ -17,6 +17,11 @@
 #include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
+#include <memory>
+
+// -------------------------------------------------------------------------------------------------
+// Wrapper classes for tensor product chain complex and its elements.
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   Type of a tensor product chain complex.
@@ -28,6 +33,10 @@ using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int,
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim >
 using tpcc_elem_t = TPCC::Element<space_dim, hyEdge_dim, unsigned int, unsigned int>;
+
+// -------------------------------------------------------------------------------------------------
+// Functions considering full tensor product chain complexes.
+// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   Create a tensor product chain complex.
@@ -51,6 +60,11 @@ tpcc_faces ( const tpcc_t < hyEdge_dim, space_dim, index_t >& elements )
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 index_t n_elements( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc ) { return tpcc.size(); }
+
+// -------------------------------------------------------------------------------------------------
+// Functions related to single elements.
+// -------------------------------------------------------------------------------------------------
+
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
@@ -86,3 +100,46 @@ get_face ( const tpcc_elem_t<hyEdge_dim, space_dim>& element, const unsigned int
               << "You requested number " << index << "." );
   return element.facet(index);
 }
+
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+unsigned int elem_orientation ( const tpcc_elem_t<hyEdge_dim,space_dim>& elem )
+{ return elem.direction_index(); }
+
+
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+unsigned int exterior_direction
+( const tpcc_elem_t<hyEdge_dim,space_dim>& elem, const unsigned int index )
+{ 
+  hy_assert( index < space_dim - hyEdge_dim ,
+             "There are only " << space_dim - hyEdge_dim << " exterior directions." );
+  return elem.across_direction(index);
+}
+
+
+template < unsigned int hyEdge_dim, unsigned int space_dim >
+unsigned int exterior_coordinate
+( const tpcc_elem_t<hyEdge_dim,space_dim>& elem, const unsigned int index )
+{ 
+  hy_assert( index < space_dim - hyEdge_dim ,
+             "There are only " << space_dim - hyEdge_dim << " exterior directions." );
+  return elem.across_coordinate(index);
+}
+
+// -------------------------------------------------------------------------------------------------
+// A series of tensor product chain complexes.
+// -------------------------------------------------------------------------------------------------
+
+/*!*************************************************************************************************
+ * \brief   A chain of tensor product chain complexes.
+ **************************************************************************************************/
+template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int >
+struct tpcc_chain
+{
+  tpcc_t<hyEdge_dim, space_dim, index_t> tpcc;
+  std::shared_ptr< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > link;
+  tpcc_chain (const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc_)  : tpcc(tpcc_)
+  { 
+    if constexpr (hyEdge_dim > 0)
+      link = std::make_shared< tpcc_chain<hyEdge_dim - 1, space_dim, index_t> > (tpcc_faces(tpcc));
+  }
+};

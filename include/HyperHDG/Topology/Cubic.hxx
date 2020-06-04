@@ -243,6 +243,14 @@ class Cubic
      **********************************************************************************************/
     const std::array<unsigned int, space_dimT>& num_elements() const { return num_elements_; }
     /*!*********************************************************************************************
+     * \brief   Tensor product chain complex for elements.
+     **********************************************************************************************/
+    tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elem() const { return tpcc_elements_; }
+    /*!*********************************************************************************************
+     * \brief   Tensor product chain complex for faces.
+     **********************************************************************************************/
+    tpcc_t<hyEdge_dimT-1, space_dimT, hyNode_index_t> tpcc_face() const { return tpcc_faces_; }
+    /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
