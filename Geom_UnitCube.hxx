@@ -30,6 +30,9 @@ namespace Geometry
 /*!*************************************************************************************************
  * \brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs that are unit cubes.
  *
+ * \todo    CONSIDER WRAPPER CONSTRUCTOR!
+ * 
+ * 
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
  * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
@@ -86,8 +89,8 @@ class UnitCube
       unsigned int fill_points
       ( 
         unsigned int corner_index,
-        tpcc_elem_t<hyEdge_dimTT, space_dimTT>& elem/*,
-        const tpcc_t<hyEdge_dimTT, space_dimTT, hyEdge_index_t>& elements*/
+        tpcc_elem_t<hyEdge_dimTT, space_dimTT>& elem,
+        const tpcc_t<hyEdge_dimTT, space_dimTT, hyEdge_index_t>& elements
       )
       {
         if constexpr ( hyEdge_dimTT == 0 )
@@ -99,12 +102,12 @@ class UnitCube
         }
         else
         {
-   //       const tpcc_t<hyEdge_dimTT-1, space_dimTT, hyEdge_index_t> faces 
-   //         = tpcc_faces<hyEdge_dimTT,space_dimTT,hyEdge_index_t>(elements);
+          const tpcc_t<hyEdge_dimTT-1, space_dimTT, hyEdge_index_t> faces 
+            = tpcc_faces<hyEdge_dimTT,space_dimTT,hyEdge_index_t>(elements);
           for (unsigned int i = 0; i < 2; ++i)
           {
             tpcc_elem_t<hyEdge_dimTT-1, space_dimTT> face = get_face<hyEdge_dimTT, space_dimTT>(elem, i);
-            corner_index = fill_points<hyEdge_dimTT-1,space_dimTT>( corner_index, face/*, faces*/ );
+            corner_index = fill_points<hyEdge_dimTT-1,space_dimTT>( corner_index, face, faces );
           }
         }
         return corner_index;
@@ -152,7 +155,7 @@ class UnitCube
         tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements(geometry.num_elements_);
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
           = get_element<hyEdge_dimT, space_dimT,unsigned int>(tpcc_elements, index);
-        fill_points<hyEdge_dimT,space_dimT>(corner_index, elem/*, geometry.tpcc_elements_*/);
+        fill_points<hyEdge_dimT,space_dimT>(corner_index, elem, geometry.tpcc_elements_);
       }
     
       /*!*******************************************************************************************
