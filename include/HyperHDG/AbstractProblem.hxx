@@ -243,8 +243,8 @@ class AbstractProblem
         ( 
           not_uses_geometry
           < LocalSolverT,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
-            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>& )
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
           >::value
         )
           hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
