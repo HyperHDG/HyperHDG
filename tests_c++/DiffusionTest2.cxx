@@ -1,7 +1,7 @@
 #include <HyperHDG/AbstractProblem.hxx>
-#include <Geom_UnitCube.hxx>
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
 #include <HyperHDG/SparseLinearAlgebra.hxx>
+#include <HyperHDG/Geometry/Cubic.hxx>
+#include <HyperHDG/LocalSolver/Diffusion.hxx>
 
 using namespace std;
 using namespace SparseLA;
