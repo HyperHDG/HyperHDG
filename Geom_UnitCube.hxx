@@ -129,10 +129,10 @@ class UnitCube
       inline void generate_mapping_if_needed()
       {
         if (mapping) return;
-        Point<space_dimT,pt_coord_t> translation = (Point<space_dimT,pt_coord_t>) point(0);
+        Point<space_dimT,pt_coord_t> translation = (Point<space_dimT,pt_coord_t>) points_[0];
         SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          matrix.set_column(dim, (Point<space_dimT,pt_coord_t>) point(1<<dim) - translation);
+          matrix.set_column(dim, (Point<space_dimT,pt_coord_t>) points_[1<<dim] - translation);
         mapping = std::make_shared<mapping_t>(translation, matrix);
       }
       /*!*******************************************************************************************
@@ -175,11 +175,13 @@ class UnitCube
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        *
+       * \todo    This function is deprecated and will be removed.
+       * 
        * Return a \c Point describing the position of a vertex of a hyperedge.
        *
        * \retval  point           Point/Vertex of the hyperedge.
        ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
+ //     Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
 
 
       /*!*******************************************************************************************

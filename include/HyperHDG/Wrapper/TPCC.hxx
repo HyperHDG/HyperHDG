@@ -17,7 +17,6 @@
 #include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
-#include <memory>
 
 // -------------------------------------------------------------------------------------------------
 // Wrapper classes for tensor product chain complex and its elements.
@@ -43,7 +42,7 @@ using tpcc_elem_t = TPCC::Element<space_dim, hyEdge_dim, unsigned int, unsigned 
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int >
 tpcc_t < hyEdge_dim, space_dim, index_t >
-create_tpcc( const std::array<unsigned int,space_dim>& dimensions )
+create_tpcc( const std::array<index_t, space_dim>& dimensions )
 { 
   static_assert( space_dim >= hyEdge_dim , "Hypercube dim must not be bigger than spatial dim!");
   return TPCC::Lexicographic<space_dim,hyEdge_dim,index_t,unsigned int, unsigned int>(dimensions);
