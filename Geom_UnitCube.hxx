@@ -84,38 +84,70 @@ class UnitCube
        * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
       std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> points_;
-      
+      /*!*******************************************************************************************
+       * \brief   Fill array of vertices of hyEdge.
+       ********************************************************************************************/
       template<unsigned int hyEdge_dimTT, unsigned int space_dimTT>
       unsigned int fill_points
       ( 
-        unsigned int corner_index,
-        tpcc_elem_t<hyEdge_dimTT, space_dimTT>& elem,
-        const tpcc_t<hyEdge_dimTT, space_dimTT, hyEdge_index_t>& elements
+        unsigned int index, 
+        const tpcc_elem_t<hyEdge_dimTT,space_dimTT>& elem, const UnitCube& geometry
       )
       {
         if constexpr ( hyEdge_dimTT == 0 )
         {
           Point<space_dimT> pt;
           for (unsigned int dim = 0; dim < space_dimTT; ++dim)
-            pt[dim] = exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim);
-          points_[corner_index++] = pt;
+            pt[dim] = exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
+                        / geometry.num_elements_[dim];
+          points_[index++] = pt;
         }
         else
-        {
-          const tpcc_t<hyEdge_dimTT-1, space_dimTT, hyEdge_index_t> faces 
-            = tpcc_faces<hyEdge_dimTT,space_dimTT,hyEdge_index_t>(elements);
           for (unsigned int i = 0; i < 2; ++i)
-          {
-            tpcc_elem_t<hyEdge_dimTT-1, space_dimTT> face = get_face<hyEdge_dimTT, space_dimTT>(elem, i);
-            corner_index = fill_points<hyEdge_dimTT-1,space_dimTT>( corner_index, face, faces );
-          }
-        }
-        return corner_index;
+            index = fill_points<hyEdge_dimTT-1,space_dimTT>
+                      ( index, get_face<hyEdge_dimTT, space_dimTT>(elem, i), geometry );
+        return index;
       }
-      
     public:
-      static constexpr unsigned int space_dim() { return space_dimT; }
+      public:
+      /*!*******************************************************************************************
+       * \brief   Returns dimension of the hyperedge.
+       ********************************************************************************************/
       static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
+      /*!*******************************************************************************************
+       * \brief   Returns dimension of the surrounding space.
+       ********************************************************************************************/
+      static constexpr unsigned int space_dim() { return space_dimT; }
+      /*!*******************************************************************************************
+       * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
+       *          spatial dimension.
+       *
+       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
+       *          A prototype of this function is located in the cxx file, where you could also
+       *          insert the new function.
+       * 
+       * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
+       * which is given as input data and the index of the hyperedge to be constructed.
+       * 
+       * \param   index           The index of the hyperedge to be created.
+       * \param   num_elements    A \c std::array containing number of elements per dimension.
+       ********************************************************************************************/
+      hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
+      {
+        tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
+          = get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
+        fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
+      }
+      /*!*******************************************************************************************
+       * \brief   Return vertex of specified index of a hyperedge.
+       *
+       * Return a \c Point describing the position of a vertex of a hyperedge.
+       *
+       * \retval  point           Point/Vertex of the hyperedge.
+       ********************************************************************************************/
+      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
+
+
       template <typename pt_coord_t>
       Point<space_dimT, pt_coord_t> map_ref_to_phys(const Point<hyEdge_dimT,pt_coord_t>& pt) const
       {
@@ -135,38 +167,8 @@ class UnitCube
         return normal;
       }
       double face_area(const unsigned int index) {return 1.;}
-      /*!*******************************************************************************************
-       * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
-       *          spatial dimension.
-       *
-       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
-       *          A prototype of this function is located in the cxx file, where you could also
-       *          insert the new function.
-       * 
-       * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
-       * which is given as input data and the index of the hyperedge to be constructed.
-       * 
-       * \param   index           The index of the hyperedge to be created.
-       * \param   num_elements    A \c std::array containing number of elements per dimension.
-       ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
-      {
-        unsigned int corner_index = 0;
-        tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements(geometry.num_elements_);
-        tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
-          = get_element<hyEdge_dimT, space_dimT,unsigned int>(tpcc_elements, index);
-        fill_points<hyEdge_dimT,space_dimT>(corner_index, elem, geometry.tpcc_elements_);
-      }
     
-      /*!*******************************************************************************************
-       * \brief   Return vertex of specified index of a hyperedge.
-       *
-       * Return a \c Point describing the position of a vertex of a hyperedge.
-       *
-       * \retval  point           Point/Vertex of the hyperedge.
-       ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
-
+      
       /*!*******************************************************************************************
        * \brief Return data of the mapping in the tensor product of a one-dimensional quadrature set.
        *
