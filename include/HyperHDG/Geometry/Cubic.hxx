@@ -1,13 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/DenseLA.hxx>
 #include <HyperHDG/Topology/Cubic.hxx>
 #include <HyperHDG/Mapping/Linear.hxx>
-
-#include <HyperHDG/NodeDescriptor/Cubic.hxx>
-
-#include <tensor_mapping.hxx>
 #include <array>
 
 /*!*************************************************************************************************
