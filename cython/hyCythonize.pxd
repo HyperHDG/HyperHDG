@@ -3,5 +3,5 @@
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 
-cdef extern from "<Cythonize.cxx>" :
+cdef extern from "<cythonize.cxx>" :
   cdef string hyCythonize(vector[string], vector[string], unsigned int, unsigned int, unsigned int)
