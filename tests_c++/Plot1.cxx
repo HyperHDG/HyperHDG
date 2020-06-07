@@ -1,5 +1,5 @@
 #include <HyperHDG/Geometry/Cubic.hxx>
-// #include <HDGHyperGraph.hxx>
+#include <HyperHDG/NodeDescriptor/Cubic.hxx>
 #include <LSol_Template.hxx>
 #include <HyperHDG/Plot.hxx>
 #include <iostream>

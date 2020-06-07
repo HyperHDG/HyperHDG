@@ -1,6 +1,7 @@
 #include <HyperHDG/AbstractProblem.hxx>
 #include <HyperHDG/SparseLinearAlgebra.hxx>
 #include <HyperHDG/Geometry/Cubic.hxx>
+#include <HyperHDG/NodeDescriptor/Cubic.hxx>
 #include <HyperHDG/LocalSolver/Diffusion.hxx>
 
 using namespace std;

@@ -14,7 +14,9 @@ problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
          +                  "NodeDescriptor::Cubic< 1, 3 >, " \
          +                  "Diffusion< 1, 3, 1, 2 * 1 > " \
          +                ">"
-filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
+filenames = [ "HyperHDG/Geometry/Cubic.hxx" , \
+              "HyperHDG/NodeDescriptor/Cubic.hxx" , \
+              "HyperHDG/LocalSolver/Diffusion.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
