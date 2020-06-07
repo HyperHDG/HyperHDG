@@ -1,14 +1,11 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 /**
- * \brief Implementation the interface of local solvers needed by enclosing objects in a minimal way.
+ * \brief Implementation the interface of local solvers needed by enclosing objects in minimal way.
  *
- * The class serves as a template for the implementation of local
- * solvers. It also serves as a minimal input to other classes using
- * local solvers.
- *
- * The local solver uses no degrees of freedom on the nodes and also
- * produces no output.
+ * The class serves as a template for the implementation of local solvers. It also serves as a
+ * minimal input to other classes using local solvers.
+ * The local solver uses no degrees of freedom on the nodes and also produces no output.
  *
  * \todo Add functions for naming and structuring VTK output of ode and edge values
  */
