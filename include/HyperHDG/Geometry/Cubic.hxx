@@ -104,14 +104,19 @@ class UnitCube
         {
           Point<space_dimT> pt;
           for (unsigned int dim = 0; dim < space_dimTT; ++dim)
-            pt[dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
-                        / (pt_coord_t) geometry.num_elements_[dim];
-          points_[index++] = pt;
+          {
+            unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim);
+            pt[ext_dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
+                             / (pt_coord_t) geometry.num_elements_[ext_dim];
+          }
+          points_[index++] = pt;          
         }
         else
+        {
           for (unsigned int i = 0; i < 2; ++i)
             index = fill_points<hyEdge_dimTT-1,space_dimTT>
                       ( index, get_face<hyEdge_dimTT, space_dimTT>(elem, i), geometry );
+        }
         return index;
       }
       /*!*******************************************************************************************
