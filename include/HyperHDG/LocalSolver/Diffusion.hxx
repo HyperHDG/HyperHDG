@@ -498,12 +498,11 @@ struct DiffusionParametersDefault
   template < unsigned int length >
   static std::array<unsigned int, length> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
-  { return 1.;  }
+  { return 1.; }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { Point<space_dimT,param_float_t> a;
-    return (pt == a); }
+  { Point<space_dimT,param_float_t> a; return (pt == a); }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
