@@ -401,8 +401,12 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to first \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT,NodeT, hyEdge_index_t >::iterator begin() const
-    { return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator(*this, 0); }
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT,NodeT, hyEdge_index_t >::iterator
+    begin() const
+    { 
+      return HDGHyperGraph< n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator
+               (*this, 0);
+    }
     /*!*********************************************************************************************
      * \brief   Return iterator to the end of \c hyEdge list.
      *
@@ -413,10 +417,11 @@ class HDGHyperGraph
      *
      * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
      **********************************************************************************************/
-    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator end() const
+    typename HDGHyperGraph<n_dofs_per_nodeT, TopoT, GeomT, NodeT, hyEdge_index_t >::iterator
+    end() const
     { 
-      return
-        HDGHyperGraph<n_dofs_per_nodeT,TopoT,GeomT,NodeT,hyEdge_index_t>::iterator(*this, n_hyEdges());
+      return HDGHyperGraph<n_dofs_per_nodeT,TopoT,GeomT,NodeT,hyEdge_index_t>::iterator
+               (*this, n_hyEdges());
     }
     /*!*********************************************************************************************
      * \brief   Return const reference to HyperNodeFactory.
