@@ -638,8 +638,8 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_mat       Matrix of the local solver.
      **********************************************************************************************/
-    template < typename GeomT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
-    assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const;
+    template < typename hyEdgeT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
+    assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const;
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from skeletal).
      *
@@ -659,11 +659,11 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    template < typename GeomT >
+    template < typename hyEdgeT >
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      GeomT                                                                     & geom 
+      hyEdgeT                                                                   & hyper_edge 
     )  const;
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from global right-hand side).
@@ -682,8 +682,9 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_rhs       Local right hand side of the locasl solver.
      **********************************************************************************************/
-    template < typename GeomT >
-    inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs ( GeomT& geom )  const;
+    template < typename hyEdgeT >
+    inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs
+    ( hyEdgeT& hyper_edge )  const;
     /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from skeletal).
      *
@@ -692,16 +693,16 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
-    template < typename GeomT >  inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem
+    template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      GeomT                                                                     & geom
+      hyEdgeT                                                                   & hyper_edge
     )  const
     {
       try
       { 
-        return (assemble_rhs_from_lambda(lambda_values, geom) 
-                 / assemble_loc_matrix(tau_, geom)).data();
+        return (assemble_rhs_from_lambda(lambda_values, hyper_edge) 
+                 / assemble_loc_matrix(tau_, hyper_edge)).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -717,12 +718,14 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
-    template < typename GeomT >
-    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs ( GeomT & geom )  const
+    template < typename hyEdgeT >
+    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs
+    ( hyEdgeT & hyper_edge )  const
     {
       try 
       { 
-        return (assemble_rhs_from_global_rhs(geom) / assemble_loc_matrix(tau_, geom)).data();
+        return (assemble_rhs_from_global_rhs(hyper_edge)
+                 / assemble_loc_matrix(tau_, hyper_edge)).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -742,9 +745,9 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    template < typename GeomT >
+    template < typename hyEdgeT >
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT > primal_at_boundary
-    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, GeomT& geom ) const;
+    ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs, hyEdgeT& hyper_edge ) const;
     /*!*********************************************************************************************
      * \brief   Evaluate dual variable at boundary.
      *
@@ -756,9 +759,12 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
      **********************************************************************************************/
-    template < typename GeomT >
+    template < typename hyEdgeT >
     inline std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT > dual_at_boundary
-    ( const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs, GeomT& geom ) const;
+    ( 
+      const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>& coeffs,
+      hyEdgeT& hyper_edge
+    ) const;
     
   public:
   
@@ -789,22 +795,23 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      GeomT                                                                     & geom
+      hyEdgeT                                                                   & hyper_edge
     )  const
     {
-      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values, geom);
+      std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values, hyper_edge);
       
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
-        primals(primal_at_boundary(coeffs,geom)), duals(dual_at_boundary(coeffs,geom));
+        primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           bdr_values[i][j] 
-            = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j] * geom.face_area(i);
+            = duals[i][j] + tau_ * primals[i][j] 
+              - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
        
       return bdr_values;
     }
@@ -815,13 +822,13 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( GeomT& geom )  const
+    ( hyEdgeT& hyper_edge )  const
     {
-      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(geom);
+      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(hyper_edge);
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
-        primals(primal_at_boundary(coeffs,geom)), duals(dual_at_boundary(coeffs,geom));
+        primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
   
       for (unsigned int i = 0; i < bdr_values.size(); ++i)
         for (unsigned int j = 0; j < bdr_values[i].size(); ++j)
@@ -829,11 +836,12 @@ class Diffusion
             
       return bdr_values;
     }
-    template < class GeomT >
+    
+    template < class hyEdgeT >
     std::array< lSol_float_t, n_errors() > calc_loc_error
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      GeomT                                                                     & geom
+      hyEdgeT                                                                   & hyper_edge
     )  const
     {
       std::array< lSol_float_t, n_errors() > result;
@@ -846,15 +854,14 @@ class Diffusion
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      **********************************************************************************************/
-    template < class GeomT >
-    std::array<lSol_float_t, n_shape_bdr_> dirichlet_coeffs ( GeomT& geom )  const
+    template < class hyEdgeT >
+    std::array<lSol_float_t, n_shape_bdr_> dirichlet_coeffs ( hyEdgeT& hyper_edge )  const
     {
       std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
   
       for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-        bdr_coeffs[i] = integrator.template
-                          integrate_vol_phifunc<GeomT,parameters::dirichlet_value>(i, geom)
-                        / geom.area();
+        bdr_coeffs[i] = integrator.template integrate_vol_phifunc<hyEdgeT,parameters::
+                          dirichlet_value>(i, hyper_edge.geometry) / hyper_edge.geometry.area();
 
       return bdr_coeffs;
     }
@@ -864,15 +871,15 @@ class Diffusion
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      **********************************************************************************************/
-    template < class GeomT >
-    std::array<lSol_float_t, n_shape_bdr_> neumann_coeffs ( GeomT& geom )  const
+    template < class hyEdgeT >
+    std::array<lSol_float_t, n_shape_bdr_> neumann_coeffs ( hyEdgeT& hyper_edge )  const
     {
       std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
   
       for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         bdr_coeffs[i] = integrator.template
-                          integrate_vol_phifunc<GeomT,parameters::neumann_value>(i, geom)
-                        / geom.area();
+                          integrate_vol_phifunc<decltype(hyEdgeT::geometry),parameters::neumann_value>(i, hyper_edge.geometry)
+                        / hyper_edge.geometry.area();
 
       return bdr_coeffs;
     }
@@ -887,7 +894,7 @@ class Diffusion
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
+    template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
@@ -901,7 +908,7 @@ class Diffusion
     ( 
       const std::array<abscissa_float_t,sizeT>  & abscissas,
       const input_array_t                       & lambda_values,
-      GeomT                                     & geom
+      hyEdgeT                                   & hyper_edge
     )  const;
 }; // end of class Diffusion
 
@@ -925,7 +932,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename GeomT >
+template < typename hyEdgeT >
 inline SmallSquareMat
 <
   Diffusion
@@ -934,7 +941,7 @@ inline SmallSquareMat
 >
 Diffusion
 < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
+assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
 { 
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
@@ -947,19 +954,19 @@ assemble_loc_matrix ( const lSol_float_t tau, GeomT& geom ) const
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphifunc
-                        < GeomT, parameters::inverse_diffusion_coeff > (i, j, geom);
+                        < decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff > (i, j, hyper_edge.geometry);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      grad_int_vec = integrator.template integrate_vol_nablaphiphi<GeomT>(i, j, geom);       
+      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);       
 
       face_integral = 0.;
       normal_int_vec = 0.;
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        helper = integrator.template integrate_bdr_phiphi<GeomT>(i, j, face, geom);
+        helper = integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
         face_integral += helper;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          normal_int_vec[dim] += geom.local_normal(face).operator[](dim) * helper; 
+          normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper; 
       }
 
       local_mat( hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
@@ -987,7 +994,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename GeomT >
+template < typename hyEdgeT >
 inline SmallVec
 <
   Diffusion
@@ -999,7 +1006,7 @@ Diffusion
 assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-  GeomT                                                                     & geom 
+  hyEdgeT                                                                   & hyper_edge 
 )  const
 {
   hy_assert( lambda_values.size() == 2 * hyEdge_dimT ,
@@ -1015,11 +1022,11 @@ assemble_rhs_from_lambda
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
+        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i]
-            -= geom.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
+            -= hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
       }
   
   return right_hand_side;
@@ -1036,7 +1043,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename GeomT >
+template < typename hyEdgeT >
 inline SmallVec
 <
   Diffusion
@@ -1045,12 +1052,12 @@ inline SmallVec
 >
 Diffusion
 < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-assemble_rhs_from_global_rhs ( GeomT & geom )  const
+assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
-      = integrator.template integrate_vol_phifunc<GeomT,parameters::right_hand_side>(i, geom);
+      = integrator.template integrate_vol_phifunc<hyEdgeT::geometry,parameters::right_hand_side>(i, hyper_edge.geometry);
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
 
@@ -1065,7 +1072,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename GeomT >
+template < typename hyEdgeT >
 inline std::array
 < 
   std::array
@@ -1082,7 +1089,7 @@ Diffusion
 primal_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
-  GeomT                                         & geom
+  hyEdgeT                                       & hyper_edge
 )  const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
@@ -1094,7 +1101,7 @@ primal_at_boundary
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values[face][j] 
           += coeffs[hyEdge_dimT * n_shape_fct_ + i] 
-              * integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
+              * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
   
   return bdr_values;
 } // end of Diffusion::primal_at_boundary
@@ -1110,7 +1117,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename GeomT >
+template < typename hyEdgeT >
 inline std::array
 < 
   std::array
@@ -1127,7 +1134,7 @@ Diffusion
 dual_at_boundary
 ( 
   const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>  & coeffs,
-  GeomT                                                           & geom
+  hyEdgeT                                                         & hyper_edge
 )  const
 {
   std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
@@ -1139,10 +1146,10 @@ dual_at_boundary
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<GeomT>(i, j, face, geom);
+        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           bdr_values[face][j] 
-            += geom.local_normal(face).operator[](dim) * integral
+            += hyper_edge.geometry.local_normal(face).operator[](dim) * integral
                  * coeffs[dim * n_shape_fct_ + i];
       }
   
@@ -1160,7 +1167,7 @@ template
   template < unsigned int, typename > typename parameters, typename lSol_float_t,
   unsigned int space_dimTP, typename lSol_float_tP
 >
-template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename GeomT >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT >
 std::array
 <
   std::array
@@ -1178,10 +1185,10 @@ bulk_values
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
-  GeomT                                     & geom
+  hyEdgeT                                   & hyper_edge
 )  const
 {
-  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values, geom);
+  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values, hyper_edge);
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;

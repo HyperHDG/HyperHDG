@@ -83,11 +83,11 @@ class AbstractProblem
      **********************************************************************************************/
     AbstractProblem
     ( 
-      const typename TopologyT::constructor_value_type& construct_topo,
-      const typename GeometryT::constructor_value_type& construct_geom,
+      const typename TopologyT::constructor_value_type&    construct_topo,
+      const typename GeometryT::constructor_value_type&    construct_geom,
       const typename LocalSolverT::constructor_value_type& construct_loc_sol
     )
-    : hyper_graph_  ( construct_topo, construct_geom ), local_solver_ ( construct_loc_sol )
+    : hyper_graph_ ( construct_topo, construct_geom ), local_solver_ ( construct_loc_sol )
     {
       static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -107,10 +107,10 @@ class AbstractProblem
      **********************************************************************************************/
     AbstractProblem
     ( 
-      const typename TopologyT::constructor_value_type& construct_topo,
+      const typename TopologyT::constructor_value_type&    construct_topo,
       const typename LocalSolverT::constructor_value_type& construct_loc_sol
     )
-    : hyper_graph_  ( construct_topo ), local_solver_ ( construct_loc_sol )
+    : hyper_graph_ ( construct_topo ), local_solver_ ( construct_loc_sol )
     {
       static_assert( TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim() ,
                      "Hyperedge dimension of topology and geometry must be equal!" );
@@ -230,10 +230,10 @@ class AbstractProblem
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Do matrix--vector multiplication by iterating over all hyperedges.
-      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyEdge_dofs[hyNode] = 
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
@@ -248,7 +248,7 @@ class AbstractProblem
           >::value
         )
           hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
-        else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge.geometry);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyper_edge);
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -319,7 +319,7 @@ class AbstractProblem
           >::value
         )
           loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
-        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge.geometry);
+        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge);
         
         // Fill the vector of errors.
         for ( unsigned int err = 0 ; err < n_errors ; ++err )  result[err] += loc_error[err];

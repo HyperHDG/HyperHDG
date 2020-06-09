@@ -447,7 +447,7 @@ void plot_vtu
         local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
       else
       {
-        auto geometry =  hyper_graph.hyEdge_geometry(he_number);
+        auto geometry =  hyper_graph[he_number];
         local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
       }
 
