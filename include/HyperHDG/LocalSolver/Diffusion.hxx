@@ -877,8 +877,9 @@ class Diffusion
       std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
   
       for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-        bdr_coeffs[i] = integrator.template
-                          integrate_vol_phifunc<decltype(hyEdgeT::geometry),parameters::neumann_value>(i, hyper_edge.geometry)
+        bdr_coeffs[i] = integrator.template integrate_vol_phifunc
+                          <decltype(hyEdgeT::geometry),parameters::neumann_value>
+                          (i, hyper_edge.geometry)
                         / hyper_edge.geometry.area();
 
       return bdr_coeffs;
@@ -954,16 +955,19 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphifunc
-                        < decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff > (i, j, hyper_edge.geometry);
+                        < decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff >
+                        (i, j, hyper_edge.geometry);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);       
+      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>
+                       (i, j, hyper_edge.geometry);       
 
       face_integral = 0.;
       normal_int_vec = 0.;
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        helper = integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
+        helper = integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>
+                   (i, j, face, hyper_edge.geometry);
         face_integral += helper;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper; 
@@ -1022,11 +1026,13 @@ assemble_rhs_from_lambda
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
+        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
+                     (i, j, face, hyper_edge.geometry);
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i]
-            -= hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] * integral; 
+            -= hyper_edge.geometry.local_normal(face).operator[](dim) 
+                 * lambda_values[face][j] * integral; 
       }
   
   return right_hand_side;
@@ -1057,7 +1063,8 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
-      = integrator.template integrate_vol_phifunc<hyEdgeT::geometry,parameters::right_hand_side>(i, hyper_edge.geometry);
+      = integrator.template integrate_vol_phifunc<hyEdgeT::geometry,parameters::right_hand_side>
+          (i, hyper_edge.geometry);
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
 
@@ -1101,7 +1108,8 @@ primal_at_boundary
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values[face][j] 
           += coeffs[hyEdge_dimT * n_shape_fct_ + i] 
-              * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
+              * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
+                  (i, j, face, hyper_edge.geometry);
   
   return bdr_values;
 } // end of Diffusion::primal_at_boundary
@@ -1146,7 +1154,8 @@ dual_at_boundary
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
+        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
+                     (i, j, face, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           bdr_values[face][j] 
             += hyper_edge.geometry.local_normal(face).operator[](dim) * integral
@@ -1188,7 +1197,8 @@ bulk_values
   hyEdgeT                                   & hyper_edge
 )  const
 {
-  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values, hyper_edge);
+  std::array< lSol_float_t, n_loc_dofs_ > coefficients
+    = solve_local_problem(lambda_values, hyper_edge);
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
