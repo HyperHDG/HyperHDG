@@ -2,6 +2,7 @@
 
 #include <HyperHDG/Topology/Cubic.hxx>
 #include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/Hypercube.hxx>
 #include <array>
 #include <vector>
 
@@ -81,13 +82,14 @@ class Cubic
         for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
         {
           tpcc_elem_t<hyEdge_dimT-1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
+          std::array<unsigned int, space_dimT> boundary; boundary.fill(0);
+          hyFace_types_[i] = 0;
           for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT; ++dim)
           { 
             unsigned int coordinate = exterior_coordinate<hyEdge_dimT-1, space_dimT>(face, dim);
             unsigned int direction  = exterior_direction <hyEdge_dimT-1, space_dimT>(face, dim);
             if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
-              hyFace_types_[i] = 2 * direction + (coordinate != 0) + 1;
-            else hyFace_types_[i] = 0;
+              hyFace_types_[direction] = (1 + (coordinate != 0)) * Hypercube<3>::pow(direction);
           }
         }
       }
