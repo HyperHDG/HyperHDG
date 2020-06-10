@@ -120,7 +120,10 @@ unsigned int exterior_direction
 { 
   hy_assert( index < space_dim - hyEdge_dim ,
              "There are only " << space_dim - hyEdge_dim << " exterior directions." );
-  return elem.across_direction(index);
+  unsigned int acr_dir = elem.across_direction(index);
+  hy_assert( acr_dir < space_dim ,
+             "Exterior direction must be smaller than amount of spatial dimensions!" );
+  return acr_dir;
 }
 
 
