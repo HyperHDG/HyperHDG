@@ -112,10 +112,10 @@ class LengtheningBeam
     /*!*********************************************************************************************
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
-    template<class GeomT> 
+    template<class hyEdgeT> 
     inline std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
-    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
-      GeomT& geom ) const
+    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<double, n_shape_bdr_> , 2*hyEdge_dimT > result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
@@ -125,7 +125,7 @@ class LengtheningBeam
         result[i].fill(0.);
       }
   
-      Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -136,16 +136,16 @@ class LengtheningBeam
     /*!*********************************************************************************************
      * \brief  Do the postprocessing to transfer local to global dofs.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
-    ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
-      GeomT& geom ) const
+    ( const std::array< std::array<double, n_shape_bdr_>, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge ) const
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!" );
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
       for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -229,14 +229,14 @@ class LengtheningBeam
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, GeomT& geom ) const
+      lambda_values, hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2*hyEdge_dimT >
-        lambda = node_dof_to_edge_dof(lambda_values, geom);
+        lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
@@ -247,7 +247,7 @@ class LengtheningBeam
         for (unsigned int j = 0; j < lambda[i].size(); ++j)
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
 
-      return edge_dof_to_node_dof(bdr_values, geom);
+      return edge_dof_to_node_dof(bdr_values, hyper_edge);
     }
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
@@ -256,20 +256,20 @@ class LengtheningBeam
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;
     }
 
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     GeomT& geom) const;
+     hyEdgeT& hyper_edge) const;
     
 }; // end of class LengtheningBeam
 
@@ -483,7 +483,7 @@ template
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t
 >
-template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
 std::array
 <
   std::array
@@ -495,10 +495,10 @@ std::array
 >
 LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  GeomT& geom) const
+  hyEdgeT& hyper_edge) const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
-    = solve_local_problem(node_dof_to_edge_dof(lambda_values, geom));
+    = solve_local_problem(node_dof_to_edge_dof(lambda_values, hyper_edge));
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
@@ -506,7 +506,7 @@ LengtheningBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_valu
  
   std::array<unsigned int, poly_deg+1> poly_indices;
   for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  Point<space_dim,lSol_float_t> normal_vector = geom.inner_normal(1);
+  Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
   std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
     values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
       
@@ -647,10 +647,10 @@ class BernoulliBendingBeam
     /*!*********************************************************************************************
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
-    template<class GeomT> 
+    template<class hyEdgeT> 
     inline std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
-    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
-      GeomT& geom, const unsigned int outer_index ) const
+    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge, const unsigned int outer_index ) const
     {
       std::array< std::array<double, 2 * n_shape_bdr_> , 2*hyEdge_dimT > result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
@@ -660,7 +660,7 @@ class BernoulliBendingBeam
         result[i].fill(0.);
       }
   
-      Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -674,16 +674,16 @@ class BernoulliBendingBeam
     /*!*********************************************************************************************
      * \brief  Do the postprocessing to transfer local to global dofs.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
-    ( const std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
-      GeomT& geom, const unsigned int outer_index ) const
+    ( const std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge, const unsigned int outer_index ) const
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
       for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -772,11 +772,11 @@ class BernoulliBendingBeam
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, GeomT& geom ) const
+      lambda_values, hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)  result[i].fill(0.);
@@ -784,7 +784,7 @@ class BernoulliBendingBeam
       for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
       {
         std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2*hyEdge_dimT >
-          lambda = node_dof_to_edge_dof(lambda_values, geom, dim);
+          lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
         std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
         std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > 
@@ -794,7 +794,7 @@ class BernoulliBendingBeam
           for (unsigned int j = 0; j < lambda[i].size(); ++j)
             bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
 
-        aux = edge_dof_to_node_dof(bdr_values, geom, dim);
+        aux = edge_dof_to_node_dof(bdr_values, hyper_edge, dim);
         for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
           for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
             result[i][j] += aux[i][j];
@@ -810,15 +810,15 @@ class BernoulliBendingBeam
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
     {
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;
     }
     
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
@@ -826,7 +826,7 @@ class BernoulliBendingBeam
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      GeomT& geom ) const;
+      hyEdgeT& hyper_edge ) const;
     
 }; // end of class BernoulliBendingBeam
 
@@ -1082,7 +1082,7 @@ template
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t
 >
-template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
 std::array
 <
   std::array
@@ -1094,7 +1094,7 @@ std::array
 >
 BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  GeomT& geom ) const
+  hyEdgeT& hyper_edge ) const
 {
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
@@ -1102,14 +1102,14 @@ BernoulliBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk
   for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
   {
     std::array< lSol_float_t, n_loc_dofs_ > coefficients
-      = solve_local_problem(node_dof_to_edge_dof(lambda_values, geom, dim_on));
+      = solve_local_problem(node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on));
 
     std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
     lSol_float_t fct_value;
  
     std::array<unsigned int, poly_deg+1> poly_indices;
     for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-    Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(dim_on);
+    Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(dim_on);
     std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
     values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
   
@@ -1227,16 +1227,16 @@ class LengtheningBernoulliBendingBeam
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, GeomT& geom ) const
+      lambda_values, hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
       
-      result = len_beam.numerical_flux_from_lambda(lambda_values, geom);
-      aux = ben_beam.numerical_flux_from_lambda(lambda_values, geom);
+      result = len_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
+      aux = ben_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
@@ -1252,24 +1252,24 @@ class LengtheningBernoulliBendingBeam
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;
     }
     
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     GeomT& geom) const
+     hyEdgeT& hyper_edge) const
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
         result, auxiliary;
-      result = len_beam.bulk_values(abscissas,lambda_values,geom);
-      auxiliary = ben_beam.bulk_values(abscissas,lambda_values,geom);
+      result = len_beam.bulk_values(abscissas,lambda_values,hyper_edge);
+      auxiliary = ben_beam.bulk_values(abscissas,lambda_values,hyper_edge);
 
       for (unsigned int i = 0; i < system_dimension(); ++i)
         for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
@@ -1396,10 +1396,10 @@ class TimoschenkoBendingBeam
     /*!*********************************************************************************************
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
-    template<class GeomT> 
+    template<class hyEdgeT> 
     inline std::array< std::array<double, 3 * n_shape_bdr_>, 2 * hyEdge_dimT > node_dof_to_edge_dof
-    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT > lambda,
-      GeomT& geom, const unsigned int outer_index ) const
+    ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge, const unsigned int outer_index ) const
     {
       std::array< std::array<double, 2 * n_shape_bdr_> , 2*hyEdge_dimT > result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
@@ -1409,7 +1409,7 @@ class TimoschenkoBendingBeam
         result[i].fill(0.);
       }
   
-      Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -1424,16 +1424,16 @@ class TimoschenkoBendingBeam
     /*!*********************************************************************************************
      * \brief  Do the postprocessing to transfer local to global dofs.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
-    ( const std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT > lambda,
-      GeomT& geom, const unsigned int outer_index ) const
+    ( const std::array< std::array<double, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >& lambda,
+      hyEdgeT& hyper_edge, const unsigned int outer_index ) const
     {
       hy_assert( n_shape_bdr_ == 1 , "This should be 1!")
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
       for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(outer_index);
+      Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
   
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -1523,11 +1523,11 @@ class TimoschenkoBendingBeam
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, GeomT& geom ) const
+      lambda_values, hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)  result[i].fill(0.);
@@ -1535,7 +1535,7 @@ class TimoschenkoBendingBeam
       for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
       {
         std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2*hyEdge_dimT >
-          lambda = node_dof_to_edge_dof(lambda_values, geom, dim);
+          lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
         std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda);
       
         std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > 
@@ -1545,7 +1545,7 @@ class TimoschenkoBendingBeam
           for (unsigned int j = 0; j < lambda[i].size(); ++j)
             bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda[i][j];
 
-        aux = edge_dof_to_node_dof(bdr_values, geom, dim);
+        aux = edge_dof_to_node_dof(bdr_values, hyper_edge, dim);
         for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
           for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
             result[i][j] += aux[i][j];
@@ -1561,16 +1561,16 @@ class TimoschenkoBendingBeam
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;
     }
     
     
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
@@ -1579,7 +1579,7 @@ class TimoschenkoBendingBeam
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      GeomT& geom ) const;
+      hyEdgeT& hyper_edge ) const;
     
 }; // end of class TimoschenkoBendingBeam
 
@@ -1836,7 +1836,7 @@ template
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t
 >
-template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
 std::array
 <
   std::array
@@ -1848,7 +1848,7 @@ std::array
 >
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  GeomT& geom ) const
+  hyEdgeT& hyper_edge ) const
 {
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
@@ -1856,14 +1856,14 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bu
   for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
   {
     std::array< lSol_float_t, n_loc_dofs_ > coefficients
-      = solve_local_problem(node_dof_to_edge_dof(lambda_values, geom, dim_on));
+      = solve_local_problem(node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on));
 
     std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
     lSol_float_t fct_value;
  
     std::array<unsigned int, poly_deg+1> poly_indices;
     for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-    Point<space_dim,lSol_float_t> normal_vector = geom.outer_normal(dim_on);
+    Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(dim_on);
     std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
     values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
   
@@ -1981,16 +1981,16 @@ class LengtheningTimoschenkoBendingBeam
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    template <class GeomT>
+    template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, GeomT& geom ) const
+      lambda_values, hyEdgeT& hyper_edge ) const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
       
-      result = len_beam.numerical_flux_from_lambda(lambda_values, geom);
-      aux = ben_beam.numerical_flux_from_lambda(lambda_values, geom);
+      result = len_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
+      aux = ben_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
 
       for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
         for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
@@ -2006,24 +2006,24 @@ class LengtheningTimoschenkoBendingBeam
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
-    template < class GeomT >
+    template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, GeomT& geom )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;
     }
     
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class GeomT>
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     GeomT& geom) const
+     hyEdgeT& hyper_edge) const
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
         result, auxiliary;
-      result = len_beam.bulk_values(abscissas,lambda_values,geom);
-      auxiliary = ben_beam.bulk_values(abscissas,lambda_values,geom);
+      result = len_beam.bulk_values(abscissas,lambda_values,hyper_edge);
+      auxiliary = ben_beam.bulk_values(abscissas,lambda_values,hyper_edge);
 
       for (unsigned int i = 0; i < system_dimension(); ++i)
         for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
