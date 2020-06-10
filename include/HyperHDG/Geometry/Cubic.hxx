@@ -108,6 +108,8 @@ class UnitCube
             unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim);
             pt[ext_dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
                              / (pt_coord_t) geometry.num_elements_[ext_dim];
+            hy_assert( 0. <= pt[ext_dim] && pt[ext_dim] <= 1.] ,
+                       "The unit cube has only these cooridnates." );
           }
           points_[index++] = pt;          
         }
