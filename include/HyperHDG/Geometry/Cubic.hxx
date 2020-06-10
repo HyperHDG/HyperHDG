@@ -108,7 +108,7 @@ class UnitCube
             unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim);
             pt[ext_dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
                              / (pt_coord_t) geometry.num_elements_[ext_dim];
-            hy_assert( 0. <= pt[ext_dim] && pt[ext_dim] <= 1.] ,
+            hy_assert( 0. <= pt[ext_dim] && pt[ext_dim] <= 1. ,
                        "The unit cube has only these cooridnates." );
           }
           points_[index++] = pt;          
@@ -172,6 +172,8 @@ class UnitCube
       {
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
           = get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
+        elem.print_debug(std::cout);
+        std::cout << std::endl;
         fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
       }
       /*!*******************************************************************************************

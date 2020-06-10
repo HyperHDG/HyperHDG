@@ -19,9 +19,9 @@ void test()
 {
   vector<unsigned int> num_elements;
 
-  if (space_dim >= 1) num_elements.push_back(2);
-  if (space_dim >= 2) num_elements.push_back(3);
-  if (space_dim >= 3) num_elements.push_back(4);
+  if (space_dim >= 1) num_elements.push_back(1);
+  if (space_dim >= 2) num_elements.push_back(1);
+  if (space_dim >= 3) num_elements.push_back(1);
 
   typedef Topology::Cubic<edge_dim,space_dim> Topo;
   typedef Geometry::UnitCube<edge_dim,space_dim> Geo;
@@ -48,11 +48,11 @@ void test()
 
 int main()
 {
-  test<1,1>();
-  test<1,2>();
-  test<2,2>();
-  test<1,3>();
+//  test<1,1>();
+//  test<1,2>();
+//  test<2,2>();
+//  test<1,3>();
   test<2,3>();
-  test<3,3>();
+//  test<3,3>();
   return 0;
 }
