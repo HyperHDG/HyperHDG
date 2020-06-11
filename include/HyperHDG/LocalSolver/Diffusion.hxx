@@ -502,7 +502,7 @@ struct DiffusionParametersDefault
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { Point<space_dimT,param_float_t> a; return (pt == a); }
+  { return norm_2(pt); }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
