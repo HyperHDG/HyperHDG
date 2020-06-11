@@ -172,8 +172,6 @@ class UnitCube
       {
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
           = get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
-        elem.print_debug(std::cout);
-        std::cout << std::endl;
         fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
       }
       /*!*******************************************************************************************
