@@ -807,39 +807,6 @@ class Diffusion
       return bdr_values;
     }
     /*!*********************************************************************************************
-     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
-     *
-     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
-     * \retval  vec_b         Local part of vector b.
-     **********************************************************************************************/
-    template < class hyEdgeT >
-    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( hyEdgeT& hyper_edge )  const
-    {
-      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem_rhs(hyper_edge);
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
-        primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
-  
-      for (unsigned int i = 0; i < bdr_values.size(); ++i)
-        for (unsigned int j = 0; j < bdr_values[i].size(); ++j)
-          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
-            
-      return bdr_values;
-    }
-    
-    template < class hyEdgeT >
-    std::array< lSol_float_t, n_errors() > calc_loc_error
-    ( 
-      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
-    )  const
-    {
-      std::array< lSol_float_t, n_errors() > result;
-      result.fill(0.);
-    }
-
-    /*!*********************************************************************************************
      * \brief   Get Dirichlet value coefficients of hyNode.
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
