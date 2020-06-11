@@ -47,14 +47,6 @@ class Diffusion_TensorialUniform
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Specify whether advanced functuions are implemented for this class
-     * 
-     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
-     * 
-     * \todo    Replace this by concept in C++20!
-     **********************************************************************************************/    
-    static constexpr bool advanced_functions() { return false; }
-    /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
      * \todo  Why are these called global degrees of freedom and not just `n_dofs_per_node()`?
@@ -206,26 +198,6 @@ class Diffusion_TensorialUniform
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
        
       return bdr_values;
-    }
-    /*!*********************************************************************************************
-     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
-     *
-     * \retval  vec_b         Local part of vector b.
-     **********************************************************************************************/
-    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond )  const
-    {
-      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;    
-      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)  bdr_values[i].fill(0.);        
-      return bdr_values;
-    }
-
-    std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT >
-    numerical_flux_from_rhs(  ) const
-    {
-      std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result;
-      for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-      return result;
     }
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
@@ -562,14 +534,6 @@ class Diffusion
      * \brief Dimension of hyper edge type that this object solves on.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-    /*!*********************************************************************************************
-     * \brief   Specify whether advanced functuions are implemented for this class
-     * 
-     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
-     * 
-     * \todo    Replace this by concept in C++20!
-     **********************************************************************************************/    
-    static constexpr bool advanced_functions() { return true; }
     /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 

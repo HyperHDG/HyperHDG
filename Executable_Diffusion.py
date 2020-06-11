@@ -45,7 +45,6 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
 vectorRHS = HDG_wrapper.return_zero_vector()
-# vectorRHS = HDG_wrapper.add_right_hand_side(vectorRHS)
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)
