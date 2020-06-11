@@ -494,7 +494,7 @@ template < unsigned int space_dimT, typename param_float_t = double >
 struct DiffusionParametersDefault
 {
   template < unsigned int length >
-  static std::array<unsigned int, length> dirichlet_nodes {1,2,3};
+  static std::array<unsigned int, length> dirichlet_nodes {1,2,3,4};
   template < unsigned int length >
   static std::array<unsigned int, length> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
@@ -699,36 +699,23 @@ class Diffusion
     template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      const unsigned int                                                          solution_type,
       hyEdgeT                                                                   & hyper_edge
     )  const
     {
       try
       { 
-        return (assemble_rhs_from_lambda(lambda_values, hyper_edge) 
-                 / assemble_loc_matrix(tau_, hyper_edge)).data();
-      }
-      catch (LAPACKexception& exc)
-      {
-        hy_assert( 0 == 1 ,
-                   exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
-        throw exc;
-      }
-    }
-    /*!*********************************************************************************************
-     * \brief  Solve local problem (with right-hand side from global right-hand side).
-     *
-     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
-     * \retval  loc_sol       Solution of the local problem.
-     **********************************************************************************************/
-    template < typename hyEdgeT >
-    inline std::array< lSol_float_t, n_loc_dofs_ > solve_local_problem_rhs
-    ( hyEdgeT & hyper_edge )  const
-    {
-      try 
-      { 
-        return (assemble_rhs_from_global_rhs(hyper_edge)
-                 / assemble_loc_matrix(tau_, hyper_edge)).data();
+        SmallVec<n_loc_dofs_, lSol_float_t> solution;
+        if (solution_type == 0)
+          solution = assemble_rhs_from_lambda(lambda_values, hyper_edge)
+                       / assemble_loc_matrix(tau_, hyper_edge);
+        else if (solution_type == 1)
+          solution = ( 
+                       assemble_rhs_from_lambda(lambda_values, hyper_edge) 
+                       + assemble_rhs_from_global_rhs(hyper_edge)
+                     )
+                     / assemble_loc_matrix(tau_, hyper_edge);
+        return solution.data();
       }
       catch (LAPACKexception& exc)
       {
@@ -805,7 +792,8 @@ class Diffusion
       hyEdgeT                                                                   & hyper_edge
     )  const
     {
-      std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values, hyper_edge);
+      std::array<lSol_float_t, n_loc_dofs_> coeffs
+        = solve_local_problem(lambda_values, 0U, hyper_edge);
       
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
@@ -1066,8 +1054,8 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
-      = integrator.template integrate_vol_phifunc<hyEdgeT::geometry,parameters::right_hand_side>
-          (i, hyper_edge.geometry);
+      = integrator.template integrate_vol_phifunc
+          <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
 
@@ -1201,7 +1189,7 @@ bulk_values
 )  const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
-    = solve_local_problem(lambda_values, hyper_edge);
+    = solve_local_problem(lambda_values, 1U, hyper_edge);
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
