@@ -89,7 +89,7 @@ class Cubic
             unsigned int coordinate = exterior_coordinate<hyEdge_dimT-1, space_dimT>(face, dim);
             unsigned int direction  = exterior_direction <hyEdge_dimT-1, space_dimT>(face, dim);
             if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
-              hyFace_types_[direction] = (1 + (coordinate != 0)) * std::pow(3, direction);
+              hyFace_types_[i] += (1 + (coordinate != 0)) * std::pow(3, direction);
           }
         }
       }
