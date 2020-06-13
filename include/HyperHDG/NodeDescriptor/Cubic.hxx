@@ -4,6 +4,7 @@
 #include <HyperHDG/HyAssert.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <array>
+#include <cmath>
 #include <vector>
 
 /*!*************************************************************************************************
@@ -82,14 +83,13 @@ class Cubic
         for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
         {
           tpcc_elem_t<hyEdge_dimT-1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
-          std::array<unsigned int, space_dimT> boundary; boundary.fill(0);
           hyFace_types_[i] = 0;
-          for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT; ++dim)
+          for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT + 1; ++dim)
           { 
             unsigned int coordinate = exterior_coordinate<hyEdge_dimT-1, space_dimT>(face, dim);
             unsigned int direction  = exterior_direction <hyEdge_dimT-1, space_dimT>(face, dim);
             if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
-              hyFace_types_[direction] = (1 + (coordinate != 0)) * Hypercube<3>::pow(direction);
+              hyFace_types_[direction] = (1 + (coordinate != 0)) * std::pow(3, direction);
           }
         }
       }
@@ -102,6 +102,7 @@ class Cubic
        ********************************************************************************************/
       const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyFace_types() const
       { return hyFace_types_; }
+      const unsigned int operator[](const unsigned int index) const {return hyFace_types_[index]; }
   }; // end of class hyEdge
   
   public:
