@@ -509,14 +509,14 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 template < unsigned int space_dimT, typename param_float_t = double >
 struct DiffusionParametersDefault
 {
-  static constexpr std::array<unsigned int, 1U> dirichlet_nodes {4};
+  static constexpr std::array<unsigned int, 2U> dirichlet_nodes {13,26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
   { return 1.; }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { return 1.; }
+  { return (pt == Point<space_dimT,param_float_t>()); }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
@@ -1040,8 +1040,7 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
           <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if ( std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(), 
-           hyper_edge.node_descriptor[face] ) == parameters::dirichlet_nodes.end() )  continue;
+      if ( !is_dirichlet(hyper_edge.node_descriptor[face]) )  continue;
       integral = integrator.template integrate_bdr_phifunc
                    <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
                    (i, face, hyper_edge.geometry);
