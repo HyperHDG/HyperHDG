@@ -9,10 +9,10 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Predefine problem to be solved.
-problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
-         +                  "Geometry::UnitCube< 1, 3 >, " \
-         +                  "NodeDescriptor::Cubic< 1, 3 >, " \
-         +                  "Diffusion< 1, 3, 1, 2 * 1 > " \
+problem = "AbstractProblem < Topology::Cubic< 1, 2 >, " \
+         +                  "Geometry::UnitCube< 1, 2 >, " \
+         +                  "NodeDescriptor::Cubic< 1, 2 >, " \
+         +                  "Diffusion< 1, 2, 1, 2 * 1 > " \
          +                ">"
 filenames = [ "HyperHDG/Geometry/Cubic.hxx" , \
               "HyperHDG/NodeDescriptor/Cubic.hxx" , \
@@ -27,11 +27,7 @@ PyDiffusionProblem = \
 tolerance = 1e-8
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([4,2,2])
-
-# Set the hypernodes that are supposed to be of Dirichlet type.
-index_vector = np.array([ 0, HDG_wrapper.size_of_system()-1 ])
-HDG_wrapper.read_dirichlet_indices(index_vector)
+HDG_wrapper = PyDiffusionProblem([1,1])
 
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
@@ -45,6 +41,9 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
 vectorRHS = HDG_wrapper.return_zero_vector()
+vectorRHS = HDG_wrapper.total_flux_vector(vectorRHS)
+
+print(vectorRHS)
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)
@@ -52,7 +51,7 @@ vectorRHS = HDG_wrapper.return_zero_vector()
 
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
+# [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
 
 # Print Solution to the problem (which is x + x_D, i.e. vectorSolution + vectorDirichlet) or number
 # of CG iterations num_iter.
@@ -66,6 +65,8 @@ else:
 HDG_wrapper.plot_solution(vectorSolution)
 print("Solution written to file", HDG_wrapper.plot_option("fileName", ""), "in output directory.")
 
+print(vectorSolution)
+
 reference_solution = np.array(
   [ 0.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
     0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,
@@ -76,7 +77,7 @@ reference_solution = np.array(
     0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
     0.44719263, 0.3000305,  0. ])
 
-if np.linalg.norm(reference_solution - vectorSolution, np.inf) > tolerance:
-  print("Diffusion test FAILED!")
-else:
-  print("Diffusion test SUCCEEDED!")
+# if np.linalg.norm(reference_solution - vectorSolution, np.inf) > tolerance:
+#   print("Diffusion test FAILED!")
+# else:
+#   print("Diffusion test SUCCEEDED!")
