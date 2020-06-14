@@ -41,31 +41,26 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
 vectorRHS = HDG_wrapper.return_zero_vector()
-vectorRHS = HDG_wrapper.total_flux_vector(vectorRHS)
-
-print(vectorRHS)
+vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(vectorRHS)]
 
 # Print right-hand side vector.
-# print("Right-hand side: ", vectorRHS)
+print("Right-hand side:\n", vectorRHS)
 
 
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-# [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
+[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
 
 # Print Solution to the problem (which is x + x_D, i.e. vectorSolution + vectorDirichlet) or number
 # of CG iterations num_iter.
 if num_iter == 0:
   print("Solution:\n", vectorSolution)
 else:
-  print("The linear solver (conjugate gradients) failed with a total number of ",
-        num_iter, " iterations.")
+  print("The linear solver (conjugate gradients) failed after", num_iter, " iterations.")
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_solution(vectorSolution)
 print("Solution written to file", HDG_wrapper.plot_option("fileName", ""), "in output directory.")
-
-print(vectorSolution)
 
 reference_solution = np.array(
   [ 0.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
