@@ -4,6 +4,7 @@
 #include <HyperHDG/QuadratureTensorial.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
+#include <algorithm>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -447,6 +448,49 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 } // end of Diffusion_TensorialUniform::bulk_values
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
@@ -465,16 +509,14 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 template < unsigned int space_dimT, typename param_float_t = double >
 struct DiffusionParametersDefault
 {
-  template < unsigned int length >
-  static std::array<unsigned int, length> dirichlet_nodes {1,2,3,4};
-  template < unsigned int length >
-  static std::array<unsigned int, length> neumann_nodes {};
+  static constexpr std::array<unsigned int, 1U> dirichlet_nodes {4};
+  static constexpr std::array<unsigned int, 0U> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
   { return 1.; }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { return norm_2(pt); }
+  { return 1.; }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
@@ -557,6 +599,12 @@ class Diffusion
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
     
+    static constexpr bool is_dirichlet( const unsigned int node_type )
+    { 
+      return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
+                        node_type ) != parameters::dirichlet_nodes.end();
+    }
+
   private:
   
     // ---------------------------------------------------------------------------------------------
@@ -669,17 +717,14 @@ class Diffusion
     {
       try
       { 
-        SmallVec<n_loc_dofs_, lSol_float_t> solution;
+        SmallVec<n_loc_dofs_, lSol_float_t> rhs;
         if (solution_type == 0)
-          solution = assemble_rhs_from_lambda(lambda_values, hyper_edge)
-                       / assemble_loc_matrix(tau_, hyper_edge);
+          rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
         else if (solution_type == 1)
-          solution = ( 
-                       assemble_rhs_from_lambda(lambda_values, hyper_edge) 
-                       + assemble_rhs_from_global_rhs(hyper_edge)
-                     )
-                     / assemble_loc_matrix(tau_, hyper_edge);
-        return solution.data();
+          rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge)
+                  + assemble_rhs_from_global_rhs(hyper_edge);
+        else  hy_assert( 0 == 1 , "This has not been implemented!" );
+        return ( rhs / assemble_loc_matrix(tau_, hyper_edge) ).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -763,48 +808,52 @@ class Diffusion
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] 
-            = duals[i][j] + tau_ * primals[i][j] 
-              - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
+        if ( is_dirichlet(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
+                                 - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
        
       return bdr_values;
     }
     /*!*********************************************************************************************
-     * \brief   Get Dirichlet value coefficients of hyNode.
+     * \brief   Evaluate local contribution to matrix--vector multiplication.
+     *
+     * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+     * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+     * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+     * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   lambda_values Local part of vector x.
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
     template < class hyEdgeT >
-    std::array<lSol_float_t, n_shape_bdr_> dirichlet_coeffs ( hyEdgeT& hyper_edge )  const
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_total
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      hyEdgeT                                                                   & hyper_edge
+    )  const
     {
-      std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
-  
-      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-        bdr_coeffs[i] = integrator.template integrate_vol_phifunc<hyEdgeT,parameters::
-                          dirichlet_value>(i, hyper_edge.geometry) / hyper_edge.geometry.area();
+      std::array<lSol_float_t, n_loc_dofs_> coeffs
+        = solve_local_problem(lambda_values, 1U, hyper_edge);
 
-      return bdr_coeffs;
-    }
-    /*!*********************************************************************************************
-     * \brief   Get Neumann value coefficients of hyNode.
-     *
-     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
-     **********************************************************************************************/
-    template < class hyEdgeT >
-    std::array<lSol_float_t, n_shape_bdr_> neumann_coeffs ( hyEdgeT& hyper_edge )  const
-    {
-      std::array<lSol_float_t, n_shape_bdr_> bdr_coeffs;
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
+        primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
   
-      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-        bdr_coeffs[i] = integrator.template integrate_vol_phifunc
-                          <decltype(hyEdgeT::geometry),parameters::neumann_value>
-                          (i, hyper_edge.geometry)
-                        / hyper_edge.geometry.area();
-
-      return bdr_coeffs;
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      {
+        if ( is_dirichlet(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = duals[i][j];/* + tau_ * primals[i][j]
+                                 - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i)*/;
+      }
+          
+      return bdr_values;
     }
     /*!*********************************************************************************************
      * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -892,7 +941,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
                    (i, j, face, hyper_edge.geometry);
         face_integral += helper;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper; 
+          normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
       }
 
       local_mat( hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
@@ -983,10 +1032,26 @@ Diffusion
 assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+  lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
       = integrator.template integrate_vol_phifunc
           <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+    {
+      if ( std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(), 
+           hyper_edge.node_descriptor[face] ) == parameters::dirichlet_nodes.end() )  continue;
+      integral = integrator.template integrate_bdr_phifunc
+                   <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
+                   (i, face, hyper_edge.geometry);
+      right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        right_hand_side[dim * n_shape_fct_ + i] 
+          -= hyper_edge.geometry.local_normal(face).operator[](dim) * integral; 
+    }
+  }
+
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
 
