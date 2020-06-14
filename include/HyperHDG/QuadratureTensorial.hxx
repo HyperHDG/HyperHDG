@@ -612,7 +612,7 @@ class IntegratorTensorial
       for (unsigned int i = 0; i < GeomT::hyEdge_dim(); ++i)
         for (unsigned int j = 0; j < GeomT::hyEdge_dim(); ++j)
           mat_r_transposed(i,j) = geom.mat_r().operator()(j,i);
-      return integral / mat_r_transposed;
+      return geom.area() * integral / mat_r_transposed;
     }
 
     template < typename GeomT > return_t integrate_bdr_phiphi
