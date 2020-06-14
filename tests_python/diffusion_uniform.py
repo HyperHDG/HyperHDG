@@ -8,6 +8,10 @@ import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
+# Correct the python paths!
+import os, sys
+sys.path.append(os.path.dirname(__file__) + "/..")
+
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
