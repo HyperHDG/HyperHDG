@@ -309,9 +309,30 @@ class AbstractProblem
             ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
           >::value
         )
-          hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs);
-        else  hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, hyper_edge);
-        
+        {
+          if constexpr
+          ( 
+            has_total_flux
+            < LocalSolverT,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+            >::value
+          )
+            hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs);
+        }
+        else
+        {
+          if constexpr
+          ( 
+            has_total_flux
+            < LocalSolverT,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                decltype(hyper_edge)& )
+            >::value
+          )
+          hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, hyper_edge);
+        }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyper_graph_.hyNode_factory().add_to_dof_values
