@@ -184,9 +184,13 @@ class Linear
     {
       hy_assert( index < hyEdge_dimT ,
                  "The index of the searched normal must not be bigger than their amount." );
-      if constexpr (hyEdge_dimT == 1)  return SmallVec<hyEdge_dimT,map_float_t>(1.);
-      
       make_qr_if_needed();
+      if constexpr (hyEdge_dimT == 1)
+      {
+        if ( matrix_r_->operator()(0,0) > 0 )  return SmallVec<hyEdge_dimT,map_float_t>(-1.);
+        else                                   return SmallVec<hyEdge_dimT,map_float_t>(+1.);
+      }
+
       SmallMat<hyEdge_dimT,hyEdge_dimT-1,map_float_t> other_vectors;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
         other_vectors.set_column(i - (i > index), matrix_r_->get_column(i));
