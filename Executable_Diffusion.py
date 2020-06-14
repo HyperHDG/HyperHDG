@@ -9,10 +9,10 @@ import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
 # Predefine problem to be solved.
-problem = "AbstractProblem < Topology::Cubic< 1, 2 >, " \
-         +                  "Geometry::UnitCube< 1, 2 >, " \
-         +                  "NodeDescriptor::Cubic< 1, 2 >, " \
-         +                  "Diffusion< 1, 2, 1, 2 * 1 > " \
+problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
+         +                  "Geometry::UnitCube< 1, 3 >, " \
+         +                  "NodeDescriptor::Cubic< 1, 3 >, " \
+         +                  "Diffusion< 1, 3, 1, 2 * 1 > " \
          +                ">"
 filenames = [ "HyperHDG/Geometry/Cubic.hxx" , \
               "HyperHDG/NodeDescriptor/Cubic.hxx" , \
@@ -27,7 +27,7 @@ PyDiffusionProblem = \
 tolerance = 1e-8
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDiffusionProblem([1,1])
+HDG_wrapper = PyDiffusionProblem([4,2,2])
 
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
