@@ -88,8 +88,8 @@ run_tests:
 	make tests
 	./build/C++ExampleBuild/Plot1.exe;
 	./build/C++ExampleBuild/Plot2.exe;
-	./build/C++ExampleBuild/PointTest.exe;
-	./build/C++ExampleBuild/DiffusionTest1.exe;
+	./build/C++ExampleBuild/point_functions.exe;
+	./build/C++ExampleBuild/diffusion_floatings.exe;
 	./build/C++ExampleBuild/DiffusionTest2.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
 	$(PYTHON) tests_python/diffusion_uniform.py
