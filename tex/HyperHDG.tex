@@ -115,6 +115,8 @@
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
 \newcommand{\range}{\ensuremath{\mathcal R}}
 
+\newcommand{\code}[1]{\texttt{#1}}
+
 \newcommand{\longDef}{\ensuremath{u}}
 \newcommand{\crossDef}{\ensuremath{w}}
 \newcommand{\torsion}{\ensuremath{\varphi}}
@@ -541,11 +543,13 @@ Equation \eqref{EQ:hdg_global} can, equivalently be rewritten to finding $\lambd
 % 
 holds for all $\mu \in \skeletalSpace$ with
 % 
-\begin{align*}
- a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\\
- b(\mu) ~=~= & \int_\Node g_\textup N \mu \ds \\
- & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds,
-\end{align*}
+\begin{subequations}\label{EQ:forms_def}
+\begin{align}
+ a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\label{EQ:bil_def}\\
+ b(\mu) ~=~= & \int_\Node g_\textup N \mu \ds \label{EQ:lin_def}\\
+ & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds,\notag
+\end{align}
+\end{subequations}
 % 
 inducing the \emph{statically condensed global system of equations}
 % 
@@ -563,6 +567,31 @@ Thus, for doing a single matrix--vector product $\vecc A \vecc x = \vecc y$, one
  \item Calculated $\int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu_i$ based on the result of the local problem, where $i$ is the local index of the degree of freedom.
  \item Find global index addociated to $i$ and add result to $\vecc y$.
 \end{enumerate}
+% 
+% ---------------------------------------------------------------------
+\section{Structure of \hyperHDG}
+% ---------------------------------------------------------------------
+% 
+The software library \hyperHDG implements the hybrid discontinuous Galerkin method on hypergraphs. Therefore, \hyperHDG is basically divided into two parts: The implementation of an \code{HDGhyperGraph} and of a \code{LocalSolver}. The programm is then structured as a loop over all hyperedges for which the local problems are solved and the results are then written into some global \code{std::vector}.
+% 
+\subsection{Implementation of the HDG hypergraph}
+% 
+An \code{HDG\-Hyper\-Graph} consists of four parts:
+% 
+\begin{enumerate}
+ \item Its \code{Topology} which is implemented as an abstact container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
+ \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, etc.
+ \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices of all of thei hypernodes describing them. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have indices 1 and 2, Neumann nodes \ldots.
+ \item Its \code{HyperNodeFactors}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
+\end{enumerate}
+% 
+Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structues that are needed for the descripton of the PDE (i.e.~its boundry conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a seperate class that is resposnsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
+
+Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract containers, we define the return value of an \code{HDGhyperGraph} as a \code{hyEdge} which contains its topological, geometrical, and node describing information.
+% 
+\subsection{Local problem solvers}
+% 
+The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the inidvidual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
 % 
 % ---------------------------------------------------------------------
 \section{Elastic beam models}
