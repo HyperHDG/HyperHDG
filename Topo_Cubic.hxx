@@ -1,5 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/Wrapper/TPCC.hxx>
 #include <HyperHDG/HyAssert.hxx>
 #include <array>
 #include <vector>

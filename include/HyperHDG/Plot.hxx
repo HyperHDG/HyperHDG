@@ -455,7 +455,7 @@ void plot_vtu
       > local_values;
       if constexpr ( LocalSolverT::use_geometry() )
       {
-        auto geometry =  hyper_graph[he_number].geometry;
+        auto geometry =  hyper_graph.hyEdge_geometry(he_number);
         local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
       }
       else local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);

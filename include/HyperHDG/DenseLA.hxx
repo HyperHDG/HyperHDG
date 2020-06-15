@@ -835,7 +835,7 @@ using Point = SmallVec<n_rows, mat_entry_t>;
 // -------------------------------------------------------------------------------------------------
 
 
-#include <HyperHDG/LapackWrapper.hxx>
+#include <HyperHDG/Wrapper/Lapack.hxx>
 // Here, since prior include violates use of SmallMat, SmallVec, ... within the functions that are
 // introduced in LapackWrapper.hxx!
 

@@ -297,7 +297,7 @@ class HDGHyperGraph
     HDGHyperGraph ( const typename TopoT::constructor_value_type& construct_topo )
     : hyGraph_topology_ ( std::make_shared<const TopoT>( construct_topo )),
       hyGraph_geometry_ ( std::make_shared<const GeomT>( *hyGraph_topology_ )),
-      hyGraph_node_des_ ( std::make_shared<const NodeT>( construct_topo )),
+      hyGraph_node_des_ ( std::make_shared<const NodeT>( *hyGraph_topology_ )),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dim() ,
@@ -328,7 +328,7 @@ class HDGHyperGraph
                    const typename GeomT::constructor_value_type& construct_geom )
     : hyGraph_topology_ ( std::make_shared<const TopoT>(construct_topo)),
       hyGraph_geometry_ ( std::make_shared<const GeomT>(construct_geom)),
-      hyGraph_node_des_ ( std::make_shared<const NodeT>(construct_topo)),
+      hyGraph_node_des_ ( std::make_shared<const NodeT>(*hyGraph_topology_)),
       hyNode_factory_   ( hyGraph_topology_->n_hyNodes())
     {
       static_assert( TopoT::hyEdge_dim() == GeomT::hyEdge_dim() ,

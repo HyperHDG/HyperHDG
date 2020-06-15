@@ -130,11 +130,14 @@ namespace Tensor
     : vertices(vertices), points_1d(points)
   {}
   
+  /*!***********************************************************************************************
+   * \todo  The static assertion gives a compilation error in g++-10 and I do not understand, why.
+   ************************************************************************************************/
   template <int rdim, int ddim, std::size_t npts, typename T>
   Point<rdim>
   MappingMultilinear<rdim,ddim,npts,T>::operator() (const std::array<unsigned int, ddim>& ind) const
   {
-    static_assert(ind.size() == ddim);
+//    static_assert(ind.size() == ddim);
     Point<rdim> result;
 
     for (unsigned int v=0;v<vertices.size();++v)
