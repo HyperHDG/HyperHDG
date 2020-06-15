@@ -291,6 +291,7 @@ string cythonize
   
   return python_name;
 }
+
 /*!*************************************************************************************************
  * \brief   Main function builds hyCythonize function using itself.
  *
@@ -299,7 +300,7 @@ string cythonize
  **************************************************************************************************/
 int main()
 {
-  std::vector<std::string> names = { "hyCythonize" , "hyCythonizer" };
+  std::vector<std::string> names = { "cythonize" , "Cythonizer" };
   cythonize( names , { } , PYVERMAJ , PYVERMIN );
   return 0;
 }
