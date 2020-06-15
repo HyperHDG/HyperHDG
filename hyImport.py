@@ -45,8 +45,8 @@ def hyImport(names, filenames = [], force_comp = False):
       print("This will most likely result in an error!\n")
       print("Check your Python version to be not of m or dm type which is not fully supported.\n\n")
     os.system("mkdir -p build build/CythonFiles build/SharedObjects output")
-    os.system("g++ cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" + str(ver_minor) +
-              " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
+    os.system("g++ cython/cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" +
+              str(ver_minor) + " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
     os.system("./build/cythonize")
 
   try:
