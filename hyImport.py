@@ -50,10 +50,10 @@ def hyImport(names, filenames = [], force_comp = False):
     os.system("./build/cythonize")
 
   try:
-    from hyCythonizer import Cythonize
+    from Cythonizer import Cythonize
   except ImportError as error:
     sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
-    from hyCythonizer import Cythonize
+    from Cythonizer import Cythonize
 
   retval = Cythonize(names, filenames, ver_major, ver_minor, force_comp)
   mod = importlib.import_module(retval)
