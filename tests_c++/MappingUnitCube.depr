@@ -1,5 +1,5 @@
 
-#include <Geom_UnitCube.hxx>
+#include <HyperHDG/Geometry/Cubic.hxx>
 
 template <unsigned int edim, unsigned int sdim, unsigned int npts>
 void test()

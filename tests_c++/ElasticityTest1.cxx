@@ -1,7 +1,7 @@
 #include <HyperHDG/AbstractProblem.hxx>
 #include <HyperHDG/Topology/File.hxx>
 #include <HyperHDG/Geometry/File.hxx>
-#include <LSol_Elasticity.hxx>
+#include <HyperHDG/LocalSolver/BernoulliBeams.hxx>
 #include <HyperHDG/SparseLinearAlgebra.hxx>
 
 #include <string>

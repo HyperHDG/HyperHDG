@@ -113,7 +113,7 @@ class File
      * topology is by default constructed by a std::vector that contains amounts of elements in the
      * different dimensions.
      **********************************************************************************************/
-    typedef std::string& constructor_value_type;
+    typedef std::string constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a topology from a given filename.
      *
