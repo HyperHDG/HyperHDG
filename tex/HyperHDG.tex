@@ -52,6 +52,8 @@
 
 % Newcommands by the authors.
 
+\newcommand{\hyperHDG}{{\fontfamily{pzc}\selectfont \texttt{Hy}\hspace{-1.5pt}perHDG }}
+
 \newcommand{\graph}{\ensuremath{\mathcal G}}
 \newcommand{\setEdge}{\ensuremath{\mathcal E}}
 \newcommand{\setNode}{\ensuremath{\mathcal N}}
@@ -112,6 +114,12 @@
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
 \newcommand{\range}{\ensuremath{\mathcal R}}
 
+\newcommand{\longDef}{\ensuremath{u}}
+\newcommand{\crossDef}{\ensuremath{w}}
+\newcommand{\torsion}{\ensuremath{\varphi}}
+\newcommand{\force}{\ensuremath{q}}
+\newcommand{\momentum}{\ensuremath{m}}
+
 % ---------------------------------------------------------------------------
 
 % Make paragraph heading being small capitals!
@@ -134,7 +142,7 @@
 
 \begin{document}
 
-\title[H\MakeLowercase{yper}HDG --- HDG on hypergraphs]{H\MakeLowercase{yper}HDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
+\title[\hyperHDG --- HDG on hypergraphs]{\hyperHDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
 
 \author{Andreas Rupp}
 \address{Interdisciplinary Center for Scientific Computing (IWR), Heidelberg University, Mathematikon, Im Neuenheimer Feld 205, 69120 Heidelberg, Germany}
@@ -169,7 +177,6 @@
  
  since we are quite many people, I have included the usepackage ``fixme''. It provides quite powerful tools for editing text. You can use a note, a warning, an error, or a fatal to indicate things in the text. Using the initials it can be tracked who set a comment. Analogously, it works for warnings, errors, and fatals. Thus, using the command \verb|\arnote{This is a note by Andreas Rupp}| creates a note at the margins, where the ar in arnote stands for Andreas Rupp. Moreover, \verb|\begin{envarnote}{Short description} ..... \end{envarnote}| \linebreak will create a short descripton at the margin and a long text (like this) within the standard text.
 \end{envarnote}
-
 % 
 \section{Introduction}
 % 
@@ -178,7 +185,7 @@
 \section{Hypergraphs}\label{SEC:hypergraph}
 % ---------------------------------------------------------------------
 % 
-HyperHDG is a simumlation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
+\hyperHDG is a simumlation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
 % 
 \subsection{Topologic aspects of hypergraphs}\label{SEC:hypergraph_topology}
 % 
@@ -285,7 +292,7 @@ and define $\| x \|^2 := (x,x)$ for $x \in \IR^\globDim$.
 % 
 A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation matrix is square if and only is $\locDim = \globDim$.
 % ---------------------------------------------------------------------
-\section{Model equation and interpretation}\label{SEC:model_eq}
+\section{Elliptic model equation and interpretation}\label{SEC:model_eq}
 % ---------------------------------------------------------------------
 % 
 Here, we formulate the standard diffusion equation in mixed form defined on a hypergraph $\graph$ that for the moment is assumed to allow an embedding $\Graph$. The differential operators will be rigorously defined in Section \ref{SEC:diff_op}. Thus, for all $\edge \in \setEdge$ we approximate solutions $(u, \vec q)$ of
@@ -386,6 +393,7 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
 \begin{equation*}
  \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\tangent(x)} (x)](b).
 \end{equation*}
+% 
 % ---------------------------------------------------------------------
 \section{HDG method on hypergraphs}
 % ---------------------------------------------------------------------
@@ -553,6 +561,60 @@ Thus, for doing a single matrix--vector product $\vecc A \vecc x = \vecc y$, one
  \item Calculated $\int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu_i$ based on the result of the local problem, where $i$ is the local index of the degree of freedom.
  \item Find global index addociated to $i$ and add result to $\vecc y$.
 \end{enumerate}
+% 
+% ---------------------------------------------------------------------
+\section{Elastic beam models}
+% ---------------------------------------------------------------------
+% 
+A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}. Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.~1.4.3]{MeskourisH2013}---be described via
+% 
+\begin{subequations}\label{EQ:Timo_2D}
+ \begin{align}
+  \force_x ~=~ & - \partial_x EA \partial_x \longDef, \label{EQ:beam_long_Timo}\\
+  \force_z ~=~ & - \partial_x GA ( \partial_x \crossDef + \torsion ), \label{EQ:Timo_2D_w}\\
+  \momentum_y ~=~ & - \partial_x EI \partial_x \torsion + GA \; ( \partial_x \crossDef + \torsion ), \label{EQ:Timo_2D_phi}
+ \end{align}
+\end{subequations}
+% 
+where subscript $x$ identifies the longitudinal component (cf.~inner normal), and subscripts $y$ and $z$ the orthogonal components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_y \equiv 0$ is assumed.
+
+Assuming that $\torsion = - \partial_x \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
+% 
+\begin{subequations}\label{EQ:Ber_2D}
+ \begin{align}
+  \force_x ~=~ & - \partial_x  EA \partial_x \longDef, \label{EQ:beam_long_Ber}\\
+  \force_z ~=~ & \partial_x^2 EI \partial_x^2 \crossDef, \label{EQ:Ber_2D_cross}
+ \end{align}
+\end{subequations}
+% 
+whose equation \eqref{EQ:Ber_2D_cross} is often tributed to J.~Bernoulli, or  L.~Euler and D.~Bernoulli, or G.~Galilei, or L.~da~Vinci.
+
+Here, $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}. In the following considerations, they will be treated as constants and denoted by $c$.
+
+Transferring the aformentioned systems of equations into three spatial dimensions for which we follow \cite[Sect.~6.1--6.4]{BauchauC2009} turns \eqref{EQ:Ber_2D} into
+% 
+\begin{equation}\label{EQ:Ber_3D}
+ \begin{bmatrix}
+  -\partial_x c_{11} \partial_x & & \\
+  & \partial^2_x c_{22} \partial^2_x & \partial^2_x c_{23} \partial^2_x \\
+  & \partial^2_x c_{32} \partial^2_x & \partial^2_x c_{33} \partial^2_x
+ \end{bmatrix}
+ \begin{bmatrix}
+  \longDef \\ \crossDef_y \\ \crossDef_z
+ \end{bmatrix}
+ =
+ \begin{bmatrix}
+  \force_x \\ \force_y + \partial_x ( \tilde y \force_x - \momentum_z ) \\ \force_z + \partial_x ( \tilde z \force_x + \momentum_y )
+ \end{bmatrix},
+\end{equation}
+% 
+where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. Beyond that, the torque distribution $\momentum_x$ is related to the twist distribution $\torsion$ via
+% 
+\begin{equation}
+ -\partial_x \bar c \partial_x \torsion_x = \momentum_x,
+\end{equation}
+% 
+where the $c$ (possibly with subscript and/or bar) are material parameters.
 
 
 

@@ -1391,7 +1391,7 @@ class TimoschenkoBendingBeam
     /*!*********************************************************************************************
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
-    static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+3) * n_shape_fct_;
+    static constexpr unsigned int n_loc_dofs_  = (2*hyEdge_dimT+2) * n_shape_fct_;
     /*!*********************************************************************************************
      * \brief  Assemble local matrix for the local solver.
      *
@@ -1647,9 +1647,12 @@ assemble_loc_matrix ( const lSol_float_t tau )
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
-      local_mat( hyEdge_dimT*n_shape_fct_+i , n_dofs_lap +j ) -= integral;
-      local_mat( n_dofs_lap + n_shape_fct_ +i , hyEdge_dimT*n_shape_fct_ +j ) -= integral;
-      local_mat( n_dofs_lap + n_shape_fct_ +i , n_dofs_lap +j ) += integral;
+      local_mat(              hyEdge_dimT * n_shape_fct_ + i ,
+                 n_dofs_lap                              + j ) += integral;
+      local_mat( n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i ,
+                                                         + j ) -= integral;
+      local_mat( n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i ,
+                 n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j ) += integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += integral;
@@ -1667,10 +1670,6 @@ assemble_loc_matrix ( const lSol_float_t tau )
           -= integral;
         local_mat(n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j)
           -= integral;
-
-        // Advection terms that need additional boundary conditions!
-        local_mat(n_dofs_lap + i , n_dofs_lap + j) += integral;
-        local_mat(n_dofs_lap  + n_shape_fct_+i , n_dofs_lap + n_shape_fct_+j) -= integral;
     
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);

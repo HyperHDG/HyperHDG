@@ -1,5 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/CompileTimeTricks.hxx>
 #include <HyperHDG/HDGHyperGraph.hxx>
 #include <HyperHDG/Plot.hxx>
 #include <HyperHDG/HyAssert.hxx>
@@ -10,12 +11,12 @@
 /*!*************************************************************************************************
  * \bief  Check in reduced complexity whether an element is contained in a \c std::vector.
  **************************************************************************************************/
-template<class T>
-bool contains(const std::vector<T>& container, const T& v)
-{
-  auto it = std::lower_bound( container.begin(), container.end(), v);
-  return (it != container.end() && *it == v);
-}
+// template<class T>
+// bool contains(const std::vector<T>& container, const T& v)
+// {
+//   auto it = std::lower_bound( container.begin(), container.end(), v);
+//   return (it != container.end() && *it == v);
+// }
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  * 
@@ -238,9 +239,16 @@ class AbstractProblem
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr ( LocalSolverT::use_geometry() )
-          hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge.geometry);
-        else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>& )
+          >::value
+        )
+          hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs);
+        else  hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge.geometry);
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -302,9 +310,16 @@ class AbstractProblem
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into local errors.
-        if constexpr ( LocalSolverT::use_geometry() )
-          loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge.geometry);
-        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>& )
+          >::value
+        )
+          loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
+        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge.geometry);
         
         // Fill the vector of errors.
         for ( unsigned int err = 0 ; err < n_errors ; ++err )  result[err] += loc_error[err];
