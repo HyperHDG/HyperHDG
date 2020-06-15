@@ -4,6 +4,8 @@
 #include <HyperHDG/NodeDescriptor/Cubic.hxx>
 #include <HyperHDG/LocalSolver/Diffusion.hxx>
 
+#include <type_traits>
+
 using namespace std;
 using namespace SparseLA;
 
@@ -19,27 +21,31 @@ using namespace SparseLA;
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-int main(int argc, char *argv[])
+template < typename float_t >
+int do_test()
 {
+  float_t solution_tolerance = 0.;
+  if constexpr (std::is_same<float_t, double>::value)      solution_tolerance = 1e-8;
+  else if constexpr (std::is_same<float_t, float>::value)  solution_tolerance = 1e-6;
+
   bool successful = true;
-  const double solution_tolerance = 1e-8;
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
   AbstractProblem< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, NodeDescriptor::Cubic<1,3>,
-                   Diffusion_TensorialUniform<1,1,2>
-                 >  diffusion_problem(num_elements, num_elements, 1.);
+                   Diffusion_TensorialUniform<1,1,2,float_t>
+                 >  diffusion_problem(num_elements, num_elements, (float_t) 1.);
   
-  vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
-  vectorDirichlet[0] = 1.;
-  vectorDirichlet[vectorDirichlet.size()-1] = 0.;
+  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector<float_t>();
+  vectorDirichlet[0] = (float_t) 1.;
+  vectorDirichlet[vectorDirichlet.size()-1] = (float_t) 0.;
   
   const vector<unsigned int> index_vector = { 0 , (unsigned int) vectorDirichlet.size()-1 };
   diffusion_problem.read_dirichlet_indices(index_vector);
   
-  vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
-  for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= -1.;
+  vector<float_t> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  for (unsigned int i = 0; i < vectorRHS.size(); ++i)  vectorRHS[i] *= (float_t) -1.;
   
-  vector<double> solution;
+  vector<float_t> solution;
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
   catch (SparseLASolveException& exc)
   {
@@ -47,9 +53,9 @@ int main(int argc, char *argv[])
     successful = false;
   }
   
-  solution = linear_combination(1., solution, 1., vectorDirichlet);
+  solution = linear_combination( (float_t) 1., solution, (float_t) 1., vectorDirichlet);
     
-  const std::vector<double> python_result = 
+  const std::vector<float_t> python_result = 
   { 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
     0.62353531, 0.52383342, 0.4428244,  0.39207816, 0.63876017, 0.57986777,
     0.5,        0.42013223, 0.36123983, 0.72849089, 0.62353531, 0.52383342,
@@ -74,3 +80,7 @@ int main(int argc, char *argv[])
   
   return successful - 1;
 }
+
+
+int main(int argc, char *argv[])
+{ return do_test<float>() + do_test<double>(); }
