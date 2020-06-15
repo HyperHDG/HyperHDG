@@ -77,6 +77,8 @@ class File
        ********************************************************************************************/
       const std::array<hyNode_index_t, n_hyNodes()>& get_hyFaces_types() const
       { return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_]; }
+      const unsigned int operator[](const unsigned int index) const 
+      { return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_][index]; }
   }; // end of class hyEdge
   
   public:
