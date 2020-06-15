@@ -44,17 +44,17 @@ def hyImport(names, filenames = [], force_comp = False):
       print("\nThe current Python version seems not to have an include file.\n")
       print("This will most likely result in an error!\n")
       print("Check your Python version to be not of m or dm type which is not fully supported.\n\n")
-    os.system("mkdir -p build build/CythonFiles build/SharedObjects")
-    os.system("g++ Cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" + str(ver_minor) +
-              " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
+    os.system("mkdir -p build build/CythonFiles build/SharedObjects output")
+    os.system("g++ cython/cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" +
+              str(ver_minor) + " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
     os.system("./build/cythonize")
 
   try:
-    from hyCythonizer import hyPyCythonize
+    from Cythonizer import Cythonize
   except ImportError as error:
     sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
-    from hyCythonizer import hyPyCythonize
+    from Cythonizer import Cythonize
 
-  retval = hyPyCythonize(names, filenames, ver_major, ver_minor, force_comp)
+  retval = Cythonize(names, filenames, ver_major, ver_minor, force_comp)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)

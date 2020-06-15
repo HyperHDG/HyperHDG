@@ -49,7 +49,7 @@ namespace fs = experimental::filesystem;
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-string hyCythonize
+string cythonize
 ( 
   vector<string>& names, const vector<string>& filenames,
   const unsigned int ver_maj, const unsigned int ver_min,
@@ -291,6 +291,7 @@ string hyCythonize
   
   return python_name;
 }
+
 /*!*************************************************************************************************
  * \brief   Main function builds hyCythonize function using itself.
  *
@@ -299,7 +300,7 @@ string hyCythonize
  **************************************************************************************************/
 int main()
 {
-  std::vector<std::string> names = { "hyCythonize" , "hyCythonizer" };
-  hyCythonize( names , { } , PYVERMAJ , PYVERMIN );
+  std::vector<std::string> names = { "cythonize" , "Cythonizer" };
+  cythonize( names , { } , PYVERMAJ , PYVERMIN );
   return 0;
 }

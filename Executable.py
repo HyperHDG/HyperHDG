@@ -13,10 +13,11 @@ from scipy.sparse.linalg import LinearOperator
 #          +                  "Geometry::UnitCube< 1, 3 >, " \
 #          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
 #          +                ">"
-# filenames = [ "Geom_UnitCube.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
+# filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
 problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, "\
          +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
-filenames = [ "HyperHDG/Geometry/File.hxx" , "LSol_Elasticity.hxx" ]
+filenames = [ "HyperHDG/Geometry/File.hxx" , \
+              "HyperHDG/LocalSolver/BernoulliBeams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from hyImport import hyImport
