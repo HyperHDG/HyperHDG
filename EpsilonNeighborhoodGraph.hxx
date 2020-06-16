@@ -87,10 +87,8 @@ index_t make_epsilon_neighborhood_graph ( std::string& filename )
 
   while( !search.empty() )
   {
-    std::cout << "Reading done!" << std::endl;
     index = search.back();
     search.pop_back();
-    std::cout << "Reading done!" << std::endl;
     for 
     ( 
       index_t ind = index;
