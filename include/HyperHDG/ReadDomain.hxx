@@ -2,8 +2,7 @@
 
 #include <HyperHDG/DenseLA.hxx>
 #include <HyperHDG/HyAssert.hxx>
-
-#include <EpsilonNeighborhoodGraph.hxx>
+#include <HyperHDG/EpsilonNeighborhoodGraph.hxx>
 
 #include <algorithm>
 #include <array>
