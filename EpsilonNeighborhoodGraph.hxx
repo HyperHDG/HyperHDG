@@ -8,7 +8,7 @@
 #include <vector>
 
 template < unsigned int dim, typename float_t = float, typename index_t = unsigned int >
-index_t make_epsilon_neighborhood_graph ( std::string& filename )
+void make_epsilon_neighborhood_graph ( std::string& filename )
 {
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".pts" ,
              "The given file needs to be a .pts file for this function to be applicable!" );
@@ -149,6 +149,4 @@ index_t make_epsilon_neighborhood_graph ( std::string& filename )
 
   for (unsigned int i = 0; i < bool_vec.size(); ++i)
     hy_assert( bool_vec[i] , "All points need to belong to one graph!" );
-
-  return points.size();
 }
