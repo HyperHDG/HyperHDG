@@ -64,6 +64,7 @@ make:
 	
 clean:
 	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR) __pycache__
+	rm -rf domains/*.pts.geo
 
 distclean:
 	make clean
