@@ -1,0 +1,13 @@
+# File containing point set of an epsilon neighboorhood graph being a triangle.
+
+Space_Dim = 2;  # Dimension of space indicating amount of coordinates of points.
+Epsilon   = 2;  # Distance below (or equal to) which two points are connected.
+
+
+# After "POINTS:" the coordinates of the points have to appear. That is, the next lines conatain one
+# point and therefore "Space_Dimension" numbers.
+
+POINTS:
+0.0 0.0
+2.0 0.0
+1.0 1.0

@@ -25,7 +25,7 @@ PyDP = hyImport(["AbstractProblem", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])
-HDG_wrapper = PyDP( "domains/SimpleTriangle.geo" )
+HDG_wrapper = PyDP( "domains/triangle.pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
@@ -40,7 +40,7 @@ vectorDirichlet[3] = 0.
 # Set the hypernodes that are supposed to be of Dirichlet type.
 # Note that all non-zero entries of vectorDirichlet are supposed to be contained in the index vector
 # to keep consistency.
-index_vector = np.array([ 0, 1, 2, 3, 4, 5, 6, 7, 10, 11])# len(vectorDirichlet)-1 ])
+index_vector = np.array([ 0, 1, 2, 3, 6, 7, 8, 9, 10, 11])# len(vectorDirichlet)-1 ])
 HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Print index vector and vector containing the Dirichlet values.
