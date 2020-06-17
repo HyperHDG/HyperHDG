@@ -349,7 +349,10 @@ template < unsigned int hyEdge_dim, unsigned int space_dim >
 DomainInfo<hyEdge_dim,space_dim> read_domain( std::string filename )
 {
   if (filename.substr(filename.size()-4, filename.size()) == ".pts")
+  {
+    hy_assert( hyEdge_dim == 1 , "This only works for graphs, so far!" );
     make_epsilon_neighborhood_graph<space_dim>(filename);
+  }
 
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
              "The given file needs to be a .geo file, since no other input file types are currently"
