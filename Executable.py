@@ -20,8 +20,8 @@ filenames = [ "HyperHDG/Geometry/File.hxx" , \
               "HyperHDG/LocalSolver/BernoulliBeams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
-from hyImport import hyImport
-PyDP = hyImport(["AbstractProblem", problem, "string", "string"], filenames)
+from cython_import import cython_import
+PyDP = cython_import(["AbstractProblem", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])
