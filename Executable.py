@@ -14,8 +14,8 @@ from scipy.sparse.linalg import LinearOperator
 #          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
 #          +                ">"
 # filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
-problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, "\
-         +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
+problem = "AbstractProblem < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
+         +                  "LengtheningBernoulliBendingBeam<1,3,1,2> > "
 filenames = [ "HyperHDG/Geometry/File.hxx" , \
               "HyperHDG/LocalSolver/BernoulliBeams.hxx" ]
 
@@ -25,7 +25,7 @@ PyDP = cython_import(["AbstractProblem", problem, "string", "string"], filenames
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])
-HDG_wrapper = PyDP( "domains/triangle.pts" )
+HDG_wrapper = PyDP( "domains/aggregate5.pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the

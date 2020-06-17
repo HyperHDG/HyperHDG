@@ -138,15 +138,15 @@ void make_epsilon_neighborhood_graph ( std::string& filename )
   outfile << std::endl << "HYPERNODES_OF_HYPEREDGES:" << std::endl;
   for (unsigned int i = 0; i < connections.size(); ++i)
     outfile << connections[i].left << " " << connections[i].right << std::endl;
-  outfile << "TYPES_OF_HYPERFACES:" << std::endl;
+  outfile << std::endl << "TYPES_OF_HYPERFACES:" << std::endl;
   for (unsigned int i = 0; i < connections.size(); ++i)
     outfile << connections[i].left << " " << connections[i].right << std::endl;
-  outfile << "POINTS_OF_HYPEREDGES:" << std::endl;
+  outfile << std::endl << "POINTS_OF_HYPEREDGES:" << std::endl;
   for (unsigned int i = 0; i < connections.size(); ++i)
     outfile << connections[i].left << " " << connections[i].right << std::endl;
 
   outfile.close();
 
   for (unsigned int i = 0; i < bool_vec.size(); ++i)
-    hy_assert( bool_vec[i] , "All points need to belong to one graph!" );
+    hy_assert( bool_vec[i] , "All points need to belong to one graph, but " << i << " does not!" );
 }
