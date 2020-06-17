@@ -35,7 +35,7 @@ import os, sys, importlib
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
-def hyImport(names, filenames = [], force_comp = False):
+def cython_import(names, filenames = [], force_comp = False):
   ver_major = sys.version_info.major
   ver_minor = sys.version_info.minor
 
