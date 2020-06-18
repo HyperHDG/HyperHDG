@@ -43,7 +43,7 @@ struct TestParameters
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename float_t >
 int do_test()
 {
-  const std::vector<unsigned int> num_elements(space_dim, 1U);
+  const std::vector<unsigned int> num_elements(space_dim, 3U);
 
   AbstractProblem
   < 
@@ -53,11 +53,14 @@ int do_test()
   >  diffusion_problem(num_elements, (float_t) 1.);
   
   std::vector<float_t> helper = diffusion_problem.template return_zero_vector<float_t>();
+
   std::string file_name = "diff_t-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
-  std::string print_file_number = "false";
+  std::string print_file_number = "false" , scale = "0.8";
 
   diffusion_problem.plot_option( "fileName" , file_name );
-  diffusion_problem.plot_option( "printFileNumber", print_file_number );
+  diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "scale" , scale );
+
   diffusion_problem.plot_solution(helper);
   
   return 0;
