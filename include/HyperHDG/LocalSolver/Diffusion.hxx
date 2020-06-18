@@ -68,7 +68,7 @@ class Diffusion_TensorialUniform
     
     static constexpr unsigned int node_value_dimension() { return 1U; }
     
-    static constexpr unsigned int system_dimension() { return 1U; }
+    static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
     
     
   private:
