@@ -101,7 +101,7 @@ void make_epsilon_neighborhood_graph ( std::string& filename )
         && ( !bool_vec[ind] || std::find(search.begin(), search.end(), ind) != search.end() )
       )
       {
-        search.push_back(ind);
+        if (!bool_vec[ind])  search.push_back(ind);
         bool_vec[ind] = true;
         connections.push_back(Pair(index,ind));
       }
@@ -117,7 +117,7 @@ void make_epsilon_neighborhood_graph ( std::string& filename )
         && ( !bool_vec[ind] || std::find(search.begin(), search.end(), ind) != search.end() )
       )
       {
-        search.push_back(ind);
+        if (!bool_vec[ind])  search.push_back(ind);
         bool_vec[ind] = true;
         connections.push_back(Pair(index,ind));
       }
