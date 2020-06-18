@@ -12,10 +12,14 @@ from scipy.sparse.linalg import LinearOperator
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
 
+# --------------------------------------------------------------------------------------------------
+# THIS SECTION CAN BE CHANGED:
+
 # Define aggregate specification:
 aggregate = "5"
 # aggregate = "1000_tree"
 # aggregate = "5000_tree"
+# --------------------------------------------------------------------------------------------------
 
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
@@ -53,7 +57,7 @@ system_size = HDG_wrapper.size_of_system()
 A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=1500, tol=1e-9) # Parameters for CG.
+[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=5500, tol=1e-9) # Parameters for CG.
 
 # Check, whether solution has been successful!
 if num_iter == 0:
