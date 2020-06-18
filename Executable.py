@@ -25,7 +25,7 @@ PyDP = cython_import(["AbstractProblem", problem, "string", "string"], filenames
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])
-HDG_wrapper = PyDP( "domains/aggregate_1000_tree.pts" )
+HDG_wrapper = PyDP( "domains/aggregate_5.pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
