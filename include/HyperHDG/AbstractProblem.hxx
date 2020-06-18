@@ -443,6 +443,7 @@ class AbstractProblem
                                                     (value == "true" || value == "1");
       else if (option == "incrementFileNumber")   plot_options.incrementFileNumber =
                                                     (value == "true" || value == "1");
+      else if (option == "scale")                 plot_options.scale = stof(value);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       if (option == "outputDir")                  value = plot_options.outputDir;
@@ -453,6 +454,7 @@ class AbstractProblem
                                                             (plot_options.printFileNumber);
       else if (option == "incrementFileNumber")   value = std::to_string
                                                             (plot_options.incrementFileNumber);
+      else if (option == "scale")                 value = std::to_string(plot_options.scale);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       return value;
