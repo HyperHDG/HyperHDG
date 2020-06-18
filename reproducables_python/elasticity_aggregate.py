@@ -12,6 +12,11 @@ from scipy.sparse.linalg import LinearOperator
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
 
+# Define aggregate specification:
+aggregate = "5"
+# aggregate = "1000_tree"
+# aggregate = "5000_tree"
+
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
          +                  "LengtheningBernoulliBendingBeam<1,3,1,2> > "
@@ -23,7 +28,7 @@ from cython_import import cython_import
 PyDP = cython_import(["AbstractProblem", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDP( "domains/aggregate_1000_tree.pts" )
+HDG_wrapper = PyDP( "domains/aggregate_" + aggregate + ".pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
@@ -57,6 +62,7 @@ else:
   print("The linear solver (conjugate gradients) failed (did not converge)!")
 
 # Plot solution to vtu File to be visualized using Paraview.
-HDG_wrapper.plot_option("fileName", "aggreagate_1000_tree")
+HDG_wrapper.plot_option("fileName", "aggregate_" + aggregate)
+HDG_wrapper.plot_option("printFileNumber", "false" )
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
 print("Solution written to file" , HDG_wrapper.plot_option("fileName", ""), "in output directory.")
