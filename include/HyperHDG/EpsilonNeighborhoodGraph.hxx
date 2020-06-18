@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -28,8 +29,8 @@ void make_epsilon_neighborhood_graph ( std::string& filename )
   index_t index;
 
   std::vector< Point<dim,float_t> > points;
-  std::vector< index_t > search;
   std::vector< Pair > connections;
+  std::deque< index_t > search;
   Point<dim> pt;
 
   while ( keyword != "Space_Dim" && std::getline(infile, line) )
@@ -87,8 +88,8 @@ void make_epsilon_neighborhood_graph ( std::string& filename )
 
   while( !search.empty() )
   {
-    index = search.back();
-    search.pop_back();
+    index = search.front();
+    search.pop_front();
     for 
     ( 
       index_t ind = index;
