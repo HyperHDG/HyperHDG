@@ -131,7 +131,7 @@ int do_test_standard()
   AbstractProblem
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim,float_t>, 
-    NodeDescriptor::File<1,space_dim>, Diffusion<1,space_dim,1,2,TestParameters,float_t>
+    NodeDescriptor::File<1,space_dim>, Diffusion<1,1,2,TestParameters,float_t>
   >  diffusion_problem(file_name, (float_t) 1.);
   
   vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector<float_t>();
@@ -228,7 +228,7 @@ int do_test_standard_dir()
   AbstractProblem
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim,float_t>, 
-    NodeDescriptor::File<1,space_dim>, Diffusion<1,space_dim,1,2,TestParametersDir,float_t>
+    NodeDescriptor::File<1,space_dim>, Diffusion<1,1,2,TestParametersDir,float_t>
   >  diffusion_problem(file_name, (float_t) 1.);
   
   vector<float_t> vectorRHS = diffusion_problem.template return_zero_vector<float_t>();

@@ -155,7 +155,6 @@ class LengtheningBeam
         lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
       return diffusion.bulk_values(abscissas,lambda);
     }
-    
 }; // end of class LengtheningBeam
 
 

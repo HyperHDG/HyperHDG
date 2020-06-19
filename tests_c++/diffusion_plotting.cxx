@@ -49,7 +49,7 @@ int do_test()
   < 
     Topology::Cubic<hyEdge_dim,space_dim>, Geometry::UnitCube<hyEdge_dim,space_dim,float_t>, 
     NodeDescriptor::Cubic<hyEdge_dim,space_dim>,
-    Diffusion<hyEdge_dim,space_dim,1,2,TestParameters,float_t>
+    Diffusion<hyEdge_dim,1,2,TestParameters,float_t>
   >  diffusion_problem(num_elements, (float_t) 1.);
   
   std::vector<float_t> helper = diffusion_problem.template return_zero_vector<float_t>();
