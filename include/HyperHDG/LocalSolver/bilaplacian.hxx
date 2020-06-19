@@ -73,10 +73,6 @@ class bilaplacian_uniform
     
   private:
     /*!*********************************************************************************************
-     * \brief   Number of quadrature points per spatial dimension.
-     **********************************************************************************************/
-    static constexpr unsigned int n_quads_1D_  = compute_n_quad_points<Gaussian>(quad_deg);
-    /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
     static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1);
@@ -543,18 +539,12 @@ struct BilaplacianParametersDefault
  **************************************************************************************************/
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT = BilaplacianParametersDefault,
-  typename lSol_float_t = double,
-  unsigned int space_dimTP = space_dimT, typename lSol_float_tP = lSol_float_t
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT = DiffusionParametersDefault,
+  typename lSol_float_t = double
 >
 class Diffusion
 {
-  /*!***********************************************************************************************
-   * \brief   The parameters type is \c parametersT with given template parameters.
-   ************************************************************************************************/
-  using parameters = parametersT<space_dimTP, lSol_float_tP>;
-    
   public:
   
     // ---------------------------------------------------------------------------------------------
@@ -587,24 +577,14 @@ class Diffusion
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
-    
-    static constexpr bool is_dirichlet( const unsigned int node_type )
-    { 
-      return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
-                        node_type ) != parameters::dirichlet_nodes.end();
-    }
 
   private:
   
     // ---------------------------------------------------------------------------------------------
     // Private, static constexpr functions
     // ---------------------------------------------------------------------------------------------
-  
-    /*!*********************************************************************************************
-     * \brief   Number of quadrature points per spatial dimension.
-     **********************************************************************************************/
-    static constexpr unsigned int n_quads_1D_  = compute_n_quad_points<Gaussian>(quad_deg);
-    /*!*********************************************************************************************
+
+   /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
     static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
@@ -616,7 +596,14 @@ class Diffusion
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+1) * n_shape_fct_;
-    
+
+    template < typename parameters >
+    static constexpr bool is_dirichlet( const unsigned int node_type )
+    { 
+      return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
+                        node_type ) != parameters::dirichlet_nodes.end();
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
     // ---------------------------------------------------------------------------------------------
@@ -790,6 +777,7 @@ class Diffusion
       hyEdgeT                                                                   & hyper_edge
     )  const
     {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge);
       
@@ -797,7 +785,7 @@ class Diffusion
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
-        if ( is_dirichlet(hyper_edge.node_descriptor[i]) )
+        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
         else
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
@@ -826,6 +814,7 @@ class Diffusion
       hyEdgeT                                                                   & hyper_edge
     )  const
     {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 1U, hyper_edge);
 
@@ -834,7 +823,7 @@ class Diffusion
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
       {
-        if ( is_dirichlet(hyper_edge.node_descriptor[i]) )
+        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
         else
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
@@ -861,8 +850,7 @@ class Diffusion
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       Diffusion
       < 
-        hyEdge_dimT, space_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, space_dimTP,
-        lSol_float_tP
+        hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       >::system_dimension()
     >
     bulk_values
@@ -889,21 +877,17 @@ class Diffusion
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
-<
-  Diffusion
-  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
-  ::n_loc_dofs_, lSol_float_t
->
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+< Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
 { 
+  using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
@@ -954,20 +938,14 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallVec
-<
-  Diffusion
-  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t, space_dimTP,lSol_float_tP >
-  ::n_loc_dofs_, lSol_float_t
->
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-assemble_rhs_from_lambda
+< Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
   hyEdgeT                                                                   & hyper_edge 
@@ -1005,21 +983,17 @@ assemble_rhs_from_lambda
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallVec
-<
-  Diffusion
-  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
-  ::n_loc_dofs_, lSol_float_t
->
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
+< Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 {
+  using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1029,7 +1003,7 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
           <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if ( !is_dirichlet(hyper_edge.node_descriptor[face]) )  continue;
+      if ( !is_dirichlet<parameters>(hyper_edge.node_descriptor[face]) )  continue;
       integral = integrator.template integrate_bdr_phifunc
                    <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
                    (i, face, hyper_edge.geometry);
@@ -1050,25 +1024,18 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  <
-    lSol_float_t,
-    Diffusion
-    < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
-    ::n_shape_bdr_
-  > ,
+  < lSol_float_t, Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_ > ,
   2 * hyEdge_dimT
 >
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-primal_at_boundary
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
   hyEdgeT                                       & hyper_edge
@@ -1096,25 +1063,18 @@ primal_at_boundary
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  <
-    lSol_float_t,
-    Diffusion
-    < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
-    ::n_shape_bdr_
-  > ,
+  < lSol_float_t,Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_ > ,
   2 * hyEdge_dimT
 >
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-dual_at_boundary
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
 ( 
   const std::array<lSol_float_t, (hyEdge_dimT+1) * n_shape_fct_>  & coeffs,
   hyEdgeT                                                         & hyper_edge
@@ -1147,9 +1107,9 @@ dual_at_boundary
 
 template
 < 
-  unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename > typename parameters, typename lSol_float_t,
-  unsigned int space_dimTP, typename lSol_float_tP
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT,
+  typename lSol_float_t
 >
 template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT >
 std::array
@@ -1159,13 +1119,9 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dimT>::pow(sizeT)
   > ,
-  Diffusion
-  < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
-  ::system_dimension()
+  Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
 >
-Diffusion
-< hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::
-bulk_values
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,

@@ -552,7 +552,7 @@ class Diffusion
     // Private, static constexpr functions
     // ---------------------------------------------------------------------------------------------
 
-    /*!*********************************************************************************************
+   /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
     static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
@@ -846,8 +846,7 @@ class Diffusion
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
@@ -907,8 +906,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallVec
@@ -952,8 +950,7 @@ Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_r
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline SmallVec
@@ -993,14 +990,13 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  < lSol_float_t, Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_ > ,
+  < lSol_float_t, Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_ >,
   2 * hyEdge_dimT
 >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
@@ -1032,14 +1028,13 @@ Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  < lSol_float_t,Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_ > ,
+  < lSol_float_t,Diffusion<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_ >,
   2 * hyEdge_dimT
 >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
@@ -1076,17 +1071,12 @@ Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_bo
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT,
-  typename lSol_float_t
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT >
 std::array
 <
-  std::array
-  <
-    lSol_float_t,
-    Hypercube<hyEdge_dimT>::pow(sizeT)
-  > ,
+  std::array < lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT) > ,
   Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
 >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
