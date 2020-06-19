@@ -33,7 +33,8 @@
 template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
-  unsigned int quad_deg, typename lSol_float_t = double
+  unsigned int quad_deg, typename lSol_float_t = double,
+  typename diffusion_sol_t = Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>
 >
 class LengtheningBeam
 {
@@ -45,14 +46,6 @@ class LengtheningBeam
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Specify whether advanced functuions are implemented for this class
-     * 
-     * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
-     * 
-     * \todo    Replace this by concept in C++20!
-     **********************************************************************************************/    
-    static constexpr bool advanced_functions() { return false; }
-    /*!*********************************************************************************************
      * \brief   Evaluate amount of global degrees of freedom per hypernode.
      * 
      * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
@@ -63,23 +56,22 @@ class LengtheningBeam
     static constexpr unsigned int n_glob_dofs_per_node()
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
-    
     static constexpr unsigned int node_value_dimension() { return space_dim; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
-    
   private:
-    const Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg> diffusion;
+    const diffusion_sol_t diffusion;
     /*!*********************************************************************************************
      * \brief  Do the pretprocessing to transfer global to local dofs.
      **********************************************************************************************/
     template<class hyEdgeT> 
-    inline std::array< std::array<double, decltype(diffusion)::n_glob_dofs_per_node()>, 2 * hyEdge_dimT > node_dof_to_edge_dof
+    inline std::array< std::array<double,diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
+    node_dof_to_edge_dof
     ( const std::array< std::array<double, n_glob_dofs_per_node() >, 2 * hyEdge_dimT >& lambda,
       hyEdgeT& hyper_edge ) const
     {
-      std::array< std::array<double, decltype(diffusion)::n_glob_dofs_per_node()> , 2*hyEdge_dimT > result;
+      std::array<std::array<double, diffusion_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT> result;
       hy_assert( result.size() == 2 , "Only implemented in one dimension!" );
       for (unsigned int i = 0; i < result.size(); ++i)
       {
@@ -101,10 +93,10 @@ class LengtheningBeam
     template <class hyEdgeT>
     inline std::array< std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT >
     edge_dof_to_node_dof
-    ( const std::array< std::array<double, decltype(diffusion)::n_glob_dofs_per_node()>, 2 * hyEdge_dimT >& lambda,
-      hyEdgeT& hyper_edge ) const
+    ( const std::array<std::array<double,diffusion_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT>& 
+      lambda, hyEdgeT& hyper_edge ) const
     {
-      hy_assert( decltype(diffusion)::n_glob_dofs_per_node() == 1 , "This should be 1!" );
+      hy_assert( diffusion_sol_t::n_glob_dofs_per_node() == 1 , "This should be 1!" );
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
       for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
@@ -146,24 +138,10 @@ class LengtheningBeam
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
       lambda_values, hyEdgeT& hyper_edge ) const
     {
-      std::array< std::array<lSol_float_t, decltype(diffusion)::n_glob_dofs_per_node()> , 2*hyEdge_dimT >
+      std::array<std::array<lSol_float_t,diffusion_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
       return edge_dof_to_node_dof(diffusion.numerical_flux_from_lambda(lambda),hyper_edge);
-    }
-    /*!*********************************************************************************************
-     * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
-     *
-     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
-     * \retval  vec_b         Local part of vector b.
-     **********************************************************************************************/
-    template < class hyEdgeT >
-    std::array< std::array<lSol_float_t, decltype(diffusion)::n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
-    {
-      std::array< std::array<lSol_float_t, decltype(diffusion)::n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
-      return bdr_values;
     }
 
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
@@ -173,7 +151,7 @@ class LengtheningBeam
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
      hyEdgeT& hyper_edge) const
     {
-      std::array< std::array<lSol_float_t, decltype(diffusion)::n_glob_dofs_per_node()> , 2*hyEdge_dimT >
+      std::array< std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
       return diffusion.bulk_values(abscissas,lambda);
     }
