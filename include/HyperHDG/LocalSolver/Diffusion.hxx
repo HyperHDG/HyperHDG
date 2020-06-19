@@ -551,12 +551,6 @@ class Diffusion
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
-    
-    static constexpr bool is_dirichlet( const unsigned int node_type )
-    { 
-      return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
-                        node_type ) != parameters::dirichlet_nodes.end();
-    }
 
   private:
   
@@ -576,6 +570,11 @@ class Diffusion
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int n_loc_dofs_  = (hyEdge_dimT+1) * n_shape_fct_;
+    static constexpr bool is_dirichlet( const unsigned int node_type )
+    { 
+      return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
+                        node_type ) != parameters::dirichlet_nodes.end();
+    }
     
     // ---------------------------------------------------------------------------------------------
     // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
