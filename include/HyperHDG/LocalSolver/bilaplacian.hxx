@@ -75,7 +75,7 @@ class bilaplacian_uniform
     /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
-    static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1);
+    static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
     /*!*********************************************************************************************
      * \brief   Number oflocal  shape functions (with respect to a face / hypernode).
      **********************************************************************************************/
