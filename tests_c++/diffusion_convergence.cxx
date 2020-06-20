@@ -19,18 +19,18 @@ using namespace SparseLA;
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParameters
+struct TestParametersSin
 {
   static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes
   { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
-  { return pi; }
+  { return 0.5 * pi; }
   static param_float_t analytic_result( const Point<space_dimT,param_float_t>& pt )
-  { return sin(pi * pt[0]); }
+  { return sin(0.5 * pi * pt[0]); }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
-  { return pi * sin(pi * pt[0]); }
+  { return 0.5 * pi * sin(0.5 * pi * pt[0]); }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
   { return analytic_result(pt); }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
@@ -48,7 +48,12 @@ struct TestParameters
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template < unsigned int hyEdge_dim, unsigned int space_dim, typename float_t >
+template
+< 
+  unsigned int hyEdge_dim, unsigned int space_dim, 
+  template < unsigned int, typename >  typename parameters,
+  typename float_t
+>
 double do_test(const unsigned int iteration)
 {
   const std::vector<unsigned int> num_elements(space_dim, (unsigned int) (1 << iteration));
@@ -57,7 +62,7 @@ double do_test(const unsigned int iteration)
   < 
     Topology::Cubic<hyEdge_dim,space_dim>, Geometry::UnitCube<hyEdge_dim,space_dim,float_t>, 
     NodeDescriptor::Cubic<hyEdge_dim,space_dim>,
-    Diffusion<hyEdge_dim,1,2,TestParameters,float_t>
+    Diffusion<hyEdge_dim,1,2,parameters,float_t>
   >  diffusion_problem(num_elements, (float_t) 10.);
   
   vector<float_t> vectorRHS = diffusion_problem.template return_zero_vector<float_t>();
@@ -85,12 +90,14 @@ double do_test(const unsigned int iteration)
 int main(int argc, char *argv[])
 { 
   for (unsigned int i = 1; i < 8; ++i)
-    std::cout << do_test<1,1,double>(i) << std::endl;
+    std::cout << do_test<1,1,TestParametersSin,double>(i) << std::endl;
   std::cout << std::endl;
   for (unsigned int i = 1; i < 8; ++i)
-    std::cout << do_test<1,2,double>(i) << std::endl;
+    std::cout << do_test<2,2,TestParametersSin,double>(i) << std::endl;
   std::cout << std::endl;
   for (unsigned int i = 1; i < 8; ++i)
-    std::cout << do_test<2,2,double>(i) << std::endl;
+    std::cout << do_test<3,3,TestParametersSin,double>(i) << std::endl;
+  std::cout << std::endl;
+
   return 0;
 }
