@@ -418,7 +418,6 @@ class AbstractProblem
             >::value
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge);
-          else hy_assert(0==1,"NO");
         }
       });
 
