@@ -49,7 +49,7 @@ struct TestParameters
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim, typename float_t >
-int do_test_standard_dir(const unsigned int iteration)
+double do_test(const unsigned int iteration)
 {
   const std::vector<unsigned int> num_elements(space_dim, (unsigned int) (1 << iteration));
 
@@ -67,18 +67,29 @@ int do_test_standard_dir(const unsigned int iteration)
   vector<float_t> solution;
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
   catch (SparseLASolveException& exc) { hy_assert( 0 == 1 , exc.what() ); }
+
+  std::string file_name = "diff_c-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
+  std::string print_file_number = "false" , scale = "0.95";
+
+  diffusion_problem.plot_option( "fileName" , file_name );
+  diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "scale" , scale );
+
+  diffusion_problem.plot_solution(solution);
   
-  float_t error = diffusion_problem.calculate_L2_error(solution);
-  std::cout << error << std::endl;
-  
-  return 0;
+  return diffusion_problem.calculate_L2_error(solution);
 }
 
 
 int main(int argc, char *argv[])
 { 
-  for (unsigned int i = 1; i < 7; ++i)
-    do_test_standard_dir<1,1,double>(i);
-
+  for (unsigned int i = 1; i < 8; ++i)
+    std::cout << do_test<1,1,double>(i) << std::endl;
+  std::cout << std::endl;
+  for (unsigned int i = 1; i < 8; ++i)
+    std::cout << do_test<1,2,double>(i) << std::endl;
+  std::cout << std::endl;
+  for (unsigned int i = 1; i < 8; ++i)
+    std::cout << do_test<2,2,double>(i) << std::endl;
   return 0;
 }
