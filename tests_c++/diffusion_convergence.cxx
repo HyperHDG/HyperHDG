@@ -68,7 +68,8 @@ double do_test(const unsigned int iteration)
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
   catch (SparseLASolveException& exc) { hy_assert( 0 == 1 , exc.what() ); }
 
-  std::string file_name = "diff_c-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
+  std::string file_name = "diff_c-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim)
+                            + "-" + std::to_string(iteration);
   std::string print_file_number = "false" , scale = "0.95";
 
   diffusion_problem.plot_option( "fileName" , file_name );
