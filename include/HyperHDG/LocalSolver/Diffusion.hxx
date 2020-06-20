@@ -472,6 +472,8 @@ struct DiffusionParametersDefault
   { return (pt == Point<space_dimT,param_float_t>()); }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
+  static param_float_t analytic_result( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
 };
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -533,10 +535,6 @@ class Diffusion
      **********************************************************************************************/
     static constexpr unsigned int n_glob_dofs_per_node()
     { return Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
-    /***********************************************************************************************
-     * \brief   Number or errors that are evaluated for this local solver.
-     **********************************************************************************************/
-    static constexpr unsigned int n_errors() { return 1; }
     /*!*********************************************************************************************
      * \brief Dimension of of the solution evaluated with respect to a hypernode.
      **********************************************************************************************/
@@ -801,6 +799,28 @@ class Diffusion
           
       return bdr_values;
     }
+    /*!*********************************************************************************************
+     * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+     *
+     * \tparam  absc_float_t  Floating type for the abscissa values.
+     * \tparam  sizeT         Size of the array of array of abscissas.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   abscissas     Abscissas of the supporting points.
+     * \param   lambda_values The values of the skeletal variable's coefficients.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class hyEdgeT >
+    lSol_float_t calc_L2_error_squared(const lSol_float_t& lambda_values, hyEdgeT& hy_edge)  const
+    {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+      std::array<lSol_float_t, n_loc_dofs_> co = solve_local_problem(lambda_values, 1U, hy_edge);
+      std::array< lSol_float_t, n_shape_fct_ > coeffs;
+      for (unsigned int i = 0; i < coeffs; ++i)  coeffs[i] = co[i + hyEdge_dimT * n_shape_fct_];
+      return integrator.template integrate_vol_diffsquare_discana
+                <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge);
+    }
+
     /*!*********************************************************************************************
      * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
      *
