@@ -35,6 +35,9 @@ template
 class Diffusion_TensorialUniform
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
      * 
@@ -517,6 +520,8 @@ class Diffusion
 {
   public:
   
+    typedef lSol_float_t solver_float_t;
+
     // ---------------------------------------------------------------------------------------------
     // Public, static constexpr functions
     // ---------------------------------------------------------------------------------------------
@@ -793,8 +798,8 @@ class Diffusion
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
         else
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-            bdr_values[i][j] = duals[i][j];/* + tau_ * primals[i][j]
-                                 - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i)*/;
+            bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j]
+                                 - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
       }
           
       return bdr_values;
@@ -811,14 +816,19 @@ class Diffusion
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
     template < class hyEdgeT >
-    lSol_float_t calc_L2_error_squared(const lSol_float_t& lambda_values, hyEdgeT& hy_edge)  const
+    lSol_float_t calc_L2_error_squared
+    ( 
+      std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      hyEdgeT                                                             & hy_edge
+    )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> co = solve_local_problem(lambda_values, 1U, hy_edge);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
-      for (unsigned int i = 0; i < coeffs; ++i)  coeffs[i] = co[i + hyEdge_dimT * n_shape_fct_];
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = co[i + hyEdge_dimT * n_shape_fct_];
       return integrator.template integrate_vol_diffsquare_discana
-                <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge);
+               <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry);
     }
 
     /*!*********************************************************************************************
