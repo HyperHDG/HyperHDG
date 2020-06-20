@@ -95,7 +95,7 @@ struct has_L2_error<C, Ret(Args...)>
     template<typename T>
     static constexpr auto check(T*)
     -> typename std::is_same
-      < decltype( std::declval<T>().numerical_flux_total( std::declval<Args>()... ) ), Ret >
+      < decltype( std::declval<T>().calc_L2_error_squared( std::declval<Args>()... ) ), Ret >
       ::type;
   
     template<typename>

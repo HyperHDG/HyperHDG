@@ -40,6 +40,9 @@ template
 class LengtheningBeam
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+
     /*!*********************************************************************************************
      * \brief   Return template parameter \c hyEdge_dimT.
      * 
@@ -205,6 +208,9 @@ template
 class BernoulliBendingBeam
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+
     /*!*********************************************************************************************
      * \brief   Return template parameter \c hyEdge_dimT.
      * 
@@ -412,6 +418,9 @@ template
 class LengtheningBernoulliBendingBeam
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+    
     /*!*********************************************************************************************
      * \brief   Return template parameter \c hyEdge_dimT.
      * 

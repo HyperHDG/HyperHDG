@@ -366,7 +366,7 @@ class AbstractProblem
      * \retval  error         A \c std::vector containing the errors.
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t> calculate_L2_error ( const std::vector<dof_value_t>& x_vec ) const
+    dof_value_t calculate_L2_error ( const std::vector<dof_value_t>& x_vec ) const
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -400,7 +400,7 @@ class AbstractProblem
           ( 
             has_L2_error
             < LocalSolverT,
-              dof_value_t
+              typename LocalSolverT::solver_float_t
               ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
             >::value
           )
@@ -412,12 +412,13 @@ class AbstractProblem
           ( 
             has_L2_error
             < LocalSolverT,
-              dof_value_t
+              typename LocalSolverT::solver_float_t
               ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
                 decltype(hyper_edge)& )
             >::value
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge);
+          else hy_assert(0==1,"NO");
         }
       });
 

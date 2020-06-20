@@ -35,6 +35,9 @@ template
 class bilaplacian_uniform
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
      * 
