@@ -667,8 +667,8 @@ class IntegratorTensorial
           }
           else
           {
-            quad_pt[dim] = quad_points_[dec_q[dim]];
-            quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
+            quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
+            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
           }
         }
         integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
