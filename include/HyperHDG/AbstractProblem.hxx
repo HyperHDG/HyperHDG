@@ -6,6 +6,7 @@
 #include <HyperHDG/HyAssert.hxx>
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 
 /*!*************************************************************************************************
@@ -363,50 +364,62 @@ class AbstractProblem
      * \retval  error         A \c std::vector containing the errors.
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
-    std::vector<dof_value_t> calculate_errors ( const std::vector<dof_value_t>& x_vec ) const
+    dof_value_t calculate_L2_error ( const std::vector<dof_value_t>& x_vec ) const
     {
-      if constexpr ( !LocalSolverT::advanced_functions() )
-      {
-        hy_assert( false , "This functionality is not implemented for the local solver!" );
-        return x_vec;
-      }
-
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-      constexpr unsigned int n_errors         = LocalSolverT::n_errors();
       
-      std::vector<dof_value_t> result(n_errors, 0.);
+      dof_value_t result = 0.;
 
-      if constexpr ( n_errors == 0 )  return result;
-
-      std::array<dof_value_t, n_errors> loc_error;
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Calculate errors by iteration over all hyperedges.
-      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyEdge)
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-        hyEdge_hyNodes = hyEdge.topology.get_hyNode_indices();
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
           hyEdge_dofs[hyNode] = 
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
         
         // Turn degrees of freedom of x_vec that have been stored locally into local errors.
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr
         ( 
           not_uses_geometry
           < LocalSolverT,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
-            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>& )
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
           >::value
         )
-          loc_error = local_solver_.calc_loc_error(hyEdge_dofs);
-        else  loc_error = local_solver_.calc_loc_error(hyEdge_dofs,hyEdge);
-        
-        // Fill the vector of errors.
-        for ( unsigned int err = 0 ; err < n_errors ; ++err )  result[err] += loc_error[err];
+        {
+          if constexpr
+          (
+            has_L2_error
+            < LocalSolverT,
+              typename LocalSolverT::solver_float_t
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+            >::value
+          )
+            result += local_solver_.calc_L2_error_squared(hyEdge_dofs);
+        }
+        else
+        {
+          if constexpr
+          (
+            has_L2_error
+            < LocalSolverT,
+              typename LocalSolverT::solver_float_t
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                decltype(hyper_edge)& )
+            >::value
+          )
+            result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge);
+        }
       });
+
+      return std::sqrt(result);
     }
     /*!*********************************************************************************************
      * \brief   Determine size of condensed system for the skeletal unknowns.
@@ -445,8 +458,8 @@ class AbstractProblem
                                                     (value == "true" || value == "1");
       else if (option == "plotEdges")             plot_options.plot_edges = (value == "true" || value == "1");
       else if (option == "plotEdgeBoundaries")    plot_options.plot_edge_boundaries = (value == "true" || value == "1");
-      else if (option == "scale")                 plot_options.scale = std::stod(value);
       else if (option == "boundaryScale")         plot_options.boundary_scale = std::stod(value);
+      else if (option == "scale")                 plot_options.scale = stof(value);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       if (option == "outputDir")                  value = plot_options.outputDir;
