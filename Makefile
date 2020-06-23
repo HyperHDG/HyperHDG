@@ -64,6 +64,7 @@ make:
 	
 clean:
 	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR) __pycache__
+	rm -rf domains/*.pts.geo
 
 distclean:
 	$(MAKE) clean
@@ -90,7 +91,9 @@ run_tests:
 	./build/C++ExampleBuild/Plot2.exe;
 	./build/C++ExampleBuild/point_functions.exe;
 	./build/C++ExampleBuild/diffusion_floatings.exe;
+	./build/C++ExampleBuild/diffusion_plotting.exe;
 	./build/C++ExampleBuild/diffusion_dimensions.exe;
+	./build/C++ExampleBuild/diffusion_convergence.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
 	$(PYTHON) tests_python/diffusion_uniform.py
 

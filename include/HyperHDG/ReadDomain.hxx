@@ -2,6 +2,7 @@
 
 #include <HyperHDG/DenseLA.hxx>
 #include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/EpsilonNeighborhoodGraph.hxx>
 
 #include <algorithm>
 #include <array>
@@ -325,6 +326,7 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
   hy_assert( hyEdge_iter == N_HyperEdges ,
              "Not all hyperedges have been added to the list!" );
 
+  infile.close();
   return domain_info;
 } // end of read_domain_geo
 
@@ -344,8 +346,14 @@ DomainInfo<hyEdge_dim,space_dim> read_domain_geo( const std::string& filename )
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 template < unsigned int hyEdge_dim, unsigned int space_dim >
-DomainInfo<hyEdge_dim,space_dim> read_domain( const std::string& filename )
+DomainInfo<hyEdge_dim,space_dim> read_domain( std::string filename )
 {
+  if (filename.substr(filename.size()-4, filename.size()) == ".pts")
+  {
+    hy_assert( hyEdge_dim == 1 , "This only works for graphs, so far!" );
+    make_epsilon_neighborhood_graph<space_dim>(filename);
+  }
+
   hy_assert( filename.substr(filename.size()-4, filename.size()) == ".geo" ,
              "The given file needs to be a .geo file, since no other input file types are currently"
              << " implemented." );

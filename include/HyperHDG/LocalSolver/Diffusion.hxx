@@ -35,6 +35,9 @@ template
 class Diffusion_TensorialUniform
 {
   public:
+
+    typedef lSol_float_t solver_float_t;
+
     /*!*********************************************************************************************
      * \brief Dimension of hyper edge type that this object solves on.
      * 
@@ -200,12 +203,12 @@ class Diffusion_TensorialUniform
        
       return bdr_values;
     }
-
-  template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-             Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
-  bulk_values
-      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
+    
+    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+      Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+    bulk_values
+    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
 
 
   template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
@@ -893,16 +896,15 @@ class Diffusion
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       Diffusion
-      <
-        hyEdge_dimT, space_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, space_dimTP,
-        lSol_float_tP
+      < 
+        hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       >::system_dimension()
     >
     bulk_values
-        (
-            const std::array<abscissa_float_t,sizeT>  & abscissas,
-            const input_array_t                       & lambda_values,
-            hyEdgeT                                   & hyper_edge
+    ( 
+      const std::array<abscissa_float_t,sizeT>  & abscissas,
+      const input_array_t                       & lambda_values,
+      hyEdgeT                                   & hyper_edge
         )  const;
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
   std::array
@@ -1252,6 +1254,7 @@ bulk_values
   
   return values;
 }
+// end of Diffusion::bulk_values
 template
     <
         unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
@@ -1314,4 +1317,3 @@ Diffusion
   return values;
 
 }
-// end of Diffusion::bulk_values

@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cmath>
+#include <numeric>
 
 
 struct Gaussian
@@ -666,12 +667,45 @@ class IntegratorTensorial
           }
           else
           {
-            quad_pt[dim] = quad_points_[dec_q[dim]];
-            quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
+            quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
+            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
           }
         }
         integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
       }
       return integral * geom.face_area(bdr);
+    }
+
+    template 
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&), std::size_t n_coeff >
+    return_t integrate_vol_diffsquare_discana
+    ( const std::array < return_t , n_coeff > coeffs, GeomT& geom)  const
+    {
+      return_t integral = 0., quad_weight;
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i, dec_q;
+      std::array<return_t, n_coeff> quad_val;
+      Point<GeomT::hyEdge_dim(), return_t> quad_pt;
+
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+      {
+        dec_q = index_decompose
+                  <GeomT::hyEdge_dim(),quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_weight = 1.;
+        quad_val = coeffs;
+        for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+        {
+          quad_pt[dim] = quad_points_[dec_q[dim]];
+          quad_weight *= quad_weights_[dec_q[dim]];
+          for (unsigned int i = 0; i < n_coeff; ++i)
+          {
+            dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+            quad_val[i] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
+          }
+        }
+        integral += quad_weight * 
+                      std::pow(fun(geom.map_ref_to_phys(quad_pt)) 
+                        - std::accumulate(quad_val.begin(), quad_val.end(), 0.), 2);
+      }
+      return integral * geom.area();
     }
 }; // end of class Integrator

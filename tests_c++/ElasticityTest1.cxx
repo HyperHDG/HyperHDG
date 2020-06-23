@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
   bool successful = true;
   const double solution_tolerance = 1e-8;
   
-  std::string filename = "domains/SimpleTriangle.geo";
+  std::string filename = "domains/triangle.pts";
   AbstractProblem
   < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, LengtheningBeam<1,2,1,2> >
   diffusion_problem(filename, 1.);
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   vectorDirichlet[0] = 1.;
   vectorDirichlet[2] = 0.;
   
-  const vector<unsigned int> index_vector = { 0 , 1 , 4 , 5 };
+  const vector<unsigned int> index_vector = { 0 , 1 , 8 , 9 };
   diffusion_problem.read_dirichlet_indices(index_vector);
   
   vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
   vector<double> solution = conjugate_gradient( vectorRHS, diffusion_problem );
   solution = linear_combination(1., solution, 1., vectorDirichlet);
  
-  const std::vector<double> python_result = { 1., 0., 0., 0., 0., 0., 0., 0., 0.5, 0.5, 0., 0. };
+  const std::vector<double> python_result = { 1., 0., 0., 0., 0.5, 0.5, 0., 0., 0., 0., 0., 0. };
   
   hy_assert ( solution.size() == python_result.size() ,
               "Size of solution of C++ program must be size of reference Python solution." );

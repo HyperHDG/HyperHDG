@@ -34,3 +34,6 @@ prog
 *.out
 *.pdf
 *.gz
+
+# Ignore files that have been created from other input
+*.pts.geo

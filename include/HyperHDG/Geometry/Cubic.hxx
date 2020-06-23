@@ -3,6 +3,7 @@
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/Topology/Cubic.hxx>
 #include <HyperHDG/Mapping/Linear.hxx>
+#include <algorithm>
 #include <array>
 
 /*!*************************************************************************************************
@@ -111,11 +112,11 @@ class UnitCube
             hy_assert( 0. <= pt[ext_dim] && pt[ext_dim] <= 1. ,
                        "The unit cube has only these cooridnates." );
           }
-          points_[index++] = pt;          
+          points_[index++] = pt;
         }
         else
         {
-          for (unsigned int i = 0; i < 2; ++i)
+          for (unsigned int i = 2 * hyEdge_dimTT - 2 ; i < 2 * hyEdge_dimTT; ++i)
             index = fill_points<hyEdge_dimTT-1,space_dimTT>
                       ( index, get_face<hyEdge_dimTT, space_dimTT>(elem, i), geometry );
         }
@@ -183,7 +184,7 @@ class UnitCube
        *
        * \retval  point           Point/Vertex of the hyperedge.
        ********************************************************************************************/
- //     Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
+      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
 
 
       /*!*******************************************************************************************
