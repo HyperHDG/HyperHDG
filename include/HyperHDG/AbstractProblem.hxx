@@ -443,6 +443,10 @@ class AbstractProblem
                                                     (value == "true" || value == "1");
       else if (option == "incrementFileNumber")   plot_options.incrementFileNumber =
                                                     (value == "true" || value == "1");
+      else if (option == "plotEdges")             plot_options.plot_edges = (value == "true" || value == "1");
+      else if (option == "plotEdgeBoundaries")    plot_options.plot_edge_boundaries = (value == "true" || value == "1");
+      else if (option == "scale")                 plot_options.scale = std::stod(value);
+      else if (option == "boundaryScale")         plot_options.boundary_scale = std::stod(value);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       if (option == "outputDir")                  value = plot_options.outputDir;
@@ -452,7 +456,13 @@ class AbstractProblem
       else if (option == "printFileNumber")       value = std::to_string
                                                             (plot_options.printFileNumber);
       else if (option == "incrementFileNumber")   value = std::to_string
-                                                            (plot_options.incrementFileNumber);
+            (plot_options.incrementFileNumber);
+      else if (option == "plotEdges")   value = std::to_string
+            (plot_options.plot_edges);
+      else if (option == "plotEdgeBoundaries")   value = std::to_string
+            (plot_options.plot_edge_boundaries);
+      else if (option == "scale") value = std::to_string(plot_options.scale);
+      else if (option == "boundaryScale") value = std::to_string(plot_options.boundary_scale);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       return value;

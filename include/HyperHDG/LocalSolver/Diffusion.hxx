@@ -200,12 +200,23 @@ class Diffusion_TensorialUniform
        
       return bdr_values;
     }
-    
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
-    bulk_values
-    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
+
+  template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+             Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+  bulk_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
+
+
+  template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,
+             Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+  boundary_values
+      (
+          const std::array<abscissa_float_t,sizeT>  & abscissas,
+          const input_array_t                       & lambda_values,
+          unsigned int boundary_number
+      )  const;
 
 }; // end of class Diffusion_TensorialUniform
 
@@ -447,6 +458,60 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
   return values;
 } // end of Diffusion_TensorialUniform::bulk_values
 
+template
+    < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t >
+std::array
+    <
+        std::array
+            <
+                lSol_float_t,
+                Hypercube<hyEdge_dimT-1>::pow(sizeT)
+            > ,
+        Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+    >
+Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::boundary_values(const std::array<
+    abscissa_float_t,
+    sizeT> &abscissas,
+                                                                                                                    const input_array_t &lambda_values,
+                                                                                                                    const unsigned int boundary_number) const {
+
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT-1>::pow(sizeT)>,system_dimension()> values;
+  std::array<unsigned int, hyEdge_dimT> dec_i;
+  std::array<unsigned int, hyEdge_dimT-1> dec_q;
+  std::array<unsigned int, poly_deg+1> poly_indices;
+  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 >
+      values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
+  lSol_float_t fct_value;
+  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
+
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
+    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT-1>::pow(sizeT); ++q)
+    {
+      dec_q = integrator.template index_decompose<hyEdge_dimT-1, abscissas.size()>(q);
+      fct_value = 1.;
+      unsigned int subd = 0;
+      for (unsigned int d = 0; d < hyEdge_dimT; ++d) {
+        if(boundary_number/2 == d) {
+          if (boundary_number % 2 == 0)
+            fct_value *= values1D[dec_i[d]][0];
+          else
+            fct_value *= values1D[dec_i[d]][poly_deg];
+        }
+        else
+          fct_value *= values1D[dec_i[d]][dec_q[subd++]];
+      }
+      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
+        values[dim][q] +=  fct_value;
+    }
+  }
+
+  return values;
+
+}
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -828,17 +893,34 @@ class Diffusion
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       Diffusion
-      < 
+      <
         hyEdge_dimT, space_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, space_dimTP,
         lSol_float_tP
       >::system_dimension()
     >
     bulk_values
-    ( 
-      const std::array<abscissa_float_t,sizeT>  & abscissas,
-      const input_array_t                       & lambda_values,
-      hyEdgeT                                   & hyper_edge
-    )  const;
+        (
+            const std::array<abscissa_float_t,sizeT>  & abscissas,
+            const input_array_t                       & lambda_values,
+            hyEdgeT                                   & hyper_edge
+        )  const;
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT >
+  std::array
+      <
+          std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,
+          Diffusion
+              <
+                  hyEdge_dimT, space_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, space_dimTP,
+                  lSol_float_tP
+              >::system_dimension()
+      >
+  boundary_values
+      (
+          const std::array<abscissa_float_t,sizeT>  & abscissas,
+          const input_array_t                       & lambda_values,
+          hyEdgeT                                   & hyper_edge,
+          const unsigned int boundary_number
+      )  const;
 }; // end of class Diffusion
 
 
@@ -1169,4 +1251,67 @@ bulk_values
   }
   
   return values;
-} // end of Diffusion::bulk_values
+}
+template
+    <
+        unsigned int hyEdge_dimT, unsigned int space_dimT, unsigned int poly_deg, unsigned int quad_deg,
+        template < unsigned int, typename > typename parameters, typename lSol_float_t,
+        unsigned int space_dimTP, typename lSol_float_tP
+    >
+template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT >
+std::array
+    <
+        std::array
+            <
+                lSol_float_t,
+                Hypercube<hyEdge_dimT-1>::pow(sizeT)
+            > ,
+        Diffusion
+            < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >
+        ::system_dimension()
+    >
+Diffusion
+    < hyEdge_dimT,space_dimT,poly_deg,quad_deg,parameters,lSol_float_t,space_dimTP,lSol_float_tP >::boundary_values(const std::array<
+    abscissa_float_t,
+    sizeT> &abscissas,
+                                                                                                   const input_array_t &lambda_values,
+                                                                                                   hyEdgeT &hyper_edge,
+                                                                                                   const unsigned int boundary_number) const {
+
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT-1>::pow(sizeT)>,system_dimension()> values;
+  std::array<unsigned int, hyEdge_dimT> dec_i;
+  std::array<unsigned int, hyEdge_dimT-1> dec_q;
+  std::array<unsigned int, poly_deg+1> poly_indices;
+  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
+  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 >
+      values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
+  lSol_float_t fct_value;
+  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
+
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
+    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT-1>::pow(sizeT); ++q)
+    {
+      dec_q = integrator.template index_decompose<hyEdge_dimT-1, abscissas.size()>(q);
+      fct_value = 1.;
+      unsigned int subd = 0;
+      for (unsigned int d = 0; d < hyEdge_dimT; ++d) {
+        if(boundary_number/2 == d) {
+          if (boundary_number % 2 == 0)
+            fct_value *= values1D[dec_i[d]][0];
+          else
+            fct_value *= values1D[dec_i[d]][poly_deg];
+        }
+        else
+          fct_value *= values1D[dec_i[d]][dec_q[subd++]];
+      }
+      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
+        values[dim][q] +=  fct_value;
+    }
+  }
+
+  return values;
+
+}
+// end of Diffusion::bulk_values

@@ -316,16 +316,47 @@ class UnitCube
       {
         static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
         hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
-                   "The index must niot exceed the number of prescribed lexicographic points." );
+                   "The index must not exceed the number of prescribed lexicographic points." );
         generate_mapping_if_needed();
         Point<hyEdge_dimT,pt_coord_t> pt;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         {
-          pt[dim] = (pt_coord_t) points_1d[index % n_sub_points]; 
+          pt[dim] = (pt_coord_t) points_1d[index % n_sub_points];
           index /= n_sub_points;
         }
         return mapping->map_reference_to_physical(pt);
       }
+
+    /*!*******************************************************************************************
+     * \brief   Return equidistant tensorial point of given index on a given boundary (slightly moved
+     * away from the boundary using boundary_scale), ordered lexicographically.
+     ********************************************************************************************/
+    template<unsigned int n_sub_points, typename one_dim_float_t>
+    Point<space_dimT,pt_coord_t> boundary_lexicographic
+        (unsigned int index, unsigned int boundary_number, float boundary_scale, const std::array<one_dim_float_t, n_sub_points>& points_1d )
+    {
+      static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
+      hy_assert( index < std::pow(n_sub_points, hyEdge_dimT-1)*hyEdge_dimT*2 ,
+                 "The index must not exceed the number of prescribed lexicographic points." );
+      generate_mapping_if_needed();
+      Point<hyEdge_dimT-1,pt_coord_t> subpt;
+      index = index - std::pow(n_sub_points,hyEdge_dimT-1)*boundary_number;
+      for (unsigned int subdim = 0; subdim < hyEdge_dimT-1; ++subdim)
+      {
+        subpt[subdim] = (pt_coord_t) points_1d[index % n_sub_points];
+        index /= n_sub_points;
+      }
+      Point<hyEdge_dimT,pt_coord_t> pt;
+      unsigned int subd = 0;
+      for(unsigned int d = 0; d < hyEdge_dimT; d++)
+      {
+        if(boundary_number / 2 == d)
+          pt[d] = boundary_scale*(boundary_number%2-0.5)+0.5;
+        else
+          pt[d] = subpt[subd++];
+      }
+      return mapping->map_reference_to_physical(pt);
+    }
   }; // end of class hyEdge
   
   public:

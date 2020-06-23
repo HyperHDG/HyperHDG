@@ -39,6 +39,7 @@ void test()
   
   PlotOptions pltop;
   pltop.scale = .8;
+  pltop.plot_edge_boundaries = true;
   pltop.numbers = true;
   std::string name = "plot2-";
   name += std::to_string(edge_dim) + std::string("-") + char('a'+ space_dim - edge_dim);
