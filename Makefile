@@ -93,7 +93,6 @@ run_tests:
 	./build/C++ExampleBuild/diffusion_floatings.exe;
 	./build/C++ExampleBuild/diffusion_plotting.exe;
 	./build/C++ExampleBuild/diffusion_dimensions.exe;
-	./build/C++ExampleBuild/diffusion_convergence.exe;
 	./build/C++ExampleBuild/ElasticityTest1.exe;
 	$(PYTHON) tests_python/diffusion_uniform.py
 
