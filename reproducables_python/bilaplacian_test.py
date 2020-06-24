@@ -12,42 +12,54 @@ from scipy.sparse.linalg import LinearOperator
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
 
-# Predefine problem to be solved.
-problem = "AbstractProblem \
-  < \
-    Topology::Cubic<1,1>, Geometry::UnitCube<1,1,double>, \
-    NodeDescriptor::Cubic<1,1>, \
-    bilaplacian<1,1,2,TestParametersSin,double> \
-  >"
-filenames = [ "HyperHDG/Geometry/Cubic.hxx" , \
-              "HyperHDG/NodeDescriptor/Cubic.hxx", \
-              "HyperHDG/LocalSolver/BernoulliBeams.hxx", \
-              "reproducables_python/parameters/bilaplacian.hxx" ]
 
-# Import C++ wrapper class to use HDG method on graphs.
-from cython_import import cython_import
-PyDP = cython_import(["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True)
+# --------------------------------------------------------------------------------------------------
+# Function bilaplacian_test.
+# --------------------------------------------------------------------------------------------------
+def bilaplacian_test(dimension, iteration):
+  # Predefine problem to be solved.
+  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
+          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSin,double> >"
+  filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
+                "HyperHDG/LocalSolver/bilaplacian.hxx", \
+                "reproducables_python/parameters/bilaplacian.hxx" ]
 
-# Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDP( [4] )
+  # Import C++ wrapper class to use HDG method on graphs.
+  from cython_import import cython_import
+  PyDP = cython_import \
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
-# Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
-# vector of Dirichlet values.
-vectorRHS = HDG_wrapper.return_zero_vector();
-vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(vectorRHS)]
+  # Initialising the wrapped C++ class HDG_wrapper.
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
-# Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-# fashion.
-system_size = HDG_wrapper.size_of_system()
-A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  # Generate right-hand side vector.
+  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
 
-# Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-[vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9) # Parameters for BiCGStab.
+  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
+  # fashion.
+  system_size = HDG_wrapper.size_of_system()
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
-# Check, whether solution has been successful!
-if num_iter == 0:
-  print("Solution has been successfully calculated!")
-else:
-  print("The linear solver (conjugate gradients) failed (did not converge)!")
+  # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
+  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
 
-print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
+  # Print error.
+  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
+  
+
+# --------------------------------------------------------------------------------------------------
+# Function main.
+# --------------------------------------------------------------------------------------------------
+def main():
+  for dimension in range(1,4):
+    for iteration in range(6 - dimension):
+      bilaplacian_test(dimension, iteration)
+
+
+# --------------------------------------------------------------------------------------------------
+# Define main function.
+# -------------------------------------------------------------------------------------------------- 
+if __name__ == "__main__":
+    main()
