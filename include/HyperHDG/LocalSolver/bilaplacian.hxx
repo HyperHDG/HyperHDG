@@ -185,8 +185,10 @@ class bilaplacian_uniform
      * \param   lambda_values Local part of vector x.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-    std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2 * hyEdge_dimT > numerical_flux_from_lambda
-    (const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
+    std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >
+    numerical_flux_from_lambda
+    (const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >& lambda_values)
+    const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
       
@@ -621,8 +623,10 @@ class bilaplacian
     template < typename parameters >
     static constexpr bool is_dirichlet_laplacian( const unsigned int node_type )
     { 
-      return std::find( parameters::dirichlet_laplacian_nodes.begin(), parameters::dirichlet_laplacian_nodes.end(),
-                        node_type ) != parameters::dirichlet_laplacian_nodes.end();
+      return std::find( parameters::dirichlet_laplacian_nodes.begin(),
+                        parameters::dirichlet_laplacian_nodes.end(),
+                        node_type )
+               != parameters::dirichlet_laplacian_nodes.end();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -675,7 +679,7 @@ class bilaplacian
     inline SmallVec< n_loc_dofs_, lSol_float_t > assemble_rhs_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge 
+      hyEdgeT                                                                     & hyper_edge 
     )  const;
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from global right-hand side).
@@ -708,8 +712,8 @@ class bilaplacian
     template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      const unsigned int                                                          solution_type,
-      hyEdgeT                                                                   & hyper_edge
+      const unsigned int                                                            solution_type,
+      hyEdgeT                                                                     & hyper_edge
     )  const
     {
       try
@@ -757,10 +761,7 @@ class bilaplacian
      **********************************************************************************************/
     template < typename hyEdgeT >
     inline std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2*hyEdge_dimT > dual_at_boundary
-    ( 
-      const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
-      hyEdgeT& hyper_edge
-    ) const;
+    ( const std::array<lSol_float_t, n_loc_dofs_>& coeffs, hyEdgeT& hyper_edge ) const;
     
   public:
   
@@ -795,7 +796,7 @@ class bilaplacian
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                     & hyper_edge
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -811,9 +812,11 @@ class bilaplacian
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
                                  - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)  bdr_values[i][j] = 0.;
+          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
+            bdr_values[i][j] = 0.;
         if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+          for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = 0.;
       }
        
       return bdr_values;
@@ -835,7 +838,7 @@ class bilaplacian
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_total
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                     & hyper_edge
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -851,9 +854,11 @@ class bilaplacian
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
                                  - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)  bdr_values[i][j] = 0.;
+          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
+            bdr_values[i][j] = 0.;
         if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+          for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = 0.;
       }
           
       return bdr_values;
@@ -934,7 +939,7 @@ template
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
-< bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
 bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
 { 
@@ -953,8 +958,8 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
       vol_func_integral = integrator.template integrate_vol_phiphifunc
-                            <decltype(hyEdgeT::geometry),parameters::inverse_bilaplacian_coefficient>
-                              (i, j, hyper_edge.geometry);
+                          <decltype(hyEdgeT::geometry),parameters::inverse_bilaplacian_coefficient>
+                          (i, j, hyper_edge.geometry);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
       grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>
@@ -971,24 +976,29 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
           normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
       }
 
-      local_mat( hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j ) -= vol_func_integral;
-      //local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) -= vol_func_integral;
+      local_mat( hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j )
+        -= vol_func_integral;
 
       local_mat( hyEdge_dimT*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
-      local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j ) += tau * face_integral;
+      local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j )
+        += tau * face_integral;
       
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       { 
         local_mat( dim*n_shape_fct_+i , dim*n_shape_fct_+j ) += vol_integral;
-        local_mat( n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j ) += vol_integral;
+        local_mat( n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j )
+          += vol_integral;
         
         local_mat( hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j ) -= grad_int_vec[dim];
         local_mat( dim*n_shape_fct_+i , hyEdge_dimT*n_shape_fct_+j ) -= grad_int_vec[dim];
-        local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j ) -= grad_int_vec[dim];
-        local_mat( n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j ) -= grad_int_vec[dim];
+        local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j )
+          -= grad_int_vec[dim];
+        local_mat( n_dofs_lap + dim*n_shape_fct_+i , n_dofs_lap + hyEdge_dimT*n_shape_fct_+j )
+          -= grad_int_vec[dim];
         
         local_mat( hyEdge_dimT*n_shape_fct_+i , dim*n_shape_fct_+j ) += normal_int_vec[dim];
-        local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j ) += normal_int_vec[dim];
+        local_mat( n_dofs_lap + hyEdge_dimT*n_shape_fct_+i , n_dofs_lap + dim*n_shape_fct_+j )
+          += normal_int_vec[dim];
       }
     }
   }
@@ -1008,11 +1018,11 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
 bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-  hyEdgeT                                                                   & hyper_edge 
+  hyEdgeT                                                                     & hyper_edge 
 )  const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -1032,7 +1042,8 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble
         integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
                      (i, j, face, hyper_edge.geometry);
         right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
-        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_ * lambda_values[face][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i]
+          += tau_ * lambda_values[face][n_shape_bdr_ + j] * integral;
         
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         {
@@ -1060,7 +1071,7 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
 bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 {
@@ -1114,7 +1125,10 @@ template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  < lSol_float_t, 2*bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_ >,
+  < 
+    lSol_float_t,
+    2 * bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
+  >,
   2 * hyEdge_dimT
 >
 bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
@@ -1159,7 +1173,10 @@ template < typename hyEdgeT >
 inline std::array
 < 
   std::array
-  < lSol_float_t,2*bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_ >,
+  <
+    lSol_float_t,
+    2 * bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
+  >,
   2 * hyEdge_dimT
 >
 bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
