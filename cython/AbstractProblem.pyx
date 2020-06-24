@@ -30,7 +30,7 @@ cdef class PythonClassName :
     return self.thisptr.matrix_vector_multiply (vec)
   def total_flux_vector(self, vec):
     return self.thisptr.total_flux_vector (vec)
-  def total_flux_vector(self, vec):
+  def calculate_L2_error(self, vec):
     return self.thisptr.calculate_L2_error (vec)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
