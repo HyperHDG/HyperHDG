@@ -42,8 +42,8 @@ def bilaplacian_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
-  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
+  # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
+  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
 
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
