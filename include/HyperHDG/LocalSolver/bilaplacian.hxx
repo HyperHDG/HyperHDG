@@ -499,18 +499,26 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
 template < unsigned int space_dimT, typename param_float_t = double >
 struct bilaplacian_parameters_default
 {
-  static constexpr std::array<unsigned int, 2U> dirichlet_nodes {13,26};
+  static constexpr std::array<unsigned int, 0U> dirichlet_nodes {};
+  static constexpr std::array<unsigned int, 0U> dirichlet_laplacian_nodes {};
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static param_float_t bilap_coefficient( const Point<space_dimT,param_float_t>& pt )
+  static constexpr std::array<unsigned int, 0U> neumann_laplacian_nodes {};
+  
+  static param_float_t inverse_bilaplacian_coefficient( const Point<space_dimT,param_float_t>& pt )
   { return 1.; }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
+  
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { return (pt == Point<space_dimT,param_float_t>()); }
+  { return 0.; }
   static param_float_t dirichlet_laplace_value( const Point<space_dimT,param_float_t>& pt )
-  { return (pt == Point<space_dimT,param_float_t>()); }
+  { return 0.; }
+  
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
+  static param_float_t neumann_laplace_value( const Point<space_dimT,param_float_t>& pt )
+  { return 0.; }
+  
   static param_float_t analytic_result( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
 };
@@ -609,6 +617,12 @@ class bilaplacian
     { 
       return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
                         node_type ) != parameters::dirichlet_nodes.end();
+    }
+    template < typename parameters >
+    static constexpr bool is_dirichlet_laplacian( const unsigned int node_type )
+    { 
+      return std::find( parameters::dirichlet_laplacian_nodes.begin(), parameters::dirichlet_laplacian_nodes.end(),
+                        node_type ) != parameters::dirichlet_laplacian_nodes.end();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -797,6 +811,8 @@ class bilaplacian
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
                                  - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)  bdr_values[i][j] = 0.;
+        if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
           for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
       }
        
@@ -835,6 +851,8 @@ class bilaplacian
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
                                  - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)  bdr_values[i][j] = 0.;
+        if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
           for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
       }
           
@@ -935,7 +953,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
       vol_func_integral = integrator.template integrate_vol_phiphifunc
-                            <decltype(hyEdgeT::geometry),parameters::bilap_coefficient>
+                            <decltype(hyEdgeT::geometry),parameters::inverse_bilaplacian_coefficient>
                               (i, j, hyper_edge.geometry);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
@@ -1057,22 +1075,26 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
           <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if ( !is_dirichlet<parameters>(hyper_edge.node_descriptor[face]) )  continue;
-      integral = integrator.template integrate_bdr_phifunc
-                   <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
-                   (i, face, hyper_edge.geometry);
-      right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        right_hand_side[dim * n_shape_fct_ + i] 
-          -= hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
-      
-      /*integral = integrator.template integrate_bdr_phifunc
-                   <decltype(hyEdgeT::geometry),parameters::dirichlet_laplace_value>
-                   (i, face, hyper_edge.geometry);
-      right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] 
-          -= hyper_edge.geometry.local_normal(face).operator[](dim) * integral;*/
+      if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[face]) )
+      {
+        integral = integrator.template integrate_bdr_phifunc
+                     <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
+                     (i, face, hyper_edge.geometry);
+        right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          right_hand_side[dim * n_shape_fct_ + i] 
+            -= hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
+      }
+      if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[face]) )
+      {
+        integral = integrator.template integrate_bdr_phifunc
+                     <decltype(hyEdgeT::geometry),parameters::dirichlet_laplace_value>
+                     (i, face, hyper_edge.geometry);
+        right_hand_side[n_dofs_lap + hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] 
+            -= hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
+      }
     }
   }
   return right_hand_side;
