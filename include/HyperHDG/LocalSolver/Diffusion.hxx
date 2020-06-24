@@ -648,6 +648,26 @@ class Diffusion
     inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs
     ( hyEdgeT& hyper_edge )  const;
     /*!*********************************************************************************************
+     * \brief  Assemble local right-hand for the local solver (from global right-hand side).
+     *
+     * Note that we basically follow the lines of
+     * 
+     * B. Cockburn, J. Gopalakrishnan, and R. Lazarov.
+     * Unified hybridization of discontinuous Galerkin, mixed, and continuous Galerkin methods for
+     * second order elliptic problems. SIAM Journal on Numerical Analysis, 47(2):1319–1365, 2009
+     * 
+     * and discriminate between local solvers with respect to the skeletal variable and with respect
+     * to the global right-hand side. This assembles the local right-hand side with respect to the
+     * global right-hand side. This function implicitly uses the parameters.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_rhs       Local right hand side of the locasl solver.
+     **********************************************************************************************/
+    template < typename hyEdgeT >
+    inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_coeffs
+    ( const std::array< lSol_float_t, n_loc_dofs_ >&coeffs, hyEdgeT& hyper_edge )  const;
+    /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from skeletal).
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
@@ -671,6 +691,29 @@ class Diffusion
           rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge)
                   + assemble_rhs_from_global_rhs(hyper_edge);
         else  hy_assert( 0 == 1 , "This has not been implemented!" );
+        return ( rhs / assemble_loc_matrix(tau_, hyper_edge) ).data();
+      }
+      catch (LAPACKexception& exc)
+      {
+        hy_assert( 0 == 1 ,
+                   exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
+        throw exc;
+      }
+    }
+    /*!*********************************************************************************************
+     * \brief  Solve local problem (with right-hand side from skeletal).
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_sol       Solution of the local problem.
+     **********************************************************************************************/
+    template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_mass_problem
+    ( const std::array<lSol_float_t, n_loc_dofs_> & coeffs, hyEdgeT & hyper_edge )  const
+    {
+      try
+      { 
+        SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(coeffs, hyper_edge);
         return ( rhs / assemble_loc_matrix(tau_, hyper_edge) ).data();
       }
       catch (LAPACKexception& exc)
@@ -800,6 +843,45 @@ class Diffusion
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
             bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j]
                                  - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
+      }
+          
+      return bdr_values;
+    }
+    /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to matrix--vector multiplication.
+     *
+     * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+     * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+     * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+     * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   lambda_values Local part of vector x.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vecAx         Local part of vector A * x.
+     **********************************************************************************************/
+    template < class hyEdgeT >
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      hyEdgeT                                                                   & hyper_edge
+    )  const
+    {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+      std::array<lSol_float_t, n_loc_dofs_> coeffs
+        = solve_local_problem(lambda_values, 1U, hyper_edge);
+      coeffs = solve_mass_problem(coeffs, hyper_edge);
+
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
+        primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
+  
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      {
+        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
       }
           
       return bdr_values;
@@ -1011,6 +1093,40 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
 
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_global_rhs
+
+
+// -------------------------------------------------------------------------------------------------
+// assemble_rhs_from_coeffs
+// -------------------------------------------------------------------------------------------------
+
+template
+< 
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
+>
+template < typename hyEdgeT >
+inline SmallVec
+< Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+assemble_rhs_from_coeffs
+( 
+  const std::array
+  < 
+    lSol_float_t,
+    Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
+  >& coeffs,
+  hyEdgeT & hyper_edge
+)  const
+{
+  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+    for (unsigned int j = 0; j < n_shape_fct_; ++j)
+      right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
+        = coeffs[hyEdge_dimT*n_shape_fct_ + j] 
+            * integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+
+  return right_hand_side;
+} // end of Diffusion::assemble_rhs_from_coeffs
 
 
 // -------------------------------------------------------------------------------------------------
