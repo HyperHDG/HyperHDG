@@ -16,15 +16,15 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(dimension, iteration):
+def diffusion_test(dimension, iteration):
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSin,double> >"
+          + "Diffusion<" + str(dimension) + ",1,2,TestParametersSin,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
-                "HyperHDG/LocalSolver/bilaplacian.hxx", \
-                "reproducables_python/parameters/bilaplacian.hxx" ]
+                "HyperHDG/LocalSolver/Diffusion.hxx", \
+                "reproducables_python/parameters/diffusion.hxx" ]
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
@@ -42,14 +42,14 @@ def bilaplacian_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
-  # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
 
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(vectorSolution);
@@ -61,7 +61,7 @@ def bilaplacian_test(dimension, iteration):
 def main():
   for dimension in range(1,4):
     for iteration in range(6 - dimension):
-      bilaplacian_test(dimension, iteration)
+      diffusion_test(dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
