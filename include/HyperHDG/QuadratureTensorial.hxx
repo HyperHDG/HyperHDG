@@ -575,6 +575,19 @@ class IntegratorTensorial
       return integral * geom.area();
     }
 
+
+    template < typename GeomT >
+    return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j, GeomT& geom) const
+    {
+      constexpr unsigned int dimT = GeomT::hyEdge_dim();
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral * geom.area();
+    }
+
     template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
     return_t integrate_vol_phifunc(const unsigned int i, GeomT& geom) const
     {
