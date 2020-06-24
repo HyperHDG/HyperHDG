@@ -465,14 +465,14 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 template < unsigned int space_dimT, typename param_float_t = double >
 struct DiffusionParametersDefault
 {
-  static constexpr std::array<unsigned int, 2U> dirichlet_nodes {13,26};
-  static constexpr std::array<unsigned int, 0U> neumann_nodes {};
+  static constexpr std::array<unsigned int, 0U> dirichlet_nodes { };
+  static constexpr std::array<unsigned int, 0U> neumann_nodes { };
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
   { return 1.; }
   static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { return (pt == Point<space_dimT,param_float_t>()); }
+  { return 0.; }
   static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
   { return 0.; }
   static param_float_t analytic_result( const Point<space_dimT,param_float_t>& pt )
