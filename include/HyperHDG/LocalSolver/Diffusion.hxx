@@ -602,6 +602,18 @@ class Diffusion
      **********************************************************************************************/
     template < typename hyEdgeT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
     assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const;
+    
+    /*!*********************************************************************************************
+     * \brief  Assemble local matrix for the local solver.
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   tau           Penalty parameter for HDG.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_mat       Matrix of the local solver.
+     **********************************************************************************************/
+    template < typename hyEdgeT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
+    assemble_loc_matrix_for_mass ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const;
+    
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from skeletal).
      *
@@ -869,7 +881,7 @@ class Diffusion
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
-        = solve_local_problem(lambda_values, 1U, hyper_edge);
+        = solve_local_problem(lambda_values, 0U, hyper_edge);
       coeffs = solve_mass_problem(coeffs, hyper_edge);
 
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
@@ -877,9 +889,9 @@ class Diffusion
   
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
       {
-        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
-        else
+//        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+//          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+//        else
           for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
             bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
       }
@@ -1124,6 +1136,10 @@ assemble_rhs_from_coeffs
       right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
         = coeffs[hyEdge_dimT*n_shape_fct_ + j] 
             * integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+
+  for (unsigned int i = 0; i < coeffs.size(); ++i)  std::cout << coef
+  std::cout << right_hand_side << std::endl;
+  hy_assert(false, "End here!");
 
   return right_hand_side;
 } // end of Diffusion::assemble_rhs_from_coeffs
