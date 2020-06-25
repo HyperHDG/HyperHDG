@@ -46,24 +46,24 @@ def diffusion_test(dimension, iteration):
   print( A * [1, 0, 0] )
   print( A * [0, 1, 0] )
   print( A * [0, 0, 1] )
-  
+  print("Make mass")
   print( Mass * [1, 0, 0] )
   print( Mass * [0, 1, 0] )
   print( Mass * [0, 0, 1] )
 
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigs(A, k=1, M=Mass, v0=[0,1,0], which='LR', tol=1e-2)
+ # [vals, vecs] = sp_lin_alg.eigs(A, k=1, M=Mass, which='LR', tol=1e-2)
 
   # Print error.
-  print(vals)
-  print(vecs)
+ # print(vals)
+ # print(vecs)
   
   # Plot obtained solution.
-  # HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
-  # HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  # HDG_wrapper.plot_option( "scale" , "0.95" );
-  # HDG_wrapper.plot_solution(vectorSolution);
+ # HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
+ # HDG_wrapper.plot_option( "printFileNumber" , "false" );
+ # HDG_wrapper.plot_option( "scale" , "0.95" );
+ # HDG_wrapper.plot_solution([i.real for i in vecs]);
   
 
 # --------------------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ def diffusion_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,2):
-    for iteration in range(1, 6 - dimension):
+    for iteration in range(1, 2):#6 - dimension):
       diffusion_test(dimension, iteration)
 
 

@@ -587,6 +587,47 @@ class IntegratorTensorial
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral * geom.area();
     }
+    
+    template < typename GeomT , std::size_t array_size, typename floating_t>
+    return_t integrate_vol_phiphi
+    (
+      const std::array<floating_t, array_size>& is,
+      const std::array<floating_t, array_size>& js,
+      GeomT& geom
+    ) const
+    {
+      constexpr unsigned int dimT = GeomT::hyEdge_dim();
+      
+      return_t integral = 0., quad_val, is_val, js_val, val_helper;
+      
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_k, dec_q;
+
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+      {
+        dec_q = index_decompose
+                  <GeomT::hyEdge_dim(),quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_val = 1.;
+        is_val = 0.;
+        js_val = 0.;
+        
+        for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+          quad_val *= quad_weights_[dec_q[dim]];
+        
+        for (unsigned int k = 0; k < array_size; ++k)
+        {
+          dec_k = index_decompose<GeomT::hyEdge_dim()>(k);
+          val_helper = 1.;
+          for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+            val_helper *= shape_fcts_at_quad_[dec_k[dim]][dec_q[dim]];
+          is_val += is[k] * val_helper;
+          js_val += js[k] * val_helper;
+       //   std::cout << shape_fcts_at_quad_[dec_k[0]][dec_q[0]] << " " << dec_k[0] << std::endl;
+       //   std::cout << is[k] << " " << js[k] << " " << val_helper << std::endl;
+        }
+        integral += quad_val * is_val * js_val;
+      }
+      return integral * geom.area();
+    }
 
     template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
     return_t integrate_vol_phifunc(const unsigned int i, GeomT& geom) const
