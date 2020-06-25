@@ -37,8 +37,8 @@ template < unsigned int space_dimT, typename param_float_t = double >
 struct TestParametersHomo
 {
   static constexpr double pi = acos(-1);
-  static constexpr std::array<unsigned int, 0U> dirichlet_nodes {};
- // { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
+  static constexpr std::array<unsigned int, 26U> dirichlet_nodes
+  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
   static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
   { return 1.; }
