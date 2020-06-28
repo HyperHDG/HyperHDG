@@ -467,15 +467,20 @@ struct DiffusionParametersDefault
 {
   static constexpr std::array<unsigned int, 0U> dirichlet_nodes { };
   static constexpr std::array<unsigned int, 0U> neumann_nodes { };
-  static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t inverse_diffusion_coeff
+  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
   { return 1.; }
-  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t right_hand_side
+  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
   { return 0.; }
-  static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t dirichlet_value
+  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
   { return 0.; }
-  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t neumann_value
+  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
   { return 0.; }
-  static param_float_t analytic_result( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t analytic_result
+  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
   { return 0.; }
 };
 /*!*************************************************************************************************
@@ -601,7 +606,8 @@ class Diffusion
      * \retval  loc_mat       Matrix of the local solver.
      **********************************************************************************************/
     template < typename hyEdgeT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
-    assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const;
+    assemble_loc_matrix
+    ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const;
         
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from skeletal).
@@ -647,7 +653,7 @@ class Diffusion
      **********************************************************************************************/
     template < typename hyEdgeT >
     inline SmallVec< n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs
-    ( hyEdgeT& hyper_edge )  const;
+    ( hyEdgeT& hyper_edge, const lSol_float_t time )  const;
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from global right-hand side).
      *
@@ -680,7 +686,8 @@ class Diffusion
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
       const unsigned int                                                          solution_type,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t time
     )  const
     {
       try
@@ -690,9 +697,9 @@ class Diffusion
           rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
         else if (solution_type == 1)
           rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge)
-                  + assemble_rhs_from_global_rhs(hyper_edge);
+                  + assemble_rhs_from_global_rhs(hyper_edge,time);
         else  hy_assert( 0 == 1 , "This has not been implemented!" );
-        return ( rhs / assemble_loc_matrix(tau_, hyper_edge) ).data();
+        return ( rhs / assemble_loc_matrix(tau_, hyper_edge, time) ).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -710,12 +717,15 @@ class Diffusion
      * \retval  loc_sol       Solution of the local problem.
      **********************************************************************************************/
     template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_mass_problem
-    ( const std::array<lSol_float_t, n_loc_dofs_> & coeffs, hyEdgeT & hyper_edge )  const
+    ( 
+      const std::array<lSol_float_t, n_loc_dofs_> & coeffs, hyEdgeT & hyper_edge,
+      const lSol_float_t time
+    )  const
     {
       try
       { 
         SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(coeffs, hyper_edge);
-        return ( rhs / assemble_loc_matrix(tau_, hyper_edge) ).data();
+        return ( rhs / assemble_loc_matrix(tau_, hyper_edge, time) ).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -789,12 +799,13 @@ class Diffusion
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
-        = solve_local_problem(lambda_values, 0U, hyper_edge);
+        = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
@@ -826,12 +837,13 @@ class Diffusion
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_total
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
-        = solve_local_problem(lambda_values, 1U, hyper_edge);
+        = solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
@@ -919,13 +931,13 @@ class Diffusion
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
     ( 
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t time = 0.
     )  const
     {
-      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
-        = solve_local_problem(lambda_values, 0U, hyper_edge);
-      coeffs = solve_mass_problem(coeffs, hyper_edge);
+        = solve_local_problem(lambda_values, 0U, hyper_edge, time);
+      coeffs = solve_mass_problem(coeffs, hyper_edge, time);
 
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
@@ -958,16 +970,17 @@ class Diffusion
     lSol_float_t calc_L2_error_squared
     ( 
       std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                             & hy_edge
+      hyEdgeT                                                             & hy_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-      std::array<lSol_float_t, n_loc_dofs_> co = solve_local_problem(lambda_values, 1U, hy_edge);
+      std::array<lSol_float_t, n_loc_dofs_> co = solve_local_problem(lambda_values, 1U, hy_edge,time);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = co[i + hyEdge_dimT * n_shape_fct_];
       return integrator.template integrate_vol_diffsquare_discana
-               <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry);
+               <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
     }
 
     /*!*********************************************************************************************
@@ -994,7 +1007,8 @@ class Diffusion
     ( 
       const std::array<abscissa_float_t,sizeT>  & abscissas,
       const input_array_t                       & lambda_values,
-      hyEdgeT                                   & hyper_edge
+      hyEdgeT                                   & hyper_edge,
+      const lSol_float_t time = 0.
     )  const;
 }; // end of class Diffusion
 
@@ -1021,7 +1035,7 @@ template < typename hyEdgeT >
 inline SmallSquareMat
 < Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
-assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
+assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const
 { 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
@@ -1036,7 +1050,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphifunc
                         < decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff >
-                        (i, j, hyper_edge.geometry);
+                        (i, j, hyper_edge.geometry, time);
       // Integral_element - nabla phi_i \vec phi_j dx 
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
       grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>
@@ -1125,7 +1139,7 @@ template < typename hyEdgeT >
 inline SmallVec
 < Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
-assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
+assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -1134,13 +1148,13 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge )  const
   {
     right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
       = integrator.template integrate_vol_phifunc
-          <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry);
+          <decltype(hyEdgeT::geometry),parameters::right_hand_side>  (i, hyper_edge.geometry, time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if ( !is_dirichlet<parameters>(hyper_edge.node_descriptor[face]) )  continue;
       integral = integrator.template integrate_bdr_phifunc
                    <decltype(hyEdgeT::geometry),parameters::dirichlet_value>
-                   (i, face, hyper_edge.geometry);
+                   (i, face, hyper_edge.geometry, time);
       right_hand_side[hyEdge_dimT*n_shape_fct_ + i] += tau_ * integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] 
@@ -1286,11 +1300,12 @@ Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_value
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
-  hyEdgeT                                   & hyper_edge
+  hyEdgeT                                   & hyper_edge,
+  const lSol_float_t time
 )  const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
-    = solve_local_problem(lambda_values, 1U, hyper_edge);
+    = solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
