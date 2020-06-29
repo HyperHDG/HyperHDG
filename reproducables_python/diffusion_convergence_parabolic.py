@@ -43,17 +43,16 @@ def diffusion_test(dimension, iteration):
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
-
+  
+  # Config time stepping.
+  time_steps  = 4 * iteration * iteration
+  delta_time  = 1 / time_steps
+  
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-  time_steps  = 40 * iteration
-  delta_time  = 1 / time_steps
-
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.mass_matrix_multiply )
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
