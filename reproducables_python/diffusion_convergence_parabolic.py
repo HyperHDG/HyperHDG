@@ -61,21 +61,23 @@ def diffusion_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= helper.multiply )
 
+  # For loop over the respective time-steps.
   for time_step in range(time_steps):
-
-    vectorRHS = \
-      np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), delta_time)
+    
+    # Assemble right-hand side vextor and "mass_matrix * old solution".
+    vectorRHS = np.multiply( \
+      HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), \
+      delta_time )
     vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
-  
     if num_iter != 0:
       print("The linear solver (conjugate gradients) failed with a total number of ",
             num_iter, " iterations.")
 
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 0.)))
+  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)))
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
@@ -88,8 +90,8 @@ def diffusion_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,2):
-    for iteration in range(1, 8 - dimension):
+  for dimension in range(1,4):
+    for iteration in range(1, 6 - dimension):
       diffusion_test(dimension, iteration)
 
 
