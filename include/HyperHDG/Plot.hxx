@@ -118,6 +118,8 @@ struct PlotOptions
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
+ * \todo    Adapt to deal with time-dependent cases when the node plotting is finished!
+ * 
  * Creates a file according to set plotting options in \c plot_options. This file contains the 
  * solution of the PDE defined in \c plotOpt having the representation \c lambda in terms of its
  * skeleta degrees of freedom (related to skeletal variable lambda).
