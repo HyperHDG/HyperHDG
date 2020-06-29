@@ -14,6 +14,37 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
+# Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
+# --------------------------------------------------------------------------------------------------
+class helper_class():
+  def __init__(self, hdg_wrapper):
+    self.hdg_wrapper = hdg_wrapper
+  def multiply_stiff(self, vector):
+    vec = [0.] * (len(vector)+2)
+    for i in range(len(vector)):
+      vec[i+1] = vector[i]
+    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
+    vecs = [0.] * len(vector)
+    for i in range(len(vector)):
+      vecs[i] = vec[i+1]
+    return vecs
+  def multiply_mass(self, vector):
+    vec = [0.] * (len(vector)+2)
+    for i in range(len(vector)):
+      vec[i+1] = vector[i]
+    vec = self.hdg_wrapper.mass_matrix_multiply(vec)
+    vecs = [0.] * len(vector)
+    for i in range(len(vector)):
+      vecs[i] = vec[i+1]
+    return vecs
+  def plot_vector(self, vector):
+    vec = [0.] * (len(vector)+2)
+    for i in range(len(vector)):
+      vec[i+1] = (vector[i]).real
+    return vec
+
+
+# --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(dimension, iteration):
@@ -29,41 +60,39 @@ def diffusion_test(dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-
-  # Generate right-hand side vector.
-  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
+  helper = helper_class(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
-  Mass = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.mass_matrix_multiply )
+  Stiff = LinearOperator( (system_size-2,system_size-2), matvec= helper.multiply_stiff )
+  Mass  = LinearOperator( (system_size-2,system_size-2), matvec= helper.multiply_mass )
 
-  print( A * [1, 0, 0] )
-  print( A * [0, 1, 0] )
-  print( A * [0, 0, 1] )
-  print("Make mass")
-  print( Mass * [1, 0, 0] )
-  print( Mass * [0, 1, 0] )
-  print( Mass * [0, 0, 1] )
-
-
+#   print( Stiff * [1, 0, 0] )
+#   print( Stiff * [1.] )
+#   print( Stiff * [0, 0, 1] )
+#   print("Make mass")
+#   print( Mass * [1, 0, 0] )
+#   print( Mass * [1, 0, 0] )
+#   print( Mass * [0, 1, 0] )
+#   print( Mass * [0, 0, 1] )
+  
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
- # [vals, vecs] = sp_lin_alg.eigs(A, k=1, M=Mass, which='LR', tol=1e-2)
+  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SR', tol=1e-9)
 
   # Print error.
- # print(vals)
- # print(vecs)
+  print(vals)
+#   print(vecs)
   
   # Plot obtained solution.
- # HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
- # HDG_wrapper.plot_option( "printFileNumber" , "false" );
- # HDG_wrapper.plot_option( "scale" , "0.95" );
- # HDG_wrapper.plot_solution([i.real for i in vecs]);
+  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "printFileNumber" , "false" );
+  HDG_wrapper.plot_option( "scale" , "0.95" );
+  HDG_wrapper.plot_solution(helper.plot_vector(vecs));
   
 
 # --------------------------------------------------------------------------------------------------
@@ -71,7 +100,7 @@ def diffusion_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,2):
-    for iteration in range(1, 2):#6 - dimension):
+    for iteration in range(2, 10 - dimension):
       diffusion_test(dimension, iteration)
 
 
