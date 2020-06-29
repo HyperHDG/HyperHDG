@@ -21,7 +21,7 @@ def diffusion_test(dimension, iteration):
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Diffusion<" + str(dimension) + ",1,2,TestParametersSin,double> >"
+          + "Diffusion<" + str(dimension) + ",1,2,TestParametersSinEllipt,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]

@@ -9,7 +9,7 @@
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersSin
+struct TestParametersSinEllipt
 {
   static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes
@@ -18,12 +18,15 @@ struct TestParametersSin
   static param_float_t inverse_diffusion_coeff
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.5 * pi; }
+  
   static param_float_t analytic_result
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return sin(0.5 * pi * point[0]); }
+  
   static param_float_t right_hand_side
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.5 * pi * sin(0.5 * pi * point[0]); }
+  
   static param_float_t dirichlet_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return analytic_result(point); }
