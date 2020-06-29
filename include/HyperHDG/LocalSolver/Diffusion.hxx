@@ -1017,7 +1017,7 @@ class Diffusion
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-      std::array<lSol_float_t, n_loc_dofs_> coefficiens 
+      std::array<lSol_float_t, n_loc_dofs_> coefficients 
         = solve_local_problem(lambda_values, 1U, hy_edge,time);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
       for (unsigned int i = 0; i < coeffs.size(); ++i)

@@ -95,6 +95,9 @@ struct TestParametersHomo
   static param_float_t right_hand_side
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
+  static param_float_t initial
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
+  { return 0.; }
   static param_float_t dirichlet_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
