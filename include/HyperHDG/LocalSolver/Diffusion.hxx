@@ -471,19 +471,19 @@ struct DiffusionParametersDefault
   static constexpr std::array<unsigned int, 0U> dirichlet_nodes { };
   static constexpr std::array<unsigned int, 0U> neumann_nodes { };
   static param_float_t inverse_diffusion_coeff
-  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 1.; }
   static param_float_t right_hand_side
-  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
   static param_float_t dirichlet_value
-  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
   static param_float_t neumann_value
-  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
   static param_float_t analytic_result
-  ( const Point<space_dimT,param_float_t>& point , const float_t time = 0. )
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
 };
 /*!*************************************************************************************************
@@ -1017,12 +1017,13 @@ class Diffusion
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-      std::array<lSol_float_t, n_loc_dofs_> co = solve_local_problem(lambda_values, 1U, hy_edge,time);
+      std::array<lSol_float_t, n_loc_dofs_> coefficiens 
+        = solve_local_problem(lambda_values, 1U, hy_edge,time);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
       for (unsigned int i = 0; i < coeffs.size(); ++i)
-        coeffs[i] = co[i + hyEdge_dimT * n_shape_fct_];
+        coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
       return integrator.template integrate_vol_diffsquare_discana
-               <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
+          <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
     }
 
     /*!*********************************************************************************************
