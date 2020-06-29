@@ -139,8 +139,10 @@ class LengtheningBeam
     template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
-    (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, hyEdgeT& hyper_edge ) const
+    (
+      const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
+      lambda_values, hyEdgeT& hyper_edge, const lSol_float_t time = 0.
+    ) const
     {
       std::array<std::array<lSol_float_t,diffusion_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
@@ -322,7 +324,7 @@ class BernoulliBendingBeam
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, hyEdgeT& hyper_edge ) const
+      lambda_values, hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const
     {
       std::array<std::array<lSol_float_t,bilaplacian_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT>
         lambda;
@@ -488,7 +490,7 @@ class LengtheningBernoulliBendingBeam
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, hyEdgeT& hyper_edge ) const
+      lambda_values, hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > result, aux;
       
@@ -511,7 +513,7 @@ class LengtheningBernoulliBendingBeam
      **********************************************************************************************/
     template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()>, 2*hyEdge_dimT > numerical_flux_from_rhs
-    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge )  const
+    ( const std::array< unsigned int, 2*hyEdge_dimT > & bound_cond, hyEdgeT& hyper_edge, const lSol_float_t = 0. )  const
     {
       std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT > bdr_values;            
       return bdr_values;

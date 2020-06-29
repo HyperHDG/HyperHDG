@@ -9,6 +9,8 @@
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
+ * \todo Update doxygen! Note that this may not depend on time (actually)!
+ * 
  * This class contains the local solver for Poisson's equation, i.e.,
  * \f[
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
@@ -187,7 +189,9 @@ class bilaplacian_uniform
      **********************************************************************************************/
     std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >
     numerical_flux_from_lambda
-    (const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >& lambda_values)
+    ( const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >&
+      lambda_values, const lSol_float_t time = 0.
+    )
     const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
@@ -206,7 +210,9 @@ class bilaplacian_uniform
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
     bulk_values
-    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
+    ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+      const lSol_float_t = 0.
+    ) const;
 
 }; // end of class bilaplacian_uniform
 
@@ -450,7 +456,8 @@ std::array
   bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
 >
 bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
-(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const
+(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+ const lSol_float_t time ) const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
@@ -527,6 +534,8 @@ struct bilaplacian_parameters_default
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
+ * \todo    Update Doxygen! This may depend on time which has not been implemented so far!
+ * 
  * This class contains the local solver for an isotropic diffusion equation, i.e.,
  * \f[
  *  - \nabla \cdot ( d \nabla u = f \quad \text{ in } \Omega, \qquad
@@ -796,7 +805,8 @@ class bilaplacian
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_lambda
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                     & hyper_edge
+      hyEdgeT                                                                     & hyper_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -838,7 +848,8 @@ class bilaplacian
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_total
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                     & hyper_edge
+      hyEdgeT                                                                     & hyper_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -878,7 +889,8 @@ class bilaplacian
     lSol_float_t calc_L2_error_squared
     ( 
       std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                             & hy_edge
+      hyEdgeT                                                             & hy_edge,
+      const lSol_float_t time = 0.
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -914,7 +926,8 @@ class bilaplacian
     ( 
       const std::array<abscissa_float_t,sizeT>  & abscissas,
       const input_array_t                       & lambda_values,
-      hyEdgeT                                   & hyper_edge
+      hyEdgeT                                   & hyper_edge,
+      const lSol_float_t time = 0.
     )  const;
 }; // end of class bilaplacian
 
@@ -1232,7 +1245,8 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_val
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
-  hyEdgeT                                   & hyper_edge
+  hyEdgeT                                   & hyper_edge,
+  const lSol_float_t time
 )  const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients

@@ -401,7 +401,7 @@ class AbstractProblem
         {
           if constexpr
           ( 
-            has_total_flux
+            has_initial_flux
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
               ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
@@ -414,7 +414,7 @@ class AbstractProblem
         {
           if constexpr
           ( 
-            has_total_flux
+            has_initial_flux
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
               ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,

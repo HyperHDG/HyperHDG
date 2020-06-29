@@ -186,7 +186,10 @@ class Diffusion_TensorialUniform
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT > numerical_flux_from_lambda
-    (const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
+    (
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values,
+      const lSol_float_t time = 0.
+    ) const
     {
       std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
       
