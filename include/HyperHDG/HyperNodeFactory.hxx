@@ -131,7 +131,7 @@ class HyperNodeFactory
       return local_dof_values;
     }
     /*!*********************************************************************************************
-     * \brief   Addy different values to values of degrees of freedom related to a hypernode.
+     * \brief   Add different values to values of degrees of freedom related to a hypernode.
      * 
      * Add local values of the \c std::array \c local_dof_vector to the respective values of the
      * \c std::vector \c global_dof_vector comprising all degrees of freedom. 
@@ -160,6 +160,37 @@ class HyperNodeFactory
                  << "not exceed the size of the vector of global degrees of freedom." );
       for(unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
         global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
+    }
+    /*!*********************************************************************************************
+     * \brief   Set different values of degrees of freedom related to a hypernode.
+     * 
+     * Set local values of the \c std::array \c local_dof_vector as the respective values of the
+     * \c std::vector \c global_dof_vector comprising all degrees of freedom. 
+     * 
+     * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+     * \tparam  dof_value_t         Floating point type specification. Default is double.
+     * \param   hypernode_index     Index of the considered hypernode.
+     * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+     * \param   local_dof_vector    \c std::array containing the local values to be set at the
+     *                              global ones.
+     * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+     **********************************************************************************************/
+    template < typename dof_index_t = unsigned int, typename dof_value_t = double >
+    void set_dof_values
+      (const hyNode_index_t hyNode_index, std::vector<dof_value_t>& global_dof_vector,
+       const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
+    {
+      dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+      hy_assert( local_dof_vector.size() == n_dofs_per_nodeT ,
+                 "The size of the local dof vector is " << local_dof_vector.size() << ", but should"
+                 << " be equal to the amount of local dofs, which is " << n_dofs_per_nodeT << "." );
+      hy_assert( initial_dof_index >= 0
+                   && initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size() ,
+                 "The initial dof index = " << initial_dof_index << "should be non-negative. " <<
+                 "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT << " must "
+                 << "not exceed the size of the vector of global degrees of freedom." );
+      for(unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
+        global_dof_vector[initial_dof_index + index] = local_dof_vector[index];
     }
     /*!*********************************************************************************************
      * \brief   Set all values of degrees of freedom of a hypernode to a predefined value.

@@ -1,4 +1,4 @@
-# Python running example for HDG solution of an elasticity problem on a superaggregate!
+# Python running example for HDG solution of an parabolic diffusion equation with implicit Euler!
 
 # Import printing functions.
 from __future__ import print_function
@@ -13,17 +13,21 @@ import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
 
 
+# --------------------------------------------------------------------------------------------------
+# Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
+# --------------------------------------------------------------------------------------------------
 class helper_class():
-  def __init__(self, hdg_class, delta_time):
-    self.hdg_wrapper = hdg_class
+  def __init__(self, hdg_wrapper, delta_time):
+    self.hdg_wrapper = hdg_wrapper
     self.delta_time = delta_time
   def multiply(self, vec):
-    vec1 = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -self.delta_time)
-    vec2 = self.hdg_wrapper.mass_matrix_multiply(vec)
-    return np.add(vec1, vec2)
+    vec_stiff = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -self.delta_time)
+    vec_mass = self.hdg_wrapper.mass_matrix_multiply(vec)
+    return np.add(vec_stiff, vec_mass)
+
 
 # --------------------------------------------------------------------------------------------------
-# Function bilaplacian_test.
+# Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(dimension, iteration):
   # Predefine problem to be solved.
@@ -38,7 +42,7 @@ def diffusion_test(dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
@@ -51,20 +55,11 @@ def diffusion_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.mass_matrix_multiply )
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorSolution, tol=1e-9)
   
-  # Generate right-hand side vector.
-  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= helper.multiply )
-
-  print("Delta time:" + str(delta_time))
 
   for time_step in range(time_steps):
 
@@ -74,7 +69,7 @@ def diffusion_test(dimension, iteration):
 
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
-    
+  
     if num_iter != 0:
       print("The linear solver (conjugate gradients) failed with a total number of ",
             num_iter, " iterations.")
@@ -93,7 +88,7 @@ def diffusion_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
+  for dimension in range(1,2):
     for iteration in range(1, 8 - dimension):
       diffusion_test(dimension, iteration)
 

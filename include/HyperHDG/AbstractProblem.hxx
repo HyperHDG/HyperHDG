@@ -426,7 +426,7 @@ class AbstractProblem
         }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
-          hyper_graph_.hyNode_factory().add_to_dof_values
+          hyper_graph_.hyNode_factory().set_dof_values
             (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
       
