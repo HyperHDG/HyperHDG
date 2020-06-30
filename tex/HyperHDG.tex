@@ -113,6 +113,8 @@
 \newcommand{\ds}{\ensuremath{\, \textup d \sigma}}
 \newcommand{\localU}{\ensuremath{\mathcal U}}
 \newcommand{\localQ}{\ensuremath{\vec{\mathcal Q}}}
+\newcommand{\localV}{\ensuremath{\mathcal V}}
+\newcommand{\localR}{\ensuremath{\vec{\mathcal R}}}
 \newcommand{\range}{\ensuremath{\mathcal R}}
 
 \newcommand{\code}[1]{\texttt{#1}}
@@ -123,6 +125,8 @@
 \newcommand{\force}{\ensuremath{q}}
 \newcommand{\momentum}{\ensuremath{m}}
 \newcommand{\crossSect}{\ensuremath{\mathcal A}}
+\newcommand{\mass}{\ensuremath{\mathfrak m}}
+\newcommand{\eigenval}{\ensuremath{\underline \lambda}}
 
 % ---------------------------------------------------------------------------
 
@@ -399,7 +403,7 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
 \end{equation*}
 % 
 % ---------------------------------------------------------------------
-\section{HDG method on hypergraphs}
+\section{HDG method on hypergraphs}\label{SEC:hdg_graph}
 % ---------------------------------------------------------------------
 %
 In this section, we discuss the HDG method applied to the diffusion equation on a hypergraph. Thus, we first formulate the method in Section \ref{SEC:HDG_form} and discuss implementation aspects of local problems (including transformation rules for the necessary integrals and differential operators) in Section \ref{SEC:HDG_loc_prob}. At last, we describe an efficient way of solving the global system of equations arising from the HDG discretizaion in Section \ref{SEC:glob_system}.
@@ -463,7 +467,7 @@ $f\in L^2(\bigcup_{\Edge \in \SetEdge} \Edge)$, where now the local solutions ar
 Once $\lambda$ has been computed, the HDG approximation
 to \eqref{EQ:diffusion_mixed} on $\Graph$ will be computed as
 % 
-\begin{gather}
+\begin{gather}\label{EQ:construct_unk}
   \begin{split}
     U &= \localU \lambda + \localU u_\textup D + \localU f\\
     \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f
@@ -538,15 +542,15 @@ and treat the divergence analogously (without the $b_j$ after the sums).
 Equation \eqref{EQ:hdg_global} can, equivalently be rewritten to finding $\lambda \in \skeletalSpace$ such that
 %
 \begin{equation*}
- a(\lambda, \mu) ~=~ b(\mu)
+ \tilde a(\lambda, \mu) ~=~ \tilde b(\mu)
 \end{equation*}
 % 
 holds for all $\mu \in \skeletalSpace$ with
 % 
 \begin{subequations}\label{EQ:forms_def}
 \begin{align}
- a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\label{EQ:bil_def}\\
- b(\mu) ~=~ & \int_\Node g_\textup N \mu \ds \label{EQ:lin_def}\\
+ \tilde a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\label{EQ:bil_def}\\
+ \tilde b(\mu) ~=~ & \int_\Node g_\textup N \mu \ds \label{EQ:lin_def}\\
  & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ u_\textup D) \cdot \Normal + \tau (\localU f + \localU u_\textup D) \right] \mu \ds,\notag
 \end{align}
 \end{subequations}
@@ -554,12 +558,12 @@ holds for all $\mu \in \skeletalSpace$ with
 inducing the \emph{statically condensed global system of equations}
 % 
 \begin{equation*}
- \vecc A \vecc x = \vecc b, \quad \text{ where } \quad \vecc A_{i.j} = a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \vecc b_i = b(\mu_i),
+ \tilde{\vecc A} \vecc x = \tilde{\vecc b}, \quad \text{ where } \quad \tilde{\vecc A}_{ij} = \tilde a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \tilde{\vecc b}_i = \tilde b(\mu_i),
 \end{equation*}
 % 
-where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.~2.1 \& (2.11.a)]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\vecc A$ is symmetric \textbf{negative definite}. Hence, the conjugate gradient (CG) method can be applied to solve the linear system of equations.
+where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.~2.1 \& (2.11.a)]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\tilde{\vecc A}$ is symmetric \emph{negative definite}. Hence, the conjugate gradient (CG) method can be applied to solve the linear system of equations.
 
-The CG method uses matrix--vector products. For doing a single matrix--vector product $\vecc A \vecc x = \vecc y$, one needs to (assume that initially $\vecc y = \vecc 0$,) go through all hyperedges and per hyperedge:
+The CG method uses matrix--vector products. For doing a single matrix--vector product $\tilde{\vecc A} \vecc x = \vecc y$, one needs to (assume that initially $\vecc y = \vecc 0$,) go through all hyperedges and per hyperedge:
 % 
 \begin{enumerate}
  \item Identify the adjacent hypernodes carrying information about $\lambda$, i.e. the global degrees of freedom---encoded in $\vecc x$.
@@ -567,6 +571,195 @@ The CG method uses matrix--vector products. For doing a single matrix--vector pr
  \item Calculated $\int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu_i$ based on the result of the local problem, where $i$ is the local index of the degree of freedom.
  \item Find global index addociated to $i$ and add result to $\vecc y$.
 \end{enumerate}
+% 
+\subsection{The statically condensed mass matrix}
+% 
+To construct the \emph{statically condensed mass matrix}, we consider \eqref{EQ:diffusion_mixed} in which $f$ as right-hand side of \eqref{EQ:div_is_f} is supposed to be equal to the unknown $u$, i.e.,
+% 
+\begin{subequations}\label{EQ:diffusion_fu_mixed}
+\begin{align}
+ \Div \vec q & = u && \text{ in } \Edge,\label{EQ:div_is_u}\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual_fu}\\
+  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond_fu}\\
+ \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNodeNeu,\label{EQ:neu_cond_fu}\\
+ \jump{\vec q} & = 0 && \text{ on } \Node \in \SetNodeInt.\label{EQ:int_cond_fu}
+\end{align}
+\end{subequations}
+% 
+\begin{remark}\label{REM:ex_reaction}
+ We do not consider the existence of possible solutions of this systems, but note that if $u$ (or $f$) is replaced by $- ru$ with some non-negative function $r$, the problem will again have an unique solution.
+\end{remark}
+The discretion of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}, and global coupling condition \eqref{EQ:hdg_global} can be conducted exactly as prescribed in \eqref{EQ:hdg_global}. However, $f$ needs to be replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux} yielding the local problem
+% 
+\begin{subequations}\label{EQ:hdg_f_is_u}
+ \begin{align}
+  \int_\Edge \tfrac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = 0, \label{EQ:hdg_fu_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau U_\Edge ) v \ds & =  \int_{\Edge} U_\Edge v \dx,\label{EQ:hdg_fu_flux}
+ \end{align}
+\end{subequations}
+% 
+ultimately leading to the need to replace $\localU f$ and $\localQ f$ by $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ in \eqref{EQ:construct_unk}, respectively:
+% 
+\begin{gather}\label{EQ:construct_unk_fu}
+  \begin{split}
+    U &= \localU \lambda + \localU u_\textup D + \localU (\localU \lambda),\\
+    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ (\localU \lambda).
+  \end{split}
+\end{gather}
+% 
+Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
+% 
+Again, we can formally set up a system which is similar to Section~\ref{SEC:glob_system}, namely
+% 
+\begin{subequations}\label{EQ:forms_def_fu}
+\begin{equation}\label{EQ:glob_system_old}
+ \tilde a(\lambda, \mu) ~=~ \tilde b(\mu) - \mass (\lambda, \mu)
+\end{equation}
+% 
+with bilinear forms
+% 
+\begin{align}
+ \tilde a(\lambda, \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ \lambda \cdot \Normal + \tau (\localU \lambda - \lambda) \right] \mu \ds,\label{EQ:stiff_def_fu}\\
+ \mass (\lambda,\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}\\
+ \tilde b(\mu) ~=~ & \int_\Node g_\textup N \mu \ds \label{EQ:lin_def_fu}
+ - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ u_\textup D \cdot \Normal + \tau \localU u_\textup D \right] \mu \ds,
+\end{align}
+\end{subequations}
+% 
+of which $\mass$ can be proven to be symmetric positive definite.
+% 
+\subsection{Restore positive definiteness of the induced systems}
+% 
+Defining the positive definite statically condensed stiffness bilinear form $a$ and the linear form $b$ as
+% 
+\begin{equation}\label{EQ:forms}
+ a(\lambda, \mu) = - \tilde a(\lambda, \mu), \qquad b(\mu) = - \tilde b(\mu)
+\end{equation}
+% 
+allows to rewrite \eqref{EQ:glob_system_old} as
+% 
+\begin{equation}\label{EQ:glob_system_new}
+ a(\lambda, \mu) = b(\mu) + \mass(\lambda,\mu),
+\end{equation}
+% 
+where $a$ is a positive definite discretization of the laplacian and $\mass$ is a positive definite discretization of the mass matrix which is related to the laplacian.
+
+% 
+The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL2009} stating that
+% 
+\begin{equation}
+ a(\lambda, \mu) = \sum_{\edge \in \setEdge} \left[ \int_\Edge \frac{1}{d} \localQ \lambda \; \localQ \mu \dx + \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \tau (\localU \lambda - \lambda) (\localU \mu - \mu) \ds \right],
+\end{equation}
+% 
+while the positive definiteness follows from the fact that $\mass$ has, cf.~\cite[Thm.~2.1]{CockburnGL2009} with $d=-1$, 
+% 
+\begin{equation}
+ \mass(\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \; \localU \mu \dx.
+\end{equation}
+% 
+\begin{remark}
+ The notation of $b$ is inconsistent, since it ``sometimes'' contains the right-hand side $f$ and ``sometimes'' it does not. The right-hand side $f$ can always be treated analogous to the aforemetioned procedure. Thus, neglecting $f$ for constructing the mass matrix is a simplification without loss of generality.
+\end{remark}
+% 
+\subsection{Different types of solvable problems}
+% 
+With the knowledge of the previous subsections, we can easily approximate the solutions to the \emph{elliptic diffusion problem} \eqref{EQ:diffusion_mixed} using
+% 
+\begin{equation}
+ a(\lambda, \mu) = b(\mu) \qquad \forall \mu \in \skeletalSpace
+\end{equation}
+% 
+with $a$ and $b$ defined via \eqref{EQ:forms_def} and \eqref{EQ:forms}.
+
+Moreover, we can solve the \emph{diffusion eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$ with
+% 
+\begin{subequations}\label{EQ:diffusion_eigen}
+\begin{align}
+ \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+  u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNodeNeu,\\
+ \jump{\vec q} & = 0 && \text{ on } \Node \in \SetNodeInt,
+\end{align}
+\end{subequations}
+% 
+using the ARPACK package fed with the induced matrices of the variational equation
+% 
+\begin{equation}
+ a(\lambda, \mu) = \eigenval \mass(\lambda,\mu)
+\end{equation}
+% 
+with $a$ and $\mass$ defined via \eqref{EQ:glob_system_old} and \eqref{EQ:forms}. Since we have, Remark \ref{REM:ex_reaction}, we can deduce that $\lambda$ needs to be positive to solve this problem.
+
+Last, but not least, we are able to solve \emph{parabolic diffusion equations}
+% 
+\begin{subequations}\label{EQ:diffusion_parab}
+\begin{align}
+ \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge,\\
+ u(0,\cdot) & = u_0 && \text{ in } \Edge,\\
+  u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeNeu,\\
+ \jump{\vec q} & = 0 && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeInt,
+\end{align}
+\end{subequations}
+% 
+by rewriting those into the form of
+% 
+\begin{equation}
+ \partial_t \mass(\lambda, \mu) + a(\lambda, \mu) = b(\mu)
+\end{equation}
+% 
+with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is done by $L^2$ projection to the skeletal space $\skeletalSpace$.
+% 
+\begin{remark}
+ The equations mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications.
+\end{remark}
+% 
+% ---------------------------------------------------------------------
+\section{Implementing the bilaplacian problem}
+% ---------------------------------------------------------------------
+% 
+The bilaplacian problem, in continuous form can be briefly written as finding $u$ and $r$ such that
+% 
+\begin{equation*}
+ -d \Delta u = v \qquad \text{ and } \qquad -\Delta v = f
+\end{equation*}
+% 
+for some given functions $f$ and $d \ge d_0 > 0$, plus appropriate boundary conditions. The problem can be fully formulated in a mixed setting as
+% 
+\begin{subequations}\label{EQ:bilap}
+\begin{align}
+ \Div \vec q & = \tfrac{1}{d} v && \text{ in } \Edge,\\
+ \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNodeNeu,\\
+ \jump{\vec q} & = 0 && \text{ on } \Node \in \SetNodeInt,\\
+ \Div \vec r & = f && \text{ in } \Edge,\\
+ \vec r + \Nabla v & = 0 && \text{ in } \Edge,\\
+ v & = v_\textup D && \text{ on } \Node \in \SetNodeDir',\\
+ \jump{\vec r} & = h_\textup N && \text{ on } \Node \in \SetNodeNeu',\\
+ \jump{\vec r} & = 0 && \text{ on } \Node \in \SetNodeInt'.
+\end{align}
+\end{subequations}
+% 
+This way of formulating the problem already indicates that we will reuse the ideas Section \ref{SEC:hdg_graph} twice to discretize the bilaplacian. However, this might destroy the symmetry of the overall system.\arnote{The system converges poorly if CG is used.}
+
+First, we define the local problem of a single hyperegde $\Edge$ assuming that functions $\lambda \in \skeletalSpace$ (approximating the trace of $u$) and $\eta \in \skeletalSpace$ (approximating the trace of $v$) are given. That is,
+% 
+\begin{subequations}\label{EQ:hdg_scheme_bilap}
+ \begin{align}
+  \int_\Edge \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds \label{EQ:hdg_primary_bilap}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla w \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) w \ds\notag\\
+  - \int_\Edge \tfrac{1}{d} V_\Edge w \dx
+  & = \tau \int_{\partial \Edge} \lambda w \ds \label{EQ:hdg_flux_bilap}\\
+  \int_\Edge \vec R_\Edge \cdot \vec \varphi \dx - \int_\Edge V_\Edge \Div \vec \varphi \dx & = - \int_{\partial \Edge} \eta \vec \varphi \cdot \Normal \ds \label{EQ:hdg_primary_lap_bilap}\\
+  - \int_\Edge \vec R_\Edge \cdot \Nabla \psi \dx  + \int_{\partial \Edge} ( \vec R_\Edge \cdot \Normal + \tau  V_\Edge ) \psi \ds
+  & = \tau \int_{\partial \Edge} \eta \psi \ds \label{EQ:hdg_flux_lap_bilap}
+ \end{align}
+\end{subequations}
+% 
+This local solver induces $\localU(\lambda,\eta)$, $\localQ(\lambda,\eta)$, $\localV(\lambda,\eta)$, and $\localR(\lambda,\eta)$. \arnote{TODO: Repeat the whole diffusion section here.}
 % 
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
