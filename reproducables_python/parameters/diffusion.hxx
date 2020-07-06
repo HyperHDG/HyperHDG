@@ -61,7 +61,7 @@ struct TestParametersSinParab
   
   static param_float_t right_hand_side
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.5 * pi * ( cos(0.5 * pi * (point[0] + time)) + sin(0.5 * pi * (point[0] + time)) ); }
+  { return 0.5 * pi * ( sin(0.5 * pi * (point[0] + time)) + cos(0.5 * pi * (point[0] + time)) ); }
   
   static param_float_t dirichlet_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
