@@ -49,7 +49,7 @@ def diffusion_test(dimension, iteration):
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
