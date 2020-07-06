@@ -322,7 +322,7 @@ Here, we formulate the standard diffusion equation in mixed form defined on a hy
 % 
 for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$.
 
-Additionally, we assume that there is a non-empty set $\setNodeDir \subset \setNode$ of Dirichlet hypernodes, a possibly empty set $\setNodeNeu \subset \setNode\setminus \setNodeDir$ of Neumann hypernodes, and the remainder set $\setNodeInt = \setNode \setminus (\setNodeDir \cup \setNodeNeu)$ of interior hypernodes. The following ideas motivate three different types of closing conditions: \arnote{One might disregard the disjoint union here, and allow for some set of amount of Diriclet nodes many nodes without mass conservation. This would be more general!}
+Additionally, we assume that there is a non-empty set $\setNodeDir \subset \setNode$ of Dirichlet hypernodes, a possibly empty set $\setNodeNeu \subset \setNode\setminus \setNodeDir$ of Neumann hypernodes, and the remainder set $\setNodeInt = \setNode \setminus (\setNodeDir \cup \setNodeNeu)$ of interior hypernodes. The following ideas motivate three different types of closing conditions:
 % 
 \begin{itemize}
  \item On hypernodes of Dirichlet type, the value of function $u$ is prescribed by function $u_\text D$.
@@ -349,11 +349,17 @@ Thus, \eqref{EQ:diffusion_mixed} is a direct generalization of the standard diff
 
 Moreover, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} can be equivalently rewritten assuming that $g_\text N \equiv 0$ on all $\Node \in \SetNodeInt$. Thus, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} will be formulated as
 % 
-\begin{equation}
+\begin{equation}\label{EQ:Neumann_cond1}
  \jump{\vec q} ~=~ g_\textup N \qquad \text{ on } \Node \in \SetNode \setminus \SetNodeDir
 \end{equation}
 % 
-in the remainder of this manuscript.
+in the remainder of this manuscript. One could also, more generally, reformulate \eqref{EQ:Neumann_cond1} to
+% 
+\begin{equation}
+ \jump{\vec q} ~=~ g_\textup N \qquad \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger
+\end{equation}
+% 
+with $\setNodeDir^\dagger \subset \setNode$ and $\# \setNodeDir^\dagger = \# \setNodeDir$. This naturally allows for Cauchy's (combination of Dirichlet and Neumann) boundary conditions without global existence and uniqueness issues. \arnote{This should be checked carefully!}
 % 
 \subsection{The notion of normals}\label{SEC:normals}
 % 
@@ -751,7 +757,7 @@ Last, but not least, we are able to solve \emph{parabolic diffusion equations}
  \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\\
  u(0,\cdot) & = u_0 && \text{ in } \Edge,\\
   u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\\
- \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \setNodeDir,
+ \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \SetNodeDir,
 \end{align}
 \end{subequations}
 % 
@@ -790,7 +796,7 @@ for some given functions $f$ and $d \ge d_0 > 0$, plus appropriate boundary cond
  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\\
  \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger,\\
  \bar{\vec q} + \Nabla \bar u & = 0 && \text{ in } \Edge,\\
- \Div \bar{\vec q} & = f && \text{ in } \Edge,\\
+ \Div \bar{\vec q} & = f && \text{ in } \Edge,\label{EQ:bilap_f}\\
  \bar u & = \bar u_\textup D && \text{ on } \Node \in \SetNodeDirBar,\\
  \jump{\bar{\vec q}} & = \bar g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDirBar^\dagger,
 \end{align}
@@ -805,7 +811,9 @@ Moreover, the sets $\setNodeDir^\dagger$ and $\setNodeDirBar^\dagger$ suffice
 \end{equation}
 % 
 This ensures that the amount of unknowns allows for a well-posed system of equations guaranteeing a maximum degree of flexibility in the formulation.
-
+% 
+\subsection{Local problems}
+% 
 First, we define the local problem of a single hyperegde $\Edge$ assuming that functions $\lambda \in \skeletalSpace$ (approximating the trace of $u$) and $\bar \lambda \in \skeletalSpace$ (approximating the trace of $\bar u$) are given. The term $\vec \lambda = (\lambda, \bar \lambda) \in \skeletalSpace\times \bar\skeletalSpace$ (where the zeros in both spaces are fixed on the respective Dirichlet nodes) prescribes both skeletal variables. That is,
 % 
 \begin{subequations}\label{EQ:hdg_scheme_bilap}
@@ -835,13 +843,20 @@ The local solver with respect to right-hand side $f$ can be similarly constructe
 \end{subequations}
 % 
 and induces $\localU f$, $\localQ f$, $\bar \localU f$, and $\bar \localQ f$.
-
-The closing condition is replaced by the two closing conditions that for
+% 
+\subsection{Global coupling conditions}
+% 
+The closing condition is replaced by the two closing conditions that for the bilinear form
 % 
 \begin{subequations}
 \begin{align}
  - a(\vec \lambda, \vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ \vec \lambda \cdot \Normal + \tau (\localU \vec \lambda - \lambda) \right] \mu \ds,\\
- & +  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar \localQ \vec \lambda \cdot \Normal + \tau (\bar \localU \vec \lambda - \bar \lambda) \right] \bar \mu \ds,\notag\\
+ & +  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar \localQ \vec \lambda \cdot \Normal + \tau (\bar \localU \vec \lambda - \bar \lambda) \right] \bar \mu \ds,\notag
+\end{align}
+% 
+and respective linear form for the data
+% 
+\begin{align}
  - b(\vec \mu) ~=~ & \sum_{\node \in \setNode \setminus \setNodeDir^\dagger} \int_\Node g_\textup N \mu \ds + \sum_{\node \in \setNode \setminus \setNodeDirBar^\dagger} \int_\Node \bar g_\textup N \bar \mu \ds \label{EQ:lin_def}\\
  & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\localU f + \localU \vec{u_\textup D}) \right] \mu \ds,\notag\\
  & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ (\bar \localQ f + \bar \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\bar \localU f + \bar \localU \vec{u_\textup D}) \right] \bar \mu \ds,\notag
@@ -854,7 +869,24 @@ and all $\vec \mu \in \skeletalSpace \times \bar \skeletalSpace$, we have
 \end{equation}
 \end{subequations}
 % 
-This is bsically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}.\arnote{In my opinion.}
+This is bsically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}.
+% 
+\begin{envarwarning}{I think!}
+ The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
+ 
+ Moreover, the following mass matrix seems to have a bug!
+\end{envarwarning}
+% 
+\subsection{Mass matrix representation}
+% 
+For constructing the mass matrix, we replace the right-hand side $f$ in \eqref{EQ:bilap_f} by $f + u$. Again, this induces an additional local problem of the form of \eqref{EQ:hdg_f_bilap}, where $f$ is replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux_lap_bilap}. The additional local reconstruction operators $\localU(\localU \vec\lambda)$, $\localQ(\localU \vec\lambda)$, $\bar\localU(\localU \vec\lambda)$, and $\bar\localQ(\localU \vec\lambda)$ define the mass matrix bilinear form via
+% 
+\begin{align}
+ \mass(\vec\lambda,\vec\mu) ~=~& \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \vec\lambda) \cdot \Normal + \tau \localU (\localU \vec\lambda) \right] \mu \ds \\
+ & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \bar \mu \ds,\notag
+\end{align}
+% 
+which represents the analogon to the right-hand side $b$. \arnote{Mass matrix is not really working well.}
 % 
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
