@@ -60,7 +60,7 @@ def bilaplacian_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,4):
-    for iteration in range(6 - dimension):
+    for iteration in range(10 - dimension):
       bilaplacian_test(dimension, iteration)
 
 
