@@ -69,22 +69,22 @@ struct TestParametersSinParab
   
   static param_float_t inverse_bilaplacian_coefficient
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 1.; }//pi * pi; }
+  { return pi * pi; }
   
   static param_float_t analytic_result
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return -time + 1.; } //sin(pi * (point[0] + time)); }
+  { return sin(pi * (point[0] + time)); }
   
   static param_float_t right_hand_side
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return - (time > 0 && time < 1); }//pi * pi * sin(pi * (point[0] + time)) + (time > 0 ? 1. : 0.) * pi * cos(pi * (point[0] + time)); }
+  { return pi * pi * sin(pi * (point[0] + time)) + (time > 0 && time < 1 ? 1. : 0.) * pi * cos(pi * (point[0] + time)); }
   
   static param_float_t dirichlet_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return analytic_result(point, time); }
   static param_float_t dirichlet_laplace_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0 *           analytic_result(point, time); }
+  { return analytic_result(point, time); }
   
   static param_float_t initial
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
