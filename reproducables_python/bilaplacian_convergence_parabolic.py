@@ -45,15 +45,26 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
   
   # Config time stepping.
-  time_steps  = 4 * iteration * iteration
+  time_steps  = 4 * (iteration+1) * (iteration+1)
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
+  
+  
+  # Generate right-hand side vector.
+  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
+  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
+  # fashion.
+  system_size = HDG_wrapper.size_of_system()
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
+  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+  
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -90,7 +101,7 @@ def bilaplacian_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,2):
-    for iteration in range(1, 10 - dimension):
+    for iteration in range(10 - dimension):
       bilaplacian_test(dimension, iteration)
 
 
