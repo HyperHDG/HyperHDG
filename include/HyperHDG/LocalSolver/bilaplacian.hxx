@@ -1014,11 +1014,14 @@ class bilaplacian
 
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
       {
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
-          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
-        else
-          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-            bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j];
+          for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
+            bdr_values[i][j] = 0.;
+        if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
+            bdr_values[i][j] = 0.;
       }
 
       return bdr_values;
