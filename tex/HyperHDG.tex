@@ -316,8 +316,8 @@ Here, we formulate the standard diffusion equation in mixed form defined on a hy
 % 
 \begin{subequations}\label{EQ:diffusion_mixed}
 \begin{align}
- \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}\\
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual}
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual}\\
+ \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}
 \end{align}
 % 
 for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$.
@@ -419,7 +419,7 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
  \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\tangent(x)} (x)](b).
 \end{equation*}
 % 
-\subsection{Existence and uniqueness of solutions}\label{SEC:ExUnique}\arnote{To be checked! It just flashed through my mind.}
+\subsection{Existence and uniqueness of solutions}\label{SEC:ExUnique}\arnote{To be checked and fully formulated! It just flashed through my mind.}
 % 
 In this brief section, we show that there is an unique function
 % 
@@ -635,8 +635,8 @@ To construct the \emph{statically condensed mass matrix}, we consider \eqref{EQ:
 % 
 \begin{subequations}\label{EQ:diffusion_fu_mixed}
 \begin{align}
- \Div \vec q & = f + u && \text{ in } \Edge,\label{EQ:div_is_u}\\
  \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual_fu}\\
+ \Div \vec q & = f + u && \text{ in } \Edge,\label{EQ:div_is_u}\\
   u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond_fu}\\
  \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_fu}
 \end{align}
@@ -728,8 +728,8 @@ Moreover, we can solve the \emph{diffusion eigenvalue problem} to find an eigenf
 % 
 \begin{subequations}\label{EQ:diffusion_eigen}
 \begin{align}
- \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
  \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
   u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
  \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,
 \end{align}
@@ -747,8 +747,8 @@ Last, but not least, we are able to solve \emph{parabolic diffusion equations}
 % 
 \begin{subequations}\label{EQ:diffusion_parab}
 \begin{align}
- \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\\
  \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge,\\
+ \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\\
  u(0,\cdot) & = u_0 && \text{ in } \Edge,\\
   u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\\
  \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \setNodeDir,
@@ -785,12 +785,12 @@ for some given functions $f$ and $d \ge d_0 > 0$, plus appropriate boundary cond
 % 
 \begin{subequations}\label{EQ:bilap}
 \begin{align}
- \Div \vec q & = \tfrac{1}{d} \bar u && \text{ in } \Edge,\\
  \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ \Div \vec q & = \tfrac{1}{d} \bar u && \text{ in } \Edge,\\
  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\\
  \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger,\\
- \Div \bar{\vec q} & = f && \text{ in } \Edge,\\
  \bar{\vec q} + \Nabla \bar u & = 0 && \text{ in } \Edge,\\
+ \Div \bar{\vec q} & = f && \text{ in } \Edge,\\
  \bar u & = \bar u_\textup D && \text{ on } \Node \in \SetNodeDirBar,\\
  \jump{\bar{\vec q}} & = \bar g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDirBar^\dagger,
 \end{align}
