@@ -45,7 +45,7 @@ def diffusion_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
   # Config time stepping.
-  time_steps  = 4 * iteration * iteration
+  time_steps  = 4 * (iteration+1) * (iteration+1)
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
@@ -90,7 +90,7 @@ def diffusion_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,4):
-    for iteration in range(1, 6 - dimension):
+    for iteration in range(10 - dimension):
       diffusion_test(dimension, iteration)
 
 
