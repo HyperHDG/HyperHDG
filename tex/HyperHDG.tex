@@ -712,7 +712,7 @@ The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL20
 % 
 while the positive definiteness follows from the fact that $\mass$ has, cf.~\cite[Thm.~2.1]{CockburnGL2009} with $d=-1$, 
 % 
-\begin{equation}
+\begin{equation}\label{EQ:mass_theo}
  \mass(\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \; \localU \mu \dx.
 \end{equation}
 % 
@@ -772,6 +772,14 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
 \begin{remark}
  The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, time-dependent versions of this problem can be constructed and solved using the aformentioned approaches.
 \end{remark}
+% 
+\begin{envarwarning}{State of implementation}
+ The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
+ 
+ Solving parabolic problems also works out very well and both representations have been implemented. They give exactly the same results, which is what is to be expected. However, \eqref{EQ:mass_def} is much more performant than \eqref{EQ:mass_theo}. Thus, \eqref{EQ:mass_def} is used and the other version is commented in the hxx file.
+ 
+ Solving eigenvalue problems works. However, the rates of convergence have not yet been checked. Moreover, major tricks need to be used, since our matrices are never definite (since Dirichlet nodes are included and set to be zero). This needs to be corrected by hand (cf. the helper class in reproducables\_python\/diffusion\_eigenvalues.py).
+\end{envarwarning}
 % 
 \subsection{Elliptic convergence analysis}
 % 
@@ -869,13 +877,7 @@ and all $\vec \mu \in \skeletalSpace \times \bar \skeletalSpace$, we have
 \end{equation}
 \end{subequations}
 % 
-This is bsically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}.
-% 
-\begin{envarwarning}{I think!}
- The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
- 
- Moreover, the following mass matrix seems to have a bug!
-\end{envarwarning}
+This is bsically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}.\arnote{I think!}
 % 
 \subsection{Mass matrix representation}
 % 
@@ -886,7 +888,15 @@ For constructing the mass matrix, we replace the right-hand side $f$ in \eqref{E
  & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \bar \mu \ds,\notag
 \end{align}
 % 
-which represents the analogon to the right-hand side $b$. \arnote{Mass matrix is not really working well.}
+which represents the analogon to the right-hand side $b$.
+
+\begin{envarwarning}{State of implementation}
+ The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
+ 
+ The mass matrix representation given above does not work and I do not understand, why. Thus, I also implemented the \eqref{EQ:mass_theo} which works out for this case. However, it is quite slow (compared to the non-working version). The question rises, why both work out, since the reconstruction of the final solution needs to have the ``corrected'' right-hand side for the bilaplacian, while the ``standard'' right-hand side works for diffusion.
+ 
+ Eigenvalue problems will be checked, when this is ensured, since they tend to be harder, than parabolics.
+\end{envarwarning}
 % 
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
