@@ -893,7 +893,7 @@ which represents the analogon to the right-hand side $b$.
 \begin{envarwarning}{State of implementation}
  The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
  
- The mass matrix representation given above does not work and I do not understand, why. Thus, I also implemented the \eqref{EQ:mass_theo} which works out for this case. However, it is quite slow (compared to the non-working version). The question rises, why both work out, since the reconstruction of the final solution needs to have the ``corrected'' right-hand side for the bilaplacian, while the ``standard'' right-hand side works for diffusion.
+ The mass matrix representation given above does not work and I do not understand, why. The mass matrix, however does not seem to be far away. It does not exactly reproduce constants, but it does converge with optimal order for constants. The order becomes suboptimal, in the checked in sin case.
  
  Eigenvalue problems will be checked, when this is ensured, since they tend to be harder, than parabolics.
 \end{envarwarning}

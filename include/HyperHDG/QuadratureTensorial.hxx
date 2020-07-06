@@ -598,8 +598,6 @@ class IntegratorTensorial
       GeomT& geom
     ) const
     {
-      constexpr unsigned int dimT = GeomT::hyEdge_dim();
-      
       return_t integral = 0., quad_val, is_val, js_val, val_helper;
       
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_k, dec_q;
