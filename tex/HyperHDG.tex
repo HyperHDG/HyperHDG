@@ -858,16 +858,16 @@ The closing condition is replaced by the two closing conditions that for the bil
 % 
 \begin{subequations}
 \begin{align}
- - a(\vec \lambda, \vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ \vec \lambda \cdot \Normal + \tau (\localU \vec \lambda - \lambda) \right] \mu \ds,\\
- & +  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar \localQ \vec \lambda \cdot \Normal + \tau (\bar \localU \vec \lambda - \bar \lambda) \right] \bar \mu \ds,\notag
+ - a(\vec \lambda, \vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ \vec \lambda \cdot \Normal + \tau (\localU \vec \lambda - \lambda) \right] \bar \mu \ds\\
+ & +  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar \localQ \vec \lambda \cdot \Normal + \tau (\bar \localU \vec \lambda - \bar \lambda) \right] \mu \ds,\notag
 \end{align}
 % 
 and respective linear form for the data
 % 
 \begin{align}
- - b(\vec \mu) ~=~ & \sum_{\node \in \setNode \setminus \setNodeDir^\dagger} \int_\Node g_\textup N \mu \ds + \sum_{\node \in \setNode \setminus \setNodeDirBar^\dagger} \int_\Node \bar g_\textup N \bar \mu \ds \label{EQ:lin_def}\\
- & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\localU f + \localU \vec{u_\textup D}) \right] \mu \ds,\notag\\
- & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ (\bar \localQ f + \bar \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\bar \localU f + \bar \localU \vec{u_\textup D}) \right] \bar \mu \ds,\notag
+ - b(\vec \mu) ~=~ & \sum_{\node \in \setNode \setminus \setNodeDir^\dagger} \int_\Node g_\textup N \bar \mu \ds + \sum_{\node \in \setNode \setminus \setNodeDirBar^\dagger} \int_\Node \bar g_\textup N \mu \ds \label{EQ:lin_def_bilap}\\
+ & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ (\localQ f + \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\localU f + \localU \vec{u_\textup D}) \right] \bar \mu \ds\notag\\
+ & - \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ (\bar \localQ f + \bar \localQ \vec{u_\textup D}) \cdot \Normal + \tau (\bar \localU f + \bar \localU \vec{u_\textup D}) \right] \mu \ds,\notag
 \end{align}
 % 
 and all $\vec \mu \in \skeletalSpace \times \bar \skeletalSpace$, we have
@@ -877,23 +877,27 @@ and all $\vec \mu \in \skeletalSpace \times \bar \skeletalSpace$, we have
 \end{equation}
 \end{subequations}
 % 
-This is bsically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}.\arnote{I think!}
+This is basically the formulation of the single face hybridizable scheme of \cite{CockburnDG2009}. However, we decided to seemingly counter-intuitively change the positions of $\mu$ and $\bar \mu$.
+
+\begin{envarwarning}{$\mu$ and $\bar \mu$}
+ I believe that the interchange has two benefits. At first, the physical flux is used at the position, where it is suspected. This, strangely, is not what one might expect at first sight. Secondly, I believe that this makes the global system symmetric and definite. Thirdly, this leads to the fact that numerically, the two following mass-matrices are identical.
+\end{envarwarning}
 % 
 \subsection{Mass matrix representation}
 % 
 For constructing the mass matrix, we replace the right-hand side $f$ in \eqref{EQ:bilap_f} by $f + u$. Again, this induces an additional local problem of the form of \eqref{EQ:hdg_f_bilap}, where $f$ is replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux_lap_bilap}. The additional local reconstruction operators $\localU(\localU \vec\lambda)$, $\localQ(\localU \vec\lambda)$, $\bar\localU(\localU \vec\lambda)$, and $\bar\localQ(\localU \vec\lambda)$ define the mass matrix bilinear form via
 % 
 \begin{align}
- \mass(\vec\lambda,\vec\mu) ~=~& \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \vec\lambda) \cdot \Normal + \tau \localU (\localU \vec\lambda) \right] \mu \ds \\
- & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \bar \mu \ds,\notag
+ \mass(\vec\lambda,\vec\mu) ~=~& \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \vec\lambda) \cdot \Normal + \tau \localU (\localU \vec\lambda) \right] \bar \mu \ds \\
+ & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \mu \ds,\notag
 \end{align}
 % 
-which represents the analogon to the right-hand side $b$.
+which represents the analogon to the right-hand side $b$ in \eqref{EQ:lin_def_bilap}. In our numerical experiments, we experienced that this is equivalent to writing $\mass$ as in \eqref{EQ:mass_theo}.
 
 \begin{envarwarning}{State of implementation}
  The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
  
- The mass matrix representation given above does not work and I do not understand, why. The mass matrix, however does not seem to be far away. It does not exactly reproduce constants, but it does converge with optimal order for constants. The order becomes suboptimal, in the checked sin case.
+ The mass matrix representation given above does not work and I do not understand, why. The mass matrix, however does not seem to be far away.
  
  Eigenvalue problems will be checked, when this is ensured, since they tend to be harder, than parabolics.
 \end{envarwarning}
