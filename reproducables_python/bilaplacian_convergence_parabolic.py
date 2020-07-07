@@ -45,7 +45,7 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
   # Config time stepping.
-  time_steps  = 1 # 4 * (iteration+1) * (iteration+1)
+  time_steps  = 1# 4 * (iteration+1) * (iteration+1)
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
@@ -63,12 +63,12 @@ def bilaplacian_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
   # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
   if num_iter != 0:
-      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+      print("Initial CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
       if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
         exit("Program failed!")
   
   
@@ -78,7 +78,7 @@ def bilaplacian_test(dimension, iteration):
   A = LinearOperator( (system_size,system_size), matvec= helper.multiply )
   
   # For loop over the respective time-steps.
-  for time_step in range(1*time_steps):
+  for time_step in range(time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
     vectorRHS = np.multiply( \
@@ -87,15 +87,15 @@ def bilaplacian_test(dimension, iteration):
     vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
+    [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
     if num_iter != 0:
-      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,np.add(vectorRHS,vectorSolution),tol=1e-9)
+      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,np.add(vectorRHS,vectorSolution),tol=1e-9)
       if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
         sys.exit("Program failed!")
 
-  final_time = float( 1. )
+  final_time = float( 3 )
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)))
   f = open("output/results.txt", "a")

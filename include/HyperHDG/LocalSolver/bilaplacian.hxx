@@ -873,6 +873,7 @@ class bilaplacian
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+      
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       
@@ -883,7 +884,8 @@ class bilaplacian
       {
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] 
-                                 - tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
+              - tau_ * lambda_values[i][j < n_shape_bdr_ ? j+n_shape_bdr_ : j-n_shape_bdr_]
+                     * hyper_edge.geometry.face_area(i);
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
           for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
             bdr_values[i][j] = 0.;
