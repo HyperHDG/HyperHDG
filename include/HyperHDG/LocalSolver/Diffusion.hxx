@@ -923,8 +923,6 @@ class Diffusion
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  //    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-  //      if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )  lambda_values[i].fill(0.);
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
