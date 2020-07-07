@@ -42,7 +42,7 @@ def bilaplacian_test(dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
   # Config time stepping.
   time_steps  = 1 # 4 * (iteration+1) * (iteration+1)
@@ -63,7 +63,13 @@ def bilaplacian_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
   # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+  if num_iter != 0:
+      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+      if num_iter != 0:
+        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        exit("Program failed!")
   
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
@@ -81,16 +87,20 @@ def bilaplacian_test(dimension, iteration):
     vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
     if num_iter != 0:
-      print("The linear solver (conjugate gradients) failed with a total number of ",
-            num_iter, " iterations.")
+      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,np.add(vectorRHS,vectorSolution),tol=1e-9)
+      if num_iter != 0:
+        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        sys.exit("Program failed!")
 
   final_time = float( 1. )
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)))
   f = open("output/results.txt", "a")
-  f.write("Error in " + str(iteration) + ": " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)) + "\n")
+  f.write("Error in " + str(iteration) + ": " + \
+          str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)) + "\n")
   f.close()
   
   # Plot obtained solution.

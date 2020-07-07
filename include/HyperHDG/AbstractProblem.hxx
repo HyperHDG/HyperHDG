@@ -594,8 +594,10 @@ class AbstractProblem
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge, time);
         }
+        
       });
-
+      
+      hy_assert( result >= 0. , "The squared error must be non-negative, but was " << result );
       return std::sqrt(result);
     }
     /*!*********************************************************************************************

@@ -35,7 +35,7 @@ def bilaplacian_test(dimension, iteration):
   HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) )
 
   # Generate right-hand side vector.
-  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
+  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -43,7 +43,13 @@ def bilaplacian_test(dimension, iteration):
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+  if num_iter != 0:
+      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+      if num_iter != 0:
+        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        sys.exit("Program failed!")
 
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
