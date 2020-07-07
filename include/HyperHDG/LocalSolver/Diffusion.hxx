@@ -923,14 +923,10 @@ class Diffusion
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
-      
-      SmallSquareMat<n_shape_fct_, lSol_float_t> local_mass_mat;
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        for (unsigned int j = 0; j < n_shape_fct_; ++j)
-          local_mass_mat(i,j) = integrator.integrate_vol_phiphi(i, j, hyper_edge.geometry);
       
       SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
