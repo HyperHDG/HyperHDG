@@ -63,7 +63,7 @@ def bilaplacian_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
   # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-14)
+  [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
   
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
@@ -81,19 +81,22 @@ def bilaplacian_test(dimension, iteration):
     vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, np.add(vectorRHS,vectorSolution), tol=1e-14)
+    [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
     if num_iter != 0:
       print("The linear solver (conjugate gradients) failed with a total number of ",
             num_iter, " iterations.")
 
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)))
+  f = open("output/results.txt", "a")
+  f.write("Error in " + str(iteration) + ": " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)) + "\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution);
+  HDG_wrapper.plot_solution(vectorSolution, 1.);
   
 
 # --------------------------------------------------------------------------------------------------
