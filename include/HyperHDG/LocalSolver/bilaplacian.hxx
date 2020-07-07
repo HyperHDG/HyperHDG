@@ -1098,13 +1098,25 @@ class bilaplacian
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+      
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          hy_assert( lambda_values[i][j] == lambda_values[i][j] ,
+                     "Lambda value wit index " << i << "," << j << " is NaN!" );
+      
       std::array<lSol_float_t, n_loc_dofs_> coefficients
         = solve_local_problem(lambda_values, 1U, hy_edge, time);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-      return integrator.template integrate_vol_diffsquare_discana
+      
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        hy_assert( coeffs[i] == coeffs[i] , "The " << i << "-th coeff is NaN!" );
+      
+      lSol_float_t result = integrator.template integrate_vol_diffsquare_discana
           <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
+      hy_assert( result >= 0. , "The squared error must be non-negative, but was " << result );
+      return result; 
     }
 
     /*!*********************************************************************************************
@@ -1453,11 +1465,11 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_
                      (i, j, face, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         {
-          bdr_values[face][j] 
+          bdr_values[face][n_shape_bdr_ + j] 
             += hyper_edge.geometry.local_normal(face).operator[](dim) * integral
                  * coeffs[dim * n_shape_fct_ + i];
           
-          bdr_values[face][n_shape_bdr_ + j] 
+          bdr_values[face][j] 
             += hyper_edge.geometry.local_normal(face).operator[](dim) * integral
                  * coeffs[n_dofs_lap + dim * n_shape_fct_ + i];
         }
