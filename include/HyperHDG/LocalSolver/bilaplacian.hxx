@@ -1071,8 +1071,6 @@ class bilaplacian
             bdr_values[i][j] = integrator.integrate_vol_phiphi
                                 (u_coeffs.data(), test_coeffs.data(), hyper_edge.geometry);
             lambda_values_uni[i][j] = 0.;
-            
-            //if (j < lambda_values[i].size() / 2)  bdr_values[i][j] = 0.;
           }
 
       return bdr_values;
@@ -1412,11 +1410,12 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_a
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        bdr_values[face][j] 
+        bdr_values[face][n_shape_bdr_ + j] 
           += coeffs[hyEdge_dimT * n_shape_fct_ + i] 
               * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
                   (i, j, face, hyper_edge.geometry);
-        bdr_values[face][n_shape_bdr_ + j] 
+                  
+        bdr_values[face][j] 
           += coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] 
               * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>
                   (i, j, face, hyper_edge.geometry);          

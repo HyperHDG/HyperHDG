@@ -43,12 +43,12 @@ def bilaplacian_test(dimension, iteration):
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
   if num_iter != 0:
-      print("GMRES failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A, vectorRHS, tol=1e-9)
+      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
       if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
         sys.exit("Program failed!")
 
   # Print error.
