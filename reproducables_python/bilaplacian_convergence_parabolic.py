@@ -34,7 +34,7 @@ def bilaplacian_test(dimension, iteration):
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSinParab,double> >"
+          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersTrivParab,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
@@ -45,7 +45,7 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
   
   # Config time stepping.
-  time_steps  = 4 * (iteration+1) * (iteration+1)
+  time_steps  = 1 # 4 * (iteration+1) * (iteration+1)
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
@@ -72,7 +72,7 @@ def bilaplacian_test(dimension, iteration):
   A = LinearOperator( (system_size,system_size), matvec= helper.multiply )
   
   # For loop over the respective time-steps.
-  for time_step in range(time_steps):
+  for time_step in range(1*time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
     vectorRHS = np.multiply( \
@@ -86,17 +86,18 @@ def bilaplacian_test(dimension, iteration):
       print("The linear solver (conjugate gradients) failed with a total number of ",
             num_iter, " iterations.")
 
+  final_time = float( 1. )
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)))
+  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)))
   f = open("output/results.txt", "a")
-  f.write("Error in " + str(iteration) + ": " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)) + "\n")
+  f.write("Error in " + str(iteration) + ": " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)) + "\n")
   f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution, 1.);
+  HDG_wrapper.plot_solution(vectorSolution, final_time);
   
 
 # --------------------------------------------------------------------------------------------------
