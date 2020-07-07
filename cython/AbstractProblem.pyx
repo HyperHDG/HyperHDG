@@ -47,5 +47,5 @@ cdef class PythonClassName :
     if isinstance(return_val,bytes): # Python3 version - use unicode for Python 2
       return_val = return_val.decode()
     return return_val
-  def plot_solution(self, vec):
-    self.thisptr.plot_solution (vec)
+  def plot_solution(self, vec, time = 0.):
+    self.thisptr.plot_solution (vec, time)

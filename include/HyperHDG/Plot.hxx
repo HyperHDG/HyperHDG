@@ -361,7 +361,7 @@ template
  typename dof_value_t = double, typename hyEdge_index_t = unsigned int >
 void plot_vtu
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options )
+	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options, const dof_value_t time )
 {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
   
@@ -446,11 +446,11 @@ void plot_vtu
           ( std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim >& )
         >::value
       )
-        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
+        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, time);
       else
       {
         auto geometry =  hyper_graph[he_number];
-        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
+        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry, time);
       }
 
       myfile << "      ";
@@ -480,12 +480,13 @@ void plot_vtu
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options )
+	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time = 0. )
 {
   hy_assert( plot_options.fileEnding == "vtu" , 
              "Only file ending vtu is supported at the moment. Your choice has been "
              << plot_options.fileEnding << ", which is invalid.");
   hy_assert( !plot_options.fileName.empty() , "File name must not be empty!" );
   hy_assert( !plot_options.outputDir.empty() , "Ouput directory must not be empty!" );
-  plot_vtu(hyper_graph, local_solver, lambda, plot_options);
+  plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
 } // end of void plot
