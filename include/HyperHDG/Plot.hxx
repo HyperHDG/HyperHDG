@@ -140,7 +140,8 @@ struct PlotOptions
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-  const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options );
+  const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time = 0. );
 
 
 // -------------------------------------------------------------------------------------------------
@@ -361,7 +362,8 @@ template
  typename dof_value_t = double, typename hyEdge_index_t = unsigned int >
 void plot_vtu
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options, const dof_value_t time )
+	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time = 0. )
 {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
   
@@ -481,7 +483,7 @@ template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
 	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
-  const dof_value_t time = 0. )
+  const dof_value_t time)
 {
   hy_assert( plot_options.fileEnding == "vtu" , 
              "Only file ending vtu is supported at the moment. Your choice has been "

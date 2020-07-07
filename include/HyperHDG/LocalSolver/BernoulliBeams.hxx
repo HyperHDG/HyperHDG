@@ -158,7 +158,7 @@ class LengtheningBeam
     >
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     hyEdgeT& hyper_edge) const
+     hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
     {
       std::array
       <
@@ -368,7 +368,7 @@ class BernoulliBendingBeam
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      hyEdgeT& hyper_edge ) const
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const
     {
       std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
       for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
@@ -523,7 +523,7 @@ class LengtheningBernoulliBendingBeam
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     hyEdgeT& hyper_edge) const
+     hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
         result, auxiliary;
@@ -838,7 +838,7 @@ class TimoschenkoBendingBeam
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      hyEdgeT& hyper_edge ) const;
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const;
     
 }; // end of class TimoschenkoBendingBeam
 
@@ -1107,7 +1107,7 @@ std::array
 >
 TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bulk_values
 ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-  hyEdgeT& hyper_edge ) const
+  hyEdgeT& hyper_edge, const lSol_float_t time ) const
 {
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
@@ -1277,7 +1277,7 @@ class LengtheningTimoschenkoBendingBeam
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     hyEdgeT& hyper_edge) const
+     hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
         result, auxiliary;
