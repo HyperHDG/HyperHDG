@@ -207,7 +207,8 @@ class Diffusion_TensorialUniform
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
     bulk_values
-    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const;
+    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+    const lSol_float_t time = 0.) const;
 
 }; // end of class Diffusion_TensorialUniform
 
@@ -417,7 +418,8 @@ std::array
   Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
 >
 Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
-(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values) const
+(const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+ const lSol_float_t time) const
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
