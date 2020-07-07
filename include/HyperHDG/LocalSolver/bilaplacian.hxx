@@ -1000,7 +1000,7 @@ class bilaplacian
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge,
+      hyEdgeT                                                                     & hyper_edge,
       const lSol_float_t time = 0.
     )  const
     {
@@ -1039,26 +1039,18 @@ class bilaplacian
      * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
-/*    template < class hyEdgeT >
+    /*template < class hyEdgeT >
     std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
     ( 
       const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-      hyEdgeT                                                                   & hyper_edge,
+      hyEdgeT                                                                     & hyper_edge,
       const lSol_float_t time = 0.
     )  const
     {
-  //    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  //    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-  //      if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )  lambda_values[i].fill(0.);
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
-      for (unsigned int i = 0; i < bdr_values.size(); ++i)  bdr_values[i].fill(0.);
-
-//      SmallSquareMat<n_shape_fct_, lSol_float_t> local_mass_mat;
-//      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-//        for (unsigned int j = 0; j < n_shape_fct_; ++j)
-//          local_mass_mat(i,j) = integrator.integrate_vol_phiphi(i, j, hyper_edge.geometry);
       
       SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1067,16 +1059,21 @@ class bilaplacian
       std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
       for (unsigned int i = 0; i < lambda_values.size(); ++i)  lambda_values_uni[i].fill(0.);
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        {
-          lambda_values_uni[i][j] = 1.;
-          coeffs = solve_local_problem(lambda_values_uni, 0U, hyper_edge, time);
-          for (unsigned int k = 0; k < n_shape_fct_; ++k)
-            test_coeffs[k] = coeffs[hyEdge_dimT*n_shape_fct_+k];
-          bdr_values[i][j] = integrator.integrate_vol_phiphi
-                               (u_coeffs.data(), test_coeffs.data(), hyper_edge.geometry);
-          lambda_values_uni[i][j] = 0.;
-        }
+        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          {
+            lambda_values_uni[i][j] = 1.;
+            coeffs = solve_local_problem(lambda_values_uni, 0U, hyper_edge, time);
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+              test_coeffs[k] = coeffs[hyEdge_dimT*n_shape_fct_+k];
+            bdr_values[i][j] = integrator.integrate_vol_phiphi
+                                (u_coeffs.data(), test_coeffs.data(), hyper_edge.geometry);
+            lambda_values_uni[i][j] = 0.;
+            
+            //if (j < lambda_values[i].size() / 2)  bdr_values[i][j] = 0.;
+          }
 
       return bdr_values;
     }*/
