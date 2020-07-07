@@ -658,6 +658,6 @@ class AbstractProblem
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
     template < typename dof_value_t >
-    void plot_solution( const std::vector<dof_value_t>& lambda ) const
-    { plot(hyper_graph_, local_solver_, lambda , plot_options ); }
+    void plot_solution( const std::vector<dof_value_t>& lambda, const dof_value_t time = 0. ) const
+    { plot(hyper_graph_, local_solver_, lambda , plot_options, time ); }
 }; // end of class AbstractProblem

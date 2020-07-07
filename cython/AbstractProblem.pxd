@@ -22,4 +22,4 @@ cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
     CyReplace03 calculate_L2_error (vector[ CyReplace03 ], CyReplace03 )
     int size_of_system ()
     string plot_option (string, string)
-    void plot_solution (vector[ CyReplace03 ])
+    void plot_solution (vector[ CyReplace03 ], CyReplace03 )
