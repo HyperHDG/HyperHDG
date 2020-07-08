@@ -41,7 +41,7 @@ def bilaplacian_test(dimension, iteration):
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Config time stepping.
-  time_steps  = 500
+  time_steps  = 1000
   delta_time  = 1 / time_steps
 
   # Import C++ wrapper class to use HDG method on graphs.
@@ -50,7 +50,7 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= 2*(2**iteration) ) # What is with 1*?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
