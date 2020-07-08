@@ -64,7 +64,7 @@ def diffusion_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
   helper = helper_class(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
@@ -74,7 +74,7 @@ def diffusion_test(dimension, iteration):
   Mass  = LinearOperator( (system_size-2,system_size-2), matvec= helper.multiply_mass )
   
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SR', tol=1e-9)
+  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
 
   # Print error.
   print("Error: ", np.absolute(vals[0] - np.pi * np.pi))
