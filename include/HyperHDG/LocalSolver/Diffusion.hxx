@@ -1069,7 +1069,7 @@ class Diffusion
     ( 
       const std::array<abscissa_float_t,sizeT>  & abscissas,
       const input_array_t                       & lambda_values,
-      hyEdgeT                                   & hyper_edge
+      hyEdgeT                                   & hyper_edge,
       const lSol_float_t time = 0.
     )  const;
 
@@ -1120,7 +1120,7 @@ template < typename hyEdgeT >
 inline SmallSquareMat
 < Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
-assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge ) const
+assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const
 { 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg,quad_deg,Gaussian,Legendre,lSol_float_t> integrator;
