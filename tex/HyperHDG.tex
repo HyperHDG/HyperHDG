@@ -359,7 +359,7 @@ in the remainder of this manuscript. One could also, more generally, reformulate
  \jump{\vec q} ~=~ g_\textup N \qquad \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger
 \end{equation}
 % 
-with $\setNodeDir^\dagger \subset \setNode$ and $\# \setNodeDir^\dagger = \# \setNodeDir$. This naturally allows for Cauchy's (combination of Dirichlet and Neumann) boundary conditions without global existence and uniqueness issues. \arnote{This should be checked carefully!}
+with $\setNodeDir^\dagger \subset \setNode$ and $\# \setNodeDir^\dagger = \# \setNodeDir$. This naturally allows for Cauchy's (combination of Dirichlet and Neumann) boundary conditions without global existence and uniqueness issues. \arerror{This should be checked carefully!}
 % 
 \subsection{The notion of normals}\label{SEC:normals}
 % 
@@ -425,7 +425,7 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
  \Div \vec f: \Edge \to \IR, \qquad [\Div \vec f](x) = \sum_{b \in \basis} [\Der (f, b)_{\tangent(x)} (x)](b).
 \end{equation*}
 % 
-\subsection{Existence and uniqueness of solutions}\label{SEC:ExUnique}\arnote{To be checked and fully formulated! It just flashed through my mind.}
+\subsection{Existence and uniqueness of solutions}\label{SEC:ExUnique}\arerror{Needs to be checked and fully formulated! It just flashed through my mind.}
 % 
 In this brief section, we show that there is an unique function
 % 
@@ -668,7 +668,7 @@ ultimately leading to the need to add $\localU (\localU \lambda)$ and $\localQ (
     U &= \localU \lambda + \localU u_\textup D + \localU f + \localU (\localU \lambda + \localU u_\textup D + \localU f),\\
     \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda + \localU u_\textup D + \localU f).
   \end{split}
-\end{gather}\arerror{I believe this must be added! TODO: Check, why old version worked and implement this! Correct last plot and L2 error for parabolic cases!}
+\end{gather}
 % 
 Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
 % 
@@ -768,10 +768,14 @@ by rewriting those into the form of
  \partial_t \left[ \mass(\lambda, \mu) + b^\mass(\mu) \right] + a(\lambda, \mu) = b(\mu)
 \end{equation}
 % 
-with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is constructed by $L^2$ projection of the trace of $u$ to the skeletal space $\skeletalSpace$. \arnote{The way the mass matrix is constructed: Does this create issues?}
+with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is constructed by $L^2$ projection of the trace of $u$ to the skeletal space $\skeletalSpace$.
 % 
-\begin{remark}
- The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, time-dependent versions of this problem can be constructed and solved using the aformentioned approaches.
+\begin{remark}[Implementation issues]\
+ \begin{enumerate}
+  \item The reconstruction of the $u$ from $\lambda$ is not possible in this case any more. In the fully discrete case, one needs $\lambda$ at the current time step and $\lambda$ of the previous time step to approximate $\partial_t u$ (as difference ratio of the ``masses'') and $u$, afterwards.
+  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\end{envarwarning}
+  \item The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, parabolic versions of this problem can be constructed and solved using the aformentioned approaches.
+ \end{enumerate}
 \end{remark}
 % 
 \begin{envarwarning}{State of implementation}
@@ -811,7 +815,7 @@ for some given functions $f$ and $d \ge d_0 > 0$, plus appropriate boundary cond
 \end{align}
 \end{subequations}
 % 
-This way of formulating the problem already indicates that we will reuse the ideas Section \ref{SEC:hdg_graph} twice to discretize the bilaplacian. However, this might destroy the symmetry of the overall system. Moreover, we note that $\bar{\vec q}$ describes the flux of $u$, and conversely the mass sources and sinks are prescribed by $\bar g_\textup N$. Hence, $\bar u$ and $\vec q$ are the two unknowns without a direct physical interpretation. \arnote{The system converges poorly if CG is used +++ are there good ways to characterize $\bar u$ and $\vec q$?}
+This way of formulating the problem already indicates that we will reuse the ideas Section \ref{SEC:hdg_graph} twice to discretize the bilaplacian. However, this might destroy the symmetry of the overall system. Moreover, we note that $\bar{\vec q}$ describes the flux of $u$, and conversely the mass sources and sinks are prescribed by $\bar g_\textup N$. Hence, $\bar u$ and $\vec q$ are the two unknowns without a direct physical interpretation. 
 
 Moreover, the sets $\setNodeDir^\dagger$ and $\setNodeDirBar^\dagger$ suffice
 % 
@@ -905,7 +909,7 @@ in order to close the system.
 \begin{envarwarning}{State of implementation}
  The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
  
- The mass matrix representation given above does not work and I do not understand, why. The mass matrix, however does not seem to be far away.
+ The mass matrix seems to work now, but has only been tested for cases, where consistency has been checked.
  
  Eigenvalue problems will be checked, when this is ensured, since they tend to be harder, than parabolics.
 \end{envarwarning}
