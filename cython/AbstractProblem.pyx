@@ -34,6 +34,8 @@ cdef class PythonClassName :
     return self.thisptr.initial_flux_vector (vec, time)
   def mass_matrix_multiply(self, vec, time = 0.):
     return self.thisptr.mass_matrix_multiply (vec, time)
+  def total_mass_vector(self, vec, time = 0.):
+    return self.thisptr.total_mass_vector (vec, time)
   def calculate_L2_error(self, vec, time = 0.):
     return self.thisptr.calculate_L2_error (vec, time)
   def size_of_system(self):

@@ -42,10 +42,10 @@ def bilaplacian_test(dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
   
   # Config time stepping.
-  time_steps  = 1# 4 * (iteration+1) * (iteration+1)
+  time_steps  = 4 * (iteration+1) * (iteration+1)
   delta_time  = 1 / time_steps
   
   # Initialising the wrapped C++ class HDG_wrapper.
@@ -81,10 +81,18 @@ def bilaplacian_test(dimension, iteration):
   for time_step in range(time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply( \
-      HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), \
-      delta_time )
-    vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
+    vectorRHS = np.add(np.multiply( \
+      HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), delta_time ),\
+      np.multiply(HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), -1.))
+      
+      
+    # print(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), 1e-14*(time_step+1) * delta_time))
+    # print(HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), 1e-14*(time_step+1) * delta_time))
+    # print(HDG_wrapper.matrix_vector_multiply(vectorSolution))
+    
+    vectorSolution = HDG_wrapper.total_mass_vector(vectorSolution, time_step * delta_time+1e-14)
+    
+    # print(vectorSolution)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
     [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
@@ -96,6 +104,7 @@ def bilaplacian_test(dimension, iteration):
         sys.exit("Program failed!")
 
   final_time = float( 3 )
+  #print(vectorSolution)
   # Print error.
   print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)))
   f = open("output/results.txt", "a")
@@ -115,7 +124,7 @@ def bilaplacian_test(dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 def main():
   for dimension in range(1,2):
-    for iteration in range(1, 10 - dimension):
+    for iteration in range(1,10 - dimension):
       bilaplacian_test(dimension, iteration)
 
 

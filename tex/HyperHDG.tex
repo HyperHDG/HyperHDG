@@ -665,10 +665,10 @@ ultimately leading to the need to add $\localU (\localU \lambda)$ and $\localQ (
 % 
 \begin{gather}\label{EQ:construct_unk_fu}
   \begin{split}
-    U &= \localU \lambda + \localU u_\textup D + + \localU f + \localU (\localU \lambda),\\
-    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda).
+    U &= \localU \lambda + \localU u_\textup D + \localU f + \localU (\localU \lambda \textcolor{red}{+ \localU u_\textup D + \localU F}),\\
+    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda \textcolor{red}{+ \localU u_\textup D + \localU F}).
   \end{split}
-\end{gather}
+\end{gather}\arerror{I believe this must be added! TODO: Check, why old version worked and implement this! Rewrite remainder!}
 % 
 Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
 % 
