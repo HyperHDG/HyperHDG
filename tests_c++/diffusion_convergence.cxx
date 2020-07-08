@@ -75,27 +75,42 @@ double do_test(const unsigned int iteration)
 
   std::string file_name = "diff_c-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim)
                             + "-" + std::to_string(iteration);
-  std::string print_file_number = "false" , scale = "0.95";
+  std::string print_file_number = "false" , scale = "0.75";
+  std::string plot_edge_boundaries = "true", boundary_scale = "0.9";
+
+  diffusion_problem.plot_option( "fileName" , file_name );
+  diffusion_problem.plot_option( "plotEdgeBoundaries", plot_edge_boundaries);
+  diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "scale" , scale );
+  diffusion_problem.plot_option( "boundaryScale" , boundary_scale );
+
+//diffusion_problem.plot_solution(solution);
+
+   print_file_number = "false" , scale = "0.8";
+   plot_edge_boundaries = "true", boundary_scale = "0.9";
 
   diffusion_problem.plot_option( "fileName" , file_name );
   diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "plotEdgeBoundaries", plot_edge_boundaries);
+  diffusion_problem.plot_option( "boundaryScale" , boundary_scale );
   diffusion_problem.plot_option( "scale" , scale );
 
+
   diffusion_problem.plot_solution(solution);
-  
+  std::cout <<"\n\n\n";
   return diffusion_problem.calculate_L2_error(solution);
 }
 
 
 int main(int argc, char *argv[])
 { 
-  for (unsigned int i = 1; i < 8; ++i)
+  for (unsigned int i = 1; i < 3; ++i)
     std::cout << do_test<1,1,TestParametersSin,double>(i) << std::endl;
   std::cout << std::endl;
-  for (unsigned int i = 1; i < 8; ++i)
+  for (unsigned int i = 1; i < 3; ++i)
     std::cout << do_test<2,2,TestParametersSin,double>(i) << std::endl;
   std::cout << std::endl;
-  for (unsigned int i = 1; i < 8; ++i)
+  for (unsigned int i = 1; i < 3; ++i)
     std::cout << do_test<3,3,TestParametersSin,double>(i) << std::endl;
   std::cout << std::endl;
 
