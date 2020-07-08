@@ -141,7 +141,8 @@ class LengtheningBeam
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
     (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
-      lambda_values, hyEdgeT& hyper_edge ) const
+      lambda_values, hyEdgeT& hyper_edge, const lSol_float_t time = 0.
+    ) const
     {
       std::array<std::array<lSol_float_t,diffusion_sol_t::n_glob_dofs_per_node()>,2*hyEdge_dimT >
         lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
@@ -377,7 +378,7 @@ class BernoulliBendingBeam
     >
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-      hyEdgeT& hyper_edge ) const
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const
     {
       std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
       for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
@@ -542,7 +543,7 @@ class LengtheningBernoulliBendingBeam
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
     bulk_values
     (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-     hyEdgeT& hyper_edge) const
+     hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
     {
       std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()>
         result, auxiliary;
