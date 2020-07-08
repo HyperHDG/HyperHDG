@@ -741,7 +741,7 @@ class Diffusion
       }
     }
     
-        /*!*********************************************************************************************
+    /*!*********************************************************************************************
      * \brief  Solve local problem (with right-hand side from skeletal).
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
