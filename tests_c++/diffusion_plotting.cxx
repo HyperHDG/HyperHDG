@@ -56,9 +56,24 @@ int do_test()
 
   std::string file_name = "diff_t-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
   std::string print_file_number = "false" , scale = "0.8";
+  std::string plot_edge_boundaries = "false", boundary_scale = "0.9";
 
   diffusion_problem.plot_option( "fileName" , file_name );
   diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "plotEdgeBoundaries", plot_edge_boundaries);
+  diffusion_problem.plot_option( "boundaryScale" , boundary_scale );
+  diffusion_problem.plot_option( "scale" , scale );
+
+  file_name = "diff_tedge-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
+  print_file_number = "false" , scale = "0.8";
+  plot_edge_boundaries = "true", boundary_scale = "0.9";
+  std::string plot_edges = "false";
+  diffusion_problem.plot_solution(helper);
+  diffusion_problem.plot_option( "fileName" , file_name );
+  diffusion_problem.plot_option( "printFileNumber" , print_file_number );
+  diffusion_problem.plot_option( "plotEdges", plot_edges);
+  diffusion_problem.plot_option( "plotEdgeBoundaries", plot_edge_boundaries);
+  diffusion_problem.plot_option( "boundaryScale" , boundary_scale );
   diffusion_problem.plot_option( "scale" , scale );
 
   diffusion_problem.plot_solution(helper);

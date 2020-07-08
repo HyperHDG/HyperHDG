@@ -61,10 +61,23 @@ public:
   template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,system_dimension()>
   bulk_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
-	       const InputArrayType& lambda_values) const
-    {
-      return std::array<std::array<lSol_float_t,
-				   Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
-			system_dimension()> ();
-    }
+               const InputArrayType& lambda_values) const
+  {
+    return std::array<std::array<lSol_float_t,
+                                 Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
+                      system_dimension()> ();
+  }
+
+
+
+template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(AbscissaSize)>,1>
+lambda_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
+             const InputArrayType& lambda_values,
+             unsigned int boundary_number) const
+{
+  return std::array<std::array<lSol_float_t,
+                               Hypercube<hyEdge_dimT-1>::pow(AbscissaSize)>,
+                    1> ();
+}
 };
