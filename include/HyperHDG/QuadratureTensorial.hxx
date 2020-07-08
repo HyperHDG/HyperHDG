@@ -524,8 +524,10 @@ class IntegratorTensorial
      * \param   j             Local index of local shape function.
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
-    return_t integrate_vol_phiphifunc(const unsigned int i, const unsigned int j, GeomT& geom) const
+    template 
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
+    return_t integrate_vol_phiphifunc
+    (const unsigned int i, const unsigned int j, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
@@ -544,13 +546,67 @@ class IntegratorTensorial
           quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]]
                         * shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
         }
-        integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
+        integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
       }
       return integral * geom.area();
     }
 
-    template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
-    return_t integrate_vol_phifunc(const unsigned int i, GeomT& geom) const
+
+    template < typename GeomT >
+    return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j, GeomT& geom) const
+    {
+      constexpr unsigned int dimT = GeomT::hyEdge_dim();
+      return_t integral = 1.;
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
+        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
+      return integral * geom.area();
+    }
+    
+    template < typename GeomT , std::size_t array_size, typename floating_t>
+    return_t integrate_vol_phiphi
+    (
+      const std::array<floating_t, array_size>& is,
+      const std::array<floating_t, array_size>& js,
+      GeomT& geom
+    ) const
+    {
+      return_t integral = 0., quad_val, is_val, js_val, val_helper;
+      
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_k, dec_q;
+
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+      {
+        dec_q = index_decompose
+                  <GeomT::hyEdge_dim(),quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_val = 1.;
+        is_val = 0.;
+        js_val = 0.;
+        
+        for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+          quad_val *= quad_weights_[dec_q[dim]];
+        
+        for (unsigned int k = 0; k < array_size; ++k)
+        {
+          dec_k = index_decompose<GeomT::hyEdge_dim()>(k);
+          val_helper = 1.;
+          for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+            val_helper *= shape_fcts_at_quad_[dec_k[dim]][dec_q[dim]];
+          is_val += is[k] * val_helper;
+          js_val += js[k] * val_helper;
+       //   std::cout << shape_fcts_at_quad_[dec_k[0]][dec_q[0]] << " " << dec_k[0] << std::endl;
+       //   std::cout << is[k] << " " << js[k] << " " << val_helper << std::endl;
+        }
+        integral += quad_val * is_val * js_val;
+      }
+      return integral * geom.area();
+    }
+
+    template
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
+    return_t integrate_vol_phifunc
+    (const unsigned int i, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
@@ -567,7 +623,7 @@ class IntegratorTensorial
           quad_pt[dim] = quad_points_[dec_q[dim]];
           quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
         }
-        integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
+        integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
       }
       return integral * geom.area();
     }
@@ -618,8 +674,10 @@ class IntegratorTensorial
       return integral * geom.face_area(bdr);
     }
     
-    template < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&) >
-    return_t integrate_bdr_phifunc(const unsigned int i, const unsigned int bdr, GeomT& geom) const
+    template
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
+    return_t integrate_bdr_phifunc
+    (const unsigned int i, const unsigned int bdr, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
@@ -642,18 +700,55 @@ class IntegratorTensorial
           else
           {
             quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
-            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
+            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] 
+                          * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
           }
         }
-        integral += fun(geom.map_ref_to_phys(quad_pt)) * quad_val;
+        integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
       }
       return integral * geom.face_area(bdr);
     }
+    
+    template
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
+    return_t integrate_bdrUni_phifunc
+    (const unsigned int i, const unsigned int bdr, GeomT& geom, const return_t time = 0.) const
+    {
+      return_t integral = 0., quad_val;
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+      std::array<unsigned int, std::max(1U,GeomT::hyEdge_dim()-1)> dec_q;
+      Point<GeomT::hyEdge_dim(), return_t> quad_pt;
+      unsigned int dim_bdr = bdr / 2 , bdr_ind = bdr % 2;
+      
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()-1); ++q)
+      {
+        dec_q = index_decompose
+                  <GeomT::hyEdge_dim()-1,quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_val = 1.;
+        for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+        {
+          if (dim == dim_bdr)
+          {
+            quad_pt[dim] = bdr_ind;
+            quad_val *= trial_bdr_[dec_i[dim]][bdr_ind];
+          }
+          else
+          {
+            quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
+            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] 
+                          * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
+          }
+        }
+        integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
+      }
+      return integral;
+    }
+
 
     template 
-    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&), std::size_t n_coeff >
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t), std::size_t n_coeff >
     return_t integrate_vol_diffsquare_discana
-    ( const std::array < return_t , n_coeff > coeffs, GeomT& geom)  const
+    ( const std::array < return_t , n_coeff > coeffs, GeomT& geom, const return_t time = 0.)  const
     {
       return_t integral = 0., quad_weight;
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_i, dec_q;
@@ -677,7 +772,7 @@ class IntegratorTensorial
           }
         }
         integral += quad_weight * 
-                      std::pow(fun(geom.map_ref_to_phys(quad_pt)) 
+                      std::pow(fun(geom.map_ref_to_phys(quad_pt), time) 
                         - std::accumulate(quad_val.begin(), quad_val.end(), 0.), 2);
       }
       return integral * geom.area();

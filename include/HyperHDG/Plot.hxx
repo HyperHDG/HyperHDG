@@ -100,7 +100,7 @@ struct PlotOptions
    * \brief   A factor for scaling each object of the plot locally.
    *
    * This factor defaults to 1 in order to produce a plot of a contiguous domain. If it is chosen
-   * less than 1, each edge or edge boundary is scaled by this factor around its center.
+   * less than 1, each edge or node is scaled by this factor around its center.
    ************************************************************************************************/
   float scale;
   /*!***********************************************************************************************
@@ -128,8 +128,9 @@ struct PlotOptions
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
- * Creates a file according to set plo
-HDG_wrapper.plot_option("scale","0.8");tting options in \c plot_options. This file contains the
+ * \todo    Adapt to deal with time-dependent cases when the node plotting is finished!
+ *
+ * Creates a file according to set plotting options in \c plot_options. This file contains the
  * solution of the PDE defined in \c plotOpt having the representation \c lambda in terms of its
  * skeleta degrees of freedom (related to skeletal variable lambda).
  *
@@ -149,7 +150,8 @@ HDG_wrapper.plot_option("scale","0.8");tting options in \c plot_options. This fi
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-  const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options );
+  const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time = 0. );
 
 
 // -------------------------------------------------------------------------------------------------
@@ -282,7 +284,7 @@ namespace PlotFunctions
     if constexpr (edge_dim == 1)       boundary_element_id = 1;
     else if constexpr (edge_dim == 2)  boundary_element_id = 3;
     else if constexpr (edge_dim == 3)  boundary_element_id = 8;
-    
+
     output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" 
            << n_plot_cells << "\">" << std::endl;
     output << "      <Points>" << std::endl;
@@ -371,6 +373,7 @@ namespace PlotFunctions
         output << "  " << Hypercube<edge_dim-1>::n_vertices() * bdr_number + start_number;
     }
     output << std::endl;
+    
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
     output << "        ";
@@ -524,7 +527,9 @@ template
  typename dof_value_t = double, typename hyEdge_index_t = unsigned int >
 void plot_vtu
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options ) {
+	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time = 0. )
+{
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -607,12 +612,13 @@ void plot_vtu
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
 ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
-	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options )
+	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
+  const dof_value_t time)
 {
   hy_assert( plot_options.fileEnding == "vtu" , 
              "Only file ending vtu is supported at the moment. Your choice has been "
              << plot_options.fileEnding << ", which is invalid.");
   hy_assert( !plot_options.fileName.empty() , "File name must not be empty!" );
   hy_assert( !plot_options.outputDir.empty() , "Ouput directory must not be empty!" );
-  plot_vtu(hyper_graph, local_solver, lambda, plot_options);
+  plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
 } // end of void plot

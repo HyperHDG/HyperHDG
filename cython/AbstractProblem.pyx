@@ -26,12 +26,16 @@ cdef class PythonClassName :
     self.thisptr.read_dirichlet_indices (indices)
   def return_zero_vector(self):
     return self.thisptr.return_zero_vector[ CyReplace03 ] ()
-  def matrix_vector_multiply(self, vec):
-    return self.thisptr.matrix_vector_multiply (vec)
-  def total_flux_vector(self, vec):
-    return self.thisptr.total_flux_vector (vec)
-  def total_flux_vector(self, vec):
-    return self.thisptr.calculate_L2_error (vec)
+  def matrix_vector_multiply(self, vec, time = 0.):
+    return self.thisptr.matrix_vector_multiply (vec, time)
+  def total_flux_vector(self, vec, time = 0.):
+    return self.thisptr.total_flux_vector (vec, time)
+  def initial_flux_vector(self, vec, time = 0.):
+    return self.thisptr.initial_flux_vector (vec, time)
+  def mass_matrix_multiply(self, vec, time = 0.):
+    return self.thisptr.mass_matrix_multiply (vec, time)
+  def calculate_L2_error(self, vec, time = 0.):
+    return self.thisptr.calculate_L2_error (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):
@@ -43,5 +47,5 @@ cdef class PythonClassName :
     if isinstance(return_val,bytes): # Python3 version - use unicode for Python 2
       return_val = return_val.decode()
     return return_val
-  def plot_solution(self, vec):
-    self.thisptr.plot_solution (vec)
+  def plot_solution(self, vec, time = 0.):
+    self.thisptr.plot_solution (vec, time)

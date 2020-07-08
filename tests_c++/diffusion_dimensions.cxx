@@ -97,13 +97,17 @@ struct TestParameters
 {
   static constexpr std::array<unsigned int, 0U> dirichlet_nodes {};
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t inverse_diffusion_coeff
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 1.; }
-  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t right_hand_side
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
-  static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t dirichlet_value
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
-  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t neumann_value
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
 };
 /*!*************************************************************************************************
@@ -194,13 +198,17 @@ struct TestParametersDir
 {
   static constexpr std::array<unsigned int, 2U> dirichlet_nodes { 0 , 1 };
   static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static param_float_t inverse_diffusion_coeff( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t inverse_diffusion_coeff
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 1.; }
-  static param_float_t right_hand_side( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t right_hand_side
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
-  static param_float_t dirichlet_value( const Point<space_dimT,param_float_t>& pt )
-  { return norm_infty(pt); }
-  static param_float_t neumann_value( const Point<space_dimT,param_float_t>& pt )
+  static param_float_t dirichlet_value
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
+  { return norm_infty(point); }
+  static param_float_t neumann_value
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
 };
 /*!*************************************************************************************************
