@@ -687,6 +687,90 @@ class AbstractProblem
       return std::sqrt(result);
     }
     /*!*********************************************************************************************
+     * \brief   Calculate errors.
+     *
+     * Function that evaluates the global right-hand side (implemented wthin the local solver) and
+     * adds the result to the function argument.
+     *
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  error         A \c std::vector containing the errors.
+     **********************************************************************************************/
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    dof_value_t calculate_L2_error_temp
+    ( 
+      const std::vector<dof_value_t>& x_vec_new,
+      const std::vector<dof_value_t>& x_vec_old,
+      const dof_value_t delta_time,
+      const dof_value_t time
+    )  const
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
+      
+      dof_value_t result = 0.;
+
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>
+        hyEdge_dofs_new, hyEdge_dofs_old;
+      
+      // Calculate errors by iteration over all hyperedges.
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs_new[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec_new);
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs_old[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec_old);
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into local errors.
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+          >::value
+        )
+        {
+          if constexpr
+          ( 
+            has_L2_error_temp
+            < LocalSolverT,
+              typename LocalSolverT::solver_float_t
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                dof_value_t, dof_value_t )
+            >::value
+          )
+            result += local_solver_.calc_L2_error_squared_temp(hyEdge_dofs_new, hyEdge_dofs_old,
+                        delta_time, time);
+        }
+        else
+        {
+          if constexpr
+          ( 
+            has_L2_error_temp
+            < LocalSolverT,
+              typename LocalSolverT::solver_float_t
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                decltype(hyper_edge)&, dof_value_t, dof_value_t )
+            >::value
+          )
+            result += local_solver_.calc_L2_error_squared_temp(hyEdge_dofs_new, hyEdge_dofs_old, 
+                hyper_edge, delta_time, time);
+        }
+        
+      });
+      
+      hy_assert( result >= 0. , "The squared error must be non-negative, but was " << result );
+      return std::sqrt(result);
+    }
+    /*!*********************************************************************************************
      * \brief   Determine size of condensed system for the skeletal unknowns.
      *
      * Function that returns the size \f$n\f$ of the \f$n \times n\f$ linear, sparse system

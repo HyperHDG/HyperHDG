@@ -30,6 +30,7 @@ class helper_class():
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(dimension, iteration):
+  
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
@@ -38,22 +39,22 @@ def diffusion_test(dimension, iteration):
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
+  
+  # Config time stepping.
+  time_steps  = 1000
+  delta_time  = 1 / time_steps
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
-  # Config time stepping.
-  time_steps  = 4 * (iteration+1) * (iteration+1)
-  delta_time  = 1 / time_steps
-  
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
-  vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
+  vectorSolutionNew = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -63,26 +64,31 @@ def diffusion_test(dimension, iteration):
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
+    vectorSolutionOld = vectorSolutionNew
+    
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply( \
-      HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), \
-      delta_time )
-    vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
+    vectorRHS = np.subtract( \
+      np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
+                     (time_step+1) * delta_time), delta_time ) , \
+      HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time) )
+    
+    vectorSolutionNew = HDG_wrapper.total_mass_vector(vectorSolutionOld, time_step * delta_time)
 
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
+    [vectorSolutionNew, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolutionNew), tol=1e-9)
     if num_iter != 0:
       print("The linear solver (conjugate gradients) failed with a total number of ",
             num_iter, " iterations.")
 
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, 1.)))
+  print("Error: " + str(HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
+        delta_time, 1.)))
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution);
+  HDG_wrapper.plot_solution(vectorSolutionNew);
   
 
 # --------------------------------------------------------------------------------------------------

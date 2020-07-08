@@ -211,3 +211,38 @@ struct has_L2_error<C, Ret(Args...)>
   public:
     static constexpr bool value = type::value;
 };
+
+/*!*************************************************************************************************
+ * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.
+ * 
+ * This struct generates a compile time error if the check is not correctly conducted!
+ **************************************************************************************************/
+template<typename, typename T>
+struct has_L2_error_temp
+{
+  static_assert( std::integral_constant<T, false>::value, // This is my way to write false ;)
+                 "Second template parameter needs to be of function type." );
+};
+/*!*************************************************************************************************
+ * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.
+ * 
+ * This struct has value true if the function does not use a geometry!
+ **************************************************************************************************/
+template<typename C, typename Ret, typename... Args>
+struct has_L2_error_temp<C, Ret(Args...)>
+{
+  private:
+    template<typename T>
+    static constexpr auto check(T*)
+    -> typename std::is_same
+      < decltype( std::declval<T>().calc_L2_error_squared_temp( std::declval<Args>()... ) ), Ret >
+      ::type;
+  
+    template<typename>
+    static constexpr std::false_type check(...);
+    
+    typedef decltype(check<C>(0)) type;
+  
+  public:
+    static constexpr bool value = type::value;
+};
