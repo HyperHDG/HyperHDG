@@ -721,7 +721,7 @@ while the positive definiteness follows from the fact that $\mass$ has, cf.~\cit
  Again, we highlight that the discretized problem is completely artificial and only in order to motive the representation of $\mass$. It does not allow for an unique solution in general. Thus, a list of reasonable problems using the aformentioned considerations is given in the next section.
 \end{remark}
 % 
-\subsection{Different types of solvable problems}
+\subsection{Different types of solvable problems}\label{SEC:diff_types}
 % 
 With the knowledge of the previous subsections, we can easily approximate the solutions to the \emph{elliptic diffusion problem} \eqref{EQ:diffusion_mixed} using
 % 
@@ -788,7 +788,149 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
 % 
 \subsection{Elliptic convergence analysis}
 % 
-Obviously, the HDG method for elliptic diffusion problems is consistent with respect to the solution guaranteed in Section \ref{SEC:ExUnique}. \arnote{The rest might work similar to standard HDG, I do not really know and believe this is not urgent.}
+Obviously, the HDG method for elliptic diffusion problems is consistent with respect to the solution guaranteed in Section \ref{SEC:ExUnique}.
+% 
+\begin{envarnote}{Analysis ideas.}
+ The rest might work similar to standard HDG, I do not really know and believe this is not urgent.
+\end{envarnote}
+% 
+\subsection{Numerical convergence tests}
+% 
+Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the different problems described in Section \ref{SEC:diff_types}. First, we consider the elliptic problem
+% 
+\begin{equation}
+ - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
+\end{equation}
+% 
+where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^{-i}$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 6.80e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+%   \midrule
+%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 3$}}}
+%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+%   \midrule
+%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 4$}}}
+%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc).}\label{TAB:diff_el_conv}
+\end{table}
+
+Here, we recognize that the achieved orders of convergence perfectly fit to the expected results. However, we used the actually suboptimal $\tau \sim \tfrac{1}{h}$ as compared to $\tau \sim 1$.
+% 
+\begin{envarnote}{$\tau$}
+ I do not know, which one is optimal for tensor products, but for simplices, the constant is best. However, I believe to remember that Sander Rhebergen said that this is not true for tensor product structures. I am not sure, however.
+\end{envarnote}
+
+Next, we consider
+% 
+\begin{equation}
+ - \Nabla \cdot (d \Nabla u) = f \text{ in } \Edge \in \SetEdge, \qquad u = u_\text D \text{ on } \Node \in \SetNodeDir,
+\end{equation}
+% 
+where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true. Thus, we only plot the errors for $p = 1$.
+% 
+\begin{table}
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 8.24e-2 & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
+  $i = 1$ && 3.09e-2 & 1.4 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  $i = 2$ && 1.28e-2 & 1.2 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  $i = 3$ && 5.79e-3 & 1.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  $i = 4$ && 2.73e-3 & 1.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  $i = 5$ && \textcolor{red}{2.95e-5} & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation.}\label{TAB:diff_hg_el_conv}
+\end{table}
+
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$.
+
+For a parabolic test, we consider
+% 
+\begin{equation}
+ \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
+\end{equation}
+% 
+with some initial datum $u_0$, $d = \tfrac{\pi}{2}$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 1e^-3$ can be found in Table \ref{TAB:diff_pb_conv}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 6.80e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+%   \midrule
+%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 3$}}}
+%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+%   \midrule
+%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 4$}}}
+%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc).}\label{TAB:diff_pb_conv}
+\end{table}\arwarning{To be filled!}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
@@ -909,9 +1051,7 @@ in order to close the system.
 \begin{envarwarning}{State of implementation}
  The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
  
- The mass matrix seems to work now, but has only been tested for cases, where consistency has been checked.
- 
- Eigenvalue problems will be checked, when this is ensured, since they tend to be harder, than parabolics.
+ The mass matrix seems to work now. Parabolic convergence studies look fine (but have not been done in great detail). Also eigenvalue convergence looks fine at first sight.
 \end{envarwarning}
 % 
 % ---------------------------------------------------------------------
