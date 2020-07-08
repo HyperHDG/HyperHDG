@@ -84,11 +84,6 @@ def bilaplacian_test(dimension, iteration):
     vectorRHS = np.add(np.multiply( \
       HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), delta_time ),\
       np.multiply(HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), -1.))
-      
-      
-    # print(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), 1e-14*(time_step+1) * delta_time))
-    # print(HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), 1e-14*(time_step+1) * delta_time))
-    # print(HDG_wrapper.matrix_vector_multiply(vectorSolution))
     
     vectorSolution = HDG_wrapper.total_mass_vector(vectorSolution, time_step * delta_time+1e-14)
     

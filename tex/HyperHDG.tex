@@ -665,10 +665,10 @@ ultimately leading to the need to add $\localU (\localU \lambda)$ and $\localQ (
 % 
 \begin{gather}\label{EQ:construct_unk_fu}
   \begin{split}
-    U &= \localU \lambda + \localU u_\textup D + \localU f + \localU (\localU \lambda \textcolor{red}{+ \localU u_\textup D + \localU F}),\\
-    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda \textcolor{red}{+ \localU u_\textup D + \localU F}).
+    U &= \localU \lambda + \localU u_\textup D + \localU f + \localU (\localU \lambda + \localU u_\textup D + \localU f),\\
+    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda + \localU u_\textup D + \localU f).
   \end{split}
-\end{gather}\arerror{I believe this must be added! TODO: Check, why old version worked and implement this! Rewrite remainder!}
+\end{gather}\arerror{I believe this must be added! TODO: Check, why old version worked and implement this! Correct last plot and L2 error for parabolic cases!}
 % 
 Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
 % 
@@ -676,14 +676,15 @@ Again, we can formally set up a system which is similar to Section~\ref{SEC:glob
 % 
 \begin{subequations}\label{EQ:forms_def_fu}
 \begin{equation}\label{EQ:glob_system_old}
- \tilde a(\lambda, \mu) ~=~ \tilde b(\mu) - \mass (\lambda, \mu)
+ \tilde a(\lambda, \mu) ~=~ \tilde b(\mu) - \left[ \mass (\lambda, \mu) + b^\mass(\mu) \right]
 \end{equation}
 % 
 with bilinear and linear forms $\tilde a$ and $\tilde b$ as described in \eqref{EQ:forms_def}, and
 % 
-\begin{equation}
- \mass (\lambda,\mu) ~=~ \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}
-\end{equation}
+\begin{align}
+ \mass (\lambda,\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}\\
+ b^\mass(\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU f + \localU u_\textup D) \cdot \Normal + \tau \localU (\localU f + \localU u_\textup D) \right] \mu \ds
+\end{align}
 \end{subequations}
 % 
 of which $\mass$ can be proven to be symmetric positive definite.
@@ -699,7 +700,7 @@ Defining the positive definite statically condensed stiffness bilinear form $a$ 
 allows to rewrite \eqref{EQ:glob_system_old} as
 % 
 \begin{equation}\label{EQ:glob_system_new}
- a(\lambda, \mu) = b(\mu) + \mass(\lambda,\mu),
+ a(\lambda, \mu) = b(\mu) + \mass(\lambda,\mu) + b^\mass(\mu),
 \end{equation}
 % 
 where $a$ is a positive definite discretization of the laplacian and $\mass$ is a positive definite discretization of the mass matrix which is related to the laplacian.
@@ -764,7 +765,7 @@ Last, but not least, we are able to solve \emph{parabolic diffusion equations}
 by rewriting those into the form of
 % 
 \begin{equation}
- \partial_t \mass(\lambda, \mu) + a(\lambda, \mu) = b(\mu)
+ \partial_t \left[ \mass(\lambda, \mu) + b^\mass(\mu) \right] + a(\lambda, \mu) = b(\mu)
 \end{equation}
 % 
 with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is constructed by $L^2$ projection of the trace of $u$ to the skeletal space $\skeletalSpace$. \arnote{The way the mass matrix is constructed: Does this create issues?}
@@ -892,7 +893,14 @@ For constructing the mass matrix, we replace the right-hand side $f$ in \eqref{E
  & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \mu \ds,\notag
 \end{align}
 % 
-which represents the analogon to the right-hand side $b$ in \eqref{EQ:lin_def_bilap}. In our numerical experiments, we experienced that this is equivalent to writing $\mass$ as in \eqref{EQ:mass_theo}.
+which represents the analogon to the right-hand side $b$ in \eqref{EQ:lin_def_bilap}. In our numerical experiments, we experienced that this is equivalent to writing $\mass$ as in \eqref{EQ:mass_theo}. Moreover, we need to set
+% 
+\begin{align}
+ b^\mass(\vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU f + \localU \vec u_\textup D) \cdot \Normal + \tau \localU (\localU f + \localU \vec u_\textup D) \right] \bar \mu \ds\\
+ & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \bar \localQ (\localU f + \localU \vec u_\textup D) \cdot \Normal + \tau \bar \localU (\localU f + \localU \vec u_\textup D) \right] \mu \ds,\notag
+\end{align}
+% 
+in order to close the system.
 
 \begin{envarwarning}{State of implementation}
  The multiplication with $-1$ serves the purpose to have as much positive definiteness as possible. The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
