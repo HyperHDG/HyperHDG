@@ -38,6 +38,8 @@ cdef class PythonClassName :
     return self.thisptr.total_mass_vector (vec, time)
   def calculate_L2_error(self, vec, time = 0.):
     return self.thisptr.calculate_L2_error (vec, time)
+  def calculate_L2_error_temp(self, vec_new, vec_old, delta_time, time):
+    return self.thisptr.calculate_L2_error_temp (vec_new, vec_old, delta_time, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

@@ -21,6 +21,7 @@ cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
     vector[ CyReplace03 ] mass_matrix_multiply (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] total_mass_vector (vector[ CyReplace03 ], CyReplace03 )
     CyReplace03 calculate_L2_error (vector[ CyReplace03 ], CyReplace03 )
+    CyReplace03 calculate_L2_error_temp (vector[ CyReplace03 ], vector[ CyReplace03 ], CyReplace03 , CyReplace03 )
     int size_of_system ()
     string plot_option (string, string)
     void plot_solution (vector[ CyReplace03 ], CyReplace03 )
