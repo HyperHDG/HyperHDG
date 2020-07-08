@@ -806,6 +806,40 @@ class bilaplacian
     }
     
     
+        /*!*********************************************************************************************
+     * \brief  Solve local problem (with right-hand side from skeletal).
+     *
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  loc_sol       Solution of the local problem.
+     **********************************************************************************************/
+    template < typename hyEdgeT >  inline std::array<lSol_float_t, n_loc_dofs_> solve_loc_prob_cor
+    ( 
+      const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      const std::array<lSol_float_t, n_loc_dofs_> & coeffs,
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t delta_time,
+      const lSol_float_t time
+    )  const
+    {
+      try
+      { 
+        SmallVec<n_loc_dofs_, lSol_float_t> rhs;
+        rhs = delta_time * assemble_rhs_from_lambda(lambda_values, hyper_edge)
+                + delta_time * assemble_rhs_from_global_rhs(hyper_edge,time)
+                + assemble_rhs_from_coeffs(coeffs, hyper_edge);
+        return ( rhs / (delta_time * assemble_loc_matrix(tau_, hyper_edge, time)) ).data();
+      }
+      catch (LAPACKexception& exc)
+      {
+        hy_assert( 0 == 1 ,
+                   exc.what() << std::endl << "This can happen if quadrature is too inaccurate!" );
+        throw exc;
+      }
+    }
+    
+    
     /*!*********************************************************************************************
      * \brief   Evaluate primal variable at boundary.
      *
@@ -977,7 +1011,9 @@ class bilaplacian
               < decltype(hyEdgeT::geometry), parameters::initial >
                         (i, j, hyper_edge.geometry, time);
           for (unsigned int j = lambda_values[i].size()/2; j < lambda_values[i].size(); ++j)
-            bdr_values[i][j] = 0.;
+            bdr_values[i][j] = integrator.template integrate_bdrUni_phifunc
+              < decltype(hyEdgeT::geometry), parameters::initial_laplace >
+                        (i, j, hyper_edge.geometry, time);
         }
       }
           
@@ -1210,6 +1246,45 @@ class bilaplacian
           <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
       hy_assert( result >= 0. , "The squared error must be non-negative, but was " << result );
       return result; 
+    }
+    
+    /*!*********************************************************************************************
+     * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+     *
+     * \tparam  absc_float_t  Floating type for the abscissa values.
+     * \tparam  sizeT         Size of the array of array of abscissas.
+     * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+     * \param   abscissas     Abscissas of the supporting points.
+     * \param   lambda_values The values of the skeletal variable's coefficients.
+     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \retval  vec_b         Local part of vector b.
+     **********************************************************************************************/
+    template < class hyEdgeT >
+    lSol_float_t calc_L2_error_squared_temp
+    ( 
+      const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values_new,
+      const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values_old,
+      hyEdgeT                                                                   & hy_edge,
+      const lSol_float_t delta_t,
+      const lSol_float_t time
+    )  const
+    {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+      
+      std::array<lSol_float_t, n_loc_dofs_> coeffs_new
+        = solve_local_problem(lambda_values_new, 1U, hy_edge, time);      
+      std::array<lSol_float_t, n_loc_dofs_> coeffs_old
+        = solve_local_problem(lambda_values_old, 1U, hy_edge, time - delta_t);
+      for (unsigned int i = 0; i < coeffs_old.size(); ++i)
+        coeffs_old[i] = ( coeffs_old[i] - coeffs_new[i] );
+      
+      std::array<lSol_float_t, n_loc_dofs_> coefficients 
+        = solve_loc_prob_cor(lambda_values_new, coeffs_old, hy_edge,  delta_t, time);
+      std::array< lSol_float_t, n_shape_fct_ > coeffs;
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
+      return integrator.template integrate_vol_diffsquare_discana
+          <decltype(hyEdgeT::geometry),parameters::analytic_result>(coeffs,hy_edge.geometry,time);
     }
 
     /*!*********************************************************************************************

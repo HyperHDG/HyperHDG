@@ -77,18 +77,27 @@ def diffusion_test(dimension, iteration):
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     [vectorSolutionNew, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolutionNew), tol=1e-9)
     if num_iter != 0:
-      print("The linear solver (conjugate gradients) failed with a total number of ",
-            num_iter, " iterations.")
+      print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
+            ". Trying GMRES!")
+      [vectorSolutionNew, num_iter] = \
+        sp_lin_alg.gmres(A,np.add(vectorRHS,vectorSolutionNew),tol=1e-9)
+      if num_iter != 0:
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
+        sys.exit("Program failed!")
 
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
-        delta_time, 1.)))
+  print("Error: ", HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
+        delta_time, 1.))
+  # f = open("output/results.txt", "a")
+  # f.write("Error in " + str(iteration) + ": " + \
+  #         str(HDG_wrapper.calculate_L2_error(vectorSolutionNew, final_time)) + "\n")
+  # f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolutionNew);
+  HDG_wrapper.plot_solution(vectorSolutionNew, 1.);
   
 
 # --------------------------------------------------------------------------------------------------
