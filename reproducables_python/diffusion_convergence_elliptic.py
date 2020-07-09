@@ -47,7 +47,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
 
   # Print error.
-  print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
+  print("Iteration: ", iteration, " Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
