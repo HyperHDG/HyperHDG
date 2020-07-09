@@ -16,12 +16,13 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(dimension, iteration):
+def diffusion_test(poly_degree, dimension, iteration):
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Diffusion<" + str(dimension) + ",1,2,TestParametersSinEllipt,double> >"
+          + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + ",TestParametersSinEllipt,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
@@ -46,7 +47,7 @@ def diffusion_test(dimension, iteration):
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
 
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution)))
+  print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
@@ -59,9 +60,12 @@ def diffusion_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
-    for iteration in range(6 - dimension):
-      diffusion_test(dimension, iteration)
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,4):
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(6):
+        diffusion_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------

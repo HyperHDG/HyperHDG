@@ -14,14 +14,46 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
+# Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
+# --------------------------------------------------------------------------------------------------
+class helper_class():
+  def __init__(self, hdg_wrapper):
+    self.hdg_wrapper = hdg_wrapper
+  def multiply_stiff(self, vector):
+    vec = [0.] * (len(vector)+4)
+    for i in range(len(vector)):
+      vec[i+2] = vector[i]
+    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
+    vecs = [0.] * len(vector)
+    for i in range(len(vector)):
+      vecs[i] = vec[i+2]
+    return vecs
+  def multiply_mass(self, vector):
+    vec = [0.] * (len(vector)+4)
+    for i in range(len(vector)):
+      vec[i+2] = vector[i]
+    vec = self.hdg_wrapper.mass_matrix_multiply(vec)
+    vecs = [0.] * len(vector)
+    for i in range(len(vector)):
+      vecs[i] = vec[i+2]
+    return vecs
+  def plot_vector(self, vector):
+    vec = [0.] * (len(vector)+4)
+    for i in range(len(vector)):
+      vec[i+2] = (vector[i]).real
+    return vec
+
+
+# --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(dimension, iteration):
+def diffusion_test(dimension, iteration):
+  
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSin,double> >"
+          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersHomo,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
@@ -32,42 +64,35 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) )
-
-  # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
+  helper = helper_class(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
-
+  Stiff = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_stiff )
+  Mass  = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_mass )
+  
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-  if num_iter != 0:
-      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
-      if num_iter != 0:
-        print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        sys.exit("Program failed!")
+  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
 
   # Print error.
-  print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
+  print("Error: ", np.absolute(vals[0] - np.power(np.pi, 4)))
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution);
+  HDG_wrapper.plot_solution(helper.plot_vector(vecs));
   
 
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
-    for iteration in range(10 - dimension):
-      bilaplacian_test(dimension, iteration)
+  for dimension in range(1,2):
+    for iteration in range(2, 10 - dimension):
+      diffusion_test(dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------

@@ -16,15 +16,16 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(dimension, iteration):
+def diffusion_test(poly_degree, dimension, iteration):
   # Predefine problem to be solved.
-  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSin,double> >"
+  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + ",3>, " \
+          + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
+          + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
+          + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + ",TestParametersQuadEllipt" + str(dimension) + ",double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
-                "HyperHDG/LocalSolver/bilaplacian.hxx", \
-                "reproducables_python/parameters/bilaplacian.hxx" ]
+                "HyperHDG/LocalSolver/Diffusion.hxx", \
+                "reproducables_python/parameters/diffusion.hxx" ]
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
@@ -32,10 +33,10 @@ def bilaplacian_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) )
+  HDG_wrapper = PyDP( [2 ** iteration] * 3, tau= (2**iteration) ) # Why is this so good?
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
+  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -44,18 +45,12 @@ def bilaplacian_test(dimension, iteration):
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-  if num_iter != 0:
-      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
-      if num_iter != 0:
-        print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        sys.exit("Program failed!")
 
   # Print error.
   print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(vectorSolution);
@@ -65,9 +60,12 @@ def bilaplacian_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
-    for iteration in range(10 - dimension):
-      bilaplacian_test(dimension, iteration)
+  for poly_degree in range(1,3):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,4):
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(6):
+        diffusion_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------

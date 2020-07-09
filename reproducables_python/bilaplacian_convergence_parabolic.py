@@ -30,47 +30,31 @@ class helper_class():
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def bilaplacian_test(dimension, iteration):
+  
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersTrivParab,double> >"
+          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
+
+  # Config time stepping.
+  time_steps  = 1000
+  delta_time  = 1 / time_steps
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
   
-  # Config time stepping.
-  time_steps  = 1# 4 * (iteration+1) * (iteration+1)
-  delta_time  = 1 / time_steps
-  
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= 2*(2**iteration) ) # What is with 1*?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
-  vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
-  
-  
-  # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
-  # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm (much faster than CG).
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-  if num_iter != 0:
-      print("Initial CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
-      if num_iter != 0:
-        print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        exit("Program failed!")
-  
+  vectorSolutionNew = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -80,42 +64,48 @@ def bilaplacian_test(dimension, iteration):
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
+    vectorSolutionOld = vectorSolutionNew
+    
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply( \
-      HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time), \
-      delta_time )
-    vectorSolution = HDG_wrapper.mass_matrix_multiply(vectorSolution)
+    vectorRHS = np.subtract( \
+      np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
+                     (time_step+1) * delta_time), delta_time ) , \
+      HDG_wrapper.total_mass_vector(HDG_wrapper.return_zero_vector(), (time_step+1) * delta_time) )
+    
+    vectorSolutionNew = HDG_wrapper.total_mass_vector(vectorSolutionOld, time_step * delta_time)
 
-    # Solve "A * x = b" in matrix-free fashion using scipy's BiCGStab algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolution), tol=1e-9)
+    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+    [vectorSolutionNew, num_iter] = sp_lin_alg.cg(A, np.add(vectorRHS,vectorSolutionNew), tol=1e-9)
     if num_iter != 0:
-      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,np.add(vectorRHS,vectorSolution),tol=1e-9)
+      print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
+            ". Trying GMRES!")
+      [vectorSolutionNew, num_iter] = \
+        sp_lin_alg.gmres(A,np.add(vectorRHS,vectorSolutionNew),tol=1e-9)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
         sys.exit("Program failed!")
 
-  final_time = float( 3 )
   # Print error.
-  print("Error: " + str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)))
-  f = open("output/results.txt", "a")
-  f.write("Error in " + str(iteration) + ": " + \
-          str(HDG_wrapper.calculate_L2_error(vectorSolution, final_time)) + "\n")
-  f.close()
+  print("Error: ", HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
+        delta_time, 1.))
+  # f = open("output/results.txt", "a")
+  # f.write("Error in " + str(iteration) + ": " + \
+  #         str(HDG_wrapper.calculate_L2_error(vectorSolutionNew, final_time)) + "\n")
+  # f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution, final_time);
+  HDG_wrapper.plot_solution(vectorSolutionNew, 1.);
   
 
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,2):
-    for iteration in range(1, 10 - dimension):
+  for dimension in range(1,4):
+    for iteration in range(10 - dimension):
       bilaplacian_test(dimension, iteration)
 
 
