@@ -900,7 +900,7 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
 \end{table}\arwarning{To be filled!}
 
-The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv}.
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
 % 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -915,11 +915,15 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
   & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
   & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
   & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
-  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && \textcolor{red}{1.12e-10}& 4.0  \\
+  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && 4.99e-4 & 1.9  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv}
 \end{table}
+
+\begin{envarerror}{Is this possible?}
+ Interestingly, the errors and orders of convergence appear to be almost independent of the degree of local polynomial approximation.
+\end{envarerror}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
