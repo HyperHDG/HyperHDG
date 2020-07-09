@@ -47,13 +47,14 @@ class helper_class():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(dimension, iteration):
+def bilaplacian_test(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersHomo,double> >"
+          + "bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + ",TestParametersHomo,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
@@ -77,7 +78,12 @@ def diffusion_test(dimension, iteration):
   [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
 
   # Print error.
-  print("Error: ", np.absolute(vals[0] - np.power(np.pi, 4)))
+  error = np.absolute(vals[0] - np.power(np.pi, 4))
+  print("Iteration: ", iteration, " Error: ", error)
+  f = open("output/bilaplacian_convergence_eigenvalue.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
@@ -90,9 +96,12 @@ def diffusion_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,2):
-    for iteration in range(2, 10 - dimension):
-      diffusion_test(dimension, iteration)
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,2):
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(2,8):
+        bilaplacian_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
