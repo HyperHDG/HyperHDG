@@ -807,7 +807,7 @@ class AbstractProblem
                                                     (value == "true" || value == "1");
       else if (option == "plotEdges")             plot_options.plot_edges = (value == "true" || value == "1");
       else if (option == "plotEdgeBoundaries")    plot_options.plot_edge_boundaries = (value == "true" || value == "1");
-      else if (option == "boundaryScale")         plot_options.boundary_scale = std::stod(value);
+      else if (option == "boundaryScale")         plot_options.boundary_scale = std::stof(value);
       else if (option == "scale")                 plot_options.scale = stof(value);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
