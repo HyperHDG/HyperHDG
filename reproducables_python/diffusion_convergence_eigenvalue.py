@@ -48,6 +48,7 @@ class helper_class():
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(dimension, iteration):
+  
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
@@ -63,7 +64,7 @@ def diffusion_test(dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
   helper = helper_class(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
@@ -71,22 +72,12 @@ def diffusion_test(dimension, iteration):
   system_size = HDG_wrapper.size_of_system()
   Stiff = LinearOperator( (system_size-2,system_size-2), matvec= helper.multiply_stiff )
   Mass  = LinearOperator( (system_size-2,system_size-2), matvec= helper.multiply_mass )
-
-#   print( Stiff * [1, 0, 0] )
-#   print( Stiff * [1.] )
-#   print( Stiff * [0, 0, 1] )
-#   print("Make mass")
-#   print( Mass * [1, 0, 0] )
-#   print( Mass * [1, 0, 0] )
-#   print( Mass * [0, 1, 0] )
-#   print( Mass * [0, 0, 1] )
   
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SR', tol=1e-9)
+  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
 
   # Print error.
-  print(vals)
-#   print(vecs)
+  print("Error: ", np.absolute(vals[0] - np.pi * np.pi))
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
