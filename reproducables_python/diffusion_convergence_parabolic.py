@@ -29,13 +29,14 @@ class helper_class():
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(dimension, iteration):
+def diffusion_test(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Diffusion<" + str(dimension) + ",1,2,TestParametersSinParab,double> >"
+          + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
@@ -86,8 +87,8 @@ def diffusion_test(dimension, iteration):
         sys.exit("Program failed!")
 
   # Print error.
-  print("Error: ", HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
-        delta_time, 1.))
+  print( "Iteration: ", iteration, " Error: ", \
+         HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, delta_time, 1.) )
   # f = open("output/results.txt", "a")
   # f.write("Error in " + str(iteration) + ": " + \
   #         str(HDG_wrapper.calculate_L2_error(vectorSolutionNew, final_time)) + "\n")
@@ -104,9 +105,12 @@ def diffusion_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
-    for iteration in range(10 - dimension):
-      diffusion_test(dimension, iteration)
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,4):
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(6):
+        diffusion_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
