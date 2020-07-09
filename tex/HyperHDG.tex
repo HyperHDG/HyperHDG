@@ -802,7 +802,7 @@ Here, we consider the standard HDG approximation (no post-processing) and evalua
  - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
 \end{equation}
 % 
-where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^{-i}$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
+where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^i$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
 % 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -824,27 +824,11 @@ where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
   & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
   & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
   & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-%   \midrule
-%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 3$}}}
-%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
-%   \midrule
-%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 4$}}}
-%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 4.49e-7 & 3.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc).}\label{TAB:diff_el_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
 \end{table}
 
 Here, we recognize that the achieved orders of convergence perfectly fit to the expected results. However, we used the actually suboptimal $\tau \sim \tfrac{1}{h}$ as compared to $\tau \sim 1$.
@@ -859,7 +843,7 @@ Next, we consider
  - \Nabla \cdot (d \Nabla u) = f \text{ in } \Edge \in \SetEdge, \qquad u = u_\text D \text{ on } \Node \in \SetNodeDir,
 \end{equation}
 % 
-where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true. Thus, we only plot the errors for $p = 1$.
+where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
 % 
 \begin{table}
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -876,7 +860,7 @@ where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\
   $i = 5$ && \textcolor{red}{2.95e-5} & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation.}\label{TAB:diff_hg_el_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
 \end{table}
 
 Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$.
@@ -887,7 +871,7 @@ For a parabolic test, we consider
  \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
 \end{equation}
 % 
-with some initial datum $u_0$, $d = \tfrac{\pi}{2}$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 1e^-3$ can be found in Table \ref{TAB:diff_pb_conv}.
+with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}.
 % 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -897,7 +881,7 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$ such that $u = \sin(\tfrac{\
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && 6.80e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
+  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
   & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
   & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
   & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
@@ -908,28 +892,33 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$ such that $u = \sin(\tfrac{\
   & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
   & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
   & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-%   \midrule
-%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 3$}}}
-%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
-%   \midrule
-%   \multirow{6}{*}{\rotatebox[origin=c]{90}{\textcolor{red}{$\globDim = 4$}}}
-%   & $i = 0$ && 1.78e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-%   & $i = 1$ && 5.71e-3 & 5 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-%   & $i = 2$ && 2.12e-3 & 5 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-%   & $i = 3$ && 4.86e-4 & 5 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-%   & $i = 4$ && 1.18e-4 & 5 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-%   & $i = 5$ && 2.95e-5 & 5 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc).}\label{TAB:diff_pb_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
+\end{table}\arwarning{To be filled!}
+
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 2$ && 5.17e-1 & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
+  & $i = 3$ && 1.27e-1 & -1 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 4$ && 3.17e-2 & -1 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 5$ && 7.93e-3 & -1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 6$ && 1.98e-3 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 7$ && \textcolor{red}{2.95e-5} & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv}
 \end{table}\arwarning{To be filled!}
 % 
 % ---------------------------------------------------------------------

@@ -42,7 +42,7 @@ def diffusion_test(poly_degree, dimension, iteration):
                 "reproducables_python/parameters/diffusion.hxx" ]
   
   # Config time stepping.
-  time_steps  = 1000
+  time_steps  = 10 ** 4
   delta_time  = 1 / time_steps
 
   # Import C++ wrapper class to use HDG method on graphs.
