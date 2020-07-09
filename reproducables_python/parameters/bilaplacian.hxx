@@ -40,7 +40,10 @@ struct TestParametersSin
   
   static param_float_t initial
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
+  { return analytic_result(point, time); }
+  static param_float_t initial_laplace
+  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
+  { return analytic_result(point, time); }
   
   static param_float_t neumann_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )

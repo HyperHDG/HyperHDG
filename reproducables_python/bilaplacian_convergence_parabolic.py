@@ -29,19 +29,20 @@ class helper_class():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(dimension, iteration):
+def bilaplacian_test(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + ",1,2,TestParametersSinParab,double> >"
+          + "bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Config time stepping.
-  time_steps  = 1000
+  time_steps  = 10 ** 4
   delta_time  = 1 / time_steps
 
   # Import C++ wrapper class to use HDG method on graphs.
@@ -86,12 +87,12 @@ def bilaplacian_test(dimension, iteration):
         sys.exit("Program failed!")
 
   # Print error.
-  print("Error: ", HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, \
-        delta_time, 1.))
-  # f = open("output/results.txt", "a")
-  # f.write("Error in " + str(iteration) + ": " + \
-  #         str(HDG_wrapper.calculate_L2_error(vectorSolutionNew, final_time)) + "\n")
-  # f.close()
+  error = HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, delta_time, 1.)
+  print("Iteration: ", iteration, " Error: ", error)
+  f = open("output/bilaplacian_convergence_parabolic.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bilap_c-" + str(dimension) + "-" + str(iteration) );
@@ -104,9 +105,12 @@ def bilaplacian_test(dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for dimension in range(1,4):
-    for iteration in range(10 - dimension):
-      bilaplacian_test(dimension, iteration)
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,3):
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(6):
+        bilaplacian_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
