@@ -78,7 +78,12 @@ def diffusion_test(poly_degree, dimension, iteration):
   [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
 
   # Print error.
-  print("Iteration: ", iteration, " Error: ", np.absolute(vals[0] - np.pi * np.pi))
+  error = np.absolute(vals[0] - np.pi * np.pi)
+  print("Iteration: ", iteration, " Error: ", error)
+  f = open("output/diffusion_convergence_eigenvalue.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );

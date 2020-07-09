@@ -910,16 +910,16 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 2$ && 5.17e-1 & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  & $i = 3$ && 1.27e-1 & -1 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 4$ && 3.17e-2 & -1 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 5$ && 7.93e-3 & -1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 6$ && 1.98e-3 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 7$ && \textcolor{red}{2.95e-5} & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
+  & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
+  & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
+  & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
+  & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
+  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && \textcolor{red}{1.12e-10}& 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv}
-\end{table}\arwarning{To be filled!}
+\end{table}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}

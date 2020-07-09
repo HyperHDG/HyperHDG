@@ -47,7 +47,12 @@ def diffusion_test(poly_degree, dimension, iteration):
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
 
   # Print error.
-  print("Iteration: ", iteration, " Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
+  error = HDG_wrapper.calculate_L2_error(vectorSolution)
+  print("Iteration: ", iteration, " Error: ", error)
+  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );

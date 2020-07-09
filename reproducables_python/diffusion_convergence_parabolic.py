@@ -87,12 +87,12 @@ def diffusion_test(poly_degree, dimension, iteration):
         sys.exit("Program failed!")
 
   # Print error.
-  print( "Iteration: ", iteration, " Error: ", \
-         HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, delta_time, 1.) )
-  # f = open("output/results.txt", "a")
-  # f.write("Error in " + str(iteration) + ": " + \
-  #         str(HDG_wrapper.calculate_L2_error(vectorSolutionNew, final_time)) + "\n")
-  # f.close()
+  error = HDG_wrapper.calculate_L2_error_temp(vectorSolutionNew, vectorSolutionOld, delta_time, 1.)
+  print( "Iteration: ", iteration, " Error: ", error )
+  f = open("output/diffusion_convergence_parabolic.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
