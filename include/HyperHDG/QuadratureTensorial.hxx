@@ -735,7 +735,7 @@ class IntegratorTensorial
       return integral * geom.face_area(bdr);
     }
     
-    template
+    /*template
     < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
     return_t integrate_bdrUni_phifunc
     (const unsigned int i, const unsigned int bdr, GeomT& geom, const return_t time = 0.) const
@@ -763,6 +763,38 @@ class IntegratorTensorial
             quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
             quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] 
                           * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > dim_bdr)]];
+          }
+        }
+        integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
+      }
+      return integral;
+    }*/
+    
+    template
+    < typename GeomT, return_t fun(const Point<GeomT::space_dim(),return_t>&, const return_t) >
+    return_t integrate_bdrUni_psifunc
+    (const unsigned int i, const unsigned int bdr, GeomT& geom, const return_t time = 0.) const
+    {
+      return_t integral = 0., quad_val;
+      std::array<unsigned int, std::max(1U,GeomT::hyEdge_dim()-1)> dec_q, 
+        dec_i = index_decompose<GeomT::hyEdge_dim()-1>(i);
+      Point<GeomT::hyEdge_dim(), return_t> quad_pt;
+      unsigned int dim_bdr = bdr / 2 , bdr_ind = bdr % 2;
+      
+      for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()-1); ++q)
+      {
+        dec_q = index_decompose
+                  <GeomT::hyEdge_dim()-1,quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+        quad_val = 1.;
+        for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+        {
+          if (dim == dim_bdr)
+            quad_pt[dim] = bdr_ind;
+          else
+          {
+            quad_pt[dim] = quad_points_[dec_q[dim - (dim > dim_bdr)]];
+            quad_val *= quad_weights_[dec_q[dim - (dim > dim_bdr)]] 
+                  * shape_fcts_at_quad_[dec_i[dim - (dim > dim_bdr)]][dec_q[dim - (dim > dim_bdr)]];
           }
         }
         integral += fun(geom.map_ref_to_phys(quad_pt), time) * quad_val;
