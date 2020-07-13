@@ -794,7 +794,7 @@ Obviously, the HDG method for elliptic diffusion problems is consistent with res
  The rest might work similar to standard HDG, I do not really know and believe this is not urgent.
 \end{envarnote}
 % 
-\subsection{Numerical convergence tests}
+\subsection{Numerical convergence tests}\arnote{All numbers (errors and orders) are rounded down!}
 % 
 Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the different problems described in Section \ref{SEC:diff_types}. First, we consider the elliptic problem
 % 
@@ -823,9 +823,9 @@ where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
   & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
   & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
   & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 4.49e-7 & 3.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 3.63e-8 & 4.5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 4.49e-7 & 3.1 && 1.99e-9 & 4.1  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 5.48e-8 & 3.0 && 1.59e-9 & 0.3  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
@@ -852,18 +852,18 @@ where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\
   \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
   \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  $i = 0$ && 8.24e-2 & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  $i = 1$ && 3.09e-2 & 1.4 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  $i = 2$ && 1.28e-2 & 1.2 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  $i = 3$ && 5.79e-3 & 1.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  $i = 4$ && 2.73e-3 & 1.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  $i = 5$ && \textcolor{red}{2.95e-5} & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  $i = 0$ && 8.24e-2 & --- && 5.83e-2 & --- && 2.38e-2 & ---  \\
+  $i = 1$ && 3.09e-2 & 1.4 && 1.78e-2 & 1.7 && 5.95e-3 & 2.0  \\
+  $i = 2$ && 1.28e-2 & 1.2 && 5.76e-3 & 1.6 && 1.48e-3 & 2.0  \\
+  $i = 3$ && 5.79e-3 & 1.1 && 1.93e-3 & 1.5 && 3.72e-4 & 1.9  \\
+  $i = 4$ && 2.73e-3 & 1.0 && 6.64e-4 & 1.5 && \textcolor{red}{1.92e-9} & 4.2  \\
+  $i = 5$ && 1.32e-3 & 1.0 && 2.31e-4 & 1.5 && 1.12e-10& 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
 \end{table}
 
-Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$.
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$ and $\tfrac{1}{2}$ if $\locDim = 2$, respectively. The optimal order is obtained for $\locDim = 3$.
 
 For a parabolic test, we consider
 % 
@@ -998,7 +998,7 @@ The closing condition is replaced by the two closing conditions that for the bil
 % 
 \begin{subequations}
 \begin{align}
- - a(\vec \lambda, \vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ \vec \lambda \cdot \Normal + \tau (\localU \vec \lambda - \lambda) \right] \bar \mu \ds\\
+ - a(\vec \lambda, \vec \mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ \vec \lambda \cdot \Normal + \tau (\localU \vec \lambda - \lambda) \right] \bar \mu \ds\label{EQ:bil_def_bilap}\\
  & +  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar \localQ \vec \lambda \cdot \Normal + \tau (\bar \localU \vec \lambda - \bar \lambda) \right] \mu \ds,\notag
 \end{align}
 % 
@@ -1023,12 +1023,12 @@ This is basically the formulation of the single face hybridizable scheme of \cit
  I believe that the interchange has two benefits. At first, the physical flux is used at the position, where it is suspected. This, strangely, is not what one might expect at first sight. Secondly, I believe that this makes the global system symmetric and definite. Thirdly, this leads to the fact that numerically, the two following mass-matrices are identical.
 \end{envarwarning}
 % 
-\subsection{Mass matrix representation}
+\subsection{Mass matrix representation}\label{SEC:bilap_mass}
 % 
 For constructing the mass matrix, we replace the right-hand side $f$ in \eqref{EQ:bilap_f} by $f + u$. Again, this induces an additional local problem of the form of \eqref{EQ:hdg_f_bilap}, where $f$ is replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux_lap_bilap}. The additional local reconstruction operators $\localU(\localU \vec\lambda)$, $\localQ(\localU \vec\lambda)$, $\bar\localU(\localU \vec\lambda)$, and $\bar\localQ(\localU \vec\lambda)$ define the mass matrix bilinear form via
 % 
 \begin{align}
- \mass(\vec\lambda,\vec\mu) ~=~& \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \vec\lambda) \cdot \Normal + \tau \localU (\localU \vec\lambda) \right] \bar \mu \ds \\
+ \mass(\vec\lambda,\vec\mu) ~=~& \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir^\dagger}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \vec\lambda) \cdot \Normal + \tau \localU (\localU \vec\lambda) \right] \bar \mu \ds \label{EQ:def_mass_bilap}\\
  & + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDirBar^\dagger}_{\node \in \edge} \int_\Node \left[ \bar\localQ (\localU \vec\lambda) \cdot \Normal + \tau \bar\localU (\localU \vec\lambda) \right] \mu \ds,\notag
 \end{align}
 % 
@@ -1046,6 +1046,201 @@ in order to close the system.
  
  The mass matrix seems to work now. Parabolic convergence studies look fine (but have not been done in great detail). Also eigenvalue convergence looks fine at first sight.
 \end{envarwarning}
+% 
+\subsection{Different types of solvable problems}\label{SEC:bilap_types}
+% 
+With the knowledge of the previous subsections, we can easily approximate the solutions to the \emph{elliptic bilaplacian problem} \eqref{EQ:bilap} using
+% 
+\begin{equation}
+ a(\vec \lambda, \vec \mu) = b(\vec \mu) \qquad \forall \mu \in \skeletalSpace
+\end{equation}
+% 
+with $a$ and $b$ defined via \eqref{EQ:bil_def_bilap} and \eqref{EQ:lin_def_bilap}.
+
+Moreover, we can solve the \emph{bilaplacian eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$ with
+% 
+\begin{subequations}\label{EQ:bilap_eigen}
+\begin{align}
+ \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ \Div \vec q & = \tfrac{1}{d} \bar u && \text{ in } \Edge,\\
+ u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger,\\
+ \bar{\vec q} + \Nabla \bar u & = 0 && \text{ in } \Edge,\\
+ \Div \bar{\vec q} & = \eigenval u && \text{ in } \Edge,\\
+ \bar u & = \bar u_\textup D = 0 && \text{ on } \Node \in \SetNodeDirBar,\\
+ \jump{\bar{\vec q}} & = \bar g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDirBar^\dagger,
+\end{align}
+\end{subequations}
+% 
+using the ARPACK package fed with the induced matrices of the variational equation
+% 
+\begin{equation}
+ a(\vec \lambda, \vec \mu) = \eigenval \mass(\vec \lambda, \mu \mu)
+\end{equation}
+% 
+with $a$ as in \eqref{EQ:bil_def_bilap}, and $\mass$ defined via \eqref{EQ:def_mass_bilap}. Since we have, Remark \ref{REM:ex_reaction} (which can be directly transferred to Section \ref{SEC:bilap_mass}), we can deduce that $\lambda$ needs to be positive to solve this problem.
+
+Last, but not least, we are able to solve \emph{parabolic bilaplacian equations}
+% 
+\begin{subequations}
+\begin{align}
+ \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ \Div \vec q & = \tfrac{1}{d} \bar u && \text{ in } \Edge,\\
+ u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir^\dagger,\\
+ \bar{\vec q} + \Nabla \bar u & = 0 && \text{ in } \Edge,\\
+ \partial_t u + \Div \bar{\vec q} & = f && \text{ in } \Edge,\\
+ \bar u & = \bar u_\textup D && \text{ on } \Node \in \SetNodeDirBar,\\
+ \jump{\bar{\vec q}} & = \bar g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDirBar^\dagger,
+\end{align}
+\end{subequations}
+% 
+by rewriting those into the form of
+% 
+\begin{equation}
+ \partial_t \left[ \mass(\vec \lambda, \vec \mu) + b^\mass(\vec \mu) \right] + a(\vec \lambda, \vec \mu) = b(\vec \mu)
+\end{equation}
+% 
+with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\vec \lambda$ is constructed by (component-wise) $L^2$ projection of the trace of $u$ to the skeletal space $\vec \skeletalSpace$.
+% 
+\begin{remark}[Implementation issues]\
+ \begin{enumerate}
+  \item The reconstruction of the $u$ from $\vec \lambda$ is not possible in this case any more. In the fully discrete case, one needs $\vec \lambda$ at the current time step and $\vec \lambda$ of the previous time step to approximate $\partial_t u$ (as difference ratio of the ``masses'') and $u$, afterwards.
+  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\end{envarwarning}
+  \item The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, parabolic versions of this problem can be constructed and solved using the aformentioned approaches.
+ \end{enumerate}
+\end{remark}
+% 
+\subsection{Numerical convergence tests}\arnote{All numbers (errors and orders) are rounded down!}
+% 
+Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the different problems described in Section \ref{SEC:diff_types}. First, we consider the elliptic problem
+% 
+\begin{equation}
+ - \Delta \cdot (d \Delta u) = f \text{ in } \Omega, \qquad u = u_\text D, \, \Delta u = \bar u_\textup D \text{ on } \partial \Omega,
+\end{equation}
+% 
+where $d = \pi$ and $u = \sin(\pi x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^i$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:bil_el_conv}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 3.09e-1 & --- && 6.23e-1 & --- && 2.78e-3 & ---  \\
+  & $i = 1$ && 1.66e-1 & 0.8 && 1.76e-2 & 5.1 && 1.59e-3 & 0-8  \\
+  & $i = 2$ && 1.63e-2 & 3.3 && 9.47e-4 & 4.2 && 4.48e-5 & 5.1  \\
+  & $i = 3$ && 2.89e-3 & 2.4 && 5.89e-5 & 4.0 && 1.38e-6 & 5.0  \\
+  & $i = 4$ && 6.65e-4 & 2.1 && 4.17e-6 & 3.8 && 4.58e-8 & 4.9  \\
+  & $i = 5$ && 1.63e-4 & 2.0 && 3.63e-7 & 3.5 && 1.75e-9 & 4.7  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 1.22e-1 & --- && 1.80e-1 & --- && 1.80e-3 & ---  \\
+  & $i = 1$ && 8.74e-2 & 0.4 && 1.17e-2 & 3.9 && 1.18e-3 & 0.6  \\
+  & $i = 2$ && 1.32e-2 & 2.7 && 8.12e-4 & 3.8 && 3.97e-5 & 4.8  \\
+  & $i = 3$ && 1.89e-3 & 2.8 && 5.51e-5 & 3.8 && 1.31e-6 & 4.9  \\
+  & $i = 4$ && 3.08e-4 & 2.6 && 4.05e-6 & 3.7 && 4.47e-8 & 4.8  \\
+  & $i = 5$ && 6.13e-5 & 2.3 && 3.59e-7 & 3.4 && \textcolor{red}{1.59e-9} & 0.3  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:bil_el_conv}
+\end{table}
+
+Here, we recognize that the achieved orders of convergence perfectly fit to the expected results. However, we used the actually suboptimal $\tau \sim \tfrac{1}{h}$ as compared to $\tau \sim 1$.\arfatal{The rest of this section has not been adapted, yet!}
+% 
+\begin{envarnote}{$\tau$}
+ I do not know, which one is optimal for tensor products, but for simplices, the constant is best. However, I believe to remember that Sander Rhebergen said that this is not true for tensor product structures. I am not sure, however.
+\end{envarnote}
+
+Next, we consider
+% 
+\begin{equation}
+ - \Nabla \cdot (d \Nabla u) = f \text{ in } \Edge \in \SetEdge, \qquad u = u_\text D \text{ on } \Node \in \SetNodeDir,
+\end{equation}
+% 
+where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
+% 
+\begin{table}
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 8.24e-2 & --- && 5.83e-2 & --- && 2.38e-2 & ---  \\
+  $i = 1$ && 3.09e-2 & 1.4 && 1.78e-2 & 1.7 && 5.95e-3 & 2.0  \\
+  $i = 2$ && 1.28e-2 & 1.2 && 5.76e-3 & 1.6 && 1.48e-3 & 2.0  \\
+  $i = 3$ && 5.79e-3 & 1.1 && 1.93e-3 & 1.5 && 3.72e-4 & 1.9  \\
+  $i = 4$ && 2.73e-3 & 1.0 && 6.64e-4 & 1.5 && \textcolor{red}{1.92e-9} & 4.2  \\
+  $i = 5$ && 1.32e-3 & 1.0 && 2.31e-4 & 1.5 && 1.12e-10& 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
+\end{table}
+
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$ and $\tfrac{1}{2}$ if $\locDim = 2$, respectively. The optimal order is obtained for $\locDim = 3$.
+
+For a parabolic test, we consider
+% 
+\begin{equation}
+ \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
+\end{equation}
+% 
+with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
+  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
+\end{table}\arwarning{To be filled!}
+
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
+  & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
+  & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
+  & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
+  & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
+  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && 4.99e-4 & 1.9  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv}
+\end{table}
+
+\begin{envarerror}{Is this possible?}
+ Interestingly, the errors and orders of convergence appear to be almost independent of the degree of local polynomial approximation. This does not fit to \cite{GopalakrishnanLNP2014}.
+\end{envarerror}
 % 
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
