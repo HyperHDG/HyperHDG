@@ -1,6 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/TensorialShapeFun.hxx>
 
 #include <array>
 #include <cmath>
@@ -340,33 +341,6 @@ class IntegratorTensorial
                     "Number of quadrature points needs to be equal in all cases!" );
     }
     /*!*********************************************************************************************
-     * \brief   Decompose index of local shape functions with respect to the local dimension.
-     *
-     * Since the shape functions are assumed to be tensor products of one-dimensional shape
-     * functions, the index of the shape function needs to be decomposed into dim indices of one-
-     * dimensional shape functions (to evaluate the shape function appropriately).
-     *
-     * \tparam  dimT          Local dimension of the shape function's domain.
-     * \tparam  range         Range (maximum) of the local indices.
-     * \param   index         Local index of the shape function.
-     * \param   decomposition Array consisiting of respective one-dimensional indices.
-     **********************************************************************************************/
-    template<unsigned int dimT, unsigned int range = max_poly_degree + 1> 
-    inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned int index ) const
-    {
-      std::array<unsigned int, std::max(dimT,1U)> decomposition;
-      if ( decomposition.size() == 1 )  decomposition[0] = index;
-      else
-      {
-        for (unsigned int dim = 0; dim < dimT; ++dim)
-        {
-          decomposition[dim] = index % range;
-          index /= range;
-        }
-      }
-      return decomposition;
-    }
-    /*!*********************************************************************************************
      * \brief   Integrate product of one-dimensional shape functions.
      *
      * \param   i             Local index of local one-dimensional shape function.
@@ -450,8 +424,8 @@ class IntegratorTensorial
     return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree+1>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree+1>(j);
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral;
@@ -469,8 +443,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree+1>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree+1>(j);
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         if ( dim == dim_fct )  integral *= integrate_1D_phiDphi(dec_i[dim_fct], dec_j[dim_fct]);
         else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
@@ -489,8 +463,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int dim ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree+1>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree+1>(j);
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         if ( dim == dim_fct )  integral *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
         else                   integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
@@ -509,8 +483,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree+1>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree+1>(j);
       unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         if (dim == dim_fct)
@@ -532,8 +506,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int bdr ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, std::max(dimT-1,1U)> dec_j = index_decompose<dimT-1>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree+1>(i);
+      std::array<unsigned int, std::max(dimT-1,1U)> dec_j = index_decompose<dimT-1, max_poly_degree+1>(j);
       unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         if (dim == dim_fct)  integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
@@ -556,8 +530,8 @@ class IntegratorTensorial
     (const unsigned int i, const unsigned int j, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim()>(j);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(j);
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
       Point<GeomT::hyEdge_dim(), return_t> quad_pt;
 
@@ -635,7 +609,7 @@ class IntegratorTensorial
     (const unsigned int i, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
       std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
       Point<GeomT::hyEdge_dim(), return_t> quad_pt;
 
@@ -659,8 +633,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, GeomT& geom ) const
     {
       SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim()>(j);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(j);
       for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
         for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
           if (dim == dim_fct)  integral[dim] *= integrate_1D_Dphiphi(dec_i[dim_fct],dec_j[dim_fct]);
@@ -676,8 +650,8 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int bdr, GeomT& geom ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim()>(j);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_j = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(j);
       unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
       for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         if (dim == dim_fct)
@@ -690,9 +664,9 @@ class IntegratorTensorial
     ( const unsigned int i, const unsigned int j, const unsigned int bdr, GeomT& geom ) const
     {
       return_t integral = 1.;
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
       std::array<unsigned int, std::max(GeomT::hyEdge_dim()-1,1U)> dec_j
-        = index_decompose<GeomT::hyEdge_dim()-1>(j);
+        = index_decompose<GeomT::hyEdge_dim()-1, max_poly_degree+1>(j);
       unsigned int dim = bdr / 2 , bdr_ind = bdr % 2;
       for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         if (dim == dim_fct)  integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
@@ -706,7 +680,7 @@ class IntegratorTensorial
     (const unsigned int i, const unsigned int bdr, GeomT& geom, const return_t time = 0.) const
     {
       return_t integral = 0., quad_val;
-      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+      std::array<unsigned int, GeomT::hyEdge_dim()> dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
       std::array<unsigned int, std::max(1U,GeomT::hyEdge_dim()-1)> dec_q;
       Point<GeomT::hyEdge_dim(), return_t> quad_pt;
       unsigned int dim_bdr = bdr / 2 , bdr_ind = bdr % 2;
@@ -825,7 +799,7 @@ class IntegratorTensorial
           quad_weight *= quad_weights_[dec_q[dim]];
           for (unsigned int i = 0; i < n_coeff; ++i)
           {
-            dec_i = index_decompose<GeomT::hyEdge_dim()>(i);
+            dec_i = index_decompose<GeomT::hyEdge_dim(), max_poly_degree+1>(i);
             quad_val[i] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
           }
         }

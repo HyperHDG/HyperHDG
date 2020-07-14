@@ -4,6 +4,7 @@
 #include <HyperHDG/QuadratureTensorial.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/TensorialShapeFun.hxx>
 #include <algorithm>
 
 /*!*************************************************************************************************
@@ -213,6 +214,21 @@ class bilaplacian_uniform
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
       const lSol_float_t = 0.
     ) const;
+
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
 
 }; // end of class bilaplacian_uniform
 
@@ -462,22 +478,24 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
   std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
+
+
   std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
   lSol_float_t fct_value;
- 
+
   std::array<unsigned int, poly_deg+1> poly_indices;
   for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
+  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 >
     values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
+
   for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
+  {
+    dec_i = index_decompose<hyEdge_dimT, poly_deg+1>(i);
     for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
     {
-      dec_q = integrator.template index_decompose<hyEdge_dimT, abscissas.size()>(q);
+      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
       fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
@@ -485,9 +503,20 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
         values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
     }
   }
-  
   return values;
-} // end of bilaplacian_uniform::bulk_values
+}
+template<unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t>
+template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1> bilaplacian_uniform<
+    hyEdge_dimT,
+    poly_deg,
+    quad_deg,
+    lSol_float_t>::lambda_values(const std::array<abscissa_float_t, sizeT> &abscissas,
+                                   const input_array_t &lambda_values,
+                                   const unsigned int boundary_number) const {
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+}
+// end of bilaplacian_uniform::bulk_values
 
 
 // -------------------------------------------------------------------------------------------------

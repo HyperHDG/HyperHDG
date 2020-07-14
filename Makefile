@@ -60,21 +60,21 @@ EXAMPLE_EXES	:= $(foreach src, $(EXAMPLE_OBJS), $(src:.e=.exe))
 TEST_EXES			:= $(foreach src, $(EXAMPLE_BUILD), $(wildcard $(EXAMPLE_BUILD)/*.exe))
 
 make:
-	make run
+	$(MAKE) run
 	
 clean:
 	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR) __pycache__
 	rm -rf domains/*.pts.geo
 
 distclean:
-	make clean
+	$(MAKE) clean
 	rm -rf $(OUTPUT_DIR)
 
 doxygen:
 	cd $(DOXY_FILE_DIR); doxygen Doxyfile
 
 new:
-	make clean
+	$(MAKE) clean
 	make
 
 run:
@@ -82,11 +82,11 @@ run:
 
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
-	make example_objects
-	make example_linking
+	$(MAKE) example_objects
+	$(MAKE) example_linking
 
 run_tests:
-	make tests
+	$(MAKE) tests
 	./build/C++ExampleBuild/Plot1.exe;
 	./build/C++ExampleBuild/Plot2.exe;
 	./build/C++ExampleBuild/point_functions.exe;
@@ -97,8 +97,8 @@ run_tests:
 	$(PYTHON) tests_python/diffusion_uniform.py
 
 new_run_tests:
-	make clean
-	make run_tests
+	$(MAKE) clean
+	$(MAKE) run_tests
 
 
 example_objects: $(EXAMPLE_OBJS)
