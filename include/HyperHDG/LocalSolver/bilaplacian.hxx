@@ -1007,11 +1007,11 @@ class bilaplacian
         else
         {
           for (unsigned int j = 0; j < lambda_values[i].size()/2; ++j)
-            bdr_values[i][j] = integrator.template integrate_bdrUni_phifunc
+            bdr_values[i][j] = integrator.template integrate_bdrUni_psifunc
               < decltype(hyEdgeT::geometry), parameters::initial >
                         (i, j, hyper_edge.geometry, time);
           for (unsigned int j = lambda_values[i].size()/2; j < lambda_values[i].size(); ++j)
-            bdr_values[i][j] = integrator.template integrate_bdrUni_phifunc
+            bdr_values[i][j] = integrator.template integrate_bdrUni_psifunc
               < decltype(hyEdgeT::geometry), parameters::initial_laplace >
                         (i, j, hyper_edge.geometry, time);
         }

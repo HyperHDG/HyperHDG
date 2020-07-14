@@ -661,16 +661,7 @@ The discretization of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}
  \end{align}
 \end{subequations}
 % 
-ultimately leading to the need to add $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ to $\localU f$ and $\localQ f$ in \eqref{EQ:construct_unk}, respectively:
-% 
-\begin{gather}\label{EQ:construct_unk_fu}
-  \begin{split}
-    U &= \localU \lambda + \localU u_\textup D + \localU f + \localU (\localU \lambda + \localU u_\textup D + \localU f),\\
-    \vec Q &= \localQ \lambda + \localQ u_\textup D + \localQ f + \localQ (\localU \lambda + \localU u_\textup D + \localU f).
-  \end{split}
-\end{gather}
-% 
-Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
+ultimately leading to the need to add $\localU (\localU \lambda + \localU u_\text D + \localU f)$ and $\localQ (\localU \lambda + \localU u_\text D + \localU f)$ to $\localU f$, since $U_\Edge$ in \eqref{EQ:hdg_f_is_u} is $\localU \lambda + \localU u_\text D + \localU f$. Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ as in \eqref{EQ:construct_unk} are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
 % 
 Again, we can formally set up a system which is similar to Section~\ref{SEC:glob_system}, namely
 % 
@@ -688,6 +679,10 @@ with bilinear and linear forms $\tilde a$ and $\tilde b$ as described in \eqref{
 \end{subequations}
 % 
 of which $\mass$ can be proven to be symmetric positive definite.
+% 
+\begin{envarerror}{Problems}
+ This give the two $U_\Edge$ in the local solver different meanings. However it fits to the expected bilinear form. Moreover, it is highly doubtable, whether this is the accurate discretization for $p \ge 2$.
+\end{envarerror}
 % 
 \subsection{Restore positive definiteness of the induced systems}
 % 
