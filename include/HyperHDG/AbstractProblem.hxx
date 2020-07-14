@@ -751,7 +751,7 @@ class AbstractProblem
         }
         else
         {
-          /*if constexpr
+          if constexpr
           ( 
             has_L2_error_temp
             < LocalSolverT,
@@ -760,7 +760,7 @@ class AbstractProblem
                 std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
                 decltype(hyper_edge)&, dof_value_t, dof_value_t )
             >::value
-          )*/
+          )
             result += local_solver_.calc_L2_error_squared_temp(hyEdge_dofs_new, hyEdge_dofs_old, 
                 hyper_edge, delta_time, time);
         }

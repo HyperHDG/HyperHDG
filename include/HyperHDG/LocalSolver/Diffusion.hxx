@@ -761,10 +761,10 @@ class Diffusion
       try
       { 
         SmallVec<n_loc_dofs_, lSol_float_t> rhs;
-        rhs = delta_time * assemble_rhs_from_lambda(lambda_values, hyper_edge)
-                + delta_time * assemble_rhs_from_global_rhs(hyper_edge,time)
+        rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge)
+                + assemble_rhs_from_global_rhs(hyper_edge,time)
                 + assemble_rhs_from_coeffs(coeffs, hyper_edge);
-        return ( rhs / (delta_time * assemble_loc_matrix(tau_, hyper_edge, time)) ).data();
+        return ( rhs / assemble_loc_matrix(tau_, hyper_edge, time) ).data();
       }
       catch (LAPACKexception& exc)
       {
@@ -987,6 +987,43 @@ class Diffusion
           }
 
       return bdr_values;
+    }
+    template < class hyEdgeT >
+    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > total_numerical_flux_mass
+    ( 
+      const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+      hyEdgeT                                                                   & hyper_edge,
+      const lSol_float_t time = 0.
+    )  const
+    {
+      using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+      std::array<lSol_float_t, n_loc_dofs_> coeffs
+        = solve_local_problem(lambda_values, 1U, hyper_edge, time);
+      std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+      
+      SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        u_coeffs[i] = coeffs[hyEdge_dimT*n_shape_fct_+i];
+
+      std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)  lambda_values_uni[i].fill(0.);
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+        if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)  bdr_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          {
+            lambda_values_uni[i][j] = 1.;
+            coeffs = solve_local_problem(lambda_values_uni, 0U, hyper_edge, time);
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+              test_coeffs[k] = coeffs[hyEdge_dimT*n_shape_fct_+k];
+            bdr_values[i][j] = integrator.integrate_vol_phiphi
+                                (u_coeffs.data(), test_coeffs.data(), hyper_edge.geometry);
+            lambda_values_uni[i][j] = 0.;
+          }
+
+      return bdr_values;
     }*/
 
 
@@ -1015,7 +1052,7 @@ class Diffusion
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       coeffs = solve_mass_problem(coeffs, hyper_edge, time);
-
+      
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values,
         primals(primal_at_boundary(coeffs,hyper_edge)), duals(dual_at_boundary(coeffs,hyper_edge));
 
@@ -1130,7 +1167,7 @@ class Diffusion
       std::array<lSol_float_t, n_loc_dofs_> coeffs_old
         = solve_local_problem(lambda_values_old, 1U, hy_edge, time - delta_t);
       for (unsigned int i = 0; i < coeffs_old.size(); ++i)
-        coeffs_old[i] = ( coeffs_old[i] - coeffs_new[i] );
+        coeffs_old[i] = ( coeffs_old[i] - coeffs_new[i] ) / delta_t;
       
       std::array<lSol_float_t, n_loc_dofs_> coefficients 
         = solve_loc_prob_cor(lambda_values_new, coeffs_old, hy_edge,  delta_t, time);
