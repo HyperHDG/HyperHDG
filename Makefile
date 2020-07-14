@@ -80,6 +80,9 @@ new:
 run:
 	$(PYTHON) Executable.py
 
+format:
+	clang-format -i tests_c++/*.cxx cython/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
+
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
 	$(MAKE) example_objects
