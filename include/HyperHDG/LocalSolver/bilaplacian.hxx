@@ -1716,10 +1716,10 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_val
   
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   { 
-    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
+    dec_i = index_decompose<hyEdge_dimT,poly_deg+1>(i);
     for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
     {
-      dec_q = integrator.template index_decompose<hyEdge_dimT, abscissas.size()>(q);
+      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
       fct_value = 1.;
       for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
         fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
