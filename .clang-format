@@ -1,0 +1,11 @@
+# Clang-Format Style Options for HyperHDG!
+# Kanschat, Rupp, Schmidt; Heidelberg, 2020
+---
+BasedOnStyle: Chromium
+IndentWidth: 2
+ColumnLimit: 100
+---
+Language: Cpp
+BreakBeforeBraces: Allman
+ConstructorInitializerIndentWidth: 0
+ContinuationIndentWidth: 2
