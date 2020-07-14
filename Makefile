@@ -48,7 +48,7 @@ LINKER      		= g++
 LINKERPREFLAGS  = -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
                   -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong \
                   -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2
-LINKERPOSTFLAGS = -llapack
+LINKERPOSTFLAGS = -llapack -lstdc++fs
 
 # Sets of source and object files
 SOURCE_FILES  := $(foreach src_dir, $(SRC_DIR), $(wildcard *.cxx))

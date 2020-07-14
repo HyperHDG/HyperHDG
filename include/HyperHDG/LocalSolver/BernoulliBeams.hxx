@@ -564,6 +564,7 @@ class LengtheningBernoulliBendingBeam
        const unsigned int boundary_number) const
   {
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1> result;
+    for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
     return result;
   }
 

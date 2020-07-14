@@ -557,8 +557,8 @@ class IntegratorTensorial
     {
       constexpr unsigned int dimT = GeomT::hyEdge_dim();
       return_t integral = 1.;
-      std::array<unsigned int, dimT> dec_i = index_decompose<dimT>(i);
-      std::array<unsigned int, dimT> dec_j = index_decompose<dimT>(j);
+      std::array<unsigned int, dimT> dec_i = index_decompose<dimT,max_poly_degree+1>(i);
+      std::array<unsigned int, dimT> dec_j = index_decompose<dimT,max_poly_degree+1>(j);
       for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
       return integral * geom.area();
@@ -751,7 +751,7 @@ class IntegratorTensorial
     {
       return_t integral = 0., quad_val;
       std::array<unsigned int, std::max(1U,GeomT::hyEdge_dim()-1)> dec_q, 
-        dec_i = index_decompose<GeomT::hyEdge_dim()-1>(i);
+        dec_i = index_decompose<GeomT::hyEdge_dim()-1, max_poly_degree+1>(i);
       Point<GeomT::hyEdge_dim(), return_t> quad_pt;
       unsigned int dim_bdr = bdr / 2 , bdr_ind = bdr % 2;
       
