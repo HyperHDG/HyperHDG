@@ -38,7 +38,10 @@ void test()
   vector<double> vectorDirichlet(hdg_graph.n_global_dofs());
   
   PlotOptions pltop;
-  pltop.scale = .9;
+  pltop.scale = 0.8;
+  pltop.plot_edge_boundaries = true;
+  pltop.plot_edges = true;
+  pltop.boundary_scale = 0.9;
   std::string name = "plot1-";
   name += std::to_string(edge_dim) + std::string("-") + char('a'+ space_dim - edge_dim);
   pltop.fileName = name;

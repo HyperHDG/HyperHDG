@@ -343,11 +343,11 @@ class AbstractProblem
           hyper_graph_.hyNode_factory().add_to_dof_values
             (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
-      
+
       // Set all Dirichlet values to zero.
       for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
       {
-        hy_assert( dirichlet_indices_[i] >= 0 
+        hy_assert( dirichlet_indices_[i] >= 0
                      && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
@@ -355,7 +355,7 @@ class AbstractProblem
                    "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         vec_Ax[dirichlet_indices_[i]] = 0.;
       }
-    
+
       return vec_Ax;
     }
     /*!*********************************************************************************************
@@ -375,23 +375,23 @@ class AbstractProblem
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-      
+
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
-      
+
       // Do matrix--vector multiplication by iterating over all hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
         hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
-          hyEdge_dofs[hyNode] = 
+          hyEdge_dofs[hyNode] =
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
-        
+
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr
-        ( 
+        (
           not_uses_geometry
           < LocalSolverT,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -400,7 +400,7 @@ class AbstractProblem
         )
         {
           if constexpr
-          ( 
+          (
             has_initial_flux
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -413,7 +413,7 @@ class AbstractProblem
         else
         {
           if constexpr
-          ( 
+          (
             has_initial_flux
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -429,11 +429,11 @@ class AbstractProblem
           hyper_graph_.hyNode_factory().set_dof_values
             (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
       });
-      
+
       // Set all Dirichlet values to zero.
       for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
       {
-        hy_assert( dirichlet_indices_[i] >= 0 
+        hy_assert( dirichlet_indices_[i] >= 0
                      && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
                    "All indices of Dirichlet nodes need to be larger than or equal to zero and "
                    << "smaller than the total amount of degrees of freedom." << std::endl
@@ -441,7 +441,7 @@ class AbstractProblem
                    "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
         vec_Ax[dirichlet_indices_[i]] = 0.;
       }
-    
+
       return vec_Ax;
     }
     /*!*********************************************************************************************
@@ -461,23 +461,23 @@ class AbstractProblem
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
-      
+
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
       std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
-      
+
       // Do matrix--vector multiplication by iterating over all hyperedges.
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
       {
         // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
         hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
-          hyEdge_dofs[hyNode] = 
+          hyEdge_dofs[hyNode] =
             hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
-        
+
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr
-        ( 
+        (
           not_uses_geometry
           < LocalSolverT,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -486,7 +486,7 @@ class AbstractProblem
         )
         {
           if constexpr
-          ( 
+          (
             has_mass_multiply
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -499,7 +499,7 @@ class AbstractProblem
         else
         {
           if constexpr
-          ( 
+          (
             has_mass_multiply
             < LocalSolverT,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
@@ -680,9 +680,9 @@ class AbstractProblem
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge, time);
         }
-        
+
       });
-      
+
       hy_assert( result >= 0. , "The squared error must be non-negative, but was " << result );
       return std::sqrt(result);
     }
@@ -805,6 +805,9 @@ class AbstractProblem
                                                     (value == "true" || value == "1");
       else if (option == "incrementFileNumber")   plot_options.incrementFileNumber =
                                                     (value == "true" || value == "1");
+      else if (option == "plotEdges")             plot_options.plot_edges = (value == "true" || value == "1");
+      else if (option == "plotEdgeBoundaries")    plot_options.plot_edge_boundaries = (value == "true" || value == "1");
+      else if (option == "boundaryScale")         plot_options.boundary_scale = std::stof(value);
       else if (option == "scale")                 plot_options.scale = stof(value);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
@@ -815,8 +818,13 @@ class AbstractProblem
       else if (option == "printFileNumber")       value = std::to_string
                                                             (plot_options.printFileNumber);
       else if (option == "incrementFileNumber")   value = std::to_string
-                                                            (plot_options.incrementFileNumber);
-      else if (option == "scale")                 value = std::to_string(plot_options.scale);
+            (plot_options.incrementFileNumber);
+      else if (option == "plotEdges")   value = std::to_string
+            (plot_options.plot_edges);
+      else if (option == "plotEdgeBoundaries")   value = std::to_string
+            (plot_options.plot_edge_boundaries);
+      else if (option == "scale") value = std::to_string(plot_options.scale);
+      else if (option == "boundaryScale") value = std::to_string(plot_options.boundary_scale);
       else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
   
       return value;

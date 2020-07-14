@@ -7,6 +7,7 @@
 #include <HyperHDG/LocalSolver/bilaplacian.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/TensorialShapeFun.hxx>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -139,8 +140,7 @@ class LengtheningBeam
     template <class hyEdgeT>
     std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2 * hyEdge_dimT >
     numerical_flux_from_lambda
-    (
-      const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
+    (const std::array< std::array<lSol_float_t, n_glob_dofs_per_node()> , 2*hyEdge_dimT >&
       lambda_values, hyEdgeT& hyper_edge, const lSol_float_t time = 0.
     ) const
     {
@@ -175,6 +175,16 @@ class LengtheningBeam
 
       return result;
     }
+
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const
+  {
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1> result;
+    return result;
+  }
 }; // end of class LengtheningBeam
 
 
@@ -385,7 +395,17 @@ class BernoulliBendingBeam
   
       return values;
     }
-    
+
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const
+  {
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1> result;
+    return result;
+  }
+
 }; // end of class BernoulliBendingBeam
 
 
@@ -536,7 +556,17 @@ class LengtheningBernoulliBendingBeam
 
       return result;
     }
-    
+
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const
+  {
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1> result;
+    return result;
+  }
+
 }; // end of class LengtheningBernoulliBendingBeam
 
 
@@ -839,7 +869,13 @@ class TimoschenkoBendingBeam
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
       hyEdgeT& hyper_edge, const lSol_float_t time = 0. ) const;
-    
+
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
+
 }; // end of class TimoschenkoBendingBeam
 
 
@@ -1117,6 +1153,9 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bu
     std::array< lSol_float_t, n_loc_dofs_ > coefficients
       = solve_local_problem(node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on));
 
+    std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values
+        = sum_all_in_tensorial_points_with_coefficients<lSol_float_t,abscissa_float_t,Legendre,
+                                                        hyEdge_dimT,abscissas.size(), poly_deg, system_dimension()>(abscissas, coefficients);
     std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
     lSol_float_t fct_value;
  
@@ -1128,10 +1167,10 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bu
   
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
     { 
-      dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
+      dec_i = index_decompose<hyEdge_dimT, poly_deg+1>(i);
       for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
       {
-        dec_q = integrator.template index_decompose<hyEdge_dimT, abscissas.size()>(q);
+        dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
         fct_value = 1.;
         for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
           fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
@@ -1143,7 +1182,31 @@ TimoschenkoBendingBeam<hyEdge_dimT,space_dim,poly_deg,quad_deg,lSol_float_t>::bu
   }
   
   return values;
-} // end of TimoschenkoBendingBeam::bulk_values
+}
+/*!*********************************************************************************************
+ * \brief   Evaluate the function lambda on tensor product points on the boundary
+ *
+ * \todo not yet implemented
+ *
+ * \tparam  absc_float_t  Floating type for the abscissa values.
+ * \tparam  sizeT         Size of the array of array of abscissas.
+ * \param   abscissas     Abscissas of the supporting points.
+ * \param   lambda_values The values of the skeletal variable's coefficients.
+ * \param   boundary_number number of the boundary on which to evaluate the function.
+ **********************************************************************************************/
+template<unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t>
+template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1> TimoschenkoBendingBeam<
+    hyEdge_dimT,
+    space_dim,
+    poly_deg,
+    quad_deg,
+    lSol_float_t>::lambda_values(const std::array<abscissa_float_t, sizeT> &abscissas,
+                                   const input_array_t &lambda_values,
+                                   const unsigned int boundary_number) const {
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+}
+// end of TimoschenkoBendingBeam::bulk_values
 
 
 /*!*************************************************************************************************
@@ -1290,5 +1353,15 @@ class LengtheningTimoschenkoBendingBeam
 
       return result;
     }
+
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const
+  {
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1> result;
+    return result;
+  }
     
 }; // end of class LengtheningTimoschenkoBendingBeam

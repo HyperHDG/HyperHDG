@@ -4,6 +4,7 @@
 #include <HyperHDG/QuadratureTensorial.hxx>
 #include <HyperHDG/Hypercube.hxx>
 #include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/TensorialShapeFun.hxx>
 #include <algorithm>
 
 /*!*************************************************************************************************
@@ -202,13 +203,30 @@ class Diffusion_TensorialUniform
        
       return bdr_values;
     }
-    
-    template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
-    bulk_values
-    (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
-    const lSol_float_t time = 0.) const;
+
+  template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+             Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+  bulk_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const lSol_float_t time = 0.) const;
+
+
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
 
 }; // end of class Diffusion_TensorialUniform
 
@@ -423,34 +441,35 @@ Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_val
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
- 
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = integrator.template index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  
+
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values
+      = sum_all_in_tensorial_points_with_coefficients<lSol_float_t,abscissa_float_t,Legendre,
+                                                      hyEdge_dimT,abscissas.size(), poly_deg, system_dimension()>(abscissas, coefficients);
+
   return values;
 } // end of Diffusion_TensorialUniform::bulk_values
 
+template
+    < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t >
+std::array
+    <
+        std::array
+            <
+                lSol_float_t,
+                Hypercube<hyEdge_dimT-1>::pow(sizeT)
+            > ,1
+    >
+Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(const std::array<
+    abscissa_float_t,
+    sizeT> &abscissas,
+                                                                                                                    const input_array_t &lambda_values,
+                                                                                                                    const unsigned int boundary_number) const {
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>, 1> values_in_local_coordinates
+      = sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre, hyEdge_dimT-1, abscissas.size(), poly_deg, 1>
+          (abscissas, lambda_values[boundary_number]);
+  return values_in_local_coordinates;
+}
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -565,7 +584,7 @@ class Diffusion
     // Private, static constexpr functions
     // ---------------------------------------------------------------------------------------------
 
-   /*!*********************************************************************************************
+    /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
     static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
@@ -580,7 +599,7 @@ class Diffusion
 
     template < typename parameters >
     static constexpr bool is_dirichlet( const unsigned int node_type )
-    { 
+    {
       return std::find( parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
                         node_type ) != parameters::dirichlet_nodes.end();
     }
@@ -613,7 +632,7 @@ class Diffusion
     template < typename hyEdgeT >  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
     assemble_loc_matrix
     ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const;
-        
+
     /*!*********************************************************************************************
      * \brief  Assemble local right-hand for the local solver (from skeletal).
      *
@@ -663,11 +682,11 @@ class Diffusion
      * \brief  Assemble local right-hand for the local solver (from global right-hand side).
      *
      * Note that we basically follow the lines of
-     * 
+     *
      * B. Cockburn, J. Gopalakrishnan, and R. Lazarov.
      * Unified hybridization of discontinuous Galerkin, mixed, and continuous Galerkin methods for
      * second order elliptic problems. SIAM Journal on Numerical Analysis, 47(2):1319–1365, 2009
-     * 
+     *
      * and discriminate between local solvers with respect to the skeletal variable and with respect
      * to the global right-hand side. This assembles the local right-hand side with respect to the
      * global right-hand side. This function implicitly uses the parameters.
@@ -729,7 +748,7 @@ class Diffusion
     )  const
     {
       try
-      { 
+      {
         SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(coeffs, hyper_edge);
         return ( rhs / assemble_loc_matrix(tau_, hyper_edge, time) ).data();
       }
@@ -915,7 +934,7 @@ class Diffusion
      **********************************************************************************************/
     template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_initial
-    ( 
+    (
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
       hyEdgeT                                                                   & hyper_edge,
       const lSol_float_t time = 0.
@@ -924,7 +943,7 @@ class Diffusion
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
-  
+
       for (unsigned int i = 0; i < lambda_values.size(); ++i)
       {
         if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
@@ -935,7 +954,7 @@ class Diffusion
               < decltype(hyEdgeT::geometry), parameters::initial >
                         (j, i, hyper_edge.geometry, time);
       }
-          
+
       return bdr_values;
     }
     /*!*********************************************************************************************
@@ -953,7 +972,7 @@ class Diffusion
      **********************************************************************************************/
     /*template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
-    ( 
+    (
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
       hyEdgeT                                                                   & hyper_edge,
       const lSol_float_t time = 0.
@@ -964,7 +983,7 @@ class Diffusion
       std::array<lSol_float_t, n_loc_dofs_> coeffs
         = solve_local_problem(lambda_values, 0U, hyper_edge, time);
       std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
-      
+
       SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
         u_coeffs[i] = coeffs[hyEdge_dimT*n_shape_fct_+i];
@@ -1042,7 +1061,7 @@ class Diffusion
      **********************************************************************************************/
     template < class hyEdgeT >
     std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
-    ( 
+    (
       const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
       hyEdgeT                                                                   & hyper_edge,
       const lSol_float_t time = 0.
@@ -1130,7 +1149,7 @@ class Diffusion
     )  const
     {
       using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-      std::array<lSol_float_t, n_loc_dofs_> coefficients 
+      std::array<lSol_float_t, n_loc_dofs_> coefficients
         = solve_local_problem(lambda_values, 1U, hy_edge,time);
       std::array< lSol_float_t, n_shape_fct_ > coeffs;
       for (unsigned int i = 0; i < coeffs.size(); ++i)
@@ -1205,6 +1224,29 @@ class Diffusion
       hyEdgeT                                   & hyper_edge,
       const lSol_float_t time = 0.
     )  const;
+
+
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template< typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array
+      <
+          std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1
+      >
+  lambda_values
+      (
+          const std::array<abscissa_float_t,sizeT>  & abscissas,
+          const input_array_t                       & lambda_values,
+          const unsigned int boundary_number
+      )  const;
+
 }; // end of class Diffusion
 
 
@@ -1366,7 +1408,7 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  
 // -------------------------------------------------------------------------------------------------
 
 template
-< 
+<
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
@@ -1375,9 +1417,9 @@ inline SmallVec
 < Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_, lSol_float_t >
 Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_coeffs
-( 
+(
   const std::array
-  < 
+  <
     lSol_float_t,
     Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
   >& coeffs,
@@ -1388,7 +1430,7 @@ assemble_rhs_from_coeffs
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       right_hand_side[hyEdge_dimT*n_shape_fct_ + i]
-        += coeffs[hyEdge_dimT*n_shape_fct_ + j] 
+        += coeffs[hyEdge_dimT*n_shape_fct_ + j]
             * integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
   return right_hand_side;
@@ -1502,30 +1544,35 @@ Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_value
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
     = solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
- 
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = integrator.template index_decompose<hyEdge_dimT>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = integrator.template index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
+  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values
+      = sum_all_in_tensorial_points_with_coefficients<lSol_float_t,abscissa_float_t,Legendre,
+      hyEdge_dimT,abscissas.size(), poly_deg, system_dimension()>(abscissas, coefficients);
   
   return values;
-} // end of Diffusion::bulk_values
+}
+// end of Diffusion::bulk_values
+
+
+template
+    <
+        unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+        template < unsigned int, typename >  typename parametersT, typename lSol_float_t
+    >
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array
+    <
+        std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1
+    >
+Diffusion < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+lambda_values
+    (
+        const std::array<abscissa_float_t,sizeT>  & abscissas,
+        const input_array_t                       & lambda_values,
+        const unsigned int boundary_number
+    )  const {
+ std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>, 1> values_in_local_coordinates
+      = sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre, hyEdge_dimT-1, abscissas.size(), poly_deg, 1>
+          (abscissas, lambda_values[boundary_number]);
+  return values_in_local_coordinates;
+
+}

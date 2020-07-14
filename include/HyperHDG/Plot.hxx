@@ -6,6 +6,7 @@
 #include <HyperHDG/DenseLA.hxx>
 
 #include <fstream>
+#include <filesystem>
 #include <iomanip>
 // #include <cmath>
 
@@ -65,11 +66,11 @@ struct PlotOptions
    ************************************************************************************************/
   bool incrementFileNumber;
   /*!***********************************************************************************************
-   * \brief   Include the nodes with their function values into the plot.
+   * \brief   Include the edge boundaries with their function values into the plot.
    *
    * Defaults to `false`.
    ************************************************************************************************/
-  bool plot_nodes;
+  bool plot_edge_boundaries;
   /*!***********************************************************************************************
    * \brief   Include the hyperedges with their function values into the plot.
    *
@@ -103,6 +104,15 @@ struct PlotOptions
    ************************************************************************************************/
   float scale;
   /*!***********************************************************************************************
+   * \brief   A factor by which to separate two boundaries belonging to different edges.
+   *
+   * This factor defaults to 1 which results in boundaries of adjacent edges being drawn on top of
+   * each other, if scale is less than one a suitable choice would be (1+scale)/2 in order separate
+   * different boundaries. A smaller factor results in a wider gap.
+   ************************************************************************************************/
+  float boundary_scale;
+
+  /*!***********************************************************************************************
    * \brief   Output a cell data array with the number of each edge and/or each node.
    ************************************************************************************************/
   bool numbers;
@@ -119,8 +129,8 @@ struct PlotOptions
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
  * \todo    Adapt to deal with time-dependent cases when the node plotting is finished!
- * 
- * Creates a file according to set plotting options in \c plot_options. This file contains the 
+ *
+ * Creates a file according to set plotting options in \c plot_options. This file contains the
  * solution of the PDE defined in \c plotOpt having the representation \c lambda in terms of its
  * skeleta degrees of freedom (related to skeletal variable lambda).
  *
@@ -159,8 +169,8 @@ void plot
 
 PlotOptions::PlotOptions()
   : outputDir("output"), fileName("example"), fileEnding("vtu"), fileNumber(0),
-    printFileNumber(true), incrementFileNumber(true), plot_nodes(false), plot_edges(true),
-    n_subintervals(1), scale(1.), numbers(false)
+    printFileNumber(true), incrementFileNumber(true), plot_edge_boundaries(false), plot_edges(true),
+    n_subintervals(1), scale(1.), boundary_scale(1.), numbers(false)
 {}
 
 
@@ -183,6 +193,7 @@ PlotOptions::PlotOptions()
  **************************************************************************************************/
 namespace PlotFunctions
 {
+
   /*!***********************************************************************************************
    * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
    *
@@ -194,7 +205,9 @@ namespace PlotFunctions
   template <unsigned int dim, typename pt_index_t>
   void  vtu_sub_cube_connectivity(std::ostream& output, unsigned int n, pt_index_t offset)
   {
-    if constexpr (dim==1)
+    if constexpr (dim==0)
+      for (unsigned int i=0;i<n-1;++i)  output << offset+i  << "\n";
+    else if constexpr (dim==1)
       for (unsigned int i=0;i<n-1;++i)  output << offset+i << ' ' << offset+i+1 << "\n";
     else if constexpr (dim==2)
       for (unsigned int i=0;i<n-1;++i)
@@ -233,7 +246,8 @@ namespace PlotFunctions
     typename pt_index_t = unsigned int >
   void plot_vtu_unstructured_geometry(std::ostream& output,
 				      const HyperGraphT& hyper_graph,
-				      const std::array<float, n_subpoints>& sub_points,
+                                      const std::array<float, n_subpoints>& sub_points,
+                                      const std::array<float, n_subpoints>& boundary_sub_points,
 				      const PlotOptions& plot_options)
   {
     constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
@@ -246,18 +260,19 @@ namespace PlotFunctions
     const pt_index_t n_plot_edges = n_edges * Hypercube<edge_dim>::pow(n_subpoints-1);
     const unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
 
-    const hyEdge_index_t n_nodes = hyper_graph.n_hyNodes();
-    const unsigned int points_per_node = Hypercube<edge_dim-1>::pow(n_subpoints);
-    const pt_index_t n_plot_nodes = n_nodes * Hypercube<edge_dim-1>::pow(n_subpoints-1);
+    const hyEdge_index_t n_boundaries_per_edge = 2*edge_dim;
+    const hyEdge_index_t n_edge_boundaries = n_edges*n_boundaries_per_edge;
+    const unsigned int points_per_boundary = Hypercube<edge_dim-1>::pow(n_subpoints);
+    const pt_index_t n_plot_boundaries = n_edge_boundaries * Hypercube<edge_dim-1>::pow(n_subpoints-1);
 
     // The total number of points and cells (using VTK nomenclature)
     // is the sum of the points for edges and the points for
-    // nodes. Equally, the total number of cells is the sum of the
+    // edge boundaries. Equally, the total number of cells is the sum of the
     // cells of dimension edge_dim plus those of dimension node_dim.
     const pt_index_t n_plot_points = (plot_options.plot_edges ? (points_per_edge * n_edges) : 0)
-      + (plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
+      + (plot_options.plot_edge_boundaries ? (points_per_boundary * n_edge_boundaries) : 0);
     const pt_index_t n_plot_cells = (plot_options.plot_edges ? n_plot_edges : 0)
-      + (plot_options.plot_nodes ? n_plot_nodes : 0);
+      + (plot_options.plot_edge_boundaries ? n_plot_boundaries : 0);
     
     // The element id can be found in the VTK file format documentation.
     static_assert (edge_dim <= 3);
@@ -265,51 +280,61 @@ namespace PlotFunctions
     if constexpr (edge_dim == 1)       element_id = 3;
     else if constexpr (edge_dim == 2)  element_id = 8;
     else if constexpr (edge_dim == 3)  element_id = 11;
-    
+    unsigned int boundary_element_id = 0;
+    if constexpr (edge_dim == 1)       boundary_element_id = 1;
+    else if constexpr (edge_dim == 2)  boundary_element_id = 3;
+    else if constexpr (edge_dim == 3)  boundary_element_id = 8;
+
     output << "    <Piece NumberOfPoints=\"" << n_plot_points << "\" NumberOfCells= \"" 
            << n_plot_cells << "\">" << std::endl;
     output << "      <Points>" << std::endl;
     output << "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">"
            << std::endl;
+    if(plot_options.plot_edges) {
+      // For each edge, output the corners of the subdivided cells in lexicographic order.
+      for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number) {
+        auto edge = hyper_graph.hyEdge_geometry(he_number);
 
-    // We want to compute node coordinates as averages of edge
-    // coordinates. Thus, we have to add them to this vector and then
-    // divide by the total number.
-    std::vector<Point<space_dim>> node_points(plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
-    std::vector<unsigned int> n_edges_per_node(plot_options.plot_nodes ? (points_per_node * n_nodes) : 0);
-    std::fill(n_edges_per_node.begin(), n_edges_per_node.end(), 0U);
-    
-    // For each edge, output the corners of the subdivided cells in lexicographic order.
-    for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
-    {
-      auto edge = hyper_graph.hyEdge_geometry(he_number);
-
-      for (unsigned int pt_number = 0; pt_number < points_per_edge; ++pt_number)
-      {
-        output << "        ";
-        const Point<space_dim> point 
-          = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, sub_points);
-        for (unsigned int dim = 0; dim < space_dim; ++dim)
-          output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
-        for (unsigned int dim = space_dim; dim < 3; ++dim)
-          output << "  0.0";
-        output << std::endl;
+        for (unsigned int pt_number = 0; pt_number < points_per_edge; ++pt_number) {
+          output << "        ";
+          const Point<space_dim> point
+              = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, sub_points);
+          for (unsigned int dim = 0; dim < space_dim; ++dim)
+            output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
+          for (unsigned int dim = space_dim; dim < 3; ++dim)
+            output << "  0.0";
+          output << std::endl;
+        }
       }
-      // Accumulating coordinates for nodes should start here
-      if (plot_options.plot_nodes)
-	{}
     }
+    if(plot_options.plot_edge_boundaries) {
+      //For each edge accumulate edge boundary coordinates
+      for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number) {
+        auto edge = hyper_graph.hyEdge_geometry(he_number);
+        for (hyEdge_index_t boundary = 0; boundary < n_boundaries_per_edge; ++boundary) {
+          for (unsigned int pt_number = 0; pt_number < points_per_boundary; ++pt_number) {
+            output << "        ";
+            const Point<space_dim> point
+                = (Point<space_dim>) edge.template boundary_lexicographic<n_subpoints>(pt_number,
+                                                                                       boundary,
+                                                                                       plot_options.boundary_scale,
+                                                                                       boundary_sub_points);
 
-    // Averaging and outputting node coordinates
-    for (pt_index_t i=0;i<node_points.size();++i)
-      {
-	hy_assert(n_edges_per_node[i]!=0, "Forgotten edge!");
-	const Point<space_dim>& point = node_points[i];
-	for (unsigned int dim = 0; dim < space_dim; ++dim)
-          output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim]/n_edges_per_node[i];
-        for (unsigned int dim = space_dim; dim < 3; ++dim)
-          output << "  0.0";
-      }    
+            if(he_number == 0)
+            for (unsigned int dim = 0; dim < space_dim; ++dim) {
+              output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
+            }
+            else
+              for (unsigned int dim = 0; dim < space_dim; ++dim) {
+                output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];//'##############################################################
+              }
+            for (unsigned int dim = space_dim; dim < 3; ++dim)
+              output << "  0.0";
+            output << std::endl;
+          }
+        }
+      }
+    }
     
     output << "        </DataArray>" << std::endl;
     output << "      </Points>" << std::endl;
@@ -324,11 +349,11 @@ namespace PlotFunctions
 	  vtu_sub_cube_connectivity<edge_dim>(output, n_subpoints, offset);
 	  offset += points_per_edge;
 	}
-    if (plot_options.plot_nodes)
-      for (pt_index_t i =0; i < n_nodes; ++i)
+    if (plot_options.plot_edge_boundaries)
+      for (pt_index_t i =0; i < n_edge_boundaries; ++i)
 	{
 	  vtu_sub_cube_connectivity<edge_dim-1>(output, n_subpoints, offset);
-	  offset += points_per_node;
+	  offset += points_per_boundary;
 	}
 
     hy_assert(offset == n_plot_points, "We did not write the right number of connectivity data");
@@ -336,23 +361,163 @@ namespace PlotFunctions
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
     output << "        ";
-    
-    for (hyEdge_index_t he_number = 1; he_number <= n_plot_edges; ++he_number)
-      output << "  " <<  Hypercube<edge_dim>::n_vertices() * he_number;
+    int start_number = 0;
+    if (plot_options.plot_edges) {
+      for (hyEdge_index_t he_number = 1; he_number <= n_plot_edges; ++he_number) {
+        output << "  " << Hypercube<edge_dim>::n_vertices() * he_number;
+        start_number = Hypercube<edge_dim>::n_vertices() * he_number;
+      }
+    }
+    if (plot_options.plot_edge_boundaries) {
+      for (hyEdge_index_t bdr_number = 1; bdr_number <= n_plot_boundaries; ++bdr_number)
+        output << "  " << Hypercube<edge_dim-1>::n_vertices() * bdr_number + start_number;
+    }
     output << std::endl;
     
     output << "        </DataArray>" << std::endl;
     output << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
     output << "        ";
-    
-    for (hyEdge_index_t he_number = 0; he_number < n_plot_edges; ++he_number)
-      output << "  " << element_id;
+    if(plot_options.plot_edges) {
+      for (hyEdge_index_t he_number = 0; he_number < n_plot_edges; ++he_number)
+        output << "  " << element_id;
+    }
+    if(plot_options.plot_edge_boundaries) {
+      for (hyEdge_index_t bdr_number = 1; bdr_number <= n_plot_boundaries; ++bdr_number)
+        output << "  " << boundary_element_id;
+    }
     output << std::endl;
     
     output << "        </DataArray>" << std::endl;
     output << "      </Cells>" << std::endl;
   } // end of void plot_vtu_unstructured_geometry
+
+
+
+
+
+/*!*************************************************************************************************
+ * \brief   Check if some file exists and can be opened
+ **************************************************************************************************/
+  void file_exists(const std::ofstream &output_file, const std::string filename) {
+    if (!output_file.is_open()) {
+      throw std::ios_base::failure("File  " + filename + " could not be opened");
+    }
+  }
+/*!*************************************************************************************************
+ * \brief   Check if an outputstream has opened a file
+ **************************************************************************************************/
+  void check_file_opened(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
+    try {
+      file_exists(output_file, filename);
+    }
+    catch (std::ios_base::failure &e) {
+      std::cerr << e.what() << std::endl;
+      std::cout << "Trying to create output directory" << std::endl;
+      std::filesystem::create_directory(plot_options.outputDir);
+    }
+  }
 } // end of namespace PlotFunctions
+
+
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to get dof values of edge.
+ * \todo Relocate this function?
+ **************************************************************************************************/
+template<unsigned int edge_dim, class HyperGraphT, typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
+std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> get_edge_dof_values(const HyperGraphT& hyper_graph, hyEdge_index_t edge_index,
+                                                                                                      const std::vector<dof_value_t>& lambda) {
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+  std::array<unsigned int, 2 * edge_dim> hyEdge_hyNodes;
+  hyEdge_hyNodes = hyper_graph.hyEdge_topology(edge_index).get_hyNode_indices();
+  for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode) {
+    hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values
+        (hyEdge_hyNodes[hyNode], lambda);
+  }
+  return hyEdge_dofs;
+}
+
+
+
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge.
+ **************************************************************************************************/
+template
+    < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
+        typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
+void plot_edge_values
+    ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+      const std::vector<dof_value_t>& lambda,
+      std::ofstream &myfile,
+      std::array<float, n_subdivisions + 1> abscissas) {
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+
+  for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number) {
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(hyper_graph, he_number, lambda);
+    std::array
+        <
+            std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
+            LocalSolverT::system_dimension()
+        > local_values;
+    if constexpr
+        (
+        not_uses_geometry
+            <LocalSolverT,
+             std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
+                 (std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> &)
+            >::value
+        )
+      local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
+    else {
+      auto geometry = hyper_graph[he_number];
+      local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
+    }
+
+    myfile << "      ";
+    for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner) {
+      myfile << "  ";
+      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
+        myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
+    }
+    myfile << std::endl;
+  }
+}
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge boundary.
+ **************************************************************************************************/
+template
+    < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
+        typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
+void plot_boundary_values
+    ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+      const std::vector<dof_value_t>& lambda,
+      std::ofstream& myfile,
+      std::array<float, n_subdivisions + 1> abscissas) {
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+  std::array
+      <
+          std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,1
+      > local_values;
+  for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index) {
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(hyper_graph, edge_index, lambda);
+    for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index) {
+      myfile << "      ";
+      local_values = local_solver.lambda_values(abscissas, hyEdge_dofs, bdr_index);
+      for (unsigned int corner = 0; corner < Hypercube<edge_dim - 1>::n_vertices(); ++corner) {
+        myfile << "  " << local_values[0][corner];
+
+        for (unsigned int d = 1; d < LocalSolverT::system_dimension(); ++d)
+          myfile << "  " << 0;
+      }
+      myfile << std::endl;
+    }
+  }
+}
 
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values to vtu file.
@@ -366,111 +531,76 @@ void plot_vtu
   const dof_value_t time = 0. )
 {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
-  
+
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const hyEdge_index_t n_edge_boundaries = n_edges * 2 * edge_dim;
   //  const unsigned int n_points_per_edge = 1 << edge_dim;
-  
-  std::array<float, n_subdivisions+1> abscissas;
-  for (unsigned int i=0;i<=n_subdivisions;++i)
-    abscissas[i] = plot_options.scale*(1.*i/n_subdivisions-0.5)+0.5;
-  
-  static_assert (edge_dim <= 3 , "Plotting hyperedges with dimensions larger than 3 is hard.");
-  
+
+  std::array<float, n_subdivisions + 1> boundary_abscissas;
+  for (unsigned int i = 0; i <= n_subdivisions; ++i)
+    boundary_abscissas[i] = plot_options.scale * plot_options.boundary_scale * (1. * i / n_subdivisions - 0.5) + 0.5;
+  std::array<float, n_subdivisions + 1> abscissas;
+  for (unsigned int i = 0; i <= n_subdivisions; ++i)
+    abscissas[i] = plot_options.scale * (1. * i / n_subdivisions - 0.5) + 0.5;
+
+  static_assert(edge_dim <= 3, "Plotting hyperedges with dimensions larger than 3 is hard.");
   std::ofstream myfile;
-  
+
   std::string filename = plot_options.outputDir;
-  filename.append("/"); filename.append(plot_options.fileName);
-  if(plot_options.printFileNumber)
-  {
-    filename.append("."); filename.append(std::to_string(plot_options.fileNumber));
+  filename.append("/");
+  filename.append(plot_options.fileName);
+  if (plot_options.printFileNumber) {
+    filename.append(".");
+    filename.append(std::to_string(plot_options.fileNumber));
   }
   filename.append(".vtu");
-  
+
   myfile.open(filename);
-  myfile << "<?xml version=\"1.0\"?>"  << std::endl;
+  PlotFunctions::check_file_opened(myfile,filename,plot_options);
+  myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
   myfile << "  <UnstructuredGrid>" << std::endl;
 
-  PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, abscissas, plot_options);
+  PlotFunctions::plot_vtu_unstructured_geometry(myfile, hyper_graph, abscissas, boundary_abscissas, plot_options);
 
   myfile << "      <CellData>" << std::endl;
-  if (plot_options.numbers)
-  {
+  if (plot_options.numbers) {
     myfile << "        <DataArray type=\"Int32\" Name=\"index\" NumberOfComponents=\"1\" "
            << "format=\"ascii\">\n";
-    if (plot_options.plot_edges)
-    {
+    if (plot_options.plot_edges) {
       for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
-        for (unsigned int i=0;i<Hypercube<edge_dim>::pow(n_subdivisions);++i)
+        for (unsigned int i = 0; i < Hypercube<edge_dim>::pow(n_subdivisions); ++i)
           myfile << ' ' << he_number;
     }
-    if (plot_options.plot_nodes)  hy_assert(false, "Not yet implemented");
-      
+    if (plot_options.plot_edge_boundaries) {
+      for (hyEdge_index_t bdr_number = 1; bdr_number <= n_edge_boundaries; ++bdr_number)
+        for (unsigned int i = 0; i < Hypercube<edge_dim>::pow(n_subdivisions); ++i)
+          myfile << "  " << bdr_number;
+    }
+
     myfile << "        </DataArray>";
   }
   myfile << "      </CellData>" << std::endl;
-  
-  myfile << "      <PointData>" << std::endl;
-  if (LocalSolverT::system_dimension() != 0)
-  {
-    myfile << "        <DataArray type=\"Float32\" Name=\"values"
-	         << "\" NumberOfComponents=\"" << LocalSolverT::system_dimension()
-	         << "\" format=\"ascii\">" << std::endl;
-      
-    std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim > hyEdge_dofs;
-    std::array<unsigned int, 2*edge_dim> hyEdge_hyNodes;
-      
-    // std::array<std::array<dof_value_t,
-    // 			    LocalSolverT::system_dimension()>,
-    // 			    Hypercube<edge_dim>::n_vertices()> local_values;
-      
-    for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
-    {
-      hyEdge_hyNodes = hyper_graph.hyEdge_topology(he_number).get_hyNode_indices();
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values
-                                (hyEdge_hyNodes[hyNode], lambda);
-      // if constexpr ( LocalSolverT::use_geometry() )
-	    // 		 local_values = local_solver.bulk_values
-      //                      (abscissas, hyper_graph.hyEdge_geometry(he_number), hyEdge_dofs);
-	    // else
-      std::array
-      < 
-        std::array< dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions+1)> ,
-        LocalSolverT::system_dimension()
-      > local_values;
-      if constexpr
-      ( 
-        not_uses_geometry
-        < LocalSolverT,
-          std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim >
-          ( std::array< std::array<dof_value_t, HyperGraphT::n_dofs_per_node() > , 2*edge_dim >& )
-        >::value
-      )
-        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, time);
-      else
-      {
-        auto geometry =  hyper_graph[he_number];
-        local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry, time);
-      }
 
-      myfile << "      ";
-      for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner)
-	    {
-	      myfile << "  ";
-	      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
-          myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
-	    }
-      myfile << std::endl;
+  myfile << "      <PointData>" << std::endl;
+  if (LocalSolverT::system_dimension() != 0) {
+    myfile << "        <DataArray type=\"Float32\" Name=\"values"
+           << "\" NumberOfComponents=\"" << LocalSolverT::system_dimension()
+           << "\" format=\"ascii\">" << std::endl;
+    if (plot_options.plot_edges) {
+      plot_edge_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, abscissas);
     }
-      
+    if (plot_options.plot_edge_boundaries) {
+      plot_boundary_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, boundary_abscissas);
+    }
     myfile << "        </DataArray>" << std::endl;
   }
-  myfile << "      </PointData>" << std::endl;  
+  myfile << "      </PointData>" << std::endl;
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
+  std::cout << plot_options.fileName << " was written\n";
   myfile.close();
 } // end of void plot_vtu
 
