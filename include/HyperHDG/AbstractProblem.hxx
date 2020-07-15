@@ -322,7 +322,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -336,7 +336,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, hyper_edge, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -408,7 +408,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -422,7 +422,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -494,7 +494,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_from_mass(hyEdge_dofs, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -508,7 +508,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.numerical_flux_from_mass(hyEdge_dofs, hyper_edge, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -580,7 +580,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.total_numerical_flux_mass(hyEdge_dofs, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -594,7 +594,7 @@ class AbstractProblem
             >::value
           )
             hyEdge_dofs = local_solver_.total_numerical_flux_mass(hyEdge_dofs, hyper_edge, time);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) hyEdge_dofs[i].fill(0.);
+          else hy_assert( false , "This is not implemented" );
         }
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
         for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
@@ -666,6 +666,7 @@ class AbstractProblem
             >::value
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
+          else  hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -679,6 +680,7 @@ class AbstractProblem
             >::value
           )
             result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge, time);
+          else  hy_assert( false , "This is not implemented" );
         }
 
       });
@@ -748,6 +750,7 @@ class AbstractProblem
           )
             result += local_solver_.calc_L2_error_squared_temp(hyEdge_dofs_new, hyEdge_dofs_old,
                         delta_time, time);
+          else  hy_assert( false , "This is not implemented" );
         }
         else
         {
@@ -763,6 +766,7 @@ class AbstractProblem
           )
             result += local_solver_.calc_L2_error_squared_temp(hyEdge_dofs_new, hyEdge_dofs_old, 
                 hyper_edge, delta_time, time);
+          else  hy_assert( false , "This is not implemented" );
         }
         
       });
@@ -809,7 +813,7 @@ class AbstractProblem
       else if (option == "plotEdgeBoundaries")    plot_options.plot_edge_boundaries = (value == "true" || value == "1");
       else if (option == "boundaryScale")         plot_options.boundary_scale = std::stof(value);
       else if (option == "scale")                 plot_options.scale = stof(value);
-      else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
+      else hy_assert( false , "This plot option has not been defined (yet)." );
   
       if (option == "outputDir")                  value = plot_options.outputDir;
       else if (option == "fileName")              value = plot_options.fileName;
@@ -825,7 +829,7 @@ class AbstractProblem
             (plot_options.plot_edge_boundaries);
       else if (option == "scale") value = std::to_string(plot_options.scale);
       else if (option == "boundaryScale") value = std::to_string(plot_options.boundary_scale);
-      else hy_assert( 0 == 1 , "This plot option has not been defined (yet)." );
+      else hy_assert( false , "This plot option has not been defined (yet)." );
   
       return value;
     }
