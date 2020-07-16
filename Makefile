@@ -1,5 +1,5 @@
 PROJECT     	= HDGonHYPERGRAPHS
-.PHONY:       	default clean distclean doxygen new run with_PythonCompileOptions object_files \
+.PHONY:       	default clean distclean doxygen new run with_PythonCompileOptions object_files format \
 								cython_cpp linking examples run_examples new_run_examples
 
 # Predefined directories for output, build files, and doxygen
