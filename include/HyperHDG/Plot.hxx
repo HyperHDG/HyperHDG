@@ -149,7 +149,7 @@ struct PlotOptions
  **************************************************************************************************/
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
-( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
   const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
   const dof_value_t time = 0. );
 
@@ -245,7 +245,7 @@ namespace PlotFunctions
   < class HyperGraphT, std::size_t n_subpoints, typename hyEdge_index_t = unsigned int,
     typename pt_index_t = unsigned int >
   void plot_vtu_unstructured_geometry(std::ostream& output,
-				      const HyperGraphT& hyper_graph,
+				      HyperGraphT& hyper_graph,
                                       const std::array<float, n_subpoints>& sub_points,
                                       const std::array<float, n_subpoints>& boundary_sub_points,
 				      const PlotOptions& plot_options)
@@ -424,7 +424,7 @@ namespace PlotFunctions
  * \todo Relocate this function?
  **************************************************************************************************/
 template<unsigned int edge_dim, class HyperGraphT, typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
-std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> get_edge_dof_values(const HyperGraphT& hyper_graph, hyEdge_index_t edge_index,
+std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> get_edge_dof_values(HyperGraphT& hyper_graph, hyEdge_index_t edge_index,
                                                                                                       const std::vector<dof_value_t>& lambda) {
   std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
   std::array<unsigned int, 2 * edge_dim> hyEdge_hyNodes;
@@ -445,7 +445,7 @@ template
     < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
         typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
 void plot_edge_values
-    ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+    ( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
       const std::vector<dof_value_t>& lambda,
       std::ofstream &myfile,
       std::array<float, n_subdivisions + 1> abscissas) {
@@ -491,7 +491,7 @@ template
     < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
         typename dof_value_t = double, typename hyEdge_index_t = unsigned int>
 void plot_boundary_values
-    ( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+    ( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
       const std::vector<dof_value_t>& lambda,
       std::ofstream& myfile,
       std::array<float, n_subdivisions + 1> abscissas) {
@@ -535,7 +535,7 @@ template
 < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
  typename dof_value_t = double, typename hyEdge_index_t = unsigned int >
 void plot_vtu
-( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
 	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
   const dof_value_t time = 0. )
 {
@@ -620,7 +620,7 @@ void plot_vtu
 
 template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot
-( const HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
+( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
 	const std::vector<dof_value_t>& lambda, const PlotOptions& plot_options,
   const dof_value_t time)
 {
