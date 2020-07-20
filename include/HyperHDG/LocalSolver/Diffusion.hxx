@@ -557,7 +557,7 @@ class Diffusion
 
 
   typedef struct empty_class {} data_type;
-  
+
   typedef lSol_float_t solver_float_t;
 
   // ---------------------------------------------------------------------------------------------
@@ -1661,6 +1661,10 @@ class DiffusionParab
    * \brief   (Globally constant) penalty parameter for HDG scheme.
    **********************************************************************************************/
   const lSol_float_t tau_;
+
+  const lSol_float_t theta_;
+
+  const lSol_float_t delta_t_;
   /*!*********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    **********************************************************************************************/
@@ -1879,13 +1883,14 @@ class DiffusionParab
   /*!*********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    **********************************************************************************************/
-  typedef lSol_float_t constructor_value_type;
+  typedef std::vector<lSol_float_t> constructor_value_type;
   /*!*********************************************************************************************
    * \brief   Constructor for local solver.
    *
    * \param   tau           Penalty parameter of HDG scheme.
    **********************************************************************************************/
-  DiffusionParab(const constructor_value_type& tau = 1.) : tau_(tau) {}
+  DiffusionParab(const constructor_value_type& constru = std::vector(3,1.))
+  : tau_(constru[0]), theta_(constru[1]), delta_t_(constru[2])  {}
   /*!*********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *

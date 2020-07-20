@@ -48,10 +48,11 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]", \
+            "double", "vector[double]"], filenames )
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,1.] ) # Why is this so good?
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.
