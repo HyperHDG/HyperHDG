@@ -42,6 +42,8 @@ class LengtheningBeam
 {
   public:
 
+    typedef struct empty_class {} data_type;
+
     typedef lSol_float_t solver_float_t;
 
     /*!*********************************************************************************************
@@ -220,7 +222,7 @@ template
 class BernoulliBendingBeam
 {
   public:
-
+    typedef struct empty_class {} data_type;
     typedef lSol_float_t solver_float_t;
 
     /*!*********************************************************************************************
@@ -440,7 +442,7 @@ template
 class LengtheningBernoulliBendingBeam
 {
   public:
-
+    typedef struct empty_class {} data_type;
     typedef lSol_float_t solver_float_t;
     
     /*!*********************************************************************************************

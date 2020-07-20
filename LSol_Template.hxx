@@ -13,6 +13,8 @@ template <int hyEdge_dimT, typename lSol_float_t>
 class LocalSolverTemplate
 {
 public:
+
+  typedef struct empty_class {} data_type;
   /**
    * \brief   Return template parameter \c hyEdge_dimT.
    * 
