@@ -18,6 +18,7 @@ cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
     vector[ CyReplace03 ] return_zero_vector[ CyReplace03 ] ()
     vector[ CyReplace03 ] matrix_vector_multiply (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] total_flux_vector (vector[ CyReplace03 ], CyReplace03 )
+    void set_data (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] initial_flux_vector (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] mass_matrix_multiply (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] total_mass_vector (vector[ CyReplace03 ], CyReplace03 )
