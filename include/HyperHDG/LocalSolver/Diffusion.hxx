@@ -1878,11 +1878,11 @@ class DiffusionParab
   // Public functions (and one typedef) to be utilized by external functions.
   // ---------------------------------------------------------------------------------------------
 
-  typedef struct save_old_state
+  typedef struct
   {
-    std::array<lSol_float_t, n_loc_dofs_> old_state;
+    std::array<lSol_float_t, n_loc_dofs_> coeffs;
   } data_type;
-  
+
   /*!*********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    **********************************************************************************************/
@@ -1970,6 +1970,32 @@ class DiffusionParab
 
     return bdr_values;
   }
+
+  /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to matrix--vector multiplication.
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values Local part of vector x.
+   * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vecAx         Local part of vector A * x.
+   **********************************************************************************************/
+  template <class hyEdgeT>
+  void set_data(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const
+  {
+    std::array<lSol_float_t, n_loc_dofs_> coeffs =
+      solve_local_problem(lambda_values, 1U, hyper_edge, time);
+
+    hyper_edge.data.coeffs = coeffs;
+  }
+
   /*!*********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
@@ -2337,15 +2363,20 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
           normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
       }
 
-      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
-        tau * face_integral;
+      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j)
+        += tau * theta_ * delta_t_ * face_integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral;
-        local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= grad_int_vec[dim];
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
-        local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += normal_int_vec[dim];
+        local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) 
+          -= theta_ * delta_t_ * grad_int_vec[dim];
+        local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j)
+          += theta_ * delta_t_ * normal_int_vec[dim];
       }
+
+      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) += vol_integral;
+
     }
   }
 
@@ -2384,7 +2415,8 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
       {
         integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
-        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
+        right_hand_side[hyEdge_dimT * n_shape_fct_ + i]
+          += tau_ * theta_ * delta_t_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
@@ -2416,10 +2448,13 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
-      integrator
-        .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
-          i, hyper_edge.geometry, time);
+    right_hand_side[hyEdge_dimT * n_shape_fct_ + i]
+      = theta_ * delta_t_ * integrator
+          .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
+            i, hyper_edge.geometry, time)
+        + (1 - theta_) * delta_t_ * integrator
+          .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
+            i, hyper_edge.geometry, time - delta_t_);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
@@ -2428,14 +2463,14 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
         integrator
           .template integrate_bdr_phifunc<decltype(hyEdgeT::geometry), parameters::dirichlet_value>(
             i, face, hyper_edge.geometry, time);
-      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * theta_ * delta_t_ * integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
           hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
     }
   }
 
-  return right_hand_side;
+  return right_hand_side + assemble_rhs_from_coeffs(hyper_edge.data.coeffs, hyper_edge);
 }  // end of DiffusionParab::assemble_rhs_from_global_rhs
 
 // -------------------------------------------------------------------------------------------------
