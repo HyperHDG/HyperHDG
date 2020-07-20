@@ -35,7 +35,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
