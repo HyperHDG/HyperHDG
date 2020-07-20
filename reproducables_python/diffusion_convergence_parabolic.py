@@ -52,7 +52,7 @@ def diffusion_test(poly_degree, dimension, iteration):
             "double", "vector[double]"], filenames )
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,1.] ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,delta_time] )
   helper = helper_class(HDG_wrapper, delta_time)
 
   # Generate right-hand side vector.

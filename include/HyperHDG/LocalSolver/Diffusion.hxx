@@ -1595,8 +1595,6 @@ class DiffusionParab
 {
  public:
 
-  typedef struct empty_class {} data_type;
-
   typedef lSol_float_t solver_float_t;
 
   // ---------------------------------------------------------------------------------------------
@@ -1880,6 +1878,11 @@ class DiffusionParab
   // Public functions (and one typedef) to be utilized by external functions.
   // ---------------------------------------------------------------------------------------------
 
+  typedef struct save_old_state
+  {
+    std::array<lSol_float_t, n_loc_dofs_> old_state;
+  } data_type;
+  
   /*!*********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    **********************************************************************************************/
