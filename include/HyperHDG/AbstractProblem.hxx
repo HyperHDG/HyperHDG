@@ -57,7 +57,8 @@ class AbstractProblem
     /*!*********************************************************************************************
      * \brief   Instantiation of a hypergraph.
      **********************************************************************************************/
-    HDGHyperGraph < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT, NodeDescriptorT >
+    HDGHyperGraph
+    < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT, NodeDescriptorT, typename LocalSolverT::data_type >
     hyper_graph_;
     /*!*********************************************************************************************
      * \brief   Vector containing the indices of Dirichlet type nodes.

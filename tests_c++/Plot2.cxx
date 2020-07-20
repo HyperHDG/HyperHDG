@@ -33,7 +33,7 @@ void test()
   
   typedef LocalSolverTemplate<edge_dim,double> Solver;
   Solver lsolver;
-  typedef HDGHyperGraph<Solver::n_glob_dofs_per_node(),Topo,Geo,Node>HDG;
+  typedef HDGHyperGraph<Solver::n_glob_dofs_per_node(),Topo,Geo,Node,typename Solver::data_type>HDG;
   HDG hdg_graph(topo, geo, node);
   vector<double> vectorDirichlet(hdg_graph.n_global_dofs());
   

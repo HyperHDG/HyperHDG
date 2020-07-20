@@ -35,6 +35,9 @@ template <unsigned int hyEdge_dimT,
 class Diffusion_TensorialUniform
 {
  public:
+
+  typedef struct empty_class {} data_type;
+
   typedef lSol_float_t solver_float_t;
 
   /*!*********************************************************************************************
@@ -551,6 +554,10 @@ template <unsigned int hyEdge_dimT,
 class Diffusion
 {
  public:
+
+
+  typedef struct empty_class {} data_type;
+  
   typedef lSol_float_t solver_float_t;
 
   // ---------------------------------------------------------------------------------------------
@@ -1587,6 +1594,9 @@ template <unsigned int hyEdge_dimT,
 class DiffusionParab
 {
  public:
+
+  typedef struct empty_class {} data_type;
+
   typedef lSol_float_t solver_float_t;
 
   // ---------------------------------------------------------------------------------------------
