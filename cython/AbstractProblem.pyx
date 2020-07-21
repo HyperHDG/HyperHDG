@@ -31,7 +31,7 @@ cdef class PythonClassName :
   def total_flux_vector(self, vec, time = 0.):
     return self.thisptr.total_flux_vector (vec, time)
   def set_data(self, vec, time = 0.):
-    self.thisptr.total_flux_vector (vec, time)
+    self.thisptr.set_data (vec, time)
   def initial_flux_vector(self, vec, time = 0.):
     return self.thisptr.initial_flux_vector (vec, time)
   def mass_matrix_multiply(self, vec, time = 0.):
