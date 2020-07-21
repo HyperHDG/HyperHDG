@@ -39,6 +39,8 @@ class bilaplacian_uniform
 {
   public:
 
+    typedef struct empty_class {} data_type;
+
     typedef lSol_float_t solver_float_t;
 
     /*!*********************************************************************************************
@@ -610,7 +612,9 @@ template
 class bilaplacian
 {
   public:
-  
+    
+    typedef struct empty_class {} data_type;
+    
     typedef lSol_float_t solver_float_t;
 
     // ---------------------------------------------------------------------------------------------

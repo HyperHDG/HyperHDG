@@ -57,7 +57,8 @@ class AbstractProblem
     /*!*********************************************************************************************
      * \brief   Instantiation of a hypergraph.
      **********************************************************************************************/
-    HDGHyperGraph < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT, NodeDescriptorT >
+    HDGHyperGraph
+    < LocalSolverT::n_glob_dofs_per_node(), TopologyT, GeometryT, NodeDescriptorT, typename LocalSolverT::data_type >
     hyper_graph_;
     /*!*********************************************************************************************
      * \brief   Vector containing the indices of Dirichlet type nodes.
@@ -222,7 +223,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t> matrix_vector_multiply
-    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -285,7 +286,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t> total_flux_vector
-    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -358,6 +359,77 @@ class AbstractProblem
 
       return vec_Ax;
     }
+
+
+    /*!*********************************************************************************************
+     * \brief   Evaluate condensed matrix-vector product.
+     *
+     * Function that evaluates the condensed, matrix-free version of the matrix-vector product
+     * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
+     * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
+     * resulting vector, which has the same size as the input vector \f$x\f$.
+     *
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+     **********************************************************************************************/
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    void set_data
+    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. )
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
+      
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+      
+      // Do matrix--vector multiplication by iterating over all hyperedges.
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+          >::value
+        )
+        {
+          if constexpr
+          ( 
+            has_set_data
+            < LocalSolverT,
+              void
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+            >::value
+          )
+            local_solver_.set_data(hyEdge_dofs, time);
+          else hy_assert( false , "This is not implemented" );
+        }
+        else
+        {
+          if constexpr
+          ( 
+            has_set_data
+            < LocalSolverT,
+              void
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                decltype(hyper_edge)& )
+            >::value
+          )
+            local_solver_.set_data(hyEdge_dofs, hyper_edge, time);
+          else hy_assert( false , "This is not implemented" );
+        }
+      });
+    }
+
+
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
      *
@@ -371,7 +443,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t> initial_flux_vector
-    ( const std::vector<dof_value_t>& x_vec, const dof_index_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec, const dof_index_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -457,7 +529,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t> mass_matrix_multiply
-    ( const std::vector<dof_value_t>& x_vec , const dof_value_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec , const dof_value_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -543,7 +615,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     std::vector<dof_value_t> total_mass_vector
-    ( const std::vector<dof_value_t>& x_vec , const dof_value_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec , const dof_value_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -627,7 +699,7 @@ class AbstractProblem
      **********************************************************************************************/
     template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
     dof_value_t calculate_L2_error
-    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. ) const
+    ( const std::vector<dof_value_t>& x_vec, const dof_value_t time = 0. )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -704,7 +776,7 @@ class AbstractProblem
       const std::vector<dof_value_t>& x_vec_old,
       const dof_value_t delta_time,
       const dof_value_t time
-    )  const
+    )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
@@ -842,6 +914,6 @@ class AbstractProblem
      * \retval  file          A file in the output directory.
      **********************************************************************************************/
     template < typename dof_value_t >
-    void plot_solution( const std::vector<dof_value_t>& lambda, const dof_value_t time = 0. ) const
+    void plot_solution( const std::vector<dof_value_t>& lambda, const dof_value_t time = 0. )
     { plot(hyper_graph_, local_solver_, lambda , plot_options, time ); }
 }; // end of class AbstractProblem
