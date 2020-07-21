@@ -1055,7 +1055,7 @@ Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract c
 The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the inidvidual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
 % 
 % ---------------------------------------------------------------------
-\section{Parabolic diffusion equation}
+\section{Parabolic diffusion equation}\arwarning{Only $\theta = 1$ has been implemented.}
 % ---------------------------------------------------------------------
 % 
 Next, we solve the parabolic diffusion equation, i.e., we want that for all $\edge \in \setEdge$ and adjacent $\node \in \setNode$

@@ -52,25 +52,25 @@ def diffusion_test(poly_degree, dimension, iteration):
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
-    HDG_wrapper.set_data(vectorSolution, time_step * delta_time)
+    if time_step > 0:
+      HDG_wrapper.set_data(vectorSolution, time_step * delta_time)
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
     vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    [vectorSolutionN, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
+    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
     if num_iter != 0:
       print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
             ". Trying GMRES!")
-      [vectorSolution, num_iter] = \
-        sp_lin_alg.gmres(A,vectorRHS,tol=1e-9)
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-9)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
         sys.exit("Program failed!")
-
+    
   # Print error.
-  error = HDG_wrapper.calculate_L2_error_temp(vectorSolution, vectorSolution, delta_time, 1.)
+  error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
   print( "Iteration: ", iteration, " Error: ", error )
   f = open("output/diffusion_convergence_parabolic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
@@ -92,7 +92,7 @@ def main():
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(1,6):
+      for iteration in range(6):
         diffusion_test(poly_degree, dimension, iteration)
 
 

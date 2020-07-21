@@ -1557,6 +1557,10 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_va
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
+ * 
+ * \todo    THETA MUST BE ONE AT THE MOMENT!
+ * 
+ * 
  * This class contains the local solver for an isotropic diffusion equation, i.e.,
  * \f[
  *  - \nabla \cdot ( d \nabla u = f \quad \text{ in } \Omega, \qquad
@@ -2031,6 +2035,11 @@ class DiffusionParab
               .template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
                 j, i, hyper_edge.geometry, time);
     }
+    
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      hyper_edge.data.coeffs[hyEdge_dimT * n_shape_fct_ + i]
+        = integrator.template integrate_volUni_phifunc<decltype(hyEdgeT::geometry), parameters::initial>(
+                i, hyper_edge.geometry, time);
 
     return bdr_values;
   }
@@ -2375,7 +2384,8 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
           += theta_ * delta_t_ * normal_int_vec[dim];
       }
 
-      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) += vol_integral;
+      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) 
+        += integrator.template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
 
     }
   }
