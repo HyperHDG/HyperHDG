@@ -33,18 +33,17 @@ def diffusion_test(poly_degree, dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * 3, tau= (2**iteration) ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * 3 )
 
   # Generate right-hand side vector.
-  vectorRHS = [-i for i in HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector())]
+  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
 
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
+  # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
@@ -55,7 +54,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "fileName" , "diff_c_he-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(vectorSolution);

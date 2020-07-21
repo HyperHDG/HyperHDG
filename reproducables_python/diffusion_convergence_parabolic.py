@@ -60,11 +60,11 @@ def diffusion_test(poly_degree, dimension, iteration):
                  (time_step+1) * delta_time), -1.)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
+    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
     if num_iter != 0:
       print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
             ". Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-9)
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
         sys.exit("Program failed!")
@@ -78,7 +78,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_c-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "fileName" , "diff_c_p-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(vectorSolution, 1.);
