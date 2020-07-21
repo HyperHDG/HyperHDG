@@ -137,6 +137,7 @@
 \newcommand{\mass}{\ensuremath{\mathfrak m}}
 \newcommand{\eigenval}{\ensuremath{\underline \lambda}}
 \newcommand{\deltat}{\ensuremath{(\Delta t)}}
+\newcommand{\D}{\ensuremath{\textup D}}
 
 % ---------------------------------------------------------------------------
 
@@ -1108,7 +1109,7 @@ where the right-hand side has the form
  (\bigstar) ~=~ & \theta \deltat \int_{\Edge} f^n v \dx + (1 - \theta) \deltat \int_\Edge f^{n-1} v \dx \\
  & + \int_\Edge U^{n-1} v \dx + \deltat (1-\theta) \int_\Edge \vec Q^{n-1} \cdot \Nabla v \dx \\
  & - \deltat (1-\theta) \int_{\partial \Edge} ( \vec Q^{n-1} \cdot \Normal + \tau  (U^{n-1} - \hat U^{n-1} ) v \ds,
-\end{align*}
+\end{align*}\arnote{Based on this, it might be wise to save the evaluated testing of $\localQ$ instead of its coefficients.}
 % 
 and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \localU^{n-1} f^{n-1}$ is the full HDG approximation of $u$ at time step $n$. The same holds for $\vec Q^{n-1}$, while $\hat U^{n-1}$ is $u^{n-1}_\textup D$ on Dirichlet nodes and $\lambda^{n-1}$ otherwise. \eqref{EQ:hdg_f_parab} induces the operators $\localU f$ \& $\localQ f$ in whose representation, the time step and the dependency on the old time step's solution is neglected. The global closing condition is formualted as \eqref{EQ:hdg_global}, i.e.,
 % 
@@ -1119,6 +1120,73 @@ and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \
 Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-interpretation of the local solution operators in each time step.
 
 The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
+% 
+% ---------------------------------------------------------------------
+\section{Diffusive eigenvalue problem}
+% ---------------------------------------------------------------------
+% 
+For the \emph{diffusive eigenvalue problem}, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that for all $\edge \in \setEdge$ and adjacent $\node \in \setNode$ the following set of equations holds:
+% 
+\begin{subequations}\label{EQ:diffusion_eigen}
+\begin{align}
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
+ \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
+  u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
+ \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir.
+\end{align}
+\end{subequations}
+% 
+Equation \eqref{EQ:diffusion_eigen} induces a single local solver based on
+% 
+\begin{subequations}\label{EQ:hdg_scheme_eigen}
+ \begin{align}
+  \int_\Edge \frac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds \label{EQ:hdg_primary_parab}\\
+  - \eigenval \int_\Edge U_\Edge v \dx - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx \quad \notag\\
+  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) v \ds
+  & = \tau \int_{\partial \Edge} \lambda v \ds \label{EQ:hdg_flux_parab}
+ \end{align}
+\end{subequations}
+% 
+However, the operators $\localU(\lambda, \eigenval)$ and $\localQ(\lambda, \eigenval)$ depend on the skeletal variable $\lambda$ and the possible eigenvalue $\eigenval$. Hence, their linearity is gone. The conservation condition 
+% 
+\begin{align*}
+ f_\mu(\lambda,\eigenval) := & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds \\
+ = & \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node g_\textup N \mu \ds = 0.
+\end{align*}
+% 
+complements the problem, for which we also have that $\eigenval$ is an unique value (i.e. does not vary across the different elements). Thus, the problem cannot be square, since we have one additional degree of freedom as compared to Section \ref{SEC:HDG_form} and use this degree of freedom to propose that
+% 
+\begin{equation*}
+ f_0 := \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node \lambda^2 \ds = 1
+\end{equation*}
+% 
+saying that we seek a strangely normalized eigenfunction. Now the problem is square again, and we can try to solve it as some non-linear problem, i.e., using Newton's method. The Gateaux (directional) derivative of $f = (f_0,f_\mu)$ at $(\lambda, \eigenval)$ in direction $(\eta, \underline \eta)$ can be calculated as
+% 
+\begin{equation*}
+ \D f_0 [(\lambda, \eigenval);(\eta, \underline \eta)] = \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node 2 \lambda \eta \ds
+\end{equation*}
+% 
+for the first part of the function and
+% 
+\begin{subequations}\label{EQ:Gateaux_eigs}
+\begin{equation}
+ \D f_\mu [\ldots] = f_\mu(\eta,\eigenval) + \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q'(\underline \eta) \cdot \Normal + \tau \localU'(\underline \eta) \right] \mu \ds
+\end{equation}
+%
+where $\localU'$ and $\localQ'$ denote the respective Gateaux derivatives of $\localU(\lambda, \eigenval)$ and $\localQ(\lambda, \eigenval)$ in direction $\underline \eta$. Thus, we have to derive the local solver with respect to $\eigenval$. To do so, we observe that $\localU_\Edge$ and $\localQ_\Edge$ from \eqref{EQ:hdg_scheme_eigen} can actually be written as
+% 
+\begin{equation*}
+ \mathcal A (\eigenval) \begin{pmatrix} \localQ_\Edge \\ \localU_\Edge \end{pmatrix} = \mathcal B(\lambda),
+\end{equation*}
+% 
+where $\mathcal A: \eigenval \in \IR \to \operatorname L[ \vec W \times V, \vec W \times V ] \ni \mathcal A(\eigenval)$ is a mapping of the real numbers to the linear operators that act on $\vec W \times V$, while $\mathcal B$ is a linear mapping to $\vec W \times V$. Thus
+% 
+\begin{equation}
+ \begin{pmatrix} \localQ'_\Edge(\underline \eta) \\ \localU'_\Edge (\underline \eta) \end{pmatrix} = - [\mathcal A(\eigenval)]^{-2} \begin{pmatrix} 0 & 0 \\ 0 & - \underline \eta \int_\Edge \varphi_j v_i \dx \end{pmatrix} \mathcal B(\lambda),
+\end{equation}
+\end{subequations}
+% 
+in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. This also indicates an appropriate implementation, while function valued arguments work analogously.\arwarning{To be checked.}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
