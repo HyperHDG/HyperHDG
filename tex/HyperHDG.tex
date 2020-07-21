@@ -1065,7 +1065,7 @@ Next, we solve the parabolic diffusion equation, i.e., we want that for all $\ed
  \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge,\label{EQ:primal_dual_parab}\\
  \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\label{EQ:div_is_f_parab}\\
  u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\label{EQ:dir_cond_parab}\\
- \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \setNodeDir,\label{EQ:neu_cond_parab}\\
+ \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_parab}\\
  u(0,\cdot) & = u_0 && \text{ in } \Edge.\label{EQ:initial_parab}
 \end{align}
 \end{subequations}
@@ -1089,11 +1089,13 @@ This transforms the local problem \eqref{EQ:hdg_scheme} to
  \end{align}
 \end{subequations}
 % 
-for the skeletal unknown and Dirichlet data, respectively (cf. Section \ref{SEC:HDG_form}). The local problem \eqref{EQ:hdg_f} is further adapted to also account for $u^{n-1}$ and $(1-\theta) \Div \vec q^{n-1}_\Edge$, i.e.,
+for the skeletal unknown and Dirichlet data, respectively. \eqref{EQ:hdg_scheme_parab} also induces the operators $\localU \lambda$, $\localQ \lambda$ and $\localU u_\textup D$, $\localQ u_\textup D$, respectively (cf. Section \ref{SEC:HDG_form} for further details).
+
+The local problem \eqref{EQ:hdg_f} is further adapted to also account for $u^{n-1}$ and $(1-\theta) \Div \vec q^{n-1}_\Edge$, i.e.,
 % 
 \begin{subequations}\label{EQ:hdg_f_parab}
  \begin{align}
-  \int_\Edge \tfrac{1}{d^n} \vec Q^n_\Edge \cdot \vec p \dx - \int_\Edge U^n_\Edge \Div \vec p \dx & = 0 \label{EQ:hdg_f_primary_parab}\\
+  \int_\Edge \frac{1}{d^n} \vec Q^n_\Edge \cdot \vec p \dx - \int_\Edge U^n_\Edge \Div \vec p \dx & = 0 \label{EQ:hdg_f_primary_parab}\\
   \int_\Edge U_\Edge^n v \dx - \deltat \theta \int_\Edge \vec Q^n_\Edge \cdot \Nabla v \dx \quad \notag\\
   + \deltat \theta \int_{\partial \Edge} ( \vec Q^n_\Edge \cdot \Normal + \tau  U^n_\Edge ) v \ds
   & = (\bigstar)\label{EQ:hdg_f_flux_parab},
@@ -1103,15 +1105,18 @@ for the skeletal unknown and Dirichlet data, respectively (cf. Section \ref{SEC:
 where the right-hand side has the form
 % 
 \begin{align*}
- (\bigstar) ~=~ & \deltat \int_{\Edge} f v \dx + \int_\Edge U^{n-1} v \dx + \deltat (1-\theta) \int_\Edge \vec Q^{n-1} \cdot \Nabla v \dx \\
+ (\bigstar) ~=~ & \theta \deltat \int_{\Edge} f^n v \dx + (1 - \theta) \deltat \int_\Edge f^{n-1} v \dx \\
+ & + \int_\Edge U^{n-1} v \dx + \deltat (1-\theta) \int_\Edge \vec Q^{n-1} \cdot \Nabla v \dx \\
  & - \deltat (1-\theta) \int_{\partial \Edge} ( \vec Q^{n-1} \cdot \Normal + \tau  (U^{n-1} - \hat U^{n-1} ) v \ds,
 \end{align*}
 % 
-where conversely $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \localU^{n-1} f^{n-1}$ is the full HDG approximation of $u$ at time step $n$. The same holds for $\vec Q^{n-1}$, while $\hat U^{n-1}$ is $u^{n-1}_\textup D$ on Dirichlet nodes and $\lambda^{n-1}$ otherwise. The global closing condition is formualted as \eqref{EQ:hdg_global}, i.e.,
+and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \localU^{n-1} f^{n-1}$ is the full HDG approximation of $u$ at time step $n$. The same holds for $\vec Q^{n-1}$, while $\hat U^{n-1}$ is $u^{n-1}_\textup D$ on Dirichlet nodes and $\lambda^{n-1}$ otherwise. \eqref{EQ:hdg_f_parab} induces the operators $\localU f$ \& $\localQ f$ in whose representation, the time step and the dependency on the old time step's solution is neglected. The global closing condition is formualted as \eqref{EQ:hdg_global}, i.e.,
 % 
 \begin{equation*}
  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q^n \cdot \Normal + \tau (U^n - \lambda^n) \right] \mu \ds = \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node g^n_\textup N \mu \ds.
 \end{equation*}
+
+Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-interpretation of the local solution operators in each time step.
 
 The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
 % 
