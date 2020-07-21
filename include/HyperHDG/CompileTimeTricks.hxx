@@ -305,7 +305,7 @@ struct has_set_data<C, Ret(Args...)>
     template<typename T>
     static constexpr auto check(T*)
     -> typename std::is_same
-      < decltype( std::declval<T>().lambda_values( std::declval<Args>()... ) ), Ret >
+      < decltype( std::declval<T>().set_data( std::declval<Args>()... ) ), Ret >
       ::type;
   
     template<typename>
