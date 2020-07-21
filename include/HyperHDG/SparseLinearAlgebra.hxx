@@ -163,7 +163,7 @@ void linear_combination ( const dof_value_t leftFac,  const std::vector<dof_valu
  **************************************************************************************************/
 template<class ProblemT, typename dof_value_t = double >
 std::vector<dof_value_t> conjugate_gradient
-( const std::vector<dof_value_t>& b, const ProblemT& problem,
+( const std::vector<dof_value_t>& b, ProblemT& problem,
   unsigned int n_iterations = 0, const dof_value_t tolerance = 1e-9 )
 {
   std::vector<dof_value_t> x (b.size(), (dof_value_t) 0.);

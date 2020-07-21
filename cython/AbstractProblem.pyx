@@ -2,24 +2,24 @@
 
 cdef class PythonClassName :
   cdef CythonClassName *thisptr # hold a C++ instance which we're wrapping
-  def __cinit__(self, topo_constr, geom_constr = 'default', tau = 'default'):
+  def __cinit__(self, topo_constr, geom_constr = 'default', lsol_constr = 'default'):
     if geom_constr == 'default':
       if isinstance(topo_constr,str): # Python3 version - use unicode for Python 2
         topo_constr = topo_constr.encode()
-      if tau == 'default':
+      if lsol_constr == 'default':
         self.thisptr = new CythonClassName (topo_constr)
       else:
-        self.thisptr = new CythonClassName (topo_constr, tau)
+        self.thisptr = new CythonClassName (topo_constr, lsol_constr)
     else:
       if isinstance(topo_constr,str): # Python3 version - use unicode for Python 2
         topo_constr = topo_constr.encode()
       if isinstance(geom_constr,str): # Python3 version - use unicode for Python 2
         geom_constr = geom_constr.encode()
-      if tau == 'default':
-        print("Python defaults tau to 1 and might overwrite C++ settings at this point.\n")
-        self.thisptr = new CythonClassName (topo_constr, geom_constr, 1.)
+      if lsol_constr == 'default':
+        print("Python defaults lsol_constr to 1 and might overwrite C++ settings at this point.\n")
+        #self.thisptr = new CythonClassName (topo_constr, geom_constr, 1.)
       else:
-        self.thisptr = new CythonClassName (topo_constr, geom_constr, tau)
+        self.thisptr = new CythonClassName (topo_constr, geom_constr, lsol_constr)
   def __dealloc__(self):
     del self.thisptr
   def read_dirichlet_indices(self, indices):
@@ -30,6 +30,8 @@ cdef class PythonClassName :
     return self.thisptr.matrix_vector_multiply (vec, time)
   def total_flux_vector(self, vec, time = 0.):
     return self.thisptr.total_flux_vector (vec, time)
+  def set_data(self, vec, time = 0.):
+    self.thisptr.set_data (vec, time)
   def initial_flux_vector(self, vec, time = 0.):
     return self.thisptr.initial_flux_vector (vec, time)
   def mass_matrix_multiply(self, vec, time = 0.):

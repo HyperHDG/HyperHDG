@@ -180,8 +180,10 @@ string cythonize
           outfile << word << " ";
           linestream >> word;
           unsigned int replace_number = stoi(word);
-          hy_assert ( replace_number + 2 > names.size() && replace_number <= 99 ,
-                      "The number of rplacements must be larger than their given amount." );
+          hy_assert ( replace_number + 3 > names.size() && replace_number <= 99 ,
+                      "The number of rplacements must be larger than their given amount."
+                      << std::endl << "Replace number = " << replace_number << ". Names size = "
+                      << names.size()  << "." );
           names.resize( replace_number + 2 );
         }
         else if (word.size() == 12 && word.substr(0,9) == "CyReplace" && word.substr(11,12) == ":")
