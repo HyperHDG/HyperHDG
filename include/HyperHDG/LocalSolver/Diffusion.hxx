@@ -2465,6 +2465,9 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
         + (1 - theta_) * delta_t_ * integrator
           .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
             i, hyper_edge.geometry, time - delta_t_);
+            
+    // THIS HAS TO BE EXTENDED FOR THETA != 1
+            
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
