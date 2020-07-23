@@ -28,6 +28,8 @@ cdef class PythonClassName :
     return self.thisptr.return_zero_vector[ CyReplace03 ] ()
   def matrix_vector_multiply(self, vec, time = 0.):
     return self.thisptr.matrix_vector_multiply (vec, time)
+  def matrix_vector_der_multiply(self, vec, eig, vec_val, eig_val):
+    return self.thisptr.matrix_vector_der_multiply (vec, eig, vec_val, eig_val)
   def total_flux_vector(self, vec, time = 0.):
     return self.thisptr.total_flux_vector (vec, time)
   def set_data(self, vec, time = 0.):

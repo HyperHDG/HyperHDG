@@ -273,6 +273,108 @@ class AbstractProblem
     
       return vec_Ax;
     }
+    
+    /*!*********************************************************************************************
+     * \brief   Evaluate condensed matrix-vector product.
+     *
+     * Function that evaluates the condensed, matrix-free version of the matrix-vector product
+     * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
+     * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
+     * resulting vector, which has the same size as the input vector \f$x\f$.
+     *
+     * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
+     * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+     **********************************************************************************************/
+    template < typename hyNode_index_t = dof_index_t, typename dof_value_t >
+    std::vector<dof_value_t> matrix_vector_der_multiply
+    ( 
+      const std::vector<dof_value_t>& x_vec, const dof_value_t eig,
+      const std::vector<dof_value_t>& x_val, const dof_value_t eig_val
+    )
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
+      
+      std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs, hyEdge_vals;
+      
+      // Do matrix--vector multiplication by iterating over all hyperedges.
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_dofs[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyEdge_vals[hyNode] = 
+            hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_val);
+        
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr
+        ( 
+          not_uses_geometry
+          < LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+            ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>& )
+          >::value
+        )
+        {
+          if constexpr
+          ( 
+            has_flux_der
+            < LocalSolverT,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                dof_value_t,
+                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                dof_value_t)
+            >::value
+          )
+            hyEdge_dofs = local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val);
+          else hy_assert( false , "This is not implemented" );
+        }
+        else
+        {
+          if constexpr
+          ( 
+            has_flux_der
+            < LocalSolverT,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
+              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                dof_value_t,
+                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+                dof_value_t,
+                decltype(hyper_edge)& )
+            >::value
+          )
+            hyEdge_dofs = 
+              local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val, hyper_edge);
+          else hy_assert( false , "This is not implemented" );
+        }
+        
+        // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
+        for ( unsigned int hyNode = 0 ; hyNode < hyEdge_hyNodes.size() ; ++hyNode )
+          hyper_graph_.hyNode_factory().add_to_dof_values
+            (hyEdge_hyNodes[hyNode], vec_Ax, hyEdge_dofs[hyNode]);
+      });
+      
+      // Set all Dirichlet values to zero.
+      for ( dof_index_t i = 0 ; i < dirichlet_indices_.size() ; ++i )
+      {
+        hy_assert( dirichlet_indices_[i] >= 0 
+                     && dirichlet_indices_[i] < hyper_graph_.n_global_dofs() ,
+                   "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                   << "smaller than the total amount of degrees of freedom." << std::endl
+                   << "In this case, the index is " << dirichlet_indices_[i] << " and the total " <<
+                   "amount of hypernodes is " << hyper_graph_.n_global_dofs() << "." );
+        vec_Ax[dirichlet_indices_[i]] = 0.;
+      }
+    
+      return vec_Ax;
+    }
+    
     /*!*********************************************************************************************
      * \brief   Evaluate condensed matrix-vector product.
      *

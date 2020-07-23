@@ -669,15 +669,15 @@ Obviously, the HDG method for elliptic diffusion problems is consistent with res
  The rest might work similar to standard HDG, I do not really know and believe this is not urgent.
 \end{envarnote}
 % 
-\subsection{Numerical convergence tests}\arnote{All numbers (errors and orders) are rounded down!}
+\subsection{Numerical convergence tests}
 % 
-Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the different problems described in Section \ref{SEC:diff_types}. First, we consider the elliptic problem
+Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the elliptic problem
 % 
 \begin{equation}
  - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
 \end{equation}
 % 
-where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^i$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
+where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
 % 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -688,29 +688,25 @@ where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
   & $i = 0$ && 6.80e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 1$ && 1.86e-2 & 1.9 && 1.14e-3 & 2.8 && 5.55e-5 & 3.9  \\
+  & $i = 2$ && 4.92e-3 & 1.9 && 1.51e-4 & 2.9 && 3.63e-6 & 3.9  \\
+  & $i = 3$ && 1.27e-3 & 2.0 && 1.94e-5 & 3.0 && 2.31e-7 & 4.0  \\
+  & $i = 4$ && 3.22e-4 & 2.0 && 2.46e-6 & 3.0 && 1.46e-8 & 4.0  \\
+  & $i = 5$ && 8.13e-5 & 2.0 && 3.09e-7 & 3.0 && 9.19e-10& 4.1  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
   & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 3.63e-8 & 4.5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 4.49e-7 & 3.1 && 1.99e-9 & 4.1  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && 5.48e-8 & 3.0 && 1.59e-9 & 0.3  \\
+  & $i = 1$ && 1.10e-2 & 1.3 && 7.74e-4 & 2.5 && 4.07e-5 & 3.6  \\
+  & $i = 2$ && 3.55e-3 & 1.6 && 1.18e-4 & 2.7 && 2.98e-6 & 3.8  \\
+  & $i = 3$ && 1.02e-3 & 1.8 && 1.66e-5 & 2.8 && 2.03e-7 & 3.9  \\
+  & $i = 4$ && 2.80e-4 & 1.9 && 2.21e-6 & 2.9 && 1.34e-8 & 3.9  \\
+  & $i = 5$ && 7.39e-5 & 1.9 && 2.88e-7 & 2.9 && 8.65e-10 & 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
 \end{table}
 
-Here, we recognize that the achieved orders of convergence perfectly fit to the expected results. However, we used the actually suboptimal $\tau \sim \tfrac{1}{h}$ as compared to $\tau \sim 1$.
-% 
-\begin{envarnote}{$\tau$}
- I do not know, which one is optimal for tensor products, but for simplices, the constant is best. However, I believe to remember that Sander Rhebergen said that this is not true for tensor product structures. I am not sure, however.
-\end{envarnote}
+Here, we recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
 
 Next, we consider
 % 
@@ -727,7 +723,7 @@ where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\
   \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
   \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  $i = 0$ && 8.24e-2 & --- && 5.83e-2 & --- && 2.38e-2 & ---  \\
+  $i = 0$ && \textcolor{red}{8.24e-2} & --- && 5.83e-2 & --- && 2.38e-2 & ---  \\
   $i = 1$ && 3.09e-2 & 1.4 && 1.78e-2 & 1.7 && 5.95e-3 & 2.0  \\
   $i = 2$ && 1.28e-2 & 1.2 && 5.76e-3 & 1.6 && 1.48e-3 & 2.0  \\
   $i = 3$ && 5.79e-3 & 1.1 && 1.93e-3 & 1.5 && 3.72e-4 & 1.9  \\
@@ -775,10 +771,10 @@ Again, we can formally set up a system which is similar to Section~\ref{SEC:glob
 % 
 \begin{subequations}\label{EQ:forms_def_fu}
 \begin{equation}\label{EQ:glob_system_old}
- \tilde a(\lambda, \mu) ~=~ \tilde b(\mu) - \left[ \bar \mass (\lambda, \mu) + \bar b^\mass(\mu) \right]
+ a(\lambda, \mu) ~=~ b(\mu) + \left[ \bar \mass (\lambda, \mu) + \bar b^\mass(\mu) \right]
 \end{equation}
 % 
-with bilinear and linear forms $\tilde a$ and $\tilde b$ as described in \eqref{EQ:forms_def}, and
+with bilinear and linear forms $a$ and $b$ as described in \eqref{EQ:forms_def}, and
 % 
 \begin{align}
  \bar \mass (\lambda,\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}\\
@@ -792,37 +788,37 @@ of which $\bar \mass$ can be proven to be symmetric positive definite.
  This give the two $U_\Edge$ in the local solver different meanings. However it fits to the expected bilinear form. Moreover, it is highly doubtable, whether this is the accurate discretization for $p \ge 2$.
 \end{envarerror}
 % 
-\subsection{Restore positive definiteness of the induced systems}
-% 
-Defining the positive definite statically condensed stiffness bilinear form $a$ and the linear form $b$ as
-% 
-\begin{equation}\label{EQ:forms}
- a(\lambda, \mu) = - \tilde a(\lambda, \mu), \qquad b(\mu) = - \tilde b(\mu)
-\end{equation}
-% 
-allows to rewrite \eqref{EQ:glob_system_old} as
-% 
-\begin{equation}\label{EQ:glob_system_new}
- a(\lambda, \mu) = b(\mu) + \bar \mass(\lambda,\mu) + \bar b^\mass(\mu),
-\end{equation}
-% 
-where $a$ is a positive definite discretization of the laplacian and $\mass$ is a positive definite discretization of the mass matrix which is related to the laplacian.
-% 
-The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL2009} stating that
-% 
-\begin{equation}
- a(\lambda, \mu) = \sum_{\edge \in \setEdge} \left[ \int_\Edge \frac{1}{d} \localQ \lambda \; \localQ \mu \dx + \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \tau (\localU \lambda - \lambda) (\localU \mu - \mu) \ds \right],
-\end{equation}
-% 
-while the positive definiteness follows from the fact that $\bar \mass$ has, cf.~\cite[Thm.~2.1]{CockburnGL2009} with $d=-1$, 
-% 
-\begin{equation}\label{EQ:mass_theo}
- \bar \mass(\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \; \localU \mu \dx.
-\end{equation}
-% 
-\begin{remark}
- Again, we highlight that the discretized problem is completely artificial and only in order to motive the representation of $\mass$. It does not allow for an unique solution in general. Thus, a list of reasonable problems using the aformentioned considerations is given in the next section.
-\end{remark}
+% \subsection{Restore positive definiteness of the induced systems}
+% % 
+% Defining the positive definite statically condensed stiffness bilinear form $a$ and the linear form $b$ as
+% % 
+% \begin{equation}\label{EQ:forms}
+%  a(\lambda, \mu) = - \tilde a(\lambda, \mu), \qquad b(\mu) = - \tilde b(\mu)
+% \end{equation}
+% % 
+% allows to rewrite \eqref{EQ:glob_system_old} as
+% % 
+% \begin{equation}\label{EQ:glob_system_new}
+%  a(\lambda, \mu) = b(\mu) + \bar \mass(\lambda,\mu) + \bar b^\mass(\mu),
+% \end{equation}
+% % 
+% where $a$ is a positive definite discretization of the laplacian and $\mass$ is a positive definite discretization of the mass matrix which is related to the laplacian.
+% % 
+% The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL2009} stating that
+% % 
+% \begin{equation}
+%  a(\lambda, \mu) = \sum_{\edge \in \setEdge} \left[ \int_\Edge \frac{1}{d} \localQ \lambda \; \localQ \mu \dx + \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \tau (\localU \lambda - \lambda) (\localU \mu - \mu) \ds \right],
+% \end{equation}
+% % 
+% while the positive definiteness follows from the fact that $\bar \mass$ has, cf.~\cite[Thm.~2.1]{CockburnGL2009} with $d=-1$, 
+% % 
+% \begin{equation}\label{EQ:mass_theo}
+%  \bar \mass(\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \; \localU \mu \dx.
+% \end{equation}
+% % 
+% \begin{remark}
+%  Again, we highlight that the discretized problem is completely artificial and only in order to motive the representation of $\mass$. It does not allow for an unique solution in general. Thus, a list of reasonable problems using the aformentioned considerations is given in the next section.
+% \end{remark}
 % 
 \subsection{Different types of solvable problems}\label{SEC:diff_types}
 % 
@@ -1043,7 +1039,7 @@ An \code{HDG\-Hyper\-Graph} consists of four parts:
  \item Its \code{Topology} which is implemented as an abstact container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
  \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, etc.
  \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices of all of thei hypernodes describing them. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have indices 1 and 2, Neumann nodes \ldots.
- \item \begin{envarwarning}{Do we really want this?}A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aformentioned elliptic problem, its entries are empty, while for the following parabolic problem it contains the coefficients of $U$ and $\vec Q$ of the previous time step.\end{envarwarning}
+ \item \begin{envarwarning}{Do we really want this?}A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aformentioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain the coefficients of $U$ and $\vec Q$ of the previous time step.\end{envarwarning}
  \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
 \end{enumerate}
 % 
@@ -1059,15 +1055,15 @@ The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and t
 \section{Parabolic diffusion equation}\arwarning{Only $\theta = 1$ has been implemented.}
 % ---------------------------------------------------------------------
 % 
-Next, we solve the parabolic diffusion equation, i.e., we want that for all $\edge \in \setEdge$ and adjacent $\node \in \setNode$
+Next, we solve the parabolic diffusion equation, i.e., we want that
 % 
 \begin{subequations}\label{EQ:diffusion_parab}
 \begin{align}
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge,\label{EQ:primal_dual_parab}\\
- \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\label{EQ:div_is_f_parab}\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge \text{ with } \Edge \in \SetEdge,\label{EQ:primal_dual_parab}\\
+ \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge \text{ with } \Edge \in \SetEdge,\label{EQ:div_is_f_parab}\\
  u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\label{EQ:dir_cond_parab}\\
  \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_parab}\\
- u(0,\cdot) & = u_0 && \text{ in } \Edge.\label{EQ:initial_parab}
+ u(0,\cdot) & = u_0 && \text{ in } \Edge \in \SetEdge.\label{EQ:initial_parab}
 \end{align}
 \end{subequations}
 % 
@@ -1155,18 +1151,17 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
 \end{table}\arwarning{To be filled!}
-
 % 
 % ---------------------------------------------------------------------
 \section{Diffusive eigenvalue problem}
 % ---------------------------------------------------------------------
 % 
-For the \emph{diffusive eigenvalue problem}, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that for all $\edge \in \setEdge$ and adjacent $\node \in \setNode$ the following set of equations holds:
+For the \emph{diffusive eigenvalue problem}, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that
 % 
 \begin{subequations}\label{EQ:diffusion_eigen}
 \begin{align}
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
- \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge \in \SetEdge,\\
+ \Div \vec q & = \eigenval u && \text{ in } \Edge \in \SetEdge,\\
   u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
  \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir.
 \end{align}
@@ -1185,18 +1180,31 @@ Equation \eqref{EQ:diffusion_eigen} induces a single local solver based on
 % 
 However, the operators $\localU(\lambda, \eigenval)$ and $\localQ(\lambda, \eigenval)$ depend on the skeletal variable $\lambda$ and the possible eigenvalue $\eigenval$. Hence, their linearity is gone. The conservation condition 
 % 
-\begin{align*}
- f_\mu(\lambda,\eigenval) := & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds \\
- = & \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node g_\textup N \mu \ds = 0.
-\end{align*}
+\begin{equation*}
+ f_\mu (\lambda,\eigenval) := \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds \overset{!}= 0.
+\end{equation*}
 % 
 complements the problem, for which we also have that $\eigenval$ is an unique value (i.e. does not vary across the different elements). Thus, the problem cannot be square, since we have one additional degree of freedom as compared to Section \ref{SEC:HDG_form} and use this degree of freedom to propose that
 % 
 \begin{equation*}
- f_0 := \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node \lambda^2 \ds = 1
+ f_0(\lambda) := f_0 (\lambda,\eigenval) := \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node \lambda^2 \ds - 1 \overset{!}= 0
 \end{equation*}
 % 
-saying that we seek a strangely normalized eigenfunction. Now the problem is square again, and we can try to solve it as some non-linear problem, i.e., using Newton's method. The Gateaux (directional) derivative of $f = (f_0,f_\mu)$ at $(\lambda, \eigenval)$ in direction $(\eta, \underline \eta)$ can be calculated as
+saying that we seek a strangely normalized eigenfunction. Now the problem is square again, and we can try to solve it as some non-linear problem, i.e., using a fixed point iteration or Newton's method.
+% 
+\subsection{Fixed point iteration}
+% 
+For a fixed point iteration, we define $G$ for which we seek a fixed point, i.e. the pair $(\eigenval,\lambda)$, such that
+% 
+\begin{equation}
+ G(\eigenval, \lambda) = (\eigenval,\lambda)^T,
+\end{equation}
+% 
+where $G_\mu (\eigenval, \lambda) = f_\mu (\lambda, \eigenval) + \lambda_\mu$ and $G_0 (\eigenval, \lambda) = f_0 (\lambda) + \eigenval$.
+% 
+\subsection{Newton's method}
+% 
+The Gateaux (directional) derivative of $f = (f_0,f_\mu)$ at $(\lambda, \eigenval)$ in direction $(\eta, \underline \eta)$ can be calculated as
 % 
 \begin{equation*}
  \D f_0 [(\lambda, \eigenval);(\eta, \underline \eta)] = \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node 2 \lambda \eta \ds
@@ -1223,6 +1231,8 @@ where $\mathcal A: \eigenval \in \IR \to \operatorname L[ \vec W \times V, \vec 
 \end{subequations}
 % 
 in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. This also indicates an appropriate implementation, while function valued arguments work analogously.\arwarning{To be checked.}
+
+Newton's method then
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
