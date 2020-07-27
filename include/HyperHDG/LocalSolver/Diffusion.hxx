@@ -2652,6 +2652,45 @@ class DiffusionEigs
     return bdr_values;
   }
   
+    /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to matrix--vector multiplication.
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values Local part of vector x.
+   * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vecAx         Local part of vector A * x.
+   **********************************************************************************************/
+  template <class hyEdgeT>
+  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_initial(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    {
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          bdr_values[i][j] = 0.;
+      else
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          bdr_values[i][j] =
+            integrator
+              .template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
+                j, i, hyper_edge.geometry, time);
+    }
+
+    return bdr_values;
+  }
+  
   /*!*********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
@@ -2675,7 +2714,7 @@ class DiffusionEigs
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_vals, hyper_edge, eig); // f_mu(eta,lambda_)
+      solve_local_problem(lambda_values, hyper_edge, eig_val); // f_mu(eta,lambda_)
 
     std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
       primals(primal_at_boundary(coeffs, hyper_edge)), duals(dual_at_boundary(coeffs, hyper_edge));
@@ -2690,11 +2729,12 @@ class DiffusionEigs
                              tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
                              
     
-    coeffs = solve_local_problem(lambda_values, hyper_edge, eig);
-    for (unsigned int i = 0; i < hyEdge_dimT * n_shape_fct_; ++i)  coeffs[i] = 0.;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)  coeffs[hyEdge_dimT * n_shape_fct_ + i] *= eig_val;
+    coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
     
-    coeffs = (SmallVec<coeffs.size(),lSol_float_t>(coeffs) / assemble_loc_matrix(tau_, hyper_edge, eig)).data();
+    for (unsigned int i = 0; i < hyEdge_dimT * n_shape_fct_; ++i)  coeffs[i] = 0.;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)  coeffs[hyEdge_dimT * n_shape_fct_ + i] *= eig * hyper_edge.geometry.area();
+    
+    coeffs = (SmallVec<coeffs.size(),lSol_float_t>(coeffs) / assemble_loc_matrix(tau_, hyper_edge, eig_val)).data();
     
     primals = primal_at_boundary(coeffs, hyper_edge);
     duals   = dual_at_boundary(coeffs, hyper_edge);
