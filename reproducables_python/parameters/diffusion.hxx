@@ -244,7 +244,8 @@ struct TestParametersHomo
   { return 0.; }
   static param_float_t initial
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { param_float_t approx = 1.;
+  { 
+    param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
       approx *= sin(0.5 * pi * point[dim]) + 1e-7 * ((std::rand() % 201) - 100); // Random noise!
     return approx;
