@@ -671,15 +671,7 @@ Obviously, the HDG method for elliptic diffusion problems is consistent with res
 % 
 \subsection{Numerical convergence tests}
 % 
-Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the elliptic problem
-% 
-\begin{equation}
- - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
-\end{equation}
-% 
-where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
-% 
-\begin{table}
+\begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
   \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
@@ -706,17 +698,15 @@ where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
 \end{table}
 % 
-We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
-
-Next, we consider a convergence example on a real hypergraph. It is constructed to approximate
+Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the elliptic problem
 % 
 \begin{equation}
- - \Nabla \cdot (d \Nabla u) = f \text{ in } \Edge \in \SetEdge, \qquad u = u_\text D \text{ on } \Node \in \SetNodeDir,
+ - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
 \end{equation}
 % 
-where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
-% 
-\begin{table}
+where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
+
+\begin{table}[ht]
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
   \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
@@ -734,208 +724,7 @@ where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
 \end{table}
 % 
-Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.\arwarning{Why?}
-
-
-\begin{envarfatal}{This might be removed!}
-\subsection{An approximation to the statically condensed mass matrix}
-% 
-To construct the \emph{statically condensed mass matrix}, we consider \eqref{EQ:diffusion_mixed} in which $f$ as right-hand side of \eqref{EQ:div_is_f} is supposed to added to the unknown $u$, i.e.,
-% 
-\begin{subequations}\label{EQ:diffusion_fu_mixed}
-\begin{align}
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual_fu}\\
- \Div \vec q & = f + u && \text{ in } \Edge,\label{EQ:div_is_u}\\
-  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond_fu}\\
- \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_fu}
-\end{align}
-\end{subequations}
-% 
-\begin{remark}\label{REM:ex_reaction}
- We do not consider the existence of possible solutions of this systems, but note that if the $u$ on the right-hand side is replaced by $- ru$ with some non-negative function $r$ (denoted \emph{reaction rate}), the problem will again have an unique solution. Such as problem is called \emph{diffusion--reaction problem}.
-\end{remark}
-% 
-The discretization of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}, and global coupling condition \eqref{EQ:hdg_global} can be conducted exactly as described above. However, in addition to this, we need a local solver in which $f$ needs to be replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux} yielding the local problem
-% 
-\begin{subequations}\label{EQ:hdg_f_is_u}
- \begin{align}
-  \int_\Edge \tfrac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = 0, \label{EQ:hdg_fu_primary}\\
-  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau U_\Edge ) v \ds & =  \int_{\Edge} U_\Edge v \dx,\label{EQ:hdg_fu_flux}
- \end{align}
-\end{subequations}
-% 
-ultimately leading to the need to add $\localU (\localU \lambda + \localU u_\text D + \localU f)$ and $\localQ (\localU \lambda + \localU u_\text D + \localU f)$ to $\localU f$, since $U_\Edge$ in \eqref{EQ:hdg_f_is_u} is $\localU \lambda + \localU u_\text D + \localU f$. Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ as in \eqref{EQ:construct_unk} are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
-% 
-Again, we can formally set up a system which is similar to Section~\ref{SEC:glob_system}, namely
-% 
-\begin{subequations}\label{EQ:forms_def_fu}
-\begin{equation}\label{EQ:glob_system_old}
- a(\lambda, \mu) ~=~ b(\mu) + \left[ \bar \mass (\lambda, \mu) + \bar b^\mass(\mu) \right]
-\end{equation}
-% 
-with bilinear and linear forms $a$ and $b$ as described in \eqref{EQ:forms_def}, and
-% 
-\begin{align}
- \bar \mass (\lambda,\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}\\
- \bar b^\mass(\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU f + \localU u_\textup D) \cdot \Normal + \tau \localU (\localU f + \localU u_\textup D) \right] \mu \ds
-\end{align}
-\end{subequations}
-% 
-of which $\bar \mass$ can be proven to be symmetric positive definite.
-% 
-\begin{envarerror}{Problems}
- This give the two $U_\Edge$ in the local solver different meanings. However it fits to the expected bilinear form. Moreover, it is highly doubtable, whether this is the accurate discretization for $p \ge 2$.
-\end{envarerror}
-% 
-% \subsection{Restore positive definiteness of the induced systems}
-% % 
-% Defining the positive definite statically condensed stiffness bilinear form $a$ and the linear form $b$ as
-% % 
-% \begin{equation}\label{EQ:forms}
-%  a(\lambda, \mu) = - \tilde a(\lambda, \mu), \qquad b(\mu) = - \tilde b(\mu)
-% \end{equation}
-% % 
-% allows to rewrite \eqref{EQ:glob_system_old} as
-% % 
-% \begin{equation}\label{EQ:glob_system_new}
-%  a(\lambda, \mu) = b(\mu) + \bar \mass(\lambda,\mu) + \bar b^\mass(\mu),
-% \end{equation}
-% % 
-% where $a$ is a positive definite discretization of the laplacian and $\mass$ is a positive definite discretization of the mass matrix which is related to the laplacian.
-% % 
-% The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL2009} stating that
-% % 
-% \begin{equation}
-%  a(\lambda, \mu) = \sum_{\edge \in \setEdge} \left[ \int_\Edge \frac{1}{d} \localQ \lambda \; \localQ \mu \dx + \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \tau (\localU \lambda - \lambda) (\localU \mu - \mu) \ds \right],
-% \end{equation}
-% % 
-% while the positive definiteness follows from the fact that $\bar \mass$ has, cf.~\cite[Thm.~2.1]{CockburnGL2009} with $d=-1$, 
-% % 
-% \begin{equation}\label{EQ:mass_theo}
-%  \bar \mass(\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \; \localU \mu \dx.
-% \end{equation}
-% % 
-% \begin{remark}
-%  Again, we highlight that the discretized problem is completely artificial and only in order to motive the representation of $\mass$. It does not allow for an unique solution in general. Thus, a list of reasonable problems using the aformentioned considerations is given in the next section.
-% \end{remark}
-% 
-\subsection{Different types of solvable problems}\label{SEC:diff_types}
-% 
-With the knowledge of the previous subsections, we can easily approximate the solutions to the \emph{elliptic diffusion problem} \eqref{EQ:diffusion_mixed} using
-% 
-\begin{equation}
- a(\lambda, \mu) = b(\mu) \qquad \forall \mu \in \skeletalSpace
-\end{equation}
-% 
-with $a$ and $b$ defined via \eqref{EQ:forms_def} and \eqref{EQ:forms}.
-% 
-Moreover, we can solve the \emph{diffusion eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$ with
-% 
-\begin{subequations}\label{EQ:diffusion_eigen}
-\begin{align}
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\\
- \Div \vec q & = \eigenval u && \text{ in } \Edge,\\
-  u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
- \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,
-\end{align}
-\end{subequations}
-% 
-using the ARPACK package fed with the induced matrices of the variational equation
-% 
-\begin{equation}
- a(\lambda, \mu) = \eigenval \mass(\lambda,\mu)
-\end{equation}
-% 
-with $a$ as in \eqref{EQ:forms_def} and \eqref{EQ:forms}, and $\mass$ defined via \eqref{EQ:mass_def}. Since we have, Remark \ref{REM:ex_reaction}, we can deduce that $\lambda$ needs to be positive to solve this problem.
-% 
-Last, but not least, we are able to solve \emph{parabolic diffusion equations}
-% 
-\begin{subequations}\label{EQ:diffusion_parab}
-\begin{align}
- \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } (0,T) \times \Edge,\\
- \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge,\\
- u(0,\cdot) & = u_0 && \text{ in } \Edge,\\
-  u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\\
- \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \SetNodeDir,
-\end{align}
-\end{subequations}
-% 
-by rewriting those into the form of
-% 
-\begin{equation}
- \partial_t \left[ \mass(\lambda, \mu) + b^\mass(\mu) \right] + a(\lambda, \mu) = b(\mu)
-\end{equation}
-% 
-with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is constructed by $L^2$ projection of the trace of $u$ to the skeletal space $\skeletalSpace$.
-% 
-\begin{remark}[Implementation issues]\
- \begin{enumerate}
-  \item The reconstruction of the $u$ from $\lambda$ is not possible in this case any more. In the fully discrete case, one needs $\lambda$ at the current time step and $\lambda$ of the previous time step to approximate $\partial_t u$ (as difference ratio of the ``masses'') and $u$, afterwards.
-  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\end{envarwarning}
-  \item The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, parabolic versions of this problem can be constructed and solved using the aformentioned approaches.
- \end{enumerate}
-\end{remark}
-% 
-\begin{envarwarning}{State of implementation}
- The stiffness matrix and solving elliptic problems seems to work to me. However, the optimal choice of parameter $\tau$ seems to be $\tfrac{1}{h}$. This is not consistent with my standard knowledge and I wonder, whether this is because we are not on simplices.
-%  
- Solving parabolic problems also works out very well and both representations have been implemented. They give exactly the same results, which is what is to be expected. However, \eqref{EQ:mass_def} is much more performant than \eqref{EQ:mass_theo}. Thus, \eqref{EQ:mass_def} is used and the other version is commented in the hxx file.
-%  
- Solving eigenvalue problems works. However, the rates of convergence have not yet been checked. Moreover, major tricks need to be used, since our matrices are never definite (since Dirichlet nodes are included and set to be zero). This needs to be corrected by hand (cf. the helper class in reproducables\_python\/diffusion\_eigenvalues.py).
-\end{envarwarning}
-% 
-\subsection{Elliptic convergence analysis}
-% 
-Obviously, the HDG method for elliptic diffusion problems is consistent with respect to the solution guaranteed in Section \ref{SEC:ExUnique}.
-% 
-\begin{envarnote}{Analysis ideas.}
- The rest might work similar to standard HDG, I do not really know and believe this is not urgent.
-\end{envarnote}
-% 
-\subsection{Numerical convergence tests}%\arnote{All numbers (errors and orders) are rounded down!}
-% 
-Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the different problems described in Section \ref{SEC:diff_types}. First, we consider the elliptic problem
-% 
-\begin{equation}
- - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
-\end{equation}
-% 
-where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be $2^i$, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}.
-% 
-\begin{table}
- \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
-  \toprule
-  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
-  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && 6.80e-2 & --- && 8.20e-3 & --- && 8.04e-4 & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 3.63e-8 & 4.5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 4.49e-7 & 3.1 && 1.99e-9 & 4.1  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && 5.48e-8 & 3.0 && 1.59e-9 & 0.3  \\
-  \bottomrule
- \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
-\end{table}
-% 
-Here, we recognize that the achieved orders of convergence perfectly fit to the expected results. However, we used the actually suboptimal $\tau \sim \tfrac{1}{h}$ as compared to $\tau \sim 1$.
-% 
-\begin{envarnote}{$\tau$}
- I do not know, which one is optimal for tensor products, but for simplices, the constant is best. However, I believe to remember that Sander Rhebergen said that this is not true for tensor product structures. I am not sure, however.
-\end{envarnote}
-% 
-Next, we consider
+Next, we consider a convergence example on a real hypergraph. It is constructed to approximate
 % 
 \begin{equation}
  - \Nabla \cdot (d \Nabla u) = f \text{ in } \Edge \in \SetEdge, \qquad u = u_\text D \text{ on } \Node \in \SetNodeDir,
@@ -943,86 +732,7 @@ Next, we consider
 % 
 where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
 % 
-\begin{table}
- \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
-  \toprule
-  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
-  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
-  \midrule
-  $i = 0$ && 8.24e-2 & --- && 5.83e-2 & --- && 2.38e-2 & ---  \\
-  $i = 1$ && 3.09e-2 & 1.4 && 1.78e-2 & 1.7 && 5.95e-3 & 2.0  \\
-  $i = 2$ && 1.28e-2 & 1.2 && 5.76e-3 & 1.6 && 1.48e-3 & 2.0  \\
-  $i = 3$ && 5.79e-3 & 1.1 && 1.93e-3 & 1.5 && 3.72e-4 & 1.9  \\
-  $i = 4$ && 2.73e-3 & 1.0 && 6.64e-4 & 1.5 && \textcolor{red}{1.92e-9} & 4.2  \\
-  $i = 5$ && 1.32e-3 & 1.0 && 2.31e-4 & 1.5 && 1.12e-10& 4.0  \\
-  \bottomrule
- \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
-\end{table}
-% 
-Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$ and $\tfrac{1}{2}$ if $\locDim = 2$, respectively. The optimal order is obtained for $\locDim = 3$.
-% 
-For a parabolic test, we consider
-% 
-\begin{equation}
- \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
-\end{equation}
-% 
-with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}.
-% 
-\begin{table}
- \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
-  \toprule
-  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
-  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-  \bottomrule
- \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
-\end{table}%\arwarning{To be filled!}
-% 
-The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
-% 
-\begin{table}
- \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
-  \toprule
-  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
-  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
-  & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
-  & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
-  & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
-  & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
-  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && 4.99e-4 & 1.9  \\
-  \bottomrule
- \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv}
-\end{table}
-% 
-\begin{envarerror}{Is this possible?}
- Interestingly, the errors and orders of convergence appear to be almost independent of the degree of local polynomial approximation. This does not fit to \cite{GopalakrishnanLNP2014}.
-\end{envarerror}
-\end{envarfatal}
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.\arwarning{Why?}
 %
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
@@ -1051,8 +761,10 @@ Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract c
 The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the inidvidual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
 % 
 % ---------------------------------------------------------------------
-\section{Parabolic diffusion equation}\arwarning{Only $\theta = 1$ has been implemented.}
+\section{Related diffusion problems}
 % ---------------------------------------------------------------------
+% 
+\subsection{Parabolic diffusion equation}\arwarning{Only $\theta = 1$ has been implemented.}
 % 
 Next, we solve the parabolic diffusion equation, i.e., we want that
 % 
@@ -1116,15 +828,7 @@ Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-in
 
 The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
 
-For a parabolic convergence test, we consider
-% 
-\begin{equation}
- \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
-\end{equation}
-% 
-with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}.
-% 
-\begin{table}
+\begin{table}[ht]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
   \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
@@ -1151,11 +855,17 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
 \end{table}\arwarning{To be filled!}
 % 
-% ---------------------------------------------------------------------
-\section{Diffusive eigenvalue problem}
-% ---------------------------------------------------------------------
+For a parabolic convergence test, we consider
 % 
-For the \emph{diffusive eigenvalue problem}, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that
+\begin{equation}
+ \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
+\end{equation}
+% 
+with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
+% 
+\subsection{Diffusive eigenvalue problem}
+% 
+Next, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that
 % 
 \begin{subequations}\label{EQ:diffusion_eigen}
 \begin{align}
@@ -1170,10 +880,10 @@ Equation \eqref{EQ:diffusion_eigen} induces a single local solver based on
 % 
 \begin{subequations}\label{EQ:hdg_scheme_eigen}
  \begin{align}
-  \int_\Edge \frac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds \label{EQ:hdg_primary_parab}\\
+  \int_\Edge \frac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds\\
   - \eigenval \int_\Edge U_\Edge v \dx - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx \quad \notag\\
   + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) v \ds
-  & = \tau \int_{\partial \Edge} \lambda v \ds \label{EQ:hdg_flux_parab}
+  & = \tau \int_{\partial \Edge} \lambda v \ds
  \end{align}
 \end{subequations}
 % 
@@ -1189,20 +899,8 @@ complements the problem, for which we also have that $\eigenval$ is an unique va
  f_0(\lambda) := f_0 (\lambda,\eigenval) := \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node \lambda^2 \ds - 1 \overset{!}= 0
 \end{equation*}
 % 
-saying that we seek a strangely normalized eigenfunction. Now the problem is square again, and we can try to solve it as some non-linear problem, i.e., using a fixed point iteration or Newton's method.
-% 
-\subsection{Fixed point iteration}
-% 
-For a fixed point iteration, we define $G$ for which we seek a fixed point, i.e. the pair $(\eigenval,\lambda)$, such that
-% 
-\begin{equation}
- G(\eigenval, \lambda) = (\eigenval,\lambda)^T,
-\end{equation}
-% 
-where $G_\mu (\eigenval, \lambda) = f_\mu (\lambda, \eigenval) + \lambda_\mu$ and $G_0 (\eigenval, \lambda) = f_0 (\lambda) + \eigenval$.
-% 
-\subsection{Newton's method}
-% 
+saying that we seek a strangely normalized eigenfunction. Now the problem is square again, and we can try to solve it as some non-linear problem, i.e., using Newton's method.
+
 The Gateaux (directional) derivative of $f = (f_0,f_\mu)$ at $(\lambda, \eigenval)$ in direction $(\eta, \underline \eta)$ can be calculated as
 % 
 \begin{equation*}
@@ -1229,9 +927,168 @@ where $\mathcal A: \eigenval \in \IR \to \operatorname L[ \vec W \times V, \vec 
 \end{equation}
 \end{subequations}
 % 
-in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. This also indicates an appropriate implementation, while function valued arguments work analogously.\arwarning{To be checked.}
+in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. This also indicates an appropriate implementation, while function valued arguments work analogously.
 
-Newton's method then
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 1$ && 2.22e-0 & --- && 6.68e-2 & --- && 6.66e-4 & --- \\
+  & $i = 2$ && 2.84e-1 & 3.0 && 1.49e-3 & 5.5 && 4.30e-6 & 7.3  \\
+  & $i = 3$ && 2.90e-2 & 3.3 && 4.08e-5 & 5.2 && 3.07e-8 & 7.1  \\
+  & $i = 4$ && 3.25e-3 & 3.2 && 1.19e-6 & 5.1 && 2.31e-10 & 7.1  \\
+  & $i = 5$ && 3.85e-4 & 3.1 && 3.63e-8 & 5.0 && 6.45e-12& 5.2  \\
+  \midrule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 1$ && \textcolor{red}{7.47e-3} & --- && \textcolor{red}{4.36e-4} & --- && \textcolor{red}{2.15e-5} & ---  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:eigenvalue_conv}
+\end{table}
+% 
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value, we use the analytical result $u = \prod_{i=1}^\globDim \sin(\tfrac{1}{2} \pi x_i)$ and the correct eigenvalue with random, additive noise in all quadrature points and with respect to the eigenvalue. For realistic approximations, the question of how to generate a good starting value for Newton's method remains unanswered here, but is discussed in Section \ref{SEC:approx_mass}. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
+% 
+\subsection{An approximation to the statically condensed mass matrix}\label{SEC:approx_mass}
+% 
+To construct an approximation of the \emph{statically condensed mass matrix}, we consider \eqref{EQ:diffusion_mixed} in which $f$ as right-hand side of \eqref{EQ:div_is_f} is supposed to added to the unknown $u$, i.e.,
+% 
+\begin{subequations}\label{EQ:diffusion_fu_mixed}
+\begin{align}
+ \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge,\label{EQ:primal_dual_fu}\\
+ \Div \vec q & = f + u && \text{ in } \Edge,\label{EQ:div_is_u}\\
+  u & = u_\textup D && \text{ on } \Node \in \SetNodeDir,\label{EQ:dir_cond_fu}\\
+ \jump{\vec q} & = g_\textup N && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_fu}
+\end{align}
+\end{subequations}
+% 
+\begin{remark}\label{REM:ex_reaction}
+ We do not consider the existence of possible solutions of this systems, but note that if the $u$ on the right-hand side is replaced by $- ru$ with some non-negative function $r$ (denoted \emph{reaction rate}), the problem will again have an unique solution. Such as problem is called \emph{diffusion--reaction problem}.
+\end{remark}
+% 
+The discretization of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}, and global coupling condition \eqref{EQ:hdg_global} can be conducted exactly as described above. However, in addition to this, we need a local solver in which $f$ needs to be replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux} yielding the local problem
+% 
+\begin{subequations}\label{EQ:hdg_f_is_u}
+ \begin{align}
+  \int_\Edge \tfrac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx & = 0, \label{EQ:hdg_fu_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau U_\Edge ) v \ds & =  \int_{\Edge} U_\Edge v \dx,\label{EQ:hdg_fu_flux}
+ \end{align}
+\end{subequations}
+% 
+ultimately leading to the need to add $\localU (\localU \lambda + \localU u_\text D + \localU f)$ and $\localQ (\localU \lambda + \localU u_\text D + \localU f)$ to $\localU f$, since $U_\Edge$ in \eqref{EQ:hdg_f_is_u} is $\localU \lambda + \localU u_\text D + \localU f$. Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ as in \eqref{EQ:construct_unk} are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
+% 
+Again, we can formally set up a system which is similar to Section~\ref{SEC:glob_system}, namely
+% 
+\begin{subequations}\label{EQ:forms_def_fu}
+\begin{equation}\label{EQ:glob_system_old}
+ a(\lambda, \mu) ~=~ b(\mu) + \left[ \mass (\lambda, \mu) +  b^\mass(\mu) \right]
+\end{equation}
+% 
+with bilinear and linear forms $a$ and $b$ as described in \eqref{EQ:forms_def}, and
+% 
+\begin{align}
+ \mass (\lambda,\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU \lambda) \cdot \Normal + \tau \localU (\localU \lambda) \right] \mu \ds\label{EQ:mass_def}\\
+ b^\mass(\mu) ~=~ & \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \localQ (\localU f + \localU u_\textup D) \cdot \Normal + \tau \localU (\localU f + \localU u_\textup D) \right] \mu \ds
+\end{align}
+\end{subequations}
+% 
+of which $\mass$ can be proven to be symmetric positive definite.
+% 
+\begin{remark}
+ This gives the two $U_\Edge$ in the local solver different meanings. However it fits to the expected bilinear form. Moreover, it is highly doubtable, whether this is the accurate discretization for $p \ge 2$. However, we receive a second order discrtization.
+\end{remark}
+% 
+\paragraph{Different types of solvable problems}
+% 
+With the knowledge of the previous paragraphs, we can easily approximate the solutions to the \emph{diffusion eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$, cf. \eqref{EQ:diffusion_eigen}, using the ARPACK package fed with the induced matrices of the variational equation
+% 
+\begin{equation}
+ a(\lambda, \mu) = \eigenval \mass(\lambda,\mu)
+\end{equation}
+% 
+with $a$ as in \eqref{EQ:forms_def} and \eqref{EQ:forms}, and $\mass$ defined via \eqref{EQ:mass_def}. Since we have, Remark \ref{REM:ex_reaction}, we can deduce that $\lambda$ needs to be positive to solve this problem.
+ 
+Also, we are able to solve \emph{parabolic diffusion equations}, cf. \eqref{EQ:diffusion_parab}, by rewriting those into the form of
+% 
+\begin{equation}
+ \partial_t \left[ \mass(\lambda, \mu) + b^\mass(\mu) \right] + a(\lambda, \mu) = b(\mu)
+\end{equation}
+% 
+with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (preferably an implicit Euler scheme) gives an appropriate discretization if the initial $\lambda$ is constructed by $L^2$ projection of the trace of $u$ to the skeletal space $\skeletalSpace$.
+% 
+\begin{remark}[Implementation issues]\
+ \begin{enumerate}
+  \item Utilizing the approximation to the mass matrix is less accurate, since it uses an approximation to the mass matrix instead of the real bilinear forms.
+  \item The reconstruction of the $u$ from $\lambda$ is not possible in this case any more. In the fully discrete case, one needs $\lambda$ at the current time step and $\lambda$ of the previous time step to approximate $\partial_t u$ (as difference ratio of the ``masses'') and $u$, afterwards.
+  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\end{envarwarning}
+  \item The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, parabolic versions of this problem can be constructed and solved using the aformentioned approaches.
+ \end{enumerate}
+\end{remark}
+% 
+\paragraph{Numerical convergence tests}\arerror{All experiments need to be redone!}
+% 
+For a parabolic test of the approximate mass matrix, we consider
+% 
+\begin{equation}
+ \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
+\end{equation}
+% 
+with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
+  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv_m}
+\end{table}
+% 
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
+% 
+\begin{table}
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
+  & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
+  & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
+  & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
+  & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
+  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && 4.99e-4 & 1.9  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv_m}
+\end{table}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
