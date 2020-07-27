@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
+import random
 
 # Correct the python paths!
 import os, sys
@@ -54,6 +55,11 @@ def diffusion_test(poly_degree, dimension, iteration):
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
 
+  # Config Newton solver
+  n_newton_steps = 10 ** 1
+  scaling_fac    = 1e-2
+  norm_exact     = 1e-9
+
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
@@ -71,54 +77,42 @@ def diffusion_test(poly_degree, dimension, iteration):
   vectorSolution = [0] * system_size
   
   # Initial vector is solution!
-  for i in range (system_size-2):
-    vectorSolution[i] = np.sin(np.pi * i / (system_size - 2))
+  vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
   vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+  vectorSolution[system_size-1] = dimension * np.pi * np.pi + 1e-3 * random.randint(-100,100)
   
-  # Config Newton solver
-  n_newton_steps = 10 ** 1
-  norm_res       = 1e-9
-  vectorSolution[system_size-1] = np.pi * np.pi
-  
-  # residual = helper.eval_residual(vectorSolution)
-  
-  # print(np.linalg.norm( residual ))
+  residual = helper.eval_residual(vectorSolution)
+  norm_res = np.linalg.norm( residual )
   
   # For loop over the respective time-steps.
   for newton_step in range(n_newton_steps):
     
-    #helper.set_val(vectorSolution)
-    
-    # print(residual)
-    # print(A * residual) 
+    helper.set_val(vectorSolution)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     # [vectorUpdate, num_iter] = sp_lin_alg.cg(A, residual, tol=1e-13)
     # if num_iter != 0:
-    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", newton_step, \
-    #        ". Trying GMRES!")
-    #  [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol=1e-13)
-    #  if num_iter != 0:
+    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", \
+    #         newton_step, ". Trying GMRES!")
+    [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= scaling_fac * norm_res)
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      sys.exit("Program failed!")
     
-    #    print("GMRES also failed with a total number of ", num_iter, "iterations.")
-    #    sys.exit("Program failed!")
-    
-    # print(vectorUpdate)
-    # vectorSolution = np.subtract(vectorSolution, vectorUpdate)
-    
+    vectorSolution = np.subtract(vectorSolution, vectorUpdate)
     residual = helper.eval_residual(vectorSolution)
-    #print(residual)
-    vectorSolution = np.add(vectorSolution, np.multiply(residual,1.) )
+    norm_res = np.linalg.norm( residual )
     
-    # print(residual)
-    print(np.linalg.norm( residual ))
-    
-    # residual = helper.eval_residual(vectorSolution)
-    # if np.linalg.norm( residual ) < norm_res:
-    #  break
-
+    if norm_res < norm_exact:
+      print("Newton solver converged after ", newton_step+1, " iterations.")
+      break
+      
+  if norm_res >= norm_exact:
+    print("Newton solver did not converge!")
+    sys.exit("Program failed!")
+  
   # Print error.
-  error = np.absolute(vectorSolution[system_size-1] - np.pi * np.pi)
+  error = np.absolute(vectorSolution[system_size-1] - dimension * np.pi * np.pi)
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/diffusion_convergence_eigenvalue.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
@@ -126,21 +120,21 @@ def diffusion_test(poly_degree, dimension, iteration):
   f.close()
   
   # Plot obtained solution.
-  #HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
-  #HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  #HDG_wrapper.plot_option( "scale" , "0.95" );
-  #HDG_wrapper.plot_solution(HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1]))
+  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
+  HDG_wrapper.plot_option( "printFileNumber" , "false" );
+  HDG_wrapper.plot_option( "scale" , "0.95" );
+  HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
   
 
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(1,2):
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
-      print("Dimension is ", dimension, "\n")
-      for iteration in range(5,6):
+  for poly_degree in range(1,4):
+    print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
+    for dimension in range(1,3):
+      print("\nDimension is ", dimension, "\n")
+      for iteration in range(1,6):
         diffusion_test(poly_degree, dimension, iteration)
 
 
