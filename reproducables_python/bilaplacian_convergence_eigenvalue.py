@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
+import random
 
 # Correct the python paths!
 import os, sys
@@ -19,28 +20,23 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 class helper_class():
   def __init__(self, hdg_wrapper):
     self.hdg_wrapper = hdg_wrapper
-  def multiply_stiff(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = vector[i]
-    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
-    vecs = [0.] * len(vector)
-    for i in range(len(vector)):
-      vecs[i] = vec[i+2]
-    return vecs
-  def multiply_mass(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = vector[i]
-    vec = self.hdg_wrapper.mass_matrix_multiply(vec)
-    vecs = [0.] * len(vector)
-    for i in range(len(vector)):
-      vecs[i] = vec[i+2]
-    return vecs
-  def plot_vector(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = (vector[i]).real
+    self.val = [0] * (hdg_wrapper.size_of_system() + 1)
+  def eval_residual(self, vector):
+    vec = self.hdg_wrapper.matrix_vector_multiply(vector, vector[len(vector)-1])
+    temp = vector[len(vector)-1]
+    vector[len(vector)-1] = 0.
+    vec[len(vec)-1] = np.linalg.norm(vector) ** 2 - 1.
+    vector[len(vector)-1] = temp
+    return vec
+  def set_val(self, val):
+    self.val = val;
+  def eval_jacobian(self, vector):
+    vec = self.hdg_wrapper.matrix_vector_der_multiply \
+            ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
+    temp = self.val[len(self.val)-1]
+    self.val[len(self.val)-1] = 0.
+    vec[len(vec)-1] = 2. * np.dot(vector,self.val)
+    self.val[len(self.val)-1] = temp
     return vec
 
 
@@ -53,11 +49,18 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "bilaplacian_eigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersHomo,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
+
+  # Config Newton solver
+  n_newton_steps = 10 ** 1
+  scaling_fac    = 1e-2
+  norm_exact     = 1e-9
+  alpha          = 0.1
+  beta           = 0.5
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
@@ -65,20 +68,68 @@ def bilaplacian_test(poly_degree, dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) ) # Why is this so good?
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
   helper = helper_class(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
-  system_size = HDG_wrapper.size_of_system()
-  Stiff = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_stiff )
-  Mass  = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_mass )
+  system_size = HDG_wrapper.size_of_system() + 1
+  A = LinearOperator( (system_size,system_size), matvec= helper.eval_jacobian )
   
-  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
+  # Initialize solution vector [lambda, eig].
+  vectorSolution = [0] * system_size
+  
+  # Initial vector is solution!
+  vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
+  vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
+  
+  residual = helper.eval_residual(vectorSolution)
+  norm_res = np.linalg.norm( residual )
+  
+  # For loop over the respective time-steps.
+  for newton_step in range(n_newton_steps):
+    
+    helper.set_val(vectorSolution)
+    norm_old = norm_res
+    gamma = 1
+    
+    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+    # [vectorUpdate, num_iter] = sp_lin_alg.cg(A, residual, tol=1e-13)
+    # if num_iter != 0:
+    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", \
+    #         newton_step, ". Trying GMRES!")
+    [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= min(1e-6,scaling_fac * norm_res))
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      sys.exit("Program failed!")
+    
+    vectorHelper = np.subtract(vectorSolution, vectorUpdate)
+    residual = helper.eval_residual(vectorHelper)
+    norm_res = np.linalg.norm( residual )
+    
+    while norm_res > (1 - alpha * gamma) * norm_old:
+      if gamma < 1e-4:
+        sys.exit("Newton step is too small!")
+      gamma = beta * gamma
+      vectorHelper = np.subtract(vectorSolution, np.multiply(vectorUpdate, gamma))
+      residual = helper.eval_residual(vectorHelper)
+      norm_res = np.linalg.norm( residual )
+    
+    vectorSolution = vectorHelper
+    
+    if norm_res < norm_exact:
+      print("Newton solver converged after ", newton_step+1, " steps with a residual of norm ",\
+            norm_res)
+      break
+      
+  if norm_res >= norm_exact:
+    print("Newton solver did not converge with final residual = ", norm_res)
+    sys.exit("Program failed!")
+  
 
   # Print error.
-  error = np.absolute(vals[0] - np.power(np.pi, 4))
+  error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 4))
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_eigenvalue.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
@@ -86,10 +137,10 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
-  HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(helper.plot_vector(vecs));
+  HDG_wrapper.plot_option( "fileName" , "bil_e-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
   
 
 # --------------------------------------------------------------------------------------------------
@@ -100,7 +151,7 @@ def main():
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,2):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(2,8):
+      for iteration in range(3,8):
         bilaplacian_test(poly_degree, dimension, iteration)
 
 

@@ -59,6 +59,8 @@ def diffusion_test(poly_degree, dimension, iteration):
   n_newton_steps = 10 ** 1
   scaling_fac    = 1e-2
   norm_exact     = 1e-9
+  alpha          = 0.1
+  beta           = 0.5
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
@@ -79,7 +81,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Initial vector is solution!
   vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
   vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-  vectorSolution[system_size-1] = dimension * np.pi * np.pi + 1e-3 * random.randint(-100,100)
+  vectorSolution[system_size-1] = dimension * (np.pi ** 2) + 1e-3 * random.randint(-100,100)
   
   residual = helper.eval_residual(vectorSolution)
   norm_res = np.linalg.norm( residual )
@@ -88,6 +90,8 @@ def diffusion_test(poly_degree, dimension, iteration):
   for newton_step in range(n_newton_steps):
     
     helper.set_val(vectorSolution)
+    norm_old = norm_res
+    gamma = 1
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     # [vectorUpdate, num_iter] = sp_lin_alg.cg(A, residual, tol=1e-13)
@@ -99,9 +103,19 @@ def diffusion_test(poly_degree, dimension, iteration):
       print("GMRES also failed with a total number of ", num_iter, "iterations.")
       sys.exit("Program failed!")
     
-    vectorSolution = np.subtract(vectorSolution, vectorUpdate)
-    residual = helper.eval_residual(vectorSolution)
+    vectorHelper = np.subtract(vectorSolution, vectorUpdate)
+    residual = helper.eval_residual(vectorHelper)
     norm_res = np.linalg.norm( residual )
+    
+    while norm_res > (1 - alpha * gamma) * norm_old:
+      if gamma < 1e-4:
+        sys.exit("Newton step is too small!")
+      gamma = beta * gamma
+      vectorHelper = np.subtract(vectorSolution, np.multiply(vectorUpdate, gamma))
+      residual = helper.eval_residual(vectorHelper)
+      norm_res = np.linalg.norm( residual )
+    
+    vectorSolution = vectorHelper
     
     if norm_res < norm_exact:
       print("Newton solver converged after ", newton_step+1, " iterations.")
@@ -112,7 +126,7 @@ def diffusion_test(poly_degree, dimension, iteration):
     sys.exit("Program failed!")
   
   # Print error.
-  error = np.absolute(vectorSolution[system_size-1] - dimension * np.pi * np.pi)
+  error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/diffusion_convergence_eigenvalue.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
