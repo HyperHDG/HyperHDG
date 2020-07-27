@@ -33,7 +33,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, tau= (2**iteration) )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
   # Generate right-hand side vector.
   vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
@@ -71,7 +71,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(1,4):
+  for poly_degree in range(3,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
