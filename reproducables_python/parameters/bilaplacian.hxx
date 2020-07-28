@@ -72,7 +72,7 @@ struct TestParametersSinParab
   
   static param_float_t inverse_bilaplacian_coefficient
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return pi * pi; }
+  { return pi; }
   
   static param_float_t analytic_result
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
@@ -80,7 +80,7 @@ struct TestParametersSinParab
   
   static param_float_t right_hand_side
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return pi * pi * sin(pi * (point[0] + time)) + pi * cos(pi * (point[0] + time)); }
+  { return pi * pi * pi * sin(pi * (point[0] + time)) + pi * cos(pi * (point[0] + time)); }
   
   static param_float_t dirichlet_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
@@ -196,7 +196,7 @@ struct TestParametersHomo
   {
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
-      approx *= sin(pi * point[dim]) + 1e-7 * ((std::rand() % 201) - 100); // Random noise!
+      approx *= sin(pi * point[dim]) + 0*1e-6 * ((std::rand() % 201) - 100); // Random noise!
     return approx;
   }
   static param_float_t initial_laplace
@@ -204,7 +204,7 @@ struct TestParametersHomo
   { 
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
-      approx *= pi * pi * sin(pi * point[dim]) + 1e-7 * ((std::rand() % 201) - 100); // Random noise!
+      approx *= pi * pi * sin(pi * point[dim]) + 0*1e-6 * ((std::rand() % 201) - 100); // Random noise!
     return approx;
   }
   
