@@ -432,24 +432,30 @@ The definition of the \emph{divergence} of a smooth vector function $\vec f \col
 In this brief section, we show that there is an unique function
 % 
 \begin{equation}
- \lambda \in \skeletalSpaceCont := \left\{ \mu \in L^2(\bigcup_{\Edge \in \SetEdge} \partial \Edge) \; \bigg| \; \mu |_{\partial \Edge} \in H^{3/2} (\partial \Edge) \text{ for all } \Edge \in \SetEdge \right\}
+ \lambda \in \skeletalSpaceCont := \left\{ \mu \in L^2(\bigcup_{\Edge \in \SetEdge} \partial \Edge) \; \bigg| \; \mu |_{\partial \Edge} \in H^{1/2} (\partial \Edge) \text{ for all } \Edge \in \SetEdge \right\}
 \end{equation}
 % 
-representing the restriction of $u$ to the hypernodes and functions $u \in H^2(\bigcup \Edge)$ and $\vec q \in H^1(\bigcup \Edge)^d$ that suffice \eqref{EQ:diffusion_mixed} in the weak sense. For this, we assume that all hyperedges $\Edge$ are (uniformly in the constant) $H^2$ regular.
+representing the restriction of $u$ to the hypernodes and unique functions $u \in L^2(\bigcup \Edge)$ and $\vec q \in H^{\operatorname{div}}(\bigcup \Edge)$ that suffice \eqref{EQ:diffusion_mixed} in the weak sense.
 
-At first, we recognize that (assuming that we have some $\lambda$ given) the problem to find $u|_\Edge \in H^2(\Omega)$ such that $\gamma_0(u) = \lambda|_{\partial \Edge}$
+At first, we recognize that (assuming that we have some $\lambda \in \skeletalSpaceCont$ given) the problem to find $u|_\Edge \in L^2(\Edge)$ and $\vec q_\Edge \in H^{\operatorname{div}}(\Edge)$ such that
 % 
-\begin{equation}
- \int_\Edge d \nabla u \cdot \nabla \varphi \dx - \int_{\partial \Edge} d (\nabla u \cdot \Normal) \varphi \ds = 0 \qquad \forall \varphi \in H^1(\Omega)
-\end{equation}
+\begin{subequations}\label{EQ:cont_lambda}
+\begin{align}
+ \int_\Edge u_\Edge (\nabla \cdot \vec \varphi) \dx - \int_\Edge \frac{1}{d} \vec q_\Edge \cdot \vec \varphi \dx & = \int_{\partial \Edge} \lambda (\vec \varphi \cdot \Normal) \ds && \forall \vec \varphi \in H^{\operatorname{div}}(\Edge) \\
+ - \int_\Edge \vec q_\Edge \cdot \nabla \psi \dx + \int_{\partial \Edge} (\vec q_\Edge \cdot \Normal) \psi \ds & = 0 && \forall \psi \in H^1(\Edge)
+\end{align}
+\end{subequations}
 % 
-allows for an unique solution on all edges $\Edge \in \setEdge$ and that setting $\vec q = - d \nabla u$ is possible (also with respect to regularity issues). Thus, there is a linear mapping $\lambda \mapsto (\localU \lambda, \localQ\lambda)$ which is iduced by solving this problem.
+allows for an unique solution on all edges $\Edge \in \SetEdge$. Thus, there is a linear mapping $\lambda \mapsto (\localU \lambda, \localQ\lambda)$ which is iduced by solving this problem.
 
-Moroever, the same holds for the problem to find $u|_\Edge \in H^2(\Omega)$ such that $\gamma_0(u) = 0$ and
+Moroever, the same holds for the problem to find $u_\Edge \in L^2(\Edge)$ and $\vec q_\Edge \in H^{\operatorname{div}}(\Edge)$ such that
 % 
-\begin{equation}\label{EQ:cont_lambda}
- \int_\Edge d \nabla u \cdot \nabla \varphi \dx - \int_{\partial \Edge} d (\nabla u \cdot \Normal) \varphi \ds = \int_\Edge f \varphi \dx \qquad \forall \varphi \in H^1(\Omega)
-\end{equation}
+\begin{subequations}
+\begin{align}
+ \int_\Edge u_\Edge (\nabla \cdot \vec \varphi) \dx - \int_\Edge \frac{1}{d} \vec q_\Edge \cdot \vec \varphi \dx & = 0 && \forall \vec \varphi \in H^{\operatorname{div}}(\Edge) \\
+ - \int_\Edge \vec q_\Edge \cdot \nabla \psi \dx + \int_{\partial \Edge} (\vec q_\Edge \cdot \Normal) \psi \ds & = \int_\Edge f \psi \dx && \forall \psi \in H^1(\Edge)
+\end{align}
+\end{subequations}
 % 
 inducing the mapping $f \mapsto (\localU f, \localQ f)$.
 
@@ -462,7 +468,7 @@ Then, we can write the nodal conditions weakly as finding $\lambda \in \skeletal
 for all $\mu \in \skeletalSpaceCont$ with $\mu = 0$ in Dirichlet nodes. The term including $\localQ f$ goes to the right-hand side and by \eqref{EQ:cont_lambda}, the remaining left-hand side is rewritten edge by edge, to gain
 % 
 \begin{equation}
- - \sum_{\edge \in \setEdge} \int_\Edge \localQ \lambda \cdot \localQ \mu \dx = \sum_{\node \in \setNode} \int_\Node g_\text N \mu \ds - \sum_{\node \in \setNode} \sum_{\edge \ni \node}^{\edge \in \setEdge} \int_\Node \localQ f \cdot \Normal \mu \ds.
+ - \sum_{\edge \in \setEdge} \int_\Edge d \localQ \lambda \cdot \localQ \mu \dx = \sum_{\node \in \setNode} \int_\Node g_\text N \mu \ds - \sum_{\node \in \setNode} \sum_{\edge \ni \node}^{\edge \in \setEdge} \int_\Node \localQ f \cdot \Normal \mu \ds.
 \end{equation}
 % 
 Obviously, the right-hand side is a linear form and the left-hand side is a negative semi-definite bilinear form (if Dirichlet nodes have been assumed to be homogeneous, which is possible extending the right-hand side as in standard finite element theory by subtracting the Dirichlet data $u_\textup D \in \skeletalSpaceCont$). To use Lax--Milgram, we multiply both sides with $-1$ and use a Poincare inequality which can be shown exactly analogous to \cite[Satz 6.21]{Dobrowolski2010}.
