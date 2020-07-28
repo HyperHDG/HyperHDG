@@ -48,7 +48,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
+  f = open("output/bilaplacian_hypergraph_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
@@ -64,9 +64,9 @@ def diffusion_test(poly_degree, dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(1,3):
+  for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,4):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         diffusion_test(poly_degree, dimension, iteration)
