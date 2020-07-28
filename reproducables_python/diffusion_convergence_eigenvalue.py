@@ -50,7 +50,7 @@ def diffusion_test(poly_degree, dimension, iteration):
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
-          + ",TestParametersHomo,double> >"
+          + ",TestParametersEigs,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]

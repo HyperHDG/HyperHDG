@@ -50,7 +50,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "bilaplacian_eigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
-          + ",TestParametersHomo,double> >"
+          + ",TestParametersEigs,double> >"
   filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
                 "HyperHDG/LocalSolver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
@@ -82,7 +82,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   # Initial vector is solution!
   vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
   vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 0*1e-3 * random.randint(-100,100)
+  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
   
   residual = helper.eval_residual(vectorSolution)
   norm_res = np.linalg.norm( residual )
@@ -149,7 +149,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(2,4):
+  for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
