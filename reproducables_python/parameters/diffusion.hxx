@@ -227,7 +227,7 @@ struct TestParametersTrivParab
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersHomo
+struct TestParametersEigs
 {
   static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes
@@ -247,7 +247,7 @@ struct TestParametersHomo
   { 
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
-      approx *= sin(0.5 * pi * point[dim]) + 1e-7 * ((std::rand() % 201) - 100); // Random noise!
+      approx *= sin(pi * point[dim]) + 1e-6 * ((std::rand() % 201) - 100); // Random noise!
     return approx;
   }
   static param_float_t dirichlet_value

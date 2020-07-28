@@ -861,7 +861,7 @@ For a parabolic convergence test, we consider
  \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
 \end{equation}
 % 
-with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
+with some initial datum $u_0$, $d = \pi$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
 % 
 \begin{envarwarning}{Parabolic convergence tests}
  In the convergence tests, we see the expected orders of convergence. However, for $p=2$ and $p=3$, the time step  error becomes dominant very quickly, although the simulation time is already quite high. Maybe, we try a solution which is smoother in time and rougher in space to balance this?
@@ -1192,9 +1192,9 @@ This is basically the formulation of the single face hybridizable scheme of \cit
  The interchange of $\mu$ and $\bar \mu$ has two benefits. At first, the physical flux is used at the position, where it is suspected. This, strangely, is not what one might expect at first sight. Secondly, this seems to make the global system symmetric and definite.
 \end{remark}
 
-\subsection{Numerical convergence tests}
+\subsection{Numerical convergence tests}\arfatal{Not yet evaluated!}
 % 
-Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the according diffusion problems).
+Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the respective diffusion problems). Moreover, an approximate mass matrix can be constructed similarly.
 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1224,6 +1224,82 @@ Implementing the parabolic and eigenvalue problems can then be done analogously 
 \end{table}\arwarning{To be filled!}
 % 
 Thus, we start with an convergence test for the elliptic problem for which $u = \sin(\pi x)$ and $d = \tfrac{1}{\pi}$. The results can be found in Table \ref{TAB:bil_el_conv} illustrating that the order of convergence is $p+1$.\arwarning{Hopefully}
+
+\begin{table}[ht]
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 8.24e-2 & --- && 5.81e-2 & --- && 2.38e-2 & ---  \\
+  $i = 1$ && 1.66e-2 & 2.3 && 9.61e-3 & 2.6 && 3.20e-3 & 2.9  \\
+  $i = 2$ && 3.60e-3 & 2.2 && 1.61e-3 & 2.6 && 4.16e-4 & 2.9  \\
+  $i = 3$ && 8.28e-4 & 2.1 && 2.76e-4 & 2.5 && 5.31e-5 & 3.0  \\
+  $i = 4$ && 1.97e-4 & 2.1 && 4.79e-5 & 2.5 && 6.71e-6 & 3.0  \\
+  $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && \textcolor{red}{?}& ?  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:bil_hg_el_conv}
+\end{table}\arwarning{To be filled!}
+% 
+The convergence of an elliptic problem on a hypergraph to $u = x^2 + y^2 + z^2$ is investigated in Table \ref{TAB:bil_hg_el_conv}.
+
+\begin{table}[ht]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
+  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:bil_pb_conv}
+\end{table}
+% 
+For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:bil_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
+
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 1$ && 2.22e-0 & --- && 6.68e-2 & --- && 6.66e-4 & --- \\
+  & $i = 2$ && 2.84e-1 & 3.0 && 1.49e-3 & 5.5 && 4.30e-6 & 7.3  \\
+  & $i = 3$ && 2.90e-2 & 3.3 && 4.08e-5 & 5.2 && 3.07e-8 & 7.1  \\
+  & $i = 4$ && 3.25e-3 & 3.2 && 1.19e-6 & 5.1 && 2.31e-10 & 7.1  \\
+  & $i = 5$ && 3.85e-4 & 3.1 && 3.63e-8 & 5.0 && 6.45e-12& 5.2  \\
+  \midrule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 1$ && \textcolor{red}{7.47e-3} & --- && \textcolor{red}{4.36e-4} & --- && \textcolor{red}{2.15e-5} & ---  \\
+  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:bil_eigenvalue_conv}
+\end{table}
+% 
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value, we use the analytical result $u = \prod_{i=1}^\globDim \sin(\tfrac{1}{2} \pi x_i)$ and the correct eigenvalue with random, additive noise in all quadrature points and with respect to the eigenvalue. For realistic approximations, the question of how to generate a good starting value for Newton's method remains unanswered here, but is discussed in Section \ref{SEC:approx_mass}. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
 
 % 
 % \subsection{Mass matrix representation}\label{SEC:bilap_mass}
