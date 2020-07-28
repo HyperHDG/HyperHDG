@@ -3052,8 +3052,12 @@ class bilaplacian_eigs
     
     coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
     
+    // for (unsigned int i = 0; i < n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_; ++i)  coeffs[i] = 0.;
+    // for (unsigned int i = 0; i < n_shape_fct_; ++i)  coeffs[n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_ + i] *= eig * hyper_edge.geometry.area();
+    
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      coeffs[n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_ + i] = eig * coeffs[hyEdge_dimT * n_shape_fct_ + i] * hyper_edge.geometry.area();
     for (unsigned int i = 0; i < n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_; ++i)  coeffs[i] = 0.;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)  coeffs[n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_ + i] *= eig * hyper_edge.geometry.area();
     
     coeffs = (SmallVec<coeffs.size(),lSol_float_t>(coeffs) / assemble_loc_matrix(tau_, hyper_edge, eig_val)).data();
     
@@ -3066,10 +3070,10 @@ class bilaplacian_eigs
         bdr_values[i][j] += duals[i][j] + tau_ * primals[i][j];
       if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
         for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          bdr_values[i][j] += 0.;
+          bdr_values[i][j] = 0.;
       if ( is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]) )
         for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] += 0.;
+          bdr_values[i][j] = 0.;
     }
     
     return bdr_values;

@@ -82,7 +82,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   # Initial vector is solution!
   vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
   vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
+  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 0*1e-3 * random.randint(-100,100)
   
   residual = helper.eval_residual(vectorSolution)
   norm_res = np.linalg.norm( residual )
@@ -99,10 +99,13 @@ def bilaplacian_test(poly_degree, dimension, iteration):
     # if num_iter != 0:
     #   print("CG failed with a total number of ", num_iter, " iterations in time step ", \
     #         newton_step, ". Trying GMRES!")
-    [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= min(1e-6,scaling_fac * norm_res))
+    [vectorUpdate, num_iter] = sp_lin_alg.bicgstab(A,residual,tol=min(1e-9,scaling_fac * norm_res))
     if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      sys.exit("Program failed!")
+      print("BiCGStab failed with a total number of ", num_iter, "iterations.")
+      [vectorUpdate, num_iter] = sp_lin_alg.gmres(A,residual,tol=min(1e-9,scaling_fac * norm_res))
+      if num_iter != 0:
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
+        sys.exit("Program failed!")
     
     vectorHelper = np.subtract(vectorSolution, vectorUpdate)
     residual = helper.eval_residual(vectorHelper)
@@ -121,12 +124,11 @@ def bilaplacian_test(poly_degree, dimension, iteration):
     if norm_res < norm_exact:
       print("Newton solver converged after ", newton_step+1, " steps with a residual of norm ",\
             norm_res)
-      break
-      
+      break  
+  
   if norm_res >= norm_exact:
     print("Newton solver did not converge with final residual = ", norm_res)
     sys.exit("Program failed!")
-  
 
   # Print error.
   error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 4))
@@ -147,11 +149,11 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(1,4):
+  for poly_degree in range(2,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(3,8):
+      for iteration in range(1,6):
         bilaplacian_test(poly_degree, dimension, iteration)
 
 
