@@ -92,8 +92,6 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   residual = helper.eval_residual( vectorSolution )
   norm_res = np.linalg.norm( residual )
   
-  print(type(residual[len(residual)-1]))
-  
   # For loop over the respective time-steps.
   for newton_step in range(n_newton_steps):
     
