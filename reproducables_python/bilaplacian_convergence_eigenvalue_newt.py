@@ -84,7 +84,12 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
   else:
     vectorSolution = initial
+    temp = initial[len(vectorSolution)-1]
+    vectorSolution[len(vectorSolution)-1] = 0.
+    vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+    vectorSolution[len(vectorSolution)-1] = temp
   
+  # Initial residual.
   residual = helper.eval_residual(vectorSolution)
   norm_res = np.linalg.norm( residual )
   
