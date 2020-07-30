@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
 # --------------------------------------------------------------------------------------------------
-class helper_class():
+class helper_ev_newt():
   def __init__(self, hdg_wrapper):
     self.hdg_wrapper = hdg_wrapper
     self.val = [0] * (hdg_wrapper.size_of_system() + 1)
@@ -43,7 +43,7 @@ class helper_class():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(poly_degree, dimension, iteration):
+def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -69,7 +69,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-  helper = helper_class(HDG_wrapper)
+  helper = helper_ev_newt(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -77,12 +77,13 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   A = LinearOperator( (system_size,system_size), matvec= helper.eval_jacobian )
   
   # Initialize solution vector [lambda, eig].
-  vectorSolution = [0] * system_size
-  
-  # Initial vector is solution!
-  vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
-  vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-  vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
+  if initial == "default":
+    vectorSolution = [0] * system_size
+    vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
+    vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+    vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
+  else:
+    vectorSolution = initial
   
   residual = helper.eval_residual(vectorSolution)
   norm_res = np.linalg.norm( residual )
