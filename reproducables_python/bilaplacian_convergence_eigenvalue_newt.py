@@ -90,7 +90,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     vectorSolution[len(vectorSolution)-1] = temp
   
   # Initial residual.
-  residual = helper.eval_residual(vectorSolution)
+  residual = helper.eval_residual( vectorSolution )
   norm_res = np.linalg.norm( residual )
   
   # For loop over the respective time-steps.
