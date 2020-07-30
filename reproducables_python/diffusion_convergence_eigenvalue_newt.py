@@ -78,16 +78,21 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   # Initialize solution vector [lambda, eig].
   if initial == "default":
     vectorSolution = [0] * system_size
+    vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
+    vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+    vectorSolution[system_size-1] = dimension * (np.pi ** 2) + 1e-3 * random.randint(-100,100)
   else:
     vectorSolution = initial
+    temp = initial[len(vectorSolution)-1]
+    vectorSolution[len(vectorSolution)-1] = 0.
+    vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
+    vectorSolution[len(vectorSolution)-1] = temp
   
-  # Initial vector is solution!
-  vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
-  vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-  vectorSolution[system_size-1] = dimension * (np.pi ** 2) + 1e-3 * random.randint(-100,100)
-  
-  residual = helper.eval_residual(vectorSolution)
+  # Initial residual.
+  residual = helper.eval_residual( vectorSolution )
   norm_res = np.linalg.norm( residual )
+  
+  print(type(residual[len(residual)-1]))
   
   # For loop over the respective time-steps.
   for newton_step in range(n_newton_steps):

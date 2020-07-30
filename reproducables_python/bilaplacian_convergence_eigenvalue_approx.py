@@ -16,38 +16,40 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
 # --------------------------------------------------------------------------------------------------
-class helper_class():
+class helper_ev_approx():
   def __init__(self, hdg_wrapper):
     self.hdg_wrapper = hdg_wrapper
+  def long_vector(self, vector):
+    vec = [0.] * (len(vector)+4)
+    for i in range(len(vector)):
+      vec[i+2] = vector[i]
+    return vec
+  def short_vector(self, vector):
+    vec = [0.] * (len(vector)-4)
+    for i in range(len(vec)):
+      vec[i] = vector[i+2]
+    return vec
   def multiply_stiff(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = vector[i]
+    vec = self.long_vector(vector)
     vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
-    vecs = [0.] * len(vector)
-    for i in range(len(vector)):
-      vecs[i] = vec[i+2]
-    return vecs
+    vec = self.short_vector(vec)
+    return vec
   def multiply_mass(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = vector[i]
+    vec = self.long_vector(vector)
     vec = self.hdg_wrapper.mass_matrix_multiply(vec)
-    vecs = [0.] * len(vector)
-    for i in range(len(vector)):
-      vecs[i] = vec[i+2]
-    return vecs
+    vec = self.short_vector(vec)
+    return vec
   def plot_vector(self, vector):
-    vec = [0.] * (len(vector)+4)
-    for i in range(len(vector)):
-      vec[i+2] = (vector[i]).real
+    vec = self.long_vector(vector)
+    for i in range(len(vec)):
+      vec[i] = (vec[i]).real
     return vec
 
 
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(poly_degree, dimension, iteration):
+def eigenvalue_approx(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -66,7 +68,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-  helper = helper_class(HDG_wrapper)
+  helper = helper_ev_approx(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
@@ -80,7 +82,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   # Print error.
   error = np.absolute(vals[0] - np.power(np.pi, 4))
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_convergence_eigenvalue.txt", "a")
+  f = open("output/bilaplacian_convergence_eigenvalue_approx.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
@@ -90,6 +92,8 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(helper.plot_vector(vecs));
+  
+  return vals[0], helper.long_vector(vecs)
   
 
 # --------------------------------------------------------------------------------------------------
@@ -101,7 +105,7 @@ def main():
     for dimension in range(1,2):
       print("Dimension is ", dimension, "\n")
       for iteration in range(2,8):
-        bilaplacian_test(poly_degree, dimension, iteration)
+        eigenvalue_approx(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
