@@ -93,7 +93,11 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(helper.plot_vector(vecs));
   
-  return vals[0], helper.long_vector(vecs)
+  sol_vec = [0.] * len(vecs)
+  for i in range(len(vecs)):
+    sol_vec[i] = vecs[i][0]
+  
+  return vals[0], helper.long_vector(sol_vec)
   
 
 # --------------------------------------------------------------------------------------------------
