@@ -131,7 +131,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   # Print error.
   error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_eigenvalue.txt", "a")
+  f = open("output/diffusion_convergence_eigenvalue_newt.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
