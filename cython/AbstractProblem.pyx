@@ -24,6 +24,8 @@ cdef class PythonClassName :
     del self.thisptr
   def read_dirichlet_indices(self, indices):
     self.thisptr.read_dirichlet_indices (indices)
+  def dirichlet_indices(self):
+    return self.thisptr.dirichlet_indices ()
   def return_zero_vector(self):
     return self.thisptr.return_zero_vector[ CyReplace03 ] ()
   def matrix_vector_multiply(self, vec, time = 0.):
