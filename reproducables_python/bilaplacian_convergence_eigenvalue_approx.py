@@ -18,16 +18,25 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 class helper_ev_approx():
   def __init__(self, hdg_wrapper):
-    self.hdg_wrapper = hdg_wrapper
+    self.hdg_wrapper       = hdg_wrapper
+    self.dirichlet_inidces = hdg_wrapper.dirichlet_indices()
   def long_vector(self, vector):
-    vec = [0.] * (len(vector)+4)
+    vec = [0.] * (len(vector)+len(self.dirichlet_inidces))
+    n_indices = 0
     for i in range(len(vector)):
-      vec[i+2] = vector[i]
+      while n_indices < len(self.dirichlet_inidces) and \
+            i + n_indices == self.dirichlet_inidces[n_indices]:
+        n_indices = n_indices + 1
+      vec[i + n_indices] = vector[i]
     return vec
   def short_vector(self, vector):
-    vec = [0.] * (len(vector)-4)
+    vec = [0.] * (len(vector)-len(self.dirichlet_inidces))
+    n_indices = 0
     for i in range(len(vec)):
-      vec[i] = vector[i+2]
+      while n_indices < len(self.dirichlet_inidces) and \
+            i + n_indices == self.dirichlet_inidces[n_indices]:
+        n_indices = n_indices + 1
+      vec[i] = vector[i + n_indices]
     return vec
   def multiply_stiff(self, vector):
     vec = self.long_vector(vector)

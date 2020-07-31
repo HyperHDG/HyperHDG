@@ -168,6 +168,61 @@ class AbstractProblem
         dirichlet_indices_[i] = (dof_index_t) indices[i];
       }
       std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
+      auto last = std::unique(dirichlet_indices_.begin(),dirichlet_indices_.end());
+      dirichlet_indices_.erase(last, dirichlet_indices_.end());
+    }
+    /*!*********************************************************************************************
+     * \brief   Read indices of Dirichlet type hypernodes/faces.
+     * 
+     * \todo    ALL!
+     *
+     * Read the indices ot the hypernodes/faces that are of Dirichlet type and therefore do not
+     * contain degrees of freedom that are allowed to change within iterations of the iterative
+     * solver and other processes. In contrast, these degrees of freedom are set by the user.
+     *
+     * The user creates a vector that contains the coefficients of the corresponding degrees of
+     * freedom (read by this function) and defines the Dirichlet values by this choice. The
+     * remaining elements of the global vector of unknowns (which is \b not the vector \c indices
+     * are supposed to be zero).
+     *
+     * \param   indices       A \c std::vector containing the (global) indices of Dirichlet type
+     *                        hypernodes/faces.
+     **********************************************************************************************/
+    template < typename hyNode_index_t = dof_index_t >
+    std::vector<unsigned int> dirichlet_indices( )
+    {
+      constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      std::array<dof_index_t, LocalSolverT::n_glob_dofs_per_node()> dof_indices;
+      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      std::array<unsigned int, 2 * hyEdge_dim> hyNode_types;
+      
+      std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
+      {
+        if constexpr
+        ( 
+          has_type_detector
+          < LocalSolverT,
+            std::array<unsigned int, 2 * TopologyT::hyEdge_dim()> ( decltype(hyper_edge)& )
+          >::value
+        )
+          hyNode_types = local_solver_.node_types(hyper_edge);
+        else hy_assert( false , "This is not implemented" );
+        
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+
+        for (unsigned int i = 0; i < hyNode_types.size(); ++i)  if (hyNode_types[i] == 1)
+        {
+          dof_indices = hyper_graph_.hyNode_factory().get_dof_indices(hyEdge_hyNodes[i]);
+          for (unsigned int j = 0; j < dof_indices.size(); ++j)
+            dirichlet_indices_.push_back(dof_indices[j]);
+        }
+      });
+
+      std::sort(dirichlet_indices_.begin(),dirichlet_indices_.end());
+      auto last = std::unique(dirichlet_indices_.begin(),dirichlet_indices_.end());
+      dirichlet_indices_.erase(last, dirichlet_indices_.end());
+
+      return dirichlet_indices_;
     }
     /*!*********************************************************************************************
      * \brief   Read indices of Neumann type hypernodes/faces.
@@ -198,6 +253,8 @@ class AbstractProblem
         neumann_indices_[i] = (dof_index_t) indices[i];
       }
       std::sort(neumann_indices_.begin(),neumann_indices_.end());
+      auto last = std::unique(neumann_indices_.begin(),neumann_indices_.end());
+      neumann_indices_.erase(last, neumann_indices_.end());
     }
     /*!*********************************************************************************************
      * \brief   Returns vector of appropriate size for the predefined problem.
