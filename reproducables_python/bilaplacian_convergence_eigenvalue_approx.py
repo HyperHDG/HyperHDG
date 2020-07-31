@@ -115,9 +115,9 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 def main():
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(2,8):
+      for iteration in range(2,6):
         eigenvalue_approx(poly_degree, dimension, iteration)
 
 
