@@ -24,7 +24,8 @@ class helper_ev_approx():
     vec = [0.] * (len(vector)+len(self.dirichlet_inidces))
     n_indices = 0
     for i in range(len(vector)):
-      while i + n_indices == self.dirichlet_inidces[n_indices]:
+      while n_indices < len(self.dirichlet_inidces) and \
+            i + n_indices == self.dirichlet_inidces[n_indices]:
         n_indices = n_indices + 1
       vec[i + n_indices] = vector[i]
     return vec
@@ -32,7 +33,8 @@ class helper_ev_approx():
     vec = [0.] * (len(vector)-len(self.dirichlet_inidces))
     n_indices = 0
     for i in range(len(vec)):
-      while i + n_indices == self.dirichlet_inidces[n_indices]:
+      while n_indices < len(self.dirichlet_inidces) and \
+            i + n_indices == self.dirichlet_inidces[n_indices]:
         n_indices = n_indices + 1
       vec[i] = vector[i + n_indices]
     return vec
@@ -113,9 +115,9 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 def main():
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(2,8):
+      for iteration in range(2,6):
         eigenvalue_approx(poly_degree, dimension, iteration)
 
 
