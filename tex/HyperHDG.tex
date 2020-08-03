@@ -710,7 +710,7 @@ Here, we consider the standard HDG approximation (no post-processing) and evalua
  - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
 \end{equation}
 % 
-where $d = \tfrac{\pi}{2}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
+where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
 
 \begin{table}[ht]
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -842,19 +842,19 @@ The representation of $(\bigstar)$ raises the need to save information about the
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.73e-3 & ---  \\
+  & $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
+  & $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
+  & $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
+  & $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
+  & $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
+  & $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
+  & $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && \textcolor{red}{8.41e-7} & 4.6  \\
+  & $i = 3$ && 4.27e-3 & 1.8.2 && \textcolor{red}{3.90e-6} & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && \textcolor{red}{7.08e-5} & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
@@ -867,11 +867,7 @@ For a parabolic convergence test, we consider
  \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
 \end{equation}
 % 
-with some initial datum $u_0$, $d = \pi$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
-% 
-\begin{envarwarning}{Parabolic convergence tests}
- In the convergence tests, we see the expected orders of convergence. However, for $p=2$ and $p=3$, the time step  error becomes dominant very quickly, although the simulation time is already quite high. Maybe, we try a solution which is smoother in time and rougher in space to balance this?
-\end{envarwarning}
+with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases. In the convergence tests, we see the expected orders of convergence. However, for $p=2$ and $p=3$, the time step  error becomes dominant very quickly, although the simulation time is already quite high.
 % 
 \subsection{Diffusive eigenvalue problem}
 % 
@@ -954,11 +950,11 @@ in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. T
   & $i = 5$ && 3.85e-4 & 3.1 && 3.63e-8 & 5.0 && 6.45e-12& 5.2  \\
   \midrule
   \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 1$ && 4.44e-0 & --- && \textcolor{red}{4.36e-4} & --- && \textcolor{red}{2.15e-5} & ---  \\
-  & $i = 2$ && 5.68e-1 & 3.0 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 5.80e-2 & 3.3 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 1$ && 4.44e-0 & --- && 1.33e-1 & --- && 1.33e-3 & ---  \\
+  & $i = 2$ && 5.68e-1 & 3.0 && 2.98e-3 & 5.5 && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 7.71e-5 & 3.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:eigenvalue_conv}
@@ -1042,7 +1038,7 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
  \end{enumerate}
 \end{remark}
 % 
-\paragraph{Numerical convergence tests}\arerror{All experiments need to be redone!}
+\paragraph{Numerical convergence tests}
 % 
 For a parabolic test of the approximate mass matrix, we consider
 % 
@@ -1050,7 +1046,7 @@ For a parabolic test of the approximate mass matrix, we consider
  \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
 \end{equation}
 % 
-with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin(\tfrac{\pi}{2}(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
+with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
 % 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1060,18 +1056,18 @@ with some initial datum $u_0$, $d = \tfrac{\pi}{2}$, and $f$ such that $u = \sin
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 0$ && 1.48e-1 & --- && 8.36e-1 & --- && 7.00e-1 & ---  \\
+  & $i = 1$ && 1.13e-1 & 0.4 && 9.05e-2 & 3.2 && 8.58e-2 & 3.0  \\
+  & $i = 2$ && 2.85e-2 & 2.0 && 1.98e-2 & 2.2 && 1.95e-2 & 2.1  \\
+  & $i = 3$ && 7.06e-3 & 2.0 && 4.75e-3 & 2.1 && 4.73e-3 & 2.0  \\
+  & $i = 4$ && 1.73e-3 & 2.0 && 1.13e-3 & 2.0 && 1.13e-3 & 2.1  \\
+  & $i = 5$ && 4.06e-4 & 2.1 && 2.39e-4 & 2.2 && 2.39e-4 & 2.3  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 0$ && 1.00e-1 & --- && 1.88e-1 & --- && 1.57e-1 & ---  \\
+  & $i = 1$ && 5.57e-2 & 0.9 && 2.59e-2 & 2.9 && \textcolor{red}{2.15e-5} & 4.5  \\
+  & $i = 2$ && 1.64e-2 & 1.8 && \textcolor{red}{3.88e-5} & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && \textcolor{red}{3.04e-4} & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
   & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
@@ -1092,9 +1088,9 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
   & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
   & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
   & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
-  & $i = 5$ && 7.93e-3 & 1.9 && 7.93e-3 & 1.9 && 7.93e-3 & 1.9  \\
+  & $i = 5$ && 7.93e-3 & 2.0 && 7.93e-3 & 2.0 && 7.93e-3 & 2.0  \\
   & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
-  & $i = 7$ && 4.97e-4 & 1.9 && 4.98e-4 & 1.9 && 4.99e-4 & 1.9  \\
+  & $i = 7$ && 4.97e-4 & 2.0 && 4.97e-4 & 2.0 && 4.97e-4 & 2.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv_m}
