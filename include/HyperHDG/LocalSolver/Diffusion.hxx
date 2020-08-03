@@ -2679,7 +2679,34 @@ class DiffusionEigs
 
     return bdr_values;
   }
-  
+  /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to matrix--vector multiplication.
+   *
+   * \todo    ALL!
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values Local part of vector x.
+   * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vecAx         Local part of vector A * x.
+   **********************************************************************************************/
+  template <class hyEdgeT>
+  std::array<unsigned int, 2 * hyEdge_dimT> node_types(hyEdgeT& hyper_edge) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    
+    std::array<unsigned int, 2 * hyEdge_dimT> result;
+    result.fill(0);
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))  result[i] = 1;
+
+    return result;
+  }
     /*!*********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
