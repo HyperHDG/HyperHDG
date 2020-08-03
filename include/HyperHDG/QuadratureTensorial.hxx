@@ -589,7 +589,7 @@ class IntegratorTensorial
         
         for (unsigned int k = 0; k < array_size; ++k)
         {
-          dec_k = index_decompose<GeomT::hyEdge_dim()>(k);
+          dec_k = index_decompose<GeomT::hyEdge_dim(),max_poly_degree+1>(k);
           val_helper = 1.;
           for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
             val_helper *= shape_fcts_at_quad_[dec_k[dim]][dec_q[dim]];
