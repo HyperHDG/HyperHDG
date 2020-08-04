@@ -78,10 +78,10 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bilap_c_p-" + str(dimension) + "-" + str(iteration) );
-  HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(vectorSolution, 1.);
+  HDG_wrapper.plot_option( "fileName" , "bil_conv_parab-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution, 1.)
   
 
 # --------------------------------------------------------------------------------------------------

@@ -101,7 +101,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   # Print error.
   error = np.absolute(vals[0] - exact_eigenval)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_convergence_eigenvalue_approx.txt", "a")
+  f = open("output/bilaplacian_convergence_eigenvalue_shifted_inverse.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
@@ -110,9 +110,9 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   solution = helper.long_vector([x[0].real for x in vecs])
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
-  HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  HDG_wrapper.plot_option( "scale" , "0.95" );
+  HDG_wrapper.plot_option( "fileName" , "bil_eig_shifi-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(solution);
   
   # Return smallest eigenvalue and corresponding eigenvector.
