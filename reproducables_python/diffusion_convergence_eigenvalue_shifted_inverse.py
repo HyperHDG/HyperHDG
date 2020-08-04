@@ -110,10 +110,10 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   solution = helper.long_vector([x[0].real for x in vecs])
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_e_si-" + str(dimension) + "-" + str(iteration) );
-  HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(solution, vals[0].real);
+  HDG_wrapper.plot_option( "fileName" , "diff_eig_shifi-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(solution, vals[0].real)
   
   # Return smallest eigenvalue and corresponding eigenvector.
   return vals[0].real, solution

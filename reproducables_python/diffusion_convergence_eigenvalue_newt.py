@@ -130,15 +130,15 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   # Print error.
   error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_eigenvalue_newt.txt", "a")
+  f = open("output/diffusion_convergence_eigenvalue_newton.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
-  HDG_wrapper.plot_option( "printFileNumber" , "false" );
-  HDG_wrapper.plot_option( "scale" , "0.95" );
+  HDG_wrapper.plot_option( "fileName" , "diff_eig_newt-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
   
 
