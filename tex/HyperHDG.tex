@@ -899,7 +899,13 @@ However, the operators $\localU(\lambda, \eigenval)$ and $\localQ(\lambda, \eige
  f_\mu (\lambda,\eigenval) := \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \left[ \vec Q \cdot \Normal + \tau (U - \lambda) \right] \mu \ds \overset{!}= 0.
 \end{equation*}
 % 
-complements the problem, for which we also have that $\eigenval$ is an unique value (i.e. does not vary across the different elements). Thus, the problem cannot be square, since we have one additional degree of freedom as compared to Section \ref{SEC:HDG_form} and use this degree of freedom to propose that
+complements the problem, for which we also have that $\eigenval$ is an unique value (i.e. does not vary across the different elements).
+
+There are several ways to tackle this problem. Several of these are discussed in the following:
+% 
+\paragraph{Global nonlinear system of equations}
+% 
+The eigenvalue problem cannot be square, since we have one additional degree of freedom as compared to Section \ref{SEC:HDG_form} and use this degree of freedom to propose that
 % 
 \begin{equation*}
  f_0(\lambda) := f_0 (\lambda,\eigenval) := \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node \lambda^2 \ds - 1 \overset{!}= 0
@@ -934,7 +940,14 @@ where $\mathcal A: \eigenval \in \IR \to \operatorname L[ \vec W \times V, \vec 
 \end{subequations}
 % 
 in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. This also indicates an appropriate implementation, while function valued arguments work analogously.
-
+% 
+\paragraph{Algorithms based on the shifted inverse approach}
+% 
+An alternative approach consists of exploiting Python's eigenvector package \code{eigsh}\footnote{\url{https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.eigsh.html}} which is based on ARPACK\footnote{\url{https://www.caam.rice.edu/software/ARPACK}}. Here, the shifted inverse $A - \sigma M$ can be used as an input argument, and it can be obtained via \eqref{EQ:hdg_scheme_eigen} with $\sigma \leftarrow \eigenval$. This allows to use the \code{eigsh} package to obtain approximates to the eigenvalues and eigenfunctions. The results of this approach can be used as initial values of the aformentioned, nonlinear one.
+% 
+\begin{envarerror}{Update this to new results!}
+\paragraph{Numerical convergence tests}
+% 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
@@ -961,6 +974,9 @@ in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. T
 \end{table}
 % 
 For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value, we use the analytical result $u = \prod_{i=1}^\globDim \sin(\pi x_i)$ and the correct eigenvalue with random, additive noise in all quadrature points and with respect to the eigenvalue. For realistic approximations, the question of how to generate a good starting value for Newton's method remains unanswered here, but is discussed in Section \ref{SEC:approx_mass}. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
+\end{envarerror}
+% 
+\begin{envarfatal}{This might be removed!}
 % 
 \subsection{An approximation to the statically condensed mass matrix}\label{SEC:approx_mass}
 % 
@@ -1096,6 +1112,8 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv_m}
 \end{table}
 % 
+\end{envarfatal}
+% 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
 % ---------------------------------------------------------------------
@@ -1196,7 +1214,11 @@ This is basically the formulation of the single face hybridizable scheme of \cit
 
 \subsection{Numerical convergence tests}
 % 
-Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the respective diffusion problems). Moreover, an approximate mass matrix can be constructed similarly.
+Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the respective diffusion problems).
+% 
+\begin{envarfatal}{This might be removed!}
+ Moreover, an approximate mass matrix can be constructed similarly.
+\end{envarfatal}
 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}

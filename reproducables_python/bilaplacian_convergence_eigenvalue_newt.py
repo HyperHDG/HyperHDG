@@ -101,10 +101,6 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     gamma = 1
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    # [vectorUpdate, num_iter] = sp_lin_alg.cg(A, residual, tol=1e-13)
-    # if num_iter != 0:
-    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", \
-    #         newton_step, ". Trying GMRES!")
     [vectorUpdate, num_iter] = sp_lin_alg.bicgstab(A,residual,tol=min(1e-9,scaling_fac * norm_res))
     if num_iter != 0:
       print("BiCGStab failed with a total number of ", num_iter, "iterations.")
@@ -159,7 +155,7 @@ def main():
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(1,6):
+      for iteration in range(2,6):
         bilaplacian_test(poly_degree, dimension, iteration)
 
 
