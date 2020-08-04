@@ -2992,6 +2992,23 @@ class bilaplacian_eigs
       
       return bdr_values;
     }
+    
+    /*!*********************************************************************************************
+     * \todo    ALL
+     **********************************************************************************************/    
+    template <class hyEdgeT>
+  std::array<unsigned int, 2 * hyEdge_dimT> node_types(hyEdgeT& hyper_edge) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    
+    std::array<unsigned int, 2 * hyEdge_dimT> result;
+    result.fill(0);
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))  result[i] = 1;
+
+    return result;
+  }
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
      *
