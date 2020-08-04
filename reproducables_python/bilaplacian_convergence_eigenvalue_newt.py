@@ -56,7 +56,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Config Newton solver
-  n_newton_steps = 10 ** 1
+  n_newton_steps = 25
   scaling_fac    = 1e-2
   norm_exact     = 1e-9
   alpha          = 0.1

@@ -22,11 +22,8 @@ def main():
       print("\nDimension is ", dimension, "\n")
       for iteration in range(2,6):
         value, vector = eigenvalue_approx(poly_degree, dimension, iteration)
-        initial = [0.] * (len(vector) + 1)
-        for i in range(len(vector)):
-          initial[i] = (vector[i]).real
-        initial[len(vector)] = value.real
-        eigenvalue_newt(poly_degree, dimension, iteration, initial)
+        vector.append(value)
+        eigenvalue_newt(poly_degree, dimension, iteration, vector)
 
 
 # --------------------------------------------------------------------------------------------------

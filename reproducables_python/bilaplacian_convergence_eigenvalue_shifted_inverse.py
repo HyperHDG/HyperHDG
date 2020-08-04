@@ -78,7 +78,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Configure eigenvector/-value solver.
-  exact_eigenval = np.power(np.pi, 4)
+  exact_eigenval = dimension * (np.pi ** 4)
   sigma          = exact_eigenval
 
   # Import C++ wrapper class to use HDG method on graphs.
