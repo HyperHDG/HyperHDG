@@ -20,22 +20,22 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 class helper_ev_newt():
   def __init__(self, hdg_wrapper):
     self.hdg_wrapper = hdg_wrapper
-    self.val = [0] * (hdg_wrapper.size_of_system() + 1)
+    self.val         = [0] * (hdg_wrapper.size_of_system() + 1)
+  def set_val(self, val):
+    self.val         = val
   def eval_residual(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_multiply(vector, vector[len(vector)-1])
+    vec  = self.hdg_wrapper.matrix_vector_multiply(vector, vector[len(vector)-1])
     temp = vector[len(vector)-1]
     vector[len(vector)-1] = 0.
-    vec[len(vec)-1] = np.linalg.norm(vector) ** 2 - 1.
+    vec[len(vec)-1]       = np.linalg.norm(vector) ** 2 - 1.
     vector[len(vector)-1] = temp
     return vec
-  def set_val(self, val):
-    self.val = val;
   def eval_jacobian(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_der_multiply \
-            ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
+    vec  = self.hdg_wrapper.matrix_vector_der_multiply \
+             ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
     temp = self.val[len(self.val)-1]
     self.val[len(self.val)-1] = 0.
-    vec[len(vec)-1] = 2. * np.dot(vector,self.val)
+    vec[len(vec)-1]           = 2. * np.dot(vector,self.val)
     self.val[len(self.val)-1] = temp
     return vec
 
@@ -100,10 +100,6 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     gamma = 1
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    # [vectorUpdate, num_iter] = sp_lin_alg.cg(A, residual, tol=1e-13)
-    # if num_iter != 0:
-    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", \
-    #         newton_step, ". Trying GMRES!")
     [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= scaling_fac * norm_res)
     if num_iter != 0:
       print("GMRES also failed with a total number of ", num_iter, "iterations.")
@@ -154,7 +150,7 @@ def main():
     print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("\nDimension is ", dimension, "\n")
-      for iteration in range(1,6):
+      for iteration in range(2,6):
         eigenvalue_newt(poly_degree, dimension, iteration)
 
 
