@@ -78,7 +78,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
                 "reproducables_python/parameters/diffusion.hxx" ]
 
   # Configure eigenvector/-value solver.
-  exact_eigenval = np.pi * np.pi
+  exact_eigenval = dimension * (np.pi ** 2)
   sigma          = exact_eigenval
 
   # Import C++ wrapper class to use HDG method on graphs.
