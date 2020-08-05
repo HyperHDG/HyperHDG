@@ -78,8 +78,8 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Configure eigenvector/-value solver.
-  exact_eigenval = dimension * (np.pi ** 4)
-  sigma          = exact_eigenval
+  exact_eigenval = (dimension * (np.pi ** 2)) ** 2
+  sigma          = exact_eigenval / 2.
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import

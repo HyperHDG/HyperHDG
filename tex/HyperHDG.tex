@@ -712,7 +712,7 @@ Here, we consider the standard HDG approximation (no post-processing) and evalua
 % 
 where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
 
-\begin{table}[ht]
+\begin{table}[t]
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
   \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
@@ -834,7 +834,7 @@ Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-in
 
 The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
 
-\begin{table}[ht]
+\begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
   \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
@@ -949,7 +949,7 @@ To obtain a good starting vector for Newton's method, we exploit Python's eigenv
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$, SI}}
-  & $i = 2$ && 7.68e-2 & --- && 3.73e-4 & --- && 1.07e-6 & ---  \\
+  & $i = 2$ && \textcolor{red}{7.68e-2} & --- && \textcolor{red}{3.73e-4} & --- && \textcolor{red}{1.07e-6} & ---  \\
   & $i = 3$ && 3.65e-3 & 4.4 && 5.10e-6 & 6.2 && 3.86e-9 & 8.1  \\
   & $i = 4$ && 2.03e-4 & 4.2 && 7.49e-8 & 6.1 && 1.44e-11 & 8.1  \\
   & $i = 5$ && 1.20e-5 & 4.0 && 1.13e-9 & 6.0 && 5.50e-14 & 8.0  \\
@@ -962,23 +962,23 @@ To obtain a good starting vector for Newton's method, we exploit Python's eigenv
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, SI}}
   & $i = 2$ && 1.92e-2 & --- && 9.33e-5 & --- && 2.69e-7 & ---  \\
-  & $i = 3$ && 4.56e-4 & 5.4 && 6.38e-7 & 7.2 && \textcolor{red}{6.18e-8} & 7.1  \\
-  & $i = 4$ && 1.27e-5 & 5.2 && \textcolor{red}{2.39e-6} & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && \textcolor{red}{7.71e-5} & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 3$ && 4.56e-4 & 5.4 && 6.38e-7 & 7.2 && 4.83e-10 & 9.1  \\
+  & $i = 4$ && 1.27e-5 & 5.2 && 4.68e-9 & 7.1 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 3.76e-7 & 5.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
-  & $i = 2$ && 5.68e-1 & 3.0 && 2.98e-3 & 5.5 && 8.61e-6 & 7.3  \\
-  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
+  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && \textcolor{red}{6.18e-8} & 7.1  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && \textcolor{red}{2.39e-6} & 5.1 && 4.86e-4 & 5  \\
   & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:eigenvalue_conv}
 \end{table}
 % 
-\arfatal{The shifted method tends to converge to non-EV if those are given as initial datum! The rates are only so good because of $\sigma = \eigenval$, I think.}
+\arerror{The shifted method tends to converge to non-EV if those are given as initial datum! The rates are only so good because of $\sigma = \eigenval$, I think.}
 % 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. 
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Again, we stress that the shifted inverse approach is solely to gain a good starting point for Newton's method. Its results do not necessarily approximate the desired values.
 % 
 \begin{envarfatal}{This might be removed!}
 % 
@@ -1060,14 +1060,6 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
 % 
 \paragraph{Numerical convergence tests}
 % 
-For a parabolic test of the approximate mass matrix, we consider
-% 
-\begin{equation}
- \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
-\end{equation}
-% 
-with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
-% 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
@@ -1095,8 +1087,14 @@ with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv_m}
 \end{table}
 % 
-The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
+For a parabolic test of the approximate mass matrix, we consider
 % 
+\begin{equation}
+ \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
+\end{equation}
+% 
+with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
+
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
@@ -1115,6 +1113,8 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv_m}
 \end{table}
+% 
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
 % 
 \end{envarfatal}
 % 
@@ -1310,7 +1310,7 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$, SI}}
-  & $i = 2$ && 1.51e-2 & --- && 7.49e-5 & --- && 2.16e-7 & ---  \\
+  & $i = 2$ && \textcolor{red}{1.51e-2} & --- && \textcolor{red}{7.49e-5} & --- && \textcolor{red}{2.16e-7} & ---  \\
   & $i = 3$ && 7.31e-4 & 4.4 && 1.02e-6 & 6.2 && 7.75e-10 & 8.1  \\
   & $i = 4$ && 4.08e-5 & 4.2 && 1.50e-8 & 6.1 && 2.89e-12 & 8.1  \\
   & $i = 5$ && 2.41e-6 & 4.1 && 2.27e-10 & 6.0 && 0 & $\infty$  \\
@@ -1322,9 +1322,9 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
   & $i = 5$ && 7.61e-3 & 3.1 && 8.29e-10 & 15 && --- & ---  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, SI}}
-  & $i = 2$ && \textcolor{red}{5.68e-1} & 3.0 && \textcolor{red}{2.98e-3} & 5.5 && \textcolor{red}{8.61e-6} & 7.3  \\
-  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 2$ && 2.92e-2 & --- && 3.08e-2 & --- && \textcolor{red}{8.61e-6} & 7.3  \\
+  & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && \textcolor{red}{6.50e-3} & 3.2 && \textcolor{red}{2.39e-6} & 5.1 && 4.86e-4 & 5  \\
   & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
@@ -1337,7 +1337,7 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:bil_eigenvalue_conv}
 \end{table}
 % 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^4$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. \begin{envarerror}{TODO!} Here, we observe that the order of convergence is $2p+1$. \end{envarerror}
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. \begin{envarerror}{TODO!} Here, we observe that the order of convergence is $2p+1$. \end{envarerror}
 % 
 % \subsection{Mass matrix representation}\label{SEC:bilap_mass}
 % % 
