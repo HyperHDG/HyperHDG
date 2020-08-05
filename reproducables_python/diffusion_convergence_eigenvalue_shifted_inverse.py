@@ -79,7 +79,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 
   # Configure eigenvector/-value solver.
   exact_eigenval = dimension * (np.pi ** 2)
-  sigma          = exact_eigenval
+  sigma          = exact_eigenval / 2.
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import

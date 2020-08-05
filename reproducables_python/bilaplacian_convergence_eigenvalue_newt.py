@@ -81,7 +81,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     vectorSolution = [0] * system_size
     vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
     vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-    vectorSolution[system_size-1] = dimension * (np.pi ** 4) + 1e-3 * random.randint(-100,100)
+    vectorSolution[system_size-1]= (dimension * (np.pi ** 2)) ** 2 + 1e-3 * random.randint(-100,100)
   else:
     vectorSolution = initial
     temp = initial[len(vectorSolution)-1]
@@ -133,7 +133,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
     sys.exit("Program failed!")
 
   # Print error.
-  error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 4))
+  error = np.absolute( vectorSolution[system_size-1] - (dimension * (np.pi ** 2)) ** 2 )
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_eigenvalue_newton.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
