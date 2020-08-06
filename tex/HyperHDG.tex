@@ -322,7 +322,15 @@ Here, we formulate the standard diffusion equation in mixed form defined on a hy
  \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}
 \end{align}
 % 
-for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$.
+for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$. Thus, $u$ is supposed to have an unique representation with respect to all $\Node \in \SetNode$. This mimics the continuity assumption that is necessary to obtain a global $H^1$ solution and is assumed to hold for all scalar unknowns in the remainder of this manuscript. It can be more rigorously formulated as:
+
+We assume that for all hypernodes $\Node \in \SetNode$ there is $u_\node$ such that
+% 
+\begin{equation}\label{EQ:cont_const}
+ u_\node =  \gamma_0 ( u|_\Edge ) |_\Node \qquad \text{ for all } \edge \in \setEdge \text{ with } \node \in \edge,
+\end{equation}
+% 
+where $\gamma_0: H^1(\Edge) \to H^{1/2}(\partial \Edge)$ is the trace operator.
 
 Additionally, we assume that there is a non-empty set $\setNodeDir \subset \setNode$ of Dirichlet hypernodes, a possibly empty set $\setNodeNeu \subset \setNode\setminus \setNodeDir$ of Neumann hypernodes, and the remainder set $\setNodeInt = \setNode \setminus (\setNodeDir \cup \setNodeNeu)$ of interior hypernodes. The following ideas motivate three different types of closing conditions:
 % 
@@ -349,7 +357,7 @@ turning the vector function $\vec q$ to a scalar and being defined for all hyppe
 % 
 Thus, \eqref{EQ:diffusion_mixed} is a direct generalization of the standard diffusion equation in the whole space---even with the same notation---if we manage to find proper direct generalizations of normals and differential operators.
 
-Moreover, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} can be equivalently rewritten assuming that $g_\text N \equiv 0$ on all $\Node \in \SetNodeInt$. Thus, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} will be formulated as
+\eqref{EQ:int_cond} is the analog to the assumption that $\vec q \in H^\textup{div}$ resulting in $u \in H^2$. Moreover, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} can be equivalently rewritten assuming that $g_\text N \equiv 0$ on all $\Node \in \SetNodeInt$. Thus, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} will be formulated as
 % 
 \begin{equation}\label{EQ:Neumann_cond1}
  \jump{\vec q} ~=~ g_\textup N \qquad \text{ on } \Node \in \SetNode \setminus \SetNodeDir
@@ -790,10 +798,12 @@ Next, we solve the parabolic diffusion equation, i.e., we want that
  \partial_t u + \Div \vec q & = f && \text{ in } (0,T) \times \Edge \text{ with } \Edge \in \SetEdge,\label{EQ:div_is_f_parab}\\
  u & = u_\textup D && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNodeDir,\label{EQ:dir_cond_parab}\\
  \jump{\vec q} & = g_\textup N && \text{ on } (0,T) \times \Node \text{ with } \Node \in \SetNode \setminus \SetNodeDir,\label{EQ:neu_cond_parab}\\
- u(0,\cdot) & = u_0 && \text{ in } \Edge \in \SetEdge.\label{EQ:initial_parab}
+ u(0,\cdot) & = u_0 && \text{ in } \Edge \in \SetEdge,\label{EQ:initial_parab}
 \end{align}
 \end{subequations}
 % 
+while \eqref{EQ:cont_const} needs to hold on all $\Node \in \SetNode$.
+
 As temporal discretization---and for the sake of simplicity, we choose the $\theta$-scheme, i.e.,
 % 
 \begin{equation}\label{EQ:theta_scheme}
@@ -888,10 +898,12 @@ Next, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in 
  \tfrac{1}{d} \vec q + \Nabla u & = 0 && \text{ in } \Edge \in \SetEdge,\\
  \Div \vec q & = \eigenval u && \text{ in } \Edge \in \SetEdge,\\
   u & = u_\textup D = 0 && \text{ on } \Node \in \SetNodeDir,\\
- \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir.
+ \jump{\vec q} & = g_\textup N = 0 && \text{ on } \Node \in \SetNode \setminus \SetNodeDir,
 \end{align}
 \end{subequations}
 % 
+for which \eqref{EQ:cont_const} is additionally supposed to hold for all $\Node \in \SetNode$.
+
 Equation \eqref{EQ:diffusion_eigen} induces a single local solver based on
 % 
 \begin{subequations}\label{EQ:hdg_scheme_eigen}
@@ -1153,6 +1165,8 @@ for some given functions $f$ and $d \ge d_0 > 0$, plus appropriate boundary cond
 \end{align}
 \end{subequations}
 % 
+for which \eqref{EQ:cont_const} should hold with respect to $u$ and $\bar u$.
+
 This way of formulating the problem already indicates that we will reuse the ideas Section \ref{SEC:hdg_graph} twice to discretize the bilaplacian. However, this might destroy the symmetry of the overall system. Moreover, we note that $\bar{\vec q}$ describes the flux of $u$, and conversely the mass sources and sinks are prescribed by $\bar g_\textup N$. Hence, $\bar u$ and $\vec q$ are the two unknowns without a direct physical interpretation. 
 
 Moreover, the sets $\setNodeDir^\dagger$ and $\setNodeDirBar^\dagger$ suffice
@@ -1576,64 +1590,99 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
 % 
 A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}.
 % 
-\subsection{Two dimensional models}
+\subsection{Two dimensional models}\label{SEC:2d_Ber}
 % 
 Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.~1.4.3]{MeskourisH2013}---be described via
 % 
 \begin{subequations}\label{EQ:Timo_2D}
  \begin{align}
-  \force_x ~=~ & - \partial_x EA \partial_x \longDef, \label{EQ:beam_long_Timo}\\
-  \force_z ~=~ & - \partial_x GA ( \partial_x \crossDef + \torsion ), \label{EQ:Timo_2D_w}\\
-  \momentum_y ~=~ & - \partial_x EI \partial_x \torsion + GA \; ( \partial_x \crossDef + \torsion ), \label{EQ:Timo_2D_phi}
+  \force_{\bar x} ~=~ & - \partial_{\bar x} EA \partial_{\bar x} \longDef, \label{EQ:beam_long_Timo}\\
+  \force_{\bar z} ~=~ & - \partial_{\bar x} GA ( \partial_{\bar x} \crossDef + \torsion ), \label{EQ:Timo_2D_w}\\
+  \momentum_{\bar y} ~=~ & - \partial_{\bar x} EI \partial_{\bar x} \torsion + GA \; ( \partial_{\bar x} \crossDef + \torsion ), \label{EQ:Timo_2D_phi}
  \end{align}
 \end{subequations}
 % 
-where subscript $x$ identifies the longitudinal / axial component (cf.~inner normal), and subscripts $y$ and $z$ the orthogonal / transverse components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_y \equiv 0$ is assumed. $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}.
+where subscript $\bar x$ identifies the longitudinal / axial component (cf.~inner normal), and subscripts $\bar y$ and $\bar z$ the orthogonal / transverse components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_{\bar y} \equiv 0$ is assumed. $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}.
 
-Assuming that $\torsion = - \partial_x \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
+Assuming that $\torsion = - \partial_{\bar x} \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
 % 
 \begin{subequations}\label{EQ:Ber_2D}
  \begin{align}
-  \force_x ~=~ & - \partial_x  EA \partial_x \longDef, \label{EQ:beam_long_Ber}\\
-  \force_z ~=~ & \partial_x^2 EI \partial_x^2 \crossDef, \label{EQ:Ber_2D_cross}
+  \force_{\bar x} ~=~ & - \partial_{\bar x}  EA \partial_{\bar x} \longDef, \label{EQ:beam_long_Ber}\\
+  \force_{\bar z} ~=~ & \partial_{\bar x}^2 EI \partial_{\bar x}^2 \crossDef, \label{EQ:Ber_2D_cross}
  \end{align}
 \end{subequations}
 % 
 whose equation \eqref{EQ:Ber_2D_cross} is often tributed to J.~Bernoulli, or  L.~Euler and D.~Bernoulli, or G.~Galilei, or L.~da~Vinci.
 % 
-\subsection{Three dimensional Bernoulli model}
+\subsection{Three dimensional Bernoulli model}\label{SEC:3d_Ber}
 % 
 Transferring the aformentioned systems of equations into three spatial dimensions for which we follow \cite[Sect.~6.1--6.4]{BauchauC2009} turns \eqref{EQ:Ber_2D} into
 % 
 \begin{equation}\label{EQ:Ber_3D}
  \begin{bmatrix}
-  -\partial_x c_{11} \partial_x & & \\
-  & \partial^2_x c_{22} \partial^2_x & \partial^2_x c_{23} \partial^2_x \\
-  & \partial^2_x c_{32} \partial^2_x & \partial^2_x c_{33} \partial^2_x
+  -\partial_{\bar x} c_{11} \partial_{\bar x} & & \\
+  & \partial^2_{\bar x} c_{22} \partial^2_{\bar x} & \partial^2_{\bar x} c_{23} \partial^2_{\bar x} \\
+  & \partial^2_{\bar x} c_{32} \partial^2_{\bar x} & \partial^2_{\bar x} c_{33} \partial^2_{\bar x}
  \end{bmatrix}
  \begin{bmatrix}
-  \longDef \\ \crossDef_y \\ \crossDef_z
+  \longDef \\ \crossDef_{\bar y} \\ \crossDef_{\bar z}
  \end{bmatrix}
  =
  \begin{bmatrix}
-  \force_x \\ \force_y + \partial_x ( \tilde y \force_x - \momentum_z ) \\ \force_z + \partial_x ( \tilde z \force_x + \momentum_y )
+  \force_{\bar x} \\ \force_{\bar y} + \partial_{\bar x} ( \tilde y \force_{\bar x} - \momentum_{\bar z} ) \\ \force_{\bar z} + \partial_{\bar x} ( \tilde z \force_{\bar x} + \momentum_{\bar y} )
  \end{bmatrix},
 \end{equation}
 % 
-where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. These quantities, however, only show up since \cite[Sect.~5--8]{BauchauC2009} assume beams to have positive (yet small thickness). The different signs of the momenta stem from the sign convention \cite[Sect.~5.2]{BauchauC2009}, and $c_{23} = c_{32}$. Beyond that, the torque distribution $\momentum_x$ is related to the twist distribution $\torsion$ via
+where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. These quantities, however, only show up since \cite[Sect.~5--8]{BauchauC2009} assume beams to have positive (yet small thickness). The different signs of the momenta stem from the sign convention \cite[Sect.~5.2]{BauchauC2009}, and $c_{23} = c_{32}$. Beyond that, the torque distribution $\momentum_{\bar x}$ is related to the twist distribution $\torsion$ via
 % 
 \begin{equation}
- -\partial_x \bar c \partial_x \torsion = \momentum_x,
+ -\partial_{\bar x} \hat c \partial_{\bar x} \torsion = \momentum_{\bar x},
 \end{equation}
 % 
-where the $c$ (possibly with subscript and/or bar) need further investigation to allow passing to the limit, where the thickness of the beam goes to zero. For a circular beam with radius $\epsilon > 0$ and cross section $\crossSect$, we have
+where the $c$ (possibly with subscript and/or hat) need further investigation to allow passing to the limit, where the thickness of the beam goes to zero. For a circular beam with radius $\epsilon > 0$ and cross section $\crossSect$, we have
 % 
 \begin{gather*}
  c_{11} = \int_\crossSect E \, \textup d\crossSect = \epsilon^2 \pi E, \qquad c_{22} = c_{33} = \int_\crossSect E y^2 \, \textup d\crossSect = \epsilon^4 \frac{\pi E}{4}, \\
- c_{23} = c_{32} = \int_\crossSect E y z \, \textup d\crossSect = 0, \qquad \bar c = \int_\crossSect G r^2 \, \textup d \crossSect = \epsilon^4 \frac{\pi G}{2}.
+ c_{23} = c_{32} = \int_\crossSect E y z \, \textup d\crossSect = 0, \qquad \hat c = \int_\crossSect G r^2 \, \textup d \crossSect = \epsilon^4 \frac{\pi G}{2}.
 \end{gather*}
 % 
-This indicates that we can drop the non-diagonal blocks in \eqref{EQ:Ber_3D}. In our idealized model, where beams are only one-dimensional objects, we can safely assume that $\tilde y = \tilde z = 0$. Thus, the three-dimensional model turns out to be a direct generalization of the two-dimensional model.
+This indicates that we can drop the non-diagonal blocks in \eqref{EQ:Ber_3D}. A beam for which the different equations of deformation decouple is referred to as \emph{isotropic}. Thus, two dimensional beams are always considered as isotropic, and three dimensional beams are isotropic if and only if $c_{23} = c_{32} = 0$. In our idealized model, where beams are only one-dimensional objects, we can safely assume that $\tilde y = \tilde z = 0$. Thus, the three-dimensional model turns out to be a direct generalization of the two-dimensional model.
+% 
+\subsection{Graphs of Bernoulli beams}
+% 
+In this section, we consider the description of an \emph{elastic graph}, that is a graph ($\locDim = 1$) of which all edges can be described as Bernoulli beams. Thus, we will discuss a way to switch between local and global coordinates and construct suitable conditions for the connections, cf.~\eqref{EQ:dir_cond}, \eqref{EQ:Neumann_cond1}.
+% 
+\paragraph{Local and global coordinates}
+% 
+The equations in Sections \ref{SEC:2d_Ber} \& \ref{SEC:3d_Ber} are formulated with respect to the local coordinates $\bar x$, $\bar y$, and $\bar z$ which are induced by the orthonormal basis $\bar{\mathcal B} = \{ \bar b_{\bar x}, \bar b_{\bar y}, \bar b_{\bar z}\}$ in three dimensions. In two spatial dimensions, $\bar z$ does not represent a coordinate and the considerations with respect to $\bar b_{\bar z}$ become obsolete. We set 
+$\bar b_{\bar x}$ to be one of the two inner normals $\Normal$ with respect to the (straight) edge connecting the two nodes of the (possibly bend) edge/beam. $\bar y$ and $\bar z$ are represented by outer normals $\NormalOuter$ of the aformentioned straight edge. We observe that we can switch between local and global coordinate representation using an affine-linear transformation. Analogously, the vector of deformations $(u, w_{\bar y}, w_{\bar z})^T$ is given in local coordinates and can also be rewritten into global coordinates by applying the affine-linear transformation. Thus, e.g.~$(u, w_{\bar y}, w_{\bar z})^T_x$ is the deformation with respect to the global $x$ direction.
+% 
+\paragraph{Global coupling conditions}
+% 
+Next, we consider the assumptions that are supposed to hold at all $\Node \in \SetNode$:
+% 
+\begin{itemize}
+ \item The deformations in global coordinates should obtain an unique value, i.e, there should be some $\vec v_\node \in \IR^\globDim$ such that for all $\Edge \in \SetEdge$ with $\node \in \edge$ and $\Edge(\bar x) = \Node$
+ \begin{equation*}
+  \vec v_\node = \begin{pmatrix} (u(\bar x), w_{\bar y}(\bar x), w_{\bar z}(\bar x))^T_x \\ (u(\bar x), w_{\bar y}(\bar x), w_{\bar z}(\bar x))^T_y \\ (u(\bar x), w_{\bar y}(\bar x), w_{\bar z}(\bar x))^T_z \end{pmatrix}.
+ \end{equation*}
+ This basically is \eqref{EQ:cont_const}.
+ \item The fluxes of the deformations should be continuous, i.e.
+ \begin{equation*}
+  \jump{ \begin{pmatrix} (-\nabla u(\bar x), \nabla \Delta w_{\bar y}(\bar x), \nabla \Delta w_{\bar z}(\bar x))^T_x \\ (-\nabla u(\bar x), \nabla \Delta w_{\bar y}(\bar x), \nabla \Delta w_{\bar z}(\bar x))^T_y \\ (-\nabla u(\bar x), \nabla \Delta w_{\bar y}(\bar x), \nabla \Delta w_{\bar z}(\bar x)))^T_z \end{pmatrix} } = g_\text N,
+ \end{equation*}
+ where $g_\text N$ is the Neumann data, i.e. the forces that are applied to the nodes.
+ \item The laplacian of the transverse deformation (curvature) should be continuous across nodes, i.e., there should be an $\bar{\vec v}_\node \in \IR^\globDim$ such that for all $\Edge \in \SetEdge$ with $\node \in \edge$ and $\Edge(\bar x) = \Node$
+ \begin{equation*}
+  \bar{\vec v}_\node = \begin{pmatrix} (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_x \\ (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_y \\ (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_z \end{pmatrix}.
+ \end{equation*}
+ This basically is \eqref{EQ:cont_const} for the laplacian of the unknowns.
+ \item The remaining gradients should be in somewhat $H^\textup{div}$
+ \begin{equation*}
+  \jump{ \begin{pmatrix} (0, \nabla w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_x \\ (0, \nabla w_{\bar y}(\bar x), \nabla w_{\bar z}(\bar x))^T_y \\ (0, \nabla w_{\bar y}(\bar x), \nabla w_{\bar z}(\bar x)))^T_z \end{pmatrix} } = \bar g_\text N.
+ \end{equation*}
+\end{itemize}
 
 
 \newpage
