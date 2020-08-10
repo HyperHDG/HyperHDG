@@ -719,7 +719,7 @@ Obviously, the HDG method for elliptic diffusion problems is consistent with res
   & $i = 5$ && 7.39e-5 & 1.9 && 2.88e-7 & 2.9 && 8.65e-10 & 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:diff_el_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of diffusion on a unit square.}\label{TAB:diff_el_conv}
 \end{table}
 % 
 Here, we consider the standard HDG approximation (no post-processing) and evaluate $L^2$ errors of the elliptic problem
@@ -745,7 +745,7 @@ where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
   $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && \textcolor{red}{?}& ?  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:diff_hg_el_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph.}\label{TAB:diff_hg_el_conv}
 \end{table}
 % 
 Next, we consider a convergence example on a real hypergraph. It is constructed to approximate
@@ -772,7 +772,7 @@ An \code{HDG\-Hyper\-Graph} consists of four parts:
  \item Its \code{Topology} which is implemented as an abstact container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
  \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, etc.
  \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices of all of thei hypernodes describing them. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have indices 1 and 2, Neumann nodes \ldots.
- \item \begin{envarwarning}{Do we really want this?}A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aformentioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain the coefficients of $U$ and $\vec Q$ of the previous time step.\end{envarwarning}
+ \item A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aformentioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain information about $U$ and $\vec Q$ of the previous time step.
  \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
 \end{enumerate}
 % 
@@ -878,7 +878,7 @@ The representation of $(\bigstar)$ raises the need to save information about the
   & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic diffusion example.}\label{TAB:diff_pb_conv}
 \end{table}
 % 
 For a parabolic convergence test, we consider
@@ -889,7 +889,7 @@ For a parabolic convergence test, we consider
 % 
 with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases. In the convergence tests, we see the expected orders of convergence. However, for $p=2$ and $p=3$, the time step  error becomes dominant very quickly, although the simulation time is already quite high.
 % 
-\subsection{Diffusive eigenvalue problem}
+\subsection{Diffusive eigenvalue problem}\label{SEC:diff_eigen}
 % 
 Next, we seek a pair of a function  $u \neq 0$ and a real number $\eigenval \in \IR$, such that
 % 
@@ -995,14 +995,10 @@ To obtain a good starting vector for Newton's method, we exploit Python's eigenv
   & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:eigenvalue_conv}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue. All results use the accurate local problems for the shifted inverse (SI) and nonlinear (NL) approaches.}\label{TAB:eigenvalue_conv}
 \end{table}
 % 
-\arerror{The shifted method tends to converge to non-EV if those are given as initial datum! The rates are only so good because of $\sigma = \eigenval$, I think.}
-% 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Again, we stress that the shifted inverse approach is solely to gain a good starting point for Newton's method. Its results do not necessarily approximate the desired values.
-% 
-\begin{envarfatal}{This might be removed!}
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Again, we stress that the shifted inverse approach is solely to gain a good starting point for Newton's method. Its results do not necessarily approximate the desired values. To find a remedy for this issue, we consider the approximation to the statically condensed mass matrix of Section \ref{SEC:approx_mass}.
 % 
 \subsection{An approximation to the statically condensed mass matrix}\label{SEC:approx_mass}
 % 
@@ -1018,7 +1014,7 @@ To construct an approximation of the \emph{statically condensed mass matrix}, we
 \end{subequations}
 % 
 \begin{remark}\label{REM:ex_reaction}
- We do not consider the existence of possible solutions of this systems, but note that if the $u$ on the right-hand side is replaced by $- ru$ with some non-negative function $r$ (denoted \emph{reaction rate}), the problem will again have an unique solution. Such as problem is called \emph{diffusion--reaction problem}.
+ We do not consider the existence of possible solutions of this systems, but note that if the $u$ on the right-hand side is replaced by $- ru$ with some non-negative function $r$ (denoted \emph{reaction rate}), the problem will again have an unique solution. Such a problem is called \emph{diffusion--reaction problem}.
 \end{remark}
 % 
 The discretization of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}, and global coupling condition \eqref{EQ:hdg_global} can be conducted exactly as described above. However, in addition to this, we need a local solver in which $f$ needs to be replaced by $U_\Edge$ in \eqref{EQ:hdg_f_flux} yielding the local problem
@@ -1047,21 +1043,27 @@ with bilinear and linear forms $a$ and $b$ as described in \eqref{EQ:forms_def},
 \end{align}
 \end{subequations}
 % 
-of which $\mass$ can be proven to be symmetric positive definite.
+of which $\mass$ can be proven to be symmetric positive semi-definite, since it has a representation as
+% 
+\begin{equation}\label{EQ:mass_definite}
+ \mass (\lambda,\mu) = \sum_{\edge \in \setEdge} \int_\Edge \localU \lambda \localU \mu \dx,
+\end{equation}
+% 
+cf. \cite{CockburnGL2009,GopalakrishnanLNP2014} for similar proofs.
 % 
 \begin{remark}
- This gives the two $U_\Edge$ in the local solver different meanings. However it fits to the expected bilinear form. Moreover, it is highly doubtable, whether this is the accurate discretization for $p \ge 2$. However, we receive a second order discrtization.
+ Clearly, this is just an approximation, since the two $U_\Edge$ in the local solver \eqref{EQ:hdg_f_is_u} play different roles (left-hand side versus right-hand side). However \eqref{EQ:mass_definite} is the expected (global) bilinear form, although it might be degenerate. According to \cite{GopalakrishnanLNP2014}, we can nonetheless expect a second order approximation by this approach.
 \end{remark}
 % 
 \paragraph{Different types of solvable problems}
 % 
-With the knowledge of the previous paragraphs, we can easily approximate the solutions to the \emph{diffusion eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$, cf. \eqref{EQ:diffusion_eigen}, using the ARPACK package fed with the induced matrices of the variational equation
+With the knowledge of the previous paragraphs, we can easily approximate the solutions to the \emph{diffusion eigenvalue problem} to find an eigenfunction $u \neq 0$ and eigenvalue $\eigenval \in \IR$, cf. \eqref{EQ:diffusion_eigen}. This can be done using the \emph{shifted inverse approach} of Section \ref{SEC:diff_eigen} to bypass the possible defect in the rank of the approximate mass matrix. That is, we try to solve
 % 
 \begin{equation}
  a(\lambda, \mu) = \eigenval \mass(\lambda,\mu)
 \end{equation}
 % 
-with $a$ as in \eqref{EQ:forms_def} and \eqref{EQ:forms}, and $\mass$ defined via \eqref{EQ:mass_def}. Since we have, Remark \ref{REM:ex_reaction}, we can deduce that $\lambda$ needs to be positive to solve this problem.
+with $a$ as in \eqref{EQ:forms_def} and \eqref{EQ:forms}, and $\mass$ defined via \eqref{EQ:mass_def}. Since we have, Remark \ref{REM:ex_reaction}, we can deduce that $\eigenval$ needs to be positive to solve this problem.
  
 Also, we are able to solve \emph{parabolic diffusion equations}, cf. \eqref{EQ:diffusion_parab}, by rewriting those into the form of
 % 
@@ -1106,7 +1108,7 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
   & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:diff_pb_conv_m}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic diffusion example. Here, the approximate mass matrix is used instead of the exact local problems.}\label{TAB:diff_pb_conv_m}
 \end{table}
 % 
 For a parabolic test of the approximate mass matrix, we consider
@@ -1115,7 +1117,7 @@ For a parabolic test of the approximate mass matrix, we consider
  \partial_t u - \nabla \cdot (d \nabla u) = f \text{ in } (0,1) \times \Omega, \qquad u = u_\text D \text{ on } (0,1) \times \partial \Omega,
 \end{equation}
 % 
-with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}.
+with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:diff_pb_conv_m}. As expected, we receive a second order approximation which is independent of the polynomial degree of the shape functions.
 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1124,21 +1126,25 @@ with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin
   \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 2$ && \textcolor{red}{5.17e-1} & --- && \textcolor{red}{5.17e-1} & --- && \textcolor{red}{5.17e-1} & ---  \\
+  & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
+  & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
+  & $i = 5$ && 7.93e-3 & 2.0 && 7.93e-3 & 2.0 && 7.93e-3 & 2.0  \\
+  & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
+  \midrule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
   & $i = 2$ && 5.17e-1 & --- && 5.17e-1 & --- && 5.17e-1 & ---  \\
   & $i = 3$ && 1.27e-1 & 2.0 && 1.27e-1 & 2.0 && 1.27e-1 & 2.0  \\
   & $i = 4$ && 3.17e-2 & 2.0 && 3.17e-2 & 2.0 && 3.17e-2 & 2.0  \\
   & $i = 5$ && 7.93e-3 & 2.0 && 7.93e-3 & 2.0 && 7.93e-3 & 2.0  \\
   & $i = 6$ && 1.98e-3 & 2.0 && 1.98e-3 & 2.0 && 1.98e-3 & 2.0  \\
-  & $i = 7$ && 4.97e-4 & 2.0 && 4.97e-4 & 2.0 && 4.97e-4 & 2.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for eigenvalue example.}\label{TAB:eigs_conv_m}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for diffusive eigenvalue example. Here, the approximate mass matrix and a shifted inverse approach are used instead of the exact local problems.}\label{TAB:eigs_conv_m}
 \end{table}
 % 
-The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]$ is the unit interval and the polynomial approximation orders and the mesh sizes vary.
-% 
-\end{envarfatal}
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]^d$ is the unit square, $\sigma = \eigenval / 2$, and the polynomial approximation orders and the mesh sizes vary. Again, we receive an oder of convergence of $2$, which has been predicted in \cite{GopalakrishnanLNP2014}.
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}
@@ -1242,11 +1248,7 @@ This is basically the formulation of the single face hybridizable scheme of \cit
 
 \subsection{Numerical convergence tests}
 % 
-Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the respective diffusion problems).
-% 
-\begin{envarfatal}{This might be removed!}
- Moreover, an approximate mass matrix can be constructed similarly.
-\end{envarfatal}
+Implementing the parabolic and eigenvalue problems can then be done analogously to Section \ref{SEC:related_diffusion_problems} (for the respective diffusion problems). Moreover, an approximate mass matrix can be constructed similarly.
 
 \begin{table}
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1275,7 +1277,7 @@ Implementing the parabolic and eigenvalue problems can then be done analogously 
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:bil_el_conv}
 \end{table}
 % 
-Thus, we start with an convergence test for the elliptic problem for which $u = \sin(\pi x)$ and $d = \tfrac{1}{\pi}$. The results can be found in Table \ref{TAB:bil_el_conv} illustrating that the order of convergence is $p+1$.\arwarning{Hopefully}
+Thus, we start with an convergence test for the elliptic problem for which $u = \sin(\pi x)$ and $d = \tfrac{1}{\pi}$. The results can be found in Table \ref{TAB:bil_el_conv} illustrating that the order of convergence is $p+1$.
 
 \begin{table}[ht]
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1293,7 +1295,7 @@ Thus, we start with an convergence test for the elliptic problem for which $u = 
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:bil_hg_el_conv}
-\end{table}\arwarning{To be filled!}
+\end{table}
 % 
 The convergence of an elliptic problem on a hypergraph to $u = x^2 + y^2 + z^2$ is investigated in Table \ref{TAB:bil_hg_el_conv}.
 
@@ -1361,7 +1363,7 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue.}\label{TAB:bil_eigenvalue_conv}
 \end{table}
 % 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which \textcolor{red}{$\sigma = 3 \eigenval / 4$} is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. \begin{envarerror}{TODO!} Here, we observe that the order of convergence is $2p+1$. \end{envarerror}
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which \textcolor{red}{$\sigma = 3 \eigenval / 4$} is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
 % 
 % \subsection{Mass matrix representation}\label{SEC:bilap_mass}
 % % 

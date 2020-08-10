@@ -53,6 +53,11 @@ class helper_ev_approx():
     vec = self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector), self.sigma)
     vec = np.multiply(self.short_vector(vec), -1.)
     return vec
+  def multiply_mass(self, vector):
+    vec = self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector), self.sigma)
+    vec = np.subtract( self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector)) , vec )
+    vec = np.multiply( self.short_vector(vec) , -1. / self.sigma )
+    return vec
   def shifted_inverse(self, vector):
     if not hasattr(self, 'ShiftOp'):
       system_size  = self.short_vector_size()
@@ -79,7 +84,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 
   # Configure eigenvector/-value solver.
   exact_eigenval = (dimension * (np.pi ** 2)) ** 2
-  sigma          = exact_eigenval / 2.
+  sigma          = 3. * exact_eigenval / 4.
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
@@ -93,10 +98,11 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   # Define LinearOperator in terms of C++ functions to use scipy's matrix-free linear solvers.
   system_size = helper.short_vector_size()
   Stiff       = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
+  Mass        = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
   ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
   
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, sigma= sigma, which='LM', OPinv= ShiftedInv)
+  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
 
   # Print error.
   error = np.absolute(vals[0] - exact_eigenval)
