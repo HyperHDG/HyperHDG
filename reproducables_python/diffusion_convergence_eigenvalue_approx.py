@@ -17,8 +17,9 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
 # --------------------------------------------------------------------------------------------------
 class helper_ev_approx():
-  def __init__(self, hdg_wrapper):
+  def __init__(self, hdg_wrapper, sigma):
     self.hdg_wrapper       = hdg_wrapper
+    self.sigma             = sigma
     self.dirichlet_inidces = hdg_wrapper.dirichlet_indices()
   def long_vector_size(self):
     return self.hdg_wrapper.size_of_system()
@@ -45,19 +46,21 @@ class helper_ev_approx():
       vec[i] = vector[i + n_indices]
     return vec
   def multiply_stiff(self, vector):
-    vec = self.long_vector(vector)
-    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
+    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply( self.long_vector(vector) ), -1.)
     vec = self.short_vector(vec)
     return vec
   def multiply_mass(self, vector):
-    vec = self.long_vector(vector)
-    vec = self.hdg_wrapper.mass_matrix_multiply(vec)
-    vec = self.short_vector(vec)
+    vec = self.short_vector( self.hdg_wrapper.mass_matrix_multiply( self.long_vector(vector) ) )
     return vec
-  def multiply_inverse_mass(self, vector):
-    system_size = self.short_vector_size()
-    Mass        = LinearOperator( (system_size,system_size), matvec= self.multiply_mass )
-    [vec, n_it] = sp_lin_alg.cg(Mass, vector, tol=1e-9)
+  def shifted_mult(self, vector):
+    vec = np.multiply( self.multiply_mass(vector), self.sigma)
+    vec = np.subtract( self.multiply_stiff(vector), vec)
+    return vec
+  def shifted_inverse(self, vector):
+    if not hasattr(self, 'ShiftOp'):
+      system_size  = self.short_vector_size()
+      self.ShiftOp = LinearOperator( (system_size,system_size), matvec=self.shifted_mult )
+    [vec, n_it] = sp_lin_alg.cg(self.ShiftOp, vector, tol=1e-9)
     assert n_it == 0
     return vec
 
@@ -77,6 +80,10 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
                 "HyperHDG/LocalSolver/Diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
 
+  # Configure eigenvector/-value solver.
+  exact_eigenval = dimension * (np.pi ** 2)
+  sigma          = exact_eigenval / 2.
+
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
@@ -84,25 +91,19 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-  helper = helper_ev_approx(HDG_wrapper)
+  helper = helper_ev_approx(HDG_wrapper, sigma)
   
   # Define LinearOperator in terms of C++ functions to use scipy's matrix-free linear solvers.
   system_size = helper.short_vector_size()
-  Stiff = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
-  Mass  = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
-  M_inv = LinearOperator( (system_size,system_size), matvec= helper.multiply_inverse_mass )
-  
-  # vector = [0.] * system_size
-  # for i in range(system_size):
-  #   vector[i] = 1.
-  #   print(Mass * vector)
-  #   vector[i] = 0.
+  Stiff       = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
+  Mass        = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
+  ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
   
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, which='SM', tol=1e-9, Minv=M_inv)
+  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv = ShiftedInv)
 
   # Print error.
-  error = np.absolute(vals[0] - np.pi * np.pi)
+  error = np.absolute(vals[0] - exact_eigenval)
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/diffusion_convergence_eigenvalue_approx.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
@@ -125,9 +126,9 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
 def main():
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(2,3):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(2,3):
+      for iteration in range(2,6):
         eigenvalue_approx(poly_degree, dimension, iteration)
 
 

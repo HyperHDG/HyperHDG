@@ -17,9 +17,14 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # Class implementing the matvec of "mass_matrix + delta_time * stiffness_matrix".
 # --------------------------------------------------------------------------------------------------
 class helper_ev_approx():
-  def __init__(self, hdg_wrapper):
+  def __init__(self, hdg_wrapper, sigma):
     self.hdg_wrapper       = hdg_wrapper
+    self.sigma             = sigma
     self.dirichlet_inidces = hdg_wrapper.dirichlet_indices()
+  def long_vector_size(self):
+    return self.hdg_wrapper.size_of_system()
+  def short_vector_size(self):
+    return self.hdg_wrapper.size_of_system() - len(self.dirichlet_inidces)
   def long_vector(self, vector):
     vec = [0.] * (len(vector)+len(self.dirichlet_inidces))
     n_indices = 0
@@ -39,19 +44,22 @@ class helper_ev_approx():
       vec[i] = vector[i + n_indices]
     return vec
   def multiply_stiff(self, vector):
-    vec = self.long_vector(vector)
-    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply(vec), -1.)
+    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply( self.long_vector(vector) ), -1.)
     vec = self.short_vector(vec)
     return vec
   def multiply_mass(self, vector):
-    vec = self.long_vector(vector)
-    vec = self.hdg_wrapper.mass_matrix_multiply(vec)
-    vec = self.short_vector(vec)
+    vec = self.short_vector( self.hdg_wrapper.mass_matrix_multiply( self.long_vector(vector) ) )
     return vec
-  def plot_vector(self, vector):
-    vec = self.long_vector(vector)
-    for i in range(len(vec)):
-      vec[i] = (vec[i]).real
+  def shifted_mult(self, vector):
+    vec = np.multiply( self.multiply_mass(vector), self.sigma)
+    vec = np.subtract( self.multiply_stiff(vector), vec)
+    return vec
+  def shifted_inverse(self, vector):
+    if not hasattr(self, 'ShiftOp'):
+      system_size  = self.short_vector_size()
+      self.ShiftOp = LinearOperator( (system_size,system_size), matvec=self.shifted_mult )
+    [vec, n_it] = sp_lin_alg.cg(self.ShiftOp, vector, tol=1e-9)
+    assert n_it == 0
     return vec
 
 
@@ -74,22 +82,26 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
-
+  
+  # Configure eigenvector/-value solver.
+  exact_eigenval = (dimension * (np.pi ** 2)) ** 2
+  sigma          = 3. * exact_eigenval / 4.
+  
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
-  helper = helper_ev_approx(HDG_wrapper)
+  helper = helper_ev_approx(HDG_wrapper, sigma)
 
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
-  system_size = HDG_wrapper.size_of_system()
-  Stiff = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_stiff )
-  Mass  = LinearOperator( (system_size-4,system_size-4), matvec= helper.multiply_mass )
+  # Define LinearOperator in terms of C++ functions to use scipy's matrix-free linear solvers.
+  system_size = helper.short_vector_size()
+  Stiff       = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
+  Mass        = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
+  ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
   
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigs(Stiff, k=1, M=Mass, which='SM', tol=1e-9)
+  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
 
   # Print error.
-  error = np.absolute(vals[0] - np.power(np.pi, 4))
+  error = np.absolute(vals[0] - exact_eigenval)
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_eigenvalue_approx.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
@@ -100,13 +112,10 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(helper.plot_vector(vecs));
+  HDG_wrapper.plot_solution(helper.long_vector([x[0].real for x in vecs]));
   
-  sol_vec = [0.] * len(vecs)
-  for i in range(len(vecs)):
-    sol_vec[i] = vecs[i][0]
-  
-  return vals[0], helper.long_vector(sol_vec)
+  # Return smallest eigenvalue and corresponding eigenvector.
+  return vals[0].real, helper.long_vector([x[0].real for x in vecs])
   
 
 # --------------------------------------------------------------------------------------------------
