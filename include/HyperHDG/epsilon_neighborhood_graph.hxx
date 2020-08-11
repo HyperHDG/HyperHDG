@@ -1,4 +1,4 @@
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/dense_la.hxx>
 
 #include <algorithm>
 #include <cmath>

@@ -24,8 +24,8 @@ aggregate = "5"
 # Predefine problem to be solved.
 problem = "AbstractProblem < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
          +                  "LengtheningBernoulliBendingBeam<1,3,1,2> > "
-filenames = [ "HyperHDG/Geometry/File.hxx" , \
-              "HyperHDG/LocalSolver/BernoulliBeams.hxx" ]
+filenames = [ "HyperHDG/geometry/file.hxx" , \
+              "HyperHDG/local_solver/bernoulli_beams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import

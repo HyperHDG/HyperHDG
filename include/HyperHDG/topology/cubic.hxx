@@ -1,26 +1,29 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/Topology/Cubic.hxx>
-#include <HyperHDG/HyAssert.hxx>
-#include <HyperHDG/Hypercube.hxx>
+#include <HyperHDG/wrapper/tpcc.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <array>
-#include <cmath>
 #include <vector>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing different classes describing hypergraph topologies.
  *
- * \todo    Doxygen
+ * One of the advantages of this software package is the strict discrimination between the topology
+ * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
+ * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
+ * sphere, since their topology is the same. However, different geometries have to be defined, since
+ * these obviously are not equal. Thus, all parts of the code that involve communication and/or
+ * solving systems of equations are reusable in a much more general (than the standard) sense.
+ * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
+ * periodic domains, for example.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-namespace NodeDescriptor
+namespace Topology
 {  
 /*!*************************************************************************************************
  * \brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs.
- *
- * \todo    CHECK THIS IMPLEMENTATION!
  *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
@@ -32,26 +35,21 @@ namespace NodeDescriptor
  * periodic domains, for example.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dimT       The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dimT.
+ *                        for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dimT    The dimension of the space, the object is located in. This number should
+ *                        be larger than or equal to hyEdge_dimT.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template
-< 
-  unsigned int hyEdge_dimT, unsigned int space_dimT,
-  typename hyEdge_index_t = unsigned int, typename hyNode_index_t = hyEdge_index_t
->
+< unsigned int hyEdge_dimT, unsigned int space_dimT, typename hyEdge_index_t = unsigned int,
+  typename hyNode_index_t = hyEdge_index_t >
 class Cubic
 {
   
   /*!***********************************************************************************************
    * \brief   Definition of the topology of a hypergraph's edges --- Cubic HyperGraph's edges.
-   * 
-   * \todo    Both private arrays are filled when the hyperedge is constructed. Lazy evaluation
-   *          might be an important aspect here. What do you think?
    *
    * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
    * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -64,7 +62,7 @@ class Cubic
        *
        * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
        ********************************************************************************************/
-      std::array<hyNode_index_t, 2*hyEdge_dimT> hyFace_types_;
+      std::array<hyNode_index_t, 2*hyEdge_dimT> hyNode_indices_;
     public:
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
@@ -76,21 +74,15 @@ class Cubic
        * \param   index           The index of the hyperedge to be created.
        * \param   num_elements    A \c std::array containing number of elements per dimension.
        ********************************************************************************************/
-      hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
+      hyEdge(const hyEdge_index_t index, const Cubic& topology)
       {
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
-          = get_element<hyEdge_dimT, space_dimT,unsigned int>(node_desc.tpcc_elements_, index);
-        for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
+          = get_element<hyEdge_dimT, space_dimT,unsigned int>(topology.tpcc_elements_, index);
+        for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
         {
           tpcc_elem_t<hyEdge_dimT-1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
-          hyFace_types_[i] = 0;
-          for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT + 1; ++dim)
-          { 
-            unsigned int coordinate = exterior_coordinate<hyEdge_dimT-1, space_dimT>(face, dim);
-            unsigned int direction  = exterior_direction <hyEdge_dimT-1, space_dimT>(face, dim);
-            if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
-              hyFace_types_[i] += (1 + (coordinate != 0)) * std::pow(3, direction);
-          }
+          hyNode_indices_[i]
+            = get_index<hyEdge_dimT-1, space_dimT,unsigned int>(topology.tpcc_faces_, face);
         }
       }
       /*!*******************************************************************************************
@@ -100,9 +92,8 @@ class Cubic
        *
        * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
        ********************************************************************************************/
-      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyFace_types() const
-      { return hyFace_types_; }
-      const unsigned int operator[](const unsigned int index) const {return hyFace_types_[index]; }
+      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const
+      { return hyNode_indices_; }
   }; // end of class hyEdge
   
   public:
@@ -173,8 +164,8 @@ class Cubic
      * \brief   Construct a cubic hypergraph from a \c std::vector.
      *
      * Constructs a hypergraph from a \c std::vector containing the elementens per spatial dimension
-     * which is given as input data. If the input vector is shorter that \c space_dimT, the remaining
-     * amounts of elemnts are assumed to be equal to zero. If the vector is longer than
+     * which is given as input data. If the input vector is shorter that \c space_dimT, the
+     * remaining amounts of elemnts are assumed to be equal to zero. If the vector is longer than
      * \c space_dimT, the first \c space_dimT entries are considered only.
      * 
      * \todo    If the vector is too short, an error is thrown in the test program and the behavior
@@ -220,15 +211,15 @@ class Cubic
      *
      * \param   other           Hypergraph to be copied.
      **********************************************************************************************/
-    Cubic(const Topology::Cubic<hyEdge_dimT,space_dimT>& other)
-    : num_elements_(other.num_elements()), tpcc_elements_(other.tpcc_elem()),
-      tpcc_faces_(other.tpcc_face()), n_hyEdges_(other.n_hyEdges()), n_hyNodes_(other.n_hyNodes())
-    { }
+    Cubic(const Cubic<hyEdge_dimT,space_dimT>& other)
+    : num_elements_(other.num_elements_), tpcc_elements_(other.tpcc_elements_),
+      tpcc_faces_(other.tpcc_faces_), n_hyEdges_(other.n_hyEdges_), n_hyNodes_(other.n_hyNodes_) { }
     /*!*********************************************************************************************
      * \brief   Get topological hyperedge of given index.
      *
      * \todo  Here, we repeatedly return a large object. This is done since the object could be
      *        locally created in regular topologies/geometries! Return shared-pointer?
+     *        -> AR: I do not really see the point, but might just be stupid ;)
      *
      * This function returns the hyperedge of the given index, i.e., it returns the topological
      * hyperedge (\b not the geometrical information). The topological informatiom comprises the
@@ -252,11 +243,25 @@ class Cubic
      **********************************************************************************************/
     const std::array<unsigned int, space_dimT>& num_elements() const { return num_elements_; }
     /*!*********************************************************************************************
+     * \brief   Tensor product chain complex for elements.
+     **********************************************************************************************/
+    tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elem() const { return tpcc_elements_; }
+    /*!*********************************************************************************************
+     * \brief   Tensor product chain complex for faces.
+     **********************************************************************************************/
+    tpcc_t<hyEdge_dimT-1, space_dimT, hyNode_index_t> tpcc_face() const { return tpcc_faces_; }
+    /*!*********************************************************************************************
      * \brief   Returns the number of hyperedges making up the hypergraph.
      *
      * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
      **********************************************************************************************/
     const hyEdge_index_t n_hyEdges() const { return n_hyEdges_; }
+    /*!*********************************************************************************************
+     * \brief   Returns the number of hypernodes making up the hypergraph.
+     *
+     * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
+     **********************************************************************************************/
+    const hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
 }; // end of class Cubic
 
-} // end of namespace NodeDescriptor
+} // end of namespace Topology

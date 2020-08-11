@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/HyAssert.hxx>
-#include <HyperHDG/HyperNodeFactory.hxx>
-#include <HyperHDG/HyDataContainer.hxx>
+#include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/hypernodefactory.hxx>
+#include <HyperHDG/hy_data_container.hxx>
 
 #include <memory>
 

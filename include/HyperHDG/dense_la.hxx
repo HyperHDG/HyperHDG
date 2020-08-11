@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
 #include <array>
 #include <cmath>
@@ -835,7 +835,7 @@ using Point = SmallVec<n_rows, mat_entry_t>;
 // -------------------------------------------------------------------------------------------------
 
 
-#include <HyperHDG/Wrapper/Lapack.hxx>
+#include <HyperHDG/wrapper/lapack.hxx>
 // Here, since prior include violates use of SmallMat, SmallVec, ... within the functions that are
 // introduced in LapackWrapper.hxx!
 

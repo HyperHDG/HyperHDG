@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/Topology/Cubic.hxx>
-#include <HyperHDG/Mapping/Linear.hxx>
+#include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/topology/cubic.hxx>
+#include <HyperHDG/mapping/linear.hxx>
 #include <algorithm>
 #include <array>
 

@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/DenseLA.hxx>
-#include <HyperHDG/HyAssert.hxx>
-#include <HyperHDG/EpsilonNeighborhoodGraph.hxx>
+#include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/epsilon_neighborhood_graph.hxx>
 
 #include <algorithm>
 #include <array>
