@@ -90,13 +90,13 @@ tests:
 
 run_tests:
 	$(MAKE) tests
-	./build/tests_c++/Plot1.exe;
-	./build/tests_c++/Plot2.exe;
+	./build/tests_c++/plot_simple.exe;
+	./build/tests_c++/plot_refined.exe;
 	./build/tests_c++/point_functions.exe;
 	./build/tests_c++/diffusion_floatings.exe;
 	./build/tests_c++/diffusion_plotting.exe;
 	./build/tests_c++/diffusion_dimensions.exe;
-	./build/tests_c++/ElasticityTest1.exe;
+	./build/tests_c++/elasticity_simple.exe;
 	$(PYTHON) tests_python/diffusion_uniform.py
 
 new_run_tests:
