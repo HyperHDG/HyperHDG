@@ -50,11 +50,11 @@ def cython_import(names, filenames = [], force_comp = False):
     os.system("./build/cythonize")
 
   try:
-    from Cythonizer import Cythonize
+    from hyper_cythonizer import hyper_cythonize
   except ImportError as error:
     sys.path.append(os.path.dirname(__file__) + "/build/shared_objects")
-    from Cythonizer import Cythonize
+    from hyper_cythonizer import hyper_cythonize
 
-  retval = Cythonize(names, filenames, ver_major, ver_minor, force_comp)
+  retval = hyper_cythonize(names, filenames, ver_major, ver_minor, force_comp)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)

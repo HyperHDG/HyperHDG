@@ -302,7 +302,7 @@ string cythonize
  **************************************************************************************************/
 int main()
 {
-  std::vector<std::string> names = { "cythonize" , "Cythonizer" };
+  std::vector<std::string> names = { "cythonize" , "hyper_cythonizer" };
   cythonize( names , { } , PYVERMAJ , PYVERMIN );
   return 0;
 }
