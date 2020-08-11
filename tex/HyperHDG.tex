@@ -959,7 +959,13 @@ in the finite-dimensional sense, where the $\varphi_j$ make up a basis of $V$. T
 % 
 \paragraph{Algorithms based on the shifted inverse approach}
 % 
-To obtain a good starting vector for Newton's method, we exploit Python's eigenvector package \code{eigsh}\footnote{\url{https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.eigsh.html}} which is based on ARPACK\footnote{\url{https://www.caam.rice.edu/software/ARPACK}}. Here, the shifted inverse $A - \sigma M$ can be used as an input argument, and it can be obtained via \eqref{EQ:hdg_scheme_eigen} with $\sigma \leftarrow \eigenval$. This allows to use the \code{eigsh} package to obtain approximates to the eigenvalues and eigenfunctions. The results of this approach can be used as initial values of the aformentioned, nonlinear one. Note that the eigenvalues and eigenvectors obtained by solving this problem do not coincide with those of the nonlinear problem, since the eigenvalues of the condensed problem do not necessarily solve the local eigenvalue problems. The relation of several eigenvalue problems is discussed in \cite{GopalakrishnanLNP2014}.
+To obtain a good starting vector for Newton's method, we exploit Python's eigenvector package \code{eigsh}\footnote{\url{https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.eigsh.html}} which is based on ARPACK\footnote{\url{https://www.caam.rice.edu/software/ARPACK}}. Here, the shifted inverse $A - \sigma M$ can be used as an input argument, and it can be obtained via \eqref{EQ:hdg_scheme_eigen} with $\sigma \leftarrow \eigenval$. This allows to use the \code{eigsh} package to obtain approximates to the eigenvalues and eigenfunctions. The results of this approach can be used as initial values of the aformentioned, nonlinear one.
+
+However, this approach clearly has the drawback that matrix $S(\sigma) := A - \sigma M$ can be evaluated, while $A$ and $M$ cannot be evaluated. This raises the need to approximate $A$ and $M$ by setting
+% 
+\begin{equation}
+ M \sim \frac{S(\sigma) - A)}{\sigma} \qquad \text{ and } \qquad A = S(0).
+\end{equation}
 % 
 \paragraph{Numerical convergence tests}
 % 
@@ -998,7 +1004,7 @@ To obtain a good starting vector for Newton's method, we exploit Python's eigenv
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue. All results use the accurate local problems for the shifted inverse (SI) and nonlinear (NL) approaches.}\label{TAB:eigenvalue_conv}
 \end{table}
 % 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Again, we stress that the shifted inverse approach is solely to gain a good starting point for Newton's method. Its results do not necessarily approximate the desired values. To find a remedy for this issue, we consider the approximation to the statically condensed mass matrix of Section \ref{SEC:approx_mass}.
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Another approach to find a good starting value consists of, we consider the approximation to the statically condensed mass matrix of Section \ref{SEC:approx_mass}.
 % 
 \subsection{An approximation to the statically condensed mass matrix}\label{SEC:approx_mass}
 % 

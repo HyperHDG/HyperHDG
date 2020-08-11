@@ -70,7 +70,7 @@ class helper_ev_approx():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def eigenvalue_approx(poly_degree, dimension, iteration):
+def eigenvalue_approx_SI(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -102,7 +102,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
     
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
+  vals, vecs = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
 
   # Print error.
   error = np.absolute(vals[0] - exact_eigenval)
@@ -122,7 +122,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   HDG_wrapper.plot_solution(solution, vals[0].real)
   
   # Return smallest eigenvalue and corresponding eigenvector.
-  return vals[0].real, solution
+  return vals[0].real, solution, error
   
 
 # --------------------------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ def main():
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_approx(poly_degree, dimension, iteration)
+        eigenvalue_approx_SI(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
