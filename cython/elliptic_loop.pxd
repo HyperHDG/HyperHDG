@@ -1,4 +1,4 @@
-# C++: HyperHDG/AbstractProblem.hxx    (This line allows for just in time compile optimization!)
+# C++: HyperHDG/global_loop/elliptic.hxx   (This line allows for just in time compile optimization!)
 
 # CyReplace_Number: 4      // For setting default values for CyReplace, their amount must be known.
 # CyReplace03: double      // Set default value for CyReplace03 to "double".
