@@ -69,7 +69,7 @@ class helper_ev_approx():
 def eigenvalue_approx_MA(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
-  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "MassEigenvalue < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
