@@ -507,16 +507,8 @@ void plot_boundary_values
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(hyper_graph, edge_index, lambda);
     for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index) {
       myfile << "      ";
-      if constexpr
-          ( 
-            has_lambda_values
-            < LocalSolverT,
-              decltype(local_values)
-              ( decltype(abscissas)&, decltype(hyEdge_dofs)&, decltype(bdr_index) )
-            >::value
-          )
+
             local_values = local_solver.lambda_values(abscissas, hyEdge_dofs, bdr_index);
-          else for (unsigned int i = 0; i < hyEdge_dofs.size(); ++i) local_values[i].fill(0.);
       for (unsigned int corner = 0; corner < Hypercube<edge_dim - 1>::n_vertices(); ++corner) {
         myfile << "  " << local_values[0][corner];
 
