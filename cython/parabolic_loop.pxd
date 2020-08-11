@@ -9,7 +9,7 @@ from libcpp.string cimport string
 
 IncludeFiles
 
-cdef extern from "<HyperHDG/AbstractProblem.hxx>" :
+cdef extern from "<HyperHDG/global_loop/parabolic.hxx>" :
   cdef cppclass CythonClassName C++ClassName :
     CythonClassName ( CyReplace01 , CyReplace02 , CyReplace04 ) except +
     CythonClassName ( CyReplace01 , CyReplace04 ) except +
