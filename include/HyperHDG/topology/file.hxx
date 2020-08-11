@@ -1,19 +1,26 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/ReadDomain.hxx>
+#include <HyperHDG/read_domain.hxx>
 
 #include <array>
 #include <string>
 
 /*!*************************************************************************************************
- * \brief   A namespace containing different classes describing local hypernode properties.
+ * \brief   A namespace containing different classes describing hypergraph topologies.
  *
- * \todo    All doxygen!
+ * One of the advantages of this software package is the strict discrimination between the topology
+ * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
+ * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
+ * sphere, since their topology is the same. However, different geometries have to be defined, since
+ * these obviously are not equal. Thus, all parts of the code that involve communication and/or
+ * solving systems of equations are reusable in a much more general (than the standard) sense.
+ * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
+ * periodic domains, for example.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-namespace NodeDescriptor
+namespace Topology
 {  
 
 /*!*************************************************************************************************
@@ -49,14 +56,6 @@ class File
   {
     public:
       static constexpr unsigned int n_hyNodes() { return 2 * hyEdge_dimT; }
-      /*!*******************************************************************************************
-       * \brief   Returns dimension of the hyperedge.
-       ********************************************************************************************/
-      static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-      /*!*******************************************************************************************
-       * \brief   Returns dimension of the surrounding space.
-       ********************************************************************************************/
-      static constexpr unsigned int space_dim() { return space_dimT; }
     private:
       /*!*******************************************************************************************
        * \brief   Reference to parent hypergraph.
@@ -75,10 +74,8 @@ class File
       /*!*******************************************************************************************
        * \brief   Return hypernodes of a hyperedge.
        ********************************************************************************************/
-      const std::array<hyNode_index_t, n_hyNodes()>& get_hyFaces_types() const
-      { return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_]; }
-      const unsigned int operator[](const unsigned int index) const 
-      { return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_][index]; }
+      const std::array<hyNode_index_t, 2*hyEdge_dimT>& get_hyNode_indices() const
+      { return hyGraph_topology_.domain_info_.hyNodes_hyEdge[index_]; }
   }; // end of class hyEdge
   
   public:
@@ -95,7 +92,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
      **********************************************************************************************/
-    const DomainInfo<hyEdge_dimT,space_dimT>& domain_info_;
+    const DomainInfo<hyEdge_dimT,space_dimT> domain_info_;
     
   public:
     /*!*********************************************************************************************
@@ -110,18 +107,20 @@ class File
     /*!*********************************************************************************************
      * \brief   Defines the value type of input argument for standard constructor.
      *
-     * \todo    Doxygen
+     * To receive a very general \c AbstractProblem, constructors need to account for the fact that
+     * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
+     * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
+     * topology is by default constructed by a std::vector that contains amounts of elements in the
+     * different dimensions.
      **********************************************************************************************/
-    typedef Topology::File<hyEdge_dimT,space_dimT> constructor_value_type;
+    typedef std::string constructor_value_type;
     /*!*********************************************************************************************
-     * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
+     * \brief   Construct a topology from a given filename.
      *
-     * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per 
-     * spatial dimension which is given as by its topology.
-     * 
-     * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
+     * \param   filename    Name of file containing the information.
      **********************************************************************************************/
-    File(const constructor_value_type& topology) : domain_info_(topology.domain_info()) { }
+    File(const constructor_value_type& filename)
+    : domain_info_(read_domain<hyEdge_dimT,space_dimT>(filename)) { }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      **********************************************************************************************/
@@ -129,22 +128,28 @@ class File
     : domain_info_(other.domain_info) { }
     
     /*!*********************************************************************************************
-     * \brief   Get geometrical hyperedge of given index.
+     * \brief   Get topological hyperedge of given index.
      *
-     * \todo    Doxygen
+     * \todo  Here, we repeatedly return a large object. This is done since the object could be
+     *        locally created in regular topologies/geometries! Return shared-pointer?
+     *        -> This is not really a large object, is it? I mean, it only consists of a reference
+     *        and an index. I do not really see the advantage of returning a shared pointer. Does
+     *        it make any difference, here?
      *
-     * \param   index       The index of the hyperedge to be returned.
-     * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
+     * This is equivalent to \c get_hyEdge.
+     *
+     * \param   index           The index of the hyperedge to be returned.
+     * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    value_type operator[](const hyEdge_index_t index) const
+    const value_type operator[](const hyEdge_index_t index) const
     { return get_hyEdge(index); }
     /*!*********************************************************************************************
-     * \brief   Get geometrical hyperedge of given index.
+     * \brief   Get topological hyperedge of given index.
      *
-     * \todo    Doxygen
+     * This is equivalent to \c operator[].
      *
-     * \param   index       The index of the hyperedge to be returned.
-     * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
+     * \param   index           The index of the hyperedge to be returned.
+     * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     value_type get_hyEdge(const hyEdge_index_t index) const
     {
@@ -153,6 +158,24 @@ class File
                  " (which is the amount of hyperedges). It was " << index << "!" );
       return hyEdge(*this, index);
     }
+    /*!*********************************************************************************************
+     * \brief   Returns the number of hyperedges making up the hypergraph.
+     *
+     * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
+     **********************************************************************************************/
+    const hyEdge_index_t n_hyEdges() const { return domain_info_.n_hyEdges; }
+    /*!*********************************************************************************************
+     * \brief   Returns the number of hypernodes making up the hypergraph.
+     *
+     * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
+     **********************************************************************************************/
+    const hyNode_index_t n_hyNodes() const { return domain_info_.n_hyNodes; }
+    /*!*********************************************************************************************
+     * \brief   Returns the whole domain info related to a hypergraph.
+     *
+     * \retval  domain_indo     Const reference to domain info.
+     **********************************************************************************************/
+    const DomainInfo<hyEdge_dimT,space_dimT>& domain_info() const { return domain_info_; }
 }; // end of class File
 
 } // end of namespace Topology

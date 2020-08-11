@@ -15,7 +15,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <tpcc/lexicographic.h>  // Submodule which is wrapped by this file!
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <array>
 
 // -------------------------------------------------------------------------------------------------

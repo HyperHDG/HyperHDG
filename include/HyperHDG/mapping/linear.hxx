@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/dense_la.hxx>
 
 #include <array>
 #include <memory>

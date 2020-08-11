@@ -1,7 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/HyAssert.hxx>
-#include <HyperHDG/TensorialShapeFun.hxx>
+#include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/tensorial_shape_fun.hxx>
 
 #include <array>
 #include <cmath>

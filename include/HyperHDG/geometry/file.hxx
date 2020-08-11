@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/Topology/File.hxx>
-#include <HyperHDG/NodeDescriptor/File.hxx>
-#include <HyperHDG/Mapping/Linear.hxx>
+#include <HyperHDG/topology/file.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
+#include <HyperHDG/mapping/linear.hxx>
 
 #include <array>
 #include <memory>

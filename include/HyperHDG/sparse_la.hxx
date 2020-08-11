@@ -1,6 +1,6 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
 #include <vector>
 // #include <cmath>

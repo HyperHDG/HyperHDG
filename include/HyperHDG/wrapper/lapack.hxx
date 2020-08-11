@@ -406,7 +406,7 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
 // -------------------------------------------------------------------------------------------------
 
 
-#include <HyperHDG/DenseLA.hxx> // Dense linear algebra that is utilized in the following.
+#include <HyperHDG/dense_la.hxx> // Dense linear algebra that is utilized in the following.
 
 /*!*************************************************************************************************
  * \brief   Matrix Q of QR decomposition --- DO NOT USE.

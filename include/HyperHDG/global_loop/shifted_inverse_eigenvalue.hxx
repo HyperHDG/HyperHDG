@@ -1,9 +1,9 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/CompileTimeTricks.hxx>
-#include <HyperHDG/HDGHyperGraph.hxx>
-#include <HyperHDG/Plot.hxx>
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/hdg_hypergraph.hxx>
+#include <HyperHDG/plot.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <algorithm>
 #include <array>
 #include <cmath>

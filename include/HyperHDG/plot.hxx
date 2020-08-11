@@ -1,9 +1,9 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/CompileTimeTricks.hxx>
-#include <HyperHDG/HDGHyperGraph.hxx>
-#include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/hdg_hypergraph.hxx>
+#include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/dense_la.hxx>
 
 #include <fstream>
 #include <experimental/filesystem>

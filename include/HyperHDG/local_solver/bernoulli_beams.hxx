@@ -1,13 +1,13 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/ShapeFun1D.hxx>
-#include <HyperHDG/QuadratureTensorial.hxx>
+#include <HyperHDG/shape_fun_1d.hxx>
+#include <HyperHDG/quadrature_tensorial.hxx>
 
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
-#include <HyperHDG/LocalSolver/bilaplacian.hxx>
-#include <HyperHDG/Hypercube.hxx>
-#include <HyperHDG/DenseLA.hxx>
-#include <HyperHDG/TensorialShapeFun.hxx>
+#include <HyperHDG/local_solver/diffusion.hxx>
+#include <HyperHDG/local_solver/bilaplacian.hxx>
+#include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/tensorial_shape_fun.hxx>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.

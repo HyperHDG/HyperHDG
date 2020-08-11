@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
-#include <HyperHDG/ShapeFun1D.hxx>
+#include <HyperHDG/shape_fun_1d.hxx>
 #include <array>
 
 /*!*********************************************************************************************

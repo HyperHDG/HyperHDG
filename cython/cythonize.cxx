@@ -1,4 +1,4 @@
-#include <HyperHDG/HyAssert.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
 #include <vector>

@@ -51,8 +51,8 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersEigs,double> >"
-  filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
-                "HyperHDG/LocalSolver/Diffusion.hxx", \
+  filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
+                "HyperHDG/local_solver/diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
 
   # Config Newton solver

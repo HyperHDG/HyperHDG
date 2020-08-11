@@ -23,8 +23,8 @@ def diffusion_test(poly_degree, dimension, iteration):
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersSinEllipt,double> >"
-  filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
-                "HyperHDG/LocalSolver/Diffusion.hxx", \
+  filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
+                "HyperHDG/local_solver/diffusion.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
 
   # Import C++ wrapper class to use HDG method on graphs.

@@ -24,8 +24,8 @@ def bilaplacian_test(poly_degree, dimension, iteration):
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "bilaplacian_parab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersSinParab,double> >"
-  filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/NodeDescriptor/Cubic.hxx", \
-                "HyperHDG/LocalSolver/bilaplacian.hxx", \
+  filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
+                "HyperHDG/local_solver/bilaplacian.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Config time stepping.
