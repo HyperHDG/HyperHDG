@@ -81,7 +81,8 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["mass_approx_eigenvalue_loop", problem, "vector[unsigned int]", \
+            "vector[unsigned int]"], filenames )
   
   # Configure eigenvector/-value solver.
   exact_eigenval = (dimension * (np.pi ** 2)) ** 2
