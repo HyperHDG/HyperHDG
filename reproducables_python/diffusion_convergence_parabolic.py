@@ -35,7 +35,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]", \
+         ( ["parabolic_loop", problem, "vector[unsigned int]", "vector[unsigned int]", \
             "double", "vector[double]"], filenames )
   
   # Initialising the wrapped C++ class HDG_wrapper.
