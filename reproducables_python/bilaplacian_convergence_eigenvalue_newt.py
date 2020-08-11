@@ -146,6 +146,9 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
   
+  # Return smallest eigenvalue and corresponding eigenvector.
+  return vectorSolution[system_size-1], vectorSolution, error
+  
 
 # --------------------------------------------------------------------------------------------------
 # Function main.

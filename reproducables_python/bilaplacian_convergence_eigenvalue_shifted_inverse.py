@@ -70,7 +70,7 @@ class helper_ev_approx():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def eigenvalue_approx(poly_degree, dimension, iteration):
+def eigenvalue_approx_SI(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -122,7 +122,7 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
   HDG_wrapper.plot_solution(solution);
   
   # Return smallest eigenvalue and corresponding eigenvector.
-  return vals[0].real, solution
+  return vals[0].real, solution, error
   
 
 # --------------------------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ def main():
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_approx(poly_degree, dimension, iteration)
+        eigenvalue_approx_SI(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
