@@ -83,7 +83,7 @@ string cythonize
   // Define names of input file and output file.
   
   string infileName = "./cython/" + names[0];
-  string outfileName = "./build/CythonFiles/" + python_name;
+  string outfileName = "./build/cython_files/" + python_name;
   
   // String defining current Python version.
 
@@ -91,7 +91,7 @@ string cythonize
   
   // Define commands to compile, cythonize, and link files.
   
-  string cythonCommand = "cd ./build/CythonFiles/; cython -3 --cplus " + python_name + ".pyx";
+  string cythonCommand = "cd ./build/cython_files/; cython -3 --cplus " + python_name + ".pyx";
   string compileCommand = "g++ \
     -pthread -g  -I/usr/include/python" + pyVersion + " -I. -Iinclude \
     -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
@@ -102,7 +102,7 @@ string cythonize
     -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
     -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 "
-    + outfileName + ".o " + "-o build/SharedObjects/" + python_name + ".so \
+    + outfileName + ".o " + "-o build/shared_objects/" + python_name + ".so \
     -llapack -lstdc++fs";
   
   // Introduce auxiliary variables needed for copying files and substituting keywords.
@@ -126,7 +126,7 @@ string cythonize
   if (success && !force_comp)
   {
     linestream >> word;
-    fs::path so_file  = fs::current_path().string() + "/build/SharedObjects/" + python_name + ".so";
+    fs::path so_file = fs::current_path().string() + "/build/shared_objects/" + python_name + ".so";
     if (exists(so_file))
     {
       fs::path pyx_file = fs::current_path().string() + "/cython/" + names[0] + ".pyx";

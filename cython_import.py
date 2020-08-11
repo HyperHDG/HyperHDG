@@ -17,7 +17,7 @@ import os, sys, importlib
 #  template parameters. The files in which the specified Topology, Geometry, and Local Solver are
 #  defined need to be available to the compiler and therefore be added in the filelist.
 #
-#  First, the method checks whether the build and build/CythonFiles directories are present. If the
+#  First, the method checks whether the build and build/cython_files directories are present. If the
 #  build directory is not present, the Python program will construct both  needed directories. If 
 #  this has beed done, the program compiles the Cythonize.cxx file that does all the work:
 #  It takes  a .pyx and a .pxd file and formats them to allow the coupling of Python and C++ code
@@ -44,7 +44,7 @@ def cython_import(names, filenames = [], force_comp = False):
       print("\nThe current Python version seems not to have an include file.\n")
       print("This will most likely result in an error!\n")
       print("Check your Python version to be not of m or dm type which is not fully supported.\n\n")
-    os.system("mkdir -p build build/CythonFiles build/SharedObjects output")
+    os.system("mkdir -p build build/cython_files build/shared_objects output")
     os.system("g++ cython/cythonize.cxx -DPYVERMAJ=" + str(ver_major) + " -DPYVERMIN=" +
               str(ver_minor) + " -std=c++17 -Iinclude -o build/cythonize -lstdc++fs")
     os.system("./build/cythonize")
@@ -52,7 +52,7 @@ def cython_import(names, filenames = [], force_comp = False):
   try:
     from Cythonizer import Cythonize
   except ImportError as error:
-    sys.path.append(os.path.dirname(__file__) + "/build/SharedObjects")
+    sys.path.append(os.path.dirname(__file__) + "/build/shared_objects")
     from Cythonizer import Cythonize
 
   retval = Cythonize(names, filenames, ver_major, ver_minor, force_comp)

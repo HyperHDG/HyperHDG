@@ -13,7 +13,7 @@ PTCC_DIR = $(SRC_DIR)/submodules/tensor_product_chain_complex.git/include/
 
 OBJECT_DIR  	= $(BUILD_DIR)/ObjectFiles
 CYTHON_DIR  	= $(BUILD_DIR)/CythonFiles
-EXAMPLE_BUILD	= $(BUILD_DIR)/C++ExampleBuild
+EXAMPLE_BUILD	= $(BUILD_DIR)/tests_c++
 CYTHON_FILE 	= ClassWrapper
 DOXY_DIR	= $(DOXY_FILE_DIR)/html $(DOXY_FILE_DIR)/latex
 
@@ -90,13 +90,13 @@ tests:
 
 run_tests:
 	$(MAKE) tests
-	./build/C++ExampleBuild/Plot1.exe;
-	./build/C++ExampleBuild/Plot2.exe;
-	./build/C++ExampleBuild/point_functions.exe;
-	./build/C++ExampleBuild/diffusion_floatings.exe;
-	./build/C++ExampleBuild/diffusion_plotting.exe;
-	./build/C++ExampleBuild/diffusion_dimensions.exe;
-	./build/C++ExampleBuild/ElasticityTest1.exe;
+	./build/tests_c++/Plot1.exe;
+	./build/tests_c++/Plot2.exe;
+	./build/tests_c++/point_functions.exe;
+	./build/tests_c++/diffusion_floatings.exe;
+	./build/tests_c++/diffusion_plotting.exe;
+	./build/tests_c++/diffusion_dimensions.exe;
+	./build/tests_c++/ElasticityTest1.exe;
 	$(PYTHON) tests_python/diffusion_uniform.py
 
 new_run_tests:
