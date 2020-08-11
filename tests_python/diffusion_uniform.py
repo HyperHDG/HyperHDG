@@ -25,7 +25,7 @@ filenames = [ "HyperHDG/Geometry/Cubic.hxx" , \
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import
 PyDiffusionProblem = cython_import \
-  (["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames)
+  (["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames)
 
 # Define tolerance
 tolerance = 1e-8
