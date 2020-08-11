@@ -378,37 +378,12 @@ class AbstractProblem
           >::value
         )
         {
-          if constexpr
-          ( 
-            has_flux_der
-            < LocalSolverT,
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
-              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-                dof_value_t,
-                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-                dof_value_t)
-            >::value
-          )
-            hyEdge_dofs = local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val);
-          else hy_assert( false , "This is not implemented" );
+          hyEdge_dofs = local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val);
         }
         else
         {
-          if constexpr
-          ( 
-            has_flux_der
-            < LocalSolverT,
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>
-              ( std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-                dof_value_t,
-                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-                dof_value_t,
-                decltype(hyper_edge)& )
-            >::value
-          )
-            hyEdge_dofs = 
-              local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val, hyper_edge);
-          else hy_assert( false , "This is not implemented" );
+          hyEdge_dofs = 
+            local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val, hyper_edge);
         }
         
         // Fill hyEdge_dofs array degrees of freedom into vec_Ax.

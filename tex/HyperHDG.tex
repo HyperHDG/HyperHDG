@@ -789,10 +789,10 @@ The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and t
 The implementation of a loop over all hyperedges cares about the specific properties of the local solvers. Thus, there is one prototypical loop class for elliptic problems, and one for each of the problem types that are discussed in Section \ref{SEC:related_diffusion_problems}. That is,
 % 
 \begin{itemize}
- \item one loop class for elliptic problems, cf. Section \ref{SEC:hdg_graph},
- \item one loop class for parabolic problems, cf. Section \ref{SEC:parabolic_diff},
- \item one loop class for the nonlinear eigenvalue approach as discussed in Section \ref{SEC:diff_eigen},
- \item one loop class for the shifted inverse eigenvalue approach which is described in Section \ref{SEC:diff_eigen},
+ \item one class for elliptic problems, cf. Section \ref{SEC:hdg_graph},
+ \item one class for parabolic problems, cf. Section \ref{SEC:parabolic_diff},
+ \item one class for the nonlinear eigenvalue approach, cf. Section \ref{SEC:diff_eigen},
+ \item one class for the shifted inverse approach, cf. Section \ref{SEC:diff_eigen},
  \item and one loop class for the mass matrix approximation and its application to eigenvalue problems as discussed in Section \ref{SEC:approx_mass}.
  \item Additionally, we need a loop class for the solution of parabolic problems using an approximated mass matrix. However, this example is purely academical and not conducted in full detail.
 \end{itemize}
