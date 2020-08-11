@@ -554,7 +554,7 @@ $f\in L^2(\bigcup_{\Edge \in \SetEdge} \Edge)$, where now the local solutions ar
 \end{subequations}
 
 Once $\lambda$ has been computed, the HDG approximation
-to \eqref{EQ:diffusion_mixed} on $\Graph$ will be computed as
+to \eqref{EQ:diffusion_mixed} on $\Graph$ will be computed as\arnote{Maybe, we should just have two local solvers: one for $\lambda$ and one for data!}
 % 
 \begin{gather}\label{EQ:construct_unk}
   \begin{split}
@@ -1085,7 +1085,7 @@ with time-dependent $\mass$, $a$, and $b$. Applying some time discretization (pr
  \begin{enumerate}
   \item Utilizing the approximation to the mass matrix is less accurate, since it uses an approximation to the mass matrix instead of the real bilinear forms.
   \item The reconstruction of the $u$ from $\lambda$ is not possible in this case any more. In the fully discrete case, one needs $\lambda$ at the current time step and $\lambda$ of the previous time step to approximate $\partial_t u$ (as difference ratio of the ``masses'') and $u$, afterwards.
-  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\end{envarwarning}
+  \begin{envarwarning}{State of implementation}This is done for the calculation of the error and not for plotting in the diffusion\_convergence\_parabolic.py reproducable.\\ Should we remove this example or keep it?\end{envarwarning}
   \item The diffusion--reaction equation mentioned in Remark \ref{REM:ex_reaction} can also be solved using our approach with slight modifications accounting for the spatial variation in $r$. Moreover, parabolic versions of this problem can be constructed and solved using the aformentioned approaches.
  \end{enumerate}
 \end{remark}
