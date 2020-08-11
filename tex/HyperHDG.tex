@@ -784,11 +784,26 @@ Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract c
 % 
 The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the inidvidual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
 % 
+\subsection{Loops over all hyperedges}
+% 
+The implementation of a loop over all hyperedges cares about the specific properties of the local solvers. Thus, there is one prototypical loop class for elliptic problems, and one for each of the problem types that are discussed in Section \ref{SEC:related_diffusion_problems}. That is,
+% 
+\begin{itemize}
+ \item one loop class for elliptic problems, cf. Section \ref{SEC:hdg_graph},
+ \item one loop class for parabolic problems, cf. Section \ref{SEC:parabolic_diff},
+ \item one loop class for the nonlinear eigenvalue approach as discussed in Section \ref{SEC:diff_eigen},
+ \item one loop class for the shifted inverse eigenvalue approach which is described in Section \ref{SEC:diff_eigen},
+ \item and one loop class for the mass matrix approximation and its application to eigenvalue problems as discussed in Section \ref{SEC:approx_mass}.
+ \item Additionally, we need a loop class for the solution of parabolic problems using an approximated mass matrix. However, this example is purely academical and not conducted in full detail.
+\end{itemize}
+
+These loop classes can then also be used for related problems like the Bilaplacian, cf.~Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
+% 
 % ---------------------------------------------------------------------
 \section{Related diffusion problems}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------
 % 
-\subsection{Parabolic diffusion equation}\arwarning{Only $\theta = 1$ has been implemented.}
+\subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}\arwarning{Only $\theta = 1$ has been implemented.}
 % 
 Next, we solve the parabolic diffusion equation, i.e., we want that
 % 
@@ -1165,7 +1180,7 @@ with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin
 The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]^d$ is the unit square, $\sigma = \eigenval / 2$, and the polynomial approximation orders and the mesh sizes vary. Again, we receive an oder of convergence of $2$, which has been predicted in \cite{GopalakrishnanLNP2014}.
 % 
 % ---------------------------------------------------------------------
-\section{Implementing the bilaplacian problem}
+\section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
 % ---------------------------------------------------------------------
 % 
 The bilaplacian problem, in continuous form can be briefly written as finding $u$ and $r$ such that
@@ -1617,7 +1632,7 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
 \newpage
 % 
 % ---------------------------------------------------------------------
-\section{\textcolor{blue}{Elastic beam models}}
+\section{\textcolor{blue}{Elastic beam models}}\label{SEC:elastic_beam}
 % ---------------------------------------------------------------------
 % 
 A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}.
