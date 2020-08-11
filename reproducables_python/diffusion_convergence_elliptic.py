@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, dimension, iteration):
   # Predefine problem to be solved.
-  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "EllipticLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
