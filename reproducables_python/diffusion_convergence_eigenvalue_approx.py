@@ -68,7 +68,7 @@ class helper_ev_approx():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def eigenvalue_approx(poly_degree, dimension, iteration):
+def eigenvalue_approx_MA(poly_degree, dimension, iteration):
   
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -110,14 +110,17 @@ def eigenvalue_approx(poly_degree, dimension, iteration):
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
+  # Postprocess solution vector.
+  solution = helper.long_vector([x[0].real for x in vecs])
+  
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
-  HDG_wrapper.plot_solution(helper.long_vector([x[0].real for x in vecs]));
+  HDG_wrapper.plot_solution(solution);
   
   # Return smallest eigenvalue and corresponding eigenvector.
-  return vals[0].real, helper.long_vector([x[0].real for x in vecs])
+  return vals[0].real, solution, error
   
 
 # --------------------------------------------------------------------------------------------------
@@ -129,7 +132,7 @@ def main():
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_approx(poly_degree, dimension, iteration)
+        eigenvalue_approx_MA(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------
