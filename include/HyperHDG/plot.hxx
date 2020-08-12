@@ -513,7 +513,7 @@ void plot_boundary_values
       myfile << "      ";
 
             local_values = local_solver.lambda_values(abscissas, hyEdge_dofs, bdr_index);
-      for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner) {
+      for (unsigned int corner = 0; corner < Hypercube<edge_dim-1>::n_vertices(); ++corner) {
       myfile << "  ";
       for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
         myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?

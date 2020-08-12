@@ -42,6 +42,10 @@ public:
   static constexpr unsigned int system_dimension()
   { return 0U; }
   
+  
+  static constexpr unsigned int node_system_dimension()
+  { return 0U; }
+  
   /**
    * \brief The local solver as needed by the HDG method
    */
@@ -73,13 +77,13 @@ public:
 
 
 template<typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(AbscissaSize)>,1>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(AbscissaSize)>,node_system_dimension()>
 lambda_values (const std::array<AbscissaType,AbscissaSize>& abscissas,
              const InputArrayType& lambda_values,
              unsigned int boundary_number) const
 {
   return std::array<std::array<lSol_float_t,
                                Hypercube<hyEdge_dimT-1>::pow(AbscissaSize)>,
-                    1> ();
+                    node_system_dimension()> ();
 }
 };

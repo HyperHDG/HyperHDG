@@ -1,8 +1,8 @@
-#include <HyperHDG/AbstractProblem.hxx>
-#include <HyperHDG/SparseLinearAlgebra.hxx>
-#include <HyperHDG/Geometry/Cubic.hxx>
-#include <HyperHDG/NodeDescriptor/Cubic.hxx>
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
+#include <HyperHDG/sparse_la.hxx>
+#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/local_solver/diffusion.hxx>
 
 #include <type_traits>
 
@@ -31,7 +31,7 @@ int do_test()
   bool successful = true;
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
-  AbstractProblem< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, NodeDescriptor::Cubic<1,3>,
+  EllipticLoop< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, NodeDescriptor::Cubic<1,3>,
                    Diffusion_TensorialUniform<1,1,2,test_float_t>
                  >  diffusion_problem(num_elements, num_elements, (test_float_t) 1.);
   

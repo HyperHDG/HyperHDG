@@ -1,7 +1,7 @@
-#include <HyperHDG/Geometry/Cubic.hxx>
-#include <HyperHDG/NodeDescriptor/Cubic.hxx>
+#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
 #include <LSol_Template.hxx>
-#include <HyperHDG/Plot.hxx>
+#include <HyperHDG/plot.hxx>
 #include <iostream>
 
 #include <memory>
