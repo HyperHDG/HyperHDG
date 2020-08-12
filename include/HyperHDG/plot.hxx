@@ -486,6 +486,9 @@ void plot_edge_values
 }
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
+ * 
+ * \todo    AR: We need to discuss this: I do not see the advantage of having several arrays of
+ *          fixed length 1!
  **************************************************************************************************/
 template
     < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
