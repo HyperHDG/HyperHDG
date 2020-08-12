@@ -32,7 +32,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t = double>
-class Diffusion_TensorialUniform
+class DiffusionUniform
 {
  public:
 
@@ -180,7 +180,7 @@ class Diffusion_TensorialUniform
    *
    * \param   tau           Penalty parameter of HDG scheme.
    **********************************************************************************************/
-  Diffusion_TensorialUniform(const constructor_value_type& tau = 1.)
+  DiffusionUniform(const constructor_value_type& tau = 1.)
   : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
   {
   }
@@ -251,7 +251,7 @@ class Diffusion_TensorialUniform
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<
     std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-    Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+    DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
   bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
               const input_array_t& lambda_values,
               const lSol_float_t time = 0.) const;
@@ -266,18 +266,18 @@ class Diffusion_TensorialUniform
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
 
   lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
 
-};  // end of class Diffusion_TensorialUniform
+};  // end of class DiffusionUniform
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF Diffusion_TensorialUniform
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF DiffusionUniform
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -291,9 +291,9 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           typename lSol_float_t>
 SmallSquareMat<
-  Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
+  DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_matrix(
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_matrix(
   const lSol_float_t tau)
 {
   const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
@@ -333,7 +333,7 @@ Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assem
   }
 
   return local_mat;
-}  // end of Diffusion_TensorialUniform::assemble_loc_matrix
+}  // end of DiffusionUniform::assemble_loc_matrix
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs
@@ -344,9 +344,9 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           typename lSol_float_t>
 inline SmallVec<
-  Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
+  DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
   const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values) const
 {
   lSol_float_t integral;
@@ -379,7 +379,7 @@ Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assem
   }
 
   return right_hand_side;
-}  // end of Diffusion_TensorialUniform::assemble_rhs
+}  // end of DiffusionUniform::assemble_rhs
 
 // -------------------------------------------------------------------------------------------------
 // primal_at_boundary
@@ -392,9 +392,9 @@ template <unsigned int hyEdge_dimT,
 inline std::array<
   std::array<
     lSol_float_t,
-    Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
+    DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_boundary(
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_boundary(
   const std::array<lSol_float_t, n_loc_dofs_>& coeffs) const
 {
   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
@@ -419,7 +419,7 @@ Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::prima
   }
 
   return bdr_values;
-}  // end of Diffusion_TensorialUniform::primal_at_boundary
+}  // end of DiffusionUniform::primal_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // dual_at_boundary
@@ -432,9 +432,9 @@ template <unsigned int hyEdge_dimT,
 inline std::array<
   std::array<
     lSol_float_t,
-    Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
+    DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_boundary(
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_boundary(
   const std::array<lSol_float_t, (hyEdge_dimT + 1) * n_shape_fct_>& coeffs) const
 {
   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
@@ -459,7 +459,7 @@ Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_
   }
 
   return bdr_values;
-}  // end of Diffusion_TensorialUniform::dual_at_boundary
+}  // end of DiffusionUniform::dual_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // bulk_values
@@ -472,8 +472,8 @@ template <unsigned int hyEdge_dimT,
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
 std::array<
   std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-  Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
+  DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const lSol_float_t time) const
@@ -487,23 +487,23 @@ Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_
                                                     system_dimension()>(abscissas, coefficients);
 
   return values;
-}  // end of Diffusion_TensorialUniform::bulk_values
+}  // end of DiffusionUniform::bulk_values
 
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
-Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg,lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg,lSol_float_t>::node_system_dimension()>
     values_in_local_coordinates =
       sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, Diffusion_TensorialUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>(
+                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>(
         abscissas, lambda_values[boundary_number]);
   return values_in_local_coordinates;
 }

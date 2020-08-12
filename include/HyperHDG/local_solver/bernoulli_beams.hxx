@@ -36,7 +36,7 @@ template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
   unsigned int quad_deg, typename lSol_float_t = double,
-  typename diffusion_sol_t = Diffusion_TensorialUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>
+  typename diffusion_sol_t = DiffusionUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>
 >
 class LengtheningBeam
 {
@@ -217,7 +217,7 @@ template
 < 
   unsigned int hyEdge_dimT, unsigned int space_dim, unsigned int poly_deg,
   unsigned int quad_deg, typename lSol_float_t = double,
-  typename bilaplacian_sol_t = bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>
+  typename bilaplacian_sol_t = BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>
 >
 class BernoulliBendingBeam
 {

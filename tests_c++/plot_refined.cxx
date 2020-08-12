@@ -1,6 +1,6 @@
 #include <HyperHDG/geometry/cubic.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
-#include <LSol_Template.hxx>
+#include <HyperHDG/local_solver/template.hxx>
 #include <HyperHDG/plot.hxx>
 #include <iostream>
 

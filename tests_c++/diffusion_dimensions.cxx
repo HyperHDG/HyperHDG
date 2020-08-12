@@ -36,7 +36,7 @@ int do_test_uniform()
   EllipticLoop
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim>, NodeDescriptor::File<1,space_dim>,
-    Diffusion_TensorialUniform<1,1,2,float_t>
+    DiffusionUniform<1,1,2,float_t>
   >  diffusion_problem(file_name, (float_t) 1.);
   
   vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector<float_t>();

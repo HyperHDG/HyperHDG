@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 problem = "EllipticLoop < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
          +                  "NodeDescriptor::Cubic< 1, 3 >, " \
-         +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
+         +                  "DiffusionUniform < 1, 1, 2 * 1 > " \
          +                ">"
 filenames = [ "HyperHDG/geometry/cubic.hxx" , \
               "HyperHDG/node_descriptor/cubic.hxx" , \
