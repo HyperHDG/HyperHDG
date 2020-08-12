@@ -231,7 +231,7 @@ class DiffusionUniform
     return numerical_flux_from_lambda(lambda_values, time);
   }
 
-    /*!*********************************************************************************************
+  /*!*********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
