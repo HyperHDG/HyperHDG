@@ -1,8 +1,8 @@
-#include <HyperHDG/AbstractProblem.hxx>
-#include <HyperHDG/Topology/File.hxx>
-#include <HyperHDG/Geometry/File.hxx>
-#include <HyperHDG/LocalSolver/BernoulliBeams.hxx>
-#include <HyperHDG/SparseLinearAlgebra.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
+#include <HyperHDG/topology/file.hxx>
+#include <HyperHDG/geometry/file.hxx>
+#include <HyperHDG/local_solver/bernoulli_beams.hxx>
+#include <HyperHDG/sparse_la.hxx>
 
 #include <string>
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
   const double solution_tolerance = 1e-8;
   
   std::string filename = "domains/triangle.pts";
-  AbstractProblem
+  EllipticLoop
   < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, LengtheningBeam<1,2,1,2> >
   diffusion_problem(filename, 1.);
 

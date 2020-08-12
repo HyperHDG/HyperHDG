@@ -1,8 +1,8 @@
-#include <HyperHDG/AbstractProblem.hxx>
-#include <HyperHDG/SparseLinearAlgebra.hxx>
-#include <HyperHDG/Geometry/File.hxx>
-#include <HyperHDG/NodeDescriptor/File.hxx>
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
+#include <HyperHDG/sparse_la.hxx>
+#include <HyperHDG/geometry/file.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
+#include <HyperHDG/local_solver/diffusion.hxx>
 
 #include <cmath>
 #include <string>
@@ -33,7 +33,7 @@ int do_test_uniform()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo" ;
   
-  AbstractProblem
+  EllipticLoop
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim>, NodeDescriptor::File<1,space_dim>,
     Diffusion_TensorialUniform<1,1,2,float_t>
@@ -132,7 +132,7 @@ int do_test_standard()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo" ;
   
-  AbstractProblem
+  EllipticLoop
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim,float_t>, 
     NodeDescriptor::File<1,space_dim>, Diffusion<1,1,2,TestParameters,float_t>
@@ -233,7 +233,7 @@ int do_test_standard_dir()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo" ;
   
-  AbstractProblem
+  EllipticLoop
   < 
     Topology::File<1,space_dim>, Geometry::File<1,space_dim,float_t>, 
     NodeDescriptor::File<1,space_dim>, Diffusion<1,1,2,TestParametersDir,float_t>

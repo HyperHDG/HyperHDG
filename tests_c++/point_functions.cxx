@@ -6,7 +6,7 @@
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
-#include <HyperHDG/DenseLA.hxx>
+#include <HyperHDG/dense_la.hxx>
 
 #include <array>
 #include <random>

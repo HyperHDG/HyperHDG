@@ -1,7 +1,7 @@
-#include <HyperHDG/AbstractProblem.hxx>
-#include <HyperHDG/Geometry/Cubic.hxx>
-#include <HyperHDG/NodeDescriptor/Cubic.hxx>
-#include <HyperHDG/LocalSolver/Diffusion.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
+#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/local_solver/diffusion.hxx>
 
 #include <string>
 
@@ -49,7 +49,7 @@ int do_test()
 {
   const std::vector<unsigned int> num_elements(space_dim, 3U);
 
-  AbstractProblem
+  EllipticLoop
   < 
     Topology::Cubic<hyEdge_dim,space_dim>, Geometry::UnitCube<hyEdge_dim,space_dim,test_float_t>, 
     NodeDescriptor::Cubic<hyEdge_dim,space_dim>,

@@ -211,6 +211,43 @@ class Diffusion_TensorialUniform
     return bdr_values;
   }
 
+  /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to matrix--vector multiplication.
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values Local part of vector x.
+   * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vecAx         Local part of vector A * x.
+   **********************************************************************************************/
+  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_total(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    const lSol_float_t time = 0.) const
+  {
+    return numerical_flux_from_lambda(lambda_values, time);
+  }
+
+    /*!*********************************************************************************************
+   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   *
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vec_b         Local part of vector b.
+   **********************************************************************************************/
+  lSol_float_t calc_L2_error_squared(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values, const lSol_float_t time = 0.) const
+  {
+    return 0.;
+  }
+
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<
     std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
