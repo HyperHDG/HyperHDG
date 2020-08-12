@@ -78,6 +78,8 @@ class bilaplacian_uniform
     
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
     
+    static constexpr unsigned int node_system_dimension() { return 2; }
+    
     
   private:
     /*!*********************************************************************************************
@@ -229,7 +231,7 @@ class bilaplacian_uniform
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
@@ -514,13 +516,13 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
 
 template<unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t>
 template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1> 
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()> 
 bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT> &abscissas,
   const input_array_t &lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -647,6 +649,8 @@ class bilaplacian
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
+    
+    static constexpr unsigned int node_system_dimension() { return 2; }
 
   private:
   
@@ -1394,7 +1398,7 @@ class bilaplacian
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
@@ -1793,13 +1797,13 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
 bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -1885,6 +1889,8 @@ class bilaplacian_parab
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
+    
+    static constexpr unsigned int node_system_dimension() { return 2; }
 
   private:
   
@@ -2356,7 +2362,7 @@ class bilaplacian_parab
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
@@ -2766,13 +2772,13 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
 bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -2852,6 +2858,8 @@ class bilaplacian_eigs
      * \brief Dimension of of the solution evaluated with respect to a hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
+    
+    static constexpr unsigned int node_system_dimension() { return 2; }
 
   private:
   
@@ -3273,7 +3281,7 @@ class bilaplacian_eigs
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
@@ -3588,11 +3596,11 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
 bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
