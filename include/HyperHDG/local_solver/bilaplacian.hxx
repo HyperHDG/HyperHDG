@@ -220,6 +220,8 @@ class bilaplacian_uniform
   /*!*********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
+   * \todo    AR: THIS IS NOT IMPLEMENTED!
+   * 
    * \tparam  absc_float_t  Floating type for the abscissa values.
    * \tparam  sizeT         Size of the array of array of abscissas.
    * \param   abscissas     Abscissas of the supporting points.
@@ -506,19 +508,21 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
     }
   }
   return values;
-}
+}// end of bilaplacian_uniform::bulk_values
+
+
+
 template<unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t>
 template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1> bilaplacian_uniform<
-    hyEdge_dimT,
-    poly_deg,
-    quad_deg,
-    lSol_float_t>::lambda_values(const std::array<abscissa_float_t, sizeT> &abscissas,
-                                   const input_array_t &lambda_values,
-                                   const unsigned int boundary_number) const {
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1> 
+bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(
+  const std::array<abscissa_float_t, sizeT> &abscissas,
+  const input_array_t &lambda_values,
+  const unsigned int boundary_number) const
+{
   return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
 }
-// end of bilaplacian_uniform::bulk_values
+
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1376,6 +1380,24 @@ class bilaplacian
       hyEdgeT                                   & hyper_edge,
       const lSol_float_t time = 0.
     )  const;
+    
+    
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \todo    AR: THIS IS NOT IMPLEMENTED!
+   * 
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
 }; // end of class bilaplacian
 
 
@@ -1765,7 +1787,20 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_val
 } // end of bilaplacian::bulk_values
 
 
-
+template
+< 
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
+>
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const input_array_t& lambda_values,
+  const unsigned int boundary_number) const
+{
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+}
 
 
 
@@ -2308,6 +2343,24 @@ class bilaplacian_parab
       hyEdgeT                                   & hyper_edge,
       const lSol_float_t time = 0.
     )  const;
+    
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \todo     AR: THIS IS NOT IMPLEMENTED!
+   * 
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
+    
 }; // end of class bilaplacian_parab
 
 
@@ -2707,7 +2760,20 @@ bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bu
 } // end of bilaplacian_parab::bulk_values
 
 
-
+template
+< 
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
+>
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const input_array_t& lambda_values,
+  const unsigned int boundary_number) const
+{
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+}
 
 
 
@@ -3194,6 +3260,23 @@ class bilaplacian_eigs
       hyEdgeT                                   & hyper_edge,
       const lSol_float_t time = 0.
     )  const;
+    
+  /*!*********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \todo    AR: THIS IS NOT IMPLEMENTED!
+   * 
+   * \tparam  absc_float_t  Floating type for the abscissa values.
+   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \param   abscissas     Abscissas of the supporting points.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   boundary_number number of the boundary on which to evaluate the function.
+   **********************************************************************************************/
+  template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,1>
+  lambda_values
+      (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
+       const unsigned int boundary_number) const;
 }; // end of class bilaplacian_eigs
 
 
@@ -3497,3 +3580,19 @@ bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bul
   
   return values;
 } // end of bilaplacian_eigs::bulk_values
+
+
+template
+< 
+  unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
+  template < unsigned int, typename >  typename parametersT, typename lSol_float_t
+>
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>
+bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const input_array_t& lambda_values,
+  const unsigned int boundary_number) const
+{
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, 1>();
+}
