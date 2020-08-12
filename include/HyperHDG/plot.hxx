@@ -488,7 +488,7 @@ void plot_edge_values
  * \brief   Auxiliary function to plot solution values on edge boundary.
  * 
  * \todo    AR: We need to discuss this: I do not see the advantage of having several arrays of
- *          fixed length 1!
+ *          fixed length 1! -> AR: I corrected this myself, cf. plot_edge_values! Please check!
  **************************************************************************************************/
 template
     < class HyperGraphT, class LocalSolverT, unsigned int n_subdivisions = 1,
@@ -504,7 +504,8 @@ void plot_boundary_values
   std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
   std::array
       <
-          std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,1
+          std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,
+          LocalSolverT::node_system_dimension()
       > local_values;
   for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index) {
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(hyper_graph, edge_index, lambda);
@@ -512,11 +513,10 @@ void plot_boundary_values
       myfile << "      ";
 
             local_values = local_solver.lambda_values(abscissas, hyEdge_dofs, bdr_index);
-      for (unsigned int corner = 0; corner < Hypercube<edge_dim - 1>::n_vertices(); ++corner) {
-        myfile << "  " << local_values[0][corner];
-
-        for (unsigned int d = 1; d < LocalSolverT::system_dimension(); ++d)
-          myfile << "  " << 0;
+      for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner) {
+      myfile << "  ";
+      for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
+        myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
       }
       myfile << std::endl;
     }
@@ -590,7 +590,7 @@ void plot_vtu
   myfile << "      <PointData>" << std::endl;
   if (LocalSolverT::system_dimension() != 0) {
     myfile << "        <DataArray type=\"Float32\" Name=\"values"
-           << "\" NumberOfComponents=\"" << LocalSolverT::system_dimension()
+           << "\" NumberOfComponents=\"" << LocalSolverT::node_system_dimension()
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges) {
       plot_edge_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, abscissas);
