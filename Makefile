@@ -78,7 +78,7 @@ new:
 	make
 
 run:
-	$(PYTHON) Executable.py
+	$(PYTHON) executable.py
 
 format:
 	clang-format -i tests_c++/*.cxx cython/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
