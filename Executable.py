@@ -14,14 +14,14 @@ from scipy.sparse.linalg import LinearOperator
 #          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
 #          +                ">"
 # filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
-problem = "AbstractProblem < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, "\
+problem = "EllipticLoop < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, "\
          +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
-filenames = [ "HyperHDG/Geometry/File.hxx" , \
-              "HyperHDG/LocalSolver/BernoulliBeams.hxx" ]
+filenames = [ "HyperHDG/geometry/file.hxx" , \
+              "HyperHDG/local_solver/bernoulli_beams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import
-PyDP = cython_import(["AbstractProblem", problem, "string", "string"], filenames)
+PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])

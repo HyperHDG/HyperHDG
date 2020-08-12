@@ -211,6 +211,42 @@ class BilaplacianUniform
       return bdr_values;
     }
     
+        /*!*********************************************************************************************
+     * \brief   Evaluate local contribution to matrix--vector multiplication.
+     *
+     * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+     * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+     * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+     * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+     *
+     * \param   lambda_values Local part of vector x.
+     * \retval  vecAx         Local part of vector A * x.
+     **********************************************************************************************/
+    std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >
+    numerical_flux_total
+    ( const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >&
+      lambda_values, const lSol_float_t time = 0.
+    )
+    const
+    {
+      std::array<lSol_float_t, n_loc_dofs_ > coeffs = solve_local_problem(lambda_values);
+      
+      std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > 
+        bdr_values, primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
+  
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
+       
+      return bdr_values;
+    }
+    
+    lSol_float_t calc_L2_error_squared(
+    const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT >& lambda_values, const lSol_float_t time = 0.) const
+    {
+    return 0.;
+    }
+    
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
       BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
