@@ -21,7 +21,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersQuadEllipt" + str(dimension) + ",double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian.hxx", \

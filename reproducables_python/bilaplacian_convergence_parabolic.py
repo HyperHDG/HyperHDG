@@ -22,7 +22,7 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   problem = "ParabolicLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "bilaplacian_parab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian.hxx", \

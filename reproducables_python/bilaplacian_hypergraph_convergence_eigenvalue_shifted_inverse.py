@@ -76,7 +76,7 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration):
   problem = "ShiftedEigenvalue < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "bilaplacian_eigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersEigs,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian.hxx", \

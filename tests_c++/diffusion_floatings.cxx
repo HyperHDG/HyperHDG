@@ -32,7 +32,7 @@ int do_test()
   const vector<unsigned int> num_elements = { 4 , 2 , 2 };
   
   EllipticLoop< Topology::Cubic<1,3>, Geometry::UnitCube<1,3>, NodeDescriptor::Cubic<1,3>,
-                   Diffusion_TensorialUniform<1,1,2,test_float_t>
+                   DiffusionUniform<1,1,2,test_float_t>
                  >  diffusion_problem(num_elements, num_elements, (test_float_t) 1.);
   
   vector<test_float_t> vectorDirichlet 

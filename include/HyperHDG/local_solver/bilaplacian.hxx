@@ -35,7 +35,7 @@ template
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
   typename lSol_float_t = double
 >
-class bilaplacian_uniform
+class BilaplacianUniform
 {
   public:
 
@@ -179,7 +179,7 @@ class bilaplacian_uniform
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    bilaplacian_uniform(const constructor_value_type& tau = 1.)
+    BilaplacianUniform(const constructor_value_type& tau = 1.)
     : tau_(tau), loc_mat_(assemble_loc_matrix(tau))  { } 
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
@@ -213,7 +213,7 @@ class bilaplacian_uniform
     
     template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
+      BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()>
     bulk_values
     ( const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
       const lSol_float_t = 0.
@@ -231,18 +231,18 @@ class bilaplacian_uniform
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
 
-}; // end of class bilaplacian_uniform
+}; // end of class BilaplacianUniform
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF bilaplacian_uniform
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF BilaplacianUniform
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -255,8 +255,8 @@ class bilaplacian_uniform
 template
 < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
 SmallSquareMat
-<bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::
+<BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::
 assemble_loc_matrix ( const lSol_float_t tau )
 { 
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -325,8 +325,8 @@ assemble_loc_matrix ( const lSol_float_t tau )
 template
 < unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t >
 inline SmallVec
-<bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
+<BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_loc_dofs_, lSol_float_t>
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::assemble_rhs
 (const std::array< std::array<lSol_float_t, 2 * n_shape_bdr_>, 2*hyEdge_dimT >& lambda_values) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -378,11 +378,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2*bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    2*BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::primal_at_boundary
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::primal_at_boundary
 ( const std::array<lSol_float_t, n_loc_dofs_ >& coeffs ) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -411,7 +411,7 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::primal_at_bound
   }
   
   return bdr_values;
-} // end of bilaplacian_uniform::primal_at_boundary
+} // end of BilaplacianUniform::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -425,11 +425,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2*bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
+    2*BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::n_shape_bdr_
   > ,
   2 * hyEdge_dimT
 >
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::dual_at_boundary
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::dual_at_boundary
 ( const std::array<lSol_float_t, 2 * (hyEdge_dimT+1) * n_shape_fct_>& coeffs ) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -458,7 +458,7 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::dual_at_boundar
   }
   
   return bdr_values;
-} // end of bilaplacian_uniform::dual_at_boundary
+} // end of BilaplacianUniform::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -475,9 +475,9 @@ std::array
     lSol_float_t,
     Hypercube<hyEdge_dimT>::pow(sizeT)
   > ,
-  bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
+  BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::system_dimension()
 >
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
 (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
  const lSol_float_t time ) const
 {
@@ -510,19 +510,19 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
     }
   }
   return values;
-}// end of bilaplacian_uniform::bulk_values
+}// end of BilaplacianUniform::bulk_values
 
 
 
 template<unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg, typename lSol_float_t>
 template<typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()> 
-bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()> 
+BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT> &abscissas,
   const input_array_t &lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_uniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -543,7 +543,7 @@ bilaplacian_uniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::lambda_values(
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct bilaplacian_parameters_default
+struct Bilaplacian_parameters_default
 {
   static constexpr std::array<unsigned int, 0U> dirichlet_nodes {};
   static constexpr std::array<unsigned int, 0U> dirichlet_laplacian_nodes {};
@@ -599,7 +599,7 @@ struct bilaplacian_parameters_default
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
  *                        contains static parameter functions.
- *                        Defaults to above functions included in \c bilaplacianParametersDefault.
+ *                        Defaults to above functions included in \c BilaplacianParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
  * \tparam  space_dimTP   The dimension of the surrounding space.
  *                        Template parameter for the parameters which defaults to space_dimT.
@@ -612,10 +612,10 @@ struct bilaplacian_parameters_default
 template
 < 
   unsigned int hyEdge_dimT, unsigned int poly_deg, unsigned int quad_deg,
-  template < unsigned int, typename >  typename parametersT = bilaplacian_parameters_default,
+  template < unsigned int, typename >  typename parametersT = Bilaplacian_parameters_default,
   typename lSol_float_t = double
 >
-class bilaplacian
+class Bilaplacian
 {
   public:
     
@@ -925,7 +925,7 @@ class bilaplacian
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    bilaplacian(const constructor_value_type& tau = 1.) : tau_(tau)  { } 
+    Bilaplacian(const constructor_value_type& tau = 1.) : tau_(tau)  { } 
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
      *
@@ -1372,7 +1372,7 @@ class bilaplacian
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      bilaplacian
+      Bilaplacian
       < 
         hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       >::system_dimension()
@@ -1398,17 +1398,17 @@ class bilaplacian
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
-}; // end of class bilaplacian
+}; // end of class Bilaplacian
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF bilaplacian
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF Bilaplacian
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -1425,8 +1425,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
-< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< Bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const
 { 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -1490,7 +1490,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_fl
   }
   
   return local_mat;
-} // end of bilaplacian::assemble_loc_matrix
+} // end of Bilaplacian::assemble_loc_matrix
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1504,8 +1504,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
+< Bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
   hyEdgeT                                                                     & hyper_edge 
@@ -1543,7 +1543,7 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble
       }
 
   return right_hand_side;
-} // end of bilaplacian::assemble_rhs_from_lambda
+} // end of Bilaplacian::assemble_rhs_from_lambda
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1557,8 +1557,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< Bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -1595,7 +1595,7 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  
     }
   }
   return right_hand_side;
-} // end of bilaplacian::assemble_rhs_from_global_rhs
+} // end of Bilaplacian::assemble_rhs_from_global_rhs
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1609,14 +1609,14 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< Bilaplacian <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_coeffs
 ( 
   const std::array
   < 
     lSol_float_t,
-    bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
+    Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
   >& coeffs,
   hyEdgeT & hyper_edge
 )  const
@@ -1649,11 +1649,11 @@ inline std::array
   std::array
   < 
     lSol_float_t,
-    2 * bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
+    2 * Bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
   hyEdgeT                                       & hyper_edge
@@ -1680,7 +1680,7 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_a
       }
   
   return bdr_values;
-} // end of bilaplacian::primal_at_boundary
+} // end of Bilaplacian::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1698,11 +1698,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2 * bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
+    2 * Bilaplacian<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_>  & coeffs,
   hyEdgeT                                                         & hyper_edge
@@ -1733,7 +1733,7 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_
       }
   
   return bdr_values;
-} // end of bilaplacian::dual_at_boundary
+} // end of Bilaplacian::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -1749,9 +1749,9 @@ template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, ty
 std::array
 <
   std::array < lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT) > ,
-  bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
+  Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
 >
-bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
+Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
@@ -1788,7 +1788,7 @@ bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_val
   }
   
   return values;
-} // end of bilaplacian::bulk_values
+} // end of Bilaplacian::bulk_values
 
 
 template
@@ -1797,13 +1797,13 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -1841,7 +1841,7 @@ bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
  *                        contains static parameter functions.
- *                        Defaults to above functions included in \c bilaplacian_parabParametersDefault.
+ *                        Defaults to above functions included in \c BilaplacianParabParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
  * \tparam  space_dimTP   The dimension of the surrounding space.
  *                        Template parameter for the parameters which defaults to space_dimT.
@@ -1857,7 +1857,7 @@ template
   template < unsigned int, typename >  typename parametersT,
   typename lSol_float_t = double
 >
-class bilaplacian_parab
+class BilaplacianParab
 {
   public:
     
@@ -2111,7 +2111,7 @@ class bilaplacian_parab
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    bilaplacian_parab(const constructor_value_type& constru = std::vector(3,1.))
+    BilaplacianParab(const constructor_value_type& constru = std::vector(3,1.))
     : tau_(constru[0]), theta_(constru[1]), delta_t_(constru[2])  {}
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
@@ -2337,7 +2337,7 @@ class bilaplacian_parab
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      bilaplacian_parab
+      BilaplacianParab
       < 
         hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       >::system_dimension()
@@ -2362,18 +2362,18 @@ class bilaplacian_parab
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
     
-}; // end of class bilaplacian_parab
+}; // end of class BilaplacianParab
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF bilaplacian_parab
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF BilaplacianParab
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -2390,8 +2390,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
-< bilaplacian_parab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< BilaplacianParab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time ) const
 { 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -2459,7 +2459,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_fl
   }
   
   return local_mat;
-} // end of bilaplacian_parab::assemble_loc_matrix
+} // end of BilaplacianParab::assemble_loc_matrix
 
 
 // -------------------------------------------------------------------------------------------------
@@ -2473,8 +2473,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian_parab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
+< BilaplacianParab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
   hyEdgeT                                                                     & hyper_edge 
@@ -2512,7 +2512,7 @@ bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::as
       }
 
   return right_hand_side;
-} // end of bilaplacian_parab::assemble_rhs_from_lambda
+} // end of BilaplacianParab::assemble_rhs_from_lambda
 
 
 // -------------------------------------------------------------------------------------------------
@@ -2526,8 +2526,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian_parab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< BilaplacianParab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -2570,7 +2570,7 @@ assemble_rhs_from_global_rhs ( hyEdgeT & hyper_edge, const lSol_float_t time )  
     }
   }
   return right_hand_side + assemble_rhs_from_coeffs(hyper_edge.data.coeffs, hyper_edge);
-} // end of bilaplacian_parab::assemble_rhs_from_global_rhs
+} // end of BilaplacianParab::assemble_rhs_from_global_rhs
 
 
 // -------------------------------------------------------------------------------------------------
@@ -2584,14 +2584,14 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian_parab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< BilaplacianParab <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_rhs_from_coeffs
 ( 
   const std::array
   < 
     lSol_float_t,
-    bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
+    BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_loc_dofs_
   >& coeffs,
   hyEdgeT & hyper_edge
 )  const
@@ -2624,11 +2624,11 @@ inline std::array
   std::array
   < 
     lSol_float_t,
-    2 * bilaplacian_parab<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
+    2 * BilaplacianParab<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
   hyEdgeT                                       & hyper_edge
@@ -2655,7 +2655,7 @@ bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::pr
       }
   
   return bdr_values;
-} // end of bilaplacian_parab::primal_at_boundary
+} // end of BilaplacianParab::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -2673,11 +2673,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2 * bilaplacian_parab<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
+    2 * BilaplacianParab<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_>  & coeffs,
   hyEdgeT                                                         & hyper_edge
@@ -2708,7 +2708,7 @@ bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::du
       }
   
   return bdr_values;
-} // end of bilaplacian_parab::dual_at_boundary
+} // end of BilaplacianParab::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -2724,9 +2724,9 @@ template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, ty
 std::array
 <
   std::array < lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT) > ,
-  bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
+  BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
 >
-bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
+BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
@@ -2763,7 +2763,7 @@ bilaplacian_parab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bu
   }
   
   return values;
-} // end of bilaplacian_parab::bulk_values
+} // end of BilaplacianParab::bulk_values
 
 
 template
@@ -2772,13 +2772,13 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -2808,7 +2808,7 @@ bilaplacian_parab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::l
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
  *                        contains static parameter functions.
- *                        Defaults to above functions included in \c bilaplacian_eigsParametersDefault.
+ *                        Defaults to above functions included in \c BilaplacianEigsParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
  * \tparam  space_dimTP   The dimension of the surrounding space.
  *                        Template parameter for the parameters which defaults to space_dimT.
@@ -2824,7 +2824,7 @@ template
   template < unsigned int, typename >  typename parametersT,
   typename lSol_float_t = double
 >
-class bilaplacian_eigs
+class BilaplacianEigs
 {
   public:
     
@@ -3020,7 +3020,7 @@ class bilaplacian_eigs
      *
      * \param   tau           Penalty parameter of HDG scheme.
      **********************************************************************************************/
-    bilaplacian_eigs(const constructor_value_type& tau = 1.) : tau_(tau)  { } 
+    BilaplacianEigs(const constructor_value_type& tau = 1.) : tau_(tau)  { } 
     /*!*********************************************************************************************
      * \brief   Evaluate local contribution to matrix--vector multiplication.
      *
@@ -3256,7 +3256,7 @@ class bilaplacian_eigs
     std::array
     <
       std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-      bilaplacian_eigs
+      BilaplacianEigs
       < 
         hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       >::system_dimension()
@@ -3281,17 +3281,17 @@ class bilaplacian_eigs
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
   template < typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
   lambda_values
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const;
-}; // end of class bilaplacian_eigs
+}; // end of class BilaplacianEigs
 
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF bilaplacian_eigs
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF BilaplacianEigs
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -3308,8 +3308,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallSquareMat
-< bilaplacian_eigs <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
+< BilaplacianEigs <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::
 assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t eig ) const
 { 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -3377,7 +3377,7 @@ assemble_loc_matrix ( const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_fl
   }
   
   return local_mat;
-} // end of bilaplacian_eigs::assemble_loc_matrix
+} // end of BilaplacianEigs::assemble_loc_matrix
 
 
 // -------------------------------------------------------------------------------------------------
@@ -3391,8 +3391,8 @@ template
 >
 template < typename hyEdgeT >
 inline SmallVec
-< bilaplacian_eigs <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
-bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
+< BilaplacianEigs <hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_loc_dofs_, lSol_float_t >
+BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::assemble_rhs_from_lambda
 ( 
   const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
   hyEdgeT                                                                     & hyper_edge 
@@ -3430,7 +3430,7 @@ bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::ass
       }
 
   return right_hand_side;
-} // end of bilaplacian_eigs::assemble_rhs_from_lambda
+} // end of BilaplacianEigs::assemble_rhs_from_lambda
 
 
 // -------------------------------------------------------------------------------------------------
@@ -3448,11 +3448,11 @@ inline std::array
   std::array
   < 
     lSol_float_t,
-    2 * bilaplacian_eigs<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
+    2 * BilaplacianEigs<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t>::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
+BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::primal_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_ >  & coeffs,
   hyEdgeT                                       & hyper_edge
@@ -3479,7 +3479,7 @@ bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::pri
       }
   
   return bdr_values;
-} // end of bilaplacian_eigs::primal_at_boundary
+} // end of BilaplacianEigs::primal_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -3497,11 +3497,11 @@ inline std::array
   std::array
   <
     lSol_float_t,
-    2 * bilaplacian_eigs<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
+    2 * BilaplacianEigs<hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::n_shape_bdr_
   >,
   2 * hyEdge_dimT
 >
-bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
+BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dual_at_boundary
 ( 
   const std::array<lSol_float_t, n_loc_dofs_>  & coeffs,
   hyEdgeT                                                         & hyper_edge
@@ -3532,7 +3532,7 @@ bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::dua
       }
   
   return bdr_values;
-} // end of bilaplacian_eigs::dual_at_boundary
+} // end of BilaplacianEigs::dual_at_boundary
 
 
 // -------------------------------------------------------------------------------------------------
@@ -3548,9 +3548,9 @@ template < typename abscissa_float_t, std::size_t sizeT, class input_array_t, ty
 std::array
 <
   std::array < lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT) > ,
-  bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
+  BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::system_dimension()
 >
-bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
+BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_values
 ( 
   const std::array<abscissa_float_t,sizeT>  & abscissas,
   const input_array_t                       & lambda_values,
@@ -3587,7 +3587,7 @@ bilaplacian_eigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bul
   }
   
   return values;
-} // end of bilaplacian_eigs::bulk_values
+} // end of BilaplacianEigs::bulk_values
 
 
 template
@@ -3596,11 +3596,11 @@ template
   template < unsigned int, typename >  typename parametersT, typename lSol_float_t
 >
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, bilaplacian_eigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
+  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }

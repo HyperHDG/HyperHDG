@@ -1462,6 +1462,55 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
 \end{table}
 % 
 For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the mass approximation (MA) approach, for which $\sigma = 3 \eigenval / 4$ is chosen. Moreover, we give the results of the shifted inverse (SI) approach with $\sigma = 3 \eigenval / 4$. The results of the NL approach for which the SI approach is used as initial guess vary inisgnificantly from the given results of the NL with MA. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
+
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, SI}}
+  & $i = 2$ && \textcolor{red}{5.11e0} & --- && \textcolor{red}{5.52e-2} & --- && \textcolor{red}{7.53e-2} & ---  \\
+  & $i = 3$ && 5.48e-1 & 3.2 && 4.22e-3 & 3.7 && 4.79e-3 & 4.0  \\
+  & $i = 4$ && 6.29e-2 & 3.1 && 2.84e-4 & 3.9 && 3.01e-4 & 4.0  \\
+  & $i = 5$ && 7.53e-3 & 3.1 && 1.83e-5 & 4.0 && 1.88e-5 & 4.0  \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, MA}}
+  & $i = 2$ && 3.72e0 & --- && 3.03e-1 & --- && 3.01e-1 & ---  \\
+  & $i = 3$ && 4.79e-1 & 3.0 && 1.92e-2 & 4.0 && 1.91e-2 & 4.0  \\
+  & $i = 4$ && 5.91e-2 & 3.0 && 1.20e-3 & 4.0 && 1.20e-3 & 4.0  \\
+  & $i = 5$ && 7.32e-3 & 3.0 && 7.54e-5 & 4.0 && 7.53e-5 & 4.0  \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, NL}}
+  & $i = 2$ && 5.52e0 & --- && 2.94e-2 & --- && 8.50e-5 & ---  \\
+  & $i = 3$ && 5.71e-1 & 3.3 && 8.06e-3 & 5.2 && 6.20e-7 & 7.1  \\
+  & $i = 4$ && 6.42e-2 & 3.2 && 2.36e-5 & 5.1 && 4.83e-9 & 7.0  \\
+  & $i = 5$ && 7.61e-3 & 3.1 && 7.18e-7 & 5.0 && 1.39e-8 & -2  \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, SI}}
+  & $i = 2$ && 2.92e-2 & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, MA}}
+  & $i = 2$ && 2.92e-2 & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \midrule
+  \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, NL}}
+  & $i = 2$ && 5.68e-1 & 3.0 && 2.98e-3 & 5.5 && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue for a diffusion problem on a real hypergraph. Here, the shifted inverse (SI), mass approximation (MA), and nonlinear (NL) approaches are shown.}\label{TAB:bil_hyg_eigenvalue_conv}
+\end{table}
+% 
+Next, we use the approaches of the previous sections to approximate the smallest eigenvalue of the bilaplacian equation with homogeneous Dirichlet boundary conditions on the hypergraph related to problem \eqref{EQ:hypergraph_example}. Thus, we consider the hypercube $[0,1]^3$ and refine it $i$ times, i.e. into $i^3$ identical sub-cubes. Afterwards we solve the diffusive eigenvalue problem on the union of this refinement's edges (for $\locDim = 1$) and its faces (for $\locDim = 2$). The homogeneous Dirichlet conditions are supposed to be satisfied on the boundary of $[0,1]^3$. Thus, the smallest eigenvalue is $\eigenval = (\locDim \pi^2)^2$ and it is approximated using the shifted inverse (SI) and mass approximation (MA) approaches with $\sigma = 3 \eigenval / 4$. The nonlinear (NL) method is applied afterwards. Its initial datum is the result of SI or MA, but the results of NL do not significantly depend on the choice. Thus, we illustrate only the results of which MA is used as initial value. The results are depicted in Table \ref{TAB:bil_hyg_eigenvalue_conv}. \textcolor{red}{TODO!}
 % 
 % \subsection{Mass matrix representation}\label{SEC:bilap_mass}
 % % 
@@ -1681,8 +1730,6 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
 % \begin{envarerror}{Is this possible?}
 %  Interestingly, the errors and orders of convergence appear to be almost independent of the degree of local polynomial approximation. This does not fit to \cite{GopalakrishnanLNP2014}.
 % \end{envarerror}
-% 
-\newpage\null\newpage
 % 
 % ---------------------------------------------------------------------
 \section{\textcolor{blue}{Elastic beam models}}\label{SEC:elastic_beam}
