@@ -1004,16 +1004,16 @@ However, this approach clearly has the drawback that matrix $S(\sigma) := A - \s
   & $i = 5$ && 3.85e-4 & 3.1 && 3.50e-8 & 5.1 && 1.27e-9 & -2  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, SI}}
-  & $i = 2$ && 2.69e-2 & --- && 4.82e-1 & --- && \textcolor{red}{2.69e-7} & ---  \\
-  & $i = 3$ && 7.17e-2 & -1 && 1.23e-1 & 2.0 && 4.83e-10 & 9.1  \\
-  & $i = 4$ && 2.51e-2 & 1.5 && \textcolor{red}{4.68e-9} & 7.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && \textcolor{red}{3.76e-7} & 5.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 2$ && 2.69e-2 & --- && 4.82e-1 & --- && 4.30e-1 & ---  \\
+  & $i = 3$ && 7.17e-2 & -1 && 1.23e-1 & 2.0 && 1.07e-1 & 2.0  \\
+  & $i = 4$ && 2.51e-2 & 1.5 && 3.13e-2 & 2.0 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 7.13e-3 & 1.8 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
   & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
   & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && \textcolor{red}{2.39e-6} & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && \textcolor{red}{7.71e-5} & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.24e-6 & 5.2 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 7.71e-4 & 3.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue. All results use the accurate local problems for the shifted inverse (SI) and nonlinear (NL) approaches.}\label{TAB:eigenvalue_conv}
@@ -1164,14 +1164,14 @@ with some initial datum $u_0$, $d = \tfrac{1}{\pi}$, and $f$ such that $u = \sin
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, MA}}
   & $i = 2$ && 6.35e-1 & --- && \textcolor{red}{9.33e-5} & --- && \textcolor{red}{2.69e-7} & ---  \\
   & $i = 3$ && 2.02e-1 & 1.7 && 6.38e-7 & 7.2 && 4.83e-10 & 9.1  \\
-  & $i = 4$ && \textcolor{red}{1.27e-5} & 5.2 && 4.68e-9 & 7.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 3.76e-7 & 5.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 4$ && 5.69e-2 & 1.8 && 4.68e-9 & 7.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && \textcolor{red}{3.76e-7} & 5.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
   & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
   & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && \textcolor{red}{6.50e-3} & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && \textcolor{red}{7.71e-5} & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue. All results use the solution of the mass approximation (MA) problem \eqref{EQ:eigs_mass} for the nonlinear (NL) approach.}\label{TAB:eigs_conv_m}
@@ -1629,7 +1629,8 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
 %  Interestingly, the errors and orders of convergence appear to be almost independent of the degree of local polynomial approximation. This does not fit to \cite{GopalakrishnanLNP2014}.
 % \end{envarerror}
 % 
-\newpage
+\newpage\null\thispagestyle{empty}\newpage
+\newpage\null\thispagestyle{empty}\newpage
 % 
 % ---------------------------------------------------------------------
 \section{\textcolor{blue}{Elastic beam models}}\label{SEC:elastic_beam}
