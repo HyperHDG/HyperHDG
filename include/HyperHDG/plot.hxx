@@ -398,7 +398,7 @@ namespace PlotFunctions
 /*!*************************************************************************************************
  * \brief   Check if some file exists and can be opened
  **************************************************************************************************/
-  void file_exists(const std::ofstream &output_file, const std::string filename) {
+  void check_file_opened(const std::ofstream &output_file, const std::string filename) {
     if (!output_file.is_open()) {
       throw std::ios_base::failure("File  " + filename + " could not be opened");
     }
@@ -406,9 +406,9 @@ namespace PlotFunctions
 /*!*************************************************************************************************
  * \brief   Check if an outputstream has opened a file
  **************************************************************************************************/
-  void check_file_opened(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
+  void create_directory_if_needed(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
     try {
-      file_exists(output_file, filename);
+		check_file_opened (output_file, filename);
     }
     catch (std::ios_base::failure &e) {
       std::cerr << e.what() << std::endl;
@@ -560,7 +560,7 @@ void plot_vtu
   filename.append(".vtu");
 
   myfile.open(filename);
-  PlotFunctions::check_file_opened(myfile,filename,plot_options);
+  PlotFunctions::create_directory_if_needed (myfile, filename, plot_options);
   myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
