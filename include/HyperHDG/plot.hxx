@@ -522,8 +522,10 @@ void plot_edge_values
     myfile << "      ";
     for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner) {
       myfile << "  ";
-      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
-        myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
+		for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
+		  myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
+		for (unsigned int d = LocalSolverT::system_dimension(); d < LocalSolverT::node_system_dimension(); ++d)
+		  myfile << "  " << 0; // AR: I switched d and corner!?
     }
     myfile << std::endl;
   }
@@ -562,6 +564,8 @@ void plot_boundary_values
       for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
         myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
       }
+		for (unsigned int d = LocalSolverT::node_system_dimension(); d < LocalSolverT::system_dimension(); ++d)
+		  myfile << "  " << 0; // AR: I switched d and corner!?
       myfile << std::endl;
     }
   }
@@ -634,7 +638,7 @@ void plot_vtu
   myfile << "      <PointData>" << std::endl;
   if (LocalSolverT::system_dimension() != 0) {
     myfile << "        <DataArray type=\"Float32\" Name=\"values"
-           << "\" NumberOfComponents=\"" << LocalSolverT::node_system_dimension()
+           << "\" NumberOfComponents=\"" << std::max(LocalSolverT::system_dimension(), LocalSolverT::node_system_dimension())
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges) {
       plot_edge_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, abscissas);
