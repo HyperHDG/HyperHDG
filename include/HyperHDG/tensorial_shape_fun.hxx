@@ -45,7 +45,7 @@ inline std::array<unsigned int, std::max(dimT,1U)> index_decompose ( unsigned in
 template<unsigned int dimT, typename return_t, typename shape_t, unsigned int polynomial_degree, unsigned int abscissas_sizeT, typename abscissa_float_t >
 class TensorialShapeFunctionEvaluation {
  private:
-  static constexpr unsigned int shapefunction_count = std::pow (polynomial_degree + 1, dimT);;
+  static constexpr unsigned int shapefunction_count = std::pow (polynomial_degree + 1, dimT);
   static constexpr unsigned int point_count = std::pow (abscissas_sizeT, dimT);
   std::array<unsigned int, polynomial_degree + 1> indices_1D;
   std::array<std::array<return_t, abscissas_sizeT>, polynomial_degree + 1> values_1D;
@@ -99,7 +99,7 @@ class TensorialShapeFunctionEvaluation {
 																  coefficient_dimension
 																  * shapefunction_count> linear_combination_coefficients)
   {
-	std::array<std::array<return_t,shapefunction_count>, coefficient_dimension> return_values;
+	std::array<std::array<return_t,point_count>, coefficient_dimension> return_values;
 
 	for(unsigned int point = 0; point < point_count; ++point)
 	  for(unsigned int d = 0; d < coefficient_dimension; ++d)

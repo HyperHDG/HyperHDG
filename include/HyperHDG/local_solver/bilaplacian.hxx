@@ -517,35 +517,18 @@ BilaplacianUniform<hyEdge_dimT,poly_deg,quad_deg,lSol_float_t>::bulk_values
 (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
  const lSol_float_t time ) const
 {
-  std::array< lSol_float_t, n_loc_dofs_ > coefficients = solve_local_problem(lambda_values);
+  std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem (lambda_values);
+  std::array<lSol_float_t, n_loc_dofs_ / 2> first_half_of_coefficients;
+  std::copy_n (coefficients.begin (), n_loc_dofs_ / 2, first_half_of_coefficients.begin ());
+  TensorialShapeFunctionEvaluation<hyEdge_dimT,
+								   lSol_float_t,
+								   Legendre,
+								   poly_deg,
+								   sizeT,
+								   abscissa_float_t> evaluation (abscissas);
+  return evaluation.
+	  template evaluate_linear_combination_in_all_tensorial_points<system_dimension ()> (first_half_of_coefficients);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-
-
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
-
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 >
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
-    dec_i = index_decompose<hyEdge_dimT, poly_deg+1>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  return values;
 }// end of BilaplacianUniform::bulk_values
 
 
@@ -697,11 +680,11 @@ class Bilaplacian
    /*!*********************************************************************************************
      * \brief   Number of local shape functions (with respect to all spatial dimensions).
      **********************************************************************************************/
-    static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1) / 2;
-    /*!*********************************************************************************************
+    static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
+  /*!*********************************************************************************************
      * \brief   Number oflocal  shape functions (with respect to a face / hypernode).
      **********************************************************************************************/
-    static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node() / 2;
+    static constexpr unsigned int n_shape_bdr_ = Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1);
     /*!*********************************************************************************************
      * \brief   Number of (local) degrees of freedom per hyperedge.
      **********************************************************************************************/
@@ -1797,33 +1780,10 @@ Bilaplacian < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk_val
 {
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
     = solve_local_problem(lambda_values, 1U, hyper_edge, time);
-
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
- 
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = index_decompose<hyEdge_dimT,poly_deg+1>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  
-  return values;
+  std::array<lSol_float_t, n_loc_dofs_/2> first_half_of_coefficients;
+  std::copy_n(coefficients.begin(),n_loc_dofs_/2,first_half_of_coefficients.begin());
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(first_half_of_coefficients);
 } // end of Bilaplacian::bulk_values
 
 
@@ -1839,7 +1799,9 @@ Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
+  TensorialShapeFunctionEvaluation<hyEdge_dimT-1, lSol_float_t, Legendre, poly_deg, sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(lambda_values[boundary_number]);
+ // return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>();
 }
 
 
@@ -2773,32 +2735,10 @@ BilaplacianParab < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bul
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
     = solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
- 
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = index_decompose<hyEdge_dimT,poly_deg+1>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  
-  return values;
+  std::array<lSol_float_t, n_loc_dofs_/2> first_half_of_coefficients;
+  std::copy_n(coefficients.begin(),n_loc_dofs_/2,first_half_of_coefficients.begin());
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(first_half_of_coefficients);
 } // end of BilaplacianParab::bulk_values
 
 
@@ -3597,32 +3537,10 @@ BilaplacianEigs < hyEdge_dimT,poly_deg,quad_deg,parametersT,lSol_float_t >::bulk
   std::array< lSol_float_t, n_loc_dofs_ > coefficients
     = solve_local_problem(lambda_values, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t,Hypercube<hyEdge_dimT>::pow(sizeT)>,system_dimension()> values;
-  std::array<unsigned int, hyEdge_dimT> dec_i, dec_q;
-  lSol_float_t fct_value;
- 
-  std::array<unsigned int, poly_deg+1> poly_indices;
-  for (unsigned int i = 0; i < poly_deg+1; ++i) poly_indices[i] = i;
-  std::array< std::array<lSol_float_t, abscissas.size()>, poly_deg+1 > 
-    values1D = shape_fct_eval<lSol_float_t,Legendre>(poly_indices, abscissas);
-      
-  for (unsigned int i = 0; i < values.size(); ++i)  values[i].fill(0.);
-  
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  { 
-    dec_i = index_decompose<hyEdge_dimT,poly_deg+1>(i);
-    for (unsigned int q = 0; q < Hypercube<hyEdge_dimT>::pow(sizeT); ++q)
-    {
-      dec_q = index_decompose<hyEdge_dimT, abscissas.size()>(q);
-      fct_value = 1.;
-      for (unsigned int dim_fct = 0; dim_fct < hyEdge_dimT; ++dim_fct)
-        fct_value *= values1D[dec_i[dim_fct]][dec_q[dim_fct]];
-      for (unsigned int dim = 0; dim < system_dimension(); ++dim)
-        values[dim][q] += coefficients[dim * n_shape_fct_ + i] * fct_value;
-    }
-  }
-  
-  return values;
+  std::array<lSol_float_t, n_loc_dofs_/2> first_half_of_coefficients;
+  std::copy_n(coefficients.begin(),n_loc_dofs_/2,first_half_of_coefficients.begin());
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(first_half_of_coefficients);
 } // end of BilaplacianEigs::bulk_values
 
 

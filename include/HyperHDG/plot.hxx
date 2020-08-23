@@ -125,6 +125,50 @@ struct PlotOptions
   PlotOptions();
 }; // end of class PlotOptions
 
+std::string set_plot_option( PlotOptions &plot_options, const std::string& option, std::string value = "" )
+{
+  if (value == "");
+  else if (option == "outputDir") plot_options.outputDir = value;
+  else if (option == "fileName") plot_options.fileName = value;
+  else if (option == "fileEnding") plot_options.fileEnding = value;
+  else if (option == "fileNumber") plot_options.fileNumber = stoi (value);
+  else if (option == "printFileNumber")
+	plot_options.printFileNumber =
+		(value == "true" || value == "1");
+  else if (option == "incrementFileNumber")
+	plot_options.incrementFileNumber =
+		(value == "true" || value == "1");
+  else if (option == "plotEdges") plot_options.plot_edges = (value == "true" || value == "1");
+  else if (option == "plotEdgeBoundaries") plot_options.plot_edge_boundaries = (value == "true" || value == "1");
+  else if (option == "boundaryScale") plot_options.boundary_scale = std::stof (value);
+  else if (option == "scale") plot_options.scale = stof (value);
+  else
+  hy_assert(false, "This plot option has not been defined (yet).");
+
+  std::string return_value;
+  if (option == "outputDir") return_value = plot_options.outputDir;
+  else if (option == "fileName") return_value = plot_options.fileName;
+  else if (option == "fileEnding") return_value = plot_options.fileEnding;
+  else if (option == "fileNumber") return_value = std::to_string (plot_options.fileNumber);
+  else if (option == "printFileNumber")
+	return_value = std::to_string
+		(plot_options.printFileNumber);
+  else if (option == "incrementFileNumber")
+	return_value = std::to_string
+		(plot_options.incrementFileNumber);
+  else if (option == "plotEdges")
+	return_value = std::to_string
+		(plot_options.plot_edges);
+  else if (option == "plotEdgeBoundaries")
+	return_value = std::to_string
+		(plot_options.plot_edge_boundaries);
+  else if (option == "scale") return_value = std::to_string (plot_options.scale);
+  else if (option == "boundaryScale") return_value = std::to_string (plot_options.boundary_scale);
+  else
+  hy_assert(false, "This plot option has not been defined (yet).");
+
+  return return_value;
+}
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
