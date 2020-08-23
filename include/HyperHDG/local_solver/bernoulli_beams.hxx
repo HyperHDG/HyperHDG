@@ -64,7 +64,7 @@ class LengtheningBeam
     static constexpr unsigned int n_glob_dofs_per_node()
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -320,7 +320,7 @@ class BernoulliBendingBeam
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -617,7 +617,7 @@ class LengtheningBernoulliBendingBeam
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -732,10 +732,8 @@ class LengtheningBernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-	//= len_beam.lambda_values(abscissas,lambda_values,boundary_number);
-	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> auxiliary;
-	//= ben_beam.lambda_values(abscissas,lambda_values,boundary_number);
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result = len_beam.lambda_values(abscissas,lambda_values,boundary_number);
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> auxiliary = ben_beam.lambda_values(abscissas,lambda_values,boundary_number);
 
 	for (unsigned int i = 0; i < node_system_dimension(); ++i)
 	  for (unsigned int j = 0; j < Hypercube<hyEdge_dimT-1>::pow(sizeT); ++j)
