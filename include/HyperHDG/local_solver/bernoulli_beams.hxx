@@ -246,8 +246,15 @@ class LengtheningBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    return result;
+	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+									 lSol_float_t,
+									 Legendre,
+									 poly_deg,
+									 sizeT,
+									 abscissa_float_t> evaluation (abscissas);
+	return evaluation.
+		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
+
   }
 }; // end of class LengtheningBeam
 
@@ -537,8 +544,14 @@ class BernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    return result;
+	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+									 lSol_float_t,
+									 Legendre,
+									 poly_deg,
+									 sizeT,
+									 abscissa_float_t> evaluation (abscissas);
+	return evaluation.
+		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
   }
 
 }; // end of class BernoulliBendingBeam
@@ -719,9 +732,14 @@ class LengtheningBernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-    return result;
+	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+									 lSol_float_t,
+									 Legendre,
+									 poly_deg,
+									 sizeT,
+									 abscissa_float_t> evaluation (abscissas);
+	return evaluation.
+		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
   }
 
 }; // end of class LengtheningBernoulliBendingBeam
