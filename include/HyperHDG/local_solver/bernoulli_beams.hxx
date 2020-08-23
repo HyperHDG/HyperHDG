@@ -732,14 +732,16 @@ class LengtheningBernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
-									 lSol_float_t,
-									 Legendre,
-									 poly_deg,
-									 sizeT,
-									 abscissa_float_t> evaluation (abscissas);
-	return evaluation.
-		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
+	//= len_beam.lambda_values(abscissas,lambda_values,boundary_number);
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> auxiliary;
+	//= ben_beam.lambda_values(abscissas,lambda_values,boundary_number);
+
+	for (unsigned int i = 0; i < node_system_dimension(); ++i)
+	  for (unsigned int j = 0; j < Hypercube<hyEdge_dimT-1>::pow(sizeT); ++j)
+		result[i][j] += auxiliary[i][j];
+
+	return result;
   }
 
 }; // end of class LengtheningBernoulliBendingBeam
