@@ -512,7 +512,7 @@ polynomials of degree up to $p$. Then, we define the space of piecewise polynomi
 \end{gather}
 % 
 The HDG method involves a local solver on each mesh hyperege
-$\Edge \in \SetEdge$, producing hyperedge-wise approximations $U_\Edge \in V_\Edge$ and and $\vec Q_\Edge \in \vec W_\Edge$ of the functions $u$ and $\vec q$ in equation~\eqref{EQ:diffusion_mixed}, respectively. We choose $V_\Edge = \polynomials_p$. Then, choosing
+$\Edge \in \SetEdge$, producing hyperedge-wise approximations $U_\Edge \in V_\Edge$ and and $\vec Q_\Edge \in \vec W_\Edge$ of the functions $u$ and $\vec q$ in equation \eqref{EQ:diffusion_mixed}, respectively. We choose $V_\Edge = \polynomials_p$. Then, choosing
 $\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. We will also use the concatenations of the spaces $V_\Edge$ and $\vec W_\Edge$, respectively, as a function space on $\Omega$, namely
 \begin{gather}\label{EQ:dg_spaces}
  \begin{aligned}
@@ -521,9 +521,9 @@ $\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discon
  \end{aligned}
 \end{gather}
 % 
-The HDG scheme for~\eqref{EQ:diffusion_mixed} on a mesh $\Graph$
+The HDG scheme for \eqref{EQ:diffusion_mixed} on a mesh $\Graph$
 consists of the local solver and a global coupling equation. The local solver is defined hyperedge-wise by a weak formulation
-of~\eqref{EQ:diffusion_mixed} in the discrete spaces
+of \eqref{EQ:diffusion_mixed} in the discrete spaces
 $V_\Edge \times \vec W_\Edge$ and defining suitable numerical traces and fluxes. Namely, given $\lambda \in \skeletalSpace$ find $U_\Edge \in V_\Edge$ and $\vec Q_\Edge \in \vec W_\Edge$ , such that
 % 
 \begin{subequations}\label{EQ:hdg_scheme}
@@ -650,7 +650,7 @@ inducing the \emph{statically condensed global system of equations}
  \tilde{\vecc A} \vecc x = \tilde{\vecc b}, \quad \text{ where } \quad \tilde{\vecc A}_{ij} = \tilde a(\mu_j, \mu_i), \, \vecc x_i = \mu_i, \, \tilde{\vecc b}_i = \tilde b(\mu_i),
 \end{equation*}
 % 
-where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.~2.1 \& (2.11.a)]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\tilde{\vecc A}$ is symmetric \emph{negative definite}. Hence, the conjugate gradient (CG) method can be applied to solve the linear system of equations.
+where $(\mu_i)_i$ forms a basis of $\skeletalSpace$. According to \cite[Thm.\ 2.1 \& (2.11.a)]{CockburnGL2009}, the bilinear form $a$ can be rewritten to a form that obviously allows to conclude that $\tilde{\vecc A}$ is symmetric \emph{negative definite}. Hence, the conjugate gradient (CG) method can be applied to solve the linear system of equations.
 
 The CG method uses matrix--vector products. For doing a single matrix--vector product $\tilde{\vecc A} \vecc x = \vecc y$, one needs to (assume that initially $\vecc y = \vecc 0$,) go through all hyperedges and per hyperedge:
 % 
@@ -679,7 +679,7 @@ allows to equivalently rewrite \eqref{EQ:forms_def} as
 % 
 where $a$ is a positive definite discretization of the laplacian.
 
-The positive definiteness of $a$ can be obtained by \cite[Thm.~2.1]{CockburnGL2009} stating that
+The positive definiteness of $a$ can be obtained by \cite[Thm.\ 2.1]{CockburnGL2009} stating that
 % 
 \begin{equation*}
  a(\lambda, \mu) = \sum_{\edge \in \setEdge} \left[ \int_\Edge \frac{1}{d} \localQ \lambda \; \localQ \mu \dx + \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node \tau (\localU \lambda - \lambda) (\localU \mu - \mu) \ds \right].
@@ -776,7 +776,7 @@ An \code{HDG\-Hyper\-Graph} consists of four parts:
  \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
 \end{enumerate}
 % 
-Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structues that are needed for the descripton of the PDE (i.e.~its boundry conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a seperate class that is resposnsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
+Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structues that are needed for the descripton of the PDE (i.e.\ its boundry conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a seperate class that is resposnsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
 
 Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract containers, we define the return value of an \code{HDGhyperGraph} as a \code{hyEdge} which contains its topological, geometrical, and node describing information.
 % 
@@ -797,7 +797,7 @@ The implementation of a loop over all hyperedges cares about the specific proper
  \item Additionally, we need a loop class for the solution of parabolic problems using an approximated mass matrix. However, this example is purely academical and not conducted in full detail.
 \end{itemize}
 
-These loop classes can then also be used for related problems like the Bilaplacian, cf.~Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
+These loop classes can then also be used for related problems like the Bilaplacian, cf.\ Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
 % 
 % ---------------------------------------------------------------------
 \section{Related diffusion problems}\label{SEC:related_diffusion_problems}
@@ -1007,13 +1007,13 @@ However, this approach clearly has the drawback that matrix $S(\sigma) := A - \s
   & $i = 2$ && 2.69e-2 & --- && 4.82e-1 & --- && 4.30e-1 & ---  \\
   & $i = 3$ && 7.17e-2 & -1 && 1.23e-1 & 2.0 && 1.07e-1 & 2.0  \\
   & $i = 4$ && 2.51e-2 & 1.5 && 3.13e-2 & 2.0 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 7.13e-3 & 1.8 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 7.13e-3 & 1.8 && 7.88e-3 & 2.0 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
   & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
   & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
   & $i = 4$ && 6.50e-3 & 3.2 && 2.24e-6 & 5.2 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 7.71e-4 & 3.1 && \textcolor{red}{2.12e-3} & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 7.71e-4 & 3.1 && 7.02e-8 & 5.0 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue of the diffusion problem. All results use the accurate local problems for the shifted inverse (SI) as initial for the nonlinear (NL) approach.}\label{TAB:eigenvalue_conv}
@@ -1049,7 +1049,7 @@ The discretization of the local problems \eqref{EQ:hdg_scheme}, \eqref{EQ:hdg_f}
 % 
 ultimately leading to the need to add $\localU (\localU \lambda + \localU u_\text D + \localU f)$ and $\localQ (\localU \lambda + \localU u_\text D + \localU f)$ to $\localU f$, since $U_\Edge$ in \eqref{EQ:hdg_f_is_u} is $\localU \lambda + \localU u_\text D + \localU f$. Here, the $\localU \lambda$ is the local approximation to $u$ if the standard problem \eqref{EQ:diffusion_mixed} is considered. The $\localU (\localU \lambda)$ and $\localQ (\localU \lambda)$ are approximations to the solution $u$ of \eqref{EQ:diffusion_fu_mixed}, where $\lambda$ is conversely disregarded. Thus, $U$ and $\vec Q$ as in \eqref{EQ:construct_unk} are the actual approximation of \eqref{EQ:diffusion_fu_mixed} and supposed to suffice \eqref{EQ:hdg_global}.
 % 
-Again, we can formally set up a system which is similar to Section~\ref{SEC:glob_system}, namely
+Again, we can formally set up a system which is similar to Section \ref{SEC:glob_system}, namely
 % 
 \begin{subequations}\label{EQ:forms_def_fu}
 \begin{equation}\label{EQ:glob_system_old}
@@ -1166,20 +1166,20 @@ As expected, we receive a second order approximation which is independent of the
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, MA}}
   & $i = 2$ && 6.35e-1 & --- && 9.65e-1 & --- && 8.53e-1 & ---  \\
   & $i = 3$ && 2.02e-1 & 1.7 && 2.47e-1 & 2.0 && 2.14e-1 & 2.0  \\
-  & $i = 4$ && 5.69e-2 & 1.8 && \textcolor{red}{4.68e-9} & 7.1 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 1.50e-2 & 1.9 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 4$ && 5.69e-2 & 1.8 && 6.27e-2 & 2.0 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 1.50e-2 & 1.9 && 1.57e-2 & 2.0 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
   & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
   & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && \textcolor{red}{2.39e-6} & 5.1 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 7.71e-4 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && \textcolor{red}{4.86e-4} & 5  \\
+  & $i = 5$ && 7.71e-4 & 3.1 && 6.27e-8 & 5.3 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue of the diffusion problem. All results use the solution of the mass approximation (MA) problem \eqref{EQ:eigs_mass} for the nonlinear (NL) approach.}\label{TAB:eigs_conv_m}
 \end{table}
 % 
-The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]^d$ is the unit square, $\sigma = \eigenval / 2$, and the polynomial approximation orders and the mesh sizes vary. Again, we receive an oder of convergence of $2$, which has been predicted in \cite{GopalakrishnanLNP2014}.
+The convergence of the eigenvalue with the smallest magnitude is depicted in Table \ref{TAB:eigs_conv_m}. Here, $\Omega = [0,1]^d$ is the unit square, $\sigma = \eigenval / 2$, and the polynomial approximation orders and the mesh sizes vary. Again, we receive an oder of convergence of $2$, which has been predicted in \cite{GopalakrishnanLNP2014}. However, the computations for the MA+NL approach took significantly longer than those of the SI+NL approach.
 % 
 \subsection{Eigenvalue problems on hypergraphs}
 % 
@@ -1357,7 +1357,7 @@ Implementing the parabolic and eigenvalue problems can then be done analogously 
   & $i = 2$ && 5.11e-2 & 1.6 && 3.34e-3 & 2.8 && 1.63e-4 & 3.9  \\
   & $i = 3$ && 1.41e-2 & 1.9 && 4.44e-4 & 2.9 && 1.07e-5 & 3.9  \\
   & $i = 4$ && 3.70e-3 & 1.9 && 5.73e-5 & 3.0 && 6.86e-7 & 4.0  \\
-  & $i = 5$ && 9.50e-4 & 2.0 && 7.32e-6 & 3.0 && \textcolor{red}{1.59e-9} & 0.3  \\
+  & $i = 5$ && 9.50e-4 & 2.0 && 7.32e-6 & 3.0 && 4.38e-8 & 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:bil_el_conv}
@@ -1735,11 +1735,11 @@ Next, we use the approaches of the previous sections to approximate the smallest
 \section{\textcolor{blue}{Elastic beam models}}\label{SEC:elastic_beam}
 % ---------------------------------------------------------------------
 % 
-A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.~1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, c.f.~\cite[Sect.~1.2.2]{MeskourisH2013}.
+A beam can be interpreted as a $\locDim = 1$ dimensional object within an $\globDim = 2$ or $\globDim = 3$ dimensional space. To describe a single beam, we follow the lines of \cite[Sect.\ 1.2.3]{MeskourisH2013} and denote the longitudinal deflection by $\longDef$, the cross deflection by $\crossDef$, and the torsion by $\torsion$. Moreover, we denote the line forces (distributed loads) by $\force$ and the line momenta by $\momentum$, cf.\ \cite[Sect.\ 1.2.2]{MeskourisH2013}.
 % 
 \subsection{Two dimensional models}\label{SEC:2d_Ber}
 % 
-Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.~1.4.3]{MeskourisH2013}---be described via
+Assuming that the cross section is constant with respect to the position with respect to the beam, its stationary deflection in $\globDim = 2$ dimensions can---according to \cite[Sect.\ 1.4.3]{MeskourisH2013}---be described via
 % 
 \begin{subequations}\label{EQ:Timo_2D}
  \begin{align}
@@ -1749,7 +1749,7 @@ Assuming that the cross section is constant with respect to the position with re
  \end{align}
 \end{subequations}
 % 
-where subscript $\bar x$ identifies the longitudinal / axial component (cf.~inner normal), and subscripts $\bar y$ and $\bar z$ the orthogonal / transverse components (cf.~outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.~Timoshenko and P.~Ehrenfest if $\momentum_{\bar y} \equiv 0$ is assumed. $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.~1.3.3]{MeskourisH2013}.
+where subscript $\bar x$ identifies the longitudinal / axial component (cf.\ inner normal), and subscripts $\bar y$ and $\bar z$ the orthogonal / transverse components (cf.\ outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.\ Timoshenko and P.\ Ehrenfest if $\momentum_{\bar y} \equiv 0$ is assumed. $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.\ 1.3.3]{MeskourisH2013}.
 
 Assuming that $\torsion = - \partial_{\bar x} \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
 % 
@@ -1760,11 +1760,11 @@ Assuming that $\torsion = - \partial_{\bar x} \crossDef$, i.e., the cross sectio
  \end{align}
 \end{subequations}
 % 
-whose equation \eqref{EQ:Ber_2D_cross} is often tributed to J.~Bernoulli, or  L.~Euler and D.~Bernoulli, or G.~Galilei, or L.~da~Vinci.
+whose equation \eqref{EQ:Ber_2D_cross} is often tributed to J.\ Bernoulli, or  L.\ Euler and D.\ Bernoulli, or G.\ Galilei, or L.\ da~Vinci.
 % 
 \subsection{Three dimensional Bernoulli model}\label{SEC:3d_Ber}
 % 
-Transferring the aformentioned systems of equations into three spatial dimensions for which we follow \cite[Sect.~6.1--6.4]{BauchauC2009} turns \eqref{EQ:Ber_2D} into
+Transferring the aformentioned systems of equations into three spatial dimensions for which we follow \cite[Sect.\ 6.1--6.4]{BauchauC2009} turns \eqref{EQ:Ber_2D} into
 % 
 \begin{equation}\label{EQ:Ber_3D}
  \begin{bmatrix}
@@ -1781,7 +1781,7 @@ Transferring the aformentioned systems of equations into three spatial dimension
  \end{bmatrix},
 \end{equation}
 % 
-where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. These quantities, however, only show up since \cite[Sect.~5--8]{BauchauC2009} assume beams to have positive (yet small thickness). The different signs of the momenta stem from the sign convention \cite[Sect.~5.2]{BauchauC2009}, and $c_{23} = c_{32}$. Beyond that, the torque distribution $\momentum_{\bar x}$ is related to the twist distribution $\torsion$ via
+where $(\tilde y, \tilde z)$ is the local coordinates of the line of motion of the axial load. These quantities, however, only show up since \cite[Sect.\ 5--8]{BauchauC2009} assume beams to have positive (yet small thickness). The different signs of the momenta stem from the sign convention \cite[Sect.\ 5.2]{BauchauC2009}, and $c_{23} = c_{32}$. Beyond that, the torque distribution $\momentum_{\bar x}$ is related to the twist distribution $\torsion$ via
 % 
 \begin{equation}
  -\partial_{\bar x} \hat c \partial_{\bar x} \torsion = \momentum_{\bar x},
@@ -1800,12 +1800,12 @@ This indicates that we can drop the non-diagonal blocks in \eqref{EQ:Ber_3D}. A 
 % 
 In this section, we consider the description of an \emph{elastic graph}, that is a graph ($\locDim = 1$) of which all edges can be described as Bernoulli beams. These graphs could be used to describe the structural mechanics of trusses, i.e. lattice towers or truss bridges, for example.
 
-Thus, we will discuss a way to switch between local and global coordinates and construct suitable conditions for the connections, cf.~\eqref{EQ:dir_cond}, \eqref{EQ:Neumann_cond1}. Note that trusses / elastic graphs are supposed to be connected by joints (i.e. there is no stiffness in nodes), here.
+Thus, we will discuss a way to switch between local and global coordinates and construct suitable conditions for the connections, cf.\ \eqref{EQ:dir_cond}, \eqref{EQ:Neumann_cond1}. Note that trusses / elastic graphs are supposed to be connected by joints (i.e. there is no stiffness in nodes), here.
 % 
 \paragraph{Local and global coordinates}
 % 
 The equations in Sections \ref{SEC:2d_Ber} \& \ref{SEC:3d_Ber} are formulated with respect to the local coordinates $\bar x$, $\bar y$, and $\bar z$ which are induced by the orthonormal basis $\bar{\mathcal B} = \{ \bar b_{\bar x}, \bar b_{\bar y}, \bar b_{\bar z}\}$ in three dimensions. In two spatial dimensions, $\bar z$ does not represent a coordinate and the considerations with respect to $\bar b_{\bar z}$ become obsolete. We set 
-$\bar b_{\bar x}$ to be one of the two inner normals $\Normal$ with respect to the (straight) edge connecting the two nodes of the (possibly bend) edge/beam. $\bar y$ and $\bar z$ are represented by outer normals $\NormalOuter$ of the aformentioned straight edge. We observe that we can switch between local and global coordinate representation using an affine-linear transformation. Analogously, the vector of deformations $(u, w_{\bar y}, w_{\bar z})^T$ is given in local coordinates and can also be rewritten into global coordinates by applying the affine-linear transformation. Thus, e.g.~$(u, w_{\bar y}, w_{\bar z})^T_x$ is the deformation with respect to the global $x$ direction.
+$\bar b_{\bar x}$ to be one of the two inner normals $\Normal$ with respect to the (straight) edge connecting the two nodes of the (possibly bend) edge/beam. $\bar y$ and $\bar z$ are represented by outer normals $\NormalOuter$ of the aformentioned straight edge. We observe that we can switch between local and global coordinate representation using an affine-linear transformation. Analogously, the vector of deformations $(u, w_{\bar y}, w_{\bar z})^T$ is given in local coordinates and can also be rewritten into global coordinates by applying the affine-linear transformation. Thus, e.g.\ $(u, w_{\bar y}, w_{\bar z})^T_x$ is the deformation with respect to the global $x$ direction.
 % 
 \paragraph{Global coupling conditions}
 % 
@@ -1838,11 +1838,10 @@ Next, we consider the assumptions that are supposed to hold at all $\Node \in \S
 To ensure that the elastic graph allows for an unique solution, we need to ensure that there is an unique way for it to be configured. To do so, we define the degree of static undeterminism $n$, for which $n < 0$ means that the truss is $-n$ times movable, $n = 0$ describes a statcially determined truss, and $n > 0$ indicates $n$ times over-dertemined trusses. The formula for $n$ is
 % 
 \begin{equation}
- n = a + s - \globDim k,
+ n = (a + s \cdot p) - (g \cdot k + r),
 \end{equation}
 % 
-where $a$ is the amount of defined \ldots, $s$ is the number of edges / beams, and $k$ is the amount of nodes. \textcolor{red}{TODO!}
-
+where $a$ is the amount of possible support reactions, $s$ is the number of edges / beams, $p$ is the number of independent stress resultants per beam, $g$ is the amount of equilibrium conditions per node, $k$ is the amount of nodes, and $r$ is the sum of all constraints among the beams, cf.\ \cite[Sect.\ 2.2]{MeskourisH2013}. However, we experienced that eight constraints in three spatial dimensions are sufficient to yield an unique solution / make the CG solver converge. In two spatial dimension, six conditions are sufficient. This corresponds to fixing two nodes / joints.\arerror{TODO: Check this!}
 
 
 \newpage
