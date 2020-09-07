@@ -693,7 +693,7 @@ Obviously, the HDG method for elliptic diffusion problems is consistent with res
  The rest might work similar to standard HDG, I do not really know and believe this is not urgent.
 \end{envarnote}
 % 
-\subsection{Numerical convergence tests}
+\subsection{Numerical convergence tests}\label{SEC:diff_conv_ell}
 % 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -742,7 +742,7 @@ where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side 
   $i = 2$ && 3.60e-3 & 2.2 && 1.61e-3 & 2.6 && 4.16e-4 & 2.9  \\
   $i = 3$ && 8.28e-4 & 2.1 && 2.76e-4 & 2.5 && 5.31e-5 & 3.0  \\
   $i = 4$ && 1.97e-4 & 2.1 && 4.79e-5 & 2.5 && 6.71e-6 & 3.0  \\
-  $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && \textcolor{red}{?}& ?  \\
+  $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && 8.43e-7 & 3.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph.}\label{TAB:diff_hg_el_conv}
@@ -1006,20 +1006,20 @@ However, this approach clearly has the drawback that matrix $S(\sigma) := A - \s
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, SI}}
   & $i = 2$ && 2.69e-2 & --- && 4.82e-1 & --- && 4.30e-1 & ---  \\
   & $i = 3$ && 7.17e-2 & -1 && 1.23e-1 & 2.0 && 1.07e-1 & 2.0  \\
-  & $i = 4$ && 2.51e-2 & 1.5 && 3.13e-2 & 2.0 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 7.13e-3 & 1.8 && 7.88e-3 & 2.0 && 4.86e-4 & 5  \\
+  & $i = 4$ && 2.51e-2 & 1.5 && 3.13e-2 & 2.0 && 2.67e-2 & 2.0  \\
+  & $i = 5$ && 7.13e-3 & 1.8 && 7.88e-3 & 2.0 && 6.69e-3 & 2.0  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$, NL}}
   & $i = 2$ && 5.68e-1 & --- && 2.98e-3 & --- && 8.61e-6 & ---  \\
   & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.24e-6 & 5.2 && \textcolor{red}{4.86e-4} & 5  \\
-  & $i = 5$ && 7.71e-4 & 3.1 && 7.02e-8 & 5.0 && 4.86e-4 & 5  \\
+  & $i = 4$ && 6.50e-3 & 3.2 && 2.24e-6 & 5.2 && 9.20e-8 & -.6  \\
+  & $i = 5$ && 7.71e-4 & 3.1 && 7.02e-8 & 5.0 && 1.44e-9 & 6.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue of the diffusion problem. All results use the accurate local problems for the shifted inverse (SI) as initial for the nonlinear (NL) approach.}\label{TAB:eigenvalue_conv}
 \end{table}
 % 
-For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. Another approach to find a good starting value consists of, we consider the approximation to the statically condensed mass matrix of Section \ref{SEC:approx_mass}.
+For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = \globDim \pi^2$. As starting value for the nonlinear (NL) approach, we use the result of the shifted inverse (SI) approach, for which $\sigma = \eigenval / 2$ is chosen. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$ for the expensive nonlinear problem. This is the expected order of convergence. However, if the error is small enough, no reasonable convergence is found, since the final residual has been set to 1e-9 (which appears to be too high for the very good approximations). Another approach to find a good starting value consists of, we consider the approximation to the statically condensed mass matrix of Section \ref{SEC:approx_mass}.
 % 
 \subsection{An approximation to the statically condensed mass matrix}\label{SEC:approx_mass}
 % 
@@ -1230,7 +1230,7 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue for a diffusion problem on a real hypergraph. Here, the shifted inverse (SI), mass approximation (MA), and nonlinear (NL) approaches are shown.}\label{TAB:dif_hyg_eigenvalue_conv}
 \end{table}
 % 
-Next, we use the approaches of the previous sections to approximate the smallest eigenvalue of the diffusion equation with homogeneous Dirichlet boundary conditions on the hypergraph related to problem \eqref{EQ:hypergraph_example}. Thus, we consider the hypercube $[0,1]^3$ and refine it $i$ times, i.e. into $i^3$ identical sub-cubes. Afterwards we solve the diffusive eigenvalue problem on the union of this refinement's edges (for $\locDim = 1$) and its faces (for $\locDim = 2$). The homogeneous Dirichlet conditions are supposed to be satisfied on the boundary of $[0,1]^3$. Thus, the smallest eigenvalue is $\eigenval = \locDim \pi^2$ and it is approximated using the shifted inverse (SI) and mass approximation (MA) approaches with $\sigma = \eigenval / 2$. The nonlinear (NL) method is applied afterwards. Its initial datum is the result of SI or MA, but the results of NL do not significantly depend on the choice. Thus, we illustrate only the results of which MA is used as initial value. The results are depicted in Table \ref{TAB:dif_hyg_eigenvalue_conv}. They suggest that the convergence rates to eigenvalues do not deteriorate if one does the calculations on hypergraphs.
+Next, we use the approaches of the previous sections to approximate the smallest eigenvalue of the diffusion equation with homogeneous Dirichlet boundary conditions on the hypergraph related to problem \eqref{EQ:hypergraph_example}. Thus, we consider the hypercube $[0,1]^3$ and refine it $i$ times, i.e. into $i^3$ identical sub-cubes. Afterwards we solve the diffusive eigenvalue problem on the union of this refinement's edges (for $\locDim = 1$) and its faces (for $\locDim = 2$). The homogeneous Dirichlet conditions are supposed to be satisfied on the boundary of $[0,1]^3$. Thus, the smallest eigenvalue is $\eigenval = \locDim \pi^2$ and it is approximated using the shifted inverse (SI) and mass approximation (MA) approaches with $\sigma = \eigenval / 2$. The nonlinear (NL) method is applied afterwards. Its initial datum is the result of SI or MA, but the results of NL do not significantly depend on the choice. Thus, we illustrate only the results of which MA is used as initial value. The results are depicted in Table \ref{TAB:dif_hyg_eigenvalue_conv}. They suggest that the convergence rates to eigenvalues neither deteriorate, nor increase if one does the calculations on hypergraphs.
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
@@ -1363,27 +1363,9 @@ Implementing the parabolic and eigenvalue problems can then be done analogously 
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example.}\label{TAB:bil_el_conv}
 \end{table}
 % 
-Thus, we start with an convergence test for the elliptic problem for which $u = \sin(\pi x)$ and $d = \tfrac{1}{\pi}$. The results can be found in Table \ref{TAB:bil_el_conv} illustrating that the order of convergence is $p+1$.
+Thus, we start with an convergence test for the elliptic problem for which $u = \sin(\pi x)$ and $d = \tfrac{1}{\pi}$. The results can be found in Table \ref{TAB:bil_el_conv} illustrating that the order of convergence is $p+1$. That is, we receive the same orders of convergence as for the corresponding diffusion problem, cf. Section \ref{SEC:diff_conv_ell}.
 
-\begin{table}[t]
- \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
-  \toprule
-  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
-  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
-  \midrule
-  $i = 0$ && \textcolor{red}{8.24e-2} & --- && 5.81e-2 & --- && 2.38e-2 & ---  \\
-  $i = 1$ && 1.66e-2 & 2.3 && 9.61e-3 & 2.6 && 3.20e-3 & 2.9  \\
-  $i = 2$ && 3.60e-3 & 2.2 && 1.61e-3 & 2.6 && 4.16e-4 & 2.9  \\
-  $i = 3$ && 8.28e-4 & 2.1 && 2.76e-4 & 2.5 && 5.31e-5 & 3.0  \\
-  $i = 4$ && 1.97e-4 & 2.1 && 4.79e-5 & 2.5 && 6.71e-6 & 3.0  \\
-  $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && \textcolor{red}{?}& ?  \\
-  \bottomrule
- \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation for hypergraph example.}\label{TAB:bil_hg_el_conv}
-\end{table}
-% 
-The convergence of an elliptic problem on a hypergraph to $u = x^2 + y^2 + z^2$ is investigated in Table \ref{TAB:bil_hg_el_conv}.
+The convergence of an elliptic problem on a hypergraph is also investigated. Here, we use the same model problem as in Section \ref{SEC:diff_conv_ell} yielding errors that are almost identical to those depicted in Table \ref{TAB:diff_hg_el_conv}.
 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1412,7 +1394,7 @@ The convergence of an elliptic problem on a hypergraph to $u = x^2 + y^2 + z^2$ 
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:bil_pb_conv}
 \end{table}
 % 
-For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:bil_pb_conv}. Again, the penalty parameter is set to $\tau = 1$ and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
+For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi$, and $f$ such that $u = \sin(\pi(x + t))$ is the analytical solution in $\Omega = [0,1]^\globDim$. The results for an implicit Euler scheme with $\Delta t = 10^{-4}$ can be found in Table \ref{TAB:bil_pb_conv}. Again, the penalty parameter is set to $\tau = 1$, and we observe the $L^2$ errors and estimated rates of convergence which correspond to those of the elliptic cases.
 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
