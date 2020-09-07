@@ -235,7 +235,7 @@ class DiffusionUniform
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
@@ -248,11 +248,11 @@ class DiffusionUniform
     return 0.;
   }
 
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
   std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
     DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
+  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               const lSol_float_t time = 0.) const;
 
@@ -260,15 +260,15 @@ class DiffusionUniform
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
 
-  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
+  lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
 
@@ -469,43 +469,39 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
 std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
   DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
 DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   const lSol_float_t time) const
 {
   std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-    values =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT, abscissas.size(), poly_deg,
-                                                    system_dimension()>(abscissas, coefficients);
-
-  return values;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
 }  // end of DiffusionUniform::bulk_values
 
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
 DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg,lSol_float_t>::node_system_dimension()>
-    values_in_local_coordinates =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>(
-        abscissas, lambda_values[boundary_number]);
-  return values_in_local_coordinates;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+								   lSol_float_t,
+								   Legendre,
+								   poly_deg,
+								   abscissas_sizeT,
+								   abscissa_float_t> evaluation (abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()> (lambda_values[boundary_number]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1202,7 +1198,7 @@ class Diffusion
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
@@ -1230,7 +1226,7 @@ class Diffusion
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
@@ -1268,18 +1264,18 @@ class Diffusion
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
    * \retval  vec_b         Local part of vector b.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, class hyEdgeT>
   std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
     Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
+  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
@@ -1288,14 +1284,14 @@ class Diffusion
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
-    const std::array<abscissa_float_t, sizeT>& abscissas,
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
+    const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
     const input_array_t& lambda_values,
     const unsigned int boundary_number) const;
 
@@ -1573,12 +1569,12 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, typename hyEdgeT>
 std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
   Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
 Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -1586,13 +1582,8 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_valu
   std::array<lSol_float_t, n_loc_dofs_> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-    values =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT, abscissas.size(), poly_deg,
-                                                    system_dimension()>(abscissas, coefficients);
-
-  return values;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
 }
 // end of Diffusion::bulk_values
 
@@ -1602,19 +1593,15 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
 Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-    values_in_local_coordinates =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>(
-        abscissas, lambda_values[boundary_number]);
-  return values_in_local_coordinates;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT-1, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(lambda_values[boundary_number]);
 }
 
 
@@ -2062,7 +2049,7 @@ class DiffusionParab
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
@@ -2090,18 +2077,18 @@ class DiffusionParab
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
    * \retval  vec_b         Local part of vector b.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, class hyEdgeT>
   std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
     DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
+  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
@@ -2110,14 +2097,14 @@ class DiffusionParab
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
-    const std::array<abscissa_float_t, sizeT>& abscissas,
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
+    const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
     const input_array_t& lambda_values,
     const unsigned int boundary_number) const;
 
@@ -2408,12 +2395,12 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, typename hyEdgeT>
 std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
   DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
 DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -2421,13 +2408,8 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk
   std::array<lSol_float_t, n_loc_dofs_> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-    values =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT, abscissas.size(), poly_deg,
-                                                    system_dimension()>(abscissas, coefficients);
-
-  return values;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
 }
 // end of DiffusionParab::bulk_values
 
@@ -2437,19 +2419,15 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
 DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-    values_in_local_coordinates =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>(
-        abscissas, lambda_values[boundary_number]);
-  return values_in_local_coordinates;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT-1, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(lambda_values[boundary_number]);
 }
 
 
@@ -2855,7 +2833,7 @@ class DiffusionEigs
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
@@ -2883,18 +2861,18 @@ class DiffusionEigs
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
    * \retval  vec_b         Local part of vector b.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, class hyEdgeT>
   std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
     DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
+  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
@@ -2903,14 +2881,14 @@ class DiffusionEigs
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  sizeT         Size of the array of array of abscissas.
+   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
    * \param   abscissas     Abscissas of the supporting points.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   boundary_number number of the boundary on which to evaluate the function.
    **********************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
-    const std::array<abscissa_float_t, sizeT>& abscissas,
+  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()> lambda_values(
+    const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
     const input_array_t& lambda_values,
     const unsigned int boundary_number) const;
 
@@ -3118,12 +3096,12 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t, typename hyEdgeT>
 std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
   DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
 DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -3131,13 +3109,8 @@ DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_
   std::array<lSol_float_t, n_loc_dofs_> coefficients =
     solve_local_problem(lambda_values, hyper_edge, time);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-    values =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT, abscissas.size(), poly_deg,
-                                                    system_dimension()>(abscissas, coefficients);
-
-  return values;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+    return evaluation.template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
 }
 // end of DiffusionEigs::bulk_values
 
@@ -3147,17 +3120,13 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension() >
+template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension() >
 DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
+  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>
-    values_in_local_coordinates =
-      sum_all_in_tensorial_points_with_coefficients<lSol_float_t, abscissa_float_t, Legendre,
-                                                    hyEdge_dimT - 1, abscissas.size(), poly_deg, DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dimension()>(
-        abscissas, lambda_values[boundary_number]);
-  return values_in_local_coordinates;
+  TensorialShapeFunctionEvaluation<hyEdge_dimT-1, lSol_float_t, Legendre, poly_deg, abscissas_sizeT, abscissa_float_t> evaluation(abscissas);
+  return evaluation.template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(lambda_values[boundary_number]);
 }

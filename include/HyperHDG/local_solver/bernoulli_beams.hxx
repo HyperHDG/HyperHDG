@@ -64,7 +64,7 @@ class LengtheningBeam
     static constexpr unsigned int n_glob_dofs_per_node()
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -246,8 +246,15 @@ class LengtheningBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    return result;
+	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+									 lSol_float_t,
+									 Legendre,
+									 poly_deg,
+									 sizeT,
+									 abscissa_float_t> evaluation (abscissas);
+	return evaluation.
+		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
+
   }
 }; // end of class LengtheningBeam
 
@@ -313,7 +320,7 @@ class BernoulliBendingBeam
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -537,8 +544,14 @@ class BernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    return result;
+	TensorialShapeFunctionEvaluation<hyEdge_dimT - 1,
+									 lSol_float_t,
+									 Legendre,
+									 poly_deg,
+									 sizeT,
+									 abscissa_float_t> evaluation (abscissas);
+	return evaluation.
+		template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension ()> (lambda_values[boundary_number]);
   }
 
 }; // end of class BernoulliBendingBeam
@@ -604,7 +617,7 @@ class LengtheningBernoulliBendingBeam
     { return 2 * space_dim * Hypercube<hyEdge_dimT-1>::pow(poly_deg + 1); }
     
     
-    static constexpr unsigned int node_system_dimension() { return space_dim; }
+    static constexpr unsigned int node_system_dimension() { return space_dim*2; }
     
     static constexpr unsigned int system_dimension() { return space_dim; }
     
@@ -719,9 +732,14 @@ class LengtheningBernoulliBendingBeam
       (const std::array<abscissa_float_t,sizeT>& abscissas, const input_array_t& lambda_values,
        const unsigned int boundary_number) const
   {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result;
-    for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
-    return result;
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> result = len_beam.lambda_values(abscissas,lambda_values,boundary_number);
+	std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT-1>::pow(sizeT)>,node_system_dimension()> auxiliary = ben_beam.lambda_values(abscissas,lambda_values,boundary_number);
+
+	for (unsigned int i = 0; i < node_system_dimension(); ++i)
+	  for (unsigned int j = 0; j < Hypercube<hyEdge_dimT-1>::pow(sizeT); ++j)
+		result[i][j] += auxiliary[i][j];
+
+	return result;
   }
 
 }; // end of class LengtheningBernoulliBendingBeam

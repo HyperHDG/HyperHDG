@@ -125,6 +125,50 @@ struct PlotOptions
   PlotOptions();
 }; // end of class PlotOptions
 
+std::string set_plot_option( PlotOptions &plot_options, const std::string& option, std::string value = "" )
+{
+  if (value == "");
+  else if (option == "outputDir") plot_options.outputDir = value;
+  else if (option == "fileName") plot_options.fileName = value;
+  else if (option == "fileEnding") plot_options.fileEnding = value;
+  else if (option == "fileNumber") plot_options.fileNumber = stoi (value);
+  else if (option == "printFileNumber")
+	plot_options.printFileNumber =
+		(value == "true" || value == "1");
+  else if (option == "incrementFileNumber")
+	plot_options.incrementFileNumber =
+		(value == "true" || value == "1");
+  else if (option == "plotEdges") plot_options.plot_edges = (value == "true" || value == "1");
+  else if (option == "plotEdgeBoundaries") plot_options.plot_edge_boundaries = (value == "true" || value == "1");
+  else if (option == "boundaryScale") plot_options.boundary_scale = std::stof (value);
+  else if (option == "scale") plot_options.scale = stof (value);
+  else
+  hy_assert(false, "This plot option has not been defined (yet).");
+
+  std::string return_value;
+  if (option == "outputDir") return_value = plot_options.outputDir;
+  else if (option == "fileName") return_value = plot_options.fileName;
+  else if (option == "fileEnding") return_value = plot_options.fileEnding;
+  else if (option == "fileNumber") return_value = std::to_string (plot_options.fileNumber);
+  else if (option == "printFileNumber")
+	return_value = std::to_string
+		(plot_options.printFileNumber);
+  else if (option == "incrementFileNumber")
+	return_value = std::to_string
+		(plot_options.incrementFileNumber);
+  else if (option == "plotEdges")
+	return_value = std::to_string
+		(plot_options.plot_edges);
+  else if (option == "plotEdgeBoundaries")
+	return_value = std::to_string
+		(plot_options.plot_edge_boundaries);
+  else if (option == "scale") return_value = std::to_string (plot_options.scale);
+  else if (option == "boundaryScale") return_value = std::to_string (plot_options.boundary_scale);
+  else
+  hy_assert(false, "This plot option has not been defined (yet).");
+
+  return return_value;
+}
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
@@ -398,7 +442,7 @@ namespace PlotFunctions
 /*!*************************************************************************************************
  * \brief   Check if some file exists and can be opened
  **************************************************************************************************/
-  void file_exists(const std::ofstream &output_file, const std::string filename) {
+  void check_file_opened(const std::ofstream &output_file, const std::string filename) {
     if (!output_file.is_open()) {
       throw std::ios_base::failure("File  " + filename + " could not be opened");
     }
@@ -406,9 +450,9 @@ namespace PlotFunctions
 /*!*************************************************************************************************
  * \brief   Check if an outputstream has opened a file
  **************************************************************************************************/
-  void check_file_opened(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
+  void create_directory_if_needed(std::ofstream &output_file, const std::string filename, const PlotOptions &plot_options) {
     try {
-      file_exists(output_file, filename);
+		check_file_opened (output_file, filename);
     }
     catch (std::ios_base::failure &e) {
       std::cerr << e.what() << std::endl;
@@ -478,8 +522,10 @@ void plot_edge_values
     myfile << "      ";
     for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner) {
       myfile << "  ";
-      for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
-        myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
+		for (unsigned int d = 0; d < LocalSolverT::system_dimension(); ++d)
+		  myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
+		for (unsigned int d = LocalSolverT::system_dimension(); d < LocalSolverT::node_system_dimension(); ++d)
+		  myfile << "  " << 0; // AR: I switched d and corner!?
     }
     myfile << std::endl;
   }
@@ -518,6 +564,8 @@ void plot_boundary_values
       for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
         myfile << "  " << local_values[d][corner]; // AR: I switched d and corner!?
       }
+		for (unsigned int d = LocalSolverT::node_system_dimension(); d < LocalSolverT::system_dimension(); ++d)
+		  myfile << "  " << 0; // AR: I switched d and corner!?
       myfile << std::endl;
     }
   }
@@ -560,7 +608,7 @@ void plot_vtu
   filename.append(".vtu");
 
   myfile.open(filename);
-  PlotFunctions::check_file_opened(myfile,filename,plot_options);
+  PlotFunctions::create_directory_if_needed (myfile, filename, plot_options);
   myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
@@ -590,7 +638,7 @@ void plot_vtu
   myfile << "      <PointData>" << std::endl;
   if (LocalSolverT::system_dimension() != 0) {
     myfile << "        <DataArray type=\"Float32\" Name=\"values"
-           << "\" NumberOfComponents=\"" << LocalSolverT::node_system_dimension()
+           << "\" NumberOfComponents=\"" << std::max(LocalSolverT::system_dimension(), LocalSolverT::node_system_dimension())
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges) {
       plot_edge_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, abscissas);

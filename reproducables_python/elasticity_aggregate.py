@@ -29,7 +29,7 @@ filenames = [ "HyperHDG/geometry/file.hxx" , \
 
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import
-PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames)
+PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames, True)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP( "domains/aggregate_" + aggregate + ".pts" )
@@ -68,5 +68,8 @@ else:
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_option("fileName", "aggregate_" + aggregate)
 HDG_wrapper.plot_option("printFileNumber", "false" )
+HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
+HDG_wrapper.plot_option("scale", "0.8")
+HDG_wrapper.plot_option("boundaryScale", "0.9")
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
 print("Solution written to file" , HDG_wrapper.plot_option("fileName", ""), "in output directory.")
