@@ -73,9 +73,9 @@ def bilaplacian_test(poly_degree, dimension, iteration):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main():
-  for poly_degree in range(1,2):
+  for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,4):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         bilaplacian_test(poly_degree, dimension, iteration)
