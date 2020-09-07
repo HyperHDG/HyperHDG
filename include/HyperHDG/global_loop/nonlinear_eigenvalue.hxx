@@ -321,7 +321,7 @@ class NonlinearEigenvalue
      **********************************************************************************************/
     std::string plot_option( const std::string& option, std::string value = "" )
     {
-      set_plot_option(plot_options, option, value);
+      return set_plot_option(plot_options, option, value);
     }
     /*!*********************************************************************************************
      * \brief   Plot solution in vtu format.
