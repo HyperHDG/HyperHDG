@@ -29,7 +29,7 @@ filenames = [ "HyperHDG/geometry/file.hxx" , \
 
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import
-PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames, True)
+PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP( "domains/aggregate_" + aggregate + ".pts" )
