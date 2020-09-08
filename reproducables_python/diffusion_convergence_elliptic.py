@@ -68,7 +68,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
-  print("Diffusion test ended at", end_time, "after", (end_time-start_time).seconds, "seconds.")
+  print("Diffusion test ended at", end_time, "after", end_time-start_time)
   
 
 # --------------------------------------------------------------------------------------------------
