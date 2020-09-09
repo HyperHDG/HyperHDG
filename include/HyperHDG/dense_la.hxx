@@ -456,6 +456,21 @@ SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
   return diag_mat;
 }
 /*!*************************************************************************************************
+ * \brief   Create SmallMat that repeats given column vector.
+ * 
+ * \param   rep_vec       Column vector that is to be repeated.
+ * \retval  rep_mat       Matrix whose columns coincide with given vector.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t >
+SmallMat<n_rows,n_cols,mat_entry_t> rep_mat(const SmallMat<n_rows,1,mat_entry_t> rep_vec)
+{
+  SmallMat<n_rows,n_cols,mat_entry_t> rep_mat;
+  for (unsigned int j = 0; j < n_cols; ++j)
+    for (unsigned int i = 0; i < n_rows; ++i)
+      rep_mat(i,j) = rep_vec[j];
+  return rep_mat;
+}
+/*!*************************************************************************************************
  * \brief   Create dyadic product of two small vectors.
  * 
  * \param   left          Left vector in dyadic product.
