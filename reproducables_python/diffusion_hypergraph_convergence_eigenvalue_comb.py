@@ -39,7 +39,7 @@ def main():
             _, _, errorNLMA = eigenvalue_newt(poly_degree, dimension, iteration, vector)
             f = open("output/diffusion_hypergraph_convergence_eigenvalue_combMA.txt", "a")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorSI = " + str(errorMA) + ".\n")
+                    + ". Iteration = " + str(iteration) + ". ErrorMA = " + str(errorMA) + ".\n")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
                     + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLMA) + ".\n")
             f.close()

@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, dimension, iteration):
   # Predefine problem to be solved.
-  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + ",3>, " \
+  problem = "EllipticLoop < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
           + "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
@@ -30,7 +30,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
