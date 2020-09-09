@@ -7,8 +7,6 @@
 #include <HyperHDG/tensorial_shape_fun.hxx>
 #include <algorithm>
 
-#include <chrono>
-#include <ctime>
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -1327,8 +1325,6 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
-  auto start = std::chrono::system_clock::now();
-  
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
@@ -1374,12 +1370,6 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
       }
     }
   }
-
-  auto end = std::chrono::system_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end-start;
-  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
- // std::cout << "finished computation at " << std::ctime(&end_time)
- //           << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
   return local_mat;
 }  // end of Diffusion::assemble_loc_matrix

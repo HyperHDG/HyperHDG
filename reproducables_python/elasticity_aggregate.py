@@ -8,6 +8,9 @@ import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
+# Import package to print date and time of start and end of program.
+from datetime import datetime
+
 # Correct the python paths!
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
@@ -20,6 +23,10 @@ aggregate = "5"
 # aggregate = "1000_tree"
 # aggregate = "5000_tree"
 # --------------------------------------------------------------------------------------------------
+
+# Print starting time of diffusion test.
+start_time = datetime.now()
+print("Starting time is", start_time)
 
 # Predefine problem to be solved.
 problem = "EllipticLoop < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
@@ -73,3 +80,7 @@ HDG_wrapper.plot_option("scale", "0.8")
 HDG_wrapper.plot_option("boundaryScale", "0.9")
 HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
 print("Solution written to file" , HDG_wrapper.plot_option("fileName", ""), "in output directory.")
+
+# Print ending time of diffusion test.
+end_time = datetime.now()
+print("Program ended at", end_time, "after", end_time-start_time)
