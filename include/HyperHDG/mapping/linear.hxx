@@ -3,7 +3,6 @@
 #include <HyperHDG/dense_la.hxx>
 
 #include <array>
-#include <memory>
 
 
 /*!*************************************************************************************************
@@ -56,17 +55,17 @@ class Linear
     /*!*********************************************************************************************
      * \brief   The translation of the affine mapping from reference to physical element.
      **********************************************************************************************/
-    const SmallVec<space_dimT,map_float_t> translation_;
+    SmallVec<space_dimT,map_float_t> translation_;
     /*!*********************************************************************************************
      * \brief   The matrix of the affine mapping from reference to physical element.
      **********************************************************************************************/
-    const SmallMat<space_dimT,hyEdge_dimT,map_float_t> matrix_;
+    SmallMat<space_dimT,hyEdge_dimT,map_float_t> matrix_;
     /*!*********************************************************************************************
      * \brief   Matrix Q of QR decomposition of the matrix of the affine transformation.
      *
      * This matrix is normalized to have det(Q) = +1.
      **********************************************************************************************/
-    std::shared_ptr< SmallSquareMat<space_dimT,map_float_t> > matrix_q_;
+    SmallSquareMat<space_dimT,map_float_t> matrix_q_;
     /*!*********************************************************************************************
      * \brief   Matrix R of QR decomposition of the matrix of the affine transformation.
      *
@@ -78,25 +77,15 @@ class Linear
      *
      * This matrix is normalized to have non-negative diagonal entries, except for the very first.
      **********************************************************************************************/
-    std::shared_ptr< SmallSquareMat<hyEdge_dimT,map_float_t> > matrix_r_;
-    /*!*********************************************************************************************
-     * \brief   Allow lazy evaluation of the QR decomposition.
-     *
-     * If matrices R and Q are not needed by e.g. the local solver, they should not be computed,
-     * since they cost computing time and space. Thus, if they are not needed, the mapping comprises
-     * two shared pointers that do not point anywhere. If they are needed, this function checks,
-     * whether they have been constructed and constructs them (if necessary).
-     **********************************************************************************************/
-    void make_qr_if_needed()
-    {
-      if (matrix_q_ && matrix_r_)  return;
-      hy_assert ( !matrix_q_ && !matrix_r_ ,
-                  "Construction of only one matrix has not been implemented, yet!" );
-      matrix_q_ = std::make_shared< SmallSquareMat<space_dimT,map_float_t> > ();
-      matrix_r_ = std::make_shared< SmallSquareMat<hyEdge_dimT,map_float_t> > ();
-      qr_decomp( matrix_ , *matrix_q_, *matrix_r_ );
-    }
+    SmallSquareMat<hyEdge_dimT,map_float_t> matrix_r_;
   public:
+    /*!*********************************************************************************************
+     * \brief   Construct affine-linear mapping.
+     *
+     * \param   translation   The translation of the afine-linear mapping.
+     * \param   matrix        The matrix of the affine-linear mapping.
+     **********************************************************************************************/
+    Linear() = default;
     /*!*********************************************************************************************
      * \brief   Construct affine-linear mapping.
      *
@@ -108,7 +97,10 @@ class Linear
       const Point<space_dimT,map_float_t>& translation,
       const SmallMat<space_dimT,hyEdge_dimT,map_float_t>& matrix
     )
-    : translation_(translation), matrix_(matrix) { }
+    : translation_(translation), matrix_(matrix)
+    { 
+      qr_decomp( matrix_ , matrix_q_, matrix_r_ );
+    }
     /*!*********************************************************************************************
      * \brief   The functional determinant of the affine-linear mappring.
      *
@@ -125,9 +117,8 @@ class Linear
      **********************************************************************************************/
     map_float_t functional_determinant_hyEdge()
     { 
-      make_qr_if_needed();
       map_float_t determinant = 1.;
-      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant *= matrix_r_->operator()(i,i);
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)  determinant *= matrix_r_(i,i);
       return determinant;
     }
     /*!*********************************************************************************************
@@ -170,7 +161,7 @@ class Linear
      * \brief   Return matrix R of the QR decomposition.
      **********************************************************************************************/
     const SmallSquareMat<hyEdge_dimT,map_float_t>& mat_r()
-    { make_qr_if_needed();  return *matrix_r_; }
+    { return matrix_r_; }
     /*!*********************************************************************************************
      * \brief   Return local normal of given index.
      *
@@ -184,20 +175,19 @@ class Linear
     {
       hy_assert( index < hyEdge_dimT ,
                  "The index of the searched normal must not be bigger than their amount." );
-      make_qr_if_needed();
       if constexpr (hyEdge_dimT == 1)
       {
-        if ( matrix_r_->operator()(0,0) > 0 )  return SmallVec<hyEdge_dimT,map_float_t>(-1.);
-        else                                   return SmallVec<hyEdge_dimT,map_float_t>(+1.);
+        if ( matrix_r_(0,0) > 0 )  return SmallVec<hyEdge_dimT,map_float_t>(-1.);
+        else                       return SmallVec<hyEdge_dimT,map_float_t>(+1.);
       }
 
       SmallMat<hyEdge_dimT,hyEdge_dimT-1,map_float_t> other_vectors;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)  if (i != index)
-        other_vectors.set_column(i - (i > index), matrix_r_->get_column(i));
+        other_vectors.set_column(i - (i > index), matrix_r_.get_column(i));
       
       SmallVec<hyEdge_dimT,map_float_t> normal
         = qr_decomp_q(other_vectors).get_column(hyEdge_dimT-1);
-      map_float_t scalar_pdct = scalar_product(normal, matrix_r_->get_column(index));
+      map_float_t scalar_pdct = scalar_product(normal, matrix_r_.get_column(index));
       hy_assert( scalar_pdct != 0., "Scalar product must not be zero!" );
       if (scalar_pdct > 0.)  normal *= -1.;
       return normal;
@@ -243,8 +233,7 @@ class Linear
       hy_assert( index < space_dimT-hyEdge_dimT ,
                  "The index of the outer normal must not be bigger than their amount." );
 
-      make_qr_if_needed();
-      return matrix_q_->get_column(index + hyEdge_dimT);;
+      return matrix_q_.get_column(index + hyEdge_dimT);
     }
 }; // end class File
 

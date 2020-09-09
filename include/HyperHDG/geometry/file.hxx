@@ -5,7 +5,6 @@
 #include <HyperHDG/mapping/linear.hxx>
 
 #include <array>
-#include <memory>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
@@ -103,33 +102,20 @@ class File
       /*!*******************************************************************************************
        * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
        ********************************************************************************************/
-      std::shared_ptr<mapping_t> mapping;
-      /*!*******************************************************************************************
-       * \brief   Prepare lazy evaluation of mapping.
-       ********************************************************************************************/
-      inline void generate_mapping_if_needed()
-      {
-        if (mapping) return;
-        Point<space_dimT,pt_coord_t> translation = point(0);
-        SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          matrix.set_column(dim, point(1<<dim) - translation);
-        mapping = std::make_shared<mapping_t>(translation, matrix);
-      }
-      /*!*******************************************************************************************
-       * \brief   Hold an instance of a matrix containing local normals.
-       ********************************************************************************************/
-      std::shared_ptr< SmallSquareMat<hyEdge_dimT,pt_coord_t> > local_normals_;
-      /*!*******************************************************************************************
-       * \brief   Hold an instance of a matrix containing inner and outer normals.
-       ********************************************************************************************/
-      std::shared_ptr< SmallSquareMat<space_dimT,pt_coord_t> > global_normals_;
+      mapping_t mapping;
     public:
       /*!*******************************************************************************************
        * \brief   Construct hyperedge from hypergraph and index.
        ********************************************************************************************/
       hyEdge ( const File& hyGraph_geometry, const hyEdge_index_t index )
-      : hyGraph_geometry_(hyGraph_geometry), index_(index) { }
+      : hyGraph_geometry_(hyGraph_geometry), index_(index)
+      {
+        Point<space_dimT,pt_coord_t> translation = point(0);
+        SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          matrix.set_column(dim, point(1<<dim) - translation);
+        mapping = mapping_t(translation, matrix);
+      }
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
        ********************************************************************************************/
@@ -148,8 +134,7 @@ class File
         for (unsigned int i = 0; i < pts.size(); ++i)
           hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
                      "Point must lie in reference square!");
-        generate_mapping_if_needed();
-        return mapping->map_reference_to_physical(pts);
+        return mapping.map_reference_to_physical(pts);
       }
       /*!*******************************************************************************************
        * \brief   Return matrix column of the affine-linear transformation.
@@ -161,24 +146,21 @@ class File
       {
         hy_assert( index < hyEdge_dimT,
                    "There are only " << hyEdge_dimT << " spanning vectors." );
-        generate_mapping_if_needed();
-        return mapping->get_column(index);
+        return mapping.get_column(index);
       }
       /*!*******************************************************************************************
        * \brief   Return reduced matrix R of the QR decomposition.
        ********************************************************************************************/
       const SmallSquareMat<hyEdge_dimT,pt_coord_t>& mat_r()
       {
-        generate_mapping_if_needed();
-        return mapping->mat_r();
+        return mapping.mat_r();
       }
       /*!*******************************************************************************************
        * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
        ********************************************************************************************/
       pt_coord_t area()
       {
-        generate_mapping_if_needed();
-        return std::abs(mapping->functional_determinant_hyEdge());
+        return std::abs(mapping.functional_determinant_hyEdge());
       }
       /*!*******************************************************************************************
        * \brief   Return Haussdorff measure of the specified hypernode.
@@ -187,8 +169,7 @@ class File
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) faces." );
-        generate_mapping_if_needed();
-        return std::abs(mapping->functional_determinant_hyNode(index / 2));
+        return std::abs(mapping.functional_determinant_hyNode(index / 2));
       }
       /*!*******************************************************************************************
        * \brief   Return local normal of given index.
@@ -202,15 +183,7 @@ class File
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        generate_mapping_if_needed();
-        if (!local_normals_)
-          local_normals_ = std::make_shared< SmallSquareMat<hyEdge_dimT,pt_coord_t> > ();
-        Point<hyEdge_dimT,pt_coord_t> normal = local_normals_->get_column(index / 2);
-        if (norm_2(normal) < 0.5)
-        {
-          normal = mapping->local_normal(index / 2);
-          local_normals_->set_column(index / 2, normal);
-        }
+        Point<hyEdge_dimT,pt_coord_t> normal = mapping.local_normal(index / 2);
         if (index % 2 == 1)  normal *= -1.;
         return normal;
       }
@@ -226,15 +199,7 @@ class File
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        generate_mapping_if_needed();
-        if (!global_normals_)
-          global_normals_ = std::make_shared< SmallSquareMat<space_dimT,pt_coord_t> > ();
-        Point<space_dimT,pt_coord_t> normal = global_normals_->get_column(index / 2);
-        if (norm_2(normal) < 0.5)
-        {
-          normal = mapping->inner_normal(index / 2);
-          global_normals_->set_column(index / 2, normal);
-        }
+        Point<space_dimT,pt_coord_t> normal = mapping.inner_normal(index / 2);
         if (index % 2 == 1)  normal *= -1.;
         return normal;
       }
@@ -248,16 +213,7 @@ class File
         hy_assert( index < space_dimT - hyEdge_dimT ,
                    "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
                    << "which are orthogonal to the hyperedge." );
-        generate_mapping_if_needed();
-        if (!global_normals_)
-          global_normals_ = std::make_shared< SmallSquareMat<space_dimT,pt_coord_t> > ();
-        Point<space_dimT,pt_coord_t> normal = global_normals_->get_column(hyEdge_dimT + index);
-        if (norm_2(normal) < 0.5)
-        {
-          normal = mapping->outer_normal(index);
-          global_normals_->set_column(hyEdge_dimT + index, normal);
-        }
-        return normal;
+        return mapping.outer_normal(index);
       }
     /*!*******************************************************************************************
      * \brief   Return lexicographically ordered equidistant tensorial point of given index.
@@ -269,14 +225,13 @@ class File
       static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
       hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
                  "The index must not exceed the number of prescribed lexicographic points." );
-      generate_mapping_if_needed();
       Point<hyEdge_dimT,pt_coord_t> pt;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         pt[dim] = (pt_coord_t) points_1d[index % n_sub_points];
         index /= n_sub_points;
       }
-      return mapping->map_reference_to_physical(pt);
+      return mapping.map_reference_to_physical(pt);
     }
     /*!*******************************************************************************************
      * \brief   Return equidistant tensorial point of given index on a given boundary (slightly moved
@@ -289,7 +244,6 @@ class File
       static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
       hy_assert( index < std::pow(n_sub_points, hyEdge_dimT-1)*hyEdge_dimT*2 ,
                  "The index must not exceed the number of prescribed lexicographic points." );
-      generate_mapping_if_needed();
       Point<hyEdge_dimT-1,pt_coord_t> subpt;
       index = index - std::pow(n_sub_points,hyEdge_dimT-1)*boundary_number;
       for (unsigned int subdim = 0; subdim < hyEdge_dimT-1; ++subdim)
@@ -306,7 +260,7 @@ class File
         else
           pt[d] = subpt[subd++];
       }
-      return mapping->map_reference_to_physical(pt);
+      return mapping.map_reference_to_physical(pt);
     }
   }; // end of class hyEdge
 

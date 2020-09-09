@@ -204,7 +204,7 @@ class SmallMat
      * \param   column    Column index of the matrix entry to be returned.
      * \retval  entry     Matrix entry at given position.
      **********************************************************************************************/
-    mat_entry_t operator()(const unsigned int row, const unsigned int column) const
+    inline mat_entry_t operator()(const unsigned int row, const unsigned int column) const
     { return operator[](loc_matrix_index(row, column)); }
     /*!*********************************************************************************************
      * \brief   Return reference to single entry of a SmallMat.
@@ -213,7 +213,7 @@ class SmallMat
      * \param   column    Column index of the matrix entry to be returned.
      * \retval  entry     A reference to a \c mat_entry_t describing the matrix entry.
      **********************************************************************************************/
-    mat_entry_t& operator()(const unsigned int row, const unsigned int column)
+    inline mat_entry_t& operator()(const unsigned int row, const unsigned int column)
     { return operator[](loc_matrix_index(row, column)); }
     /*!*********************************************************************************************
      * \brief   Return single entry of a constant SmallMat.
@@ -221,7 +221,7 @@ class SmallMat
      * \param   index     An \c unsigned \c int referring to the entry that is to be returned.
      * \retval  entry     \c mat_entry_t being the entry at given index.
      **********************************************************************************************/
-    mat_entry_t operator[](const unsigned int index) const
+    inline mat_entry_t operator[](const unsigned int index) const
     {
       hy_assert( 0 <= index && index < size() ,
                  "You can only access entries of a SmallMat's entries that have non-negaitive "
@@ -235,7 +235,7 @@ class SmallMat
      * \param   index     An \c unsigned \c int referring to the entry that is to be returned.
      * \retval  entry     Reference to \c mat_entry_t being the entry at given index.
      **********************************************************************************************/
-    mat_entry_t& operator[](const unsigned int index)
+    inline mat_entry_t& operator[](const unsigned int index)
     {
       hy_assert( 0 <= index && index < size() ,
                  "You can only access entries of a SmallMat's entries that have non-negaitive "
