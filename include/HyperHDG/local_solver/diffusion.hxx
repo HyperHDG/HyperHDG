@@ -7,6 +7,9 @@
 #include <HyperHDG/tensorial_shape_fun.hxx>
 #include <algorithm>
 
+#include <chrono>
+#include <ctime>
+
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
@@ -1324,11 +1327,17 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
+  auto start = std::chrono::system_clock::now();
+  
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
+  
+  SmallMat<hyEdge_dimT, 2*hyEdge_dimT, lSol_float_t> normals;
+  for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+    normals.set_column(face, hyper_edge.geometry.local_normal(face));
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -1351,8 +1360,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
         helper = integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         face_integral += helper;
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
+        normal_int_vec += helper * normals.get_column(face);
       }
 
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
@@ -1366,6 +1374,12 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
       }
     }
   }
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+ // std::cout << "finished computation at " << std::ctime(&end_time)
+ //           << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
   return local_mat;
 }  // end of Diffusion::assemble_loc_matrix
