@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 def diffusion_test(poly_degree, dimension, iteration):
   # Print starting time of diffusion test.
   start_time = datetime.now()
-  print("Starting time of diffusion test is", start_time)
+  print("Starting time is", start_time)
   
   # Predefine problem to be solved.
   problem = "EllipticLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
@@ -68,7 +68,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
-  print("Diffusion test ended at", end_time, "after", end_time-start_time)
+  print("Program ended at", end_time, "after", end_time-start_time)
   
 
 # --------------------------------------------------------------------------------------------------

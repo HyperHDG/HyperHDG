@@ -8,6 +8,9 @@ import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
+# Import package to print date and time of start and end of program.
+from datetime import datetime
+
 # Correct the python paths!
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
@@ -17,6 +20,10 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, dimension, iteration):
+  # Print starting time of diffusion test.
+  start_time = datetime.now()
+  print("Starting time is", start_time)
+
   # Predefine problem to be solved.
   problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
@@ -58,6 +65,10 @@ def diffusion_test(poly_degree, dimension, iteration):
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
+  
+  # Print ending time of diffusion test.
+  end_time = datetime.now()
+  print("Program ended at", end_time, "after", end_time-start_time)
   
 
 # --------------------------------------------------------------------------------------------------
