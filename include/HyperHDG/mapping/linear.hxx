@@ -99,7 +99,7 @@ class Linear
     )
     : translation_(translation), matrix_(matrix)
     { 
-      qr_decomp( matrix_ , matrix_q_, matrix_r_ );
+      qr_decomp( matrix , matrix_q_ , matrix_r_ );
     }
     /*!*********************************************************************************************
      * \brief   The functional determinant of the affine-linear mappring.
@@ -160,7 +160,7 @@ class Linear
     /*!*********************************************************************************************
      * \brief   Return matrix R of the QR decomposition.
      **********************************************************************************************/
-    const SmallSquareMat<hyEdge_dimT,map_float_t>& mat_r()
+    const SmallSquareMat<hyEdge_dimT,map_float_t>& mat_r() const
     { return matrix_r_; }
     /*!*********************************************************************************************
      * \brief   Return local normal of given index.
@@ -171,7 +171,7 @@ class Linear
      *
      * \param   index         Index of the vector in the matrix which is \b not related to the node.
      **********************************************************************************************/
-    SmallVec<hyEdge_dimT,map_float_t> local_normal(const unsigned int index)
+    SmallVec<hyEdge_dimT,map_float_t> local_normal(const unsigned int index) const
     {
       hy_assert( index < hyEdge_dimT ,
                  "The index of the searched normal must not be bigger than their amount." );
@@ -202,7 +202,7 @@ class Linear
      *
      * \param   index         Index of the vector in the matrix which is \b not related to the node.
      **********************************************************************************************/
-    SmallVec<space_dimT,map_float_t> inner_normal(const unsigned int index)
+    SmallVec<space_dimT,map_float_t> inner_normal(const unsigned int index) const
     {
       hy_assert( index < hyEdge_dimT ,
                  "The index of the inner normal must not be bigger than their amount." );
@@ -228,13 +228,16 @@ class Linear
      *
      * \param   index         Index of the normal.
      **********************************************************************************************/
-    SmallVec<space_dimT,map_float_t> outer_normal(const unsigned int index)
+    SmallVec<space_dimT,map_float_t> outer_normal(const unsigned int index) const
     {
       hy_assert( index < space_dimT-hyEdge_dimT ,
                  "The index of the outer normal must not be bigger than their amount." );
 
       return matrix_q_.get_column(index + hyEdge_dimT);
     }
+
+    const SmallMat<space_dimT,hyEdge_dimT,map_float_t>& matrix() const { return matrix_; }
+    const SmallVec<space_dimT,map_float_t>& translation() const { return translation_; }
 }; // end class File
 
 } // end of namespace Mapping
