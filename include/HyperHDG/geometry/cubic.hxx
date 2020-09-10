@@ -1,8 +1,8 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
 #include <HyperHDG/topology/cubic.hxx>
-#include <HyperHDG/mapping/linear.hxx>
 #include <algorithm>
 #include <array>
 
@@ -50,9 +50,7 @@ namespace Geometry
 template 
 < 
   unsigned int hyEdge_dimT, unsigned int space_dimT, typename pt_coord_t = double,
-  template < unsigned int, unsigned int, typename >  typename mapping_tM = Mapping::Linear,
-  unsigned int hyEdge_dimTM = hyEdge_dimT, unsigned int space_dimTM = space_dimT,
-  typename pt_coord_tM = pt_coord_t, typename hyEdge_index_t = unsigned int
+  typename hyEdge_index_t = unsigned int
 >
 class UnitCube
 {
@@ -78,10 +76,6 @@ class UnitCube
    ************************************************************************************************/
   class hyEdge
   {
-    /*!*********************************************************************************************
-     * \brief   The mapping type is \c mapping_tt with given template parameters.
-     **********************************************************************************************/
-    using mapping_t = mapping_tM<hyEdge_dimTM,space_dimTM,pt_coord_tM>;
     private:
       /*!*******************************************************************************************
        * \brief   Points adjacent to the hyperedge.
@@ -91,6 +85,11 @@ class UnitCube
        * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
       std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> points_;
+
+      Point<space_dimT, pt_coord_t> translation;
+      std::array<unsigned int, hyEdge_dimT> dim_indices;
+      pt_coord_t char_length;
+
       /*!*******************************************************************************************
        * \brief   Fill array of vertices of hyEdge.
        ********************************************************************************************/
@@ -122,10 +121,6 @@ class UnitCube
         }
         return index;
       }
-      /*!*******************************************************************************************
-       * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
-       ********************************************************************************************/
-      mapping_t mapping;
     public:
       /*!*******************************************************************************************
        * \brief   Returns dimension of the hyperedge.
@@ -155,11 +150,15 @@ class UnitCube
           = get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
         fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
         
-        Point<space_dimT,pt_coord_t> translation = (Point<space_dimT,pt_coord_t>) points_[0];
-        SmallMat<space_dimT,hyEdge_dimT,pt_coord_t> matrix;
+        translation = (Point<space_dimT,pt_coord_t>) points_[0];
+        char_length = norm_2 ( points_[1] - points_[0] );
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          matrix.set_column(dim, (Point<space_dimT,pt_coord_t>) points_[1<<dim] - translation);
-        mapping = mapping_t(translation, matrix);
+          for (unsigned int i = 0; i < space_dimT; ++i)
+            if ( points_[1<<dim][i] - points_[0][i] > char_length / 2. )
+            {
+              dim_indices[dim] = i;
+              break;
+            }
       }
       /*!*******************************************************************************************
        * \brief   Return vertex of specified index of a hyperedge.
@@ -182,7 +181,34 @@ class UnitCube
         for (unsigned int i = 0; i < pts.size(); ++i)
           hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
                      "Point must lie in reference square!");
-        return mapping.map_reference_to_physical(pts);
+
+        SmallMat<space_dimT, n_vec, pt_coord_t> phy_pts
+          = rep_mat<space_dimT,n_vec,pt_coord_t>(translation);
+        for (unsigned int j = 0; j < n_vec; ++j)
+          for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+            phy_pts(dim_indices[i],j) += pts(i,j) * char_length;
+
+        return phy_pts;
+      }
+      /*!*******************************************************************************************
+       * \brief   Map n_vec points from reference to physical element.
+       ********************************************************************************************/
+      template < unsigned int n_vec >
+      SmallMat<space_dimT, n_vec, pt_coord_t>& map_ref_to_phys
+      (SmallMat<space_dimT, n_vec, pt_coord_t>& pts)
+      {
+        hy_assert( hyEdge_dimT == space_dimT ,
+                   "This is only valid of the problem is of volumetype." )
+        for (unsigned int i = 0; i < pts.size(); ++i)
+          hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
+                     "Point must lie in reference square!");
+
+        pts *= char_length;
+        for (unsigned int j = 0; j < n_vec; ++j)
+          for (unsigned int i = 0; i < space_dimT; ++i)
+            pts(i,j) += translation[i];
+
+        return pts;
       }
       /*!*******************************************************************************************
        * \brief   Return matrix column of the affine-linear transformation.
@@ -194,21 +220,25 @@ class UnitCube
       {
         hy_assert( index < hyEdge_dimT,
                    "There are only " << hyEdge_dimT << " spanning vectors." );
-        return mapping.get_column(index);
+
+        SmallVec<space_dimT, pt_coord_t> span_vec;
+        span_vec[dim_indices[index]] = char_length;
+
+        return span_vec;
       }
       /*!*******************************************************************************************
        * \brief   Return reduced matrix R of the QR decomposition.
        ********************************************************************************************/
-      const SmallSquareMat<hyEdge_dimT,pt_coord_t>& mat_r()
+      const SmallSquareMat<hyEdge_dimT,pt_coord_t> mat_r()
       {
-        return mapping.mat_r();
+        return diagonal<hyEdge_dimT,hyEdge_dimT,pt_coord_t>(char_length);
       }
       /*!*******************************************************************************************
        * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
        ********************************************************************************************/
       pt_coord_t area()
       {
-        return std::abs(mapping.functional_determinant_hyEdge());
+        return std::pow( char_length , hyEdge_dimT );
       }
       /*!*******************************************************************************************
        * \brief   Return Haussdorff measure of the specified hypernode.
@@ -217,7 +247,7 @@ class UnitCube
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) faces." );
-        return std::abs(mapping.functional_determinant_hyNode(index / 2));
+        return std::pow( char_length , hyEdge_dimT-1 );
       }
       /*!*******************************************************************************************
        * \brief   Return local normal of given index.
@@ -231,8 +261,8 @@ class UnitCube
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        Point<hyEdge_dimT,pt_coord_t> normal = mapping.local_normal(index / 2);
-        if (index % 2 == 1)  normal *= -1.;
+        Point<hyEdge_dimT,pt_coord_t> normal;
+        normal[index / 2] = index % 2 ? 1. : -1.;
         return normal;
       }
       /*!*******************************************************************************************
@@ -247,8 +277,8 @@ class UnitCube
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) inner normals." );
-        Point<space_dimT,pt_coord_t> normal = mapping.inner_normal(index / 2);
-        if (index % 2 == 1)  normal *= -1.;
+        Point<space_dimT,pt_coord_t> normal;
+        normal[dim_indices[index / 2]] = index % 2 ? 1. : -1.;
         return normal;
       }
       /*!*******************************************************************************************
@@ -261,7 +291,14 @@ class UnitCube
         hy_assert( index < space_dimT - hyEdge_dimT ,
                    "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
                    << "which are orthogonal to the hyperedge." );
-        return mapping.outer_normal(index);
+
+        Point<space_dimT,pt_coord_t> outer_normal;
+        unsigned int dim = 0;
+        for (unsigned int cnt = 0; cnt < index + 1; ++dim)
+          if (std::find(dim_indices.begin(), dim_indices.end(), dim) == dim_indices.end()) ++cnt;
+        outer_normal[dim] = 1.;
+
+        return outer_normal;
       }
       /*!*******************************************************************************************
        * \brief   Return lexicographically ordered equidistant tensorial point of given index.
@@ -279,7 +316,7 @@ class UnitCube
           pt[dim] = (pt_coord_t) points_1d[index % n_sub_points];
           index /= n_sub_points;
         }
-        return mapping.map_reference_to_physical(pt);
+        return map_ref_to_phys(pt);
       }
 
     /*!*******************************************************************************************
@@ -309,7 +346,7 @@ class UnitCube
         else
           pt[d] = subpt[subd++];
       }
-      return mapping.map_reference_to_physical(pt);
+      return map_ref_to_phys(pt);
     }
   }; // end of class hyEdge
   
