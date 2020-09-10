@@ -1330,10 +1330,6 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  
-  SmallMat<hyEdge_dimT, 2*hyEdge_dimT, lSol_float_t> normals;
-  for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-    normals.set_column(face, hyper_edge.geometry.local_normal(face));
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -1356,7 +1352,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
         helper = integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         face_integral += helper;
-        normal_int_vec += helper * normals.get_column(face);
+        normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
       }
 
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
