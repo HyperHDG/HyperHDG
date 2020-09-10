@@ -467,7 +467,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> rep_mat(const SmallMat<n_rows,1,mat_entry_t>
   SmallMat<n_rows,n_cols,mat_entry_t> rep_mat;
   for (unsigned int j = 0; j < n_cols; ++j)
     for (unsigned int i = 0; i < n_rows; ++i)
-      rep_mat(i,j) = rep_vec[j];
+      rep_mat(i,j) = rep_vec[i];
   return rep_mat;
 }
 /*!*************************************************************************************************
