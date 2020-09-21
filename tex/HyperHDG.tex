@@ -194,19 +194,19 @@
 \begin{envarnote}{Editing!}
  Dear all,
  
- since we are quite many people, I have included the usepackage ``fixme''. It provides quite powerful tools for editing text. You can use a note, a warning, an error, or a fatal to indicate things in the text. Using the initials it can be tracked who set a comment. Analogously, it works for warnings, errors, and fatals. Thus, using the command \verb|\arnote{This is a note by Andreas Rupp}| creates a note at the margins, where the ar in arnote stands for Andreas Rupp. Moreover, \verb|\begin{envarnote}{Short description} ..... \end{envarnote}| \linebreak will create a short descripton at the margin and a long text (like this) within the standard text.
+ since we are quite many people, I have included the usepackage ``fixme''. It provides quite powerful tools for editing text. You can use a note, a warning, an error, or a fatal to indicate things in the text. Using the initials it can be tracked who set a comment. Analogously, it works for warnings, errors, and fatals. Thus, using the command \verb|\arnote{This is a note by Andreas Rupp}| creates a note at the margins, where the ar in arnote stands for Andreas Rupp. Moreover, \verb|\begin{envarnote}{Short description} ..... \end{envarnote}| \linebreak will create a short description at the margin and a long text (like this) within the standard text.
 \end{envarnote}
 % 
 \section{Introduction}
 % 
-\textcolor{red}{TODO!}
+Simulating flow and transport phenomena on \emph{hypergraphs}, i.e. self-intersecting surfaces or lines (in three dimensions), is not new. Hybrid methods seem extremely promising for these applications. Thus, for example, \cite{HedinPE2019} uses the hybrid high order method to do flow simulations in discrete fracture networks.
 % ---------------------------------------------------------------------
 \section{Hypergraphs}\label{SEC:hypergraph}
 % ---------------------------------------------------------------------
 % 
-\hyperHDG is a simumlation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
+\hyperHDG is a simulation software to perform numerical experiments on so called hypergraphs. To this end, it is useful to discuss the composition of hypergraphs in some detail. At first, every hypergraph is defined as topological hypergraph, cf. Section. \ref{SEC:hypergraph_topology}. Additionally, a hypergraph may be equipped with a geometry, as illuminated in Section \ref{SEC:hypergraph_geometry}. 
 % 
-\subsection{Topologic aspects of hypergraphs}\label{SEC:hypergraph_topology}
+\subsection{Topological aspects of hypergraphs}\label{SEC:hypergraph_topology}
 % 
 In the whole manuscript, we consider a \emph{hypergraph} $\graph = (\setNode,\setEdge)$ consisting of a finite set of \emph{hypernodes} $\setNode = \{\node_1, \node_2, \ldots \}$ and a finite set of \emph{hyperedges} $\setEdge = \{\edge_1, \edge_2, \ldots \}$. All hyperedges $\edge \in \setEdge$ can be interpreted as connecting several nodes and, thus, can be written as $\edge \subset \setNode$.
 
@@ -214,13 +214,13 @@ Thus, the topology of a hypergraph $\graph$ is a pair consisting of a set of hyp
 
 \paragraph{Cubic and simplicial hypergraphs, and local dimension $\locDim$}
 % 
-We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as (relatively) open unit hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hypereges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$. In this representation, also the hypernodes are supposed to be (relatively) open sets.
+We will define partial differential equations (PDEs) on hypergraphs. To do so, it helps---but is not necessary---to have an adequate graphical representation of hyperedges. For example, one might try to represent all $\edge \in \setEdge$ as (relatively) open unit hypercubes of dimension $\locDim \in \IN$. A hypergraph, of which all hyperedges $\edge = \{ \node_1, \node_2, \ldots, \node_{2\locDim} \}$ consist of exactly $2\locDim$ hypernodes, allows for such a representation of all hyperedges. The hypernodes may then be interpreted as the \emph{faces} (not the vertices) of the hypercubes/hyperedges and the hypergraph is denoted \emph{cubic} of \emph{local dimension} $\locDim$. In this representation, also the hypernodes are supposed to be (relatively) open sets.
 
 Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ hypernodes is called \emph{simplicial} of local dimension $\locDim$.
 
 \paragraph{Cubic/simplicial (topological) embeddings of hypergraphs to global dimension $\globDim$}
 % 
-If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embeddind to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be \emph{topologically embedded} into $\IR^\globDim$ if
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embedding to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be \emph{topologically embedded} into $\IR^\globDim$ if
 % 
 \begin{enumerate}
  \item there is a way to assemble all deformed hypercubes/simplices (representing the hyperedges) such that for two different hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
@@ -283,11 +283,11 @@ Figure \ref{FIG:hyG_topo} already indicates that hypergraphs, especially those w
 
 This motivates the following observation: A hypergraph can, beyond its topological information, carry geometrical information. That is, for all hyperedges, there is a geometry prescribed.
 
-This can lead to the case that for one hypernode, different geometries are prescribed as illustrated gray in the right picture of Figure \ref{FIG:hyG_geom}. The hypernode can also be disorted as illustrated by the dashed lines indicating that the two top vertices have to interchange when reinterpreting the node as face of the one or the other hyperedge. This could not be easily illustrated in the picture if the right version of the hypernode was not smaller than the left version. Thus, the hypernode would look as if no reinterpretation is necessary, although in fact, it is.
+This can lead to the case that for one hypernode, different geometries are prescribed as illustrated gray in the right picture of Figure \ref{FIG:hyG_geom}. The hypernode can also be distorted as illustrated by the dashed lines indicating that the two top vertices have to interchange when reinterpreting the node as face of the one or the other hyperedge. This could not be easily illustrated in the picture if the right version of the hypernode was not smaller than the left version. Thus, the hypernode would look as if no reinterpretation is necessary, although in fact, it is.
 
 \paragraph{Embedded hypergraphs}
 % 
-If the hypergraph can be topologically embedded to dimension $\globDim$ and carries geometrical information for the hyperedges, such that for all hypernodes, there is a unique geometrical description---excluding that the hypernode is disorted or has different shapes for different hyperedges, then the hypergraph can be \emph{topological and geometrical embedded} (for short, just \emph{embedded}) into $\IR^\globDim$. For the representation of the embeddded hypergraph, we also use the notation with the bold symbols.
+If the hypergraph can be topologically embedded to dimension $\globDim$ and carries geometrical information for the hyperedges, such that for all hypernodes, there is a unique geometrical description---excluding that the hypernode is distorted or has different shapes for different hyperedges, then the hypergraph can be \emph{topological and geometrical embedded} (for short, just \emph{embedded}) into $\IR^\globDim$. For the representation of the embedded hypergraph, we also use the notation with the bold symbols.
 
 \paragraph{Smoothness assumptions}
 % 
@@ -310,6 +310,7 @@ and define $\| x \|^2 := (x,x)$ for $x \in \IR^\globDim$.
 \paragraph{Linear hypergraphs}
 % 
 A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation matrix is square if and only is $\locDim = \globDim$.
+% 
 % ---------------------------------------------------------------------
 \section{Elliptic model equation and interpretation}\label{SEC:model_eq}
 % ---------------------------------------------------------------------
@@ -495,7 +496,7 @@ Obviously, the right-hand side is a linear form and the left-hand side is a nega
 \section{HDG method on hypergraphs}\label{SEC:hdg_graph}
 % ---------------------------------------------------------------------
 %
-In this section, we discuss the HDG method applied to the diffusion equation on a hypergraph. Thus, we first formulate the method in Section \ref{SEC:HDG_form} and discuss implementation aspects of local problems (including transformation rules for the necessary integrals and differential operators) in Section \ref{SEC:HDG_loc_prob}. At last, we describe an efficient way of solving the global system of equations arising from the HDG discretizaion in Section \ref{SEC:glob_system}.
+In this section, we discuss the HDG method applied to the diffusion equation on a hypergraph. Thus, we first formulate the method in Section \ref{SEC:HDG_form} and discuss implementation aspects of local problems (including transformation rules for the necessary integrals and differential operators) in Section \ref{SEC:HDG_loc_prob}. At last, we describe an efficient way of solving the global system of equations arising from the HDG discretization in Section \ref{SEC:glob_system}.
 % 
 \subsection{HDG formulation}\label{SEC:HDG_form}
 % 
@@ -511,9 +512,7 @@ polynomials of degree up to $p$. Then, we define the space of piecewise polynomi
  \right\}.
 \end{gather}
 % 
-The HDG method involves a local solver on each mesh hyperege
-$\Edge \in \SetEdge$, producing hyperedge-wise approximations $U_\Edge \in V_\Edge$ and and $\vec Q_\Edge \in \vec W_\Edge$ of the functions $u$ and $\vec q$ in equation \eqref{EQ:diffusion_mixed}, respectively. We choose $V_\Edge = \polynomials_p$. Then, choosing
-$\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. We will also use the concatenations of the spaces $V_\Edge$ and $\vec W_\Edge$, respectively, as a function space on $\Omega$, namely
+The HDG method involves a local solver on each mesh hyperedge $\Edge \in \SetEdge$, producing hyperedge-wise approximations $U_\Edge \in V_\Edge$ and and $\vec Q_\Edge \in \vec W_\Edge$ of the functions $u$ and $\vec q$ in equation \eqref{EQ:diffusion_mixed}, respectively. We choose $V_\Edge = \polynomials_p$. Then, choosing $\vec W_\Edge = \polynomials_p^d$ yields the so called hybridizable local discontinuous Galerkin (LDG-H) scheme. We will also use the concatenations of the spaces $V_\Edge$ and $\vec W_\Edge$, respectively, as a function space on $\Omega$, namely
 \begin{gather}\label{EQ:dg_spaces}
  \begin{aligned}
   \discElementSpace &:=\bigl\{ v \in L^2(\Omega) & \big|\;v_{|\Edge} &\in V_\Edge, &\forall \Edge &\in \SetEdge \bigr\},\\
@@ -728,7 +727,7 @@ Here, we consider the standard HDG approximation (no post-processing) and evalua
  - \nabla \cdot (d \nabla u) = f \text{ in } \Omega, \qquad u = u_\text D \text{ on } \partial \Omega,
 \end{equation}
 % 
-where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly sundivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
+where $d = \tfrac{2}{\pi}$ and $u = \sin(\tfrac{\pi}{2}x)$. The right hand side $f$ is chosen accordingly and $\Omega$ is supposed to be the $\globDim$ dimensional unit cube $[0,1]^\globDim$ which is uniformly subdivided into $2^{\globDim i}$ identical cubes in the $i$th refinement step. The penalty coefficient $\tau$ is set to be one, and the errors (err) and estimated orders of convergence (eoc) are depicted in Table \ref{TAB:diff_el_conv}. We recognize that the achieved orders of convergence perfectly fit to the expected ones which are $p + 1$.
 
 \begin{table}[t]
  \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -762,27 +761,27 @@ Interestingly, the $L^2$ errors converge although with refinement, also the comp
 \section{Structure of \hyperHDG}
 % ---------------------------------------------------------------------
 % 
-The software library \hyperHDG implements the hybrid discontinuous Galerkin method on hypergraphs. Therefore, \hyperHDG is basically divided into two parts: The implementation of an \code{HDGhyperGraph} and of a \code{LocalSolver}. The programm is then structured as a loop over all hyperedges for which the local problems are solved and the results are then written into some global \code{std::vector}.
+The software library \hyperHDG implements the hybrid discontinuous Galerkin method on hypergraphs. Therefore, \hyperHDG is basically divided into two parts: The implementation of an \code{HDGhyperGraph} and of a \code{LocalSolver}. The program is then structured as a loop over all hyperedges for which the local problems are solved and the results are then written into some global \code{std::vector}.
 % 
 \subsection{Implementation of the HDG hypergraph}
 % 
 An \code{HDG\-Hyper\-Graph} consists of four parts:
 % 
 \begin{enumerate}
- \item Its \code{Topology} which is implemented as an abstact container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
+ \item Its \code{Topology} which is implemented as an abstract container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
  \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, etc.
  \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices of all of thei hypernodes describing them. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have indices 1 and 2, Neumann nodes \ldots.
- \item A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aformentioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain information about $U$ and $\vec Q$ of the previous time step.
+ \item A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aforementioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain information about $U$ and $\vec Q$ of the previous time step.
  \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
 \end{enumerate}
 % 
-Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structues that are needed for the descripton of the PDE (i.e.\ its boundry conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a seperate class that is resposnsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
+Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structures that are needed for the description of the PDE (i.e.\ its boundary conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a separate class that is responsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
 
 Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract containers, we define the return value of an \code{HDGhyperGraph} as a \code{hyEdge} which contains its topological, geometrical, and node describing information.
 % 
 \subsection{Local problem solvers}
 % 
-The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the inidvidual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
+The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the individual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
 % 
 \subsection{Loops over all hyperedges}
 % 
@@ -1733,7 +1732,7 @@ Assuming that the cross section is constant with respect to the position with re
 % 
 where subscript $\bar x$ identifies the longitudinal / axial component (cf.\ inner normal), and subscripts $\bar y$ and $\bar z$ the orthogonal / transverse components (cf.\ outer normals) of the given quantities or derivatives, respectively. Equations  \eqref{EQ:Timo_2D_w} and \eqref{EQ:Timo_2D_phi} are sometimes tributed to S.\ Timoshenko and P.\ Ehrenfest if $\momentum_{\bar y} \equiv 0$ is assumed. $A$, $E$, $G$, $I$ are material parameters. Their physical interpretation can be found in \cite[Sect.\ 1.3.3]{MeskourisH2013}.
 
-Assuming that $\torsion = - \partial_{\bar x} \crossDef$, i.e., the cross section is orthogonal to the midline of the beam and its centroid corresponds to the midline, we gain
+Assuming that $\torsion = - \partial_{\bar x} \crossDef$, i.e., the cross section is orthogonal to the mid-line of the beam and its centroid corresponds to the mid-line, we gain
 % 
 \begin{subequations}\label{EQ:Ber_2D}
  \begin{align}
@@ -1808,7 +1807,7 @@ Next, we consider the assumptions that are supposed to hold at all $\Node \in \S
  \begin{equation*}
   \bar{\vec v}_\node = \begin{pmatrix} (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_x \\ (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_y \\ (0, \Delta w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_z \end{pmatrix}.
  \end{equation*}
- This basically is \eqref{EQ:cont_const} for the laplacian of the unknowns.
+ This basically is \eqref{EQ:cont_const} for the Laplacian of the unknowns.
  \item The remaining gradients should be in somewhat $H^\textup{div}$
  \begin{equation*}
   \jump{ \begin{pmatrix} (0, \nabla w_{\bar y}(\bar x), \Delta w_{\bar z}(\bar x))^T_x \\ (0, \nabla w_{\bar y}(\bar x), \nabla w_{\bar z}(\bar x))^T_y \\ (0, \nabla w_{\bar y}(\bar x), \nabla w_{\bar z}(\bar x)))^T_z \end{pmatrix} } = \bar g_\text N.
@@ -1817,7 +1816,7 @@ Next, we consider the assumptions that are supposed to hold at all $\Node \in \S
 % 
 \subsection{Conditions for an unique solution}
 % 
-To ensure that the elastic graph allows for an unique solution, we need to ensure that there is an unique way for it to be configured. To do so, we define the degree of static undeterminism $n$, for which $n < 0$ means that the truss is $-n$ times movable, $n = 0$ describes a statcially determined truss, and $n > 0$ indicates $n$ times over-dertemined trusses. The formula for $n$ is
+To ensure that the elastic graph allows for an unique solution, we need to ensure that there is an unique way for it to be configured. To do so, we define the degree of static under-determinism $n$, for which $n < 0$ means that the truss is $-n$ times movable, $n = 0$ describes a statically determined truss, and $n > 0$ indicates $n$ times over-determined trusses. The formula for $n$ is
 % 
 \begin{equation}
  n = (a + s \cdot p) - (g \cdot k + r),
