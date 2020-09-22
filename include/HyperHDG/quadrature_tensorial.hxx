@@ -347,7 +347,7 @@ class IntegratorTensorial
      * \param   j             Local index of local one-dimensional shape function.
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
+    inline return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
                  "Indices of shape functions must be smaller than amount of shape functions." );
@@ -365,7 +365,7 @@ class IntegratorTensorial
      * \param   j             Local index of local one-dimensional shape function (with derivative).
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
+    inline return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
                  "Indices of shape functions must be smaller than amount of shape functions." );
@@ -383,7 +383,7 @@ class IntegratorTensorial
      * \param   j             Local index of local one-dimensional shape function.
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
+    inline return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
                  "Indices of shape functions must be smaller than amount of shape functions." );
@@ -401,7 +401,7 @@ class IntegratorTensorial
      * \param   j             Local index of local one-dimensional shape function (with derivative).
      * \retval  integral      Integral of product of both shape functions.
      **********************************************************************************************/
-    return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
+    inline return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
     {
       hy_assert( i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size() ,
                  "Indices of shape functions must be smaller than amount of shape functions." );
