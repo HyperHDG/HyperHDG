@@ -53,7 +53,7 @@ string cythonize
 ( 
   vector<string>& names, const vector<string>& filenames,
   const unsigned int ver_maj, const unsigned int ver_min,
-  const bool force_comp = false
+  const bool force_comp = false, const bool debug_mode = false
 )
 {
   static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
@@ -98,6 +98,7 @@ string cythonize
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
     -fPIC --std=c++17 -DPYVERMAJ=" + to_string(PYVERMAJ) + " -DPYVERMIN=" + to_string(PYVERMIN) +
     " -c " + outfileName + ".cpp -o " + outfileName + ".o";
+  if (!debug_mode)  compileCommand.append(" -DNDEBUG" );
   string linkCommand = "g++ \
     -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
