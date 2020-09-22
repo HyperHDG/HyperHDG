@@ -80,9 +80,8 @@ template < unsigned int hyEdge_dim, unsigned int space_dim, typename index_t >
 tpcc_elem_t < hyEdge_dim, space_dim >
 get_element( const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const index_t index )
 {
-  index_t n_elements_ = n_elements<hyEdge_dim,space_dim,index_t>(tpcc);
-  hy_assert( index < n_elements_ , "Index " << index << " must not be bigger than the TPCC "
-             << "size, which is " << n_elements_ << "." );
+  hy_assert( index < tpcc.size() , "Index " << index << " must not be bigger than the TPCC "
+             << "size, which is " << tpcc.size() << "." );
   return tpcc.operator[](index);
 }
 /*!*************************************************************************************************
@@ -93,8 +92,7 @@ index_t get_index
 (  const tpcc_t<hyEdge_dim,space_dim,index_t>& tpcc, const tpcc_elem_t<hyEdge_dim,space_dim>& elem )
 { 
   index_t index = tpcc.index(elem);
-  index_t n_elements_ = n_elements<hyEdge_dim,space_dim,index_t>(tpcc);
-  hy_assert( index < n_elements_ , "Returned index is larger than number of elements!" );
+  hy_assert( index < tpcc.size() , "Returned index is larger than number of elements!" );
   return index;
 }
 /*!*************************************************************************************************
