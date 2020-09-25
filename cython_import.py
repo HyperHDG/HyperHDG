@@ -30,13 +30,12 @@ import os, sys, importlib
 #
 #  \param   names       Vector containing names of class to be imported.
 #  \param   filenames   Vector containing names of files that need to be included. Default is empty.
-#  \param   force_comp  Force recompilation of the C++ class. Default is False.
 #  \param   debug_mode  Compile library in debub mode (not in release mode). Default is False.
 #  \retval  class       The C++ class (not class member) to be used in the Python code.
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
-def cython_import(names, filenames = [], force_comp = False, debug_mode = False):
+def cython_import(names, filenames = [], debug_mode = False):
   ver_major = sys.version_info.major
   ver_minor = sys.version_info.minor
 
@@ -56,6 +55,6 @@ def cython_import(names, filenames = [], force_comp = False, debug_mode = False)
     sys.path.append(os.path.dirname(__file__) + "/build/shared_objects")
     from hyper_cythonizer import hyper_cythonize
 
-  retval = hyper_cythonize(names, filenames, ver_major, ver_minor, force_comp, debug_mode)
+  retval = hyper_cythonize(names, filenames, ver_major, ver_minor, debug_mode)
   mod = importlib.import_module(retval)
   return getattr(mod, retval)

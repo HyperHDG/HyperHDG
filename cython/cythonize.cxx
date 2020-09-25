@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <chrono>
 #include <experimental/filesystem>
 
 using namespace std;
@@ -26,6 +27,34 @@ namespace fs = experimental::filesystem;
 #endif
 
 /*!*************************************************************************************************
+ * \brief   Function to find all included files that belong to HyperHDG.
+ **************************************************************************************************/
+std::vector<std::string>& fill_file_names(
+  std::vector<std::string>& include_files, const unsigned int index)
+{
+  const string search_word = "<HyperHDG/";
+  string line;
+  ifstream infile;
+  unsigned int start, end;
+
+  infile.open(include_files[index]);
+
+  while(getline(infile, line)) {
+    if (line.find(search_word, 0) != string::npos) {
+      start = line.find(search_word, 0) + 1;
+      end   = line.find(">", start);
+      line  = fs::current_path().string() + "/include/" + line.substr(start,end - start);
+      if (find(include_files.begin(), include_files.end(), line) == include_files.end())
+        include_files.push_back(line);
+    }
+  }
+
+  infile.close();
+
+  return include_files;
+}
+
+/*!*************************************************************************************************
  * \brief   Function serving as C++ counterpart of just-in-time compilation.
  * 
  * In HyperHDG, a Python script can be executed using the libraries functions (which have been
@@ -43,7 +72,7 @@ namespace fs = experimental::filesystem;
  * \param   filenames   Vector containing names of additional files that need to be included.
  * \param   ver_maj     Python version's major part.
  * \param   ver_min     Python version's minor part.
- * \param   force_comp  Force recompilation of Cython class in current execution. Defults to false.
+ * \param   debug_mode  Discriminate between debug and release version of code. Defaults to false.
  * \retval  name        Name associated to created .so file.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -53,11 +82,13 @@ string cythonize
 ( 
   vector<string>& names, const vector<string>& filenames,
   const unsigned int ver_maj, const unsigned int ver_min,
-  const bool force_comp = false, const bool debug_mode = false
+  const bool debug_mode = false
 )
 {
   static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
                  "Python verion needs to be set as compile flags!" );
+
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
 
   hy_assert( ver_maj == PYVERMAJ && ver_min == PYVERMIN ,
              "The Python version, this program is executed under needs to be the same as the one "
@@ -66,12 +97,15 @@ string cythonize
   hy_assert( names.size() >= 2 ,
              "The size of the names vector must be large enough for all needed compile options!" );
   
-  cout << "Cythonizing " << names[1] << " ... " << flush;
-  
   // Auxiliary string for name of internal Python class
   
   string python_name = names[1];
   python_name.erase(std::remove(python_name.begin(), python_name.end(), ' '), python_name.end());
+  if (python_name != "hyper_cythonizer" && debug_mode)  python_name.append("_deb");
+  else if (python_name != "hyper_cythonizer")           python_name.append("_rel");
+
+  cout << "Cythonizing " << python_name << " ... " << flush;
+
   replace( python_name.begin(), python_name.end(), '+', '_' );
   replace( python_name.begin(), python_name.end(), '-', '_' );
   replace( python_name.begin(), python_name.end(), '*', '_' );
@@ -106,59 +140,55 @@ string cythonize
     + outfileName + ".o " + "-o build/shared_objects/" + python_name + ".so \
     -llapack -lstdc++fs";
   
+  // Check whether or not file needs to be recompiled
+  
+  {
+    fs::path so_file = fs::current_path().string() + "/build/shared_objects/" + python_name + ".so";
+    if (!exists(so_file))  goto do_compilation;
+
+    fs::path pyx_file = fs::current_path().string() + "/cython/" + names[0] + ".pyx";
+    hy_assert( exists(pyx_file) , "File needs to exist!" );
+    fs::path pxd_file = fs::current_path().string() + "/cython/" + names[0] + ".pxd";
+    hy_assert( exists(pxd_file) , "File needs to exist!" );
+    
+    auto so_time  = fs::last_write_time(so_file);
+    if (so_time < fs::last_write_time(pyx_file) || so_time < fs::last_write_time(pxd_file))
+      goto do_compilation;
+
+    std::vector<std::string> file_names;
+    file_names.push_back(pxd_file);
+    fs::path cxx_file;
+    for (unsigned int i = 0; i < filenames.size(); ++i)
+      if (filenames[i].substr(0,8) == "HyperHDG")
+        file_names.push_back(fs::current_path().string() + "/include/" + filenames[i]);
+      else  file_names.push_back(fs::current_path().string() + "/" + filenames[i]);
+    for (unsigned int i = 0; i < file_names.size(); ++i)
+    {
+      cxx_file = file_names[i];
+      hy_assert( exists(cxx_file) , "Included file " << cxx_file << " needs to exist!" );
+      if (so_time < fs::last_write_time(cxx_file))  goto do_compilation;
+      file_names = fill_file_names(file_names, i);
+    }
+        
+    cout << " DONE without recompilation in "
+         << std::chrono::duration_cast<std::chrono::milliseconds>
+              (std::chrono::steady_clock::now() - begin).count() << " milliseconds." << endl;
+    return python_name; // File does not need to be recompiled!
+  }
+
+  // File needs to be recompiled.
+
+  do_compilation: // Needed for goto!
+
   // Introduce auxiliary variables needed for copying files and substituting keywords.
   
   string line, word;
   std::istringstream linestream;
   ifstream infile;
   ofstream outfile;
-  
-  // Check whether or not file needs to be recompiled
-  
-  bool success = true;
-  infile.open(infileName + ".pxd");
-  std::getline(infile, line);
-  linestream = std::istringstream(line);
-  infile.close();
-  
-  linestream >> word; if (word != "#")     success = false;
-  linestream >> word; if (word != "C++:")  success = false;
-  
-  if (success && !force_comp)
-  {
-    linestream >> word;
-    fs::path so_file = fs::current_path().string() + "/build/shared_objects/" + python_name + ".so";
-    if (exists(so_file))
-    {
-      fs::path pyx_file = fs::current_path().string() + "/cython/" + names[0] + ".pyx";
-      hy_assert( exists(pyx_file) , "File needs to exist!" );
-      fs::path pxd_file = fs::current_path().string() + "/cython/" + names[0] + ".pxd";
-      hy_assert( exists(pxd_file) , "File needs to exist!" );
-      fs::path cxx_file = fs::current_path().string() + "/" + word;
-      if ( !exists(cxx_file) )  cxx_file = fs::current_path().string() + "/include/" + word;
-      hy_assert( exists(cxx_file) , "File needs to exist!" );
-      
-      auto so_time  = fs::last_write_time(so_file);
-      auto pyx_time = fs::last_write_time(pyx_file);
-      auto pxd_time = fs::last_write_time(pxd_file);
-      auto cxx_time = fs::last_write_time(cxx_file);
-/*
-      // Needs #include <chrono> and makes better time representation.
-      std::time_t so_t = decltype(so_time)::clock::to_time_t(so_time);
-      std::time_t pyx_t = decltype(pyx_time)::clock::to_time_t(pyx_time);
-      std::time_t pxd_t = decltype(pxd_time)::clock::to_time_t(pxd_time);
-      std::time_t cxx_t = decltype(cxx_time)::clock::to_time_t(cxx_time);
-*/      
-      if (so_time > pyx_time && so_time > pxd_time && so_time > cxx_time)
-      {
-        cout << " DONE without recompilation." << endl;
-        return python_name;
-      }
-    }
-  }
-  
+
   // Copy .pxd file to build location.
-  
+
   infile.open(infileName + ".pxd");
   outfile.open(outfileName + ".pxd");
   
@@ -290,7 +320,9 @@ string cythonize
   
   // Finish program.
   
-  cout << " DONE with compilation." << endl;
+  cout << " DONE with compilation in " 
+       << std::chrono::duration_cast<std::chrono::milliseconds>
+            (std::chrono::steady_clock::now() - begin).count() << " milliseconds." << endl;
   
   return python_name;
 }
@@ -304,6 +336,6 @@ string cythonize
 int main()
 {
   std::vector<std::string> names = { "cythonize" , "hyper_cythonizer" };
-  cythonize( names , { } , PYVERMAJ , PYVERMIN );
+  cythonize( names , { } , PYVERMAJ , PYVERMIN, true );
   return 0;
 }

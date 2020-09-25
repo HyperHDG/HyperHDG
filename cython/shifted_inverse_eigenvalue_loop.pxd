@@ -1,5 +1,3 @@
-# C++: HyperHDG/global_loop/shifted_inverse_eigenvalue.hxx
-
 # CyReplace_Number: 4      // For setting default values for CyReplace, their amount must be known.
 # CyReplace03: double      // Set default value for CyReplace03 to "double".
 # CyReplace04: double      // Set default value for CyReplace04 to "double".
