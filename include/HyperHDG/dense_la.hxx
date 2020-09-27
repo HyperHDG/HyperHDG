@@ -3,6 +3,7 @@
 #include <HyperHDG/hy_assert.hxx>
 
 #include <array>
+#include <vector> // Allows explicit converion from vector to SmallMat!
 #include <cmath>
 #include <ostream>
 
@@ -125,6 +126,28 @@ class SmallMat
      **********************************************************************************************/
     SmallMat(std::array<mat_entry_t, size()>&& entries) noexcept
     : entries_(std::move(entries)) { }
+    /*!*********************************************************************************************
+     * \brief   Construct SmallMat from std::vector of entries.
+     *
+     * Fills the SmallMat's array of entries with the input parameter. 
+     * 
+     * \param   entries   A \c std::array containing the entries of the SmallMat.
+     **********************************************************************************************/
+    SmallMat(const std::vector<mat_entry_t>& entries) // : entries_(entries)
+    { 
+      hy_assert( entries.size() == size() ,
+                 "std::vector and SmallMat must have compatible sizes!" );
+      for (unsigned int i = 0; i < size(); ++i)  entries_[i] = entries[i];
+    }
+    /*!*********************************************************************************************
+     * \brief   Move constructor from std::vector.
+     **********************************************************************************************/
+    SmallMat(std::vector<mat_entry_t>&& entries) noexcept
+    : entries_(std::move(entries))
+    {
+      hy_assert( entries.size() == size() ,
+                 "std::vector and SmallMat must have compatible sizes!" );
+    }
     /*!*********************************************************************************************
      * \brief   Copy constructor.
      *

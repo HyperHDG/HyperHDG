@@ -7,6 +7,9 @@
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
  *
+ * \todo    Discuss, whether we want to get rid of std::vector and std::array in these inner classes
+ *          and replace those by SmallVec.
+ *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
  * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
@@ -342,7 +345,7 @@ class UnitCube
      *
      * A \c std::array comprising the number of elements in each spatial dimension.
      **********************************************************************************************/
-    std::array<unsigned int, space_dimT> num_elements_;
+    SmallVec<space_dimT, unsigned int> num_elements_;
     /*!*********************************************************************************************
      * \brief   Tensor product chain complex for elements.
      **********************************************************************************************/
@@ -368,7 +371,7 @@ class UnitCube
      * topology whic is a unit cube is by default constructed by a std::vector that contains amounts
      * of elements in the different dimensions.
      **********************************************************************************************/
-    typedef std::vector<unsigned int> constructor_value_type;
+    typedef SmallVec<space_dimT, unsigned int> constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
      *
@@ -378,11 +381,9 @@ class UnitCube
      * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
      **********************************************************************************************/
     UnitCube(const constructor_value_type& num_elements)
-    : tpcc_elements_(num_elements_)
-    { 
-      for (unsigned int dim = 0; dim < space_dimT; ++dim) num_elements_[dim] = num_elements[dim];
-      tpcc_elements_ = create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements_);
-    }
+    : num_elements_(num_elements), 
+      tpcc_elements_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements.data()))
+    { }
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
      *
