@@ -2,13 +2,11 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/topology/cubic.hxx>
-#include <array>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
  *
- * \todo    Discuss, whether we want to get rid of std::vector and std::array in these inner classes
- *          and replace those by SmallVec.
+ * \todo    Discuss, whether we want to use array or SmallVec in internals.
  *
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
@@ -65,7 +63,7 @@ class UnitCube
     private:
       
       Point<space_dimT, pt_coord_t> translation;
-      std::array<unsigned int, hyEdge_dimT> dim_indices;
+      SmallVec<hyEdge_dimT, unsigned int> dim_indices;
       SmallVec<hyEdge_dimT, pt_coord_t> char_length;
 
       /*!*******************************************************************************************
@@ -281,7 +279,7 @@ class UnitCube
        ********************************************************************************************/
       template<unsigned int n_sub_points, typename one_dim_float_t>
       Point<space_dimT,pt_coord_t> lexicographic
-      ( unsigned int index, const std::array<one_dim_float_t, n_sub_points>& points_1d )
+      ( unsigned int index, const SmallVec<n_sub_points, one_dim_float_t>& points_1d )
       {
         static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
         hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
@@ -301,7 +299,7 @@ class UnitCube
      ********************************************************************************************/
     template<unsigned int n_sub_points, typename one_dim_float_t>
     Point<space_dimT,pt_coord_t> boundary_lexicographic
-        (unsigned int index, unsigned int boundary_number, float boundary_scale, const std::array<one_dim_float_t, n_sub_points>& points_1d )
+        (unsigned int index, unsigned int boundary_number, float boundary_scale, const SmallVec<n_sub_points, one_dim_float_t>& points_1d )
     {
       static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
       hy_assert( index < std::pow(n_sub_points, hyEdge_dimT-1)*hyEdge_dimT*2 ,

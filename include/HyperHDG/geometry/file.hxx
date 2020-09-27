@@ -3,8 +3,7 @@
 #include <HyperHDG/topology/file.hxx>
 #include <HyperHDG/node_descriptor/file.hxx>
 #include <HyperHDG/mapping/linear.hxx>
-
-#include <array>
+#include <HyperHDG/dense_la.hxx>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
@@ -220,7 +219,7 @@ class File
      ********************************************************************************************/
     template<unsigned int n_sub_points, typename one_dim_float_t>
     Point<space_dimT,pt_coord_t> lexicographic
-        ( unsigned int index, const std::array<one_dim_float_t, n_sub_points>& points_1d )
+        ( unsigned int index, const SmallVec<n_sub_points, one_dim_float_t>& points_1d )
     {
       static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
       hy_assert( index < std::pow(n_sub_points, hyEdge_dimT) ,
@@ -239,7 +238,7 @@ class File
      ********************************************************************************************/
     template<unsigned int n_sub_points, typename one_dim_float_t>
     Point<space_dimT,pt_coord_t> boundary_lexicographic
-        (unsigned int index, unsigned int boundary_number, float boundary_scale, const std::array<one_dim_float_t, n_sub_points>& points_1d )
+        (unsigned int index, unsigned int boundary_number, float boundary_scale, const SmallVec<n_sub_points, one_dim_float_t>& points_1d )
     {
       static_assert( n_sub_points > 0 , "No subpoints do not make sense!" );
       hy_assert( index < std::pow(n_sub_points, hyEdge_dimT-1)*hyEdge_dimT*2 ,

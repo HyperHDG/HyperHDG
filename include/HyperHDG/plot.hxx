@@ -343,7 +343,7 @@ namespace PlotFunctions
         for (unsigned int pt_number = 0; pt_number < points_per_edge; ++pt_number) {
           output << "        ";
           const Point<space_dim> point
-              = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, sub_points);
+              = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, (SmallVec<n_subpoints, float>) sub_points);
           for (unsigned int dim = 0; dim < space_dim; ++dim)
             output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
           for (unsigned int dim = space_dim; dim < 3; ++dim)
@@ -363,7 +363,7 @@ namespace PlotFunctions
                 = (Point<space_dim>) edge.template boundary_lexicographic<n_subpoints>(pt_number,
                                                                                        boundary,
                                                                                        plot_options.boundary_scale,
-                                                                                       boundary_sub_points);
+                                                                                       (SmallVec<n_subpoints, float>) boundary_sub_points);
 
             if(he_number == 0)
             for (unsigned int dim = 0; dim < space_dim; ++dim) {
