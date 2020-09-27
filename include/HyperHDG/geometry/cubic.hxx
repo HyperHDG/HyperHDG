@@ -84,8 +84,7 @@ class UnitCube
        *
        * An array comprising the vertices (points) of a cubic hyperedge.
        ********************************************************************************************/
-      std::array<Point<space_dimT>, Hypercube<hyEdge_dimT>::n_vertices()> points_;
-
+      
       Point<space_dimT, pt_coord_t> translation;
       std::array<unsigned int, hyEdge_dimT> dim_indices;
       SmallVec<hyEdge_dimT, pt_coord_t> char_length;
@@ -93,31 +92,48 @@ class UnitCube
       /*!*******************************************************************************************
        * \brief   Fill array of vertices of hyEdge.
        ********************************************************************************************/
-      template<unsigned int hyEdge_dimTT, unsigned int space_dimTT>
-      unsigned int fill_points
+      template<unsigned int hyEdge_dimTT>
+      unsigned int fill_data
       ( 
-        unsigned int index, 
-        const tpcc_elem_t<hyEdge_dimTT,space_dimTT>& elem, const UnitCube& geometry
+        unsigned int index,
+        const tpcc_elem_t<hyEdge_dimTT,space_dimT>& elem, const UnitCube& geometry
       )
       {
         if constexpr ( hyEdge_dimTT == 0 )
         {
-          Point<space_dimT> pt;
-          for (unsigned int dim = 0; dim < space_dimTT; ++dim)
-          {
-            unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim);
-            pt[ext_dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim)
-                             / (pt_coord_t) geometry.num_elements_[ext_dim];
-            hy_assert( 0. <= pt[ext_dim] && pt[ext_dim] <= 1. ,
-                       "The unit cube has only these cooridnates." );
-          }
-          points_[index++] = pt;
+          if (index == 0)
+            for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
+            {
+              unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim_pt);
+              translation[ext_dim] = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt)
+                                        / (pt_coord_t) geometry.num_elements_[ext_dim];
+              hy_assert( 0. <= translation[ext_dim] && translation[ext_dim] <= 1. ,
+                          "The unit cube has only these cooridnates." );
+            }
+          unsigned int dim = 0;
+          for (; dim < hyEdge_dimT && char_length[dim] != 0.; ++dim) ;
+          if (index == (unsigned int) 1 << dim && char_length[dim] == 0.)
+            for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
+            {
+              unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem,dim_pt);
+              pt_coord_t helper = (pt_coord_t) exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt)
+                                        / (pt_coord_t) geometry.num_elements_[ext_dim];
+              hy_assert( 0. <= helper && helper <= 1. ,
+                          "The unit cube has only these cooridnates." );
+              if ( helper != translation[ext_dim] )
+              {
+                char_length[dim] = helper - translation[ext_dim];
+                dim_indices[dim] = ext_dim;
+                break;
+              }
+            }
+          ++index;
         }
         else
         {
           for (unsigned int i = 2 * hyEdge_dimTT - 2 ; i < 2 * hyEdge_dimTT; ++i)
-            index = fill_points<hyEdge_dimTT-1,space_dimTT>
-                      ( index, get_face<hyEdge_dimTT, space_dimTT>(elem, i), geometry );
+            index = fill_data<hyEdge_dimTT-1>
+                      ( index, get_face<hyEdge_dimTT, space_dimT>(elem, i), geometry );
         }
         return index;
       }
@@ -148,29 +164,9 @@ class UnitCube
       {
         tpcc_elem_t<hyEdge_dimT, space_dimT> elem 
           = get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
-        fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
-        
-        translation = (Point<space_dimT,pt_coord_t>) points_[0];
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          for (unsigned int i = 0; i < space_dimT; ++i)
-            if ( points_[1<<dim][i] != points_[0][i] )
-            {
-              char_length[dim] = points_[1<<dim][i] - points_[0][i];
-              dim_indices[dim] = i;
-              break;
-            }
+        fill_data<hyEdge_dimT>(0, elem, geometry);
       }
-      /*!*******************************************************************************************
-       * \brief   Return vertex of specified index of a hyperedge.
-       *
-       * \todo    This function is deprecated and will be removed.
-       * 
-       * Return a \c Point describing the position of a vertex of a hyperedge.
-       *
-       * \retval  point           Point/Vertex of the hyperedge.
-       ********************************************************************************************/
-      Point<space_dimT> point(const unsigned int index) const  { return points_[index]; }
-
+      
       /*!*******************************************************************************************
        * \brief   Map n_vec points from reference to physical element.
        ********************************************************************************************/
@@ -179,8 +175,7 @@ class UnitCube
       (const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& pts)
       {
         for (unsigned int i = 0; i < pts.size(); ++i)
-          hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
-                     "Point must lie in reference square!");
+          hy_assert( pts[i] >= 0. && pts[i] <= 1. , "Point must lie in reference square!" );
 
         SmallMat<space_dimT, n_vec, pt_coord_t> phy_pts
           = rep_mat<space_dimT,n_vec,pt_coord_t>(translation);
@@ -200,8 +195,7 @@ class UnitCube
         hy_assert( hyEdge_dimT == space_dimT ,
                    "This is only valid of the problem is of volumetype." )
         for (unsigned int i = 0; i < pts.size(); ++i)
-          hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
-                     "Point must lie in reference square!");
+          hy_assert( pts[i] >= 0. && pts[i] <= 1. , "Point must lie in reference square!");
 
         for (unsigned int j = 0; j < n_vec; ++j)
           for (unsigned int i = 0; i < space_dimT; ++i)
