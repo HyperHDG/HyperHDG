@@ -88,7 +88,7 @@ class UnitCube
 
       Point<space_dimT, pt_coord_t> translation;
       std::array<unsigned int, hyEdge_dimT> dim_indices;
-      pt_coord_t char_length;
+      SmallVec<hyEdge_dimT, pt_coord_t> char_length;
 
       /*!*******************************************************************************************
        * \brief   Fill array of vertices of hyEdge.
@@ -151,11 +151,11 @@ class UnitCube
         fill_points<hyEdge_dimT,space_dimT>(0, elem, geometry);
         
         translation = (Point<space_dimT,pt_coord_t>) points_[0];
-        char_length = norm_2 ( points_[1] - points_[0] );
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           for (unsigned int i = 0; i < space_dimT; ++i)
-            if ( points_[1<<dim][i] - points_[0][i] > char_length / 2. )
+            if ( points_[1<<dim][i] != points_[0][i] )
             {
+              char_length[dim] = points_[1<<dim][i] - points_[0][i];
               dim_indices[dim] = i;
               break;
             }
@@ -186,7 +186,7 @@ class UnitCube
           = rep_mat<space_dimT,n_vec,pt_coord_t>(translation);
         for (unsigned int j = 0; j < n_vec; ++j)
           for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-            phy_pts(dim_indices[i],j) += pts(i,j) * char_length;
+            phy_pts(dim_indices[i],j) += pts(i,j) * char_length[i];
 
         return phy_pts;
       }
@@ -203,10 +203,12 @@ class UnitCube
           hy_assert( pts[i] >= 0. && pts[i] <= 1. ,
                      "Point must lie in reference square!");
 
-        pts *= char_length;
         for (unsigned int j = 0; j < n_vec; ++j)
           for (unsigned int i = 0; i < space_dimT; ++i)
+          {
+            pts(i,j) *= char_length[i];
             pts(i,j) += translation[i];
+          }
 
         return pts;
       }
@@ -222,7 +224,7 @@ class UnitCube
                    "There are only " << hyEdge_dimT << " spanning vectors." );
 
         SmallVec<space_dimT, pt_coord_t> span_vec;
-        span_vec[dim_indices[index]] = char_length;
+        span_vec[dim_indices[index]] = char_length[index];
 
         return span_vec;
       }
@@ -238,16 +240,21 @@ class UnitCube
        ********************************************************************************************/
       pt_coord_t area()
       {
-        return std::pow( char_length , hyEdge_dimT );
+        pt_coord_t area = 1.;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)  area *= char_length[dim];
+        return area;
       }
       /*!*******************************************************************************************
        * \brief   Return Haussdorff measure of the specified hypernode.
        ********************************************************************************************/
-      pt_coord_t face_area(const unsigned int  index)
+      pt_coord_t face_area(const unsigned int index)
       {
         hy_assert( index < 2 * hyEdge_dimT ,
                    "A hyperedge has 2 * dim(hyEdge) faces." );
-        return std::pow( char_length , hyEdge_dimT-1 );
+        pt_coord_t area = 1.;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          if (dim != index / 2)  area *= char_length[dim];
+        return area;
       }
       /*!*******************************************************************************************
        * \brief   Return local normal of given index.

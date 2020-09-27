@@ -456,6 +456,21 @@ SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
   return diag_mat;
 }
 /*!*************************************************************************************************
+ * \brief   Create SmallMat that is a diagonal matrix with specified value on diagonal.
+ * 
+ * \param   diag_value    Diagonal value.
+ * \retval  diag_mat      Diagonal matrix.
+ **************************************************************************************************/
+template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t, unsigned int n_vec >
+SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const SmallMat<n_vec,1,mat_entry_t>& diag)
+{
+  constexpr unsigned int rank = std::min(n_rows, n_cols);
+  static_assert( n_vec <= rank , "There must not be more diagonal values than entries!" );
+  SmallMat<n_rows,n_cols,mat_entry_t> diag_mat;
+  for (unsigned int i = 0; i < n_vec; ++i)  diag_mat(i,i) = diag[i];
+  return diag_mat;
+}
+/*!*************************************************************************************************
  * \brief   Create SmallMat that repeats given column vector.
  * 
  * \param   rep_vec       Column vector that is to be repeated.
