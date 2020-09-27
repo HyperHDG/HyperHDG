@@ -2,9 +2,6 @@
 
 #include <HyperHDG/dense_la.hxx>
 
-#include <array>
-
-
 /*!*************************************************************************************************
  * \brief   Namespace for mappings from reference elements to physical elements, etc.
  *
