@@ -1,9 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/dense_la.hxx>
-#include <HyperHDG/hypercube.hxx>
 #include <HyperHDG/topology/cubic.hxx>
-#include <algorithm>
 #include <array>
 
 /*!*************************************************************************************************
@@ -26,9 +24,6 @@ namespace Geometry
 
 /*!*************************************************************************************************
  * \brief   Definition of the topology of a hypergraph --- Cubic HyperGraphs that are unit cubes.
- *
- * \todo    CONSIDER WRAPPER CONSTRUCTOR!
- * 
  * 
  * One of the advantages of this software package is the strict discrimination between the topology
  * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
@@ -59,38 +54,19 @@ class UnitCube
    * \brief   Definition of the topology of a hypergraph's hyperedge --- Edges of cubic HyperGraphs
    *          that form unit cubes.
    * 
-   * \todo    We do not use this information for our simulations, but for plotting only. Thus, the
-   *          results do not really show the truth. A HyperGraph consisiting of HyperEdges that are
-   *          unit cubes is calculated and a HyperGraph that is a cube and made up of smaller
-   *          quadrilaterals (in 2D) is plotted!
-   * 
-   * \todo    Functions returning the Jacobian / its det, etc are not yet implemented. Should they
-   *          be implemented in the future or should their interfaces (commented at the moment) be
-   *          removed from this file?
-   * 
-   * \todo    The points/vertices are computed when the HyperEdge is constructed. Lazy evaluation
-   *          might be a relevant aspect here. What do you think?
-   * 
    * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
    * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
    ************************************************************************************************/
   class hyEdge
   {
     private:
-      /*!*******************************************************************************************
-       * \brief   Points adjacent to the hyperedge.
-       *
-       * \todo    In the long run, do not store these.
-       *
-       * An array comprising the vertices (points) of a cubic hyperedge.
-       ********************************************************************************************/
       
       Point<space_dimT, pt_coord_t> translation;
       std::array<unsigned int, hyEdge_dimT> dim_indices;
       SmallVec<hyEdge_dimT, pt_coord_t> char_length;
 
       /*!*******************************************************************************************
-       * \brief   Fill array of vertices of hyEdge.
+       * \brief   Fill data of hyEdge.
        ********************************************************************************************/
       template<unsigned int hyEdge_dimTT>
       unsigned int fill_data
@@ -149,10 +125,6 @@ class UnitCube
       /*!*******************************************************************************************
        * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
        *          spatial dimension.
-       *
-       * \todo    Guido: Please, implement function that constructs the hyperedge of a given index.
-       *          A prototype of this function is located in the cxx file, where you could also
-       *          insert the new function.
        * 
        * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
        * which is given as input data and the index of the hyperedge to be constructed.
@@ -399,8 +371,6 @@ class UnitCube
     typedef std::vector<unsigned int> constructor_value_type;
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
-     *
-     * \todo This is copied from the other constructor
      *
      * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per 
      * spatial dimension which is given as by its topology.
