@@ -472,7 +472,7 @@ template<unsigned int edge_dim, class HyperGraphT, typename dof_value_t = double
 std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> get_edge_dof_values(HyperGraphT& hyper_graph, hyEdge_index_t edge_index,
                                                                                                       const std::vector<dof_value_t>& lambda) {
   std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
-  std::array<unsigned int, 2 * edge_dim> hyEdge_hyNodes;
+  SmallVec<2 * edge_dim, unsigned int> hyEdge_hyNodes;
   hyEdge_hyNodes = hyper_graph.hyEdge_topology(edge_index).get_hyNode_indices();
   for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode) {
     hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values
