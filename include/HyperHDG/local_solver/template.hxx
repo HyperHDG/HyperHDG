@@ -1,5 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/hypercube.hxx>
+
 /**
  * \brief Implementation the interface of local solvers needed by enclosing objects in minimal way.
  *
