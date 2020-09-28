@@ -1,7 +1,7 @@
 #pragma once // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/topology/cubic.hxx>
+#include <HyperHDG/dense_la.hxx>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing classes describing hypergraph geometries.
@@ -380,7 +380,7 @@ class UnitCube
      **********************************************************************************************/
     UnitCube(const constructor_value_type& num_elements)
     : num_elements_(num_elements), 
-      tpcc_elements_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements.data()))
+      tpcc_elements_(create_tpcc< hyEdge_dimT, space_dimT, hyEdge_index_t >(num_elements))
     { }
     /*!*********************************************************************************************
      * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.

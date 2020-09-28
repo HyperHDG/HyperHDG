@@ -192,7 +192,7 @@ class EllipticLoop
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Do matrix--vector multiplication by iterating over all hyperedges.
@@ -255,7 +255,7 @@ class EllipticLoop
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Do matrix--vector multiplication by iterating over all hyperedges.
@@ -321,7 +321,7 @@ class EllipticLoop
       
       dof_value_t result = 0.;
 
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Calculate errors by iteration over all hyperedges.
