@@ -11,6 +11,8 @@
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
+ * \todo    Implement local solvers with template parameters in_vector and out_vector.
+ * 
  * This class contains the local solver for Poisson's equation, i.e.,
  * \f[
  *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
