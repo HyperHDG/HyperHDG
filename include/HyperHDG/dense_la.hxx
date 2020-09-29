@@ -119,8 +119,8 @@ class SmallMat
      * 
      * \param   entries   A \c std::array containing the entries of the SmallMat.
      **********************************************************************************************/
-    SmallMat(const std::array<mat_entry_t, size()>& entries) // : entries_(entries)
-    { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = entries[i]; }
+    SmallMat(const std::array<mat_entry_t, size()>& entries) : entries_(entries) { }
+    // { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = entries[i]; }
     /*!*********************************************************************************************
      * \brief   Move constructor from array.
      **********************************************************************************************/
@@ -133,7 +133,7 @@ class SmallMat
      * 
      * \param   entries   A \c std::array containing the entries of the SmallMat.
      **********************************************************************************************/
-    SmallMat(const std::vector<mat_entry_t>& entries) // : entries_(entries)
+    SmallMat(const std::vector<mat_entry_t>& entries)
     { 
       hy_assert( entries.size() == size() ,
                  "std::vector and SmallMat must have compatible sizes!" );
@@ -153,8 +153,8 @@ class SmallMat
      *
      * \todo    Check, why the commented version sometimes (only(!)) leads to wrong results!
      **********************************************************************************************/
-    SmallMat(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) // : entries_(other.entries_)
-    { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
+    SmallMat(const SmallMat<n_rowsT,n_colsT,mat_entry_t>& other) : entries_(other.entries_) { }
+    // { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
     /*!*********************************************************************************************
      * \brief   Conversion between different floating points artithmetics.
      **********************************************************************************************/
