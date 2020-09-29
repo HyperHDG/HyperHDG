@@ -287,12 +287,12 @@ namespace PlotFunctions
    * This function writes the `<Geometry>` part of the structure.
    ************************************************************************************************/
   template
-  < class HyperGraphT, std::size_t n_subpoints, typename hyEdge_index_t = unsigned int,
+  < class HyperGraphT, unsigned int n_subpoints, typename hyEdge_index_t = unsigned int,
     typename pt_index_t = unsigned int >
   void plot_vtu_unstructured_geometry(std::ostream& output,
 				      HyperGraphT& hyper_graph,
-                                      const std::array<float, n_subpoints>& sub_points,
-                                      const std::array<float, n_subpoints>& boundary_sub_points,
+                                      const SmallVec<n_subpoints, float>& sub_points,
+                                      const SmallVec<n_subpoints, float>& boundary_sub_points,
 				      const PlotOptions& plot_options)
   {
     constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
@@ -343,7 +343,7 @@ namespace PlotFunctions
         for (unsigned int pt_number = 0; pt_number < points_per_edge; ++pt_number) {
           output << "        ";
           const Point<space_dim> point
-              = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, (SmallVec<n_subpoints, float>) sub_points);
+              = (Point<space_dim>) edge.template lexicographic<n_subpoints>(pt_number, sub_points);
           for (unsigned int dim = 0; dim < space_dim; ++dim)
             output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
           for (unsigned int dim = space_dim; dim < 3; ++dim)
@@ -363,7 +363,7 @@ namespace PlotFunctions
                 = (Point<space_dim>) edge.template boundary_lexicographic<n_subpoints>(pt_number,
                                                                                        boundary,
                                                                                        plot_options.boundary_scale,
-                                                                                       (SmallVec<n_subpoints, float>) boundary_sub_points);
+                                                                                       boundary_sub_points);
 
             if(he_number == 0)
             for (unsigned int dim = 0; dim < space_dim; ++dim) {
@@ -493,7 +493,7 @@ void plot_edge_values
     ( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
       const std::vector<dof_value_t>& lambda,
       std::ofstream &myfile,
-      std::array<float, n_subdivisions + 1> abscissas) {
+      SmallVec<n_subdivisions + 1, float> abscissas) {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -514,10 +514,10 @@ void plot_edge_values
                  (std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> &)
             >::value
         )
-      local_values = local_solver.bulk_values(abscissas, hyEdge_dofs);
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs);
     else {
       auto geometry = hyper_graph[he_number];
-      local_values = local_solver.bulk_values(abscissas, hyEdge_dofs, geometry);
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry);
     }
 
     myfile << "      ";
@@ -544,7 +544,7 @@ void plot_boundary_values
     ( HyperGraphT& hyper_graph, const LocalSolverT& local_solver,
       const std::vector<dof_value_t>& lambda,
       std::ofstream& myfile,
-      std::array<float, n_subdivisions + 1> abscissas) {
+      SmallVec<n_subdivisions + 1, float> abscissas) {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -559,7 +559,7 @@ void plot_boundary_values
     for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index) {
       myfile << "      ";
 
-            local_values = local_solver.lambda_values(abscissas, hyEdge_dofs, bdr_index);
+            local_values = local_solver.lambda_values(abscissas.data(), hyEdge_dofs, bdr_index);
       for (unsigned int corner = 0; corner < Hypercube<edge_dim-1>::n_vertices(); ++corner) {
       myfile << "  ";
       for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
@@ -589,10 +589,10 @@ void plot_vtu
   const hyEdge_index_t n_edge_boundaries = n_edges * 2 * edge_dim;
   //  const unsigned int n_points_per_edge = 1 << edge_dim;
 
-  std::array<float, n_subdivisions + 1> boundary_abscissas;
+  SmallVec<n_subdivisions + 1, float> boundary_abscissas;
   for (unsigned int i = 0; i <= n_subdivisions; ++i)
     boundary_abscissas[i] = plot_options.scale * plot_options.boundary_scale * (1. * i / n_subdivisions - 0.5) + 0.5;
-  std::array<float, n_subdivisions + 1> abscissas;
+  SmallVec<n_subdivisions + 1, float> abscissas;
   for (unsigned int i = 0; i <= n_subdivisions; ++i)
     abscissas[i] = plot_options.scale * (1. * i / n_subdivisions - 0.5) + 0.5;
 
