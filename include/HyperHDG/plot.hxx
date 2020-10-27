@@ -185,9 +185,12 @@ std::string set_plot_option( PlotOptions &plot_options, const std::string& optio
  * \tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
  *                          i.e., it contains an local solver for a specific equation living on the
  *                          hypergraph.
+ * \param   hyper_graph     The hypergraph.
+ * \param   local_solver    The local solver.
  * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
  * \param   plot_options    PlotOptions object containing plotting options.
+ * \param   time            The time stamp.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
