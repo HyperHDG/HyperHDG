@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    TPCC.hxx
+ * \file    tpcc.hxx
  * \brief   This file provides the functions of the submodule TPCC.
  *
  * \todo    The external module does not provide functions that return the template parameters. Why?

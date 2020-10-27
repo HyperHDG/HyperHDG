@@ -69,13 +69,13 @@ struct PlotOptions
   /*!***********************************************************************************************
    * \brief   Include the edge boundaries with their function values into the plot.
    *
-   * Defaults to `false`.
+   * Defaults to false.
    ************************************************************************************************/
   bool plot_edge_boundaries;
   /*!***********************************************************************************************
    * \brief   Include the hyperedges with their function values into the plot.
    *
-   * Defaults to `true`.
+   * Defaults to true.
    ************************************************************************************************/
   bool plot_edges;
   /*!***********************************************************************************************
@@ -277,14 +277,14 @@ namespace PlotFunctions
    * This function plots the geometry part of an unstructured mesh in* a VTU file. 
    * The typical file structure is
    *
-   * ```
+   * 
    * <Preamble/>
    * <UnstructuredGrid>
    * <Geometry/>
    * <Data/>
    * </UnstructuredGrid>
    *
-   * This function writes the `<Geometry>` part of the structure.
+   * This function writes the <Geometry> part of the structure.
    ************************************************************************************************/
   template
   < class HyperGraphT, unsigned int n_subpoints, typename hyEdge_index_t = unsigned int,
@@ -371,7 +371,7 @@ namespace PlotFunctions
             }
             else
               for (unsigned int dim = 0; dim < space_dim; ++dim) {
-                output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];//'##############################################################
+                output << "  " << std::fixed << std::scientific << std::setprecision(3) << point[dim];
               }
             for (unsigned int dim = space_dim; dim < 3; ++dim)
               output << "  0.0";

@@ -151,8 +151,9 @@ class MassEigenvalue
     std::vector<unsigned int> dirichlet_indices( )
     {
       constexpr unsigned int hyEdge_dim       = TopologyT::hyEdge_dim();
+      
       std::array<dof_index_t, LocalSolverT::n_glob_dofs_per_node()> dof_indices;
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim,hyNode_index_t> hyEdge_hyNodes;
       std::array<unsigned int, 2 * hyEdge_dim> hyNode_types;
       
       std::for_each( hyper_graph_.begin() , hyper_graph_.end() , [&](auto hyper_edge)
@@ -193,7 +194,7 @@ class MassEigenvalue
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
       
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim,hyNode_index_t> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
       
       // Do matrix--vector multiplication by iterating over all hyperedges.
@@ -244,7 +245,7 @@ class MassEigenvalue
       constexpr unsigned int n_dofs_per_node  = LocalSolverT::n_glob_dofs_per_node();
 
       std::vector<dof_value_t> vec_Ax( x_vec.size() , 0.);
-      std::array<hyNode_index_t, 2*hyEdge_dim> hyEdge_hyNodes;
+      SmallVec<2*hyEdge_dim,hyNode_index_t> hyEdge_hyNodes;
       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
 
       // Do matrix--vector multiplication by iterating over all hyperedges.
