@@ -138,6 +138,8 @@ class LengtheningBeam
      * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
      * \param   lambda_values Local part of vector x.
+     * \param   hyper_edge    HyperEdge.
+     * \param   time          Time.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
     template <class hyEdgeT>
@@ -399,6 +401,8 @@ class BernoulliBendingBeam
      * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
      * \param   lambda_values Local part of vector x.
+     * \param   hyper_edge    Hyperedge.
+     * \param   time          Time.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
     template <class hyEdgeT>
@@ -443,7 +447,9 @@ class BernoulliBendingBeam
      * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \param   lambda_values Lambda values.
+     * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
+     * \param   time          Time.
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
     template < class hyEdgeT >
@@ -652,6 +658,8 @@ class LengtheningBernoulliBendingBeam
      * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
      *
      * \param   lambda_values Local part of vector x.
+     * \param   hyper_edge    Hyperedge.
+     * \param   time          Time.
      * \retval  vecAx         Local part of vector A * x.
      **********************************************************************************************/
     template <class hyEdgeT>
@@ -676,7 +684,9 @@ class LengtheningBernoulliBendingBeam
      * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
      *
      * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-     * \param   geom          The geometry of the considered hyperedge (of typename GeomT).
+     * \param   lambda_values Lambda values.
+     * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
+     * \param   time          Time.
      * \retval  vec_b         Local part of vector b.
      **********************************************************************************************/
     template < class hyEdgeT >
