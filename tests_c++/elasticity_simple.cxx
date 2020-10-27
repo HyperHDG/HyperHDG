@@ -8,6 +8,7 @@
 
 using namespace std;
 using namespace SparseLA;
+using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference

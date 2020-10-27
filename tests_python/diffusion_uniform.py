@@ -16,11 +16,11 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 problem = "EllipticLoop < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
          +                  "NodeDescriptor::Cubic< 1, 3 >, " \
-         +                  "DiffusionUniform < 1, 1, 2 * 1 > " \
+         +                  "LocalSolver::DiffusionUniform < 1, 1, 2 * 1 > " \
          +                ">"
 filenames = [ "HyperHDG/geometry/cubic.hxx" , \
               "HyperHDG/node_descriptor/cubic.hxx" , \
-              "HyperHDG/local_solver/diffusion.hxx" ]
+              "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
 from cython_import import cython_import
