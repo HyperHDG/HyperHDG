@@ -127,6 +127,7 @@ std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
  * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
  *                      \c double are supported.
  * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \param   mat_q       Reference to empy matrix to be filled.
  * \retval  dense_mat   Matrix R of Householder QR decomposition.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  **************************************************************************************************/
@@ -146,6 +147,8 @@ void lapack_qr_decomp
  * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
  *                      \c double are supported.
  * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
+ * \param   mat_q       Reference to empy matrix to be filled.
+ * \param   mat_r       Reference to empy matrix to be filled.
  * \retval  dense_mat   Matrix R of Householder QR decomposition.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  * \retval  mat_r       Square system of size n_cols that contains respective part of R.
@@ -272,6 +275,7 @@ extern "C"
  * replaced by the solution of the system of equations.
  *
  * \param  system_size  Size of the system of equations.
+ * \param  n_rhs_cols   Number of right-hand sides the system is solved for.
  * \param  mat_a        Pointer to the matrix describing the linear system of equations.
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
@@ -297,6 +301,7 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
  * replaced by the solution of the system of equations.
  *
  * \param  system_size  Size of the system of equations.
+ * \param  n_rhs_cols   Number of right-hand sides the system is solved for.
  * \param  mat_a        Pointer to the matrix describing the linear system of equations.
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
@@ -523,7 +528,7 @@ inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result
  * \tparam  n_cols      Number of columns of the matrix whose determinant should be calculated.
  * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
  *                      \c double are supported.
- * \param   dense_mat   Array comprising the QR decomposed matrix.
+ * \param   lapack_mat  Array comprising the QR decomposed matrix.
  * \param   mat_r       Matrix to be filled with the entries of the return value.
  * \retval  mat_r       Matrix R of Householder QR decomposition.
  **************************************************************************************************/

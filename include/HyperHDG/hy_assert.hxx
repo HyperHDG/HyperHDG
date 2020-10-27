@@ -3,7 +3,7 @@
  * \brief   This file provides the function \c hy_assert.
  *
  * This is a wrapper file to provide a function that allows to use assertions that are similar to
- * those provided by \c <cassert>. That is, we define a macro \c hy_assert that implements assert.
+ * those provided by cassert. That is, we define a macro \c hy_assert that implements assert.
  * If a user wants to use assertions, it is recommended to use \c hy_assert( \c Expr, \c Msg). The
  * use of the function \c __Hy_Assert is \b not recommended.
  * 

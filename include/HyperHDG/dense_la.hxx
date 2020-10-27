@@ -481,7 +481,7 @@ SmallMat<n_rows,n_cols,mat_entry_t> diagonal(const mat_entry_t diag_value)
 /*!*************************************************************************************************
  * \brief   Create SmallMat that is a diagonal matrix with specified value on diagonal.
  * 
- * \param   diag_value    Diagonal value.
+ * \param   diag          Diagonal vector.
  * \retval  diag_mat      Diagonal matrix.
  **************************************************************************************************/
 template < unsigned int n_rows, unsigned int n_cols, typename mat_entry_t, unsigned int n_vec >
