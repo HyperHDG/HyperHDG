@@ -1,11 +1,12 @@
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/geometry/cubic.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
-#include <HyperHDG/local_solver/diffusion.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 
 #include <string>
 
 using namespace std;
+using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Set the test parameters.

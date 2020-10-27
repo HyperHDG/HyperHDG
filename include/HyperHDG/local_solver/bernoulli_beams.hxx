@@ -4,11 +4,19 @@
 #include <HyperHDG/quadrature_tensorial.hxx>
 #include <HyperHDG/compile_time_tricks.hxx>
 
-#include <HyperHDG/local_solver/diffusion.hxx>
-#include <HyperHDG/local_solver/bilaplacian.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
+#include <HyperHDG/local_solver/bilaplacian_ldgh.hxx>
+
+#include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
+#include <HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx>
+
+
 #include <HyperHDG/hypercube.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
+
+namespace LocalSolver
+{
 
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
@@ -753,3 +761,5 @@ class LengtheningBernoulliBendingBeam
   }
 
 }; // end of class LengtheningBernoulliBendingBeam
+
+}

@@ -568,4 +568,3 @@ class HDGHyperGraph
     return hyNode_factory_.n_global_dofs();
   }
 };  // end of class HDGHyperGraph
-ß

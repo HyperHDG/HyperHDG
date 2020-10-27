@@ -2,12 +2,13 @@
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/geometry/cubic.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
-#include <HyperHDG/local_solver/diffusion.hxx>
+#include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
 
 #include <type_traits>
 
 using namespace std;
 using namespace SparseLA;
+using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference

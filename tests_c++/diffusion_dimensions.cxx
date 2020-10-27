@@ -2,7 +2,8 @@
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/node_descriptor/file.hxx>
-#include <HyperHDG/local_solver/diffusion.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
 
 #include <cmath>
 #include <string>
@@ -10,6 +11,7 @@
 
 using namespace std;
 using namespace SparseLA;
+using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
