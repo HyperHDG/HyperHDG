@@ -86,7 +86,7 @@ string cythonize
 )
 {
   static_assert( PYVERMAJ != -1 && PYVERMIN != -1 ,
-                 "Python verion needs to be set as compile flags!" );
+                 "Python version needs to be set as compile flags!" );
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
 

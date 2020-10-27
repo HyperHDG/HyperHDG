@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    Lapack.hxx
+ * \file    lapack.hxx
  * \brief   This file provides the function lapack_solve.
  *
  * This is a wrapper file to provide LAPACK based functions that have the ability to solve (dense)

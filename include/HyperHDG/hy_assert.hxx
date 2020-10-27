@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \file    HyAssert.hxx
+ * \file    hy_assert.hxx
  * \brief   This file provides the function \c hy_assert.
  *
  * This is a wrapper file to provide a function that allows to use assertions that are similar to
