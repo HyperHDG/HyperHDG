@@ -1,5 +1,13 @@
 import os, sys, importlib
 
+## \package cython_import
+# 
+#  \brief   Python interface for HyperHDG library.
+#
+#  This file is the main ingredient to use the HyperHDG library within Python scripts. Its function
+#  \c cython_import compiles the necessary components just-in-time and provides the as classes that
+#  can be used within Python. To this end, the Cython package is heavily used. 
+
 ## \brief   Function to import classes of the HyperHDG package using Cython.
 #
 #  This function takes a vector / list of at least two strings. The first string refers to the name

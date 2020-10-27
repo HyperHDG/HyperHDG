@@ -608,7 +608,7 @@ struct Bilaplacian_parameters_default
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
  * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
- * case of \c hyEdge_dimT > 3). \f$f$\f and \f$d\f$ are scalars defined in the whole domain, the
+ * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
  * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
@@ -1829,7 +1829,7 @@ Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
  * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
- * case of \c hyEdge_dimT > 3). \f$f$\f and \f$d\f$ are scalars defined in the whole domain, the
+ * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
  * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
@@ -2774,7 +2774,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::la
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
  * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
- * case of \c hyEdge_dimT > 3). \f$f$\f and \f$d\f$ are scalars defined in the whole domain, the
+ * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
  * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
