@@ -12,7 +12,7 @@
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 
-#pragma once // Ensure that file is included only once in a single compilation.
+#pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <array>
 // #include <exception>
@@ -20,13 +20,14 @@
 /*!*************************************************************************************************
  * \brief   Exception to be thrown if LAPACK's solve fails.
  *
- * \todo    Is this the way to do it intended by Guido? If so, should we include <exception>? It
+ * \todo    Is this the way to do it intended by Guido? If so, should we include exception? It
  *          works perfecly without the include. I suspect that array (or another by that point
  *          included package includes exception?!
  **************************************************************************************************/
 struct LAPACKexception : public std::exception
-{ const char * what () const throw ()  { return "LAPACK's function failed!"; } };
-
+{
+  const char* what() const throw() { return "LAPACK's function failed!"; }
+};
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -36,7 +37,6 @@ struct LAPACKexception : public std::exception
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
-
 
 /*!*************************************************************************************************
  * \brief   Solve local system of equations.
@@ -58,12 +58,10 @@ struct LAPACKexception : public std::exception
  * \param   rhs         Array comprising the right-hand side of the system.
  * \retval  rhs_b       Array comprising the solution of the system of equations.
  **************************************************************************************************/
-template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
-std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
-( 
-  std::array<lapack_float_t, system_size * system_size> &   dense_mat,
-  std::array<lapack_float_t, system_size * n_rhs_cols>  &   rhs
-);
+template <unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t>
+std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
+  std::array<lapack_float_t, system_size * system_size>& dense_mat,
+  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs);
 /*!*************************************************************************************************
  * \brief   Determinant of a rectangular system.
  *
@@ -82,8 +80,8 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
  * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
  * \retval  determinant Generalized determinant of the matrix.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat );
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+lapack_float_t lapack_det(std::array<lapack_float_t, n_rows * n_cols>& dense_mat);
 /*!*************************************************************************************************
  * \brief   Matrix Q of QR decomposition.
  *
@@ -97,9 +95,9 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
  * \param   dense_mat   Array comprising the matrix describing the linear system of equations.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat );
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q(
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat);
 /*!*************************************************************************************************
  * \brief   Matrix R of QR decomposition.
  *
@@ -114,9 +112,9 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
  * \retval  dense_mat   Matrix R of Householder QR decomposition.
  * \retval  mat_r       Matrix R of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
-( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat );
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r(
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat);
 /*!*************************************************************************************************
  * \brief   Matrices Q and R of QR decomposition.
  *
@@ -131,12 +129,9 @@ std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
  * \retval  dense_mat   Matrix R of Householder QR decomposition.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-void lapack_qr_decomp
-( 
-  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows> &   mat_q
-);
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+                      std::array<lapack_float_t, n_rows * n_rows>& mat_q);
 /*!*************************************************************************************************
  * \brief   Matrices Q and R of QR decomposition.
  *
@@ -153,14 +148,10 @@ void lapack_qr_decomp
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  * \retval  mat_r       Square system of size n_cols that contains respective part of R.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-void lapack_qr_decomp
-( 
-  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows> &   mat_q,
-  std::array<lapack_float_t, n_cols * n_cols> &   mat_r
-);
-
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+                      std::array<lapack_float_t, n_rows * n_rows>& mat_q,
+                      std::array<lapack_float_t, n_cols * n_cols>& mat_r);
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -170,97 +161,103 @@ void lapack_qr_decomp
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
-
 extern "C"
 {
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
   void daxpy_(int* n, double* alpha, double* dx, int* incx, double* dy, int* incy);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
   double dnrm2_(int* n, double* x, int* incx);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
+  void dgetrf_(int* M, int* N, double* A, int* lda, int* IPIV, int* INFO);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void dgetrs_
-    (char* C, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
+  void dgetrs_(char* C,
+               int* N,
+               int* NRHS,
+               double* A,
+               int* LDA,
+               int* IPIV,
+               double* B,
+               int* LDB,
+               int* INFO);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
+  void dgesv_(int* n, int* nrhs, double* a, int* lda, int* ipiv, double* b, int* ldb, int* info);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void dgeqr2_(int *m, int *n, double *a, int *lda, double *tau, double *work, int *info);
-  
+  void dgeqr2_(int* m, int* n, double* a, int* lda, double* tau, double* work, int* info);
+
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
   void saxpy_(int* n, float* alpha, float* dx, int* incx, float* dy, int* incy);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
   double snrm2_(int* n, float* x, int* incx);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void sgetrf_(int* M, int *N, float* A, int* lda, int* IPIV, int* INFO);
+  void sgetrf_(int* M, int* N, float* A, int* lda, int* IPIV, int* INFO);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void sgetrs_
-    (char* C, int* N, int* NRHS, float* A, int* LDA, int* IPIV, float* B, int* LDB, int* INFO);
+  void
+  sgetrs_(char* C, int* N, int* NRHS, float* A, int* LDA, int* IPIV, float* B, int* LDB, int* INFO);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void sgesv_(int *n, int *nrhs, float *a, int *lda, int *ipiv, float *b, int *ldb, int *info);
+  void sgesv_(int* n, int* nrhs, float* a, int* lda, int* ipiv, float* b, int* ldb, int* info);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
    *
-   * This function is \b not to be used in regular code. It only / solely is defined to allow the 
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
-  void sgeqr2_(int *m, int *n, float *a, int *lda, float *tau, float *work, int *info);
-} // end of extern "C"
+  void sgeqr2_(int* m, int* n, float* a, int* lda, float* tau, float* work, int* info);
+}  // end of extern "C"
 
 /*!*************************************************************************************************
  * \brief   Solve local system of equations with \c double floating point numbers --- DO NOT USE.
@@ -280,13 +277,14 @@ extern "C"
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
  **************************************************************************************************/
-inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double *rhs_b)
+inline void lapack_solve(int system_size, int n_rhs_cols, double* mat_a, double* rhs_b)
 {
   int info = -1;
-  int *ipiv = new int[system_size];
+  int* ipiv = new int[system_size];
   dgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
-  if (info != 0)  throw LAPACKexception();
+  if (info != 0)
+    throw LAPACKexception();
 }
 /*!*************************************************************************************************
  * \brief   Solve local system of equations with \c float floating point numbers --- DO NOT USE.
@@ -306,13 +304,14 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double *mat_a, double 
  * \param  rhs_b        Pointer to the right-hand side of the system.
  * \retval rhs_b        Pointer to the solution of the system of equations.
  **************************************************************************************************/
-inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *rhs_b)
+inline void lapack_solve(int system_size, int n_rhs_cols, float* mat_a, float* rhs_b)
 {
   int info = -1;
-  int *ipiv = new int[system_size];
+  int* ipiv = new int[system_size];
   sgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
-  if (info != 0)  throw LAPACKexception();
+  if (info != 0)
+    throw LAPACKexception();
 }
 /*!*************************************************************************************************
  * \brief   QR decomposition in \c double floating point arithmetic --- DO NOT USE.
@@ -327,13 +326,14 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float *mat_a, float *r
  * \retval mat_a        Encoded QR decomposition of the matrix.
  * \retval tau          Auxiliary parameters needed to reconstruct matrix Q.
  **************************************************************************************************/
-inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
+inline void lapack_qr(int n_rows, int n_cols, double* mat_a, double* tau)
 {
   int info = -1;
-  double *work = new double[n_cols];
+  double* work = new double[n_cols];
   dgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
   delete[] work;
-  if (info != 0)  throw LAPACKexception();
+  if (info != 0)
+    throw LAPACKexception();
 }
 /*!*************************************************************************************************
  * \brief   QR decomposition in \c float floating point arithmetic --- DO NOT USE.
@@ -348,15 +348,15 @@ inline void lapack_qr(int n_rows, int n_cols, double *mat_a, double *tau)
  * \retval mat_a        Encoded QR decomposition of the matrix.
  * \retval tau          Auxiliary parameters needed to reconstruct matrix Q.
  **************************************************************************************************/
-inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
+inline void lapack_qr(int n_rows, int n_cols, float* mat_a, float* tau)
 {
   int info = -1;
-  float *work = new float[n_cols];
+  float* work = new float[n_cols];
   sgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
   delete[] work;
-  if (info != 0)  throw LAPACKexception();
+  if (info != 0)
+    throw LAPACKexception();
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -367,39 +367,35 @@ inline void lapack_qr(int n_rows, int n_cols, float *mat_a, float *tau)
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
-
 // -------------------------------------------------------------------------------------------------
 // lapack_solve
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t >
-std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve
-( 
+template <unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t>
+std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
   std::array<lapack_float_t, system_size * system_size>& dense_mat,
-  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs
-)
+  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
 {
   lapack_solve(system_size, n_rhs_cols, dense_mat.data(), rhs.data());
   return rhs;
 }
 
-
 // -------------------------------------------------------------------------------------------------
 // lapack_det
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_mat )
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+lapack_float_t lapack_det(std::array<lapack_float_t, n_rows * n_cols>& dense_mat)
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
 
   lapack_float_t determinant = 1.;
-  for (unsigned int i = 0; i < rank; ++i)  determinant *= -dense_mat[i * (n_rows + 1)];
+  for (unsigned int i = 0; i < rank; ++i)
+    determinant *= -dense_mat[i * (n_rows + 1)];
   return determinant;
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -410,8 +406,7 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
-
-#include <HyperHDG/dense_la.hxx> // Dense linear algebra that is utilized in the following.
+#include <HyperHDG/dense_la.hxx>  // Dense linear algebra that is utilized in the following.
 
 /*!*************************************************************************************************
  * \brief   Matrix Q of QR decomposition --- DO NOT USE.
@@ -428,12 +423,10 @@ lapack_float_t lapack_det ( std::array<lapack_float_t, n_rows * n_cols>& dense_m
  * \param   tau         Auxiliary data from LAPACK to encode matrix Q.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
-inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
-( 
-  const std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  const std::array<lapack_float_t, rank>            &   tau
-)
+template <unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t>
+inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result(
+  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  const std::array<lapack_float_t, rank>& tau)
 {
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.), matQ = unity;
   SmallVec<n_rows, lapack_float_t> vec;
@@ -441,10 +434,13 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
   for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
   {
     for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
-      if (j < i)        vec[j] = 0.;
-      else if (j == i)  vec[j] = 1.;
-      else              vec[j] = dense_mat[i * n_rows + j];
-    matQ = matQ * ( unity - tau[i] * dyadic_product(vec, vec) );
+      if (j < i)
+        vec[j] = 0.;
+      else if (j == i)
+        vec[j] = 1.;
+      else
+        vec[j] = dense_mat[i * n_rows + j];
+    matQ = matQ * (unity - tau[i] * dyadic_product(vec, vec));
   }
 
   return matQ.data();
@@ -468,13 +464,11 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result
  * \param   mat_q       Matrix to be filled with entries of the return value.
  * \retval  mat_q       Matrix Q of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t >
-inline void get_q_from_lapack_qr_result
-( 
-  const std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  const std::array<lapack_float_t, rank>            &   tau,
-        std::array<lapack_float_t, n_rows * n_rows> &   mat_q
-)
+template <unsigned int n_rows, unsigned int n_cols, unsigned int rank, typename lapack_float_t>
+inline void get_q_from_lapack_qr_result(
+  const std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+  const std::array<lapack_float_t, rank>& tau,
+  std::array<lapack_float_t, n_rows * n_rows>& mat_q)
 {
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.);
   SmallMat<n_rows, n_rows, lapack_float_t> matQ(std::move(mat_q));
@@ -484,10 +478,13 @@ inline void get_q_from_lapack_qr_result
   for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
   {
     for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
-      if (j < i)        vec[j] = 0.;
-      else if (j == i)  vec[j] = 1.;
-      else              vec[j] = dense_mat[i * n_rows + j];
-    matQ = matQ * ( unity - tau[i] * dyadic_product(vec, vec) );
+      if (j < i)
+        vec[j] = 0.;
+      else if (j == i)
+        vec[j] = 1.;
+      else
+        vec[j] = dense_mat[i * n_rows + j];
+    matQ = matQ * (unity - tau[i] * dyadic_product(vec, vec));
   }
 
   mat_q = std::move(matQ.data());
@@ -508,13 +505,14 @@ inline void get_q_from_lapack_qr_result
  * \param   dense_mat   Array comprising the QR decomposed matrix.
  * \retval  mat_r       Matrix R of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result
-( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result(
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat)
 {
-  for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
+  for (unsigned int i = 0; i < n_cols; ++i)    // i is column index, here!
     for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
-      if (j > i)  dense_mat[i * n_rows + j] = 0.;
+      if (j > i)
+        dense_mat[i * n_rows + j] = 0.;
   return dense_mat;
 }
 /*!*************************************************************************************************
@@ -532,20 +530,19 @@ inline std::array<lapack_float_t, n_rows * n_cols>& get_r_from_lapack_qr_result
  * \param   mat_r       Matrix to be filled with the entries of the return value.
  * \retval  mat_r       Matrix R of Householder QR decomposition.
  **************************************************************************************************/
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-inline void get_r_from_lapack_qr_result
-( 
-  const std::array<lapack_float_t, n_rows * n_cols> &   lapack_mat,
-        std::array<lapack_float_t, n_cols * n_cols> &   mat_r
-)
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+inline void get_r_from_lapack_qr_result(
+  const std::array<lapack_float_t, n_rows * n_cols>& lapack_mat,
+  std::array<lapack_float_t, n_cols * n_cols>& mat_r)
 {
-  static_assert( n_rows >= n_cols, "Function only defined for these matrices!" );
-  for (unsigned int i = 0; i < n_cols; ++i)  // i is column index, here!
+  static_assert(n_rows >= n_cols, "Function only defined for these matrices!");
+  for (unsigned int i = 0; i < n_cols; ++i)    // i is column index, here!
     for (unsigned int j = 0; j < n_cols; ++j)  // j is row index, here!
-      if (j > i)  mat_r[i * n_rows + j] = 0.;
-      else        mat_r[i * n_cols + j] = lapack_mat[i * n_rows + j];
+      if (j > i)
+        mat_r[i * n_rows + j] = 0.;
+      else
+        mat_r[i * n_cols + j] = lapack_mat[i * n_rows + j];
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -556,74 +553,64 @@ inline void get_r_from_lapack_qr_result
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
-
 // -------------------------------------------------------------------------------------------------
 // lapack_qr_decomp_q
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q
-( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q(
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat)
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
-  return get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau);
+  return get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau);
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // lapack_qr_decomp_r
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r
-( std::array<lapack_float_t, n_rows * n_cols> &   dense_mat )
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r(
+  std::array<lapack_float_t, n_rows * n_cols>& dense_mat)
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
-  return get_r_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat);
+  return get_r_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat);
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // lapack_qr_decomp
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-void lapack_qr_decomp
-( 
-  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows> &   mat_q
-)
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+                      std::array<lapack_float_t, n_rows * n_rows>& mat_q)
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
 
-  get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau, mat_q);
-  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat);
+  get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau, mat_q);
+  get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat);
 }
-
 
 // -------------------------------------------------------------------------------------------------
 // lapack_qr_decomp
 // -------------------------------------------------------------------------------------------------
 
-template < unsigned int n_rows, unsigned int n_cols, typename lapack_float_t >
-void lapack_qr_decomp
-( 
-  std::array<lapack_float_t, n_rows * n_cols> &   dense_mat,
-  std::array<lapack_float_t, n_rows * n_rows> &   mat_q,
-  std::array<lapack_float_t, n_cols * n_cols> &   mat_r
-)
+template <unsigned int n_rows, unsigned int n_cols, typename lapack_float_t>
+void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
+                      std::array<lapack_float_t, n_rows * n_rows>& mat_q,
+                      std::array<lapack_float_t, n_cols * n_cols>& mat_r)
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
   lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
 
-  get_q_from_lapack_qr_result<n_rows,n_cols,rank,lapack_float_t>(dense_mat, tau, mat_q);
-  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat, mat_r);
-  get_r_from_lapack_qr_result<n_rows,n_cols,lapack_float_t>(dense_mat);
+  get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau, mat_q);
+  get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat, mat_r);
+  get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat);
 }
