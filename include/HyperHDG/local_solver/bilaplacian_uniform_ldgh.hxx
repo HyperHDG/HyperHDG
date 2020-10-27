@@ -12,7 +12,7 @@ namespace LocalSolver
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
- * \todo    Implement local solvers with template parameters in_vector and out_vector.
+ * \todo Update doxygen! Note that this may not depend on time (actually)!
  *
  * This class contains the local solver for Poisson's equation, i.e.,
  * \f[
@@ -36,7 +36,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t = double>
-class DiffusionUniform
+class BilaplacianUniform
 {
  public:
   typedef struct empty_class
@@ -78,7 +78,7 @@ class DiffusionUniform
    ************************************************************************************************/
   static constexpr unsigned int n_glob_dofs_per_node()
   {
-    return Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
+    return 2 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
   /*!***********************************************************************************************
    * \brief Dimension of of the solution evaluated with respect to a hypernode.
@@ -89,7 +89,7 @@ class DiffusionUniform
    ************************************************************************************************/
   static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
 
-  static constexpr unsigned int node_system_dimension() { return 1; }
+  static constexpr unsigned int node_system_dimension() { return 2; }
 
  private:
   // -----------------------------------------------------------------------------------------------
@@ -99,15 +99,15 @@ class DiffusionUniform
   /*!***********************************************************************************************
    * \brief   Number of local shape functions (with respect to all spatial dimensions).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
+  static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
   /*!***********************************************************************************************
    * \brief   Number oflocal  shape functions (with respect to a face / hypernode).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node();
+  static constexpr unsigned int n_shape_bdr_ = Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   /*!***********************************************************************************************
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
-  static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
+  static constexpr unsigned int n_loc_dofs_ = 2 * (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief  Assemble local matrix for the local solver.
    *
@@ -146,7 +146,8 @@ class DiffusionUniform
    * \retval  loc_rhs       Local right hand side of the locasl solver.
    ************************************************************************************************/
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values) const;
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
+    const;
 
   /*!***********************************************************************************************
    * \brief  Solve local problem.
@@ -155,7 +156,8 @@ class DiffusionUniform
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
   inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values) const
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
+    const
   {
     try
     {
@@ -177,7 +179,7 @@ class DiffusionUniform
    * \param   coeffs        Coefficients of the local solution.
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
-  inline std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primal_at_boundary(
+  inline std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primal_at_boundary(
     const std::array<lSol_float_t, n_loc_dofs_>& coeffs) const;
   /*!***********************************************************************************************
    * \brief   Evaluate dual variable at boundary.
@@ -188,8 +190,8 @@ class DiffusionUniform
    * \param   coeffs        Coefficients of the local solution.
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
-  inline std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> dual_at_boundary(
-    const std::array<lSol_float_t, (hyEdge_dimT + 1) * n_shape_fct_>& coeffs) const;
+  inline std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> dual_at_boundary(
+    const std::array<lSol_float_t, 2 * (hyEdge_dimT + 1) * n_shape_fct_>& coeffs) const;
 
  public:
   /*!***********************************************************************************************
@@ -201,7 +203,7 @@ class DiffusionUniform
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  DiffusionUniform(const constructor_value_type& tau = 1.)
+  BilaplacianUniform(const constructor_value_type& tau = 1.)
   : tau_(tau), loc_mat_(assemble_loc_matrix(tau))
   {
   }
@@ -217,13 +219,14 @@ class DiffusionUniform
    * \param   time          Time.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_from_lambda(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>
+  numerical_flux_from_lambda(
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     const lSol_float_t time = 0.) const
   {
     std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values);
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
       primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
 
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -245,11 +248,20 @@ class DiffusionUniform
    * \param   time          Time.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_total(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_total(
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     const lSol_float_t time = 0.) const
   {
-    return numerical_flux_from_lambda(lambda_values, time);
+    std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values);
+
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
+      primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+        bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
+
+    return bdr_values;
   }
 
   /*!***********************************************************************************************
@@ -260,21 +272,23 @@ class DiffusionUniform
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     const lSol_float_t time = 0.) const
   {
     return 0.;
   }
 
-  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+             BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
               const input_array_t& lambda_values,
-              const lSol_float_t time = 0.) const;
+              const lSol_float_t = 0.) const;
 
   /*!***********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary
+   *
+   * \todo    AR: THIS IS NOT IMPLEMENTED!
    *
    * \tparam  absc_float_t  Floating type for the abscissa values.
    * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
@@ -282,21 +296,20 @@ class DiffusionUniform
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   boundary_number number of the boundary on which to evaluate the function.
    ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
+  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-    DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
-
-  lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
+    BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
 
-};  // end of class DiffusionUniform
+};  // end of class BilaplacianUniform
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF DiffusionUniform
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF BilaplacianUniform
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -309,11 +322,12 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-SmallSquareMat<DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
+SmallSquareMat<BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
                lSol_float_t>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_matrix(
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_matrix(
   const lSol_float_t tau)
 {
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   lSol_float_t integral;
 
@@ -325,8 +339,14 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_ma
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
+      local_mat(hyEdge_dimT * n_shape_fct_ + i, n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) -=
+        integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += integral;
+        local_mat(n_dofs_lap + dim * n_shape_fct_ + i, n_dofs_lap + dim * n_shape_fct_ + j) +=
+          integral;
+      }
 
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
@@ -335,23 +355,37 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_ma
         integral = integrator.template integrate_vol_Dphiphi<hyEdge_dimT>(i, j, dim);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= integral;
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= integral;
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                  n_dofs_lap + dim * n_shape_fct_ + j) -= integral;
+        local_mat(n_dofs_lap + dim * n_shape_fct_ + i,
+                  n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) -= integral;
 
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += integral;
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                  n_dofs_lap + dim * n_shape_fct_ + j) +=
+          integral;  // Removing to enforce Neumann zero!
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) += tau * integral;
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                  n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) += tau * integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
         integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 0);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= integral;
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                  n_dofs_lap + dim * n_shape_fct_ + j) -=
+          integral;  // Removing to enforce Neumann zero!
         // and from the penalty in the lower right diagonal block
         local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) += tau * integral;
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                  n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) += tau * integral;
       }
     }
   }
 
   return local_mat;
-}  // end of DiffusionUniform::assemble_loc_matrix
+}  // end of BernoulliBendingBeam::assemble_loc_matrix
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs
@@ -361,19 +395,20 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-inline SmallVec<DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
+inline SmallVec<BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
                 lSol_float_t>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
-  const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values) const
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
+  const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
+  const
 {
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   lSol_float_t integral;
-
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
 
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
             "The size of the lambda values should be twice the dimension of a hyperedge.");
   for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    hy_assert(lambda_values[i].size() == n_shape_bdr_,
+    hy_assert(lambda_values[i].size() == 2 * n_shape_bdr_,
               "The size of lambda should be the amount of ansatz functions at boundary.");
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -386,17 +421,25 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
         right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2 * dim + 0][j] * integral;
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
           tau_ * lambda_values[2 * dim + 0][j] * integral;
+        right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] +=
+          lambda_values[2 * dim + 0][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] +=
+          tau_ * lambda_values[2 * dim + 0][n_shape_bdr_ + j] * integral;
 
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         right_hand_side[dim * n_shape_fct_ + i] -= lambda_values[2 * dim + 1][j] * integral;
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
           tau_ * lambda_values[2 * dim + 1][j] * integral;
+        right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] -=
+          lambda_values[2 * dim + 1][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] +=
+          tau_ * lambda_values[2 * dim + 1][n_shape_bdr_ + j] * integral;
       }
     }
   }
 
   return right_hand_side;
-}  // end of DiffusionUniform::assemble_rhs
+}  // end of BernoulliBendingBeam::assemble_rhs
 
 // -------------------------------------------------------------------------------------------------
 // primal_at_boundary
@@ -408,12 +451,13 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 inline std::array<
   std::array<lSol_float_t,
-             DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
+             2 * BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_boundary(
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_boundary(
   const std::array<lSol_float_t, n_loc_dofs_>& coeffs) const
 {
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
@@ -427,15 +471,19 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_bound
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         bdr_values[2 * dim + 0][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2 * dim + 0][n_shape_bdr_ + j] +=
+          coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
 
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         bdr_values[2 * dim + 1][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
+        bdr_values[2 * dim + 1][n_shape_bdr_ + j] +=
+          coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
       }
     }
   }
 
   return bdr_values;
-}  // end of DiffusionUniform::primal_at_boundary
+}  // end of BilaplacianUniform::primal_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // dual_at_boundary
@@ -447,12 +495,13 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 inline std::array<
   std::array<lSol_float_t,
-             DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
+             2 * BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_boundary(
-  const std::array<lSol_float_t, (hyEdge_dimT + 1) * n_shape_fct_>& coeffs) const
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_boundary(
+  const std::array<lSol_float_t, 2 * (hyEdge_dimT + 1) * n_shape_fct_>& coeffs) const
 {
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
   lSol_float_t integral;
 
   for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
@@ -466,15 +515,19 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_boundar
       {
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
         bdr_values[2 * dim + 0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
+        bdr_values[2 * dim + 0][n_shape_bdr_ + j] -=
+          coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
 
         integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
         bdr_values[2 * dim + 1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
+        bdr_values[2 * dim + 1][n_shape_bdr_ + j] +=
+          coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
       }
     }
   }
 
   return bdr_values;
-}  // end of DiffusionUniform::dual_at_boundary
+}  // end of BilaplacianUniform::dual_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // bulk_values
@@ -484,41 +537,42 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+           BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const lSol_float_t time) const
 {
   std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
-
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT,
+  std::array<lSol_float_t, n_loc_dofs_ / 2> first_half_of_coefficients;
+  std::copy_n(coefficients.begin(), n_loc_dofs_ / 2, first_half_of_coefficients.begin());
+  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT,
                                    abscissa_float_t>
     evaluation(abscissas);
   return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
-}  // end of DiffusionUniform::bulk_values
+    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
+      first_half_of_coefficients);
+
+}  // end of BilaplacianUniform::bulk_values
 
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
-DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
+std::array<
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
+  BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg,
-                                   abscissas_sizeT, abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-      lambda_values[boundary_number]);
+  return std::array<
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
+    BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>();
 }
 
 }  // namespace LocalSolver
