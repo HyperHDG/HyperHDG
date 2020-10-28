@@ -28,10 +28,10 @@ def bilaplacian_test(poly_degree, dimension, iteration):
   problem = "ParabolicLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "LocalSolver::BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/bilaplacian.hxx", \
+                "HyperHDG/local_solver/bilaplacian_parab_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Config time stepping.
