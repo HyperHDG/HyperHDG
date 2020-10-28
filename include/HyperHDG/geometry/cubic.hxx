@@ -162,9 +162,8 @@ class UnitCube
     SmallMat<space_dimT, n_vec, pt_coord_t>& map_ref_to_phys(
       SmallMat<space_dimT, n_vec, pt_coord_t>& pts)
     {
-      hy_assert(hyEdge_dimT == space_dimT,
-                "This is only valid of the problem is of volumetype.") for (unsigned int i = 0;
-                                                                            i < pts.size(); ++i)
+      hy_assert(hyEdge_dimT == space_dimT, "This is only valid of the problem is of volumetype.");
+      for (unsigned int i = 0; i < pts.size(); ++i)
         hy_assert(pts[i] >= 0. && pts[i] <= 1., "Point must lie in reference square!");
 
       for (unsigned int j = 0; j < n_vec; ++j)
