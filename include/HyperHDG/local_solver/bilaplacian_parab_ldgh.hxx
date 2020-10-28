@@ -94,7 +94,7 @@ struct Bilaplacian_parameters_default
  * \tparam  poly_deg      The polynomial degree of test and trial functions.
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
- *                        contains static parameter functions.                        
+ *                        contains static parameter functions.
  * \tparam  lSol_float_tP The floating point type calculations are executed in. Defaults to double.
  *                        Template parameter for the parameters which defaults to lSol_float_t.
  *
