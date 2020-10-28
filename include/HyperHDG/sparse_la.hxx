@@ -74,10 +74,10 @@ dof_value_t inner_product(const std::vector<dof_value_t>& left,
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template < typename dof_value_t = double >
-dof_value_t norm_2 ( const std::vector<dof_value_t>& vec )
+template <typename dof_value_t = double>
+dof_value_t norm_2(const std::vector<dof_value_t>& vec)
 {
-  return std::sqrt( inner_product(vec,vec) );
+  return std::sqrt(inner_product(vec, vec));
 }
 /*!*************************************************************************************************
  * \brief   Evaluate linear combination of vectors and return the result.
