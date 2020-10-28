@@ -19,25 +19,25 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration):
+def bilaplacian_test(poly_degree, dimension, iteration):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
 
   # Predefine problem to be solved.
-  problem = "AbstractProblem < Topology::Cubic<" + str(dimension) + ",3>, " \
+  problem = "EllipticLoop < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "LocalSolver::Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersQuadEllipt" + str(dimension) + ",double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/bilaplacian.hxx", \
+                "HyperHDG/local_solver/bilaplacian_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["AbstractProblem", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
@@ -64,6 +64,8 @@ def diffusion_test(poly_degree, dimension, iteration):
   HDG_wrapper.plot_option( "fileName" , "bil_conv_hyg-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_option("boundaryScale", "0.9")
+  HDG_wrapper.plot_option( "plotEdgeBoundaries", "true")
   HDG_wrapper.plot_solution(vectorSolution)
   
   # Print ending time of diffusion test.
@@ -77,10 +79,10 @@ def diffusion_test(poly_degree, dimension, iteration):
 def main():
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,4):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
-        diffusion_test(poly_degree, dimension, iteration)
+        bilaplacian_test(poly_degree, dimension, iteration)
 
 
 # --------------------------------------------------------------------------------------------------

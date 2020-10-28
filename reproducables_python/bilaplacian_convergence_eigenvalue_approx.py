@@ -78,10 +78,10 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration):
   problem = "MassEigenvalue < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
+          + "LocalSolver::Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
           + ",TestParametersEigs,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/bilaplacian.hxx", \
+                "HyperHDG/local_solver/bilaplacian_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 
   # Import C++ wrapper class to use HDG method on graphs.
