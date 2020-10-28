@@ -663,7 +663,7 @@ class Bilaplacian
 
     return bdr_values;
   }
-  
+
   /*template < class hyEdgeT >
   std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
   (
