@@ -108,6 +108,11 @@ class DiffusionUniform
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
+
+  static constexpr unsigned int system_dim = system_dimension();
+
+  static constexpr unsigned int node_system_dim = node_system_dimension();
+
   /*!***********************************************************************************************
    * \brief  Assemble local matrix for the local solver.
    *
@@ -267,8 +272,7 @@ class DiffusionUniform
   }
 
   template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>, system_dim>
   bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               const lSol_float_t time = 0.) const;
@@ -283,15 +287,18 @@ class DiffusionUniform
    * \param   boundary_number number of the boundary on which to evaluate the function.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-  std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-    DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
+             node_system_dim>
 
   lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
 
 };  // end of class DiffusionUniform
+
+// -------------------------------------------------------------------------------------------------
+/// \cond EXCLUDE_CODE
+// -------------------------------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -486,7 +493,7 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
 std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
+           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dim>
 DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
@@ -507,7 +514,7 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
 std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>
+           DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dim>
 DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
@@ -520,5 +527,9 @@ DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values(
     .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
       lambda_values[boundary_number]);
 }
+
+// -------------------------------------------------------------------------------------------------
+/// \endcond
+// -------------------------------------------------------------------------------------------------
 
 }  // namespace LocalSolver
