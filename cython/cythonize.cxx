@@ -130,11 +130,8 @@ string cythonize(vector<string>& names,
 
   string cythonCommand = "cd ./build/cython_files/; cython -3 --cplus " + python_name + ".pyx";
   string compileCommand =
-    "g++ \
-    -pthread -g  -I/usr/include/python" +
-    pyVersion +
-    " -I. -Iinclude \
-    -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
+    "g++ -pthread -g -I. -Iinclude -I/usr/include/python" + pyVersion +
+    " -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
     -fPIC --std=c++17 -DPYVERMAJ=" +
     to_string(PYVERMAJ) + " -DPYVERMIN=" + to_string(PYVERMIN) + " -c " + outfileName + ".cpp -o " +
@@ -142,13 +139,10 @@ string cythonize(vector<string>& names,
   if (!debug_mode)
     compileCommand.append(" -DNDEBUG");
   string linkCommand =
-    "g++ \
-    -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
+    "g++ -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
     -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 " +
-    outfileName + ".o " + "-o build/shared_objects/" + python_name +
-    ".so \
-    -llapack -lstdc++fs";
+    outfileName + ".o " + "-o build/shared_objects/" + python_name + ".so -llapack -lstdc++fs";
 
   // Check whether or not file needs to be recompiled
 
@@ -183,10 +177,9 @@ string cythonize(vector<string>& names,
       file_names = fill_file_names(file_names, i);
     }
 
+    auto run_time = std::chrono::steady_clock::now() - begin;
     cout << " DONE without recompilation in "
-         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
-                                                                  begin)
-              .count()
+         << std::chrono::duration_cast<std::chrono::milliseconds>(run_time).count()
          << " milliseconds." << endl;
     return python_name;  // File does not need to be recompiled!
   }
@@ -350,10 +343,9 @@ do_compilation:  // Needed for goto!
 
   // Finish program.
 
+  auto run_time = std::chrono::steady_clock::now() - begin;
   cout << " DONE with compilation in "
-       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
-                                                                begin)
-            .count()
+       << std::chrono::duration_cast<std::chrono::milliseconds>(run_time).count()
        << " milliseconds." << endl;
 
   return python_name;
