@@ -34,7 +34,8 @@
     std::stringstream __hy_assertion_text;                             \
     __hy_assertion_text << Msg;                                        \
     __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); \
-  }
+  }                                                                    \
+  static_assert(true, "")
 
 /*!*************************************************************************************************
  * \brief   This function is not (never) to be used.
