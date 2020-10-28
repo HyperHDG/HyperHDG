@@ -4,7 +4,7 @@
  *
  * This is a wrapper file to provide a function that allows to use assertions that are similar to
  * those provided by cassert. That is, we define a macro \c hy_assert that implements assert.
- * If a user wants to use assertions, it is recommended to use \c hy_assert( \c Expr, \c Msg). The
+ * If a user wants to use assertions, it is recommended to use \c hy_assert(\c Expr, \c Msg). The
  * use of the function \c __Hy_Assert is \b not recommended.
  *
  * Function \c hy_assert takes two arguments. The first argument is evaluated to a \c boolean and
@@ -37,6 +37,10 @@
   }                                                                    \
   static_assert(true, "")
 
+// -------------------------------------------------------------------------------------------------
+/// \cond EXCLUDE_CODE
+// -------------------------------------------------------------------------------------------------
+
 /*!*************************************************************************************************
  * \brief   This function is not (never) to be used.
  *
@@ -64,3 +68,7 @@ inline void __Hy_Assert(const char* expr_str,
 #else  // alternative branch of ifndef NDEBUG
 #define hy_assert(Expr, Msg) ;
 #endif  // end of ifndef NDEBUG
+
+// -------------------------------------------------------------------------------------------------
+/// \endcond
+// -------------------------------------------------------------------------------------------------
