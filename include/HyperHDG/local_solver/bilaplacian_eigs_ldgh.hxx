@@ -165,6 +165,10 @@ class BilaplacianEigs
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = 2 * (hyEdge_dimT + 1) * n_shape_fct_;
 
+  static constexpr unsigned int system_dim = system_dimension();
+
+  static constexpr unsigned int node_system_dim = node_system_dimension();
+
   template <typename parameters>
   static constexpr bool is_dirichlet(const unsigned int node_type)
   {
@@ -562,13 +566,11 @@ class BilaplacianEigs
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
-  std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-    BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
-  bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
-              const input_array_t& lambda_values,
-              hyEdgeT& hyper_edge,
-              const lSol_float_t time = 0.) const;
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dim> bulk_values(
+    const std::array<abscissa_float_t, sizeT>& abscissas,
+    const input_array_t& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const;
 
   /*!***********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary
@@ -582,13 +584,15 @@ class BilaplacianEigs
    * \param   boundary_number number of the boundary on which to evaluate the function.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-             BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
-               node_system_dimension()>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, node_system_dim>
   lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
 };  // end of class BilaplacianEigs
+
+// -------------------------------------------------------------------------------------------------
+/// \cond EXCLUDE_CODE
+// -------------------------------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -841,9 +845,8 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
-std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-  BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+           BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
 BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
@@ -870,9 +873,9 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-           BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
-             node_system_dimension()>
+std::array<
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
+  BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dim>
 BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
@@ -882,5 +885,9 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lam
                     BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT,
                                     lSol_float_t>::node_system_dimension()>();
 }
+
+// -------------------------------------------------------------------------------------------------
+/// \endcond
+// -------------------------------------------------------------------------------------------------
 
 }  // namespace LocalSolver
