@@ -373,7 +373,7 @@ class BernoulliBendingBeam
     ( const std::array< std::array<double, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT >& lambda,
       hyEdgeT& hyper_edge, const unsigned int outer_index ) const
     {
-      hy_assert( bilaplacian_sol_t::n_glob_dofs_per_node() == 2 , "This should be 1*2!")
+      hy_assert( bilaplacian_sol_t::n_glob_dofs_per_node() == 2 , "This should be 1*2!");
       std::array< std::array<double, n_glob_dofs_per_node() > , 2*hyEdge_dimT > result;
       for (unsigned int i = 0; i < result.size(); ++i)  result[i].fill(0.);
       Point<space_dim,lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
