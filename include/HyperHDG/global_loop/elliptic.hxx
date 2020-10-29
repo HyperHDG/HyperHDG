@@ -260,8 +260,8 @@ class EllipticLoop
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyEdge_dofs[hyNode] = hyper_graph_.hyNode_factory().get_dof_values(
-          hyEdge_hyNodes[hyNode], x_vec, hyEdge_dofs[hyNode]);
+        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
+                                                     hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
@@ -321,8 +321,8 @@ class EllipticLoop
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyEdge_dofs[hyNode] = hyper_graph_.hyNode_factory().get_dof_values(
-          hyEdge_hyNodes[hyNode], x_vec, hyEdge_dofs[hyNode]);
+        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
+                                                     hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into local errors.
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
