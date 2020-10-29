@@ -2,9 +2,6 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
-#include <array>
-#include <vector>
-
 /*!*************************************************************************************************
  * \brief   This class is responsible for the mapping of hypernodes to global degrees of freedom.
  *
@@ -18,7 +15,6 @@
  *                            number of local trial functions for the skeletal variable.
  * \tparam  hyNode_index_t    Unsigned integer type specification. Default is unsigned int.
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int n_dofs_per_nodeT, typename hyNode_index_t = unsigned int>
@@ -44,10 +40,9 @@ class HyperNodeFactory
 
  public:
   /*!***********************************************************************************************
-   *
    * \brief   Construct HyperNodeFactory from total number of hypernodes.
    *
-   * \param   n_hyNodes   Total number of hypernodes.
+   * \param   n_hyNodes           Total number of hypernodes.
    ************************************************************************************************/
   HyperNodeFactory(const hyNode_index_t n_hyNodes) : n_hyNodes_(n_hyNodes) {}
   /*!***********************************************************************************************
@@ -66,32 +61,33 @@ class HyperNodeFactory
    *
    * \retval  n_hypernodes        The total amount of hypernodes in the considered hypergraph.
    ************************************************************************************************/
-  const hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
+  hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
   /*!***********************************************************************************************
    * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
+   * \tparam  dof_index_t         Unsigned integer type specification. Default is \c hyNode_index_t.
    * \retval  n_global_dofs       The total amount of degreees of freedom in the considered
    *                              hypergraph.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int>
-  const dof_index_t n_global_dofs() const
+  template <typename dof_index_t = hyNode_index_t>
+  dof_index_t n_global_dofs() const
   {
     return n_hyNodes_ * n_dofs_per_nodeT;
   }
   /*!***********************************************************************************************
    * \brief   Calculate global indices of degrees of freedom related to a hypernode.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
-   * \param   hyNode_index     Index of the considered hypernode.
-   * \retval  dof_indices         A \c std::array containing the global indices of related degrees
-   *                              of freedom.
+   * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
+   *                              operator [] for random access.
+   * \param   hyNode_index        Index of the considered hypernode.
+   * \param   dof_indices         Reference to small vector to be filled.
+   * \retval  dof_indices         Reference to small vector containing the global indices of related
+   *                              degrees of freedom.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int>
-  std::array<dof_index_t, n_dofs_per_nodeT> get_dof_indices(const hyNode_index_t hyNode_index) const
+  template <typename SmallVecT>
+  SmallVecT& get_dof_indices(const hyNode_index_t hyNode_index, SmallVecT& dof_indices) const
   {
-    dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
-    std::array<dof_index_t, n_dofs_per_nodeT> dof_indices;
+    const typename SmallVecT::value_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     for (unsigned int i = 0; i < n_dofs_per_nodeT; ++i)
       dof_indices[i] = initial_dof_index + i;
     return dof_indices;
@@ -101,9 +97,9 @@ class HyperNodeFactory
    *
    * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
    * \param   dof_index           Global index of related degree of freedom.
-   * \retval  hyNode_index     Index of the considered hypernode.
+   * \retval  hyNode_index        Index of the considered hypernode.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int>
+  template <typename dof_index_t>
   hyNode_index_t get_hyNode_from_dof_index(const dof_index_t dof_index) const
   {
     hy_assert(0 <= dof_index && dof_index < n_global_dofs(), "No valid dof index.");
@@ -112,18 +108,25 @@ class HyperNodeFactory
   /*!***********************************************************************************************
    * \brief   Evaluate values of degrees of freedom related to a hypernode.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
-   * \tparam  dof_value_t         Floating point type specification. Default is double.
+   * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
+   * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
+   *                              operator [] for random access.
+   * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
+   *                              operator [] for random access.
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   global_dof_vector   Global vector of degrees of freedom.
-   * \retval  dof_values          A \c std::array containing the values of related degrees of
-   *                              freedom.
+   * \param   local_dof_values    Reference to small vector to be filled.
+   * \retval  local_dof_values    Reference to small vector containing the values of related degrees
+   *                              of freedom.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int, typename dof_value_t = double>
-  std::array<dof_value_t, n_dofs_per_nodeT> get_dof_values(
-    const hyNode_index_t hyNode_index,
-    const std::vector<dof_value_t>& global_dof_vector) const
+  template <typename dof_index_t = hyNode_index_t, typename SmallVecT, typename LargeVecT>
+  SmallVecT& get_dof_values(const hyNode_index_t hyNode_index,
+                            const LargeVecT& global_dof_vector,
+                            SmallVecT& local_dof_values) const
   {
+    using dof_value_t = typename LargeVecT::value_type;
+    static_assert(std::is_same<typename SmallVecT::value_type, dof_value_t>::value,
+                  "Both vectors must have same type!");
     dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     hy_assert(initial_dof_index >= 0 &&
                 initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size(),
@@ -132,7 +135,6 @@ class HyperNodeFactory
                 << " Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT
                 << " must "
                 << "not exceed the size of the vector of global degrees of freedom.");
-    std::array<dof_value_t, n_dofs_per_nodeT> local_dof_values;
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       local_dof_values[index] = global_dof_vector[initial_dof_index + index];
     return local_dof_values;
@@ -140,22 +142,28 @@ class HyperNodeFactory
   /*!***********************************************************************************************
    * \brief   Add different values to values of degrees of freedom related to a hypernode.
    *
-   * Add local values of the \c std::array \c local_dof_vector to the respective values of the
-   * \c std::vector \c global_dof_vector comprising all degrees of freedom.
+   * Add local values of the small vector \c local_dof_vector to the respective values of the large
+   * vector \c global_dof_vector comprising all degrees of freedom.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
-   * \tparam  dof_value_t         Floating point type specification. Default is double.
+   * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
+   * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
+   *                              operator [] for random access.
+   * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
+   *                              operator [] for random access.
    * \param   hyNode_index        Index of the considered hypernode.
-   * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
-   * \param   local_dof_vector    \c std::array containing the local values to be added to the
+   * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
+   * \param   local_dof_vector    Small vector containing the local values to be added to the
    *                              global ones.
-   * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+   * \retval  global_dof_vector   Large vector containing the values of all degrees of freedom.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int, typename dof_value_t = double>
-  void add_to_dof_values(const hyNode_index_t hyNode_index,
-                         std::vector<dof_value_t>& global_dof_vector,
-                         const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
+  template <typename dof_index_t = hyNode_index_t, typename SmallVecT, typename LargeVecT>
+  LargeVecT& add_to_dof_values(const hyNode_index_t hyNode_index,
+                               LargeVecT& global_dof_vector,
+                               const SmallVecT& local_dof_vector) const
   {
+    static_assert(
+      std::is_same<typename SmallVecT::value_type, typename LargeVecT::value_type>::value,
+      "Both vectors must have same type!");
     dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     hy_assert(local_dof_vector.size() == n_dofs_per_nodeT,
               "The size of the local dof vector is "
@@ -170,6 +178,7 @@ class HyperNodeFactory
                 << "not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
+    return global_dof_vector;
   }
   /*!***********************************************************************************************
    * \brief   Set different values of degrees of freedom related to a hypernode.
@@ -177,19 +186,25 @@ class HyperNodeFactory
    * Set local values of the \c std::array \c local_dof_vector as the respective values of the
    * \c std::vector \c global_dof_vector comprising all degrees of freedom.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
-   * \tparam  dof_value_t         Floating point type specification. Default is double.
+   * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
+   * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
+   *                              operator [] for random access.
+   * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
+   *                              operator [] for random access.
    * \param   hyNode_index        Index of the considered hypernode.
-   * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
-   * \param   local_dof_vector    \c std::array containing the local values to be set at the
+   * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
+   * \param   local_dof_vector    Small vector containing the local values to be set at the
    *                              global ones.
-   * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+   * \retval  global_dof_vector   Large vector containing the values of all degrees of freedom.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int, typename dof_value_t = double>
-  void set_dof_values(const hyNode_index_t hyNode_index,
-                      std::vector<dof_value_t>& global_dof_vector,
-                      const std::array<dof_value_t, n_dofs_per_nodeT>& local_dof_vector) const
+  template <typename dof_index_t = hyNode_index_t, typename SmallVecT, typename LargeVecT>
+  LargeVecT& set_dof_values(const hyNode_index_t hyNode_index,
+                            LargeVecT& global_dof_vector,
+                            const SmallVecT& local_dof_vector) const
   {
+    static_assert(
+      std::is_same<typename SmallVecT::value_type, typename LargeVecT::value_type>::value,
+      "Both vectors must have same type!");
     dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     hy_assert(local_dof_vector.size() == n_dofs_per_nodeT,
               "The size of the local dof vector is "
@@ -204,21 +219,23 @@ class HyperNodeFactory
                 << "not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] = local_dof_vector[index];
+    return global_dof_vector;
   }
   /*!***********************************************************************************************
    * \brief   Set all values of degrees of freedom of a hypernode to a predefined value.
    *
-   * \tparam  dof_index_t         Unsigned integer type specification. Default is unsigned int.
-   * \tparam  dof_value_t         Floating point type specification. Default is double.
-   * \param   hyNode_index     Index of the considered hypernode.
-   * \param   global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+   * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
+   * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
+   *                              operator [] for random access.
+   * \param   hyNode_index        Index of the considered hypernode.
+   * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
    * \param   value               The future value of related degrees of freedom.
-   * \retval  global_dof_vector   \c std::vector containing the values of all degrees of freedom.
+   * \retval  global_dof_vector   Large vector containing the values of all degrees of freedom.
    ************************************************************************************************/
-  template <typename dof_index_t = unsigned int, typename dof_value_t = double>
-  void set_dof_values(const hyNode_index_t hyNode_index,
-                      std::vector<dof_value_t>& global_dof_vector,
-                      const dof_value_t value) const
+  template <typename dof_index_t = hyNode_index_t, typename LargeVecT>
+  LargeVecT& set_dof_values(const hyNode_index_t hyNode_index,
+                            LargeVecT& global_dof_vector,
+                            const typename LargeVecT::value_type value) const
   {
     dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     hy_assert(initial_dof_index >= 0 &&
@@ -230,5 +247,6 @@ class HyperNodeFactory
                 << "not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] = value;
+    return global_dof_vector;
   }
 };  // end of class HyperNodeFactory
