@@ -529,8 +529,8 @@ get_edge_dof_values(HyperGraphT& hyper_graph,
   hyEdge_hyNodes = hyper_graph.hyEdge_topology(edge_index).get_hyNode_indices();
   for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
   {
-    hyEdge_dofs[hyNode] =
-      hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], lambda);
+    hyEdge_dofs[hyNode] = hyper_graph.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode],
+                                                                      lambda, hyEdge_dofs[hyNode]);
   }
   return hyEdge_dofs;
 }
