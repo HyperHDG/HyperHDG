@@ -88,6 +88,11 @@ class HyperNodeFactory
   SmallVecT& get_dof_indices(const hyNode_index_t hyNode_index, SmallVecT& dof_indices) const
   {
     const typename SmallVecT::value_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+    hy_assert(dof_indices.size() == n_dofs_per_nodeT,
+              "The size of the local dof vector is "
+                << dof_indices.size()
+                << ", but should be equal to the amount of local dofs, which is "
+                << n_dofs_per_nodeT << ".");
     for (unsigned int i = 0; i < n_dofs_per_nodeT; ++i)
       dof_indices[i] = initial_dof_index + i;
     return dof_indices;
@@ -127,14 +132,18 @@ class HyperNodeFactory
     using dof_value_t = typename LargeVecT::value_type;
     static_assert(std::is_same<typename SmallVecT::value_type, dof_value_t>::value,
                   "Both vectors must have same type!");
+    hy_assert(local_dof_values.size() == n_dofs_per_nodeT,
+              "The size of the local dof vector is "
+                << local_dof_values.size()
+                << ", but should be equal to the amount of local dofs, which is "
+                << n_dofs_per_nodeT << ".");
     dof_index_t initial_dof_index = hyNode_index * n_dofs_per_nodeT;
     hy_assert(initial_dof_index >= 0 &&
                 initial_dof_index + n_dofs_per_nodeT <= global_dof_vector.size(),
               "The initial dof index = "
                 << initial_dof_index << ", should be non-negative. "
                 << " Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT
-                << " must "
-                << "not exceed the size of the vector of global degrees of freedom.");
+                << " must not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       local_dof_values[index] = global_dof_vector[initial_dof_index + index];
     return local_dof_values;
@@ -174,8 +183,7 @@ class HyperNodeFactory
               "The initial dof index = "
                 << initial_dof_index << "should be non-negative. "
                 << "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT
-                << " must "
-                << "not exceed the size of the vector of global degrees of freedom.");
+                << " must not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] += local_dof_vector[index];
     return global_dof_vector;
@@ -215,8 +223,7 @@ class HyperNodeFactory
               "The initial dof index = "
                 << initial_dof_index << "should be non-negative. "
                 << "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT
-                << " must "
-                << "not exceed the size of the vector of global degrees of freedom.");
+                << " must not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] = local_dof_vector[index];
     return global_dof_vector;
@@ -243,8 +250,7 @@ class HyperNodeFactory
               "The initial dof index = "
                 << initial_dof_index << "should be non-negative. "
                 << "Moreover, the final index = " << initial_dof_index + n_dofs_per_nodeT
-                << " must "
-                << "not exceed the size of the vector of global degrees of freedom.");
+                << " must not exceed the size of the vector of global degrees of freedom.");
     for (unsigned int index = 0; index < n_dofs_per_nodeT; ++index)
       global_dof_vector[initial_dof_index + index] = value;
     return global_dof_vector;
