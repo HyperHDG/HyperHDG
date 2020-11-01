@@ -1,6 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/wrapper/tpcc.hxx>
 
@@ -33,20 +32,25 @@ namespace Topology
  * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
  * periodic domains, for example.
  *
- * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                        for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dimT    The dimension of the space, the object is located in. This number should
- *                        be larger than or equal to hyEdge_dimT.
+ * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
+ *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
+ * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
+ *                          be larger than or equal to hyEdge_dimT.
+ * \tparam  NodeIncesVecT   The vector type of an array containing the node indices of an hyperedge.
+ * \tparam  ConstructorVecT The vector type of the constructor.
+ * \tparam  hyEdge_index_t  The index type of an hyperedge.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
-          typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = hyEdge_index_t>
+          typename NodeIndexVecT = SmallVec<2 * hyEdge_dimT, unsigned int>,
+          typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
+          typename hyEdge_index_t = typename NodeIndexVecT::value_type>
 class Cubic
 {
+  using hyNode_index_t = typename NodeIndexVecT::value_type;
   /*!***********************************************************************************************
    * \brief   Definition of the topology of a hypergraph's edges --- Cubic HyperGraph's edges.
    *
@@ -61,7 +65,7 @@ class Cubic
      *
      * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
      **********************************************************************************************/
-    SmallVec<2 * hyEdge_dimT, hyNode_index_t> hyNode_indices_;
+    NodeIndexVecT hyNode_indices_;
 
    public:
     /*!*********************************************************************************************
@@ -92,10 +96,7 @@ class Cubic
      *
      * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const SmallVec<2 * hyEdge_dimT, hyNode_index_t>& get_hyNode_indices() const
-    {
-      return hyNode_indices_;
-    }
+    const NodeIndexVecT& get_hyNode_indices() const { return hyNode_indices_; }
   };  // end of class hyEdge
 
  public:
@@ -118,7 +119,7 @@ class Cubic
    *
    * A \c std::array comprising the number of elements in each spatial dimension.
    ************************************************************************************************/
-  const SmallVec<space_dimT, unsigned int> num_elements_;
+  const ConstructorVecT num_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
@@ -163,7 +164,7 @@ class Cubic
    * topology is by default constructed by a std::vector that contains amounts of elements in the
    * different dimensions.
    ************************************************************************************************/
-  typedef SmallVec<space_dimT, unsigned int> constructor_value_type;
+  typedef ConstructorVecT constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a cubic hypergraph from a \c std::vector.
    *
@@ -229,7 +230,7 @@ class Cubic
    *
    * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
    ************************************************************************************************/
-  const SmallVec<space_dimT, unsigned int>& num_elements() const { return num_elements_; }
+  const ConstructorVecT& num_elements() const { return num_elements_; }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
