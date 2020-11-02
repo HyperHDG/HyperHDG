@@ -14,9 +14,9 @@ from scipy.sparse.linalg import LinearOperator
 #          +                  "Diffusion_TensorialUniform < 1, 1, 2 * 1 > " \
 #          +                ">"
 # filenames = [ "HyperHDG/Geometry/Cubic.hxx" , "HyperHDG/LocalSolver/Diffusion.hxx" ]
-problem = "EllipticLoop < Topology::File<1,2>, Geometry::File<1,2>, NodeDescriptor::File<1,2>, "\
-         +                  "LengtheningBernoulliBendingBeam<1,2,1,2> > "
-filenames = [ "HyperHDG/geometry/file.hxx" , \
+problem = "GlobalLoop::Elliptic<Topology::File<1,2>,Geometry::File<1,2>,NodeDescriptor::File<1,2>,"\
+        +                      "LocalSolver::LengtheningBernoulliBendingBeam<1,2,1,2> > "
+filenames = [ "HyperHDG/geometry/file.hxx" , "HyperHDG/node_descriptor/file.hxx" , \
               "HyperHDG/local_solver/bernoulli_beams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.

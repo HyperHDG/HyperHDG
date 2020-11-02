@@ -266,7 +266,13 @@ class File
   /*!***********************************************************************************************
    * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
    ************************************************************************************************/
-  const DomainInfo<hyEdge_dimT, space_dimT>& domain_info_;
+  const DomainInfo<hyEdge_dimT,
+                   space_dimT,
+                   vectorT,
+                   pointT,
+                   hyEdge_index_t,
+                   hyNode_index_t,
+                   pt_index_t>& domain_info_;
 
  public:
   /*!***********************************************************************************************
@@ -287,7 +293,9 @@ class File
    * topology is by default constructed by a std::vector that contains amounts of elements in the
    * different dimensions.
    ************************************************************************************************/
-  typedef Topology::File<hyEdge_dimT, space_dimT> constructor_value_type;
+  typedef Topology::
+    File<hyEdge_dimT, space_dimT, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+      constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
    *

@@ -47,11 +47,12 @@ bool is_unique(const vectorT& vec)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename> typename vectorT = std::vector,
-          typename pointT = Point<space_dim, float>,
+          template <typename>
+          typename vectorT,  // = std::vector,
+          typename pointT,   // = Point<space_dim, float>,
           typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = unsigned int,
-          typename pt_index_t = unsigned int>
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
 struct DomainInfo
 {
   /*!***********************************************************************************************

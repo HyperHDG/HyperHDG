@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace SparseLA;
-using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
@@ -37,11 +36,13 @@ int do_test_uniform()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo";
 
-  EllipticLoop<Topology::File<1, space_dim>, Geometry::File<1, space_dim>,
-               NodeDescriptor::File<1, space_dim>, DiffusionUniform<1, 1, 2, float_t> >
+  GlobalLoop::Elliptic<Topology::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       Geometry::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       NodeDescriptor::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       LocalSolver::DiffusionUniform<1, 1, 2, float_t>, std::vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector<float_t>();
+  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
@@ -152,11 +153,13 @@ int do_test_standard()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo";
 
-  EllipticLoop<Topology::File<1, space_dim>, Geometry::File<1, space_dim, float_t>,
-               NodeDescriptor::File<1, space_dim>, Diffusion<1, 1, 2, TestParameters, float_t> >
+  GlobalLoop::Elliptic<Topology::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       Geometry::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       NodeDescriptor::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       LocalSolver::Diffusion<1, 1, 2, TestParameters, float_t>, vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector<float_t>();
+  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
@@ -269,11 +272,14 @@ int do_test_standard_dir()
   bool successful = true;
   const string file_name = "domains/simplex_1_" + to_string(space_dim) + ".geo";
 
-  EllipticLoop<Topology::File<1, space_dim>, Geometry::File<1, space_dim, float_t>,
-               NodeDescriptor::File<1, space_dim>, Diffusion<1, 1, 2, TestParametersDir, float_t> >
+  GlobalLoop::Elliptic<Topology::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       Geometry::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       NodeDescriptor::File<1, space_dim, vector, Point<space_dim, float_t> >,
+                       LocalSolver::Diffusion<1, 1, 2, TestParametersDir, float_t>,
+                       vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorRHS = diffusion_problem.template return_zero_vector<float_t>();
+  vector<float_t> vectorRHS = diffusion_problem.template return_zero_vector();
   vectorRHS = diffusion_problem.total_flux_vector(vectorRHS);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;

@@ -101,8 +101,7 @@ class File
                    pointT,
                    hyEdge_index_t,
                    hyNode_index_t,
-                   pt_index_t>
-    domain_info_;
+                   pt_index_t>& domain_info_;
 
  public:
   /*!***********************************************************************************************

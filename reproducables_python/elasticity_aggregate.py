@@ -29,10 +29,9 @@ start_time = datetime.now()
 print("Starting time is", start_time)
 
 # Predefine problem to be solved.
-problem = "GlobalLoop::Elliptic< Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
-         +                  "LocalSolver::LengtheningBernoulliBendingBeam<1,3,1,2> > "
-filenames = [ "HyperHDG/geometry/file.hxx" , \
-              "HyperHDG/node_descriptor/file.hxx", \
+problem = "GlobalLoop::Elliptic<Topology::File<1,3>,Geometry::File<1,3>,NodeDescriptor::File<1,3>,"\
+          +                    "LocalSolver::LengtheningBernoulliBendingBeam<1,3,1,2> > "
+filenames = [ "HyperHDG/geometry/file.hxx", "HyperHDG/node_descriptor/file.hxx", \
               "HyperHDG/local_solver/bernoulli_beams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
@@ -65,7 +64,7 @@ system_size = HDG_wrapper.size_of_system()
 A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=5500, tol=1e-9) # Parameters for CG.
+[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=5500, tol=1e-9)
 
 # Check, whether solution has been successful!
 if num_iter == 0:

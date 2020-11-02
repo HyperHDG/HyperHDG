@@ -8,7 +8,6 @@
 
 using namespace std;
 using namespace SparseLA;
-using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
@@ -34,12 +33,12 @@ int do_test()
   bool successful = true;
   const vector<unsigned int> num_elements = {4, 2, 2};
 
-  EllipticLoop<Topology::Cubic<1, 3>, Geometry::UnitCube<1, 3>, NodeDescriptor::Cubic<1, 3>,
-               DiffusionUniform<1, 1, 2, test_float_t> >
+  GlobalLoop::Elliptic<Topology::Cubic<1, 3>, Geometry::UnitCube<1, 3>, NodeDescriptor::Cubic<1, 3>,
+                       LocalSolver::DiffusionUniform<1, 1, 2, test_float_t>,
+                       std::vector<test_float_t> >
     diffusion_problem(num_elements, num_elements, (test_float_t)1.);
 
-  vector<test_float_t> vectorDirichlet =
-    diffusion_problem.template return_zero_vector<test_float_t>();
+  vector<test_float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
   vectorDirichlet[0] = (test_float_t)1.;
   vectorDirichlet[vectorDirichlet.size() - 1] = (test_float_t)0.;
 
