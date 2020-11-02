@@ -45,6 +45,7 @@ namespace Geometry
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
           typename pt_coord_t = double,
+          typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
           typename hyEdge_index_t = unsigned int>
 class UnitCube
 {
@@ -370,7 +371,7 @@ class UnitCube
    * topology whic is a unit cube is by default constructed by a std::vector that contains amounts
    * of elements in the different dimensions.
    ************************************************************************************************/
-  typedef SmallVec<space_dimT, unsigned int> constructor_value_type;
+  typedef ConstructorVecT constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
    *

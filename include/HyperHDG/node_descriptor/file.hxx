@@ -1,9 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/read_domain.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/topology/file.hxx>
 
-#include <array>
 #include <string>
 
 /*!*************************************************************************************************
@@ -36,8 +35,11 @@ namespace NodeDescriptor
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dimT, float>,
           typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = hyEdge_index_t>
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
 class File
 {
   /*!***********************************************************************************************
@@ -77,7 +79,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Return hypernodes of a hyperedge.
      **********************************************************************************************/
-    const std::array<hyNode_index_t, n_hyNodes()>& get_hyFaces_types() const
+    const auto& get_hyFaces_types() const
     {
       return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_];
     }
@@ -101,7 +103,14 @@ class File
   /*!***********************************************************************************************
    * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
    ************************************************************************************************/
-  const DomainInfo<hyEdge_dimT, space_dimT>& domain_info_;
+  const DomainInfo<hyEdge_dimT,
+                   space_dimT,
+                   vectorT,
+                   pointT,
+                   hyEdge_index_t,
+                   hyNode_index_t,
+                   pt_index_t>
+    domain_info_;
 
  public:
   /*!***********************************************************************************************
@@ -118,7 +127,9 @@ class File
    *
    * \todo    Doxygen
    ************************************************************************************************/
-  typedef Topology::File<hyEdge_dimT, space_dimT> constructor_value_type;
+  typedef Topology::
+    File<hyEdge_dimT, space_dimT, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+      constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
    *
@@ -131,7 +142,16 @@ class File
   /*!***********************************************************************************************
    * \brief   Copy constructor.
    ************************************************************************************************/
-  File(const File<hyEdge_dimT, space_dimT>& other) : domain_info_(other.domain_info) {}
+  File(const File<hyEdge_dimT,
+                  space_dimT,
+                  vectorT,
+                  pointT,
+                  hyEdge_index_t,
+                  hyNode_index_t,
+                  pt_index_t>& other)
+  : domain_info_(other.domain_info)
+  {
+  }
 
   /*!***********************************************************************************************
    * \brief   Get geometrical hyperedge of given index.

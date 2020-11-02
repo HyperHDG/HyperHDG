@@ -1,8 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/read_domain.hxx>
 
-#include <array>
 #include <string>
 
 /*!*************************************************************************************************
@@ -42,8 +42,11 @@ namespace Topology
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dimT, float>,
           typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = hyEdge_index_t>
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
 class File
 {
   /*!***********************************************************************************************
@@ -75,7 +78,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Return hypernodes of a hyperedge.
      **********************************************************************************************/
-    const std::array<hyNode_index_t, 2 * hyEdge_dimT>& get_hyNode_indices() const
+    const auto& get_hyNode_indices() const
     {
       return hyGraph_topology_.domain_info_.hyNodes_hyEdge[index_];
     }
@@ -95,7 +98,14 @@ class File
   /*!***********************************************************************************************
    * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
    ************************************************************************************************/
-  const DomainInfo<hyEdge_dimT, space_dimT> domain_info_;
+  const DomainInfo<hyEdge_dimT,
+                   space_dimT,
+                   vectorT,
+                   pointT,
+                   hyEdge_index_t,
+                   hyNode_index_t,
+                   pt_index_t>
+    domain_info_;
 
  public:
   /*!***********************************************************************************************
@@ -123,7 +133,13 @@ class File
    * \param   filename    Name of file containing the information.
    ************************************************************************************************/
   File(const constructor_value_type& filename)
-  : domain_info_(read_domain<hyEdge_dimT, space_dimT>(filename))
+  : domain_info_(read_domain<hyEdge_dimT,
+                             space_dimT,
+                             vectorT,
+                             pointT,
+                             hyEdge_index_t,
+                             hyNode_index_t,
+                             pt_index_t>(filename))
   {
   }
   /*!***********************************************************************************************
@@ -179,7 +195,17 @@ class File
    *
    * \retval  domain_indo     Const reference to domain info.
    ************************************************************************************************/
-  const DomainInfo<hyEdge_dimT, space_dimT>& domain_info() const { return domain_info_; }
+  const DomainInfo<hyEdge_dimT,
+                   space_dimT,
+                   vectorT,
+                   pointT,
+                   hyEdge_index_t,
+                   hyNode_index_t,
+                   pt_index_t>&
+  domain_info() const
+  {
+    return domain_info_;
+  }
 };  // end of class File
 
 }  // end of namespace Topology

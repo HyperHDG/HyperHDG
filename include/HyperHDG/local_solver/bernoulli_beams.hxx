@@ -97,7 +97,8 @@ class LengtheningBeam
       result[i].fill(0.);
     }
 
-    Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
+    Point<space_dim, lSol_float_t> normal_vector =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -118,7 +119,8 @@ class LengtheningBeam
     std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result;
     for (unsigned int i = 0; i < result.size(); ++i)
       result[i].fill(0.);
-    Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
+    Point<space_dim, lSol_float_t> normal_vector =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -238,7 +240,8 @@ class LengtheningBeam
       result;
 
     auto bulk = diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge));
-    Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.inner_normal(1);
+    Point<space_dim, lSol_float_t> normal_vector =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
     for (unsigned int dim = 0; dim < result.size(); ++dim)
       for (unsigned int q = 0; q < result[dim].size(); ++q)
@@ -353,7 +356,8 @@ class BernoulliBendingBeam
       result[i].fill(0.);
     }
 
-    Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
+    Point<space_dim, lSol_float_t> normal_vector =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(outer_index);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -379,7 +383,8 @@ class BernoulliBendingBeam
     std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result;
     for (unsigned int i = 0; i < result.size(); ++i)
       result[i].fill(0.);
-    Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(outer_index);
+    Point<space_dim, lSol_float_t> normal_vector =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(outer_index);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -551,7 +556,8 @@ class BernoulliBendingBeam
     {
       auto bulk = bilaplacian_solver.bulk_values(
         abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on));
-      Point<space_dim, lSol_float_t> normal_vector = hyper_edge.geometry.outer_normal(dim_on);
+      Point<space_dim, lSol_float_t> normal_vector =
+        (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(dim_on);
 
       for (unsigned int dim = 0; dim < values.size(); ++dim)
         for (unsigned int q = 0; q < values[dim].size(); ++q)
