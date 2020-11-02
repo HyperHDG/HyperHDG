@@ -8,6 +8,8 @@
 #include <array>
 #include <cmath>
 
+namespace GlobalLoop
+{
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  *
@@ -263,3 +265,5 @@ class ShiftedEigenvalue
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
 };  // end of class ShiftedEigenvalue
+
+}  // end of namespace GlobalLoop

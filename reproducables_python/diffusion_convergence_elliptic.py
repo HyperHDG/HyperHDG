@@ -25,7 +25,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   print("Starting time is", start_time)
   
   # Predefine problem to be solved.
-  problem = "EllipticLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "GlobalLoop::Elliptic < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \

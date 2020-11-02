@@ -233,7 +233,7 @@ class DiffusionEigs
       SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
       return (rhs / assemble_loc_matrix(tau_, hyper_edge, eig)).data();
     }
-    catch (LAPACKexception& exc)
+    catch (Wrapper::LAPACKexception& exc)
     {
       hy_assert(0 == 1, exc.what() << std::endl
                                    << "This can happen if quadrature is too inaccurate!");

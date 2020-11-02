@@ -286,7 +286,7 @@ class Diffusion
         hy_assert(0 == 1, "This has not been implemented!");
       return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
     }
-    catch (LAPACKexception& exc)
+    catch (Wrapper::LAPACKexception& exc)
     {
       hy_assert(0 == 1, exc.what() << std::endl
                                    << "This can happen if quadrature is too inaccurate!");
@@ -313,7 +313,7 @@ class Diffusion
       SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(coeffs, hyper_edge);
       return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
     }
-    catch (LAPACKexception& exc)
+    catch (Wrapper::LAPACKexception& exc)
     {
       hy_assert(0 == 1, exc.what() << std::endl
                                    << "This can happen if quadrature is too inaccurate!");
@@ -340,7 +340,7 @@ class Diffusion
             assemble_rhs_from_coeffs(coeffs, hyper_edge);
       return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
     }
-    catch (LAPACKexception& exc)
+    catch (Wrapper::LAPACKexception& exc)
     {
       hy_assert(0 == 1, exc.what() << std::endl
                                    << "This can happen if quadrature is too inaccurate!");

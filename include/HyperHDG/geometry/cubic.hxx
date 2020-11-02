@@ -3,23 +3,6 @@
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/topology/cubic.hxx>
 
-/*!*************************************************************************************************
- * \brief   A namespace containing classes describing hypergraph geometries.
- *
- * \todo    Discuss, whether we want to use array or SmallVec in internals.
- *
- * One of the advantages of this software package is the strict discrimination between the topology
- * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
- * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
- * sphere, since their topology is the same. However, different geometries have to be defined, since
- * these obviously are not equal. Thus, all parts of the code that involve communication and/or
- * solving systems of equations are reusable in a much more general (than the standard) sense.
- * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
- * periodic domains, for example.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 namespace Geometry
 {
 /*!*************************************************************************************************
@@ -68,7 +51,7 @@ class UnitCube
      **********************************************************************************************/
     template <unsigned int hyEdge_dimTT>
     unsigned int fill_data(unsigned int index,
-                           const tpcc_elem_t<hyEdge_dimTT, space_dimT>& elem,
+                           const Wrapper::tpcc_elem_t<hyEdge_dimTT, space_dimT>& elem,
                            const UnitCube& geometry)
     {
       if constexpr (hyEdge_dimTT == 0)
@@ -76,9 +59,10 @@ class UnitCube
         if (index == 0)
           for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
           {
-            unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
+            unsigned int ext_dim =
+              Wrapper::exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
             translation[ext_dim] =
-              (pt_coord_t)exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
+              (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
               (pt_coord_t)geometry.num_elements_[ext_dim];
             hy_assert(0. <= translation[ext_dim] && translation[ext_dim] <= 1.,
                       "The unit cube has only these cooridnates.");
@@ -89,9 +73,10 @@ class UnitCube
         if (index == (unsigned int)1 << dim && char_length[dim] == 0.)
           for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
           {
-            unsigned int ext_dim = exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
+            unsigned int ext_dim =
+              Wrapper::exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
             pt_coord_t helper =
-              (pt_coord_t)exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
+              (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
               (pt_coord_t)geometry.num_elements_[ext_dim];
             hy_assert(0. <= helper && helper <= 1., "The unit cube has only these cooridnates.");
             if (helper != translation[ext_dim])
@@ -106,8 +91,8 @@ class UnitCube
       else
       {
         for (unsigned int i = 2 * hyEdge_dimTT - 2; i < 2 * hyEdge_dimTT; ++i)
-          index = fill_data<hyEdge_dimTT - 1>(index, get_face<hyEdge_dimTT, space_dimT>(elem, i),
-                                              geometry);
+          index = fill_data<hyEdge_dimTT - 1>(
+            index, Wrapper::get_face<hyEdge_dimTT, space_dimT>(elem, i), geometry);
       }
       return index;
     }
@@ -133,8 +118,9 @@ class UnitCube
      **********************************************************************************************/
     hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
     {
-      tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_, index);
+      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
+        Wrapper::get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_,
+                                                                      index);
       fill_data<hyEdge_dimT>(0, elem, geometry);
     }
 
@@ -348,7 +334,7 @@ class UnitCube
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
+  Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
 
  public:
   /*!***********************************************************************************************
@@ -382,7 +368,7 @@ class UnitCube
    ************************************************************************************************/
   UnitCube(const constructor_value_type& num_elements)
   : num_elements_(num_elements),
-    tpcc_elements_(create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements))
+    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements))
   {
   }
   /*!***********************************************************************************************
@@ -395,7 +381,8 @@ class UnitCube
    ************************************************************************************************/
   UnitCube(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
   : num_elements_(other.num_elements()),
-    tpcc_elements_(create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(other.num_elements()))
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(other.num_elements()))
   {
   }
   /*!***********************************************************************************************

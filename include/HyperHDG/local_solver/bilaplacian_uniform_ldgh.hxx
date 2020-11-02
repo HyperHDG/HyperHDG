@@ -168,7 +168,7 @@ class BilaplacianUniform
     {
       return (assemble_rhs(lambda_values) / loc_mat_).data();
     }
-    catch (LAPACKexception& exc)
+    catch (Wrapper::LAPACKexception& exc)
     {
       hy_assert(0 == 1, exc.what() << std::endl
                                    << "This can happen if quadrature is too inaccurate!");

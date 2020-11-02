@@ -3,21 +3,6 @@
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/wrapper/tpcc.hxx>
 
-/*!*************************************************************************************************
- * \brief   A namespace containing different classes describing hypergraph topologies.
- *
- * One of the advantages of this software package is the strict discrimination between the topology
- * and the geometry of the domain \f$\Omega\f$. Thus, one can exemplarily define a single topology
- * (the one of a cube) to approximate PDEs that live on the cube's boundary and PDEs that live on a
- * sphere, since their topology is the same. However, different geometries have to be defined, since
- * these obviously are not equal. Thus, all parts of the code that involve communication and/or
- * solving systems of equations are reusable in a much more general (than the standard) sense.
- * Beyond that, absurd (on first sight) domains can be defined easily. This also covers variously
- * periodic domains, for example.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 namespace Topology
 {
 /*!*************************************************************************************************
@@ -80,13 +65,14 @@ class Cubic
      **********************************************************************************************/
     hyEdge(const hyEdge_index_t index, const Cubic& topology)
     {
-      tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        get_element<hyEdge_dimT, space_dimT, unsigned int>(topology.tpcc_elements_, index);
+      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
+        Wrapper::get_element<hyEdge_dimT, space_dimT, unsigned int>(topology.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
       {
-        tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
+          Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
         hyNode_indices_[i] =
-          get_index<hyEdge_dimT - 1, space_dimT, unsigned int>(topology.tpcc_faces_, face);
+          Wrapper::get_index<hyEdge_dimT - 1, space_dimT, unsigned int>(topology.tpcc_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -123,11 +109,11 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges.
    *
@@ -180,10 +166,10 @@ class Cubic
    ************************************************************************************************/
   Cubic(const constructor_value_type& num_elements)
   : num_elements_(num_elements),
-    tpcc_elements_(create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
-    tpcc_faces_(tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyEdges_(n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyNodes_(n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
+    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
+    tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
+    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
+    n_hyNodes_(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
   {
   }
   /*!***********************************************************************************************
@@ -234,11 +220,17 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elem() const { return tpcc_elements_; }
+  Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elem() const
+  {
+    return tpcc_elements_;
+  }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_face() const { return tpcc_faces_; }
+  Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_face() const
+  {
+    return tpcc_faces_;
+  }
   /*!***********************************************************************************************
    * \brief   Returns the number of hyperedges making up the hypergraph.
    *

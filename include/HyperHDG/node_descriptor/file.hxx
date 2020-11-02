@@ -5,14 +5,6 @@
 
 #include <string>
 
-/*!*************************************************************************************************
- * \brief   A namespace containing different classes describing local hypernode properties.
- *
- * \todo    All doxygen!
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 namespace NodeDescriptor
 {
 /*!*************************************************************************************************
