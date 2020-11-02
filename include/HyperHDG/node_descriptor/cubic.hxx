@@ -1,6 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/topology/cubic.hxx>
 #include <cmath>
@@ -39,6 +38,8 @@ namespace NodeDescriptor
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
+          typename NodeTypeVecT = SmallVec<2 * hyEdge_dimT, unsigned int>,
+          typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t>
 class Cubic
@@ -60,7 +61,7 @@ class Cubic
      *
      * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
      **********************************************************************************************/
-    SmallVec<2 * hyEdge_dimT, hyNode_index_t> hyFace_types_;
+    NodeTypeVecT hyFace_types_;
 
    public:
     /*!*********************************************************************************************
@@ -97,10 +98,7 @@ class Cubic
      *
      * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
-    const SmallVec<2 * hyEdge_dimT, hyNode_index_t>& get_hyFace_types() const
-    {
-      return hyFace_types_;
-    }
+    const NodeTypeVecT& get_hyFace_types() const { return hyFace_types_; }
     const unsigned int operator[](const unsigned int index) const { return hyFace_types_[index]; }
   };  // end of class hyEdge
 
@@ -124,7 +122,7 @@ class Cubic
    *
    * A \c std::array comprising the number of elements in each spatial dimension.
    ************************************************************************************************/
-  SmallVec<space_dimT, unsigned int> num_elements_;
+  ConstructorVecT num_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
@@ -169,7 +167,7 @@ class Cubic
    * topology is by default constructed by a std::vector that contains amounts of elements in the
    * different dimensions.
    ************************************************************************************************/
-  typedef SmallVec<space_dimT, unsigned int> constructor_value_type;
+  typedef ConstructorVecT constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a cubic hypergraph from a \c std::array.
    *
@@ -181,7 +179,7 @@ class Cubic
    *
    * \param   num_elements    A \c std::array containing number of elements per spatial dimension.
    ************************************************************************************************/
-  Cubic(const SmallVec<space_dimT, unsigned int>& num_elements)
+  Cubic(const ConstructorVecT& num_elements)
   : num_elements_(num_elements),
     tpcc_elements_(create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
     tpcc_faces_(tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
@@ -232,7 +230,7 @@ class Cubic
    *
    * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
    ************************************************************************************************/
-  const SmallVec<space_dimT, unsigned int>& num_elements() const { return num_elements_; }
+  const ConstructorVecT& num_elements() const { return num_elements_; }
   /*!***********************************************************************************************
    * \brief   Returns the number of hyperedges making up the hypergraph.
    *

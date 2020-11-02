@@ -1,6 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/epsilon_neighborhood_graph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
@@ -8,26 +7,24 @@
 #include <array>
 #include <fstream>
 #include <sstream>
-#include <vector>
 
 /*!*************************************************************************************************
- * \brief   Chech whether a \c std::vector does not contain duplicate entries.
+ * \brief   Check whether a \c std::vector does not contain duplicate entries.
  *
  * This function returns true if the \c std::vector \c vec does not contain duplicates, and false if
  * it contains duplicates.
  *
- * \tparam  T               Class template for vector elements.
- *
+ * \tparam  vectorT         Class template for vector.
  * \param   vec             General vector to be checked for duplicates.
  * \retval  is_unique       True if vector does not contain duplicates and false otherwise.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template <class T>
-bool is_unique(const std::vector<T>& vec)
+template <typename vectorT>
+bool is_unique(const vectorT& vec)
 {
-  std::vector<T> x(vec);                                       // Copy vector enabling reorder.
+  vectorT x(vec);                                              // Copy vector enabling reorder.
   std::sort(x.begin(), x.end());                               // Sort vector in O(N log N).
   return (std::adjacent_find(x.begin(), x.end()) == x.end());  // Check for duplicates in O(n).
 }
@@ -50,6 +47,8 @@ bool is_unique(const std::vector<T>& vec)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dim, float>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = unsigned int,
           typename pt_index_t = unsigned int>
@@ -70,15 +69,15 @@ struct DomainInfo
   /*!***********************************************************************************************
    * \brief   Vector containing points.
    ************************************************************************************************/
-  std::vector<Point<space_dim> > points;
+  vectorT<pointT> points;
   /*!***********************************************************************************************
    * \brief   Vector containing hypernode indices per hyperedge.
    ************************************************************************************************/
-  std::vector<std::array<hyNode_index_t, 2 * hyEdge_dim> > hyNodes_hyEdge, hyFaces_hyEdge;
+  vectorT<std::array<hyNode_index_t, 2 * hyEdge_dim> > hyNodes_hyEdge, hyFaces_hyEdge;
   /*!***********************************************************************************************
    * \brief   Vector containing vertex indices per hyperedge.
    ************************************************************************************************/
-  std::vector<std::array<pt_index_t, 1 << hyEdge_dim> > points_hyEdge;  // 2 ^ hyEdge_dim
+  vectorT<std::array<pt_index_t, 1 << hyEdge_dim> > points_hyEdge;  // 2 ^ hyEdge_dim
   /*!***********************************************************************************************
    * \brief   Constructor of DomainInfo struct.
    ************************************************************************************************/
@@ -162,10 +161,13 @@ struct DomainInfo
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dim, float>,
           typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = unsigned int,
-          typename pt_index_t = unsigned int>
-DomainInfo<hyEdge_dim, space_dim> read_domain_geo(const std::string& filename)
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
+DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+read_domain_geo(const std::string& filename)
 {
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
             "The given file needs to be a .geo file for this function to be applicable!");
@@ -178,7 +180,7 @@ DomainInfo<hyEdge_dim, space_dim> read_domain_geo(const std::string& filename)
   pt_index_t N_Points = 0, pt_iter;
   hyEdge_index_t N_HyperEdges = 0, hyEdge_iter;
   hyNode_index_t N_HyperNodes = 0;
-  Point<space_dim> pt;
+  pointT pt;
 
   while (keyword != "Space_Dim" && std::getline(infile, line))
   {
@@ -243,7 +245,8 @@ DomainInfo<hyEdge_dim, space_dim> read_domain_geo(const std::string& filename)
   hy_assert(equal_sign == "=", "The keyword " << keyword << " has not been followd by = symbol!");
   hy_assert(N_HyperEdges != 0, "The value of N_HyperEdges has not been set correctly!");
 
-  DomainInfo<hyEdge_dim, space_dim> domain_info(N_Points, N_HyperEdges, N_HyperNodes, N_Points);
+  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+    domain_info(N_Points, N_HyperEdges, N_HyperNodes, N_Points);
 
   while (keyword != "POINTS:" && std::getline(infile, line))
   {
@@ -340,20 +343,29 @@ DomainInfo<hyEdge_dim, space_dim> read_domain_geo(const std::string& filename)
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-DomainInfo<hyEdge_dim, space_dim> read_domain(std::string filename)
+template <unsigned int hyEdge_dim,
+          unsigned int space_dim,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dim, float>,
+          typename hyEdge_index_t = unsigned int,
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
+DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+read_domain(std::string filename)
 {
   if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
   {
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
-    make_epsilon_neighborhood_graph<space_dim>(filename);
+    make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
             "The given file needs to be a .geo file, since no other input file types are currently"
               << " implemented.");
 
-  DomainInfo<hyEdge_dim, space_dim> domain_info = read_domain_geo<hyEdge_dim, space_dim>(filename);
+  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+    domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                                  hyNode_index_t, pt_index_t>(filename);
 
   hy_assert(domain_info.check_consistency(),
             "Domain info appears to be inconsistent!"

@@ -1,16 +1,21 @@
-#include <HyperHDG/dense_la.hxx>
+#pragma once  // Ensure that file is included only once in a single compilation.
+
+#include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
-#include <cmath>
 #include <deque>
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <vector>
 
-template <unsigned int dim, typename float_t = float, typename index_t = unsigned int>
+template <unsigned int dim,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<dim, float>,
+          typename index_t = unsigned int>
 void make_epsilon_neighborhood_graph(std::string& filename)
 {
+  using float_t = typename pointT::value_type;
+
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".pts",
             "The given file needs to be a .pts file for this function to be applicable!");
 
@@ -28,10 +33,10 @@ void make_epsilon_neighborhood_graph(std::string& filename)
   float_t epsilon;
   index_t index;
 
-  std::vector<Point<dim, float_t> > points;
-  std::vector<Pair> connections;
+  vectorT<pointT> points;
+  vectorT<Pair> connections;
   std::deque<index_t> search;
-  Point<dim> pt;
+  pointT pt;
 
   while (keyword != "Space_Dim" && std::getline(infile, line))
   {
@@ -79,7 +84,7 @@ void make_epsilon_neighborhood_graph(std::string& filename)
   hy_assert(std::adjacent_find(points.begin(), points.end()) == points.end(),
             "Points must be unique in given file!");
 
-  std::vector<bool> bool_vec(points.size(), false);
+  vectorT<bool> bool_vec(points.size(), false);
   search.push_back(0);
   bool_vec[0] = true;
 

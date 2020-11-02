@@ -2,7 +2,6 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/mapping/linear.hxx>
-#include <HyperHDG/node_descriptor/file.hxx>
 #include <HyperHDG/topology/file.hxx>
 
 /*!*************************************************************************************************
@@ -62,15 +61,18 @@ namespace Geometry
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
-          typename pt_coord_t = double,
+          template <typename> typename vectorT = std::vector,
+          typename pointT = Point<space_dimT, float>,
           template <unsigned int, unsigned int, typename> typename mapping_tM = Mapping::Linear,
           unsigned int hyEdge_dimTM = hyEdge_dimT,
           unsigned int space_dimTM = space_dimT,
-          typename pt_coord_tM = pt_coord_t,
+          typename pt_coord_tM = typename pointT::value_type,
           typename hyEdge_index_t = unsigned int,
-          typename hyNode_index_t = hyEdge_index_t>
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
 class File
 {
+  using pt_coord_t = typename pointT::value_type;
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
    ************************************************************************************************/
@@ -123,7 +125,7 @@ class File
      **********************************************************************************************/
     Point<space_dimT, pt_coord_t> point(const unsigned int pt_index) const
     {
-      return (Point<space_dimT, pt_coord_t>)hyGraph_geometry_.domain_info_
+      return hyGraph_geometry_.domain_info_
         .points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
     }
     /*!*********************************************************************************************
