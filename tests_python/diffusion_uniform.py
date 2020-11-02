@@ -13,7 +13,7 @@ import os, sys
 sys.path.append(os.path.dirname(__file__) + "/..")
 
 # Predefine problem to be solved.
-problem = "EllipticLoop < Topology::Cubic< 1, 3 >, " \
+problem = "GlobalLoop::Elliptic < Topology::Cubic< 1, 3 >, " \
          +                  "Geometry::UnitCube< 1, 3 >, " \
          +                  "NodeDescriptor::Cubic< 1, 3 >, " \
          +                  "LocalSolver::DiffusionUniform < 1, 1, 2 * 1 > " \

@@ -79,11 +79,12 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration):
   print("Starting time is", start_time)
   
   # Predefine problem to be solved.
-  problem = "ShiftedEigenvalue < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "GlobalLoop::ShiftedEigenvalue<Topology::Cubic<" + str(dimension) + "," \
+          + str(dimension) + ">, " \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
-          + ",TestParametersEigs,double> >"
+          + "LocalSolver::BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
+          + str(2*poly_degree) + ",TestParametersEigs,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian_eigs_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]

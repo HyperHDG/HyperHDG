@@ -25,11 +25,11 @@ def diffusion_test(poly_degree, dimension, iteration):
   print("Starting time is", start_time)
   
   # Predefine problem to be solved.
-  problem = "ParabolicLoop < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "GlobalLoop::Parabolic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">,"\
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
-          + ",TestParametersSinParab,double> >"
+          + "LocalSolver::DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," \
+          + str(2*poly_degree) + ",TestParametersSinParab,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_parab_ldgh.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]

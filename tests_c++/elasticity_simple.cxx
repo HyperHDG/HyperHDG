@@ -1,6 +1,7 @@
 #include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/local_solver/bernoulli_beams.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/topology/file.hxx>
 
@@ -8,7 +9,6 @@
 
 using namespace std;
 using namespace SparseLA;
-using namespace LocalSolver;
 
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
@@ -25,11 +25,11 @@ using namespace LocalSolver;
 int main(int argc, char* argv[])
 {
   bool successful = true;
-  const double solution_tolerance = 1e-8;
+  const double solution_tolerance = 1e-7;
 
   std::string filename = "domains/triangle.pts";
-  EllipticLoop<Topology::File<1, 2>, Geometry::File<1, 2>, NodeDescriptor::File<1, 2>,
-               LengtheningBeam<1, 2, 1, 2> >
+  GlobalLoop::Elliptic<Topology::File<1, 2>, Geometry::File<1, 2>, NodeDescriptor::File<1, 2>,
+                       LocalSolver::LengtheningBeam<1, 2, 1, 2> >
     diffusion_problem(filename, 1.);
 
   vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();

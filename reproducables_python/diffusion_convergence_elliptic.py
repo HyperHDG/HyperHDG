@@ -25,11 +25,11 @@ def diffusion_test(poly_degree, dimension, iteration):
   print("Starting time is", start_time)
   
   # Predefine problem to be solved.
-  problem = "GlobalLoop::Elliptic < Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "GlobalLoop::Elliptic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">," \
           + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," + str(2*poly_degree) \
-          + ",TestParametersSinEllipt,double> >"
+          + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+          + str(2*poly_degree) + ",TestParametersSinEllipt,double> >"
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_ldgh.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
@@ -37,7 +37,7 @@ def diffusion_test(poly_degree, dimension, iteration):
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True )
+         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )

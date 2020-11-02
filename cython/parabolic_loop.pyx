@@ -23,7 +23,7 @@ cdef class PythonClassName :
   def __dealloc__(self):
     del self.thisptr
   def return_zero_vector(self):
-    return self.thisptr.return_zero_vector[ CyReplace03 ] ()
+    return self.thisptr.return_zero_vector ()
   def matrix_vector_multiply(self, vec, time = 0.):
     return self.thisptr.matrix_vector_multiply (vec, time)
   def total_flux_vector(self, vec, time = 0.):

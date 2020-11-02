@@ -42,9 +42,12 @@ template <class TopologyT,
           class GeometryT,
           class NodeDescriptorT,
           class LocalSolverT,
+          typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
 class MassEigenvalue
 {
+  using dof_value_t = typename LargeVecT::value_type;
+
  private:
   /*!***********************************************************************************************
    * \brief   Instantiation of a hypergraph.
@@ -162,7 +165,7 @@ class MassEigenvalue
       for (unsigned int i = 0; i < hyNode_types.size(); ++i)
         if (hyNode_types[i] == 1)
         {
-          dof_indices = hyper_graph_.hyNode_factory().get_dof_indices(hyEdge_hyNodes[i]);
+          hyper_graph_.hyNode_factory().get_dof_indices(hyEdge_hyNodes[i], dof_indices);
           for (unsigned int j = 0; j < dof_indices.size(); ++j)
             dirichlet_indices_.push_back(dof_indices[j]);
         }
@@ -186,14 +189,13 @@ class MassEigenvalue
    * \param   time          Time.
    * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t, typename dof_value_t>
-  std::vector<dof_value_t> matrix_vector_multiply(const std::vector<dof_value_t>& x_vec,
-                                                  const dof_value_t time = 0.)
+  template <typename hyNode_index_t = dof_index_t>
+  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
-    std::vector<dof_value_t> vec_Ax(x_vec.size(), 0.);
+    LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
 
@@ -202,8 +204,8 @@ class MassEigenvalue
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyEdge_dofs[hyNode] =
-          hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
+                                                     hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
@@ -235,14 +237,13 @@ class MassEigenvalue
    * \param   time          Time.
    * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t, typename dof_value_t>
-  std::vector<dof_value_t> mass_matrix_multiply(const std::vector<dof_value_t>& x_vec,
-                                                const dof_value_t time = 0.)
+  template <typename hyNode_index_t = dof_index_t>
+  LargeVecT mass_matrix_multiply(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
-    std::vector<dof_value_t> vec_Ax(x_vec.size(), 0.);
+    LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
 
@@ -251,8 +252,8 @@ class MassEigenvalue
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyEdge_dofs[hyNode] =
-          hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec);
+        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
+                                                     hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
