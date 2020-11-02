@@ -32,7 +32,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
           typename NodeIndexVecT = SmallVec<2 * hyEdge_dimT, unsigned int>,
           typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
-          typename hyEdge_index_t = typename NodeIndexVecT::value_type>
+          typename hyEdge_index_t = typename NodeIndexVecT::value_type,
+          typename NodeOrientationT = SmallVec<2 * hyEdge_dimT - 2, unsigned int> >
 class Cubic
 {
   using hyNode_index_t = typename NodeIndexVecT::value_type;
@@ -83,6 +84,13 @@ class Cubic
      * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     const NodeIndexVecT& get_hyNode_indices() const { return hyNode_indices_; }
+    /*!*********************************************************************************************
+     * \brief   Return orienation of hypernode.
+     **********************************************************************************************/
+    const NodeOrientationT get_hyNode_oriantation(unsigned int node) const
+    {
+      return NodeOrientationT();
+    }
   };  // end of class hyEdge
 
  public:

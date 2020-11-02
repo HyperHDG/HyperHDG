@@ -31,7 +31,8 @@ template <unsigned int hyEdge_dimT,
           typename pointT = Point<space_dimT, float>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
-          typename pt_index_t = hyNode_index_t>
+          typename pt_index_t = hyNode_index_t,
+          typename NodeOrientationT = SmallVec<2 * hyEdge_dimT - 2, unsigned int> >
 class File
 {
   /*!***********************************************************************************************
@@ -66,6 +67,13 @@ class File
     const auto& get_hyNode_indices() const
     {
       return hyGraph_topology_.domain_info_.hyNodes_hyEdge[index_];
+    }
+    /*!*********************************************************************************************
+     * \brief   Return orienation of hypernode.
+     **********************************************************************************************/
+    const NodeOrientationT get_hyNode_oriantation(unsigned int node) const
+    {
+      return NodeOrientationT();
     }
   };  // end of class hyEdge
 
