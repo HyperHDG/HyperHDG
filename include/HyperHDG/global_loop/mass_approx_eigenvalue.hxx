@@ -8,6 +8,8 @@
 #include <array>
 #include <cmath>
 
+namespace GlobalLoop
+{
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  *
@@ -315,3 +317,5 @@ class MassEigenvalue
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
 };  // end of class MassEigenvalue
+
+}  // end of namespace GlobalLoop

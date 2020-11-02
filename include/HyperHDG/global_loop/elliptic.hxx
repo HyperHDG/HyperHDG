@@ -10,6 +10,8 @@
 #include <cmath>
 #include <vector>
 
+namespace GlobalLoop
+{
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  *
@@ -44,7 +46,7 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class EllipticLoop
+class Elliptic
 {
   using dof_value_t = typename LargeVecT::value_type;
 
@@ -82,9 +84,9 @@ class EllipticLoop
    * \param   construct_geom    Information to construct a geometry.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  EllipticLoop(const typename TopologyT::constructor_value_type& construct_topo,
-               const typename GeometryT::constructor_value_type& construct_geom,
-               const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  Elliptic(const typename TopologyT::constructor_value_type& construct_topo,
+           const typename GeometryT::constructor_value_type& construct_geom,
+           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -103,8 +105,8 @@ class EllipticLoop
    * \param   construct_topo    Information to construct a topology.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  EllipticLoop(const typename TopologyT::constructor_value_type& construct_topo,
-               const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  Elliptic(const typename TopologyT::constructor_value_type& construct_topo,
+           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -122,7 +124,7 @@ class EllipticLoop
    *
    * \param   construct_topo    Information to construct a topology.
    ************************************************************************************************/
-  EllipticLoop(const typename TopologyT::constructor_value_type& construct_topo)
+  Elliptic(const typename TopologyT::constructor_value_type& construct_topo)
   : hyper_graph_(construct_topo)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -379,4 +381,6 @@ class EllipticLoop
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
-};  // end of class EllipticLoop
+};  // end of class Elliptic
+
+}  // end of namespace GlobalLoop

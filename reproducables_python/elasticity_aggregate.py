@@ -29,7 +29,7 @@ start_time = datetime.now()
 print("Starting time is", start_time)
 
 # Predefine problem to be solved.
-problem = "EllipticLoop < Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
+problem = "GlobalLoop::Elliptic< Topology::File<1,3>, Geometry::File<1,3>, NodeDescriptor::File<1,3>, "\
          +                  "LocalSolver::LengtheningBernoulliBendingBeam<1,3,1,2> > "
 filenames = [ "HyperHDG/geometry/file.hxx" , \
               "HyperHDG/node_descriptor/file.hxx", \

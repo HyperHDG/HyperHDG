@@ -940,7 +940,7 @@ template <unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t>
 SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(SmallMat<n_rowsA, n_colsB, mat_entry_t>& b,
                                                   SmallMat<n_rowsA, n_rowsA, mat_entry_t>& A)
 {
-  return lapack_solve<n_rowsA, n_colsB, mat_entry_t>(A.data(), b.data());
+  return Wrapper::lapack_solve<n_rowsA, n_colsB, mat_entry_t>(A.data(), b.data());
 }
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations A * x = b <=> x = A / b.
@@ -966,7 +966,7 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(const SmallMat<n_rowsA, n_cols
 template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
 SmallMat<n_rows, n_rows, mat_entry_t> qr_decomp_q(SmallMat<n_rows, n_cols, mat_entry_t>& mat)
 {
-  return lapack_qr_decomp_q<n_rows, n_cols, mat_entry_t>(mat.data());
+  return Wrapper::lapack_qr_decomp_q<n_rows, n_cols, mat_entry_t>(mat.data());
 }
 /*!*************************************************************************************************
  * \brief   Matrix Q of Householder QR decomposition.
@@ -999,7 +999,7 @@ void qr_decomp(SmallMat<n_rows, n_cols, mat_entry_t>& mat,
                SmallSquareMat<n_cols, mat_entry_t>& mat_r)
 {
   static_assert(n_cols <= n_rows, "Function only defined for these matrices!");
-  lapack_qr_decomp<n_rows, n_cols, mat_entry_t>(mat.data(), mat_q.data(), mat_r.data());
+  Wrapper::lapack_qr_decomp<n_rows, n_cols, mat_entry_t>(mat.data(), mat_q.data(), mat_r.data());
   SmallVec<n_rows, mat_entry_t> factors(1.);
   bool switch_necessary = false;
 
@@ -1078,7 +1078,7 @@ void qr_decomp(const SmallMat<n_rows, n_cols, mat_entry_t>& mat,
 template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
 mat_entry_t determinant(SmallMat<n_rows, n_cols, mat_entry_t>& mat)
 {
-  return lapack_det<n_rows, n_cols, mat_entry_t>(mat.data());
+  return Wrapper::lapack_det<n_rows, n_cols, mat_entry_t>(mat.data());
 }
 /*!*************************************************************************************************
  * \brief   Determinant of a rectangular system.

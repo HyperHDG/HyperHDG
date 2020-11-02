@@ -4,14 +4,6 @@
 #include <HyperHDG/topology/cubic.hxx>
 #include <cmath>
 
-/*!*************************************************************************************************
- * \brief   A namespace containing different classes describing hypergraph topologies.
- *
- * \todo    Doxygen
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 namespace NodeDescriptor
 {
 /*!*************************************************************************************************
@@ -76,16 +68,20 @@ class Cubic
      **********************************************************************************************/
     hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
     {
-      tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        get_element<hyEdge_dimT, space_dimT, unsigned int>(node_desc.tpcc_elements_, index);
+      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
+        Wrapper::get_element<hyEdge_dimT, space_dimT, unsigned int>(node_desc.tpcc_elements_,
+                                                                    index);
       for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
-        tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = get_face<hyEdge_dimT, space_dimT>(elem, i);
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
+          Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
         hyFace_types_[i] = 0;
         for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT + 1; ++dim)
         {
-          unsigned int coordinate = exterior_coordinate<hyEdge_dimT - 1, space_dimT>(face, dim);
-          unsigned int direction = exterior_direction<hyEdge_dimT - 1, space_dimT>(face, dim);
+          unsigned int coordinate =
+            Wrapper::exterior_coordinate<hyEdge_dimT - 1, space_dimT>(face, dim);
+          unsigned int direction =
+            Wrapper::exterior_direction<hyEdge_dimT - 1, space_dimT>(face, dim);
           if (coordinate == 0 || coordinate == node_desc.num_elements().operator[](direction))
             hyFace_types_[i] += (1 + (coordinate != 0)) * std::pow(3, direction);
         }
@@ -126,11 +122,11 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+  Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
+  Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges.
    *
@@ -181,10 +177,10 @@ class Cubic
    ************************************************************************************************/
   Cubic(const ConstructorVecT& num_elements)
   : num_elements_(num_elements),
-    tpcc_elements_(create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
-    tpcc_faces_(tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyEdges_(n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyNodes_(n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
+    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
+    tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
+    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
+    n_hyNodes_(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
   {
   }
   /*!***********************************************************************************************

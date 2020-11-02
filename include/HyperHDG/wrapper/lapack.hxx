@@ -17,6 +17,8 @@
 #include <array>
 // #include <exception>
 
+namespace Wrapper
+{
 /*!*************************************************************************************************
  * \brief   Exception to be thrown if LAPACK's solve fails.
  *
@@ -405,6 +407,8 @@ lapack_float_t lapack_det(std::array<lapack_float_t, n_rows * n_cols>& dense_mat
   return determinant;
 }
 
+}  // end of namespace Wrapper
+
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
@@ -416,6 +420,8 @@ lapack_float_t lapack_det(std::array<lapack_float_t, n_rows * n_cols>& dense_mat
 
 #include <HyperHDG/dense_la.hxx>  // Dense linear algebra that is utilized in the following.
 
+namespace Wrapper
+{
 /*!*************************************************************************************************
  * \brief   Matrix Q of QR decomposition --- DO NOT USE.
  *
@@ -622,3 +628,5 @@ void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
   get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat, mat_r);
   get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat);
 }
+
+}  // end of namespace Wrapper

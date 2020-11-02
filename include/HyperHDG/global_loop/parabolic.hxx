@@ -8,6 +8,8 @@
 #include <array>
 #include <cmath>
 
+namespace GlobalLoop
+{
 /*!*************************************************************************************************
  * \brief   This is an abstract example problem class.
  *
@@ -41,7 +43,7 @@ template <class TopologyT,
           class NodeDescriptorT,
           class LocalSolverT,
           typename dof_index_t = unsigned int>
-class ParabolicLoop
+class Parabolic
 {
  private:
   /*!***********************************************************************************************
@@ -73,9 +75,9 @@ class ParabolicLoop
    * \param   construct_geom    Information to construct a geometry.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  ParabolicLoop(const typename TopologyT::constructor_value_type& construct_topo,
-                const typename GeometryT::constructor_value_type& construct_geom,
-                const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  Parabolic(const typename TopologyT::constructor_value_type& construct_topo,
+            const typename GeometryT::constructor_value_type& construct_geom,
+            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -94,8 +96,8 @@ class ParabolicLoop
    * \param   construct_topo    Information to construct a topology.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  ParabolicLoop(const typename TopologyT::constructor_value_type& construct_topo,
-                const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  Parabolic(const typename TopologyT::constructor_value_type& construct_topo,
+            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -113,7 +115,7 @@ class ParabolicLoop
    *
    * \param   construct_topo    Information to construct a topology.
    ************************************************************************************************/
-  ParabolicLoop(const typename TopologyT::constructor_value_type& construct_topo)
+  Parabolic(const typename TopologyT::constructor_value_type& construct_topo)
   : hyper_graph_(construct_topo)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -423,4 +425,6 @@ class ParabolicLoop
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
-};  // end of class ParabolicLoop
+};  // end of class Parabolic
+
+}  // end of namespace GlobalLoop

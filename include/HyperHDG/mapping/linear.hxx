@@ -1,13 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
-/*!*************************************************************************************************
- * \brief   Namespace for mappings from reference elements to physical elements, etc.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 namespace Mapping
 {
 /*!*************************************************************************************************

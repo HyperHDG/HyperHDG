@@ -18,6 +18,8 @@
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
+namespace Wrapper
+{
 // -------------------------------------------------------------------------------------------------
 // Wrapper classes for mathematical helper functions.
 // -------------------------------------------------------------------------------------------------
@@ -142,3 +144,5 @@ unsigned int exterior_coordinate(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
             "There are only " << space_dim - hyEdge_dim << " exterior directions.");
   return elem.across_coordinate(index);
 }
+
+}  // end of namespace Wrapper
