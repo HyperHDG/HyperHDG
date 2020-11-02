@@ -34,7 +34,7 @@ void test()
   auto geo = std::make_shared<const Geo>(*topo);
   auto node = std::make_shared<const Node>(num_elements);
 
-  typedef LocalSolverTemplate<edge_dim, double> Solver;
+  typedef LocalSolver::Template<edge_dim, double> Solver;
   Solver lsolver;
   typedef HDGHyperGraph<Solver::n_glob_dofs_per_node(), Topo, Geo, Node, typename Solver::data_type>
     HDG;

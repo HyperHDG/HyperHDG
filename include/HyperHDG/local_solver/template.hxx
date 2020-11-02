@@ -2,6 +2,8 @@
 
 #include <HyperHDG/hypercube.hxx>
 
+namespace LocalSolver
+{
 /**
  * \brief Implementation the interface of local solvers needed by enclosing objects in minimal way.
  *
@@ -12,7 +14,7 @@
  * \todo Add functions for naming and structuring VTK output of ode and edge values
  */
 template <int hyEdge_dimT, typename lSol_float_t>
-class LocalSolverTemplate
+class Template
 {
  public:
   typedef struct empty_class
@@ -84,3 +86,5 @@ class LocalSolverTemplate
                       node_system_dimension()>();
   }
 };
+
+}  // end of namespace LocalSolver
