@@ -26,6 +26,8 @@ cdef class PythonClassName :
     return self.thisptr.matrix_vector_multiply (vec, time)
   def matrix_vector_der_multiply(self, vec, eig, vec_val, eig_val):
     return self.thisptr.matrix_vector_der_multiply (vec, eig, vec_val, eig_val)
+  def initial_flux_vector(self, vec, time = 0.):
+    return self.thisptr.initial_flux_vector (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

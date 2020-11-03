@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
-def main():
+def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
@@ -24,9 +24,9 @@ def main():
       for iteration in range(2,6):
         for approx_type in range(2):
           if approx_type == 0:
-            value, vector, errorSI = eigenvalue_approx_SI(poly_degree, dimension, iteration)
+            value,vector,errorSI = eigenvalue_approx_SI(poly_degree,dimension,iteration,debug_mode)
             vector.append(value)
-            _, _, errorNLSI = eigenvalue_newt(poly_degree, dimension, iteration, vector)
+            _, _, errorNLSI = eigenvalue_newt(poly_degree, dimension, iteration, vector, debug_mode)
             f = open("output/diffusion_convergence_eigenvalue_combSI.txt", "a")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
                     + ". Iteration = " + str(iteration) + ". ErrorSI = " + str(errorSI) + ".\n")
@@ -34,9 +34,9 @@ def main():
                     + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLSI) + ".\n")
             f.close()
           else:
-            value, vector, errorMA = eigenvalue_approx_MA(poly_degree, dimension, iteration)
+            value,vector,errorMA = eigenvalue_approx_MA(poly_degree,dimension,iteration,debug_mode)
             vector.append(value)
-            _, _, errorNLMA = eigenvalue_newt(poly_degree, dimension, iteration, vector)
+            _, _, errorNLMA = eigenvalue_newt(poly_degree, dimension, iteration, vector, debug_mode)
             f = open("output/diffusion_convergence_eigenvalue_combMA.txt", "a")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
                     + ". Iteration = " + str(iteration) + ". ErrorMA = " + str(errorMA) + ".\n")
@@ -49,4 +49,8 @@ def main():
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-    main()
+  debug_mode = False
+  try:
+    debug_mode = (sys.argv[1] == "True")
+  finally:
+    main(debug_mode)

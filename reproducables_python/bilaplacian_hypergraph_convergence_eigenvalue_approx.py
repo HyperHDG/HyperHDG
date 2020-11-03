@@ -69,7 +69,7 @@ class helper_ev_approx():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def eigenvalue_approx_MA(poly_degree, dimension, iteration):
+def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -88,7 +88,7 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration):
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["mass_approx_eigenvalue_loop", problem, "vector[unsigned int]", \
-            "vector[unsigned int]"], filenames )
+            "vector[unsigned int]"], filenames, debug_mode )
   
   # Configure eigenvector/-value solver.
   exact_eigenval = (dimension * (np.pi ** 2)) ** 2
@@ -135,17 +135,21 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
-def main():
+def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_approx_MA(poly_degree, dimension, iteration)
+        eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode)
 
 
 # --------------------------------------------------------------------------------------------------
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-    main()
+  debug_mode = False
+  try:
+    debug_mode = (sys.argv[1] == "True")
+  finally:
+    main(debug_mode)
