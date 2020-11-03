@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration):
+def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -33,11 +33,12 @@ def diffusion_test(poly_degree, dimension, iteration):
   filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_ldgh.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
-
+  
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
-         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames )
+         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, \
+           debug_mode )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
@@ -74,17 +75,21 @@ def diffusion_test(poly_degree, dimension, iteration):
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
-def main():
+def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
-        diffusion_test(poly_degree, dimension, iteration)
+        diffusion_test(poly_degree, dimension, iteration, debug_mode)
 
 
 # --------------------------------------------------------------------------------------------------
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-    main()
+  debug_mode = False
+  try:
+    debug_mode = (sys.argv[1] == "True")
+  finally:
+    main(debug_mode)

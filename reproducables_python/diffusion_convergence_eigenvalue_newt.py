@@ -46,7 +46,7 @@ class helper_ev_newt():
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
+def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -73,7 +73,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
   from cython_import import cython_import
   PyDP = cython_import \
          ( ["nonlinear_eigenvalue_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], \
-           filenames )
+           filenames , debug_mode )
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
@@ -160,17 +160,21 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default"):
 # --------------------------------------------------------------------------------------------------
 # Function main.
 # --------------------------------------------------------------------------------------------------
-def main():
+def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("\nDimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_newt(poly_degree, dimension, iteration)
+        eigenvalue_newt(poly_degree, dimension, iteration, "default", debug_mode)
 
 
 # --------------------------------------------------------------------------------------------------
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-    main()
+  debug_mode = False
+  try:
+    debug_mode = (sys.argv[1] == "True")
+  finally:
+    main(debug_mode)
