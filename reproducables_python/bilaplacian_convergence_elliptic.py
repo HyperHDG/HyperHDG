@@ -97,8 +97,4 @@ def main(debug_mode):
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-  debug_mode = False
-  try:
-    debug_mode = (sys.argv[1] == "True")
-  finally:
-    main(debug_mode)
+  main(len(sys.argv) > 1 and sys.argv[1] == "True")
