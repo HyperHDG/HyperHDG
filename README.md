@@ -30,5 +30,5 @@ following steps:
 
 ## License & developer certificate of origing
 
-- The license can be found in [./License.txt](License.txt). It contains the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html).
-- The developer certificate of origign can be found in [./DeveloperCertificateOfOrigin.txt](DeveloperCertificateOfOrigin.txt). It contains the [Developer Certificate of Origin version 1.1](https://developercertificate.org/).
+- The license can be found in [License.txt](License.txt). It contains the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html).
+- The developer certificate of origign can be found in [DeveloperCertificateOfOrigin.txt](DeveloperCertificateOfOrigin.txt). It contains the [Developer Certificate of Origin version 1.1](https://developercertificate.org/).
