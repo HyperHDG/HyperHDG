@@ -75,7 +75,7 @@ located there is copyrighted by their respective authors</b> (independent of the
 and are covered by different licenses.
 
 The libraries listed above are all open source and as such place few restrictions on their use.
-However, if you want to distribute software developed with deal.II (in source or binary form) and
+However, if you want to distribute software developed with HyperHDG (in source or binary form) and
 you are using the packages above (with source code in `submodules/`), then they may impose
 different terms. Please consult the licenses of these packages for more information.
 
