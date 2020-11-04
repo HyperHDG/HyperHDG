@@ -29,9 +29,9 @@ following steps:
 
 
 
-# HyperHDG Copyright, License, and Developer Certificate of Origin
+# Copyright, License, and Contribution Policy
 
-This directory contains the hyperHDG library.
+This directory contains the HyperHDG library.
 
 The HyperHDG library is copyrighted by the HyperHDG authors. This term refers to the people listed
 in the file [Authors.txt](Authors.txt).
@@ -56,8 +56,8 @@ Developer Certificate of Origin version 1.1 is quoted in [DeveloperCertificateOf
 
 In addition to the terms imposed by the LGPL v2.1 or later, we ask for the following courtesy:
 
-> Every publication presenting numerical results obtained with the help of hyperHDG should state the
-> name of the library and cite appropriate hyperHDG references listed at the top of the file
+> Every publication presenting numerical results obtained with the help of HyperHDG should state the
+> name of the library and cite appropriate HyperHDG references listed at the top of the file
 > [Publications.txt](Publications.txt).
 
 This is the usual, fair way of giving credit to contributors to a scientific result. In addition, it
