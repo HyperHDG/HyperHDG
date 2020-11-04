@@ -1,12 +1,10 @@
-What is HyperHDG?
-=================
+# What is HyperHDG?
 
 This repository contains the code to write a hybrid discontinuous Galerkin based solver for PDEs
 defined on hypergraphs.
 
 
-How to start?
--------------
+## How to start?
 
 To start with this repository enter the directory you want to clone this repository into and do the
 following steps:
@@ -30,8 +28,8 @@ following steps:
       $ git submodule update --init --recursive
 
 
+## [Developer Certificate of Origin version 1.1](https://developercertificate.org/)
 
-text of the [Developer Certificate of Origin version 1.1](https://developercertificate.org/)
 
 
 License:
