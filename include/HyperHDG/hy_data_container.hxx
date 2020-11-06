@@ -2,86 +2,60 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
-#include <vector>
-
 /*!*************************************************************************************************
- * \brief   Hypergraph topology based on an input file.
+ * \brief   Class for saving some (abstract) data per hyperedge.
  *
- * \todo    ALL NEW!
+ * For parabolic PDEs, for example, it might be necessary to save some data of the old time step.
+ * This data might be related to hypernodes and therefore be saved in a global vector that is
+ * administrated by the HypernodeFactory, or it might be related to hypernodes and therefore be
+ * administrated by the HyDataContainer.
  *
- * The topology class File is a set of hyperedges. Each of these tensorial hyperedges is represented
- * by its hypernodes (given within the file). For consistency, it is assumed that the vertices and
- * the hypernodes are assumed to be given in lexicographical order to ensure that geometry and
- * topology of all hyperedges fit.
- *
- * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dimT.
- * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyEdge_index_t.
+ * \tparam  data_t          The class name of the data which is saved per hyperedge.
+ * \tparam  vectorT         Data structure in which the datas are stored. Defaults to std::vector.
+ * \tparam  hyEdge_index_t  Index type which is used to identify entries in this data structure.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template <typename data_t, typename hyEdge_index_t = unsigned int>
+template <typename data_t,
+          typename vectorT = std::vector<data_t>,
+          typename hyEdge_index_t = decltype(std::declval<vectorT>().size())>
 class HyDataContainer
 {
  private:
   /*!***********************************************************************************************
-   * \brief   Domain Info containing all the information of the hypergraph (cf. ReadDomain.hxx).
+   * \brief   The internal overall data container which holds all data of a hypergraph's hyperedges.
    ************************************************************************************************/
-  std::vector<data_t> data_container;
+  vectorT data_container;
 
  public:
   /*!***********************************************************************************************
    * \brief   Defines the return value of the class.
-   *
-   * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
-   * different hyperedges (that actually are constructed everytime access is needed from e.g. the
-   * solver class). Thus, its main purpose is to provide a structure that administrates the
-   * hyperedges that are the return value of this structure.
    ************************************************************************************************/
   typedef data_t value_type;
   /*!***********************************************************************************************
    * \brief   Defines the value type of input argument for standard constructor.
-   *
-   * To receive a very general \c AbstractProblem, constructors need to account for the fact that
-   * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
-   * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
-   * topology is by default constructed by a std::vector that contains amounts of elements in the
-   * different dimensions.
    ************************************************************************************************/
-  typedef unsigned int constructor_value_type;
+  typedef decltype(std::declval<vectorT>().size()) constructor_value_type;
   /*!***********************************************************************************************
    * \brief   Construct a topology from a given filename.
    *
-   * \param   n_hyEdges    Number of hyperedges.
+   * \param   n_hyEdges     Number of hyperedges.
    ************************************************************************************************/
   HyDataContainer(const constructor_value_type n_hyEdges) : data_container(n_hyEdges) {}
 
   /*!***********************************************************************************************
-   * \brief   Get topological hyperedge of given index.
+   * \brief   Get data of hyperedge of given index.
    *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> This is not really a large object, is it? I mean, it only consists of a reference
-   *        and an index. I do not really see the advantage of returning a shared pointer. Does
-   *        it make any difference, here?
-   *
-   * This is equivalent to \c get_hyEdge.
-   *
-   * \param   index           The index of the hyperedge to be returned.
-   * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
+   * \param   index         The index of the hyperedge whose data is to be returned.
+   * \retval  data          The data of the selected hyperedge.
    ************************************************************************************************/
   value_type& operator[](const hyEdge_index_t index) { return get_hyEdge(index); }
   /*!***********************************************************************************************
-   * \brief   Get topological hyperedge of given index.
+   * \brief   Get data of hyperedge of given index.
    *
-   * This is equivalent to \c operator[].
-   *
-   * \param   index           The index of the hyperedge to be returned.
-   * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
+   * \param   index         The index of the hyperedge whose data is to be returned.
+   * \retval  data          The data of the selected hyperedge.
    ************************************************************************************************/
   value_type& get_hyEdge(const hyEdge_index_t index)
   {

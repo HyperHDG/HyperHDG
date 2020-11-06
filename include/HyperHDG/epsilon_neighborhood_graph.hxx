@@ -20,7 +20,7 @@
 template <unsigned int dim,
           template <typename> typename vectorT = std::vector,
           typename pointT = Point<dim, float>,
-          typename index_t = unsigned int>
+          typename index_t = decltype(std::declval<vectorT>().size())>
 void make_epsilon_neighborhood_graph(std::string& filename)
 {
   using float_t = typename pointT::value_type;
