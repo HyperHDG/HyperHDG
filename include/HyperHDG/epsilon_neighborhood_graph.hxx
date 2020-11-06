@@ -8,6 +8,15 @@
 #include <sstream>
 #include <string>
 
+/*!*************************************************************************************************
+ * \brief   Construct epsilon neighborhood graph from a file that contains only points.
+ *
+ * This function takes a filename that belongs to a .pts file containing only points and writes the
+ * corresponding epsilon neighborhood graph (if it is a valid one) to filename.geo.
+ *
+ * \param   filename      Name of the file containing the points.
+ * \retval  filename.geo  File containing the respective epsilon neighborhood graph.
+ **************************************************************************************************/
 template <unsigned int dim,
           template <typename> typename vectorT = std::vector,
           typename pointT = Point<dim, float>,

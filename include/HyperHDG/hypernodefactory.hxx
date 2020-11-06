@@ -22,7 +22,7 @@ class HyperNodeFactory
 {
  public:
   /*!***********************************************************************************************
-   * \brief   Returns the template parameter representing the amount of dofs per node.
+   * \brief   Return the template parameter representing the amount of dofs per node.
    *
    * \retval  n_dofs_per_node     The amount of degrees of freedom per node.
    ************************************************************************************************/
@@ -78,7 +78,7 @@ class HyperNodeFactory
    * \brief   Calculate global indices of degrees of freedom related to a hypernode.
    *
    * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and sizes().
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   dof_indices         Reference to small vector to be filled.
    * \retval  dof_indices         Reference to small vector containing the global indices of related
@@ -115,9 +115,9 @@ class HyperNodeFactory
    *
    * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
    * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   global_dof_vector   Global vector of degrees of freedom.
    * \param   local_dof_values    Reference to small vector to be filled.
@@ -156,9 +156,9 @@ class HyperNodeFactory
    *
    * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
    * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
    * \param   local_dof_vector    Small vector containing the local values to be added to the
@@ -196,9 +196,9 @@ class HyperNodeFactory
    *
    * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
    * \tparam  SmallVecT           The typename of a small vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
    * \param   local_dof_vector    Small vector containing the local values to be set at the
@@ -233,7 +233,7 @@ class HyperNodeFactory
    *
    * \tparam  dof_index_t         Unsigned integer type specification. Default is hyNode_index_t.
    * \tparam  LargeVecT           The typename of a large vector to be filled. Needs to provide the
-   *                              operator [] for random access.
+   *                              operator [] for random access and size().
    * \param   hyNode_index        Index of the considered hypernode.
    * \param   global_dof_vector   Large vector containing the values of all degrees of freedom.
    * \param   value               The future value of related degrees of freedom.

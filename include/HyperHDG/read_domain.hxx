@@ -38,9 +38,11 @@ bool is_unique(const vectorT& vec)
  *
  * \tparam  hyEdge_dim      The local dimension of a hyperedge.
  * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  vectorT         The typename of a large vector holding e.g. all points.
+ * \tparam  pointT          The typename of a point.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
- * \tparam  pt_index_t      The index type for points. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
+ * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
@@ -48,8 +50,8 @@ bool is_unique(const vectorT& vec)
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
           template <typename>
-          typename vectorT,  // = std::vector,
-          typename pointT,   // = Point<space_dim, float>,
+          typename vectorT,
+          typename pointT,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>
@@ -97,13 +99,10 @@ struct DomainInfo
   }
   /*!***********************************************************************************************
    * \brief   Check, whether DomainInfo is in a consistent state.
-   *
-   * \todo    Extend this to hyperfaces of hyperedges!
    ************************************************************************************************/
   bool check_consistency()
   {
-    bool consistent = (hyNodes_hyEdge.size() == hyNodes_hyEdge.size());
-    hy_assert(consistent, "The sizes of hyNodes_hyEdge and hyNodes_hyEdge need to be equal!");
+    bool consistent = true;
 
     std::for_each(hyNodes_hyEdge.begin(), hyNodes_hyEdge.end(),
                   [&](std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge) {
@@ -150,9 +149,11 @@ struct DomainInfo
  *
  * \tparam  hyEdge_dim      The local dimension of a hyperedge.
  * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  vectorT         The typename of a large vector holding e.g. all points.
+ * \tparam  pointT          The typename of a point.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c unsigned \c int.
- * \tparam  pt_index_t      The index type for points. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
+ * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
  *
  * \param   filename        Name of the .geo file to be read.
  * \retval  domain_info     Topological and geometrical information of hypergraph.
@@ -337,6 +338,11 @@ read_domain_geo(const std::string& filename)
  *
  * \tparam  hyEdge_dim      The local dimension of a hyperedge.
  * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  vectorT         The typename of a large vector holding e.g. all points.
+ * \tparam  pointT          The typename of a point.
+ * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
+ * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
  *
  * \param   filename        Name of the .geo file to be read.
  * \retval  domain_info     Topological and geometrical information of hypergraph.
