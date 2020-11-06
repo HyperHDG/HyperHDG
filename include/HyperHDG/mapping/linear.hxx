@@ -8,20 +8,8 @@ namespace Mapping
 /*!*************************************************************************************************
  * \brief   Mapping of a unit hypercube to a parallelotope --- can also be used for simplices.
  *
- * The affine-linear mapping of a \c hyEdge_dimT dimensional unit square to a subset of the real
- * numbers to the power \c space_dimT heavily relies on QR decomposition. Additionally, there are
- * four different types of normals:
- *
- * - The normals of the unit square in \c hyEdge_dimT dimensions.
- * - The normals of R times the unit square in \c hyEdge_dimT dimensions (called local_normal).
- * - The normals of QR times the unit square within the planar spanned by the columns of the
- *   transformation matrix (denoted inner normals) in \c space_dimT dimensions.
- * - The orthonormal vectors to the planar spanned by the transformation matrix (outer normals).
- *
- * The QR decomposition has a special normalization, i.e., the matrix Q suffices det(Q) = +1, i.e.
- * Q describes a movement (no mirrioring), and R has non-negative diagonal entries --- except for
- * the entry (0,0) which may have negative sign. Thus, the sign of entry (0,0) describes, whether
- * matrix a is orientation preserving or not.
+ * The affine-linear mapping of a \c hyEdge_dimT dimensional unit square to an parallelotope which
+ * lives in \c space_dimT dimensions.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -132,6 +120,8 @@ class Linear
   }
   /*!***********************************************************************************************
    * \brief   Return vector representing matrix column of specified index.
+   *
+   * \param   col         The index of the column that is to be returned.
    ************************************************************************************************/
   SmallVec<space_dimT, map_float_t> matrix_column(const unsigned int col) const
   {
@@ -139,22 +129,28 @@ class Linear
   }
 
   /*!***********************************************************************************************
-   * \brief   Map one or more points from reference to physical element.
+   * \brief   Map n_vec points from reference to physical element.
+   *
+   * \param   points        Matrix whose columns consist of the points to be mapped.
+   * \retval  phy_points    Matrix whose columns consist of the mapped points.
    ************************************************************************************************/
   template <unsigned int n_vec>
   SmallMat<space_dimT, n_vec, map_float_t> map_reference_to_physical(
-    const SmallMat<hyEdge_dimT, n_vec, map_float_t>& mat) const
+    const SmallMat<hyEdge_dimT, n_vec, map_float_t>& points) const
   {
-    return matrix_ * mat + translation_;
+    return matrix_ * points + translation_;
   }
   /*!***********************************************************************************************
-   * \brief   Map one or more points from physical to reference element.
+   * \brief   Map n_vec points from physical to element.
+   *
+   * \param   phy_points    Matrix whose columns consist of the mapped points.
+   * \retval  points        Matrix whose columns consist of the points to be mapped.
    ************************************************************************************************/
   template <unsigned int n_vec>
   SmallMat<hyEdge_dimT, n_vec, map_float_t> map_physical_to_reference(
-    const SmallMat<space_dimT, n_vec, map_float_t>& mat) const
+    const SmallMat<space_dimT, n_vec, map_float_t>& phy_points) const
   {
-    return (mat - translation_) / matrix_;
+    return (phy_points - translation_) / matrix_;
   }
   /*!***********************************************************************************************
    * \brief   Return matrix R of the QR decomposition.
@@ -240,8 +236,13 @@ class Linear
 
     return matrix_q_.get_column(index + hyEdge_dimT);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Return matrix associated to affine-linear transformation.
+   ************************************************************************************************/
   const SmallMat<space_dimT, hyEdge_dimT, map_float_t>& matrix() const { return matrix_; }
+  /*!***********************************************************************************************
+   * \brief   Return shifting vector associated to affine-linear transformation.
+   ************************************************************************************************/
   const SmallVec<space_dimT, map_float_t>& translation() const { return translation_; }
 };  // end class File
 
