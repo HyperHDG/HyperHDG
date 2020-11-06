@@ -357,11 +357,11 @@ class UnitCube
    *
    * A vector / array comprising the number of elements in each spatial dimension.
    ************************************************************************************************/
-  SmallVec<space_dimT, unsigned int> n_elements_;
+  const SmallVec<space_dimT, unsigned int> n_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
 
  public:
   /*!***********************************************************************************************
