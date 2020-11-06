@@ -58,7 +58,7 @@ int do_test_uniform()
   {
     solution = conjugate_gradient(vectorRHS, diffusion_problem);
   }
-  catch (SparseLASolveException& exc)
+  catch (SolveException& exc)
   {
     hy_assert(0 == 1, exc.what());
     successful = false;
@@ -175,7 +175,7 @@ int do_test_standard()
   {
     solution = conjugate_gradient(vectorRHS, diffusion_problem);
   }
-  catch (SparseLASolveException& exc)
+  catch (SolveException& exc)
   {
     hy_assert(0 == 1, exc.what());
     successful = false;
@@ -289,7 +289,7 @@ int do_test_standard_dir()
   {
     solution = conjugate_gradient(vectorRHS, diffusion_problem);
   }
-  catch (SparseLASolveException& exc)
+  catch (SolveException& exc)
   {
     hy_assert(0 == 1, exc.what());
     successful = false;

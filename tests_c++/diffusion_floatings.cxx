@@ -54,7 +54,7 @@ int do_test()
   {
     solution = conjugate_gradient(vectorRHS, diffusion_problem);
   }
-  catch (SparseLASolveException& exc)
+  catch (SolveException& exc)
   {
     hy_assert(0 == 1, exc.what());
     successful = false;

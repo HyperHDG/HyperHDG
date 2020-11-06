@@ -20,8 +20,7 @@ struct Hypercube
    ************************************************************************************************/
   static constexpr unsigned int n_vertices() { return 1 << dim; }
   /*!***********************************************************************************************
-   * \brief   Return \c n to the power \c dim, which is the size of the dim-dimensional tensor of
-   *          dimension n.
+   * \brief   Return \c n to the power \c dim.
    ************************************************************************************************/
   static constexpr unsigned int pow(unsigned int n)
   {

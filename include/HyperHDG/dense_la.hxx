@@ -12,10 +12,6 @@
 /*!*************************************************************************************************
  * \brief   Exception to be thrown if division by zero appears.
  *
- * \todo    Is this the way to do it intended by Guido? If so, should we include exception? It
- *          works perfecly without the include. I suspect that array (or another by that SmallMat
- *          included package includes exception?!
- *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
@@ -26,9 +22,6 @@ struct SmallMatDivByZeroException : public std::exception
 
 /*!*************************************************************************************************
  * \brief   This class implements a small/dense matrix.
- *
- * \todo    \c std::array has some problems using copy constructor. This has been bypassed now, but
- *          its correct use has to be checked!
  *
  * \tparam  n_rowsT       Number of rows of the matrix.
  * \tparam  n_colsT       Number of columns of the matrix. Defaults to create square matrix.
@@ -121,8 +114,6 @@ class SmallMat
   /*!***********************************************************************************************
    * \brief   Construct SmallMat from array of entries.
    *
-   * \todo    Check, why the commented version sometimes (only(!)) leads to wrong results!
-   *
    * Fills the SmallMat's array of entries with the input parameter.
    *
    * \param   entries   A \c std::array containing the entries of the SmallMat.
@@ -155,8 +146,6 @@ class SmallMat
   }
   /*!***********************************************************************************************
    * \brief   Copy constructor.
-   *
-   * \todo    Check, why the commented version sometimes (only(!)) leads to wrong results!
    ************************************************************************************************/
   SmallMat(const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other) : entries_(other.entries_) {}
   // { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
@@ -178,8 +167,6 @@ class SmallMat
   }
   /*!***********************************************************************************************
    * \brief   Copy assignment.
-   *
-   * \todo    In the light of the other todos, check whether this has to be adapted.
    ************************************************************************************************/
   SmallMat<n_rowsT, n_colsT, mat_entry_t>& operator=(
     const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other)
@@ -190,8 +177,6 @@ class SmallMat
   }
   /*!***********************************************************************************************
    * \brief   Move assignment.
-   *
-   * \todo    In the light of the other todos, check whether this has to be adapted.
    ************************************************************************************************/
   SmallMat<n_rowsT, n_colsT, mat_entry_t>& operator=(
     SmallMat<n_rowsT, n_colsT, mat_entry_t>&& other) noexcept

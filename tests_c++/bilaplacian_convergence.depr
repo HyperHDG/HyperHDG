@@ -76,7 +76,7 @@ double do_test(const unsigned int iteration)
   
   vector<float_t> solution;
   try { solution = conjugate_gradient( vectorRHS, diffusion_problem ); }
-  catch (SparseLASolveException& exc) { hy_assert( 0 == 1 , exc.what() ); }
+  catch (SolveException& exc) { hy_assert( 0 == 1 , exc.what() ); }
 
   std::string file_name = "diff_c-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim)
                             + "-" + std::to_string(iteration);
