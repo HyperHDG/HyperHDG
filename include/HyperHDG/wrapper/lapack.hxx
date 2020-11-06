@@ -21,10 +21,6 @@ namespace Wrapper
 {
 /*!*************************************************************************************************
  * \brief   Exception to be thrown if LAPACK's solve fails.
- *
- * \todo    Is this the way to do it intended by Guido? If so, should we include exception? It
- *          works perfecly without the include. I suspect that array (or another by that point
- *          included package includes exception?!
  **************************************************************************************************/
 struct LAPACKexception : public std::exception
 {
@@ -461,9 +457,6 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result(
 }
 /*!*************************************************************************************************
  * \brief   Matrix Q of QR decomposition --- DO NOT USE.
- *
- * \todo    Check whether the implementation is correct, since I am not perfectly sure about the two
- *          \c std::move statements to do exactly, what I want.
  *
  * Return matrix Q of the Householder QR decomposition of the matrix. The matrix is supposed to
  * contain the Householder QR decomposition which is encoded in the style of LAPACK. The function

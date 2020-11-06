@@ -19,8 +19,13 @@ namespace Topology
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyEdge_dimT.
+ * \tparam  vectorT         The typename of the large vector type. Defaults to std::vector.
+ * \tparam  pointT          The typename of a Point class. Defaults to \c Point<space_dimT, float>.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyEdge_index_t.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyNode_index_t.
+ * \tparam  pt_index_t      The index type of points. Default is \c hyNode_index_t.
+ * \tparam NodeOrientationT The class type that encodes the orientation of the hypernodes with
+ *                          respect to a given hyperedge.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -41,6 +46,9 @@ class File
   class hyEdge
   {
    public:
+    /*!*********************************************************************************************
+     * \brief   Number of hypernodes per hyperedge.
+     **********************************************************************************************/
     static constexpr unsigned int n_hyNodes() { return 2 * hyEdge_dimT; }
 
    private:
@@ -103,21 +111,10 @@ class File
  public:
   /*!***********************************************************************************************
    * \brief   Defines the return value of the class.
-   *
-   * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
-   * different hyperedges (that actually are constructed everytime access is needed from e.g. the
-   * solver class). Thus, its main purpose is to provide a structure that administrates the
-   * hyperedges that are the return value of this structure.
    ************************************************************************************************/
   typedef hyEdge value_type;
   /*!***********************************************************************************************
    * \brief   Defines the value type of input argument for standard constructor.
-   *
-   * To receive a very general \c AbstractProblem, constructors need to account for the fact that
-   * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
-   * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
-   * topology is by default constructed by a std::vector that contains amounts of elements in the
-   * different dimensions.
    ************************************************************************************************/
   typedef std::string constructor_value_type;
   /*!***********************************************************************************************
@@ -143,12 +140,6 @@ class File
   /*!***********************************************************************************************
    * \brief   Get topological hyperedge of given index.
    *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> This is not really a large object, is it? I mean, it only consists of a reference
-   *        and an index. I do not really see the advantage of returning a shared pointer. Does
-   *        it make any difference, here?
-   *
    * This is equivalent to \c get_hyEdge.
    *
    * \param   index           The index of the hyperedge to be returned.
@@ -163,7 +154,7 @@ class File
    * \param   index           The index of the hyperedge to be returned.
    * \retval  hyperedge       Topological information on the hyperedge (cf. \c value_type).
    ************************************************************************************************/
-  value_type get_hyEdge(const hyEdge_index_t index) const
+  const value_type get_hyEdge(const hyEdge_index_t index) const
   {
     hy_assert(index < domain_info_.n_hyEdges && index >= 0,
               "Index must be non-negative and smaller than "
@@ -172,21 +163,21 @@ class File
     return hyEdge(*this, index);
   }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hyperedges making up the hypergraph.
+   * \brief   Return the number of hyperedges making up the hypergraph.
    *
    * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges() const { return domain_info_.n_hyEdges; }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hypernodes making up the hypergraph.
+   * \brief   Return the number of hypernodes making up the hypergraph.
    *
    * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
    ************************************************************************************************/
   const hyNode_index_t n_hyNodes() const { return domain_info_.n_hyNodes; }
   /*!***********************************************************************************************
-   * \brief   Returns the whole domain info related to a hypergraph.
+   * \brief   Return the whole domain info related to a hypergraph.
    *
-   * \retval  domain_indo     Const reference to domain info.
+   * \retval  domain_info     Const reference to domain info.
    ************************************************************************************************/
   const DomainInfo<hyEdge_dimT,
                    space_dimT,
