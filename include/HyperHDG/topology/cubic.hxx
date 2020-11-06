@@ -113,7 +113,7 @@ class Cubic
    *
    * A \c std::array comprising the number of elements in each spatial dimension.
    ************************************************************************************************/
-  const ConstructorVecT num_elements_;
+  const ConstructorVecT n_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
@@ -127,7 +127,7 @@ class Cubic
    *
    * The number of hyperedges that form the hypergraph. This information is needed to allow to go
    * through all hyperedges and execute some code. The number of hyperedges can be computed from
-   * the \c std::array \c num_elements_.
+   * the \c std::array \c n_elements_.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges_;
   /*!***********************************************************************************************
@@ -135,7 +135,7 @@ class Cubic
    *
    * The number of hypernodes that make up the hypergraph. This information is needed to have the
    * appropriate version of a \c HyperNodeFactory. It can be vomputed from the \c std::array
-   * \c num_elements_.
+   * \c n_elements_.
    ************************************************************************************************/
   const hyNode_index_t n_hyNodes_;
 
@@ -170,11 +170,11 @@ class Cubic
    * \todo    If the vector is too short, an error is thrown in the test program and the behavior
    *          is undefined for Python (most likely an error is thrown, too) at the moment.
    *
-   * \param   num_elements    A \c std::vector containing number of elements per dimension.
+   * \param   n_elements    A \c std::vector containing number of elements per dimension.
    ************************************************************************************************/
-  Cubic(const constructor_value_type& num_elements)
-  : num_elements_(num_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
+  Cubic(const constructor_value_type& n_elements)
+  : n_elements_(n_elements),
+    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
     tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
     n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
     n_hyNodes_(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
@@ -190,7 +190,7 @@ class Cubic
    * \param   other           Hypergraph to be copied.
    ************************************************************************************************/
   Cubic(const Cubic<hyEdge_dimT, space_dimT>& other)
-  : num_elements_(other.num_elements_),
+  : n_elements_(other.n_elements_),
     tpcc_elements_(other.tpcc_elements_),
     tpcc_faces_(other.tpcc_faces_),
     n_hyEdges_(other.n_hyEdges_),
@@ -222,9 +222,9 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Read the array of elements per dimensions.
    *
-   * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
+   * \retval  n_elements    A \c std::array containing the elements in the repective dimension.
    ************************************************************************************************/
-  const ConstructorVecT& num_elements() const { return num_elements_; }
+  const ConstructorVecT& n_elements() const { return n_elements_; }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/

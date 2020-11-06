@@ -18,7 +18,7 @@ problem = "GlobalLoop::Elliptic < Topology::Cubic< 1, 3 >, " \
          +                  "NodeDescriptor::Cubic< 1, 3 >, " \
          +                  "LocalSolver::DiffusionUniform < 1, 1, 2 * 1 > " \
          +                ">"
-filenames = [ "HyperHDG/geometry/cubic.hxx" , \
+filenames = [ "HyperHDG/geometry/unit_cube.hxx" , \
               "HyperHDG/node_descriptor/cubic.hxx" , \
               "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx" ]
 

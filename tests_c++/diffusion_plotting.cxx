@@ -1,4 +1,4 @@
-#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
