@@ -103,7 +103,7 @@ struct Gaussian
    * a one-dimensional unit interval \f$[0,1]\f$.
    *
    * \tparam  max_quad_degree     Desired degree of accuracy.
-   * \tparam  return_t        Floating type specification. Default is double.
+   * \tparam  return_t            Floating type specification. Default is double.
    * \retval  quad_weights        \c std::array containing the quadrature weights.
    *
    * \authors   Guido Kanschat, Heidelberg University, 2020.
@@ -162,8 +162,7 @@ struct Gaussian
 /*!*************************************************************************************************
  * \brief   Calculate the amount of quadrature points.
  *
- * \tparam  quadrature_t        The quadrature rule applied.
- *
+ * \tparam  quadrature_t      The quadrature rule applied.
  * \param   max_quad_degree   Desired degree of accuracy.
  * \param   local_dimensions  Dimension of the underlying domain. Defaullt is one.
  * \retval  n_quad_points     Amount of needed quadrature points.
@@ -403,7 +402,7 @@ class IntegratorTensorial
     return result;
   }
   /*!***********************************************************************************************
-   * \brief   Integrate product of one-dimensional shape function and one derivative.
+   * \brief   Integrate product of two one-dimensional shape functions' derivatives.
    *
    * \param   i             Local index of local one-dimensional shape function (with derivative).
    * \param   j             Local index of local one-dimensional shape function (with derivative).
@@ -421,7 +420,7 @@ class IntegratorTensorial
     return result;
   }
   /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional volume.
+   * \brief   Integrate product of shape functions over dimT-dimensional unit volume.
    *
    * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function.
@@ -439,7 +438,7 @@ class IntegratorTensorial
     return integral;
   }
   /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional volume.
+   * \brief   Integrate product of shape function amd derivative over dimT-dimensional unit volume.
    *
    * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function.
@@ -463,7 +462,7 @@ class IntegratorTensorial
     return integral;
   }
   /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional volume.
+   * \brief   Integrate product of shape function and derivative over dimT-dimensional unit volume.
    *
    * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function (with derivative).
@@ -538,16 +537,15 @@ class IntegratorTensorial
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
     return integral;
   }
-
   /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional volume.
+   * \brief   Integrate product of shape functions times some function over some geometry.
    *
-   * \tparam  dimT          Dimension of the volume.
-   * \tparam  func          Function the is also to be integrated;
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function that is also to be integrated.
    * \param   i             Local index of local shape function.
    * \param   j             Local index of local shape function.
    * \param   geom          Geometrical information.
-   * \param   time          Time.
+   * \param   time          Time at which function is evaluated.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
   template <typename GeomT,
@@ -581,7 +579,15 @@ class IntegratorTensorial
     }
     return integral * geom.area();
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \param   i             Local index of local shape function.
+   * \param   j             Local index of local shape function.
+   * \param   geom          Geometrical information.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT>
   return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j, GeomT& geom) const
   {
@@ -593,7 +599,17 @@ class IntegratorTensorial
       integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
     return integral * geom.area();
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of linear combinations of shape functions over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  array_size    Size of arrays containing coefficients of linear combinations.
+   * \tparam  floating_t    The floating point type for the calculation.
+   * \param   is            Coefficients of local shape functions.
+   * \param   js            Coefficients of local shape functions.
+   * \param   geom          Geometrical information.
+   * \retval  integral      Integral of product of lineat combinations of shape functions.
+   ************************************************************************************************/
   template <typename GeomT, std::size_t array_size, typename floating_t>
   return_t integrate_vol_phiphi(const std::array<floating_t, array_size>& is,
                                 const std::array<floating_t, array_size>& js,
@@ -623,14 +639,21 @@ class IntegratorTensorial
           val_helper *= shape_fcts_at_quad_[dec_k[dim]][dec_q[dim]];
         is_val += is[k] * val_helper;
         js_val += js[k] * val_helper;
-        //   std::cout << shape_fcts_at_quad_[dec_k[0]][dec_q[0]] << " " << dec_k[0] << std::endl;
-        //   std::cout << is[k] << " " << js[k] << " " << val_helper << std::endl;
       }
       integral += quad_val * is_val * js_val;
     }
     return integral * geom.area();
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of shape function times some function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Function whose product with shape function is integrated.
+   * \param   i             Local index of local shape function.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT,
             return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
   return_t integrate_vol_phifunc(const unsigned int i, GeomT& geom, const return_t time = 0.) const
@@ -656,7 +679,16 @@ class IntegratorTensorial
     }
     return integral * geom.area();
   }
-
+  /*!***********************************************************************************************
+   * \brief   Average integral of product of shape function times some function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Function whose product with shape function is integrated.
+   * \param   i             Local index of local shape function.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT,
             return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
   return_t integrate_volUni_phifunc(const unsigned int i,
@@ -684,7 +716,15 @@ class IntegratorTensorial
     }
     return integral;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate gradient of shape function times other shape function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \param   i             Local index of local shape function with gradient.
+   * \param   j             Local index of local shape function.
+   * \param   geom          Geometrical information.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT>
   SmallVec<GeomT::hyEdge_dim(), return_t> integrate_vol_nablaphiphi(const unsigned int i,
                                                                     const unsigned int j,
@@ -707,7 +747,16 @@ class IntegratorTensorial
         mat_r_transposed(i, j) = geom.mat_r().operator()(j, i);
     return geom.area() * integral / mat_r_transposed;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions over boundary face.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \param   i             Local index of local shape function.
+   * \param   j             Local index of local shape function.
+   * \param   bdr           Boundary face index.
+   * \param   geom          Geometrical information.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT>
   return_t integrate_bdr_phiphi(const unsigned int i,
                                 const unsigned int j,
@@ -727,7 +776,16 @@ class IntegratorTensorial
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
     return integral * geom.face_area(bdr);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions of volumen and skeletal over boundary face.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \param   i             Local index of local volumne shape function.
+   * \param   j             Local index of local skeletal shape function.
+   * \param   bdr           Boundary face index.
+   * \param   geom          Geometrical information.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT>
   return_t integrate_bdr_phipsi(const unsigned int i,
                                 const unsigned int j,
@@ -747,7 +805,17 @@ class IntegratorTensorial
         integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
     return integral * geom.face_area(bdr);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions times some function over boundary face.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function that is multiplied by shape function.
+   * \param   i             Local index of local shape function.
+   * \param   bdr           Boundary face index.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which the function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT,
             return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
   return_t integrate_bdr_phifunc(const unsigned int i,
@@ -820,7 +888,17 @@ class IntegratorTensorial
     }
     return integral;
   }*/
-
+  /*!***********************************************************************************************
+   * \brief   Average integral of product of skeletal shape functions times some function.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function that is multiplied by shape function.
+   * \param   i             Local index of local shape function.
+   * \param   bdr           Boundary face index.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which the function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
   template <typename GeomT,
             return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
   return_t integrate_bdrUni_psifunc(const unsigned int i,
@@ -855,7 +933,16 @@ class IntegratorTensorial
     }
     return integral;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Squared L2 distance of some function and an discrete function on volume.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function whose distance is measured.
+   * \param   coeffs        Coefficients of discrete function.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which the function is evaluated.
+   * \retval  integral      Squared distance of functions.
+   ************************************************************************************************/
   template <typename GeomT,
             return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t),
             std::size_t n_coeff>
