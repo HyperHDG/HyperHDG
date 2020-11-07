@@ -11,29 +11,14 @@
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
- * \brief   This is an abstract example problem class.
+ * \brief   Combine local solver and global information for parabolic problems.
  *
- * This file provides an ParabolicLoop class defining an abstract problem. This abstract problem
- * serves as one possible, simple interface to Python. At the moment, it can be used to quickly
- * prototype testcases and others.
- *
- * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
- *        solvers, right? Dirichlet boundary conditions? Post filtering!
- *        -> A: I believe that we have to discuss, how to do this best. Note that the now, there is
- *        a for_each loop (cf. HDGHyperGraph.hxx)!
- *
- * \todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
- *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
- *        -> A: This is the case already. I do not really see the difference.
- *
- * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
- *        (With explanation, I mean this definition and the following function explanations, etc.)
- *        -> A: Agreed.
- *
- * \tparam  TopologyT     Class type containing topological information.
- * \tparam  GeometryT     Class type containing geometrical information.
- * \tparam  LocalSolverT  Class type of the local solver.
- * \tparam  dof_index_t   Index type of hyperedges. Default is \c unsigned \c int.
+ * \tparam  TopologyT       Class type containing topological information.
+ * \tparam  GeometryT       Class type containing geometrical information.
+ * \tparam  NodeDescriptorT Class type containing the information of nodes of hyperedges.
+ * \tparam  LocalSolverT    Class type of the local solver.
+ * \tparam  LargeVecT       Clas type of large, global vector.
+ * \tparam  dof_index_t     Index type of hyperedges. Default is \c unsigned \c int.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -46,6 +31,9 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class Parabolic
 {
+  /*!***********************************************************************************************
+   * \brief   Floating type is determined by floating type of large vector's entries.
+   ************************************************************************************************/
   using dof_value_t = typename LargeVecT::value_type;
 
  private:
@@ -134,21 +122,21 @@ class Parabolic
    * Returns a vector containing only the value zero, but of the size \f$n\f$ which is also the
    * number which is returned if \c size_of_system() is evaluated.
    *
-   * \retval  zero          A \c std::vector of the correct size for the unknowns of the given
-   *                        problem.
+   * \retval  zero          A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
   LargeVecT return_zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
    * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method that needs to be
+   * inverted for a time step, \f$x\f$ is the vector of parameters to define the skeletal variable
+   * \f$\lambda\f$, and \f$y\f$ is the resulting vector, which has the same size as the input vector
+   * \f$x\f$.
    *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time at which the new time step will end.
+   * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t time = 0.)
@@ -190,13 +178,14 @@ class Parabolic
    * \brief   Evaluate condensed matrix-vector product.
    *
    * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method that needs to be
+   * inverted to do a time step, \f$x\f$ is the vector of parameters to define the skeletal variable
+   * \f$\lambda\f$, and \f$y\f$ is the resulting vector, which has the same size as the input vector
+   * \f$x\f$.
    *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time at which the time step ends.
+   * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> total_flux_vector(const std::vector<dof_value_t>& x_vec,
@@ -239,16 +228,10 @@ class Parabolic
     return vec_Ax;
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate condensed matrix-vector product.
-   *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * \brief   Set data using the result of the old time step.
    *
    * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   time          Time at which the old time step ended.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   void set_data(const LargeVecT& x_vec, const dof_value_t time = 0.)
@@ -283,16 +266,11 @@ class Parabolic
     });
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate condensed matrix-vector product.
+   * \brief   Evaluate the initial flux of the problem.
    *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
-   *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time for initial data.
+   * \retval  y_vec         A vector containing the initial fluxes.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT initial_flux_vector(const LargeVecT& x_vec, const dof_index_t time = 0.)
@@ -334,14 +312,11 @@ class Parabolic
     return vec_Ax;
   }
   /*!***********************************************************************************************
-   * \brief   Calculate errors.
+   * \brief   Calculate L2 error.
    *
-   * Function that evaluates the global right-hand side (implemented wthin the local solver) and
-   * adds the result to the function argument.
-   *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  error         A \c std::vector containing the errors.
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time at which error is evaluated.
+   * \retval  error         L2 error.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   dof_value_t calculate_L2_error(const LargeVecT& x_vec, const dof_value_t time = 0.)
@@ -390,8 +365,7 @@ class Parabolic
    * This function is needed to define a \c LinearOperator from Python's \c scipy.sparse.linalg
    * package which can be used to define iterative solvers for sparse systems.
    *
-   * \retval  n             An \c int which Python needs and actually is a parsed \c unsigned
-   *                        \c int.
+   * \retval  n             Size of condensed system of equations.
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
   /*!***********************************************************************************************
@@ -414,10 +388,9 @@ class Parabolic
    * Function that plots the solution of the problem to a predefined file.
    *
    * \param   lambda        A vector of unknowns containing the data vector.
-   * \param   time          Time.
+   * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  template <typename dof_value_t>
   void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

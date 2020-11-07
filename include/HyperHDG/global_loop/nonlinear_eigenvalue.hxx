@@ -11,29 +11,14 @@
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
- * \brief   This is an abstract example problem class.
+ * \brief   Combine local solver and global information for nonlinear eigenvalue problems.
  *
- * This file provides an NonlinearEigenvalue class defining an abstract problem. This abstract
- *problem serves as one possible, simple interface to Python. At the moment, it can be used to
- *quickly prototype testcases and others.
- *
- * \todo  The loop in matrix_vector_multiply() only combines properties of HyperGraph with local
- *        solvers, right? Dirichlet boundary conditions? Post filtering!
- *        -> A: I believe that we have to discuss, how to do this best. Note that the now, there is
- *        a for_each loop (cf. HDGHyperGraph.hxx)!
- *
- * \todo  We should discuss, whether or not it makes sense to turn this class into an abstract class
- *        that receives a HyperGraph Topology, Geometry, and a LocalSolver as template parameters.
- *        -> A: This is the case already. I do not really see the difference.
- *
- * \todo  We should rewrite this explanation appropriately and think whether this is general enough.
- *        (With explanation, I mean this definition and the following function explanations, etc.)
- *        -> A: Agreed.
- *
- * \tparam  TopologyT     Class type containing topological information.
- * \tparam  GeometryT     Class type containing geometrical information.
- * \tparam  LocalSolverT  Class type of the local solver.
- * \tparam  dof_index_t   Index type of hyperedges. Default is \c unsigned \c int.
+ * \tparam  TopologyT       Class type containing topological information.
+ * \tparam  GeometryT       Class type containing geometrical information.
+ * \tparam  NodeDescriptorT Class type containing the information of nodes of hyperedges.
+ * \tparam  LocalSolverT    Class type of the local solver.
+ * \tparam  LargeVecT       Clas type of large, global vector.
+ * \tparam  dof_index_t     Index type of hyperedges. Default is \c unsigned \c int.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -131,17 +116,15 @@ class NonlinearEigenvalue
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * This function corresponds to the evaluation of the residual. Here, the vector contains the
+   * eigenfunction representation, while the floating point is the eigenvalue.
    *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         A vector containing the input vector.
+   * \param   eig           Eigenvalue.
+   * \retval  y_vec         A vector containing the residual.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -164,9 +147,9 @@ class NonlinearEigenvalue
                                                  2 * TopologyT::hyEdge_dim()>(
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, time);
+        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, eig);
       else
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyper_edge, time);
+        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyper_edge, eig);
 
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -179,16 +162,14 @@ class NonlinearEigenvalue
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * This function corresponds to evaluating the Jacobian at point \c x_val, \c eig_val in direction
+   * \c x_vec, \c eig.
    *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   eig           Eigenvalue.
-   * \param   x_val         X Value.
-   * \param   eig_val       Eigenvalue.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         Direction in which Jacobian is evaluated.
+   * \param   eig           Direction in which Jacobian is evaluated.
+   * \param   x_val         Point at which Jacobian is evaluated.
+   * \param   eig_val       Point at which Jacobian is evaluated.
+   * \retval  y_vec         Corresponds to directional derivative.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT matrix_vector_der_multiply(const LargeVecT& x_vec,
@@ -238,19 +219,14 @@ class NonlinearEigenvalue
     return vec_Ax;
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate condensed matrix-vector product.
+   * \brief   Create initial starting value for Newton's methods.
    *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
-   *
-   * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
-   * \param   time          Time.
-   * \retval  y_vec         A \c std::vector containing the product \f$y = Ax\f$.
+   * \param   x_vec         A vector containing the input vector \f$x\f$ which should be zero.
+   * \param   eig           Eigenvalue (approximation).
+   * \retval  y_vec         A vector containing initial flux vector.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT initial_flux_vector(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT initial_flux_vector(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -274,11 +250,11 @@ class NonlinearEigenvalue
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
       {
-        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, time);
+        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, eig);
       }
       else
       {
-        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, time);
+        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, eig);
       }
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -324,7 +300,6 @@ class NonlinearEigenvalue
    * \param   time          Time.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  template <typename dof_value_t>
   void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

@@ -16,9 +16,6 @@ using namespace SparseLA;
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
  *          solution obtained with the Python interface.
  *
- * \todo    Should we also add naive tests like checking whether return_zero_vector() returns vector
- *          of correct size only containing zeros?
- *
  * This function implements an alternative to Executable.py (which usses the Cython interface).
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
@@ -132,9 +129,6 @@ struct TestParameters
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
  *          solution obtained with the Python interface.
- *
- * \todo    Should we also add naive tests like checking whether return_zero_vector() returns vector
- *          of correct size only containing zeros?
  *
  * This function implements an alternative to Executable.py (which usses the Cython interface).
  *
@@ -251,9 +245,6 @@ struct TestParametersDir
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
  *          solution obtained with the Python interface.
- *
- * \todo    Should we also add naive tests like checking whether return_zero_vector() returns vector
- *          of correct size only containing zeros?
  *
  * This function implements an alternative to Executable.py (which usses the Cython interface).
  *
