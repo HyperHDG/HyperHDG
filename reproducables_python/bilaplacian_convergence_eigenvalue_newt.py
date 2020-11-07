@@ -58,7 +58,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
           + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
           + "LocalSolver::BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
           + str(2*poly_degree) + ",TestParametersEigs,double> >"
-  filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
+  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian_eigs_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]
 

@@ -1,4 +1,4 @@
-#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
@@ -44,9 +44,6 @@ struct TestParameters
 /*!*************************************************************************************************
  * \brief   Function that tests several aspects of the C++ implementation against a given reference
  *          solution obtained with the Python interface.
- *
- * \todo    Should we also add naive tests like checking whether return_zero_vector() returns vector
- *          of correct size only containing zeros?
  *
  * This function implements an alternative to Executable.py (which usses the Cython interface).
  *

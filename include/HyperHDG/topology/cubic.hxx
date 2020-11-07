@@ -24,6 +24,8 @@ namespace Topology
  * \tparam  NodeIncesVecT   The vector type of an array containing the node indices of an hyperedge.
  * \tparam  ConstructorVecT The vector type of the constructor.
  * \tparam  hyEdge_index_t  The index type of an hyperedge.
+ * \tparam NodeOrientationT The class type that encodes the orientation of the hypernodes with
+ *                          respect to a given hyperedge.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -48,21 +50,15 @@ class Cubic
    private:
     /*!*********************************************************************************************
      * \brief   Indices of the hypernodes adjacent to the hyperedge.
-     *
-     * A \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
      **********************************************************************************************/
     NodeIndexVecT hyNode_indices_;
 
    public:
     /*!*********************************************************************************************
-     * \brief   Construct a cubic hyperedge from its index and a \c std::array of elements in each
-     *          spatial dimension.
+     * \brief   Construct a cubic hyperedge from its index and a the global topology class.
      *
-     * Constructs a hyperedge from a \c std::array containing the elementens per spatial dimension
-     * which is given as input data and the index of the hyperedge to be constructed.
-     *
-     * \param   index           The index of the hyperedge to be created.
-     * \param   topology        A cubic topology.
+     * \param   index               The index of the hyperedge to be created.
+     * \param   topology            A cubic topology.
      **********************************************************************************************/
     hyEdge(const hyEdge_index_t index, const Cubic& topology)
     {
@@ -79,9 +75,7 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Return indices of hypernodes adjacent to the hyperedge.
      *
-     * Return a \c std::array comprising the indices of the hypernodes adjacent to a hyperedge.
-     *
-     * \retval  hypernode_indeices  Topological information on the hyperedge (cf. \c value_type).
+     * \retval  hypernode_indices   Topological information on the hyperedge (cf. \c value_type).
      **********************************************************************************************/
     const NodeIndexVecT& get_hyNode_indices() const { return hyNode_indices_; }
     /*!*********************************************************************************************
@@ -95,25 +89,23 @@ class Cubic
 
  public:
   /*!***********************************************************************************************
-   * \brief   Returns the template parameter representing the dimension of a hyperedge.
+   * \brief   Return the template parameter representing the dimension of a hyperedge.
    *
-   * \retval  hyEdge_dimT   The dimension of a hyperedge.
+   * \retval  hyEdge_dimT     The dimension of a hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; };
   /*!***********************************************************************************************
-   * \brief   Returns the template parameter representing the dimension of the space.
+   * \brief   Return the template parameter representing the dimension of the space.
    *
-   * \retval  space_dimT       The dimension of the space.
+   * \retval  space_dimT      The dimension of the space.
    ************************************************************************************************/
   static constexpr unsigned int space_dim() { return space_dimT; };
 
  private:
   /*!***********************************************************************************************
    * \brief   Number of elements per spatial dimension.
-   *
-   * A \c std::array comprising the number of elements in each spatial dimension.
    ************************************************************************************************/
-  const ConstructorVecT num_elements_;
+  const ConstructorVecT n_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
@@ -124,73 +116,44 @@ class Cubic
   const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges.
-   *
-   * The number of hyperedges that form the hypergraph. This information is needed to allow to go
-   * through all hyperedges and execute some code. The number of hyperedges can be computed from
-   * the \c std::array \c num_elements_.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges_;
   /*!***********************************************************************************************
    * \brief   Total amount of hypernodes.
-   *
-   * The number of hypernodes that make up the hypergraph. This information is needed to have the
-   * appropriate version of a \c HyperNodeFactory. It can be vomputed from the \c std::array
-   * \c num_elements_.
    ************************************************************************************************/
   const hyNode_index_t n_hyNodes_;
 
  public:
   /*!***********************************************************************************************
-   * \brief   Defines the return value of the class.
-   *
-   * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
-   * different hyperedges (that actually are constructed everytime access is needed from e.g. the
-   * solver class). Thus, its main purpose is to provide a structure that administrates the
-   * hyperedges that are the return value of this structure.
+   * \brief   Define the return value of the class.
    ************************************************************************************************/
   typedef hyEdge value_type;
   /*!***********************************************************************************************
-   * \brief   Defines the value type of input argument for standard constructor.
-   *
-   * To receive a very general \c AbstractProblem, constructors need to account for the fact that
-   * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
-   * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
-   * topology is by default constructed by a std::vector that contains amounts of elements in the
-   * different dimensions.
+   * \brief   Define the value type of input argument for standard constructor.
    ************************************************************************************************/
   typedef ConstructorVecT constructor_value_type;
   /*!***********************************************************************************************
-   * \brief   Construct a cubic hypergraph from a \c std::vector.
+   * \brief   Construct a cubic hypergraph.
    *
-   * Constructs a hypergraph from a \c std::vector containing the elementens per spatial dimension
-   * which is given as input data. If the input vector is shorter that \c space_dimT, the
-   * remaining amounts of elemnts are assumed to be equal to zero. If the vector is longer than
-   * \c space_dimT, the first \c space_dimT entries are considered only.
-   *
-   * \todo    If the vector is too short, an error is thrown in the test program and the behavior
-   *          is undefined for Python (most likely an error is thrown, too) at the moment.
-   *
-   * \param   num_elements    A \c std::vector containing number of elements per dimension.
+   * \param   n_elements      A vector / array containing number of elements per dimension.
    ************************************************************************************************/
-  Cubic(const constructor_value_type& num_elements)
-  : num_elements_(num_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(num_elements)),
+  Cubic(const constructor_value_type& n_elements)
+  : n_elements_(n_elements),
+    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
     tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
     n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
     n_hyNodes_(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
   {
   }
   /*!***********************************************************************************************
-   * \brief   Construct a hypergraph from another hypergraph.
-   *
-   * \todo    Guido: If possible, this function computes the amount of hyperedges and hypernodes.
+   * \brief   Construct a hypergraph topology from another hypergraph topology.
    *
    * Create a (value based) copy of another hypergraph.
    *
    * \param   other           Hypergraph to be copied.
    ************************************************************************************************/
   Cubic(const Cubic<hyEdge_dimT, space_dimT>& other)
-  : num_elements_(other.num_elements_),
+  : n_elements_(other.n_elements_),
     tpcc_elements_(other.tpcc_elements_),
     tpcc_faces_(other.tpcc_faces_),
     n_hyEdges_(other.n_hyEdges_),
@@ -199,10 +162,6 @@ class Cubic
   }
   /*!***********************************************************************************************
    * \brief   Get topological hyperedge of given index.
-   *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> AR: I do not really see the point, but might just be stupid ;)
    *
    * This function returns the hyperedge of the given index, i.e., it returns the topological
    * hyperedge (\b not the geometrical information). The topological informatiom comprises the
@@ -222,31 +181,31 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Read the array of elements per dimensions.
    *
-   * \retval  num_elements    A \c std::array containing the elements in the repective dimension.
+   * \retval  n_elements      A vector / arary containing the elements in the repective dimension.
    ************************************************************************************************/
-  const ConstructorVecT& num_elements() const { return num_elements_; }
+  const ConstructorVecT& n_elements() const { return n_elements_; }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elem() const
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t>& tpcc_elem() const
   {
     return tpcc_elements_;
   }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_face() const
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t>& tpcc_face() const
   {
     return tpcc_faces_;
   }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hyperedges making up the hypergraph.
+   * \brief   Return the number of hyperedges making up the hypergraph.
    *
    * \retval  n_hyperedges    The total amount of hyperedges of a hypergraph.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges() const { return n_hyEdges_; }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hypernodes making up the hypergraph.
+   * \brief   Return the number of hypernodes making up the hypergraph.
    *
    * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
    ************************************************************************************************/

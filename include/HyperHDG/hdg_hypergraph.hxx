@@ -136,7 +136,7 @@ class HDGHyperGraph
      * Construct \c HDGHyperGraph::iterator by passing over an \c HDGHyperGraph object and the
      * index the iterator is supposed to dot at.
      *
-     * \param   hyGraph    The \c HDGHyperGraph, the iterator refers to.
+     * \param   hyGraph       The \c HDGHyperGraph, the iterator refers to.
      * \param   index         Index of the object, the iterator dots at.
      **********************************************************************************************/
     iterator(HDGHyperGraph& hyGraph, const hyEdge_index_t index) : hyGraph_(hyGraph), index_(index)
@@ -309,11 +309,7 @@ class HDGHyperGraph
 
  public:
   /*!***********************************************************************************************
-   * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
-   *
-   * \todo Where does an HDGHyperGraph constructed like this get its geometry from?
-   *
-   * \todo Do not put "\c" in front of class names
+   * \brief   Construct HDGHyperGraph from \c constructor_value_type.
    *
    * This is one of two standard ways of constructing a hypergraph.
    * That is, a hypergraph is constructed by providing the necessary data in form of the
@@ -343,7 +339,7 @@ class HDGHyperGraph
                 << "consists of " << hyGraph_topology_->n_hyEdges() << " hyperedges.");
   }
   /*!***********************************************************************************************
-   * \brief   Construct \c HDGHyperGraph from \c constructor_value_type.
+   * \brief   Construct HDGHyperGraph from \c constructor_value_type.
    *
    * This is one of two standard ways of constructing a hypergraph.
    * That is, a hypergraph is constructed by providing the necessary data to construct its
@@ -409,15 +405,12 @@ class HDGHyperGraph
                 << "consists of " << hyGraph_topology_->n_hyEdges() << " hyperedges.");
   }
   /*!***********************************************************************************************
-   * \brief   Subscript operator of a \c HDGHyperGraph.
-   *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
+   * \brief   Subscript operator of a HDGHyperGraph.
    *
    * The subscript operator takes an index referring to an hyperedge and returns the respective
-   * \c hyEdge containing its topological and geometrical information. Thus, this operator can
-   * be bypassed by using the functions \c hyEdge_topology (only returning the topological
-   * data) and \c hyEdge_geometry (ony returning the geometrical data).
+   * hyEdge containing its topological and geometrical information. Thus, this operator can be
+   * bypassed by using the functions \c hyEdge_topology (only returning the topological data) and
+   * hyEdge_geometry (ony returning the geometrical data).
    *
    * \param   index                 Index of the \c hyEdge to be returned.
    * \retval  hyEdge             The \c hyEdge of the given index.
@@ -428,11 +421,10 @@ class HDGHyperGraph
                       hyEdge_data(index));
   }
   /*!***********************************************************************************************
-   * \brief   Return iterator to first \c hyEdge of \c HDGHyperGraph.
+   * \brief   Return iterator to first hyEdge of HDGHyperGraph.
    *
-   * This function returns an \c HDGHyperGraph::iterator that refers to the first \c hyEdge of
-   * the hypergraph (index = 0). Thus, it can be used to mark the starting point in \c for_each
-   * loops.
+   * This function returns an HDGHyperGraph::iterator that refers to the first \c hyEdge of the
+   * hypergraph (index = 0). Thus, it can be used to mark the starting point in \c for_each loops.
    *
    * \retval  hyEdge             Iterator referring to first \c hyEdge.
    ************************************************************************************************/
@@ -443,12 +435,12 @@ class HDGHyperGraph
       *this, 0);
   }
   /*!***********************************************************************************************
-   * \brief   Return iterator to the end of \c hyEdge list.
+   * \brief   Return iterator to the end of hyEdge list.
    *
-   * This function returns an \c HDGHyperGraph::iterator that refers to the position of an (non-
+   * This function returns an HDGHyperGraph::iterator that refers to the position of an (non-
    * existing) \c hyEdge of the hypergraph (index = n_hyEdges), i.e., the position  directly
-   * after the last valid entry of the \c HDGHyperGraph. Thus, it can be used to mark the ending
-   * point in \c for_each loops.
+   * after the last valid entry of the HDGHyperGraph. Thus, it can be used to mark the ending point
+   * in \c for_each loops.
    *
    * \retval  hyEdge             Iterator referring to position behind last \c hyEdge.
    ************************************************************************************************/
@@ -461,13 +453,8 @@ class HDGHyperGraph
   /*!***********************************************************************************************
    * \brief   Return const reference to HyperNodeFactory.
    *
-   * \todo    Why is this public? Why not get_hypernode()?
-   *          -> Because a hypernode would have several functions and we decided not to introduce
-   *          a hypernode class, but to only have a hypernode factory covering all those aspects.
-   *          What we could do is to repeat all functions of the hypernode_factory in this class.
-   *
    * This function returns an \c HyperNodeFactory handling the access to the degrees of freedom
-   * encoded in some \c std::vector.
+   * encoded in some vector type.
    *
    * \retval  hypernode_factory     The \c HyperNodeFactory belonging the hypergraph.
    ************************************************************************************************/
@@ -478,17 +465,12 @@ class HDGHyperGraph
   /*!***********************************************************************************************
    * \brief   Topological information of prescribed hyperedge.
    *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
-   *        object then?
-   *
    * Return the topological information of a specific hyperedge identified via its index. This
    * function can be used to bypass the subscript operator which returns topological and geometric
    * information about a hyperedge of given index.
    *
    * \param   index                 Index of the hyperedge to be returned.
-   * \retval  hyEdge_topology    Topological information about hyperedge.
+   * \retval  hyEdge_topology       Topological information about hyperedge.
    ************************************************************************************************/
   const typename TopoT::value_type hyEdge_topology(const hyEdge_index_t index) const
   {
@@ -497,17 +479,12 @@ class HDGHyperGraph
   /*!***********************************************************************************************
    * \brief   Geometrical information of prescribed hyperedge.
    *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
-   *        object then?
-   *
    * Return the geometrical information of a specific hyperedge identified via its index. This
    * function can be used to bypass the subscript operator which returns topological and geometric
    * information about a hyperedge of given index.
    *
    * \param   index                 Index of the hyperedge to be returned.
-   * \retval  hyEdge_geometry    Geometrical information about hyperedge.
+   * \retval  hyEdge_geometry       Geometrical information about hyperedge.
    ************************************************************************************************/
   const typename GeomT::value_type hyEdge_geometry(const hyEdge_index_t index) const
   {
@@ -516,42 +493,28 @@ class HDGHyperGraph
   /*!***********************************************************************************************
    * \brief   Nodal information of prescribed hyperedge.
    *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
-   *        object then?
-   *
-   * \todo  All
-   *
    * \param   index                 Index of the hyperedge to be returned.
-   * \retval  hyEdge_geometry    Geometrical information about hyperedge.
+   * \retval  hyEdge_nodedescriptor Node types of nodes of a hyperedge.
    ************************************************************************************************/
   const typename NodeT::value_type hyNode_descriptor(const hyEdge_index_t index) const
   {
     return hyGraph_node_des_->operator[](index);
   }
   /*!***********************************************************************************************
-   * \brief   Nodal information of prescribed hyperedge.
-   *
-   * \todo  Here, we repeatedly return a large object. This is done since the object could be
-   *        locally created in regular topologies/geometries! Return shared-pointer?
-   *        -> I do not see the advanatge of that. Do we not just return a pointer to a large
-   *        object then?
-   *
-   * \todo  All
+   * \brief   Data of prescribed hyperedge.
    *
    * \param   index                 Index of the hyperedge to be returned.
-   * \retval  hyEdge_geometry    Geometrical information about hyperedge.
+   * \retval  hyEdge_data           The data saved with respect to a hyperede.
    ************************************************************************************************/
   DataT& hyEdge_data(const hyEdge_index_t index) { return hyData_cont_.operator[](index); }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hyperedges making up the hypergraph.
+   * \brief   Return the number of hyperedges making up the hypergraph.
    *
-   * \retval  n_hyEdges          The total amount of hyperedges of a hypergraph.
+   * \retval  n_hyEdges             The total amount of hyperedges of a hypergraph.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges() const { return hyGraph_topology_->n_hyEdges(); }
   /*!***********************************************************************************************
-   * \brief   Returns the number of hypernodes making up the hypergraph.
+   * \brief   Return the number of hypernodes making up the hypergraph.
    *
    * \retval  n_hypernodes          The total amount of hypernodes of a hypergraph.
    ************************************************************************************************/

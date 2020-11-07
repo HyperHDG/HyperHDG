@@ -1,4 +1,4 @@
-#include <HyperHDG/geometry/cubic.hxx>
+#include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/local_solver/template.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/plot.hxx>

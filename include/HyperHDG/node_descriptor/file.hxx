@@ -10,17 +10,8 @@ namespace NodeDescriptor
 /*!*************************************************************************************************
  * \brief   Hypergraph topology based on an input file.
  *
- * The topology class File is a set of hyperedges. Each of these tensorial hyperedges is represented
- * by its hypernodes (given within the file). For consistency, it is assumed that the vertices and
- * the hypernodes are assumed to be given in lexicographical order to ensure that geometry and
- * topology of all hyperedges fit.
- *
- * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
- *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
- *                          be larger than or equal to hyEdge_dimT.
- * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
- * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyEdge_index_t.
+ * The node descriptor class of a hypergraph which is read from a file. Thus, this class uses the
+ * file's information on hypernode types and returns them.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -35,18 +26,18 @@ template <unsigned int hyEdge_dimT,
 class File
 {
   /*!***********************************************************************************************
-   * \brief   Definition of the topology of a hypergraph's edges.
+   * \brief   Definition of the node types of a hypergraph's edges.
    ************************************************************************************************/
   class hyEdge
   {
    public:
     static constexpr unsigned int n_hyNodes() { return 2 * hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Returns dimension of the hyperedge.
+     * \brief   Return dimension of the hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Returns dimension of the surrounding space.
+     * \brief   Return dimension of the surrounding space.
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
 
@@ -69,12 +60,15 @@ class File
     {
     }
     /*!*********************************************************************************************
-     * \brief   Return hypernodes of a hyperedge.
+     * \brief   Return hypernode types of the \c hyEdge.
      **********************************************************************************************/
     const auto& get_hyFaces_types() const
     {
       return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_];
     }
+    /*!*********************************************************************************************
+     * \brief   Return hypernode type of given index.
+     **********************************************************************************************/
     const unsigned int operator[](const unsigned int index) const
     {
       return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_][index];
@@ -105,29 +99,17 @@ class File
 
  public:
   /*!***********************************************************************************************
-   * \brief   Defines the return value of the class.
-   *
-   * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
-   * different hyperedges (that actually are constructed everytime access is needed from e.g. the
-   * solver class). Thus, its main purpose is to provide a structure that administrates the
-   * hyperedges that are the return value of this structure.
+   * \brief   Define the return value of the class.
    ************************************************************************************************/
   typedef hyEdge value_type;
   /*!***********************************************************************************************
    * \brief   Defines the value type of input argument for standard constructor.
-   *
-   * \todo    Doxygen
    ************************************************************************************************/
   typedef Topology::
     File<hyEdge_dimT, space_dimT, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
       constructor_value_type;
   /*!***********************************************************************************************
-   * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
-   *
-   * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per
-   * spatial dimension which is given as by its topology.
-   *
-   * \param   topology     The topology of the hypergraph that has the geometry of the unit cube.
+   * \brief   Construct a node descriptor from a file topology.
    ************************************************************************************************/
   File(const constructor_value_type& topology) : domain_info_(topology.domain_info()) {}
   /*!***********************************************************************************************
@@ -145,21 +127,11 @@ class File
   }
 
   /*!***********************************************************************************************
-   * \brief   Get geometrical hyperedge of given index.
-   *
-   * \todo    Doxygen
-   *
-   * \param   index       The index of the hyperedge to be returned.
-   * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
+   * \brief   Return hyperegde of given index.
    ************************************************************************************************/
   value_type operator[](const hyEdge_index_t index) const { return get_hyEdge(index); }
   /*!***********************************************************************************************
-   * \brief   Get geometrical hyperedge of given index.
-   *
-   * \todo    Doxygen
-   *
-   * \param   index       The index of the hyperedge to be returned.
-   * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
+   * \brief   Return hyperedge of given index.
    ************************************************************************************************/
   value_type get_hyEdge(const hyEdge_index_t index) const
   {

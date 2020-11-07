@@ -15,7 +15,8 @@ struct Legendre
    * Evaluates the value of the \c index orthonormal, one-dimensional shape function on the
    * reference interval \f$[0,1]\f$ at abscissa \c x_val.
    *
-   * \tparam  lSol_float_t        Floating type specification. Default is double.
+   * \tparam  return_t            Floating type specification for return value.
+   * \tparam  input_t             Floating type specification for input value.
    * \param   index               Index of evaluated shape function.
    * \param   x_val               Abscissa of evaluated shape function.
    * \retval  fct_value           Evaluated value of shape function.
@@ -64,7 +65,8 @@ struct Legendre
    * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional shape
    * function on the reference interval \f$[0,1]\f$ at abscissa \c x_val.
    *
-   * \tparam  lSol_float_t        Floating type specification. Default is double.
+   * \tparam  return_t            Floating type specification for return value.
+   * \tparam  input_t             Floating type specification for input value.
    * \param   index               Index of evaluated shape function.
    * \param   x_val               Abscissa of evaluated shape function.
    * \retval  fct_value           Evaluated value of shape function's derivative.
@@ -112,15 +114,16 @@ struct Legendre
 // Shape functions & their derivatives (evaluation):
 
 /*!*************************************************************************************************
- * \brief   Evaluate several values of one orthonormal shape function.
+ * \brief   Evaluate value of one shape function.
  *
- * Evaluates several values of the \c index orthonormal, one-dimensional shape function on the
- * reference interval \f$[0,1]\f$ at abscissas \c x_val.
+ * Evaluates value of the \c index one-dimensional shape function on the reference interval
+ * \f$[0,1]\f$ at abscissas \c x_val.
  *
- * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \param   index               Index of evaluated shape function.
- * \param   x_val               Abscissas of evaluated shape function.
+ * \param   x_val               Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
@@ -132,15 +135,16 @@ inline return_t shape_fct_eval(const unsigned int index, const input_t x_val)
   return shape_t::template shape_fct_eval<return_t>(index, x_val);
 }
 /*!*************************************************************************************************
- * \brief   Evaluate several values of the derivative of one orthonormal shape function.
+ * \brief   Evaluate values of the derivative of one shape function.
  *
- * Evaluates several values of the derivative of the \c index orthonormal, one-dimensional shape
- * function on the reference interval \f$[0,1]\f$ at abscissas \c x_val.
+ * Evaluates value of the derivative of the \c index one-dimensional shape function on the reference
+ * interval \f$[0,1]\f$ at abscissas \c x_val.
  *
- * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \param   index               Index of evaluated shape function.
- * \param   x_val               Abscissas of evaluated shape function.
+ * \param   x_val               Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function's derivative.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
@@ -153,13 +157,15 @@ inline return_t shape_der_eval(const unsigned int index, const input_t x_val)
 }
 
 /*!*************************************************************************************************
- * \brief   Evaluate several values of one orthonormal shape function.
+ * \brief   Evaluate several values of one shape function.
  *
- * Evaluates several values of the \c index orthonormal, one-dimensional shape function on the
- * reference interval \f$[0,1]\f$ at abscissas \c x_val.
+ * Evaluates several values of the \c index one-dimensional shape function on the reference interval
+ * \f$[0,1]\f$ at abscissas \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_val               Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
@@ -177,13 +183,15 @@ inline std::array<return_t, sizeX> shape_fct_eval(const unsigned int index,
   return result;
 }
 /*!*************************************************************************************************
- * \brief   Evaluate several values of the derivative of one orthonormal shape function.
+ * \brief   Evaluate several values of the derivative of one shape function.
  *
- * Evaluates several values of the derivative of the \c index orthonormal, one-dimensional shape
- * function on the reference interval \f$[0,1]\f$ at abscissas \c x_val.
+ * Evaluates several values of the derivative of the \c index one-dimensional shape function in the
+ * reference interval \f$[0,1]\f$ at abscissas \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Index of evaluated shape function.
  * \param   x_val               Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function's derivative.
@@ -201,13 +209,15 @@ inline std::array<return_t, sizeX> shape_der_eval(const unsigned int index,
   return result;
 }
 /*!*************************************************************************************************
- * \brief   Evaluate one value of several orthonormal shape function.
+ * \brief   Evaluate one value of several shape functions.
  *
- * Evaluates the value of the \c index orthonormal, one-dimensional shape functions on the reference
- * interval \f$[0,1]\f$ at abscissa \c x_val.
+ * Evaluate the value of the \c index one-dimensional shape functions on the reference interval
+ * \f$[0,1]\f$ at abscissa \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape functions.
  * \param   x_val               Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape function.
@@ -225,13 +235,15 @@ inline std::array<return_t, sizeInd> shape_fct_eval(const std::array<unsigned in
   return result;
 }
 /*!*************************************************************************************************
- * \brief   Evaluate one value of several orthonormal shape functions' derivatives.
+ * \brief   Evaluate one value of several shape functions' derivatives.
  *
- * Evaluates the value of the derivatives of \c index orthonormal, one-dimensional shape functions
- * on the reference interval \f$[0,1]\f$ at abscissa \c x_val.
+ * Evaluates the value of the derivatives of \c index one-dimensional shape functions on the
+ * reference interval \f$[0,1]\f$ at abscissa \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape functions.
  * \param   x_val               Abscissa of evaluated shape function.
  * \retval  fct_value           Evaluated value of shape functions' derivatives.
@@ -249,14 +261,16 @@ inline std::array<return_t, sizeInd> shape_der_eval(const std::array<unsigned in
   return result;
 }
 /*!*************************************************************************************************
- * \brief   Evaluate several values of several orthonormal shape functions.
+ * \brief   Evaluate several values of several shape functions.
  *
- * Evaluates the values of the \c index orthonormal, one-dimensional shape functions on the
- * reference interval \f$[0,1]\f$ at abscissas \c x_val.
+ * Evaluates the values of the \c index one-dimensional shape functions on the reference interval
+ * \f$[0,1]\f$ at abscissas \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
  * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape function.
  * \param   x_val               Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated values of shape functions.
@@ -279,14 +293,16 @@ inline std::array<std::array<return_t, sizeX>, sizeInd> shape_fct_eval(
   return result;
 }
 /*!*************************************************************************************************
- * \brief   Evaluate several values of several orthonormal shape functions' derivatives.
+ * \brief   Evaluate several values of several shape functions' derivatives.
  *
- * Evaluates the values of the \c index orthonormal, one-dimensional shape functions' derivatives on
+ * Evaluates the values of the \c index one-dimensional shape functions' derivatives on
  * the reference interval \f$[0,1]\f$ at abscissas \c x_val.
  *
+ * \tparam  return_t            Floating type specification for return value.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
+ * \tparam  input_t             Floating type specification for input value.
  * \tparam  sizeInd             Size of array of inidces of polynomial degrees.
  * \tparam  sizeX               Size of array of x values.
- * \tparam  lSol_float_t        Floating type specification. Default is double.
  * \param   index               Indices of evaluated shape function.
  * \param   x_val               Abscissas of evaluated shape function.
  * \retval  fct_value           Evaluated values of shape functions' derivatives.
@@ -310,12 +326,13 @@ inline std::array<std::array<return_t, sizeX>, sizeInd> shape_der_eval(
 }
 
 /*!*************************************************************************************************
- * \brief   Orthonormal shape functions evaluated at end points of unit interval.
+ * \brief   Shape functions evaluated at end points of unit interval.
  *
- * Returns the values of the orthonormal shape functions on \f$[0,1]\f$ of degree at most
+ * Returns the values of the shape functions on \f$[0,1]\f$ of degree at most
  * \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  *
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
  * \tparam  return_t            Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of
  *                              corner indices (the shape functions are evaluated at).
@@ -334,12 +351,13 @@ std::array<std::array<return_t, 2>, max_poly_degree + 1> shape_fcts_at_bdrs()
   return shape_fct_eval<return_t, shape_t>(poly_deg_index, bdrs);
 }
 /*!*************************************************************************************************
- * \brief   Derivatives of orthonormal shape functions evaluated at end points of unit interval.
+ * \brief   Derivatives of shape functions evaluated at end points of unit interval.
  *
- * Returns the values of the orthonormal shape functions' derivatives on \f$[0,1]\f$ of degree at
- * most \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
+ * Returns the values of the shape functions' derivatives on \f$[0,1]\f$ of degree at most
+ * \c max_poly_degree at the value \f$0\f$ (at index 0) and at \f$1\f$ (at index 1).
  *
  * \tparam  max_poly_degree     Maximum degree of evaluated polynomials.
+ * \tparam  shape_t             Type of shape functions, e.g. Legendre.
  * \tparam  return_t            Floating type specification. Default is double.
  * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of
  *                              corner indices (the shape functions' derivatives are evaluated at).

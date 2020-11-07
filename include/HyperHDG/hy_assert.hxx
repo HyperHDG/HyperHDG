@@ -29,6 +29,12 @@
 #include <iostream>
 #include <sstream>
 
+/*!*************************************************************************************************
+ * \brief   The assertion to be used within HyperHDG --- deactivate using -DNDEBUG compile flag.
+ *
+ * \param   Expr  C++ Expression that can be evaluated to \c true or \c false.
+ * \param   Msg   Message that is to be displayed if \c Expr is evaluated to \c false.
+ **************************************************************************************************/
 #define hy_assert(Expr, Msg)                                           \
   {                                                                    \
     std::stringstream __hy_assertion_text;                             \

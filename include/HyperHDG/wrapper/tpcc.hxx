@@ -117,13 +117,17 @@ tpcc_elem_t<hyEdge_dim - 1, space_dim> get_face(const tpcc_elem_t<hyEdge_dim, sp
                                                             << ".");
   return element.facet(index);
 }
-
+/*!*************************************************************************************************
+ * \brief   Determine the orientation of an element.
+ **************************************************************************************************/
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 unsigned int elem_orientation(const tpcc_elem_t<hyEdge_dim, space_dim>& elem)
 {
   return elem.direction_index();
 }
-
+/*!*************************************************************************************************
+ * \brief   Return the index-th orthonormal direction to element.
+ **************************************************************************************************/
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 unsigned int exterior_direction(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
                                 const unsigned int index)
@@ -135,7 +139,9 @@ unsigned int exterior_direction(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
             "Exterior direction must be smaller than amount of spatial dimensions!");
   return acr_dir;
 }
-
+/*!*************************************************************************************************
+ * \brief   Return coordinate value with respect to index-th orthonormal direction of element.
+ **************************************************************************************************/
 template <unsigned int hyEdge_dim, unsigned int space_dim>
 unsigned int exterior_coordinate(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
                                  const unsigned int index)
