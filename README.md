@@ -6,8 +6,20 @@ defined on hypergraphs.
 
 ## How to start?
 
-To start with this repository enter the directory you want to clone this repository into and do the
-following steps:
+Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
+operating system this can be done using the commands:
+
+```
+$ sudo apt-get update
+$ sudo apt-get dist-upgrade
+$ sudo apt-get autoremove
+$ sudo apt-get install git python3-dev python3-numpy python3-scipy cython libblas-dev liblapack-dev
+```
+
+The first three lines bring your operating system into a clear state. The last lines installs the
+packages that are necessary to fully use HyperHDG. Afterwards, you can start obtaining HyperHDG.
+
+To do so, enter the directory you want to clone HyperHDG into and do the following steps:
 
 1. Clone the repository and give it the name "your_name":
 

@@ -1,6 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <type_traits>
+// #include <type_traits>
 
 /*!*************************************************************************************************
  * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.

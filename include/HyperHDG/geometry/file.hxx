@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/mapping/linear.hxx>
 #include <HyperHDG/topology/file.hxx>
 
@@ -14,20 +15,12 @@ namespace Geometry
  * given in lexicographical order. Also the hypernodes are assumed to be given in lexicographical
  * order to ensure that geometry and topology of all hyperedges fit.
  *
- * There are four different types of normals specified (cf. the respective mapping):
- * - The normals of the reference element.
- * - The normals of of the transformed element which is still an element of the hyEdge_dimT
- *   dimensional space, but already has the shape of the physical element (called local_normal).
- * - The space_dimT dimensional normals of the phyiscal element located within the planar (or curve
- *   if curved elements are allowed) which is spanned by the element.
- * - The orthonormal vectors to the planar/curve spanned by phyiscal element (outer normals).
- *
  * \tparam  hyEdge_dimT     Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
  *                          for PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
  * \tparam  space_dimT      The dimension of the space, the object is located in. This number should
  *                          be larger than or equal to hyEdge_dimT.
- * \tparam  pt_coord_t      The floating point type in which points/vertices are represented.
- *                          Default is double.
+ * \tparam  vectorT         The typename of the large vector type. Defaults to std::vector.
+ * \tparam  pointT          The typename of a Point class. Defaults to \c Point<space_dimT, float>.
  * \tparam  mapping_tM      The mapping which should depened on the aforementioned three template
  *                          arguments. Default is linear mapping.
  * \tparam  hyEdge_dimTM    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is
@@ -37,9 +30,11 @@ namespace Geometry
  *                          be larger than or equal to hyEdge_dimT.
  *                          Template parameter for the mapping which defaults to space_dimT.
  * \tparam  pt_coord_tM     The floating point type in which points/vertices are represented.
- *                          Default is double.
+ *                          Default is the floating point of the point class.
  *                          Template parameter for the mapping which defaults to pt_coord_t.
  * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is \c hyNode_index_t.
+ * \tparam  pt_index_t      The index type of points. Default is \c hyNode_index_t.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -57,24 +52,26 @@ template <unsigned int hyEdge_dimT,
           typename pt_index_t = hyNode_index_t>
 class File
 {
+  /*!***********************************************************************************************
+   * \brief   The point type is the floating point type of \c pointT.
+   ************************************************************************************************/
   using pt_coord_t = typename pointT::value_type;
+  /*!***********************************************************************************************
+   * \brief   The mapping type is \c mapping_tt with given template parameters.
+   ************************************************************************************************/
+  using mapping_t = mapping_tM<hyEdge_dimTM, space_dimTM, pt_coord_tM>;
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a hypergraph's edges.
    ************************************************************************************************/
   class hyEdge
   {
-    /*!*********************************************************************************************
-     * \brief   The mapping type is \c mapping_tt with given template parameters.
-     **********************************************************************************************/
-    using mapping_t = mapping_tM<hyEdge_dimTM, space_dimTM, pt_coord_tM>;
-
    public:
     /*!*********************************************************************************************
-     * \brief   Returns dimension of the hyperedge.
+     * \brief   Return dimension of the hyperedge.
      **********************************************************************************************/
     static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
     /*!*********************************************************************************************
-     * \brief   Returns dimension of the surrounding space.
+     * \brief   Return dimension of the surrounding space.
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
 
@@ -84,7 +81,7 @@ class File
      **********************************************************************************************/
     const File& hyGraph_geometry_;
     /*!*********************************************************************************************
-     * \brief   Index of the hyperedge within the hypergraph
+     * \brief   Index of the hyperedge within the hypergraph.
      **********************************************************************************************/
     const hyEdge_index_t index_;
     /*!*********************************************************************************************
@@ -108,21 +105,39 @@ class File
     /*!*********************************************************************************************
      * \brief   Return vertex of specified index of a hyperedge.
      **********************************************************************************************/
-    Point<space_dimT, pt_coord_t> point(const unsigned int pt_index) const
+    pointT point(const unsigned int pt_index) const
     {
       return hyGraph_geometry_.domain_info_
         .points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
     }
     /*!*********************************************************************************************
      * \brief   Map n_vec points from reference to physical element.
+     *
+     * \param   points        Matrix whose columns consist of the points to be mapped.
+     * \retval  phy_points    Matrix whose columns consist of the mapped points.
      **********************************************************************************************/
     template <unsigned int n_vec>
     SmallMat<space_dimT, n_vec, pt_coord_t> map_ref_to_phys(
-      const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& pts)
+      const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& points)
     {
-      for (unsigned int i = 0; i < pts.size(); ++i)
-        hy_assert(pts[i] >= 0. && pts[i] <= 1., "Point must lie in reference square!");
-      return mapping.map_reference_to_physical(pts);
+      for (unsigned int i = 0; i < points.size(); ++i)
+        hy_assert(points[i] >= 0. && points[i] <= 1., "Point must lie in reference square!");
+      return mapping.map_reference_to_physical(points);
+    }
+    /*!*********************************************************************************************
+     * \brief   Map n_vec points from reference to physical element.
+     *
+     * \param   points        Matrix whose columns consist of the points to be mapped.
+     * \retval  points        Matrix whose columns consist of the mapped points.
+     **********************************************************************************************/
+    template <unsigned int n_vec>
+    SmallMat<space_dimT, n_vec, pt_coord_t>& map_ref_to_phys(
+      SmallMat<space_dimT, n_vec, pt_coord_t>& points)
+    {
+      for (unsigned int i = 0; i < points.size(); ++i)
+        hy_assert(points[i] >= 0. && points[i] <= 1., "Point must lie in reference square!");
+      points = mapping.map_reference_to_physical(points);
+      return points;
     }
     /*!*********************************************************************************************
      * \brief   Return matrix column of the affine-linear transformation.
@@ -155,7 +170,7 @@ class File
      * \brief   Return local normal of given index.
      *
      * Return outer unit normal with respect to the hypernode which is spanned by the vectors
-     * spanning the phyiscal element, orthogonally projected to a hyEdge_dimT dimensiona space,
+     * spanning the phyiscal element, orthogonally projected to a hyEdge_dimT dimensional space,
      * but the vector of the given index. This is an element of the same dimension as the
      * reference element.
      **********************************************************************************************/
@@ -216,7 +231,7 @@ class File
     }
     /*!*********************************************************************************************
      * \brief   Return equidistant tensorial point of given index on a given boundary (slightly
-     *moved away from the boundary using boundary_scale), ordered lexicographically.
+     *          moved away from the boundary using boundary_scale), ordered lexicographically.
      **********************************************************************************************/
     template <unsigned int n_sub_points, typename one_dim_float_t>
     Point<space_dimT, pt_coord_t> boundary_lexicographic(
@@ -278,29 +293,23 @@ class File
   /*!***********************************************************************************************
    * \brief   Defines the return value of the class.
    *
-   * The \c class \c HyperGraph_Cubic defines the topology of the hypergraph. It "contains" the
+   * The \c class \c Geometry::File defines the geometry of the hypergraph. It "contains" the
    * different hyperedges (that actually are constructed everytime access is needed from e.g. the
    * solver class). Thus, its main purpose is to provide a structure that administrates the
    * hyperedges that are the return value of this structure.
    ************************************************************************************************/
   typedef hyEdge value_type;
   /*!***********************************************************************************************
-   * \brief   Defines the value type of input argument for standard constructor.
-   *
-   * To receive a very general \c AbstractProblem, constructors need to account for the fact that
-   * the specific topology / geometry of a hypergraph influences the way in which the hypergraph
-   * needs to be constructed. The \c typedef implements the aspect, that a cubic hypergraph
-   * topology is by default constructed by a std::vector that contains amounts of elements in the
-   * different dimensions.
+   * \brief   Define the value type of input argument for standard constructor.
    ************************************************************************************************/
   typedef Topology::
     File<hyEdge_dimT, space_dimT, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
       constructor_value_type;
   /*!***********************************************************************************************
-   * \brief   Construct a cubic that describes a cube hypergraph from a \c HyperGraph_Cubic.
+   * \brief   Construct a hypergraph which is read from a file.
    *
-   * Constructs a hypergraph from a \c Topology::HyperGraph_Cubic containing the elementens per
-   * spatial dimension which is given as by its topology.
+   * Constructs a hypergraph from a \c Topology::File containing the elementens per spatial
+   * dimension which is given as by its topology.
    *
    * \param   topology     The topology of the hypergraph that has the geometry of the unit cube.
    ************************************************************************************************/

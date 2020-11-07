@@ -82,7 +82,7 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
           + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
           + str(2*poly_degree) + ",TestParametersEigs,double> >"
-  filenames = [ "HyperHDG/geometry/cubic.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
+  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_ldgh.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
 
