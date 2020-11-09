@@ -65,12 +65,10 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=5500, tol=1e-9)
+if num_iter != 0:
+  raise RuntimeError("Linear solver did not converge!")
 
-# Check, whether solution has been successful!
-if num_iter == 0:
-  print("Solution has been successfully calculated!")
-else:
-  print("The linear solver (conjugate gradients) failed (did not converge)!")
+print("The linear solver (conjugate gradients) failed (did not converge)!")
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_option("fileName", "aggregate_" + aggregate)
