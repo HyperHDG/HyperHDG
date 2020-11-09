@@ -26,7 +26,11 @@ def main(debug_mode):
           if approx_type == 0:
             value,vector,errorSI = eigenvalue_approx_SI(poly_degree,dimension,iteration,debug_mode)
             vector.append(value)
-            _, _, errorNLSI = eigenvalue_newt(poly_degree, dimension, iteration, vector, debug_mode)
+            try:
+              _,_,errorNLSI = eigenvalue_newt(poly_degree,dimension,iteration,vector,debug_mode)
+            except RuntimeError as error:
+              print("ERROR: ", error)
+              errorNLSI = -1.
             f = open("output/diffusion_hypergraph_convergence_eigenvalue_combSI.txt", "a")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
                     + ". Iteration = " + str(iteration) + ". ErrorSI = " + str(errorSI) + ".\n")
@@ -36,7 +40,11 @@ def main(debug_mode):
           else:
             value,vector,errorMA = eigenvalue_approx_MA(poly_degree,dimension,iteration,debug_mode)
             vector.append(value)
-            _, _, errorNLMA = eigenvalue_newt(poly_degree, dimension, iteration, vector, debug_mode)
+            try:
+              _,_,errorNLMA = eigenvalue_newt(poly_degree,dimension,iteration,vector,debug_mode)
+            except RuntimeError as error:
+              print("ERROR: ", error)
+              errorNLMA = -1.
             f = open("output/diffusion_hypergraph_convergence_eigenvalue_combMA.txt", "a")
             f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
                     + ". Iteration = " + str(iteration) + ". ErrorMA = " + str(errorMA) + ".\n")

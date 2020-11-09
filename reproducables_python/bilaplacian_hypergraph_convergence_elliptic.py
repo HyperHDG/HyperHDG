@@ -52,6 +52,8 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+  if num_iter != 0:
+    raise RuntimeError("Linear solver did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
@@ -83,7 +85,10 @@ def main(debug_mode):
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
-        bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
+        try:
+          bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
+        except RuntimeError as error:
+          print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------
