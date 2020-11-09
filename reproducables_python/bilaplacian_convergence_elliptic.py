@@ -58,7 +58,7 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
       [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        sys.exit("Program failed!")
+        raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
@@ -90,7 +90,10 @@ def main(debug_mode):
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
-        bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
+        try:
+          bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
+        except RuntimeError as error:
+          print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------
