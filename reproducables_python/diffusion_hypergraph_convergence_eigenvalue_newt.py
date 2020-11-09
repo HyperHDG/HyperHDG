@@ -106,11 +106,14 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     norm_old = norm_res
     gamma = 1
     
-    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+    # Solve "A * x = b" in matrix-free fashion using scipy's GMRES or BiCGStab algorithms.
     [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= scaling_fac * norm_res)
     if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      sys.exit("Program failed!")
+      print("GMRES failed with a total number of ", num_iter, "iterations.")
+      [vectorUpdate, num_iter] = sp_lin_alg.bicgsatb(A, residual, tol= scaling_fac * norm_res)
+      if num_iter != 0:
+        print("BiCGStab also failed with ", num_iter, "iterations")
+        raise RuntimeError("Linear solvers did not converge!")
     
     vectorHelper = np.subtract(vectorSolution, vectorUpdate)
     residual = helper.eval_residual(vectorHelper)
@@ -118,7 +121,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     
     while norm_res > (1 - alpha * gamma) * norm_old:
       if gamma < 1e-4:
-        sys.exit("Newton step is too small!")
+        raise RuntimeError("Newton step is too small")
       gamma = beta * gamma
       vectorHelper = np.subtract(vectorSolution, np.multiply(vectorUpdate, gamma))
       residual = helper.eval_residual(vectorHelper)
@@ -131,8 +134,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
       break
       
   if norm_res >= norm_exact:
-    print("Newton solver did not converge!")
-    sys.exit("Program failed!")
+    raise RuntimeError("Newton solver did not converge!")
   
   # Print error.
   error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
@@ -165,7 +167,10 @@ def main(debug_mode):
     for dimension in range(1,3):
       print("\nDimension is ", dimension, "\n")
       for iteration in range(2,6):
-        eigenvalue_newt(poly_degree, dimension, iteration, "default", debug_mode)
+        try:
+          eigenvalue_newt(poly_degree, dimension, iteration, "default", debug_mode)
+        except RuntimeError as error:
+          print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------
