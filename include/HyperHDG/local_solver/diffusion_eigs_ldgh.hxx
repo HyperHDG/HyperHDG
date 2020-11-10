@@ -9,13 +9,6 @@
 
 namespace LocalSolver
 {
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-//
-// GENERAL DIFFUSION PROBLEM AND RELATED CLASSES/STRUCTS
-//
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
@@ -26,48 +19,58 @@ namespace LocalSolver
 template <unsigned int space_dimT, typename param_float_t = double>
 struct DiffusionParametersDefault
 {
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
+   ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> dirichlet_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary.
+   ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Inverse diffusion coefficient in PDE as analytic function.
+   ************************************************************************************************/
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>& point,
                                                const param_float_t time = 0.)
   {
     return 1.;
   }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
     return 0.;
   }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
     return 0.;
   }
+  /*!***********************************************************************************************
+   * \brief   Neumann values of solution as analytic function.
+   ************************************************************************************************/
   static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
                                      const param_float_t time = 0.)
   {
     return 0.;
   }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
     return 0.;
   }
-};
+};  // end of struct DiffusionParametersDefault
+
 /*!*************************************************************************************************
- * \brief   Local solver for Poisson's equation on uniform hypergraph.
- *
- * This class contains the local solver for an isotropic diffusion equation, i.e.,
- * \f[
- *  - \nabla \cdot ( d \nabla u = f \quad \text{ in } \Omega, \qquad
- *  u = u_\textup D \quad \text{ on } \partial \Omega_\textup D}, \qquad
- *  - d \nabla u \cdot \nu = g_\textup N \quad \text{ on } \partial \Omega_\textup N
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
- * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
- * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
+ * \brief   Local solver for the nonlinear eigenvalue problem induced by the diffusion equation.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
  *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
@@ -78,10 +81,6 @@ struct DiffusionParametersDefault
  *                        contains static parameter functions.
  *                        Defaults to above functions included in \c DiffusionParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
- * \tparam  space_dimTP   The dimension of the surrounding space.
- *                        Template parameter for the parameters which defaults to space_dimT.
- * \tparam  lSol_float_tP The floating point type calculations are executed in. Defaults to double.
- *                        Template parameter for the parameters which defaults to lSol_float_t.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -94,10 +93,15 @@ template <unsigned int hyEdge_dimT,
 class DiffusionEigs
 {
  public:
+  /*!***********************************************************************************************
+   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
+   ************************************************************************************************/
   typedef struct empty_class
   {
   } data_type;
-
+  /*!***********************************************************************************************
+   *  \brief  Define floating type the local solver uses for use of external classses / functions.
+   ************************************************************************************************/
   typedef lSol_float_t solver_float_t;
 
   // -----------------------------------------------------------------------------------------------
@@ -105,7 +109,7 @@ class DiffusionEigs
   // -----------------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief Dimension of hyper edge type that this object solves on.
+   * \brief   Dimension of hyper edge type that this object solves on.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
   /*!***********************************************************************************************
@@ -128,7 +132,9 @@ class DiffusionEigs
    * \brief Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return 1; }
 
  private:
@@ -148,11 +154,21 @@ class DiffusionEigs
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   * 
+   * This allows to the use of this quantity as template parameter in member functions.
+   ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   * 
+   * This allows to the use of this quantity as template parameter in member functions.
+   ************************************************************************************************/
   static constexpr unsigned int node_system_dim = node_system_dimension();
-
+  /*!***********************************************************************************************
+   * \brief   Find out whether a node is of Dirichlet type.
+   ************************************************************************************************/
   template <typename parameters>
   static constexpr bool is_dirichlet(const unsigned int node_type)
   {
@@ -178,20 +194,19 @@ class DiffusionEigs
   // -----------------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief  Assemble local matrix for the local solver.
+   * \brief   Assemble local matrix for the local solver.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   tau           Penalty parameter.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig           Time, when the local matrix is evaluated.
+   * \param   eig           Eigenvalue for which the matrix is assembled.
    * \retval  loc_mat       Matrix of the local solver.
    ************************************************************************************************/
   template <typename hyEdgeT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
   assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t eig) const;
-
   /*!***********************************************************************************************
-   * \brief  Assemble local right-hand for the local solver (from skeletal).
+   * \brief   Assemble local right-hand for the local solver (from skeletal).
    *
    * The right hand side needs the values of the global degrees of freedom. Note that we basically
    * follow the lines of
@@ -214,12 +229,12 @@ class DiffusionEigs
     const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
-   * \brief  Solve local problem (with right-hand side from skeletal).
+   * \brief   Solve local problem (with right-hand side from skeletal).
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig           Point of time the problem is solved.
+   * \param   eig           Eigenvalue for which the local problem is solved.
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
   template <typename hyEdgeT>
@@ -240,7 +255,6 @@ class DiffusionEigs
       throw exc;
     }
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate primal variable at boundary.
    *
@@ -290,15 +304,12 @@ class DiffusionEigs
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * This corresponds to an evaluation of the residual in the nonlinear context
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig            Time.
+   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   eig           Eigenvalue.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -326,18 +337,11 @@ class DiffusionEigs
     return bdr_values;
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to matrix--vector multiplication.
-   *
-   * \todo    ALL!
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * \brief   Fill array with 1 if the node is of Dirichlet type and 0 elsewhen.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \retval  vecAx         Local part of vector A * x.
+   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \retval  result        Array encoding edge types.
    ************************************************************************************************/
   template <class hyEdgeT>
   std::array<unsigned int, 2 * hyEdge_dimT> node_types(hyEdgeT& hyper_edge) const
@@ -354,18 +358,13 @@ class DiffusionEigs
     return result;
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to matrix--vector multiplication.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * \brief   L2 project given analytical functio to skeletal space.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vecAx         Local part of vector A * x.
+   * \param   lambda_values Local part of vector x. (Redundant)
+   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   time          Time. (Redundant)
+   * \retval  bdr_values    Coefficients of L2 projection.
    ************************************************************************************************/
   template <class hyEdgeT>
   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_initial(
@@ -392,21 +391,18 @@ class DiffusionEigs
 
     return bdr_values;
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * This corresponds to the evaluation of the Jacobian evaluated at \c lambda_vals, \c eig_val in
+   * the direction \c lambda_values, \c eig.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig           Time.
-   * \param   lambda_vals   Lambda values.
-   * \param   eig_val       Eigenvalue.
+   * \param   lambda_values Lambda in whose direction Jacobian is evaluated.
+   * \param   eig           Eigenvalue in whose direction Jacobian is evaluated.
+   * \param   lambda_vals   Lambda at which Jacobian is evaluated.
+   * \param   eig_val       Eigenvalue at which Jacobian is evaluated.
+   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -457,35 +453,31 @@ class DiffusionEigs
 
     return bdr_values;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   * \brief   Local squared contribution to the L2 error.
    *
-   * \tparam  absc_float_t      Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time              Time.
+   * \param   eig               Approximated eigenvalue.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
   lSol_float_t calc_L2_error_squared(
     const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     hyEdgeT& hy_edge,
-    const lSol_float_t time = 0.) const
+    const lSol_float_t eig = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coefficients =
-      solve_local_problem(lambda_values, hy_edge, time);
+      solve_local_problem(lambda_values, hy_edge, eig);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
     return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
                                                                 parameters::analytic_result>(
-      coeffs, hy_edge.geometry, time);
+      coeffs, hy_edge.geometry, eig);
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
@@ -497,7 +489,7 @@ class DiffusionEigs
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
    * \param   time              Time.
-   * \retval  vec_b             Local part of vector b.
+   * \retval  func_values       Function values at tensorial points.
    ************************************************************************************************/
   template <typename abscissa_float_t,
             std::size_t abscissas_sizeT,
@@ -508,15 +500,15 @@ class DiffusionEigs
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
-
   /*!***********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
-   * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
-   * \param   abscissas     Abscissas of the supporting points.
-   * \param   lambda_values The values of the skeletal variable's coefficients.
-   * \param   boundary_number number of the boundary on which to evaluate the function.
+   * \tparam  absc_float_t    Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
+   * \param   abscissas       Abscissas of the supporting points.
+   * \param   lambda_values   The values of the skeletal variable's coefficients.
+   * \param   boundary_number Number of the boundary on which to evaluate the function.
+   * \retval  func_values       Function values at tensorial points.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
@@ -524,7 +516,6 @@ class DiffusionEigs
   lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
-
 };  // end of class DiffusionEigs
 
 // -------------------------------------------------------------------------------------------------
