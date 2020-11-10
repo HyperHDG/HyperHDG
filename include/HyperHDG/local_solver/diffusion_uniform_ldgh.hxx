@@ -9,7 +9,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
@@ -20,7 +19,7 @@ namespace LocalSolver
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1), or hypergraph whose
  * hyperedges are surfaces (\c hyEdge_dimT = 2), or volumes (\c hyEdge_dimT = 3), or higher
- * dimensional analogues. For this class, all hyperedges are supposed to be uniform (i.e. equal to 
+ * dimensional analogues. For this class, all hyperedges are supposed to be uniform (i.e. equal to
  * the unit hypercube). Thus, no geometrical information is needed by this class.
  *
  * \tparam  hyEdge_dimT   Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
@@ -102,13 +101,13 @@ class DiffusionUniform
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dim = node_system_dimension();

@@ -9,7 +9,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -107,13 +106,6 @@ class DiffusionParab
 {
  public:
   /*!***********************************************************************************************
-   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
-   ************************************************************************************************/
-  typedef struct
-  {
-    std::array<lSol_float_t, n_loc_dofs_> coeffs;
-  } data_type;
-  /*!***********************************************************************************************
    *  \brief  Define floating type the local solver uses for use of external classses / functions.
    ************************************************************************************************/
   typedef lSol_float_t solver_float_t;
@@ -170,13 +162,13 @@ class DiffusionParab
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dim = node_system_dimension();
@@ -252,7 +244,7 @@ class DiffusionParab
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
    * \brief   Assemble local right-hand for the local solver (from global right-hand side).
-   * 
+   *
    * Note that we basically follow the lines of
    *
    * B. Cockburn, J. Gopalakrishnan, and R. Lazarov.
@@ -366,6 +358,13 @@ class DiffusionParab
   // Public functions (and one typedef) to be utilized by external functions.
   // -----------------------------------------------------------------------------------------------
 
+  /*!***********************************************************************************************
+   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
+   ************************************************************************************************/
+  typedef struct
+  {
+    std::array<lSol_float_t, n_loc_dofs_> coeffs;
+  } data_type;
   /*!***********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    ************************************************************************************************/

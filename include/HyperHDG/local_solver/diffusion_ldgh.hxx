@@ -10,7 +10,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -84,7 +83,7 @@ struct DiffusionParametersDefault
  * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
  * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
  * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
- * 
+ *
  * Moreover, this class provides the functions that approximate the condensed mass matrix. By this,
  * it is possible to approximate parabolic problems (in a very bad way) and to find good starting
  * values for the nonlinear eigenvalue problem.
@@ -172,13 +171,13 @@ class Diffusion
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dim = node_system_dimension();
@@ -327,7 +326,7 @@ class Diffusion
   }
   /*!***********************************************************************************************
    * \brief   Solve local problem for mass matrix approximation.
-   * 
+   *
    * \note    This function is not use for elliptic problems.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
@@ -356,7 +355,7 @@ class Diffusion
   }
   /*!***********************************************************************************************
    * \brief  Solve local problem for parabolic approximations.
-   * 
+   *
    * \note   This function is not use for elliptic problems.
    ************************************************************************************************/
   template <typename hyEdgeT>
@@ -522,7 +521,7 @@ class Diffusion
   }
   /*!***********************************************************************************************
    * \brief   Evaluate L2 projected lambda values at initial state.
-   * 
+   *
    * \note    This function is not used for elliptic problems.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
@@ -671,7 +670,7 @@ class Diffusion
 
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to mass matrix--vector residual.
-   * 
+   *
    * \note    This function is not used for elliptic problems.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
@@ -736,7 +735,7 @@ class Diffusion
 
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
-   * 
+   *
    * \note    This function is not used for elliptic problems.
    *
    * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.

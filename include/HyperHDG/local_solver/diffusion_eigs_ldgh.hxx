@@ -9,7 +9,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -156,13 +155,13 @@ class DiffusionEigs
   static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   * 
+   *
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dim = node_system_dimension();
