@@ -228,7 +228,7 @@ class DiffusionParab
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
   assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time) const;
   /*!***********************************************************************************************
-   * \brief  Assemble local right-hand for the local solver (from skeletal).
+   * \brief   Assemble local right-hand for the local solver (from skeletal).
    *
    * The right hand side needs the values of the global degrees of freedom. Note that we basically
    * follow the lines of
@@ -251,9 +251,7 @@ class DiffusionParab
     const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
-   * \brief  Assemble local right-hand for the local solver (from global right-hand side).
-   *
-   * \todo   Start here!
+   * \brief   Assemble local right-hand for the local solver (from global right-hand side).
    * 
    * Note that we basically follow the lines of
    *
@@ -275,7 +273,7 @@ class DiffusionParab
     hyEdgeT& hyper_edge,
     const lSol_float_t time) const;
   /*!***********************************************************************************************
-   * \brief  Assemble local right-hand for the local solver (from global right-hand side).
+   * \brief   Assemble local right-hand for the local solver (from function coefficients).
    *
    * Note that we basically follow the lines of
    *
@@ -297,7 +295,7 @@ class DiffusionParab
     const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
-   * \brief  Solve local problem (with right-hand side from skeletal).
+   * \brief   Solve local problem (with right-hand side from skeletal).
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
@@ -332,7 +330,6 @@ class DiffusionParab
       throw exc;
     }
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate primal variable at boundary.
    *
@@ -393,7 +390,7 @@ class DiffusionParab
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Local part of vector x.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
+   * \param   time          Time at which time step ends.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -421,9 +418,9 @@ class DiffusionParab
     return bdr_values;
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to matrix--vector multiplication.
+   * \brief   Evaluate local contribution to residual.
    *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * Execute residual evaluation y = A * x - b, where x represents the vector containing the
    * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
    * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
    * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
@@ -431,7 +428,7 @@ class DiffusionParab
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Local part of vector x.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
+   * \param   time          Time at which time step ends.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -460,20 +457,13 @@ class DiffusionParab
 
     return bdr_values;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to matrix--vector multiplication.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * \brief   Set data into data container to be used for next time step.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Local part of vector x.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vecAx         Local part of vector A * x.
+   * \param   time          Time at which the old time step ended.
    ************************************************************************************************/
   template <class hyEdgeT>
   void set_data(
@@ -486,20 +476,14 @@ class DiffusionParab
 
     hyper_edge.data.coeffs = coeffs;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to matrix--vector multiplication.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   * \brief   L2 project initial data to skeletal and fill data container.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Local part of vector x.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vecAx         Local part of vector A * x.
+   * \param   time          Initial time of parabolic problem.
+   * \retval  vecAx         L2 projected initial datum.
    ************************************************************************************************/
   template <class hyEdgeT>
   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_initial(
@@ -532,17 +516,14 @@ class DiffusionParab
 
     return bdr_values;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   * \brief   Evaluate squared local L2 error.
    *
-   * \tparam  absc_float_t      Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time              Time.
-   * \retval  vec_b             Local part of vector b.
+   * \param   time              Time at which error is evaluated.
+   * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
   lSol_float_t calc_L2_error_squared(
@@ -560,7 +541,6 @@ class DiffusionParab
                                                                 parameters::analytic_result>(
       coeffs, hy_edge.geometry, time);
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
@@ -571,8 +551,8 @@ class DiffusionParab
    * \param   abscissas         Abscissas of the supporting points.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time              Time.
-   * \retval  vec_b             Local part of vector b.
+   * \param   time              Time at which function is plotted.
+   * \retval  func_vals         Array of function values.
    ************************************************************************************************/
   template <typename abscissa_float_t,
             std::size_t abscissas_sizeT,
@@ -583,15 +563,16 @@ class DiffusionParab
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
-
   /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   * \brief   Evaluate the function lambda on tensor product points on the boundary.
    *
-   * \tparam  absc_float_t  Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT         Size of the array of array of abscissas.
-   * \param   abscissas     Abscissas of the supporting points.
-   * \param   lambda_values The values of the skeletal variable's coefficients.
-   * \param   boundary_number number of the boundary on which to evaluate the function.
+   * \tparam  absc_float_t      Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
+   * \tparam  input_array_t     Input array type.
+   * \param   abscissas         Abscissas of the supporting points.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   boundary_number   Number of the boundary on which to evaluate the function.
+   * \retval  func_vals         Array of function values.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,

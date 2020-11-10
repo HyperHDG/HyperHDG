@@ -153,7 +153,6 @@ class DiffusionUniform
    ************************************************************************************************/
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs(
     const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values) const;
-
   /*!***********************************************************************************************
    * \brief   Solve local problem.
    *
@@ -238,7 +237,6 @@ class DiffusionUniform
 
     return bdr_values;
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector residual.
    *
@@ -252,7 +250,6 @@ class DiffusionUniform
   {
     return numerical_flux_from_lambda(lambda_values, time);
   }
-
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.
    *
