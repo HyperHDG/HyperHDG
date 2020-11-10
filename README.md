@@ -16,26 +16,26 @@ $ sudo apt-get autoremove
 $ sudo apt-get install git python3-dev python3-numpy python3-scipy cython libblas-dev liblapack-dev
 ```
 
-The first three lines bring your operating system into a clear state. The last lines installs the
+The first three lines bring your operating system into a clear state. The last line installs the
 packages that are necessary to fully use HyperHDG. Afterwards, you can start obtaining HyperHDG.
 
 To do so, enter the directory you want to clone HyperHDG into and do the following steps:
 
 1. Clone the repository and give it the name "your_name":
 
-   1. To clone this repository with https use:
+   1. To clone this repository with https use
       
           $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
 
-   2. To clone this repository with ssh use:
+   2. To clone this repository with ssh use
       
           $ git git@github.com:AndreasRupp/HyperHDG.git your_name
 
-2. Enter directory using:
+2. Enter directory using
 
        $ cd your_name
 
-3. Initialize submodules using:
+3. Initialize submodules using
 
        $ git submodule update --init --recursive
 
@@ -109,4 +109,5 @@ License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
 - The developer certificate of origin can be found in 
 [DeveloperCertificateOfOrigin.txt](DeveloperCertificateOfOrigin.txt). It contains the [Developer 
 Certificate of Origin version 1.1](https://developercertificate.org/).
-- The list of authors can be found in [Authors.txt](Authors.txt).
+- The list of authors and publications can be found in [Authors.txt](Authors.txt) and 
+[Publications.txt](Publications.txt), respectively.
