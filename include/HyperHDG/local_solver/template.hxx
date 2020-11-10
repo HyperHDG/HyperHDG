@@ -4,7 +4,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief Implementation the interface of local solvers needed by enclosing objects in minimal way.
  *
@@ -58,7 +57,7 @@ class Template
    * \brief   The values of the local solution in quadrature points of the cell.
    *
    * \retval  An array of array with outer size system_dimension() and inner size number of
-   *          quadrature points, containing for each component of the solution the values in each 
+   *          quadrature points, containing for each component of the solution the values in each
    *          quadrature point.
    ************************************************************************************************/
   template <typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
