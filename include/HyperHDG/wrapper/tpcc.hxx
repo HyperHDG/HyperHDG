@@ -2,9 +2,6 @@
  * \file    tpcc.hxx
  * \brief   This file provides the functions of the submodule TPCC.
  *
- * \todo    The external module does not provide functions that return the template parameters. Why?
- *          If these functins will be provided, we should use them to do consistency checks!
- *
  * This is a wrapper file to provide TPCC (tensor product chain complex) based functions. Since this
  * is an external submodule utilized by hyperHDG, this file provides appropriate wrapper functions.
  *

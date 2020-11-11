@@ -24,23 +24,28 @@ struct PlotOptions
    *
    * This \c std::string describes the directory the output is created in. Default is "output".
    ************************************************************************************************/
-  std::string outputDir;
+  std::string outputDir = "output";
   /*!***********************************************************************************************
    * \brief   Name of the file plotted.
    *
    * This \c std::string describes the name of the file for the output plot. Default is "example".
    ************************************************************************************************/
-  std::string fileName;
+  std::string fileName = "example";
+  /*!***********************************************************************************************
+   * \brief   Enum for possible file endings.
+   ************************************************************************************************/
+  enum fileType
+  {
+    vtu
+  };
   /*!***********************************************************************************************
    * \brief   File ending and also way of plotting.
    *
    * This \c std::string describes the name of the file ending for the output plot. Thus, it also
    * characterizes which applications can read the output files properly. Default and currently
    * only option is "vtu" for Paraview.
-   * \todo    G recommends to make this an enum. Text matching is always apita
-   *          -> A agrees! Should he do this or is G in this part of the file?
    ************************************************************************************************/
-  std::string fileEnding;
+  fileType fileEnding = vtu;
   /*!***********************************************************************************************
    * \brief   Number of the plot file.
    *
@@ -48,62 +53,55 @@ struct PlotOptions
    * solved repeatedly (e.g. parabolic problem, local refinement, ...) this number indicates the
    * number of the file (e.g. time step, refinement step, ...). Default is 0.
    ************************************************************************************************/
-  unsigned int fileNumber;
+  unsigned int fileNumber = 0;
   /*!***********************************************************************************************
    * \brief   Decide whether \c fileNumber is part of the file name.
    *
    * This \c boolean discriminates whether the \c fileNumber should appear within the name of the
    * file (true) or not (false). Default is true.
    ************************************************************************************************/
-  bool printFileNumber;
+  bool printFileNumber = true;
   /*!***********************************************************************************************
    * \brief   Decide whether \c fileNumber is incremented after plotting.
    *
    * This \c boolean discriminates whether the \c fileNumber should be incremented after a file has
    * been written (true) or not (false). Default is true.
-   *
-   * \todo    This could not be implemented in your version with call by value, nor can it be
-              implemented in mine with a const reference.
    ************************************************************************************************/
-  bool incrementFileNumber;
+  bool incrementFileNumber = true;
   /*!***********************************************************************************************
    * \brief   Include the edge boundaries with their function values into the plot.
    *
    * Defaults to false.
    ************************************************************************************************/
-  bool plot_edge_boundaries;
+  bool plot_edge_boundaries = false;
   /*!***********************************************************************************************
    * \brief   Include the hyperedges with their function values into the plot.
    *
    * Defaults to true.
    ************************************************************************************************/
-  bool plot_edges;
+  bool plot_edges = true;
   /*!***********************************************************************************************
    * \brief   Number of subintervals for plotting.
    *
-   * When plotting an interval, it is split into #n_subintervals
-   * intervals such that higher order polynomials and other functions
-   * can be displayed appropriately. When plotting higher dimensional
-   * objects, this subdivision is applied accordingly in each
-   * direction.
+   * When plotting an interval, it is split into #n_subintervals intervals such that higher order
+   * polynomials and other functions can be displayed appropriately. When plotting higher
+   * dimensional objects, this subdivision is applied accordingly in each direction.
    *
-   * This functionality is implemented such that higher order
-   * polynomials can be output as piecewise linear functions giving
-   * them sufficient meaning. It will increase the number of cells
-   * seen by the visualization tool, such that the cell boundaries
-   * there are not the actual cell boundaries anymore. You can still
-   * use the parameter #scale below to see the separate edges.
+   * This functionality is implemented such that higher order polynomials can be output as piecewise
+   * linear functions giving them sufficient meaning. It will increase the number of cells seen by
+   * the visualization tool, such that the cell boundaries there are not the actual cell boundaries
+   * anymore. You can still use the parameter #scale below to see the separate edges.
    *
    * Defaults to 1.
    ************************************************************************************************/
-  unsigned int n_subintervals;
+  unsigned int n_subintervals = 1;
   /*!***********************************************************************************************
    * \brief   A factor for scaling each object of the plot locally.
    *
    * This factor defaults to 1 in order to produce a plot of a contiguous domain. If it is chosen
    * less than 1, each edge or node is scaled by this factor around its center.
    ************************************************************************************************/
-  float scale;
+  float scale = 1.;
   /*!***********************************************************************************************
    * \brief   A factor by which to separate two boundaries belonging to different edges.
    *
@@ -111,21 +109,16 @@ struct PlotOptions
    * each other, if scale is less than one a suitable choice would be (1+scale)/2 in order separate
    * different boundaries. A smaller factor results in a wider gap.
    ************************************************************************************************/
-  float boundary_scale;
-
+  float boundary_scale = 1.;
   /*!***********************************************************************************************
    * \brief   Output a cell data array with the number of each edge and/or each node.
    ************************************************************************************************/
-  bool numbers;
-  /*!***********************************************************************************************
-   * \brief   Construct a \c PlotOptions class object containing default values.
-   *
-   * Constructs a \c PlotOptions object containing default options and information about the
-   * hypergraph and the local solver.
-   ************************************************************************************************/
-  PlotOptions();
+  bool numbers = false;
 };  // end of class PlotOptions
 
+/*!*************************************************************************************************
+ * \brief Set a plot option and return the new value of this option as std::string.
+ **************************************************************************************************/
 std::string set_plot_option(PlotOptions& plot_options,
                             const std::string& option,
                             std::string value = "")
@@ -137,7 +130,12 @@ std::string set_plot_option(PlotOptions& plot_options,
   else if (option == "fileName")
     plot_options.fileName = value;
   else if (option == "fileEnding")
-    plot_options.fileEnding = value;
+  {
+    if (value == "vtu")
+      plot_options.fileEnding = PlotOptions::vtu;
+    else
+      hy_assert(false, "You have chosen an invalid file type!");
+  }
   else if (option == "fileNumber")
     plot_options.fileNumber = stoi(value);
   else if (option == "printFileNumber")
@@ -184,8 +182,6 @@ std::string set_plot_option(PlotOptions& plot_options,
 /*!*************************************************************************************************
  * \brief   Function plotting the solution of an equation on a hypergraph in vtu format.
  *
- * \todo    Adapt to deal with time-dependent cases when the node plotting is finished!
- *
  * Creates a file according to set plotting options in \c plot_options. This file contains the
  * solution of the PDE defined in \c plotOpt having the representation \c lambda in terms of its
  * skeleta degrees of freedom (related to skeletal variable lambda).
@@ -196,6 +192,7 @@ std::string set_plot_option(PlotOptions& plot_options,
  * \tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
  *                          i.e., it contains an local solver for a specific equation living on the
  *                          hypergraph.
+ * \tparam  dof_value_t     The floating point of dof values.
  * \param   hyper_graph     The hypergraph.
  * \param   local_solver    The local solver.
  * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
@@ -210,47 +207,15 @@ template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot(HyperGraphT& hyper_graph,
           const LocalSolverT& local_solver,
           const std::vector<dof_value_t>& lambda,
-          const PlotOptions& plot_options,
+          PlotOptions& plot_options,
           const dof_value_t time = 0.);
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF PlotOptions
+// IMPLEMENTATION OF AUXILIARY FUNCTIONS FOR plot()
 //
 // -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-
-// -------------------------------------------------------------------------------------------------
-// PlotOptions
-// -------------------------------------------------------------------------------------------------
-
-PlotOptions::PlotOptions()
-: outputDir("output"),
-  fileName("example"),
-  fileEnding("vtu"),
-  fileNumber(0),
-  printFileNumber(true),
-  incrementFileNumber(true),
-  plot_edge_boundaries(false),
-  plot_edges(true),
-  n_subintervals(1),
-  scale(1.),
-  boundary_scale(1.),
-  numbers(false)
-{
-}
-
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-//
-// IMPLEMENTATION OF AUXILIARY FUNCTIONS FOR plot() and plot()
-//
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-
-// -------------------------------------------------------------------------------------------------
-// Auxiliary functions for plot()
 // -------------------------------------------------------------------------------------------------
 
 /*!*************************************************************************************************
@@ -300,7 +265,6 @@ void vtu_sub_cube_connectivity(std::ostream& output, unsigned int n, pt_index_t 
  *
  * This function plots the geometry part of an unstructured mesh in* a VTU file.
  * The typical file structure is
- *
  *
  * \< Preamble/\>
  * \< UnstructuredGrid\>
@@ -513,7 +477,6 @@ void create_directory_if_needed(std::ofstream& output_file,
 
 /*!*************************************************************************************************
  * \brief   Auxiliary function to get dof values of edge.
- * \todo Relocate this function?
  **************************************************************************************************/
 template <unsigned int edge_dim,
           class HyperGraphT,
@@ -590,9 +553,6 @@ void plot_edge_values(HyperGraphT& hyper_graph,
 }
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
- *
- * \todo    AR: We need to discuss this: I do not see the advantage of having several arrays of
- *          fixed length 1! -> AR: I corrected this myself, cf. plot_edge_values! Please check!
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
@@ -744,13 +704,15 @@ template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
 void plot(HyperGraphT& hyper_graph,
           const LocalSolverT& local_solver,
           const std::vector<dof_value_t>& lambda,
-          const PlotOptions& plot_options,
+          PlotOptions& plot_options,
           const dof_value_t time)
 {
-  hy_assert(plot_options.fileEnding == "vtu",
+  hy_assert(plot_options.fileEnding == PlotOptions::vtu,
             "Only file ending vtu is supported at the moment. Your choice has been "
               << plot_options.fileEnding << ", which is invalid.");
   hy_assert(!plot_options.fileName.empty(), "File name must not be empty!");
   hy_assert(!plot_options.outputDir.empty(), "Ouput directory must not be empty!");
   plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+  if (plot_options.incrementFileNumber)
+    ++plot_options.fileNumber;
 }  // end of void plot
