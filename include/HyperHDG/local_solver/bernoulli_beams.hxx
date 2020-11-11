@@ -1,15 +1,14 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/quadrature_tensorial.hxx>
+#include <HyperHDG/shape_fun_1d.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the lengthening of an elastic beam.
  *
@@ -143,7 +142,7 @@ class LengtheningBeam
                              hyEdgeT& hyper_edge,
                              const lSol_float_t time = 0.) const
   {
-    static_assert( hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!" );
+    static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -174,7 +173,7 @@ class LengtheningBeam
                        hyEdgeT& hyper_edge,
                        const lSol_float_t time = 0.) const
   {
-    static_assert( hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!" );
+    static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -195,8 +194,8 @@ class LengtheningBeam
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig               Approximated eigenvalue.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -428,7 +427,7 @@ class BernoulliBendingBeam
                              hyEdgeT& hyper_edge,
                              const lSol_float_t time = 0.) const
   {
-    static_assert( hyEdge_dimT == 1, "The beam must be one-dimensional!" );
+    static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda;
 
@@ -475,7 +474,7 @@ class BernoulliBendingBeam
                        hyEdgeT& hyper_edge,
                        const lSol_float_t time = 0.) const
   {
-    static_assert( hyEdge_dimT == 1, "The beam must be one-dimensional!" );
+    static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda;
 
@@ -512,8 +511,8 @@ class BernoulliBendingBeam
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig               Approximated eigenvalue.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -662,6 +661,7 @@ class LengtheningBernoulliBendingBeam
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
+
  private:
   /*!***********************************************************************************************
    * \brief   The lengthening beam solver that does the lengthening of the beam.
@@ -746,8 +746,8 @@ class LengtheningBernoulliBendingBeam
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
-   * \param   eig               Approximated eigenvalue.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>

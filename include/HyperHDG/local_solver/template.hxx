@@ -4,7 +4,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief Implementation the interface of local solvers needed by enclosing objects in minimal way.
  *

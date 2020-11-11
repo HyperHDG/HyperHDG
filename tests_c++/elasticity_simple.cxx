@@ -1,6 +1,8 @@
 #include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/local_solver/bernoulli_beams.hxx>
+#include <HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
 #include <HyperHDG/node_descriptor/file.hxx>
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/topology/file.hxx>
