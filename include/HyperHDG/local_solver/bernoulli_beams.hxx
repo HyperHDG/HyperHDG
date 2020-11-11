@@ -1,40 +1,16 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-
-#include <HyperHDG/local_solver/bilaplacian_ldgh.hxx>
-#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
-
-#include <HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx>
-#include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
-
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/quadrature_tensorial.hxx>
+#include <HyperHDG/shape_fun_1d.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
 
 namespace LocalSolver
 {
 /*!*************************************************************************************************
- * \brief   Local solver for Poisson's equation on uniform hypergraph.
- *
- * \todo    Update doxygen in whole file!!!
- *
- * This class contains the local solver for Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3). For this class, all
- * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
- * information is needed by this class.
- *
- * \tparam  hyEdge_dimT    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  poly_deg      The polynomial degree of test and trial functions.
- * \tparam  quad_deg      The order of the quadrature rule.
+ * \brief   Local solver for the equation that governs the lengthening of an elastic beam.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -49,12 +25,16 @@ template <unsigned int hyEdge_dimT,
 class LengtheningBeam
 {
  public:
+  /*!***********************************************************************************************
+   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
+   ************************************************************************************************/
   typedef struct empty_class
   {
   } data_type;
-
+  /*!***********************************************************************************************
+   *  \brief  Define floating type the local solver uses for use of external classses / functions.
+   ************************************************************************************************/
   typedef lSol_float_t solver_float_t;
-
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -73,15 +53,22 @@ class LengtheningBeam
   {
     return 2 * space_dim * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
+   ************************************************************************************************/
+  static constexpr unsigned int system_dimension() { return space_dim; }
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
 
-  static constexpr unsigned int system_dimension() { return space_dim; }
-
  private:
+  /*!***********************************************************************************************
+   * \brief   The diffusion solver that solves the locally defined PDE.
+   ************************************************************************************************/
   const diffusion_sol_t diffusion;
   /*!***********************************************************************************************
-   * \brief  Do the pretprocessing to transfer global to local dofs.
+   * \brief   Do the pretprocessing to transfer global to local dofs.
    ************************************************************************************************/
   template <class hyEdgeT>
   inline std::array<std::array<double, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -107,7 +94,7 @@ class LengtheningBeam
     return result;
   }
   /*!***********************************************************************************************
-   * \brief  Do the postprocessing to transfer local to global dofs.
+   * \brief   Do the postprocessing to transfer local to global dofs.
    ************************************************************************************************/
   template <class hyEdgeT>
   inline std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -143,16 +130,9 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \todo    Include static asserts to check for correct dimensions.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
-   *
    * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    HyperEdge.
-   * \param   time          Time.
+   * \param   hyper_edge    HyperEdge that is considered.
+   * \param   time          Time at which analytic functions are evaluated.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -162,6 +142,7 @@ class LengtheningBeam
                              hyEdgeT& hyper_edge,
                              const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -177,7 +158,14 @@ class LengtheningBeam
 
     return edge_dof_to_node_dof(lambda, hyper_edge);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate local contribution to residual.
+   *
+   * \param   lambda_values Local part of vector x.
+   * \param   hyper_edge    HyperEdge that is considered.
+   * \param   time          Time at which analytic functions are evaluated.
+   * \retval  vecAx         Local part of vector A * x - b.
+   ************************************************************************************************/
   template <class hyEdgeT>
   std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
   numerical_flux_total(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
@@ -185,6 +173,7 @@ class LengtheningBeam
                        hyEdgeT& hyper_edge,
                        const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -200,7 +189,15 @@ class LengtheningBeam
 
     return edge_dof_to_node_dof(lambda, hyper_edge);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Local squared contribution to the L2 error.
+   *
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
+   * \retval  vec_b             Local part of vector b.
+   ************************************************************************************************/
   template <class hyEdgeT>
   lSol_float_t calc_L2_error_squared(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
@@ -224,7 +221,19 @@ class LengtheningBeam
 
     return error;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   *
+   * \tparam  absc_float_t      Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
+   * \tparam  input_array_t     Type of input array.
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   abscissas         Abscissas of the supporting points.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time.
+   * \retval  func_values       Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
   std::array<
     std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
@@ -249,7 +258,16 @@ class LengtheningBeam
 
     return result;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary.
+   *
+   * \tparam  absc_float_t    Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
+   * \param   abscissas       Abscissas of the supporting points.
+   * \param   lambda_values   The values of the skeletal variable's coefficients.
+   * \param   boundary_number Number of the boundary on which to evaluate the function.
+   * \retval  func_values     Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
              node_system_dimension()>
@@ -267,24 +285,7 @@ class LengtheningBeam
 };  // end of class LengtheningBeam
 
 /*!*************************************************************************************************
- * \brief   Local solver for Poisson's equation on uniform hypergraph.
- *
- * \todo    Update doxygen in whole file!!!
- *
- * This class contains the local solver for Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3). For this class, all
- * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
- * information is needed by this class.
- *
- * \tparam  hyEdge_dimT    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  poly_deg      The polynomial degree of test and trial functions.
- * \tparam  quad_deg      The order of the quadrature rule.
+ * \brief   Local solver for the equation that governs the bending of an elastic Bernoulli beam.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -299,25 +300,22 @@ template <unsigned int hyEdge_dimT,
 class BernoulliBendingBeam
 {
  public:
+  /*!***********************************************************************************************
+   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
+   ************************************************************************************************/
   typedef struct empty_class
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define floating type the local solver uses for use of external classses / functions.
+   ************************************************************************************************/
   typedef lSol_float_t solver_float_t;
-
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
    * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-  /*!***********************************************************************************************
-   * \brief   Specify whether advanced functuions are implemented for this class
-   *
-   * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
-   *
-   * \todo    Replace this by concept in C++20!
-   ************************************************************************************************/
-  static constexpr bool advanced_functions() { return false; }
   /*!***********************************************************************************************
    * \brief   Evaluate amount of global degrees of freedom per hypernode.
    *
@@ -330,15 +328,22 @@ class BernoulliBendingBeam
   {
     return 2 * space_dim * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
+   ************************************************************************************************/
+  static constexpr unsigned int system_dimension() { return space_dim; }
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
 
-  static constexpr unsigned int system_dimension() { return space_dim; }
-
  private:
+  /*!***********************************************************************************************
+   * \brief   The bilaplacian solver that solves the locally defined PDE.
+   ************************************************************************************************/
   const bilaplacian_sol_t bilaplacian_solver;
   /*!***********************************************************************************************
-   * \brief  Do the pretprocessing to transfer global to local dofs.
+   * \brief   Do the preprocessing to transfer global to local dofs.
    ************************************************************************************************/
   template <class hyEdgeT>
   inline std::array<std::array<double, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -369,7 +374,7 @@ class BernoulliBendingBeam
     return result;
   }
   /*!***********************************************************************************************
-   * \brief  Do the postprocessing to transfer local to global dofs.
+   * \brief   Do the postprocessing to transfer local to global dofs.
    ************************************************************************************************/
   template <class hyEdgeT>
   inline std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -410,16 +415,9 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \todo    Include static asserts to check for correct dimensions.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
-   *
    * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    Hyperedge.
-   * \param   time          Time.
+   * \param   hyper_edge    HyperEdge that is considered.
+   * \param   time          Time at which analytic functions are evaluated.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -429,6 +427,7 @@ class BernoulliBendingBeam
                              hyEdgeT& hyper_edge,
                              const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda;
 
@@ -460,15 +459,13 @@ class BernoulliBendingBeam
 
     return result;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+   * \brief   Evaluate local contribution to residual.
    *
-   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Lambda values.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vec_b         Local part of vector b.
+   * \param   lambda_values Local part of vector x.
+   * \param   hyper_edge    HyperEdge that is considered.
+   * \param   time          Time at which analytic functions are evaluated.
+   * \retval  vecAx         Local part of vector A * x - b.
    ************************************************************************************************/
   template <class hyEdgeT>
   std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -477,6 +474,7 @@ class BernoulliBendingBeam
                        hyEdgeT& hyper_edge,
                        const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda;
 
@@ -508,7 +506,15 @@ class BernoulliBendingBeam
 
     return result;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Local squared contribution to the L2 error.
+   *
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
+   * \retval  vec_b             Local part of vector b.
+   ************************************************************************************************/
   template <class hyEdgeT>
   lSol_float_t calc_L2_error_squared(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
@@ -537,7 +543,19 @@ class BernoulliBendingBeam
 
     return error;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   *
+   * \tparam  absc_float_t      Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
+   * \tparam  input_array_t     Type of input array.
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   abscissas         Abscissas of the supporting points.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time.
+   * \retval  func_values       Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
              BernoulliBendingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t>::
@@ -566,7 +584,16 @@ class BernoulliBendingBeam
 
     return values;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary.
+   *
+   * \tparam  absc_float_t    Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
+   * \param   abscissas       Abscissas of the supporting points.
+   * \param   lambda_values   The values of the skeletal variable's coefficients.
+   * \param   boundary_number Number of the boundary on which to evaluate the function.
+   * \retval  func_values     Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
              node_system_dimension()>
@@ -581,28 +608,11 @@ class BernoulliBendingBeam
       .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
         lambda_values[boundary_number]);
   }
-
 };  // end of class BernoulliBendingBeam
 
 /*!*************************************************************************************************
- * \brief   Local solver for Poisson's equation on uniform hypergraph.
- *
- * \todo    Update doxygen in whole file!!!
- *
- * This class contains the local solver for Poisson's equation, i.e.,
- * \f[
- *  - \Delta u = 0 \quad \text{ in } \Omega, \qquad u = u_\text D \quad \text{ on } \partial \Omega
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3). For this class, all
- * hyperedges are supposed to be uniform (i.e. equal to the unit hypercube). Thus, no geometrical
- * information is needed by this class.
- *
- * \tparam  hyEdge_dimT    Dimension of a hyperedge, i.e., 1 is for PDEs defined on graphs, 2 is for
- *                        PDEs defined on surfaces, and 3 is for PDEs defined on volumes.
- * \tparam  poly_deg      The polynomial degree of test and trial functions.
- * \tparam  quad_deg      The order of the quadrature rule.
+ * \brief   Local solver for the equation that governs the bending and change of length of an
+ *          elastic Bernoulli beam.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -615,25 +625,22 @@ template <unsigned int hyEdge_dimT,
 class LengtheningBernoulliBendingBeam
 {
  public:
+  /*!***********************************************************************************************
+   *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
+   ************************************************************************************************/
   typedef struct empty_class
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define floating type the local solver uses for use of external classses / functions.
+   ************************************************************************************************/
   typedef lSol_float_t solver_float_t;
-
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
    * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim() { return hyEdge_dimT; }
-  /*!***********************************************************************************************
-   * \brief   Specify whether advanced functuions are implemented for this class
-   *
-   * Advanced functions are numerical_flux_from_rhs, dirichlet_coeffs, and neumann_coeffs.
-   *
-   * \todo    Replace this by concept in C++20!
-   ************************************************************************************************/
-  static constexpr bool advanced_functions() { return false; }
   /*!***********************************************************************************************
    * \brief   Evaluate amount of global degrees of freedom per hypernode.
    *
@@ -646,15 +653,23 @@ class LengtheningBernoulliBendingBeam
   {
     return 2 * space_dim * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
+   ************************************************************************************************/
+  static constexpr unsigned int system_dimension() { return space_dim; }
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
 
-  static constexpr unsigned int system_dimension() { return space_dim; }
-
  private:
-  const lSol_float_t tau_;
-
+  /*!***********************************************************************************************
+   * \brief   The lengthening beam solver that does the lengthening of the beam.
+   ************************************************************************************************/
   const LengtheningBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t> len_beam;
+  /*!***********************************************************************************************
+   * \brief   The bending beam solver that does the bending of the beam.
+   ************************************************************************************************/
   const BernoulliBendingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t> ben_beam;
 
  public:
@@ -668,22 +683,15 @@ class LengtheningBernoulliBendingBeam
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
   LengtheningBernoulliBendingBeam(const constructor_value_type& tau = 1.)
-  : tau_(tau), len_beam(tau), ben_beam(tau)
+  : len_beam(tau), ben_beam(tau)
   {
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \todo    Include static asserts to check for correct dimensions.
-   *
-   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
-   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
-   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
-   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
-   *
    * \param   lambda_values Local part of vector x.
    * \param   hyper_edge    Hyperedge.
-   * \param   time          Time.
+   * \param   time          Time at which analytic functions are evaluated.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT>
@@ -693,6 +701,7 @@ class LengtheningBernoulliBendingBeam
                              hyEdgeT& hyper_edge,
                              const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
 
     result = len_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
@@ -704,15 +713,14 @@ class LengtheningBernoulliBendingBeam
 
     return result;
   }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to right-hand side vector by global right-hand side.
+   * \brief   Evaluate local contribution to residual.
    *
    * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
    * \param   lambda_values Lambda values.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vec_b         Local part of vector b.
+   * \param   time          Time at which analytic functions are evaluated.
+   * \retval  vec_b         Local part of vector A * x - b.
    ************************************************************************************************/
   template <class hyEdgeT>
   std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -721,6 +729,7 @@ class LengtheningBernoulliBendingBeam
                        hyEdgeT& hyper_edge,
                        const lSol_float_t time = 0.) const
   {
+    static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
 
     result = len_beam.numerical_flux_total(lambda_values, hyper_edge);
@@ -732,7 +741,15 @@ class LengtheningBernoulliBendingBeam
 
     return result;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Local squared contribution to the L2 error.
+   *
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which analytic functions are evaluated.
+   * \retval  vec_b             Local part of vector b.
+   ************************************************************************************************/
   template <class hyEdgeT>
   lSol_float_t calc_L2_error_squared(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
@@ -745,7 +762,19 @@ class LengtheningBernoulliBendingBeam
     error += ben_beam.calc_L2_error_squared(lambda_values, hyper_edge);
     return error;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   *
+   * \tparam  absc_float_t      Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
+   * \tparam  input_array_t     Type of input array.
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   abscissas         Abscissas of the supporting points.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time.
+   * \retval  func_values       Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
   bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
@@ -764,7 +793,16 @@ class LengtheningBernoulliBendingBeam
 
     return result;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Evaluate the function lambda on tensor product points on the boundary.
+   *
+   * \tparam  absc_float_t    Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
+   * \param   abscissas       Abscissas of the supporting points.
+   * \param   lambda_values   The values of the skeletal variable's coefficients.
+   * \param   boundary_number Number of the boundary on which to evaluate the function.
+   * \retval  func_values     Function values at tensorial points.
+   ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
              node_system_dimension()>
@@ -785,7 +823,6 @@ class LengtheningBernoulliBendingBeam
 
     return result;
   }
-
 };  // end of class LengtheningBernoulliBendingBeam
 
 }  // namespace LocalSolver

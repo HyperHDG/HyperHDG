@@ -32,6 +32,8 @@ print("Starting time is", start_time)
 problem = "GlobalLoop::Elliptic<Topology::File<1,3>,Geometry::File<1,3>,NodeDescriptor::File<1,3>,"\
           +                    "LocalSolver::LengtheningBernoulliBendingBeam<1,3,1,2> > "
 filenames = [ "HyperHDG/geometry/file.hxx", "HyperHDG/node_descriptor/file.hxx", \
+              "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx", \
+              "HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx", \
               "HyperHDG/local_solver/bernoulli_beams.hxx" ]
 
 # Import C++ wrapper class to use HDG method on graphs.
@@ -68,7 +70,7 @@ A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 
-print("The linear solver (conjugate gradients) failed (did not converge)!")
+print("The linear solver (conjugate gradients) worked!")
 
 # Plot solution to vtu File to be visualized using Paraview.
 HDG_wrapper.plot_option("fileName", "aggregate_" + aggregate)
