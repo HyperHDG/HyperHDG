@@ -9,6 +9,7 @@
 
 namespace LocalSolver
 {
+
 /*!*************************************************************************************************
  * \brief   Local solver for bilaplacian equation on uniform hypergraph.
  *

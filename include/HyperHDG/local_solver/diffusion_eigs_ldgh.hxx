@@ -9,6 +9,7 @@
 
 namespace LocalSolver
 {
+
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -124,11 +125,11 @@ class DiffusionEigs
     return Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
   /*!***********************************************************************************************
-   * \brief Dimension of of the solution evaluated with respect to a hypernode.
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
   static constexpr unsigned int node_value_dimension() { return 1U; }
   /*!***********************************************************************************************
-   * \brief Dimension of of the solution evaluated with respect to a hyperedge.
+   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
   /*!***********************************************************************************************
@@ -500,14 +501,14 @@ class DiffusionEigs
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
   /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary
+   * \brief   Evaluate the function lambda on tensor product points on the boundary.
    *
    * \tparam  absc_float_t    Floating type for the abscissa values.
    * \tparam  abscissas_sizeT Size of the array of array of abscissas.
    * \param   abscissas       Abscissas of the supporting points.
    * \param   lambda_values   The values of the skeletal variable's coefficients.
    * \param   boundary_number Number of the boundary on which to evaluate the function.
-   * \retval  func_values       Function values at tensorial points.
+   * \retval  func_values     Function values at tensorial points.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
