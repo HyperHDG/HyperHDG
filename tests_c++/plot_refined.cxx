@@ -49,7 +49,7 @@ void test()
   name += std::to_string(edge_dim) + std::string("-") + char('a' + space_dim - edge_dim);
   pltop.fileName = name;
   pltop.printFileNumber = false;
-  plot_vtu<HDG, Solver, nsub>(hdg_graph, lsolver, vectorDirichlet, pltop);
+  plot_vtu<HDG, Solver, vector<double>, double, nsub>(hdg_graph, lsolver, vectorDirichlet, pltop);
 }
 
 int main()
