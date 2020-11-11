@@ -9,6 +9,7 @@
 
 namespace LocalSolver
 {
+
 /*!*************************************************************************************************
  * \brief   Local solver for Poisson's equation on uniform hypergraph.
  *
