@@ -192,10 +192,11 @@ std::string set_plot_option(PlotOptions& plot_options,
  * \tparam  LocalSolverT    Template parameter describing the precise class of the local solver,
  *                          i.e., it contains an local solver for a specific equation living on the
  *                          hypergraph.
- * \tparam  dof_value_t     The floating point of dof values.
+ * \tparam  LargeVecT       The typename of the large vector.
+ * \tparam  floatT          The floating point type in wihch time is given of dof values.
  * \param   hyper_graph     The hypergraph.
  * \param   local_solver    The local solver.
- * \param   lambda          \c std::vector containing the skeletal degrees of freedom encoding the
+ * \param   lambda          Large vector containing the skeletal degrees of freedom encoding the
  *                          representation of the unique solution.
  * \param   plot_options    PlotOptions object containing plotting options.
  * \param   time            The time stamp.
@@ -203,12 +204,12 @@ std::string set_plot_option(PlotOptions& plot_options,
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
+template <typename HyperGraphT, typename LocalSolverT, typename LargeVecT, typename floatT = float>
 void plot(HyperGraphT& hyper_graph,
           const LocalSolverT& local_solver,
-          const std::vector<dof_value_t>& lambda,
+          const LargeVecT& lambda,
           PlotOptions& plot_options,
-          const dof_value_t time = 0.);
+          const floatT time = 0.);
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -478,16 +479,13 @@ void create_directory_if_needed(std::ofstream& output_file,
 /*!*************************************************************************************************
  * \brief   Auxiliary function to get dof values of edge.
  **************************************************************************************************/
-template <unsigned int edge_dim,
-          class HyperGraphT,
-          typename dof_value_t = double,
-          typename hyEdge_index_t = unsigned int>
-std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
-get_edge_dof_values(HyperGraphT& hyper_graph,
-                    hyEdge_index_t edge_index,
-                    const std::vector<dof_value_t>& lambda)
+template <unsigned int edge_dim, class HyperGraphT, typename hyEdge_index_t, typename LargeVecT>
+std::array<std::array<typename LargeVecT::value_type, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
+get_edge_dof_values(HyperGraphT& hyper_graph, hyEdge_index_t edge_index, const LargeVecT& lambda)
 {
-  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+  std::array<std::array<typename LargeVecT::value_type, HyperGraphT::n_dofs_per_node()>,
+             2 * edge_dim>
+    hyEdge_dofs;
   SmallVec<2 * edge_dim, unsigned int> hyEdge_hyNodes;
   hyEdge_hyNodes = hyper_graph.hyEdge_topology(edge_index).get_hyNode_indices();
   for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -503,15 +501,16 @@ get_edge_dof_values(HyperGraphT& hyper_graph,
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
+          typename LargeVecT,
           unsigned int n_subdivisions = 1,
-          typename dof_value_t = double,
           typename hyEdge_index_t = unsigned int>
 void plot_edge_values(HyperGraphT& hyper_graph,
                       const LocalSolverT& local_solver,
-                      const std::vector<dof_value_t>& lambda,
+                      const LargeVecT& lambda,
                       std::ofstream& myfile,
                       SmallVec<n_subdivisions + 1, float> abscissas)
 {
+  using dof_value_t = typename LargeVecT::value_type;
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -519,7 +518,7 @@ void plot_edge_values(HyperGraphT& hyper_graph,
 
   for (hyEdge_index_t he_number = 0; he_number < n_edges; ++he_number)
   {
-    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
       hyper_graph, he_number, lambda);
     std::array<
       std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
@@ -556,15 +555,16 @@ void plot_edge_values(HyperGraphT& hyper_graph,
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
+          typename LargeVecT,
           unsigned int n_subdivisions = 1,
-          typename dof_value_t = double,
           typename hyEdge_index_t = unsigned int>
 void plot_boundary_values(HyperGraphT& hyper_graph,
                           const LocalSolverT& local_solver,
-                          const std::vector<dof_value_t>& lambda,
+                          const LargeVecT& lambda,
                           std::ofstream& myfile,
                           SmallVec<n_subdivisions + 1, float> abscissas)
 {
+  using dof_value_t = typename LargeVecT::value_type;
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -575,7 +575,7 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
     local_values;
   for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index)
   {
-    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, dof_value_t, hyEdge_index_t>(
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
       hyper_graph, edge_index, lambda);
     for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index)
     {
@@ -601,14 +601,15 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
           unsigned int n_subdivisions = 1,
-          typename dof_value_t = double,
           typename hyEdge_index_t = unsigned int>
 void plot_vtu(HyperGraphT& hyper_graph,
               const LocalSolverT& local_solver,
-              const std::vector<dof_value_t>& lambda,
+              const LargeVecT& lambda,
               const PlotOptions& plot_options,
-              const dof_value_t time = 0.)
+              const floatT time = 0.)
 {
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
@@ -678,12 +679,12 @@ void plot_vtu(HyperGraphT& hyper_graph,
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges)
     {
-      plot_edge_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(
+      plot_edge_values<HyperGraphT, LocalSolverT, LargeVecT, n_subdivisions, hyEdge_index_t>(
         hyper_graph, local_solver, lambda, myfile, abscissas);
     }
     if (plot_options.plot_edge_boundaries)
     {
-      plot_boundary_values<HyperGraphT, LocalSolverT, n_subdivisions, dof_value_t, hyEdge_index_t>(
+      plot_boundary_values<HyperGraphT, LocalSolverT, LargeVecT, n_subdivisions, hyEdge_index_t>(
         hyper_graph, local_solver, lambda, myfile, boundary_abscissas);
     }
     myfile << "        </DataArray>" << std::endl;
@@ -700,12 +701,12 @@ void plot_vtu(HyperGraphT& hyper_graph,
 // plot()
 // -------------------------------------------------------------------------------------------------
 
-template <class HyperGraphT, class LocalSolverT, typename dof_value_t = double>
+template <typename HyperGraphT, typename LocalSolverT, typename LargeVecT, typename floatT>
 void plot(HyperGraphT& hyper_graph,
           const LocalSolverT& local_solver,
-          const std::vector<dof_value_t>& lambda,
+          const LargeVecT& lambda,
           PlotOptions& plot_options,
-          const dof_value_t time)
+          const floatT time)
 {
   hy_assert(plot_options.fileEnding == PlotOptions::vtu,
             "Only file ending vtu is supported at the moment. Your choice has been "
