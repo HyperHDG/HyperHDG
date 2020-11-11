@@ -9,7 +9,6 @@
 
 namespace LocalSolver
 {
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
