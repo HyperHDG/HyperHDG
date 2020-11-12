@@ -32,10 +32,6 @@ class LengtheningBeam
   {
   } data_type;
   /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
-  /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
    * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
@@ -306,10 +302,6 @@ class BernoulliBendingBeam
   typedef struct empty_class
   {
   } data_type;
-  /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -631,10 +623,6 @@ class LengtheningBernoulliBendingBeam
   typedef struct empty_class
   {
   } data_type;
-  /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *

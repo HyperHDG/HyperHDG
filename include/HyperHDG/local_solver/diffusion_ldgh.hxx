@@ -114,10 +114,6 @@ class Diffusion
   typedef struct empty_class
   {
   } data_type;
-  /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
