@@ -119,11 +119,6 @@ template <unsigned int hyEdge_dimT,
 class BilaplacianParab
 {
  public:
-  /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
-
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
   // -----------------------------------------------------------------------------------------------
