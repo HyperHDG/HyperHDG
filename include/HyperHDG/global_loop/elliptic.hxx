@@ -198,10 +198,12 @@ class Elliptic
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                  2 * TopologyT::hyEdge_dim()>(
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, time);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge_dofs, time);
       else
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyper_edge, time);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge_dofs, hyper_edge, time);
 
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -259,13 +261,15 @@ class Elliptic
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                  2 * TopologyT::hyEdge_dim()>(
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
       {
-        hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, time);
+        local_solver_.numerical_flux_total(hyEdge_dofs, hyEdge_dofs, time);
       }
       else
       {
-        hyEdge_dofs = local_solver_.numerical_flux_total(hyEdge_dofs, hyper_edge, time);
+        local_solver_.numerical_flux_total(hyEdge_dofs, hyEdge_dofs, hyper_edge, time);
       }
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -318,6 +322,8 @@ class Elliptic
       if constexpr (not_uses_geometry<LocalSolverT,
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                  2 * TopologyT::hyEdge_dim()>(
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
         result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
