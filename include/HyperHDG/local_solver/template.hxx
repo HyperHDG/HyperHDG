@@ -34,10 +34,6 @@ class Template
    ************************************************************************************************/
   static constexpr unsigned int n_glob_dofs_per_node() { return 0U; }
   /*!***********************************************************************************************
-   * \brief   The dimension of the function space for Lagrange multiplies on nodes
-   ************************************************************************************************/
-  static constexpr unsigned int node_value_dimension() { return 0U; }
-  /*!***********************************************************************************************
    * \brief   The dimension of the local system of partial differential equations
    ************************************************************************************************/
   static constexpr unsigned int system_dimension() { return 0U; }

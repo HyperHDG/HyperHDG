@@ -140,10 +140,6 @@ class Diffusion
     return Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
   /*!***********************************************************************************************
-   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   ************************************************************************************************/
-  static constexpr unsigned int node_value_dimension() { return 1U; }
-  /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
