@@ -323,7 +323,7 @@ class Diffusion
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \tparam  SmallMatT     The data type for the lambda_values.
-   * \param   coeffs        Global degrees of freedom associated to the hyperedge.
+   * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \param   time          Point of time the local problem is solved at.
    * \retval  loc_sol       Solution of the local problem.
@@ -384,7 +384,7 @@ class Diffusion
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primal_at_boundary(
+  inline SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primal_at_boundary(
     const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
@@ -399,7 +399,7 @@ class Diffusion
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> dual_at_boundary(
+  inline SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> dual_at_boundary(
     const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
     hyEdgeT& hyper_edge) const;
 
@@ -421,19 +421,19 @@ class Diffusion
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \todo    Update doxygen in this file starting here!
-   *
    * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
    * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
    * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
    * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatT     Data type of \c lambda_values.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time                Time.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
@@ -441,11 +441,20 @@ class Diffusion
                                            hyEdgeT& hyper_edge,
                                            const lSol_float_t time = 0.) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
@@ -456,7 +465,7 @@ class Diffusion
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] =
-            duals[i][j] + tau_ * primals[i][j] -
+            duals(i, j) + tau_ * primals(i, j) -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
 
     return lambda_values_out;
@@ -481,12 +490,14 @@ class Diffusion
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to residual \f$ A x - b \f$.
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatT     Data type of \c lambda_values.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x - b.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   time                Time at which analytic functions are evaluated.
+   * \retval  vecAx               Local part of vector A * x - b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
@@ -494,11 +505,20 @@ class Diffusion
                                      hyEdgeT& hyper_edge,
                                      const lSol_float_t time = 0.) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
@@ -510,7 +530,7 @@ class Diffusion
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] =
-            duals[i][j] + tau_ * primals[i][j] -
+            duals(i, j) + tau_ * primals(i, j) -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
     }
 
@@ -533,8 +553,12 @@ class Diffusion
                                     hyEdgeT& hyper_edge,
                                     const lSol_float_t time = 0.) const
   {
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
+                "Matrix must have appropriate size!");
 
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
@@ -631,12 +655,14 @@ class Diffusion
    *
    * \note    This function is not used for elliptic problems.
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatT     Data type of \c lambda_values.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x-
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   time                Time at which analytic functions are evaluated.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& numerical_flux_from_mass(const SmallMatInT& lambda_values_in,
@@ -644,12 +670,21 @@ class Diffusion
                                          hyEdgeT& hyper_edge,
                                          const lSol_float_t time = 0.) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
     coeffs = solve_mass_problem(coeffs, hyper_edge, time);
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
@@ -660,7 +695,7 @@ class Diffusion
           lambda_values_out[i][j] = 0.;
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = duals[i][j] + tau_ * primals[i][j];
+          lambda_values_out[i][j] = duals(i, j) + tau_ * primals(i, j);
     }
 
     return lambda_values_out;
@@ -670,12 +705,14 @@ class Diffusion
    *
    * \note    This function is not used for elliptic problems.
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatT     Data type of \c lambda_values.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time          Tinme.
-   * \retval  vecAx         Local part of mass matrix residual.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \¢ lambda_values_out
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   time                Time.
+   * \retval  vecAx               Local part of mass matrix residual.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& total_numerical_flux_mass(const SmallMatInT& lambda_values_in,
@@ -683,12 +720,21 @@ class Diffusion
                                           hyEdgeT& hyper_edge,
                                           const lSol_float_t time = 0.) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
     coeffs = solve_mass_problem(coeffs, hyper_edge, time);
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
@@ -699,7 +745,7 @@ class Diffusion
           lambda_values_out[i][j] = 0.;
       else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values_out[i][j] = duals[i][j] + tau_ * primals[i][j];
+          lambda_values_out[i][j] = duals(i, j) + tau_ * primals(i, j);
     }
 
     return lambda_values_out;
@@ -720,6 +766,11 @@ class Diffusion
                                      hyEdgeT& hy_edge,
                                      const lSol_float_t time = 0.) const
   {
+    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
+                "Matrix must have appropriate size!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
       solve_local_problem(lambda_values, 1U, hy_edge, time);
@@ -752,6 +803,15 @@ class Diffusion
                                           const lSol_float_t delta_t,
                                           const lSol_float_t time) const
   {
+    hy_assert(lambda_values_new.size() == lambda_values_old.size() &&
+                lambda_values_new.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_new.size(); ++i)
+      hy_assert(
+        lambda_values_new[i].size() == lambda_values_old[i].size() &&
+          lambda_values_new[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs_new =
@@ -1014,23 +1074,19 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline std::array<
-  std::array<lSol_float_t,
-             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
-  2 * hyEdge_dimT>
+inline SmallMat<2 * hyEdge_dimT,
+                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+                lSol_float_t>
 Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
-
-  for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
-    bdr_values[dim_n].fill(0.);
+  SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        bdr_values[face][j] +=
+        bdr_values(face, j) +=
           coeffs[hyEdge_dimT * n_shape_fct_ + i] *
           integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
@@ -1049,19 +1105,15 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline std::array<
-  std::array<lSol_float_t,
-             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
-  2 * hyEdge_dimT>
+inline SmallMat<2 * hyEdge_dimT,
+                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+                lSol_float_t>
 Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
-  std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
+  SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
   lSol_float_t integral;
-
-  for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
-    bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1070,7 +1122,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_b
         integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          bdr_values[face][j] += hyper_edge.geometry.local_normal(face).operator[](dim) * integral *
+          bdr_values(face, j) += hyper_edge.geometry.local_normal(face).operator[](dim) * integral *
                                  coeffs[dim * n_shape_fct_ + i];
       }
 
