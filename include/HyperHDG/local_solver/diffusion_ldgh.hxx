@@ -6,7 +6,6 @@
 #include <HyperHDG/shape_fun_1d.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
 #include <algorithm>
-#include <type_traits>
 
 namespace LocalSolver
 {
@@ -363,7 +362,7 @@ class Diffusion
       rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge) +
             assemble_rhs_from_global_rhs(hyper_edge, time) +
             assemble_rhs_from_coeffs(coeffs, hyper_edge);
-      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
+      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time));
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -750,7 +749,6 @@ class Diffusion
 
     return lambda_values_out;
   }
-
   /*!***********************************************************************************************
    * \brief   Calculate squared local contribution of L2 error.
    *
@@ -781,7 +779,6 @@ class Diffusion
                                                                 parameters::analytic_result>(
       coeffs, hy_edge.geometry, time);
   }
-
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
    *
@@ -869,7 +866,6 @@ class Diffusion
   lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
-
 };  // end of class Diffusion
 
 // -------------------------------------------------------------------------------------------------
