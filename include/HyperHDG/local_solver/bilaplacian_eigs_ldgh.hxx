@@ -244,28 +244,29 @@ class BilaplacianEigs
    * skeletal variable.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT     The typename of \c lambda_values.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \retval  loc_rhs       Local right hand side of the locasl solver.
    ************************************************************************************************/
-  template <typename hyEdgeT>
+  template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_lambda(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    const SmallMatT& lambda_values,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
    * \brief   Solve local problem (with right-hand side from skeletal).
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT     The data type of \c lambda_values.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \param   eig           Eigenvalue for which the local problem is solved.
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
-  template <typename hyEdgeT>
-  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hyper_edge,
-    const lSol_float_t eig) const
+  template <typename hyEdgeT, typename SmallMatT>
+  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(const SmallMatT& lambda_values,
+                                                                   hyEdgeT& hyper_edge,
+                                                                   const lSol_float_t eig) const
   {
     try
     {
@@ -330,42 +331,54 @@ class BilaplacianEigs
    *
    * This corresponds to an evaluation of the residual in the nonlinear context
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   eig           Eigenvalue.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   eig                 Eigenvalue.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>
-  numerical_flux_from_lambda(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hyper_edge,
-    const lSol_float_t eig) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out,
+                                           hyEdgeT& hyper_edge,
+                                           const lSol_float_t eig) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values, hyper_edge, eig);
+      solve_local_problem(lambda_values_in, hyper_edge, eig);
 
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
-      primals(primal_at_boundary(coeffs, hyper_edge)), duals(dual_at_boundary(coeffs, hyper_edge));
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+      primal_at_boundary(coeffs, hyper_edge)),
+      duals(dual_at_boundary(coeffs, hyper_edge));
 
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
     {
-      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        bdr_values[i][j] =
+      for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        lambda_values_out[i][j] =
           duals[i][j] + tau_ * primals[i][j] -
-          tau_ * lambda_values[i][j < n_shape_bdr_ ? j + n_shape_bdr_ : j - n_shape_bdr_] *
+          tau_ * lambda_values_in[i][j < n_shape_bdr_ ? j + n_shape_bdr_ : j - n_shape_bdr_] *
             hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+          lambda_values_out[i][j] = 0.;
       if (is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = lambda_values_out[i].size() / 2; j < lambda_values_out[i].size(); ++j)
+          lambda_values_out[i][j] = 0.;
     }
 
-    return bdr_values;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Fill array with 1 if the node is of Dirichlet type and 0 elsewhen.
@@ -392,42 +405,40 @@ class BilaplacianEigs
    * \brief   L2 project given analytical functio to skeletal space.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT     The data type of \c lambda_values.
    * \param   lambda_values Local part of vector x. (Redundant)
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
    * \param   time          Time. (Redundant)
    * \retval  bdr_values    Coefficients of L2 projection.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_initial(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hyper_edge,
-    const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatT>
+  SmallMatT numerical_flux_initial(SmallMatT& lambda_values,
+                                   hyEdgeT& hyper_edge,
+                                   const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
 
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = 0.;
+          lambda_values[i][j] = 0.;
       else
       {
         for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          bdr_values[i][j] =
+          lambda_values[i][j] =
             integrator
               .template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
                 i, j, hyper_edge.geometry, time);
         for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] =
+          lambda_values[i][j] =
             integrator.template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
                                                          parameters::initial_laplace>(
               i, j, hyper_edge.geometry, time);
       }
     }
 
-    return bdr_values;
+    return lambda_values;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
@@ -435,42 +446,55 @@ class BilaplacianEigs
    * This corresponds to the evaluation of the Jacobian evaluated at \c lambda_vals, \c eig_val in
    * the direction \c lambda_values, \c eig.
    *
-   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Lambda in whose direction Jacobian is evaluated.
-   * \param   eig           Eigenvalue in whose direction Jacobian is evaluated.
-   * \param   lambda_vals   Lambda at which Jacobian is evaluated.
-   * \param   eig_val       Eigenvalue at which Jacobian is evaluated.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   eig                 Eigenvalue in whose direction Jacobian is evaluated.
+   * \param   lambda_vals         Lambda at which Jacobian is evaluated.
+   * \param   eig_val             Eigenvalue at which Jacobian is evaluated.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_der(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    const lSol_float_t eig,
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_vals,
-    const lSol_float_t eig_val,
-    hyEdgeT& hyper_edge) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_der(const SmallMatInT& lambda_values_in,
+                                   SmallMatOutT& lambda_values_out,
+                                   const lSol_float_t eig,
+                                   const SmallMatInT& lambda_vals,
+                                   const lSol_float_t eig_val,
+                                   hyEdgeT& hyper_edge) const
   {
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values, hyper_edge, eig_val);  // f_mu(eta,lambda_)
+      solve_local_problem(lambda_values_in, hyper_edge, eig_val);  // f_mu(eta,lambda_)
 
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
-      primals(primal_at_boundary(coeffs, hyper_edge)), duals(dual_at_boundary(coeffs, hyper_edge));
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+      primal_at_boundary(coeffs, hyper_edge)),
+      duals(dual_at_boundary(coeffs, hyper_edge));
 
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
     {
-      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        bdr_values[i][j] =
+      for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        lambda_values_out[i][j] =
           duals[i][j] + tau_ * primals[i][j] -
-          tau_ * lambda_values[i][j < n_shape_bdr_ ? j + n_shape_bdr_ : j - n_shape_bdr_] *
+          tau_ * lambda_values_in[i][j < n_shape_bdr_ ? j + n_shape_bdr_ : j - n_shape_bdr_] *
             hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+          lambda_values_out[i][j] = 0.;
       if (is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = lambda_values_out[i].size() / 2; j < lambda_values_out[i].size(); ++j)
+          lambda_values_out[i][j] = 0.;
     }
 
     coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
@@ -492,34 +516,34 @@ class BilaplacianEigs
     primals = primal_at_boundary(coeffs, hyper_edge);
     duals = dual_at_boundary(coeffs, hyper_edge);
 
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
     {
-      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        bdr_values[i][j] += duals[i][j] + tau_ * primals[i][j];
+      for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        lambda_values_out[i][j] += duals[i][j] + tau_ * primals[i][j];
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+          lambda_values_out[i][j] = 0.;
       if (is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          bdr_values[i][j] = 0.;
+        for (unsigned int j = lambda_values_out[i].size() / 2; j < lambda_values_out[i].size(); ++j)
+          lambda_values_out[i][j] = 0.;
     }
 
-    return bdr_values;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Local squared contribution to the L2 error.
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT         The data type of \c lambda_values.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
    * \param   eig               Approximated eigenvalue.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hy_edge,
-    const lSol_float_t eig = 0.) const
+  template <class hyEdgeT, typename SmallMatT>
+  lSol_float_t calc_L2_error_squared(SmallMatT& lambda_values,
+                                     hyEdgeT& hy_edge,
+                                     const lSol_float_t eig = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -691,14 +715,12 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename hyEdgeT>
+template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
   BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
 BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
-  assemble_rhs_from_lambda(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hyper_edge) const
+  assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
