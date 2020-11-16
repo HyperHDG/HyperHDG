@@ -34,10 +34,6 @@ class BilaplacianUniform
   typedef struct empty_class
   {
   } data_type;
-  /*!***********************************************************************************************
-   *  \brief  Define floating type the local solver uses for use of external classses / functions.
-   ************************************************************************************************/
-  typedef lSol_float_t solver_float_t;
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -59,10 +55,6 @@ class BilaplacianUniform
   {
     return 2 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
-  /*!***********************************************************************************************
-   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   ************************************************************************************************/
-  static constexpr unsigned int node_value_dimension() { return 1U; }
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
@@ -137,21 +129,22 @@ class BilaplacianUniform
    * The right hand side needs the values of the global degrees of freedom. Thus, it needs to be
    * constructed individually for every hyperedge.
    *
+   * \tparam  SmallMatT     The cata type of the \c lambda_values.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \retval  loc_rhs       Local right hand side of the locasl solver.
    ************************************************************************************************/
-  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
-    const;
+  template <typename SmallMatT>
+  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs(const SmallMatT& lambda_values) const;
   /*!***********************************************************************************************
    * \brief   Solve local problem.
    *
+   * \tparam  SmallMatT     The cata type of the \c lambda_values.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
+  template <typename SmallMatT>
   inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
-    const
+    const SmallMatT& lambda_values) const
   {
     try
     {
@@ -209,47 +202,56 @@ class BilaplacianUniform
    * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
    * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
    *
-   * \param   lambda_values Local part of vector x.
-   * \param   time          Time --- this parameter is redundant for this local solver.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   time                Time --- this parameter is redundant for this local solver.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>
-  numerical_flux_from_lambda(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    const lSol_float_t time = 0.) const
+  template <typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out,
+                                           const lSol_float_t time = 0.) const
   {
-    std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values);
+    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+                lambda_values_in.size() == 2 * hyEdge_dimT,
+              "Both matrices must be of same size which corresponds to the number of faces!");
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      hy_assert(
+        lambda_values_in[i].size() == lambda_values_out[i].size() &&
+          lambda_values_in[i].size() == n_glob_dofs_per_node(),
+        "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
-      primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
+    std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values_in);
 
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+      primal_at_boundary(coeffs)),
+      duals(dual_at_boundary(coeffs));
 
-    return bdr_values;
+    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
+      for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        lambda_values_out[i][j] = duals[i][j] + tau_ * (primals[i][j] - lambda_values_in[i][j]);
+
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector residual.
    *
-   * \param   lambda_values Local part of vector x.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
    * \param   time          Time --- this parameter is redundant for this local solver.
    * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
-  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> numerical_flux_total(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    const lSol_float_t time = 0.) const
+  template <typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
+                                     SmallMatOutT& lambda_values_out,
+                                     const lSol_float_t time = 0.) const
   {
-    std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_values);
-
-    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values,
-      primals(primal_at_boundary(coeffs)), duals(dual_at_boundary(coeffs));
-
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-        bdr_values[i][j] = duals[i][j] + tau_ * primals[i][j] - tau_ * lambda_values[i][j];
-
-    return bdr_values;
+    return lambda_values_out =
+             numerical_flux_from_lambda(lambda_values_in, lambda_values_out, time);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.
@@ -258,9 +260,9 @@ class BilaplacianUniform
    * \param   time          Time --- this parameter is redundant for this local solver.
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
-  lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    const lSol_float_t time = 0.) const
+  template <typename SmallMatT>
+  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
+                                     const lSol_float_t time = 0.) const
   {
     return 0.;
   }
@@ -392,11 +394,11 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t>
+template <typename SmallMatT>
 inline SmallVec<BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::n_loc_dofs_,
                 lSol_float_t>
 BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
-  const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values)
-  const
+  const SmallMatT& lambda_values) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   lSol_float_t integral;

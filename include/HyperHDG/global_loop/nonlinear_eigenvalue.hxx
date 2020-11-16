@@ -131,30 +131,36 @@ class NonlinearEigenvalue
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
+      hyEdge_dofs_new;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      {
         hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs[hyNode]);
+                                                     hyEdge_dofs_old[hyNode]);
+        hyEdge_dofs_new[hyNode].fill(0.);
+      }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>(
+                                                 2 * TopologyT::hyEdge_dim()>&(
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, eig);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, eig);
       else
-        hyEdge_dofs = local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyper_edge, eig);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, eig);
 
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
         hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs[hyNode]);
+                                                        hyEdge_dofs_new[hyNode]);
     });
 
     return vec_Ax;
@@ -182,38 +188,44 @@ class NonlinearEigenvalue
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs, hyEdge_vals;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
+      hyEdge_dofs_new, hyEdge_vals;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      {
         hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs[hyNode]);
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+                                                     hyEdge_dofs_old[hyNode]);
         hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_val,
                                                      hyEdge_vals[hyNode]);
+        hyEdge_dofs_new[hyNode].fill(0.);
+      }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>(
+                                                 2 * TopologyT::hyEdge_dim()>&(
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
       {
-        hyEdge_dofs = local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val);
+        local_solver_.numerical_flux_der(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
+                                         eig_val);
       }
       else
       {
-        hyEdge_dofs =
-          local_solver_.numerical_flux_der(hyEdge_dofs, eig, hyEdge_vals, eig_val, hyper_edge);
+        local_solver_.numerical_flux_der(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
+                                         eig_val, hyper_edge);
       }
 
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
         hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs[hyNode]);
+                                                        hyEdge_dofs_new[hyNode]);
     });
 
     return vec_Ax;
@@ -246,15 +258,17 @@ class NonlinearEigenvalue
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>(
+                                                 2 * TopologyT::hyEdge_dim()>&(
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
       {
-        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, eig);
+        local_solver_.numerical_flux_initial(hyEdge_dofs, eig);
       }
       else
       {
-        hyEdge_dofs = local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, eig);
+        local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, eig);
       }
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
