@@ -189,7 +189,7 @@ class ShiftedEigenvalue
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>(
+                                                 2 * TopologyT::hyEdge_dim()>&(
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, sigma);
