@@ -413,13 +413,12 @@ class DiffusionEigs
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_der(
-    const SmallMatInT& lambda_values_in,
-    SmallMatOutT& lambda_values_out,
-    const lSol_float_t eig,
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_vals,
-    const lSol_float_t eig_val,
-    hyEdgeT& hyper_edge) const
+  SmallMatOutT& numerical_flux_der(const SmallMatInT& lambda_values_in,
+                                   SmallMatOutT& lambda_values_out,
+                                   const lSol_float_t eig,
+                                   const SmallMatInT& lambda_vals,
+                                   const lSol_float_t eig_val,
+                                   hyEdgeT& hyper_edge) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,

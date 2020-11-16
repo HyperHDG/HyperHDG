@@ -266,13 +266,14 @@ class DiffusionUniform
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.
    *
+   * \tparam  SmallMatT     The typename of \c lambda_values.
    * \param   lambda_values The values of the skeletal variable's coefficients.
    * \param   time          Time --- this parameter is redundant for this local solver.
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
-  lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    const lSol_float_t time = 0.) const
+  template <typename SmallMatT>
+  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
+                                     const lSol_float_t time = 0.) const
   {
     return 0.;
   }

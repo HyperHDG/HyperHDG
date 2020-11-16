@@ -40,7 +40,7 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Evaluate amount of global degrees of freedom per hypernode.
    *
-   * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+   * This number must be equal to HyperNodeFactory::n_glob_dofs_per_node()() of the HyperNodeFactory
    * cooperating with this object.
    *
    * \retval  n_dofs        Number of global degrees of freedom per hypernode.
@@ -66,11 +66,9 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Do the pretprocessing to transfer global to local dofs.
    ************************************************************************************************/
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename SmallMatT>
   inline std::array<std::array<double, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  node_dof_to_edge_dof(
-    const std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>& lambda,
-    hyEdgeT& hyper_edge) const
+  node_dof_to_edge_dof(const SmallMatT& lambda, hyEdgeT& hyper_edge) const
   {
     std::array<std::array<double, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result;
     hy_assert(result.size() == 2, "Only implemented in one dimension!");
@@ -92,24 +90,20 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Do the postprocessing to transfer local to global dofs.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  inline std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  edge_dof_to_node_dof(const std::array<std::array<double, diffusion_sol_t::n_glob_dofs_per_node()>,
-                                        2 * hyEdge_dimT>& lambda,
-                       hyEdgeT& hyper_edge) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  inline SmallMatOutT& edge_dof_to_node_dof(const SmallMatInT& lambda,
+                                            SmallMatOutT& lambda_values_out,
+                                            hyEdgeT& hyper_edge) const
   {
     hy_assert(diffusion_sol_t::n_glob_dofs_per_node() == 1, "This should be 1!");
-    std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result;
-    for (unsigned int i = 0; i < result.size(); ++i)
-      result[i].fill(0.);
     Point<space_dim, lSol_float_t> normal_vector =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        result[i][dim] = normal_vector[dim] * lambda[i][0];
+        lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
 
-    return result;
+    return lambda_values_out;
   }
 
  public:
@@ -126,80 +120,86 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    HyperEdge that is considered.
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          HyperEdge that is considered.
+   * \param   time                Time at which analytic functions are evaluated.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_from_lambda(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                              2 * hyEdge_dimT>& lambda_values,
-                             hyEdgeT& hyper_edge,
-                             const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out,
+                                           hyEdgeT& hyper_edge,
+                                           const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
-    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge),
+      lambda_new;
+    for (unsigned int i = 0; i < lambda_new.size(); ++i)
+      lambda_new[i].fill(0.);
 
     if constexpr (not_uses_geometry<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                               2 * hyEdge_dimT>(
+                               2 * hyEdge_dimT>&(
+                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+                                 2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      lambda = diffusion.numerical_flux_from_lambda(lambda);
+      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new);
     else
-      lambda = diffusion.numerical_flux_from_lambda(lambda, hyper_edge);
+      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge);
 
-    return edge_dof_to_node_dof(lambda, hyper_edge);
+    return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to residual.
-   *
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    HyperEdge that is considered.
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x - b.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_total(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                        2 * hyEdge_dimT>& lambda_values,
-                       hyEdgeT& hyper_edge,
-                       const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
+                                     SmallMatOutT& lambda_values_out,
+                                     hyEdgeT& hyper_edge,
+                                     const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
-    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge),
+      lambda_new;
+    for (unsigned int i = 0; i < lambda_new.size(); ++i)
+      lambda_new[i].fill(0.);
 
     if constexpr (not_uses_geometry<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                               2 * hyEdge_dimT>(
+                               2 * hyEdge_dimT>&(
+                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+                                 2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      lambda = diffusion.numerical_flux_total(lambda);
+      diffusion.numerical_flux_total(lambda_old, lambda_new);
     else
-      lambda = diffusion.numerical_flux_total(lambda, hyper_edge);
+      diffusion.numerical_flux_total(lambda_old, lambda_new, hyper_edge);
 
-    return edge_dof_to_node_dof(lambda, hyper_edge);
+    return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
   /*!***********************************************************************************************
    * \brief   Local squared contribution to the L2 error.
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT         The data type of \c lambda_values.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
    * \param   time              Time at which analytic functions are evaluated.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
-      lambda_values,
-    hyEdgeT& hyper_edge,
-    const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatT>
+  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
+                                     hyEdgeT& hyper_edge,
+                                     const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -208,7 +208,9 @@ class LengtheningBeam
     if constexpr (not_uses_geometry<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                               2 * hyEdge_dimT>(
+                               2 * hyEdge_dimT>&(
+                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+                                 2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
       error = diffusion.calc_L2_error_squared(lambda);
@@ -311,7 +313,7 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Evaluate amount of global degrees of freedom per hypernode.
    *
-   * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+   * This number must be equal to HyperNodeFactory::n_glob_dofs_per_node()() of the HyperNodeFactory
    * cooperating with this object.
    *
    * \retval  n_dofs        Number of global degrees of freedom per hypernode.
@@ -337,12 +339,11 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Do the preprocessing to transfer global to local dofs.
    ************************************************************************************************/
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename SmallMatT>
   inline std::array<std::array<double, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  node_dof_to_edge_dof(
-    const std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>& lambda,
-    hyEdgeT& hyper_edge,
-    const unsigned int outer_index) const
+  node_dof_to_edge_dof(const SmallMatT& lambda,
+                       hyEdgeT& hyper_edge,
+                       const unsigned int outer_index) const
   {
     std::array<std::array<double, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       result;
@@ -368,29 +369,26 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Do the postprocessing to transfer local to global dofs.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  inline std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  edge_dof_to_node_dof(
+  template <class hyEdgeT, typename SmallMatT>
+  inline SmallMatT& edge_dof_to_node_dof(
     const std::array<std::array<double, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                      2 * hyEdge_dimT>& lambda,
+    SmallMatT& lambda_values_out,
     hyEdgeT& hyper_edge,
     const unsigned int outer_index) const
   {
     hy_assert(bilaplacian_sol_t::n_glob_dofs_per_node() == 2, "This should be 1*2!");
-    std::array<std::array<double, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result;
-    for (unsigned int i = 0; i < result.size(); ++i)
-      result[i].fill(0.);
     Point<space_dim, lSol_float_t> normal_vector =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(outer_index);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
-        result[i][dim] = normal_vector[dim] * lambda[i][0];
-        result[i][space_dim + dim] = normal_vector[dim] * lambda[i][1];
+        lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
+        lambda_values_out[i][space_dim + dim] += normal_vector[dim] * lambda[i][1];
       }
 
-    return result;
+    return lambda_values_out;
   }
 
  public:
@@ -407,96 +405,82 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    HyperEdge that is considered.
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x.
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          HyperEdge that is considered.
+   * \param   time                Time at which analytic functions are evaluated.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_from_lambda(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                              2 * hyEdge_dimT>& lambda_values,
-                             hyEdgeT& hyper_edge,
-                             const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out,
+                                           hyEdgeT& hyper_edge,
+                                           const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda;
-
-    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      result[i].fill(0.);
+      lambda_old, lambda_new;
 
     for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
     {
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge, dim);
+      for (unsigned int i = 0; i < lambda_new.size(); ++i)
+        lambda_new[i].fill(0.);
 
       if constexpr (
         not_uses_geometry<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
-                     2 * hyEdge_dimT>(
+                     2 * hyEdge_dimT>&(
+            std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
+                       2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                        2 * hyEdge_dimT>&)>::value)
-        lambda = bilaplacian_solver.numerical_flux_from_lambda(lambda);
+        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new);
       else
-        lambda = bilaplacian_solver.numerical_flux_from_lambda(lambda, hyper_edge);
+        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge);
 
-      aux = edge_dof_to_node_dof(lambda, hyper_edge, dim);
-
-      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
-          result[i][j] += aux[i][j];
+      edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
 
-    return result;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to residual.
-   *
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    HyperEdge that is considered.
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x - b.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_total(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                        2 * hyEdge_dimT>& lambda_values,
-                       hyEdgeT& hyper_edge,
-                       const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
+                                     SmallMatOutT& lambda_values_out,
+                                     hyEdgeT& hyper_edge,
+                                     const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda;
-
-    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      result[i].fill(0.);
+      lambda_old, lambda_new;
 
     for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
     {
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge, dim);
+      for (unsigned int i = 0; i < lambda_new.size(); ++i)
+        lambda_new[i].fill(0.);
 
       if constexpr (
         not_uses_geometry<
           bilaplacian_sol_t,
-          std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
-                     2 * hyEdge_dimT>(
-            std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
-                       2 * hyEdge_dimT>&)>::value)
-        lambda = bilaplacian_solver.numerical_flux_total(lambda);
+          std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
+        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new);
       else
-        lambda = bilaplacian_solver.numerical_flux_total(lambda, hyper_edge);
+        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, hyper_edge);
 
-      aux = edge_dof_to_node_dof(lambda, hyper_edge, dim);
-
-      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
-          result[i][j] += aux[i][j];
+      edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
 
-    return result;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Local squared contribution to the L2 error.
@@ -524,10 +508,9 @@ class BernoulliBendingBeam
       if constexpr (
         not_uses_geometry<
           bilaplacian_sol_t,
-          std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
-                     2 * hyEdge_dimT>(
-            std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
-                       2 * hyEdge_dimT>&)>::value)
+          std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
         error += bilaplacian_solver.calc_L2_error_squared(lambda);
       else
         error += bilaplacian_solver.calc_L2_error_squared(lambda, hyper_edge);
@@ -632,7 +615,7 @@ class LengtheningBernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Evaluate amount of global degrees of freedom per hypernode.
    *
-   * This number must be equal to HyperNodeFactory::n_dofs_per_node() of the HyperNodeFactory
+   * This number must be equal to HyperNodeFactory::n_glob_dofs_per_node()() of the HyperNodeFactory
    * cooperating with this object.
    *
    * \retval  n_dofs        Number of global degrees of freedom per hypernode.
@@ -676,58 +659,35 @@ class LengtheningBernoulliBendingBeam
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
-   *
-   * \param   lambda_values Local part of vector x.
-   * \param   hyper_edge    Hyperedge.
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vecAx         Local part of vector A * x.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_from_lambda(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                              2 * hyEdge_dimT>& lambda_values,
-                             hyEdgeT& hyper_edge,
-                             const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out,
+                                           hyEdgeT& hyper_edge,
+                                           const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
-    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
 
-    result = len_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
-    aux = ben_beam.numerical_flux_from_lambda(lambda_values, hyper_edge);
+    len_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge);
+    ben_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge);
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
-        result[i][j] += aux[i][j];
-
-    return result;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to residual.
-   *
-   * \tparam  GeomT         The geometry type / typename of the considered hyEdge's geometry.
-   * \param   lambda_values Lambda values.
-   * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time          Time at which analytic functions are evaluated.
-   * \retval  vec_b         Local part of vector A * x - b.
    ************************************************************************************************/
-  template <class hyEdgeT>
-  std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-  numerical_flux_total(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
-                                        2 * hyEdge_dimT>& lambda_values,
-                       hyEdgeT& hyper_edge,
-                       const lSol_float_t time = 0.) const
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
+                                     SmallMatOutT& lambda_values_out,
+                                     hyEdgeT& hyper_edge,
+                                     const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
-    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> result, aux;
 
-    result = len_beam.numerical_flux_total(lambda_values, hyper_edge);
-    aux = ben_beam.numerical_flux_total(lambda_values, hyper_edge);
+    len_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge);
+    ben_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge);
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
-        result[i][j] += aux[i][j];
-
-    return result;
+    return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Local squared contribution to the L2 error.
