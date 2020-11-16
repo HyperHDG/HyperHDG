@@ -183,15 +183,19 @@ class Elliptic
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
+      hyEdge_dofs_new;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      {
         hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs[hyNode]);
+                                                     hyEdge_dofs_old[hyNode]);
+        hyEdge_dofs_new[hyNode].fill(0.);
+      }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
@@ -201,14 +205,15 @@ class Elliptic
                                                    2 * TopologyT::hyEdge_dim()>&,
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge_dofs, time);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, time);
       else
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs, hyEdge_dofs, hyper_edge, time);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
+                                                 time);
 
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
         hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs[hyNode]);
+                                                        hyEdge_dofs_new[hyNode]);
     });
 
     // Set all Dirichlet values to zero.
@@ -246,15 +251,19 @@ class Elliptic
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
+      hyEdge_dofs_new;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
       // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
       hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+      {
         hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs[hyNode]);
+                                                     hyEdge_dofs_old[hyNode]);
+        hyEdge_dofs_new[hyNode].fill(0.);
+      }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (not_uses_geometry<LocalSolverT,
@@ -265,16 +274,16 @@ class Elliptic
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
       {
-        local_solver_.numerical_flux_total(hyEdge_dofs, hyEdge_dofs, time);
+        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, time);
       }
       else
       {
-        local_solver_.numerical_flux_total(hyEdge_dofs, hyEdge_dofs, hyper_edge, time);
+        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
       }
       // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
       for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
         hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs[hyNode]);
+                                                        hyEdge_dofs_new[hyNode]);
     });
 
     // Set all Dirichlet values to zero.
