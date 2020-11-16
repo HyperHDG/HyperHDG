@@ -44,10 +44,11 @@ class Template
   /*!***********************************************************************************************
    * \brief   The local solver as needed by the HDG method
    ************************************************************************************************/
-  std::array<std::array<lSol_float_t, 0>, 2 * hyEdge_dimT> numerical_flux_from_lambda(
-    const std::array<std::array<lSol_float_t, 0>, 2 * hyEdge_dimT>& lambda_values) const
+  template <typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
+                                           SmallMatOutT& lambda_values_out) const
   {
-    return std::array<std::array<lSol_float_t, 0>, 2 * hyEdge_dimT>();
+    return lambda_values_out = SmallMatOutT();
   }
   /*!***********************************************************************************************
    * \brief   The values of the local solution in quadrature points of the cell.
