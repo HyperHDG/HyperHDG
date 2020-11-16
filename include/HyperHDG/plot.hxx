@@ -524,12 +524,13 @@ void plot_edge_values(HyperGraphT& hyper_graph,
       std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
       LocalSolverT::system_dimension()>
       local_values;
-    if constexpr (not_uses_geometry<
-                    LocalSolverT,
-                    std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>,
-                               2 * edge_dim>(
-                      std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>,
-                                 2 * edge_dim>&)>::value)
+    if constexpr (
+      not_uses_geometry<
+        LocalSolverT,
+        std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&(
+          std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&,
+          std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&)>::
+        value)
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs);
     else
     {
