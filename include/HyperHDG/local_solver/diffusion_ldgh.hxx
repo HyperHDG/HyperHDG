@@ -427,7 +427,7 @@ class Diffusion
    *
    * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
    * \tparam  SmallMatInT         Data type of \c lambda_values_in.
-   * \tparam  SmallMatOutT        Data type of \c lambda_values_out
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
    * \param   lambda_values_in    Local part of vector x.
    * \param   lambda_values_out   Local part that will be added to A * x.
    * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).

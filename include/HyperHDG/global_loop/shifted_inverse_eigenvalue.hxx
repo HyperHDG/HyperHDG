@@ -192,7 +192,7 @@ class ShiftedEigenvalue
                                                  2 * TopologyT::hyEdge_dim()>(
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                    2 * TopologyT::hyEdge_dim()>&)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new sigma);
+        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, sigma);
       else
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
                                                  sigma);
