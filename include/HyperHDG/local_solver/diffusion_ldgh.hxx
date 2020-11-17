@@ -73,9 +73,9 @@ struct DiffusionParametersDefault
  *
  * This class contains the local solver for an isotropic diffusion equation, i.e.,
  * \f[
- *  - \nabla \cdot ( d \nabla u = f \quad \text{ in } \Omega, \qquad
- *  u = u_\textup D \quad \text{ on } \partial \Omega_\textup D}, \qquad
- *  - d \nabla u \cdot \nu = g_\textup N \quad \text{ on } \partial \Omega_\textup N
+ *  - \nabla \cdot ( d \nabla u ) = f \quad \text{ in } \Omega, \qquad
+ *  u = u_\text D \quad \text{ on } \partial \Omega_\text D, \qquad
+ *  - d \nabla u \cdot \nu = g_\text N \quad \text{ on } \partial \Omega_\text N
  * \f]
  * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
  * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose

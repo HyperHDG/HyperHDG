@@ -81,7 +81,7 @@ run:
 	$(PYTHON) executable.py
 
 format:
-	clang-format -i tests_c++/*.cxx cython/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
+	clang-format -i reproducables_python/parameters/*.hxx tests_c++/*.cxx cython/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
 
 tests:
 	mkdir -p $(EXAMPLE_BUILD)
