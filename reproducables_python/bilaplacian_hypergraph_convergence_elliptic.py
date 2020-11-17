@@ -29,7 +29,7 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
           + "LocalSolver::Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersQuadEllipt" + str(dimension) + ",double> >"
+          + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double> >"
   filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/bilaplacian_ldgh.hxx", \
                 "reproducables_python/parameters/bilaplacian.hxx" ]

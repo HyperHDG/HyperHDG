@@ -9,7 +9,7 @@
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersSin
+struct TestParametersSinEllipt
 {
   static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes
@@ -59,8 +59,11 @@ struct TestParametersSin
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
+template<unsigned int hyEdge_dimT >
+struct HG
+{
 template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersQuadEllipt1
+struct TestParametersQuadEllipt
 {
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes
   { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
@@ -86,7 +89,7 @@ struct TestParametersQuadEllipt1
   { return analytic_result(point); }
   static param_float_t dirichlet_laplace_value
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return -2. * 1.; }  // This changes!
+  { return -2. * (param_float_t)hyEdge_dimT; }  // This changes!
   
   static param_float_t initial
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
@@ -102,105 +105,6 @@ struct TestParametersQuadEllipt1
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
 };
-
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersQuadEllipt2
-{
-  static constexpr std::array<unsigned int, 26U> dirichlet_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 26U> dirichlet_laplacian_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes {};
-  
-  static param_float_t inverse_bilaplacian_coefficient
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 1.; }
-  
-  static param_float_t analytic_result
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return std::pow(point[0], 2.) + std::pow(point[1], 2.) + std::pow(point[2], 2.); }
-  
-  static param_float_t right_hand_side
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  
-  static param_float_t dirichlet_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point); }
-  static param_float_t dirichlet_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return -2. * 2.; }  // This changes!
-  
-  static param_float_t initial
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  static param_float_t initial_laplace
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  
-  static param_float_t neumann_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  static param_float_t neumann_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-};
-
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersQuadEllipt3
-{
-  static constexpr std::array<unsigned int, 26U> dirichlet_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 26U> dirichlet_laplacian_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes {};
-  
-  static param_float_t inverse_bilaplacian_coefficient
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 1.; }
-  
-  static param_float_t analytic_result
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return std::pow(point[0], 2.) + std::pow(point[1], 2.) + std::pow(point[2], 2.); }
-  
-  static param_float_t right_hand_side
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  
-  static param_float_t dirichlet_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point); }
-  static param_float_t dirichlet_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return -2. * 3.; }  // This changes!
-  
-  static param_float_t initial
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  static param_float_t initial_laplace
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  
-  static param_float_t neumann_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  static param_float_t neumann_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
 };
 
 /*!*************************************************************************************************
@@ -253,58 +157,6 @@ struct TestParametersSinParab
   ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
   { return 0.; }
 };
-
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template < unsigned int space_dimT, typename param_float_t = double >
-struct TestParametersTrivParab
-{
-  static constexpr double pi = acos(-1);
-  static constexpr std::array<unsigned int, 26U> dirichlet_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 26U> dirichlet_laplacian_nodes
-  { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 };
-  static constexpr std::array<unsigned int, 0U> neumann_nodes {};
-  static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes {};
-  
-  static param_float_t inverse_bilaplacian_coefficient
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 1.; }
-  
-  static param_float_t analytic_result
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 1. - time; }
-  
-  static param_float_t right_hand_side
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return -1.; }
-  
-  static param_float_t dirichlet_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  static param_float_t dirichlet_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  
-  static param_float_t initial
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return analytic_result(point, time); }
-  static param_float_t initial_laplace
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  
-  static param_float_t neumann_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-  static param_float_t neumann_laplace_value
-  ( const Point<space_dimT,param_float_t>& point , const param_float_t time = 0. )
-  { return 0.; }
-};
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
