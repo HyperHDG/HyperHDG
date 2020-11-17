@@ -5,7 +5,7 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -471,7 +471,7 @@ void create_directory_if_needed(std::ofstream& output_file,
   {
     std::cerr << e.what() << std::endl;
     std::cout << "Trying to create output directory" << std::endl;
-    std::experimental::filesystem::create_directory(plot_options.outputDir);
+    std::filesystem::create_directory(plot_options.outputDir);
   }
 }
 }  // end of namespace PlotFunctions
