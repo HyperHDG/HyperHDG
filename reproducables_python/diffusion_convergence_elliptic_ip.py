@@ -41,7 +41,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
            debug_mode )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr = (dimension ** 6) * (2 ** iteration) )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr = (2 ** iteration) )
 
   # Generate right-hand side vector.
   vectorRHS = np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
@@ -86,7 +86,7 @@ def main(debug_mode):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(1,6):
+      for iteration in range(6):
         try:
           diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:

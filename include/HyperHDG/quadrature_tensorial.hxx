@@ -850,8 +850,8 @@ class IntegratorTensorial
         else
         {
           normal[dim] = 0.;
-          quad_pt[dim] = quad_points_[dec_q[dim]];
-          phi_j *= shape_ders_at_quad_[dec_j[dim]][dec_q[dim - (dim > bdr_dim)]];
+          quad_pt[dim] = quad_points_[dec_q[dim - (dim > bdr_dim)]];
+          phi_j *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim - (dim > bdr_dim)]];
           quad_weight *= quad_weights_[dec_q[dim - (dim > bdr_dim)]];
         }
         nabla_phi_i[dim] = 1.;
@@ -860,11 +860,13 @@ class IntegratorTensorial
           if (dim == dim_fct && dim_fct == bdr_dim)
             nabla_phi_i[dim] *= trial_der_bdr_[dec_i[dim_fct]][bdr_ind];
           else if (dim == dim_fct)
-            nabla_phi_i[dim] *= shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
+            nabla_phi_i[dim] *=
+              shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct - (dim_fct > bdr_dim)]];
           else if (dim_fct == bdr_dim)
             nabla_phi_i[dim] *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
           else
-            nabla_phi_i[dim] *= shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
+            nabla_phi_i[dim] *=
+              shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct - (dim_fct > bdr_dim)]];
         }
       }
       integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
@@ -920,8 +922,8 @@ class IntegratorTensorial
         else
         {
           normal[dim] = 0.;
-          quad_pt[dim] = quad_points_[dec_q[dim]];
-          phi_j *= shape_ders_at_quad_[dec_j[dim]][dec_q[dim]];
+          quad_pt[dim] = quad_points_[dec_q[dim - (dim > bdr_dim)]];
+          phi_j *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
           quad_weight *= quad_weights_[dec_q[dim - (dim > bdr_dim)]];
         }
         nabla_phi_i[dim] = 1.;
@@ -930,11 +932,13 @@ class IntegratorTensorial
           if (dim == dim_fct && dim_fct == bdr_dim)
             nabla_phi_i[dim] *= trial_der_bdr_[dec_i[dim_fct]][bdr_ind];
           else if (dim == dim_fct)
-            nabla_phi_i[dim] *= shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
+            nabla_phi_i[dim] *=
+              shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct - (dim_fct > bdr_dim)]];
           else if (dim_fct == bdr_dim)
             nabla_phi_i[dim] *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
           else
-            nabla_phi_i[dim] *= shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
+            nabla_phi_i[dim] *=
+              shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct - (dim_fct > bdr_dim)]];
         }
       }
       integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
