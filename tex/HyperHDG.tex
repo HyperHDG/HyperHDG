@@ -801,7 +801,7 @@ The implementation of a loop over all hyperedges cares about the specific proper
 These loop classes can then also be used for related problems like the Bilaplacian, cf.\ Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
 % 
 % ---------------------------------------------------------------------
-\section{Related diffusion problems}\label{SEC:related_diffusion_problems}
+\section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------
 % 
 \subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}\arwarning{Only $\theta = 1$ has been implemented.}
@@ -1233,10 +1233,7 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
 % 
 Next, we use the approaches of the previous sections to approximate the smallest eigenvalue of the diffusion equation with homogeneous Dirichlet boundary conditions on the hypergraph related to problem \eqref{EQ:hypergraph_example}. Thus, we consider the hypercube $[0,1]^3$ and refine it $i$ times, i.e. into $i^3$ identical sub-cubes. Afterwards we solve the diffusive eigenvalue problem on the union of this refinement's edges (for $\locDim = 1$) and its faces (for $\locDim = 2$). The homogeneous Dirichlet conditions are supposed to be satisfied on the boundary of $[0,1]^3$. Thus, the smallest eigenvalue is $\eigenval = \locDim \pi^2$ and it is approximated using the shifted inverse (SI) and mass approximation (MA) approaches with $\sigma = \eigenval / 2$. The nonlinear (NL) method is applied afterwards. Its initial datum is the result of SI or MA, but the results of NL do not significantly depend on the choice. Thus, we illustrate only the results of which MA is used as initial value. The results are depicted in Table \ref{TAB:dif_hyg_eigenvalue_conv}. They suggest that the convergence rates to eigenvalues neither deteriorate, nor increase if one does the calculations on hypergraphs.
 % 
-% 
-% ---------------------------------------------------------------------
-\section{Different local solvers for the diffusion problem}\label{SEC:other_solvers}
-% ---------------------------------------------------------------------
+\subsection{Different local solvers for the diffusion problem}\label{SEC:other_solvers}
 % 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
@@ -1265,6 +1262,24 @@ Next, we use the approaches of the previous sections to approximate the smallest
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of diffusion on a unit square calculated with IP-H.}\label{TAB:diff_el_conv_ip}
 \end{table}
 % 
+\begin{table}[t]
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 2.30e-2 & --- && 2.44e-1 & --- && 2.38e-2 & ---  \\
+  $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 3.20e-3 & 2.9  \\
+  $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 4.16e-4 & 2.9  \\
+  $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && 5.31e-5 & 3.0  \\
+  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-5 & 1.5 && 6.71e-6 & 3.0  \\
+  $i = 5$ && 3.72e-5 & 1.0 && \textcolor{red}{8.39e-6} & 2.5 && 8.43e-7 & 3.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.}\label{TAB:diff_hg_el_conv_ip}
+\end{table}
+% 
 Alternatively to the LDG-H method which is described in Section \ref{SEC:HDG_form}, we could also use different local solvers. For example, hybrid versions of the Raviart--Thomas or the Brezzi-Douglas--Marini methods can be obtained, by setting $\tau \equiv 0$ and adpating the spaces $V$ and $\vec W$.
 
 The hybrid version of the primal interior penalty (IP) methods, however, can only be constructed by changing the LDG style local solvers \eqref{EQ:hdg_scheme} \& \eqref{EQ:hdg_f} to their primal IP analogues. This adaption results in the hybridized IP (IP-H) methods which do not use the space $\vec W$, since the flux unknown is not treated as an additional variable.
@@ -1289,7 +1304,7 @@ while the global coupling condition is formulated as
 % 
 The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
-A comparison of the total errors can be conducted evaluating Tables \ref{TAB:diff_el_conv_ip} -- ??? and comparing them to their LDG-H analogues.
+A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}.
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
