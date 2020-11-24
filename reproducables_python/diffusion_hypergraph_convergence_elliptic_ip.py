@@ -23,17 +23,17 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
-  
+
   # Predefine problem to be solved.
-  problem = "GlobalLoop::Elliptic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">," \
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
+  problem = "GlobalLoop::Elliptic < Topology::Cubic<" + str(dimension) + ",3>, " \
+          + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
+          + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
           + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersSinEllipt,double> >"
+          + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double> >"
   filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_ip.hxx", \
                 "reproducables_python/parameters/diffusion.hxx" ]
-  
+
   # Import C++ wrapper class to use HDG method on graphs.
   from cython_import import cython_import
   PyDP = cython_import \
@@ -41,11 +41,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
            debug_mode )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, \
+  HDG_wrapper = PyDP( [2 ** iteration] * 3, \
                       lsol_constr = 5 * (dimension + 1) * (poly_degree ** 3) * (2 ** iteration) )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
+  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
 
   # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system()
@@ -54,22 +54,18 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
   if num_iter != 0:
-    print("CG solver failed with a total number of ", num_iter, "iterations.")
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
-    if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      raise RuntimeError("Linear solvers did not converge!")
+    raise RuntimeError("Linear solver did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_elliptic_ip.txt", "a")
+  f = open("output/diffusion_hypergraph_convergence_elliptic_ip.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_ellip-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_conv_hyg-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -85,7 +81,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
+    for dimension in range(1,4):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
