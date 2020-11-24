@@ -41,7 +41,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
            debug_mode )
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr = 2 ** iteration )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr = (dimension ** 6) * (2 ** iteration) )
 
   # Generate right-hand side vector.
   vectorRHS = np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
@@ -53,7 +53,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
   if num_iter != 0:
-    raise RuntimeError("CG solver did not converge!")
+    print("CG solver failed with a total number of ", num_iter, "iterations.")
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
