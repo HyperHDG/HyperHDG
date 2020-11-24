@@ -317,7 +317,7 @@ class IntegratorTensorial
   const std::array<std::array<return_t, quadrature_t::compute_n_quad_points(max_quad_degree)>,
                    max_poly_degree + 1>
     shape_fcts_at_quad_, shape_ders_at_quad_;
-  const std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_;
+  const std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_, trial_der_bdr_;
 
  public:
   /*!***********************************************************************************************
@@ -336,7 +336,8 @@ class IntegratorTensorial
                                                   quadrature_t,
                                                   shape_t,
                                                   return_t>()),
-    trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>())
+    trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>()),
+    trial_der_bdr_(shape_ders_at_bdrs<max_poly_degree, shape_t, return_t>())
   {
     hy_assert(quad_weights_.size() == quad_points_.size(),
               "Number of quadrature weights and points must be equal!");
@@ -768,7 +769,7 @@ class IntegratorTensorial
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
     Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, nabla_phi_j;
     const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rrT =
-      mat_times_tranposed_mat(geom.mat_r(), geom.mat_r());
+      mat_times_transposed_mat(geom.mat_r(), geom.mat_r());
 
     for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
     {
@@ -796,8 +797,8 @@ class IntegratorTensorial
           }
         }
       }
-      integral += quad_weight * func(geom.map_ref_to_phys(quad_pt), time) *
-                  (nabla_phi_i * (nabla_phi_j / rrT));
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) *
+                  scalar_product(nabla_phi_i, nabla_phi_j / rrT);
     }
     return geom.area() * integral;
   }
@@ -826,9 +827,10 @@ class IntegratorTensorial
       index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
       index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
-    std::array<unsigned int, GeomT::hyEdge_dim() - 1> dec_q;
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_q;
     Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, normal;
-    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT = tranposed(geom.mat_r());
+    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT =
+      transposed(geom.mat_r());
     const unsigned int bdr_dim = bdr / 2, bdr_ind = bdr % 2;
 
     for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim() - 1); ++q)
@@ -843,7 +845,7 @@ class IntegratorTensorial
         {
           normal[dim] = 2. * bdr_ind - 1.;
           quad_pt[dim] = (return_t)bdr_ind;
-          phi_j *= shape_fcts_at_bdrs[dec_j[dim]][bdr_ind];
+          phi_j *= trial_bdr_[dec_j[dim]][bdr_ind];
         }
         else
         {
@@ -856,17 +858,17 @@ class IntegratorTensorial
         for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         {
           if (dim == dim_fct && dim_fct == bdr_dim)
-            nabla_phi_i[dim] *= shape_ders_at_bdrs[dec_i[dim_fct]][bdr_ind];
+            nabla_phi_i[dim] *= trial_der_bdr_[dec_i[dim_fct]][bdr_ind];
           else if (dim == dim_fct)
             nabla_phi_i[dim] *= shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
           else if (dim_fct == bdr_dim)
-            nabla_phi_i[dim] *= shape_fcts_at_bdrs[dec_i[dim_fct]][bdr_ind];
+            nabla_phi_i[dim] *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
           else
             nabla_phi_i[dim] *= shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
         }
       }
-      integral += quad_weight * func(geom.map_ref_to_phys(quad_pt), time) * phi_j *
-                  (normal * (nabla_phi_i / rT));
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
+                  scalar_product(normal, nabla_phi_i / rT);
     }
     return geom.face_area(bdr) * integral;
   }
@@ -894,11 +896,12 @@ class IntegratorTensorial
     return_t integral = 0., quad_weight, phi_j;
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
       index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
-    std::array<unsigned int, GeomT::hyEdge_dim() - 1> dec_j =
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_j =
       index_decompose<GeomT::hyEdge_dim() - 1, max_poly_degree + 1>(j);
-    std::array<unsigned int, GeomT::hyEdge_dim() - 1> dec_q;
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_q;
     Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, normal;
-    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT = tranposed(geom.mat_r());
+    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT =
+      transposed(geom.mat_r());
     const unsigned int bdr_dim = bdr / 2, bdr_ind = bdr % 2;
 
     for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim() - 1); ++q)
@@ -925,17 +928,17 @@ class IntegratorTensorial
         for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         {
           if (dim == dim_fct && dim_fct == bdr_dim)
-            nabla_phi_i[dim] *= shape_ders_at_bdrs[dec_i[dim_fct]][bdr_ind];
+            nabla_phi_i[dim] *= trial_der_bdr_[dec_i[dim_fct]][bdr_ind];
           else if (dim == dim_fct)
             nabla_phi_i[dim] *= shape_ders_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
           else if (dim_fct == bdr_dim)
-            nabla_phi_i[dim] *= shape_fcts_at_bdrs[dec_i[dim_fct]][bdr_ind];
+            nabla_phi_i[dim] *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
           else
             nabla_phi_i[dim] *= shape_fcts_at_quad_[dec_i[dim_fct]][dec_q[dim_fct]];
         }
       }
-      integral += quad_weight * func(geom.map_ref_to_phys(quad_pt), time) * phi_j *
-                  (normal * (nabla_phi_i / rT));
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
+                  scalar_product(normal, nabla_phi_i / rT);
     }
     return geom.face_area(bdr) * integral;
   }

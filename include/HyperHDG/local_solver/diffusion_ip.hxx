@@ -27,7 +27,7 @@ struct DiffusionParametersDefault
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   /*!***********************************************************************************************
-   * \brief   Inverse diffusion coefficient in PDE as analytic function.
+   * \brief   Diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
   static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
@@ -581,8 +581,6 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
-  lSol_float_t vol_integral, face_integral, helper;
-  SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -596,12 +594,13 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        local_mat(i, j) += integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
-          i, j, face, hyper_edge.geometry);
+        local_mat(i, j) +=
+          tau_ * integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+                   i, j, face, hyper_edge.geometry);
         local_mat(i, j) -=
           integrator.template integrate_bdr_nablaphiphinufunc<decltype(hyEdgeT::geometry),
                                                               parameters::diffusion_coeff>(
-            i, j, face, hyper_edge.geometry);
+            j, i, face, hyper_edge.geometry);
       }
     }
   }
@@ -635,17 +634,13 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
               "The size of lambda should be the amount of ansatz functions at boundary.");
 
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
-  lSol_float_t integral;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-      {
         right_hand_side[i] += tau_ * lambda_values[face][j] *
-                              ntegrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                              integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                                 i, j, face, hyper_edge.geometry);
-        ;
-      }
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
@@ -669,7 +664,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
-  lSol_float_t integral;
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     right_hand_side[i] =
@@ -741,9 +736,8 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values(face, j) +=
-          coeffs[hyEdge_dimT * n_shape_fct_ + i] *
-          integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-            i, j, face, hyper_edge.geometry);
+          coeffs[i] * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                        i, j, face, hyper_edge.geometry);
 
   return bdr_values;
 }  // end of Diffusion::primal_at_boundary
@@ -766,19 +760,17 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_b
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
+  using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
-  lSol_float_t integral;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-      {
-        integral = integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-          i, j, face, hyper_edge.geometry);
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          bdr_values(face, j) += hyper_edge.geometry.local_normal(face).operator[](dim) * integral *
-                                 coeffs[dim * n_shape_fct_ + i];
-      }
+        bdr_values(face, j) -=
+          integrator.template integrate_bdr_nablaphipsinufunc<decltype(hyEdgeT::geometry),
+                                                              parameters::diffusion_coeff>(
+            i, j, face, hyper_edge.geometry) *
+          coeffs[i];
 
   return bdr_values;
 }  // end of Diffusion::dual_at_boundary
