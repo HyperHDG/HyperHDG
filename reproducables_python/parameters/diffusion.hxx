@@ -73,7 +73,7 @@ struct HG
       14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
     static constexpr std::array<unsigned int, 0U> neumann_nodes{};
     static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>& point,
-                                                 const param_float_t time = 0.)
+                                         const param_float_t time = 0.)
     {
       return 1.;
     }
