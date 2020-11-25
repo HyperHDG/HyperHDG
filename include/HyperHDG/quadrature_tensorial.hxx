@@ -923,7 +923,7 @@ class IntegratorTensorial
         {
           normal[dim] = 0.;
           quad_pt[dim] = quad_points_[dec_q[dim - (dim > bdr_dim)]];
-          phi_j *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
+          phi_j *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim - (dim > bdr_dim)]];
           quad_weight *= quad_weights_[dec_q[dim - (dim > bdr_dim)]];
         }
         nabla_phi_i[dim] = 1.;
