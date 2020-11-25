@@ -324,7 +324,7 @@ Here, we formulate the standard diffusion equation in mixed form defined on a hy
  \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}
 \end{align}
 % 
-for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$. Thus, $u$ is supposed to have an unique representation with respect to all $\Node \in \SetNode$. This mimics the continuity assumption that is necessary to obtain a global $H^1$ solution and is assumed to hold for all scalar unknowns in the remainder of this manuscript. It can be more rigorously formulated as:
+for given functions $d,f\colon \Edge \to \IR$, where $d \ge d_0 > 0$ is denoted diffusion coefficient and $f$ is denoted right-hand side. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$. Thus, $u$ is supposed to have an unique representation with respect to all $\Node \in \SetNode$. This mimics the continuity assumption that is necessary to obtain a global $H^1$ solution and is assumed to hold for all scalar unknowns in the remainder of this manuscript. It can be more rigorously formulated as:
 
 We assume that for all hypernodes $\Node \in \SetNode$ there is $u_\node$ such that
 % 
@@ -1269,15 +1269,16 @@ Next, we use the approaches of the previous sections to approximate the smallest
   \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
   \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  $i = 0$ && 2.30e-2 & --- && 2.44e-1 & --- && 2.38e-2 & ---  \\
-  $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 3.20e-3 & 2.9  \\
-  $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 4.16e-4 & 2.9  \\
-  $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && 5.31e-5 & 3.0  \\
+  $i = 0$ && 2.30e-2 & --- && 2.44e-1 & --- && 1.16e-1 & ---  \\
+  $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 5.12e-2 & 1.2  \\
+  $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 6.89e-2* & -.4  \\
+  $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && \textcolor{red}{5.31e-5} & 3.0  \\
   $i = 4$ && 7.66e-3 & 1.1 && 2.78e-5 & 1.5 && 6.71e-6 & 3.0  \\
-  $i = 5$ && 3.72e-5 & 1.0 && \textcolor{red}{8.39e-6} & 2.5 && 8.43e-7 & 3.0  \\
+  $i = 5$ && 3.72e-5 & 1.0 && 9.71e-6 & 1.5 && 8.43e-7 & 3.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
- \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.}\label{TAB:diff_hg_el_conv_ip}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.
+ \newline ``~*~'' inidcates that the CG solver failed.}\label{TAB:diff_hg_el_conv_ip}
 \end{table}
 % 
 Alternatively to the LDG-H method which is described in Section \ref{SEC:HDG_form}, we could also use different local solvers. For example, hybrid versions of the Raviart--Thomas or the Brezzi-Douglas--Marini methods can be obtained, by setting $\tau \equiv 0$ and adpating the spaces $V$ and $\vec W$.
@@ -1305,6 +1306,22 @@ while the global coupling condition is formulated as
 The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
 A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}.
+\begin{envarwarning}{Why is this so?!}
+ Unfortunatelly, we did not manage to find a penalty $\tau := \tau(\locDim, \globDim, i, d, p)$ that gives appropriate convergence for $\locDim = 3$. In this case, the CG solver tends not to converge, and the $L^2$ error remains almost constant after some refinement steps.
+\end{envarwarning}
+% 
+\subsection{Advection--diffusion--reaction problems}\label{SEC:other_solvers}
+% 
+One could also consider advection--diffusion--reaction equation by replacing \eqref{EQ:primal_dual} \& \eqref{EQ:div_is_f} in \eqref{EQ:diffusion_mixed} by
+% 
+\begin{subequations}
+\begin{align}
+ \tfrac{1}{d} \vec q + \Nabla u - \tfrac{1}{d} \vec a_\Edge u & = 0 && \text{ in } \Edge, \\
+ \Div \vec q + r u & = f && \text{ in } \Edge.
+\end{align}
+\end{subequations}
+% 
+Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.\arnote{TODO: Implement this!}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
