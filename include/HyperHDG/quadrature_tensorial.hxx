@@ -581,6 +581,55 @@ class IntegratorTensorial
     return integral * geom.area();
   }
   /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions times some function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function that is also to be integrated.
+   * \param   i             Local index of local shape function.
+   * \param   j             Local index of local shape function.
+   * \param   dimension     Local dimension with respect to which the vector-function is integrated.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
+  template <typename GeomT,
+            SmallVec<GeomT::space_dim(), return_t> fun(const Point<GeomT::space_dim(), return_t>&,
+                                                       const return_t)>
+  return_t integrate_vol_phiphivecfunc(const unsigned int i,
+                                       const unsigned int j,
+                                       const unsigned int dimension,
+                                       GeomT& geom,
+                                       const return_t time = 0.) const
+  {
+    return_t integral = 0., quad_val;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt;
+    const SmallSquareMat<GeomT::space_dim(), return_t> mat_q =
+      (SmallSquareMat<GeomT::space_dim(), return_t>)geom.mat_q();
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+    {
+      dec_q =
+        index_decompose<GeomT::hyEdge_dim(), quadrature_t::compute_n_quad_points(max_quad_degree)>(
+          q);
+      quad_val = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        quad_pt[dim] = quad_points_[dec_q[dim]];
+        quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]] *
+                    shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
+      }
+      integral +=
+        scalar_product(fun(geom.map_ref_to_phys(quad_pt), time), mat_q.get_column(dimension)) *
+        quad_val;
+    }
+    return integral * geom.area();
+  }
+  /*!***********************************************************************************************
    * \brief   Integrate product of shape functions over some geometry.
    *
    * \tparam  GeomT         Geometry which is the integration domain.
@@ -752,6 +801,7 @@ class IntegratorTensorial
    * \param   i             Local index of local shape function.
    * \param   j             Local index of local shape function.
    * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
    * \retval  integral      Integral of product of both shape function's weighted gradients.
    ************************************************************************************************/
   template <typename GeomT,
@@ -812,6 +862,7 @@ class IntegratorTensorial
    * \param   j             Local index of local shape function.
    * \param   bdr           Index of the boundatry face to integrate over.
    * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
    * \retval  integral      Integral of product of both shape function's weighted gradients.
    ************************************************************************************************/
   template <typename GeomT,
@@ -885,6 +936,7 @@ class IntegratorTensorial
    * \param   j             Local index of local shape function.
    * \param   bdr           Index of the boundatry face to integrate over.
    * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
    * \retval  integral      Integral of product of both shape function's weighted gradients.
    ************************************************************************************************/
   template <typename GeomT,

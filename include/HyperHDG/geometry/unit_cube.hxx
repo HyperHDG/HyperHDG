@@ -212,6 +212,16 @@ class UnitCube
       return diagonal<hyEdge_dimT, hyEdge_dimT, pt_coord_t>(char_length);
     }
     /*!*********************************************************************************************
+     * \brief   Return matrix Q of the QR decomposition of the linear transoformation.
+     **********************************************************************************************/
+    const SmallSquareMat<space_dimT, pt_coord_t> mat_q()
+    {
+      SmallSquareMat<space_dimT, pt_coord_t> mat_q;
+      for (unsigned int index = 0; index < space_dimT; ++index)
+        mat_q(dim_indices[index], index) = 1.;
+      return mat_q;
+    }
+    /*!*********************************************************************************************
      * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
      **********************************************************************************************/
     pt_coord_t area()
