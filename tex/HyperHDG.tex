@@ -1243,20 +1243,20 @@ Next, we use the approaches of the previous sections to approximate the smallest
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && 8.67e-2 & --- && 1.17e-2 & --- && 1.11e-3 & ---  \\
-  & $i = 1$ && 2.28e-2 & 1.9 && 1.52e-3 & 2.9 && 7.12e-5 & 4.0  \\
-  & $i = 2$ && 5.80e-3 & 2.0 && 1.94e-4 & 3.0 && 4.47e-6 & 4.0  \\
-  & $i = 3$ && 1.45e-3 & 2.0 && 2.52e-5 & 2.9 && 2.80e-7 & 4.0  \\
-  & $i = 4$ && 3.64e-4 & 2.0 && 3.57e-6 & 2.8 && 1.75e-8 & 4.0  \\
-  & $i = 5$ && 9.11e-5 & 2.0 && 6.11e-7 & 2.5 && 1.09e-9 & 4.0  \\
+  & $i = 0$ && 1.00e-1 & --- && 1.17e-2 & --- && 1.07e-3 & ---  \\
+  & $i = 1$ && 2.59e-2 & 2.0 && 1.51e-3 & 3.0 && 6.88e-5 & 4.0  \\
+  & $i = 2$ && 6.55e-3 & 2.0 && 1.90e-4 & 3.0 && 4.32e-6 & 4.0  \\
+  & $i = 3$ && 1.64e-3 & 2.0 && 2.38e-5 & 3.0 && 2.70e-7 & 4.0  \\
+  & $i = 4$ && 4.10e-4 & 2.0 && 2.98e-6 & 3.0 && 1.69e-8 & 4.0  \\
+  & $i = 5$ && 1.02e-4 & 2.0 && 3.72e-7 & 3.0 && 1.05e-9 & 4.0  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 5.25e-2 & --- && 1.10e-2 & --- && 9.57e-4 & ---  \\
-  & $i = 1$ && 1.66e-2 & 1.7 && 1.45e-3 & 2.9 && 6.51e-5 & 3.9  \\
-  & $i = 2$ && 4.06e-3 & 2.0 && 1.89e-4 & 2.9 && 4.26e-6 & 3.9  \\
-  & $i = 3$ && 1.00e-3 & 2.0 && 2.42e-5 & 3.0 && 2.73e-7 & 4.0  \\
-  & $i = 4$ && 2.51e-4 & 2.0 && 3.09e-6 & 3.0 && 1.72e-8 & 4.0  \\
-  & $i = 5$ && 6.26e-5 & 2.0 && 4.07e-7 & 2.9 && 1.08e-9 & 4.0  \\
+  & $i = 0$ && 5.56e-2 & --- && 1.10e-2 & --- && 9.50e-4 & ---  \\
+  & $i = 1$ && 1.75e-2 & 1.7 && 1.44e-3 & 2.9 && 6.40e-5 & 3.9  \\
+  & $i = 2$ && 4.29e-3 & 2.0 && 1.89e-4 & 2.9 && 4.17e-6 & 3.9  \\
+  & $i = 3$ && 1.06e-3 & 2.0 && 2.41e-5 & 3.0 && 2.67e-7 & 4.0  \\
+  & $i = 4$ && 2.64e-4 & 2.0 && 3.03e-6 & 3.0 && 1.69e-8 & 4.0  \\
+  & $i = 5$ && 6.61e-5 & 2.0 && 3.80e-7 & 3.0 && 1.06e-9 & 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of diffusion on a unit square calculated with IP-H.}\label{TAB:diff_el_conv_ip}
@@ -1269,12 +1269,12 @@ Next, we use the approaches of the previous sections to approximate the smallest
   \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
   \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  $i = 0$ && 2.30e-2 & --- && 2.44e-1 & --- && 1.16e-1 & ---  \\
+  $i = 0$ && 2.30e-1 & --- && 2.44e-1 & --- && \textcolor{red}{1.16e-1} & ---  \\
   $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 5.12e-2 & 1.2  \\
   $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 6.89e-2* & -.4  \\
   $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && \textcolor{red}{5.31e-5} & 3.0  \\
-  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-5 & 1.5 && 6.71e-6 & 3.0  \\
-  $i = 5$ && 3.72e-5 & 1.0 && 9.71e-6 & 1.5 && 8.43e-7 & 3.0  \\
+  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-3 & 1.5 && 6.71e-6 & 3.0  \\
+  $i = 5$ && 3.72e-3 & 1.0 && 9.71e-4 & 1.5 && 8.43e-7 & 3.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.
@@ -1321,7 +1321,7 @@ One could also consider advection--diffusion--reaction equation by replacing \eq
 \end{align}
 \end{subequations}
 % 
-Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.\arnote{TODO: Implement this!}
+Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $\vec a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $\vec a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.\arnote{TODO: Implement this!}
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
