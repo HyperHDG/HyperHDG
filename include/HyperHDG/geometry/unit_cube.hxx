@@ -4,6 +4,8 @@
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/topology/cubic.hxx>
 
+#include <algorithm>
+
 namespace Geometry
 {
 /*!*************************************************************************************************
@@ -216,9 +218,19 @@ class UnitCube
      **********************************************************************************************/
     const SmallSquareMat<space_dimT, pt_coord_t> mat_q()
     {
+      const auto& dim_ind = dim_indices.data();
       SmallSquareMat<space_dimT, pt_coord_t> mat_q;
-      for (unsigned int index = 0; index < space_dimT; ++index)
+      for (unsigned int index = 0; index < hyEdge_dimT; ++index)
         mat_q(dim_indices[index], index) = 1.;
+      unsigned int helper = 0;
+      for (unsigned int index = hyEdge_dimT; index < space_dimT; ++index)
+      {
+        while (std::find(dim_ind.begin(), dim_ind.end(), helper) != dim_ind.end())
+          ++helper;
+        mat_q(helper, index) = 1.;
+        ++helper;
+      }
+
       return mat_q;
     }
     /*!*********************************************************************************************
