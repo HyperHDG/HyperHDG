@@ -757,7 +757,10 @@ Next, we consider a convergence example on a real hypergraph. It is constructed 
 % 
 where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
 % 
-Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.\arwarning{Why?}
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.
+\begin{envarerror}{To be verified!}
+ This might be due to the fact that the solution is quadratic and due to some super-convergence properties of LDG-H. For IP-H (cf.\ Section \ref{SEC:other_solvers}), this superconvergence does not apply.
+\end{envarerror}
 %
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
@@ -1305,12 +1308,57 @@ while the global coupling condition is formulated as
 % 
 The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
-A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}.
+A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprsingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H.
 \begin{envarwarning}{Why is this so?!}
- Unfortunatelly, we did not manage to find a penalty $\tau := \tau(\locDim, \globDim, i, d, p)$ that gives appropriate convergence for $\locDim = 3$. In this case, the CG solver tends not to converge, and the $L^2$ error remains almost constant after some refinement steps.
+ Unfortunatelly, we did not manage to find a penalty $\tau := \tau(\locDim, \globDim, i, d, p)$ that gives appropriate convergence for $\locDim = 3$. In this case, the CG solver tends not to converge, and the $L^2$ error remains almost constant after some refinement steps. Nonetheless, if $p=2$ the method appears to be consistent in $\locDim = 1,2,3$ dimensions.
 \end{envarwarning}
 % 
-\subsection{Advection--diffusion--reaction problems}\label{SEC:other_solvers}
+\subsection{Advection--diffusion--reaction problems}\label{SEC:advection_diffusion_reaction}
+% 
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 1.27e-2 & --- && 1.40e-3 & --- && 3.54e-5 & ---  \\
+  & $i = 1$ && 3.20e-3 & 2.0 && 1.89e-4 & 2.9 && 2.29e-6 & 3.9  \\
+  & $i = 2$ && 7.98e-4 & 2.0 && 2.46e-5 & 2.9 && 1.43e-7 & 4.0  \\
+  & $i = 3$ && 1.98e-4 & 2.0 && 3.13e-6 & 3.0 && 8.96e-9 & 4.0  \\
+  & $i = 4$ && 4.95e-5 & 2.0 && 3.95e-7 & 3.0 && 5.58e-10 & 4.0  \\
+  & $i = 5$ && 1.23e-5 & 2.0 && 4.96e-8 & 3.0 && 3.48e-11 & 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 4.85e-3 & --- && 7.14e-4 & --- && 1.98e-5 & ---  \\
+  & $i = 1$ && 1.76e-3 & 1.5 && 1.18e-4 & 2.6 && 1.60e-6 & 3.6  \\
+  & $i = 2$ && 5.45e-4 & 1.7 && 1.82e-5 & 2.7 && 1.14e-7 & 3.8  \\
+  & $i = 3$ && 1.55e-4 & 1.8 && 2.58e-6 & 2.8 && 7.72e-9 & 3.9  \\
+  & $i = 4$ && 4.21e-5 & 1.9 && 3.47e-7 & 2.9 && 5.05e-10 & 3.9  \\
+  & $i = 5$ && 1.10e-5 & 1.9 && 4.54e-8 & 2.9 && 3.25e-11 & 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of advectuion--diffusion--reaction on a unit square.}\label{TAB:dar_el_conv}
+\end{table}
+% 
+\begin{table}[t]
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 7.71e-2 & --- && 5.64e-2 & --- && 2.33e-2 & ---  \\
+  $i = 1$ && 1.62e-2 & 2.2 && 9.45e-3 & 2.6 && 3.14e-3 & 2.9  \\
+  $i = 2$ && 3.50e-3 & 2.2 && 1.58e-3 & 2.6 && 4.09e-4 & 2.9  \\
+  $i = 3$ && 7.96e-4 & 2.1 && 2.70e-4 & 2.6 && 5.22e-5 & 3.0  \\
+  $i = 4$ && 1.88e-4 & 2.1 && 4.67e-5 & 2.5 && 6.60e-6 & 3.0  \\
+  $i = 5$ && 4.58e-5 & 2.0 && 8.18e-6 & 2.5 && 8.29e-7 & 3.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the advection--diffusion--reaction equation for a hypergraph.}\label{TAB:dar_hg_el_conv}
+\end{table}
 % 
 One could also consider advection--diffusion--reaction equation by replacing \eqref{EQ:primal_dual} \& \eqref{EQ:div_is_f} in \eqref{EQ:diffusion_mixed} by
 % 
@@ -1321,7 +1369,22 @@ One could also consider advection--diffusion--reaction equation by replacing \eq
 \end{align}
 \end{subequations}
 % 
-Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $\vec a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $\vec a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.\arnote{TODO: Implement this!}
+Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $\vec a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $\vec a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.
+
+Thus, the local solver of \eqref{EQ:hdg_scheme} needs to be adapted to
+% 
+\begin{subequations}
+ \begin{align}
+  \int_\Edge \frac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx \quad \notag \\
+  - \int_\Edge \frac{1}{d} \vec a_\Edge U_\Edge \cdot \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds, \label{EQ:dar_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) v \ds \quad \notag \\
+  + \int_\Edge r U_\Edge v \dx & = \tau \int_{\partial \Edge} \lambda v \ds, \label{EQ:dar_flux}
+ \end{align}
+\end{subequations}
+% 
+changing the definitions of $\localU \lambda$ and $\localQ \lambda$. The defining equations for $\localU f$, $\localQ f$, $\localU u_\textup D$, and $\localQ_\textup D$ have to be manipulated analogously, while \eqref{EQ:construct_unk} \& \eqref{EQ:hdg_global} remain intact.
+
+Again, we conduct convergence tests utilizing the method of manufactured solutions and receive Tables \ref{TAB:dar_el_conv} \& \ref{TAB:dar_hg_el_conv}. These indicate that the convergence rates of the standard diffusion equation are reproduced for the advection--difusion--reaction equation.
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
