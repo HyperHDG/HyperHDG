@@ -28,7 +28,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   problem = "GlobalLoop::Elliptic < Topology::Cubic<" + str(dimension) + ",3>, " \
           + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
           + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+          + "LocalSolver::DiffusionIP<" + str(dimension) + "," + str(poly_degree) + "," \
           + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double> >"
   filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
                 "HyperHDG/local_solver/diffusion_ip.hxx", \

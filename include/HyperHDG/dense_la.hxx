@@ -210,6 +210,7 @@ class SmallMat
    ************************************************************************************************/
   SmallMat<n_rowsT, 1, mat_entry_t> get_column(const unsigned int col) const
   {
+    hy_assert(col < n_colsT, "The column you requested does not exist!");
     SmallMat<n_rowsT, 1, mat_entry_t> column;
     for (unsigned int i = 0; i < n_rowsT; ++i)
       column[i] = operator()(i, col);

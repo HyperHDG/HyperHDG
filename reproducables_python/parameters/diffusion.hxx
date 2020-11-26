@@ -86,7 +86,10 @@ struct HG
     static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                          const param_float_t time = 0.)
     {
-      return -point[0] * point[0] - point[1] * point[1] - point[2] * point[2];
+      param_float_t result = 0;
+      for (unsigned int dim = 0; dim < space_dimT; ++dim)
+        result -= point[dim] * point[dim];
+      return result;
     }
 
     static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,

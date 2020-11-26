@@ -130,7 +130,7 @@ string cythonize(vector<string>& names,
 
   string cythonCommand = "cd ./build/cython_files/; cython -3 --cplus " + python_name + ".pyx";
   string compileCommand =
-    "g++-8 -pthread -g -I. -Iinclude -I/usr/include/python" + pyVersion +
+    "g++ -pthread -g -I. -Iinclude -I/usr/include/python" + pyVersion +
     " -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
     -fPIC --std=c++17 -DPYVERMAJ=" +
@@ -139,7 +139,7 @@ string cythonize(vector<string>& names,
   if (!debug_mode)
     compileCommand.append(" -DNDEBUG");
   string linkCommand =
-    "g++-8 -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
+    "g++ -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
     -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
     -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 " +
     outfileName + ".o " + "-o build/shared_objects/" + python_name + ".so -llapack -lstdc++fs";
