@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
+def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -63,13 +63,14 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_advection_reaction_hypergraph_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_hyg-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_adv_reac_conv_hyg-" + str(dimension) + "-" \
+                           + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -89,7 +90,7 @@ def main(debug_mode):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
-          diffusion_test(poly_degree, dimension, iteration, debug_mode)
+          adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 

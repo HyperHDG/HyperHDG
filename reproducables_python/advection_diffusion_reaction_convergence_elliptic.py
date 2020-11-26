@@ -62,13 +62,14 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_advection_reaction_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_ellip-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_adv_reac_conv_ellip-" + str(dimension) + "-" \
+                            + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
