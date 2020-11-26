@@ -106,13 +106,11 @@ struct HG
         result -= (point[dim] - 2.) * (point[dim] - 2.);
       return result;
     }
-
     static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                          const param_float_t time = 0.)
     {
       return 3. * (param_float_t)hyEdge_dimT + analytic_result(point, time);
     }
-
     static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
                                          const param_float_t time = 0.)
     {
