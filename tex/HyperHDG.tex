@@ -871,7 +871,13 @@ and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \
 
 Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-interpretation of the local solution operators in each time step.
 
-The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
+The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container. For the first step, we define $U^0$ as $L^2$ projection of $u_0$ and $\vec Q^0$ via
+%
+\begin{equation}
+ \int_\Edge \frac{1}{d} \vec Q^0 \cdot \vec p \dx = \int_\Edge u_0 \Div \vec p \dx - \int_{\partial \Edge} u_0 \vec p \cdot \Normal \ds,
+\end{equation}
+%
+which corresponds to \eqref{EQ:primal_dual_parab} at time $t=0$.
 
 \begin{table}[t]
  \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
