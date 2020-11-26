@@ -90,7 +90,7 @@ struct HG
     {
       SmallVec<space_dimT, param_float_t> advection;
       for (unsigned int dim = 0; dim < space_dimT; ++dim)
-        advection[dim] = 1. / (point[dim] - 2.);
+        advection[dim] = (point[dim] - 2.) / analytic_result(point, time);
       return inverse_diffusion_coeff(point, time) * advection;
     }
     static param_float_t reaction_rate(const Point<space_dimT, param_float_t>& point,
