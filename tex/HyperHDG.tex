@@ -807,7 +807,7 @@ These loop classes can then also be used for related problems like the Bilaplaci
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------
 % 
-\subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}\arwarning{Only $\theta = 1$ has been implemented.}
+\subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}
 % 
 Next, we solve the parabolic diffusion equation, i.e., we want that
 % 
@@ -861,7 +861,7 @@ where the right-hand side has the form
  (\bigstar) ~=~ & \theta \deltat \int_{\Edge} f^n v \dx + (1 - \theta) \deltat \int_\Edge f^{n-1} v \dx \\
  & + \int_\Edge U^{n-1} v \dx + \deltat (1-\theta) \int_\Edge \vec Q^{n-1} \cdot \Nabla v \dx \\
  & - \deltat (1-\theta) \int_{\partial \Edge} ( \vec Q^{n-1} \cdot \Normal + \tau  (U^{n-1} - \hat U^{n-1} ) v \ds,
-\end{align*}\arnote{Based on this, it might be wise to save the evaluated testing of $\localQ$ instead of its coefficients.}
+\end{align*}
 % 
 and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \localU^{n-1} f^{n-1}$ is the full HDG approximation of $u$ at time step $n$. The same holds for $\vec Q^{n-1}$, while $\hat U^{n-1}$ is $u^{n-1}_\textup D$ on Dirichlet nodes and $\lambda^{n-1}$ otherwise. \eqref{EQ:hdg_f_parab} induces the operators $\localU f$ \& $\localQ f$ in whose representation, the time step and the dependency on the old time step's solution is neglected. The global closing condition is formualted as \eqref{EQ:hdg_global}, i.e.,
 % 
@@ -880,31 +880,66 @@ The representation of $(\bigstar)$ raises the need to save information about the
 which corresponds to \eqref{EQ:primal_dual_parab} at time $t=0$.
 
 \begin{table}[t]
- \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+ \begin{tabular}{ccc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
-  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
-  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \multicolumn{3}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{5-6} \cmidrule{8-9} \cmidrule{11-12}
+  \multicolumn{3}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  \multirow{12,5}{*}{\rotatebox[origin=c]{90}{$\theta = 1$}}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
   & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.73e-3 & ---  \\
-  & $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
-  & $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
-  & $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
-  & $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
-  & $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  && $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
+  && $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
+  && $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
+  && $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
+  && $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
+  \cmidrule{2-12}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
   & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
-  & $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
-  & $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
-  & $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
-  & $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
-  & $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
+  && $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
+  && $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
+  && $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
+  && $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
+  && $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
+  \midrule
+  \multirow{12,5}{*}{\rotatebox[origin=c]{90}{$\theta = 0.5$}}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.73e-3 & ---  \\
+  && $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
+  && $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
+  && $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
+  && $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
+  && $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
+  \cmidrule{2-12}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
+  && $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
+  && $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
+  && $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
+  && $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
+  && $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
+  \midrule
+  \multirow{10,5}{*}{\rotatebox[origin=c]{90}{$\theta = 0$}}
+  &\multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.73e-3 & ---  \\
+  && $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
+  && $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
+  && $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
+  && $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
+%  && $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
+  \cmidrule{2-12}
+  &\multirow{5}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
+  && $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
+  && $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
+  && $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
+  && $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
+%  && $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic diffusion example.}\label{TAB:diff_pb_conv}
-\end{table}
+\end{table}\arnote{Table still needs to be filled!}
 % 
 For a parabolic convergence test, we consider
 % 
