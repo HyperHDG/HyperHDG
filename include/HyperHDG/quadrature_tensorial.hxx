@@ -958,11 +958,11 @@ class IntegratorTensorial
         }
         for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         {
-          if (dim == dim_fct && dim_fct == bdr_dim)
+          if (dim == dim_fct && dim == bdr_dim)
             nabla_phi_i[dim_fct] *= trial_der_bdr_[dec_i[dim]][bdr_ind];
           else if (dim == dim_fct)
             nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
-          else if (dim_fct == bdr_dim)
+          else if (dim == bdr_dim)
             nabla_phi_i[dim_fct] *= trial_bdr_[dec_i[dim]][bdr_ind];
           else
             nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr)]];
@@ -1029,11 +1029,11 @@ class IntegratorTensorial
         }
         for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         {
-          if (dim == dim_fct && dim_fct == bdr_dim)
+          if (dim == dim_fct && dim == bdr_dim)
             nabla_phi_i[dim_fct] *= trial_der_bdr_[dec_i[dim]][bdr_ind];
           else if (dim == dim_fct)
             nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
-          else if (dim_fct == bdr_dim)
+          else if (dim == bdr_dim)
             nabla_phi_i[dim_fct] *= trial_bdr_[dec_i[dim]][bdr_ind];
           else
             nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
