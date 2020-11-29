@@ -1314,8 +1314,8 @@ while the global coupling condition is formulated as
 % 
 The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
-A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprsingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H.
-\begin{envarwarning}{Why is this so?!}
+A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprisingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H.
+\begin{envarwarning}{Check the new convergence results!}
  Unfortunatelly, we did not manage to find a penalty $\tau := \tau(\locDim, \globDim, i, d, p)$ that gives appropriate convergence for $\locDim = 3$. In this case, the CG solver tends not to converge, and the $L^2$ error remains almost constant after some refinement steps. Nonetheless, if $p=2$ the method appears to be consistent in $\locDim = 1,2,3$ dimensions.
 \end{envarwarning}
 % 
