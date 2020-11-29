@@ -875,8 +875,7 @@ class IntegratorTensorial
       index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
     Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i;
-    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT =
-      transposed(geom.mat_r());
+    const SmallSquareMat<GeomT::hyEdge_dim(), return_t> rT = transposed(geom.mat_r());
 
     for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
     {

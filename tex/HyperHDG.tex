@@ -826,7 +826,7 @@ while \eqref{EQ:cont_const} needs to hold on all $\Node \in \SetNode$.
 As temporal discretization---and for the sake of simplicity, we choose the $\theta$-scheme, i.e.,
 % 
 \begin{equation}\label{EQ:theta_scheme}
- \partial_t u + \Div \vec q \approx \frac{ u^n - u^{n-1} }{\deltat} + \theta \Div \vec q^n - (1 - \theta) \Div \vec q^{n-1},
+ \partial_t u + \Div \vec q \approx \frac{ u^n - u^{n-1} }{\deltat} + \theta \Div \vec q^n + (1 - \theta) \Div \vec q^{n-1},
 \end{equation}
 %
 where $n+1$ is the index of the old time step, $n$ is the index of the new time-step, $\deltat = t^n - t^{n-1}$, and $\theta \in [0,1]$ defines the time-stepping scheme. Thus $\theta = 0$ represents a forward (explicit) Euler scheme, $\theta = 1$ is the backward (implicit) Euler scheme, and $\theta = \tfrac{1}{2}$ defines the Cranck--Nicolson scheme. For the numerical scheme with respect to time, we multiply \eqref{EQ:theta_scheme} and \eqref{EQ:div_is_f_parab} by $\deltat$, respectively.

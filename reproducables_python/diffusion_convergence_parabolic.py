@@ -45,7 +45,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
             "double", "vector[double]"], filenames, debug_mode )
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,delta_time] )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,0.5,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
