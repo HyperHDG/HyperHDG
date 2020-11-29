@@ -58,9 +58,6 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
-    if time_step > 0:
-      HDG_wrapper.set_data(vectorSolution, time_step * delta_time)
-    
     # Assemble right-hand side vextor and "mass_matrix * old solution".
     vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
                  (time_step+1) * delta_time), -1.)
@@ -73,7 +70,12 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
       [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        raise RuntimeError("Both linear solvers did not converge!")
+        [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
+        if num_iter != 0:
+          print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+          raise RuntimeError("All linear solvers did not converge!")
+
+    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
     
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
