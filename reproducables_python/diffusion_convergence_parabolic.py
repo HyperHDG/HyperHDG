@@ -35,6 +35,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
                 "reproducables_python/parameters/diffusion.hxx" ]
   
   # Config time stepping.
+  theta       = 1.
   time_steps  = 10 ** 4
   delta_time  = 1 / time_steps
 
@@ -45,7 +46,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
             "double", "vector[double]"], filenames, debug_mode )
   
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,0.5,delta_time] )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
@@ -80,7 +81,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
   print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/diffusion_convergence_parabolic.txt", "a")
+  f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
