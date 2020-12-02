@@ -1615,7 +1615,7 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue for a bilaplacian eigenvalue problem. Here, the shifted inverse (SI), mass approximation (MA) and nonlinear (NL) approaches are shown.
- \newline ``~*~'' inidcates that the Newton solver failed, since it could not solve the internal linear system for one of the two initial guesses. The other guess' error is given. If both guesses lead to failures, this is indicated by ``---''.}\label{TAB:bil_eigenvalue_conv}
+ \newline *) inidcates that the Newton solver failed, since it could not solve the internal linear system for one of the two initial guesses. The other guess' error is given. If both guesses lead to failures, this is indicated by ``---''.}\label{TAB:bil_eigenvalue_conv}
 \end{table}
 % 
 For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the mass approximation (MA) approach, for which $\sigma = 3 \eigenval / 4$ is chosen. Moreover, we give the results of the shifted inverse (SI) approach with $\sigma = 3 \eigenval / 4$. The results of the NL approach for which the SI approach is used as initial guess vary insignificantly from the given results of the NL with MA. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.
