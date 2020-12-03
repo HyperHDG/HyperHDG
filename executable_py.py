@@ -22,33 +22,24 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::Elliptic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">," \
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersSinEllipt,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/diffusion_ldgh.hxx", \
-                "reproducables_python/parameters/diffusion.hxx" ]
   try:
-    import python_import
+    import cython_import
   except ImportError as error:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    import python_import
+    import cython_import
   
-  const                 = python_import.hyperhdg_constructor()
+  const                 = cython_import.hyperhdg_constructor()
   const.global_loop     = "Elliptic"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-                            + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+                            + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
-  PyDP = python_import.cython_import(const)
+  PyDP = cython_import.cython_import(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )

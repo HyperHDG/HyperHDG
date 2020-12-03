@@ -1,5 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <cmath>
 
 /*!*************************************************************************************************

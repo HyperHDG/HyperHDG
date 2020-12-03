@@ -13,7 +13,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -75,26 +74,29 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
-  
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::MassEigenvalue < Topology::Cubic<" + str(dimension) + ",3>, " \
-          + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "LocalSolver::Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersEigs,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/diffusion_ldgh.hxx", \
-                "reproducables_python/parameters/diffusion.hxx" ]
 
   # Configure eigenvector/-value solver.
   exact_eigenval = dimension * (np.pi ** 2)
   sigma          = exact_eigenval / 2.
 
-  # Import C++ wrapper class to use HDG method on graphs.
-  from cython_import import cython_import
-  PyDP = cython_import \
-         ( ["mass_approx_eigenvalue_loop", problem, "vector[unsigned int]", \
-            "vector[unsigned int]"], filenames, debug_mode )
+  try:
+    import cython_import
+  except ImportError as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    import cython_import
+  
+  const                 = cython_import.hyperhdg_constructor()
+  const.global_loop     = "MassApproxEigenvalue"
+  const.topology        = "Cubic<" + str(dimension) + ",3>"
+  const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
+  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersEigs,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.debug_mode      = debug_mode
+
+  PyDP = cython_import.cython_import(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )

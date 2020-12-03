@@ -14,7 +14,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -51,17 +50,6 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   start_time = datetime.now()
   print("Starting time is", start_time)
   
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::NonlinearEigenvalue<Topology::Cubic<" + str(dimension) + "," \
-          + str(dimension) + ">, " \
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersEigs,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/bilaplacian_eigs_ldgh.hxx", \
-                "reproducables_python/parameters/bilaplacian.hxx" ]
-
   # Config Newton solver
   n_newton_steps = 25
   scaling_fac    = 1e-2
@@ -69,11 +57,24 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   alpha          = 0.1
   beta           = 0.5
 
-  # Import C++ wrapper class to use HDG method on graphs.
-  from cython_import import cython_import
-  PyDP = cython_import \
-         ( ["nonlinear_eigenvalue_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], \
-           filenames, debug_mode )
+  try:
+    import cython_import
+  except ImportError as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    import cython_import
+  
+  const                 = cython_import.hyperhdg_constructor()
+  const.global_loop     = "NonlinearEigenvalue"
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersEigs,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.debug_mode      = debug_mode
+
+  PyDP = cython_import.cython_import(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )

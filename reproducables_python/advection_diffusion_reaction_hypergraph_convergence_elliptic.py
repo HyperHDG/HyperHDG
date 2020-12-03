@@ -13,7 +13,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -24,22 +23,24 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
 
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::Elliptic < Topology::Cubic<" + str(dimension) + ",3>, " \
-          + "Geometry::UnitCube<" + str(dimension) + ",3,double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + ",3>, " \
-          + "LocalSolver::DiffusionAdvectionReaction<" + str(dimension) + "," + str(poly_degree) \
-          + "," + str(2*poly_degree) + ",HG<" + str(dimension) \
-          + ">::TestParametersQuadEllipt,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/diffusion_advection_reaction_ldg.hxx", \
-                "reproducables_python/parameters/diffusion_advection_reaction.hxx" ]
+  try:
+    import cython_import
+  except ImportError as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    import cython_import
+  
+  const                 = cython_import.hyperhdg_constructor()
+  const.global_loop     = "Elliptic"
+  const.topology        = "Cubic<" + str(dimension) + ",3>"
+  const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
+  const.local_solver    = "DiffusionAdvectionReaction<" + str(dimension) + "," + str(poly_degree) \
+    + "," + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+  const.include_files   = ["reproducables_python/parameters/diffusion_advection_reaction.hxx"]
+  const.debug_mode      = debug_mode
 
-  # Import C++ wrapper class to use HDG method on graphs.
-  from cython_import import cython_import
-  PyDP = cython_import \
-         ( ["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, \
-           debug_mode )
+  PyDP = cython_import.cython_import(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )

@@ -10,22 +10,23 @@ from scipy.sparse.linalg import LinearOperator
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
-# Predefine problem to be solved.
-problem = "GlobalLoop::Elliptic < Topology::Cubic< 1, 3 >, " \
-         +                  "Geometry::UnitCube< 1, 3 >, " \
-         +                  "NodeDescriptor::Cubic< 1, 3 >, " \
-         +                  "LocalSolver::DiffusionUniform < 1, 1, 2 * 1 > " \
-         +                ">"
-filenames = [ "HyperHDG/geometry/unit_cube.hxx" , \
-              "HyperHDG/node_descriptor/cubic.hxx" , \
-              "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx" ]
+try:
+  import cython_import
+except ImportError as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+  import cython_import
 
-# Import C++ wrapper class to use HDG method on graphs.
-from cython_import import cython_import
-PyDiffusionProblem = cython_import \
-  (["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True)
+const                 = cython_import.hyperhdg_constructor()
+const.global_loop     = "Elliptic"
+const.local_solver    = "DiffusionUniform < 1, 1, 2 * 1 >"
+const.topology        = "Cubic< 1, 3 >"
+const.geometry        = "UnitCube< 1, 3 >"
+const.node_descriptor = "Cubic< 1, 3 >"
+const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+const.debug_mode      = True
+
+PyDiffusionProblem = cython_import.cython_import(const)
 
 # Define tolerance
 tolerance = 1e-8

@@ -30,7 +30,7 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class ShiftedEigenvalue
+class ShiftedInverseEigenvalue
 {
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
@@ -71,9 +71,9 @@ class ShiftedEigenvalue
    * \param   construct_geom    Information to construct a geometry.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  ShiftedEigenvalue(const typename TopologyT::constructor_value_type& construct_topo,
-                    const typename GeometryT::constructor_value_type& construct_geom,
-                    const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  ShiftedInverseEigenvalue(const typename TopologyT::constructor_value_type& construct_topo,
+                           const typename GeometryT::constructor_value_type& construct_geom,
+                           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -92,8 +92,8 @@ class ShiftedEigenvalue
    * \param   construct_topo    Information to construct a topology.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  ShiftedEigenvalue(const typename TopologyT::constructor_value_type& construct_topo,
-                    const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  ShiftedInverseEigenvalue(const typename TopologyT::constructor_value_type& construct_topo,
+                           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -111,7 +111,7 @@ class ShiftedEigenvalue
    *
    * \param   construct_topo    Information to construct a topology.
    ************************************************************************************************/
-  ShiftedEigenvalue(const typename TopologyT::constructor_value_type& construct_topo)
+  ShiftedInverseEigenvalue(const typename TopologyT::constructor_value_type& construct_topo)
   : hyper_graph_(construct_topo)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -244,6 +244,6 @@ class ShiftedEigenvalue
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
-};  // end of class ShiftedEigenvalue
+};  // end of class ShiftedInverseEigenvalue
 
 }  // end of namespace GlobalLoop

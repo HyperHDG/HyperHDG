@@ -13,7 +13,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -24,26 +23,30 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::Parabolic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">,"\
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersSinParab,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/bilaplacian_parab_ldgh.hxx", \
-                "reproducables_python/parameters/bilaplacian.hxx" ]
-
   # Config time stepping.
   time_steps  = 10 ** 4
   delta_time  = 1 / time_steps
 
-  # Import C++ wrapper class to use HDG method on graphs.
-  from cython_import import cython_import
-  PyDP = cython_import \
-         ( ["parabolic_loop", problem, "vector[unsigned int]", "vector[unsigned int]", \
-            "double", "vector[double]"], filenames, debug_mode )
+  try:
+    import cython_import
+  except ImportError as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    import cython_import
   
+  const                 = cython_import.hyperhdg_constructor()
+  const.global_loop     = "Parabolic"
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersSinParab,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
+    "double", "vector[double]"]
+  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.debug_mode      = debug_mode
+
+  PyDP = cython_import.cython_import(const)
+
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,delta_time] )
 
