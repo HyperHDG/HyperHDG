@@ -1,4 +1,18 @@
-import configparser, os, sys, importlib, glob, re
+import configparser, os, sys, importlib, glob, re, datetime
+
+
+CYTHON_COM  = "cython"
+COMPILE_COM = "g++-8"
+LINKER_COM  = "g++-8"
+PYTHON_DIR  = "/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+
+
+
+
+
+
+
+
 
 ## \package cython_import
 # 
@@ -8,20 +22,7 @@ import configparser, os, sys, importlib, glob, re
 #  \c cython_import compiles the necessary components just-in-time and provides the as classes that
 #  can be used within Python. To this end, the Cython package is heavily used. 
 
-def extract_classname(fullname):
-  index = fullname.find('<')
-  if index == -1:
-    return fullname
-  else:
-    return fullname[0:index]
 
-
-def find_definition(folder, classname):
-  for file in glob.glob(os.getcwd() + "/include/HyperHDG/" + folder + "/*.hxx"):
-    with open(file, "r") as hxxfile:
-      if "class " + classname in hxxfile.read() or "struct " + classname in hxxfile.read():
-        return re.sub(os.getcwd() + "/include/", '', file)
-  assert False, "File containing defintion of " + classname + " has not been found!"
 
 
 class hyperhdg_constructor:
@@ -94,35 +95,96 @@ class hyperhdg_constructor:
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
 def cython_import(constructor):
+  start_time = datetime.datetime.now()
   # Check that constructor is appropriatelly filled.
   assert isinstance(constructor, hyperhdg_constructor) and constructor.is_consistent()
 
+  # Start program.
+  print("Cythonizing ... ", end='', flush=True)
+
   # Create folders and log files and check for consistency.
-  os.system("mkdir -p build build/cython_files build/shared_objects output")
-  if not os.path.isfile("build/cython_log.txt"):
-    file = open(os.getcwd() + "/build/cython_log.txt", "w")
+  os.system("mkdir -p " + main_path() + "/build " + main_path() + "/build/cython_files " \
+            + main_path() + "/build/shared_objects output")
+  if not os.path.isfile(main_path() + "/build/cython_log.txt"):
+    file = open(main_path() + "/build/cython_log.txt", "w")
     file.write("Python version: " + str(sys.version_info))
     file.close()
   else:
-    file = open(os.getcwd() + "/build/cython_log.txt", "r")
+    file = open(main_path() + "/build/cython_log.txt", "r")
     assert file.readline() == "Python version: " + str(sys.version_info), \
            "Wrong Python version!\n \
             Remove build directory and reinstall HyperHDG or use previous Python version."
     file.close()
 
-  # Evaluate configfile.
+  # Evaluate configfile, define include files, and define dependent files.
+  cy_replace      = evaluate_config(constructor)
+  include_string  = extract_includes(constructor)
+  cpp_class, python_class, cython_class = file_names(constructor)
+
+  compilation_necessary = need_compile(constructor, python_class)
+  if compilation_necessary:
+    # Copy pyx and pxd files from cython directory.
+    for file_end in ["pxd", "pyx"]:
+      with open(main_path()+"/cython/"+constructor.global_loop.lower()+"."+file_end, "r") as file:
+        content = file.read()
+    content = re.sub("C\+\+ClassName", "\"" + cpp_class + "\"", content)
+    content = re.sub("CythonClassName", cython_class, content)
+    content = re.sub("PythonClassName", python_class, content)
+    content = re.sub("IncludeFiles", include_string, content)
+    for i in range(len(cy_replace)):
+      content = re.sub("CyReplace" + '%02d' % (i+1), cy_replace[i], content)
+    with open(main_path() + "/build/cython_files/" + python_class + "." + file_end, "w") as file:
+      file.write(content)
+    # Prepare the compilation commands.
+    cython_command, compile_command, link_command = get_commands(python_class)
+    if not (constructor.debug_mode):
+      compile_command = compile_command + " -DNDEBUG";
+    #Actually compile the prepared files.
+    os.system(cython_command);
+    os.system(compile_command);
+    os.system(link_command);
+
+  try:
+    mod = importlib.import_module(python_class)
+  except ImportError as error:
+    sys.path.append(main_path() + "/build/shared_objects")
+    mod = importlib.import_module(python_class)
+
+  delta_time_ms = 1000 * (datetime.datetime.now() - start_time).total_seconds()
+  if compilation_necessary:
+    print("DONE with compilation in " + "{:.2f}".format(delta_time_ms) + " milliseconds.")
+  else:
+    print("DONE without compilation in " + "{:.2f}".format(delta_time_ms) + " milliseconds.")
+
+  return getattr(mod, python_class)
+
+
+def extract_classname(fullname):
+  index = fullname.find('<')
+  return fullname[0:index if index != -1 else len(fullname)]
+
+def find_definition(folder, classname):
+  for file in glob.glob(main_path() + "/include/HyperHDG/" + folder + "/*.hxx"):
+    with open(file, "r") as hxxfile:
+      if ("class " + classname or "struct " + classname) in hxxfile.read():
+        return re.sub(main_path() + "/include/", '', file)
+  assert False, "File containing defintion of " + classname + " has not been found!"
+
+def evaluate_config(constructor):
   config = configparser.ConfigParser()
-  config.read(os.getcwd() + "/cython/" + constructor.global_loop.lower() + ".cfg")
+  config.read(main_path() + "/cython/" + constructor.global_loop.lower() + ".cfg")
   n_replacements = int(config['default']['n_replacements'])
-  cy_rep = []
+  cy_replace = []
   for i in range(n_replacements):
     if i < len(constructor.cython_replacements) and constructor.cython_replacements[i] != "":
-      cy_rep.append(constructor.cython_replacements[i])
+      cy_replace.append(constructor.cython_replacements[i])
     else:
       assert config.has_option('default','replacement' + '%02d' % (i+1))
-      cy_rep.append(config['default']['replacement' + '%02d' % (i+1)])
+      cy_replace.append(config['default']['replacement' + '%02d' % (i+1)])
+  assert n_replacements == len(cy_replace)
+  return cy_replace
 
-  # Find files in which class instances are defined and remove duplicates.
+def extract_includes(constructor):
   constructor.include_files.append(find_definition(
     "global_loop", extract_classname(constructor.global_loop)))
   constructor.include_files.append(find_definition(
@@ -134,45 +196,41 @@ def cython_import(constructor):
   constructor.include_files.append(find_definition(
     "node_descriptor", extract_classname(constructor.node_descriptor)))
   constructor.include_files = list(set(constructor.include_files))
-  include_files = ""
+  include_string = ""
   for x in constructor.include_files:
-    include_files = include_files + "include <" + x + ">\n"
+    include_string = include_string + "cdef extern from \"<" + x + ">\": pass\n"
+  return include_string
 
-  # Define Python and Cython names.
+def file_names(constructor):
+  cpp_class    = "GlobalLoop::" + constructor.global_loop + "<Topology::" + constructor.topology \
+                 + ",Geometry::" + constructor.geometry + ",NodeDescriptor::" \
+                 + constructor.node_descriptor + ",LocalSolver::" + constructor.local_solver + " >"
+  cython_file  = cpp_class + "_deb" if constructor.debug_mode else cpp_class + "_rel"
+  cython_file  = re.sub(' ', '', cython_file)
+  cython_file  = re.sub('\+|\-|\*|\/|<|>|\,|\:', '_', cython_file)
+  cython_class = cython_file + "CP"
+  return cpp_class, cython_file, cython_class
 
-  # Copy pyx and pxd files from cython directory.
-  file = open(os.getcwd() + "/cython/" + constructor.global_loop.lower() + ".pxd", "r")
-  content = file.read()
-  file.close()
-  content = re.sub("IncludeFiles", include_files, content)
-  for i in range(n_replacements):
-    content = re.sub("CyReplace" + '%02d' % (i+1), cy_rep[i], content)
-  file =open(os.getcwd() + "/build/cython_files/" + constructor.global_loop.lower() + ".pxd", "w")
-  file.write(content)
-  file.close()
-  file = open(os.getcwd() + "/cython/" + constructor.global_loop.lower() + ".pyx", "r")
-  content = file.read()
-  file.close()
-  content = re.sub("IncludeFiles", include_files, content)
-  for i in range(n_replacements):
-    content = re.sub("CyReplace" + '%02d' % (i+1), cy_rep[i], content)
-  file =open(os.getcwd() + "/build/cython_files/" + constructor.global_loop.lower() + ".pyx", "w")
-  file.write(content)
-  file.close()
-
-
-  cythonCommand = "cd ./build/cython_files/; cython -3 --cplus " + python_name + ".pyx";
-  compileCommand = \
-    "g++ -pthread -g -I. -Iinclude -I/usr/include/python" + pyVersion +
-    " -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
+def get_commands(python_class):
+  cython_command = "cd " + main_path() + "/build/cython_files/; " + CYTHON_COM + " -3 --cplus " \
+    + python_class + ".pyx";
+  compile_command = "cd " + main_path() + "; " + COMPILE_COM + " -pthread -g -I. -Iinclude -I" \
+    + PYTHON_DIR +" -Isubmodules/tensor_product_chain_complex.git/include -fwrapv -O2 -Wall -g \
     -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 \
-    -fPIC --std=c++17 -c " + outfileName + ".cpp -o " + outfileName + ".o";
-  if (!debug_mode)
-   compileCommand.append(" -DNDEBUG");
-  linkCommand =
-    "g++ -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
-    -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
-    -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 " +
-    outfileName + ".o " + "-o build/shared_objects/" + python_name + ".so -llapack -lstdc++fs";
+    -fPIC --std=c++17 -c ./build/cython_files/" + python_class + ".cpp -o ./build/cython_files/" \
+    + python_class + ".o";
+  link_command = "cd " + main_path() + "; " + LINKER_COM + " -pthread -shared -Wl,-O1 \
+    -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-Bsymbolic-functions \
+    -Wl,-z,relro -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
+    -D_FORTIFY_SOURCE=2 ./build/cython_files/" + python_class + ".o " + "-o build/shared_objects/" \
+    + python_class + ".so -llapack -lstdc++fs";
+  return cython_command, compile_command, link_command
 
-  print(constructor.include_files)
+def need_compile(constructor, python_class):
+  if not os.path.isfile(main_path() + "/build/shared_objects/" + python_class + ".so"):
+    return True
+  time_so = os.stat(main_path() + "/build/shared_objects/" + python_class + ".so").st_mtime
+  return True
+
+def main_path():
+  return os.path.dirname(os.path.abspath(__file__))
