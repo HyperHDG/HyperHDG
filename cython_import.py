@@ -166,22 +166,24 @@ def evaluate_config(constructor):
 def get_cmakes():
   global CYTHON_COM, COMPILE_COM, LINKER_COM, PYTHON_DIR, PY_VER_MAJ, PY_VER_MIN
   if not os.path.isfile(main_path() + "/build/cmake_cython.cfg"):
-    print("CMAKE files do not exist, using default values for Cython!")
+    print("CMAKE files do not exist ... using default values for Cython!")
     CYTHON_COM  = "cython"
     COMPILE_COM = "g++-8"
     LINKER_COM  = "g++-8"
     PYTHON_DIR  = "/usr/include/python"+str(sys.version_info.major)+"."+str(sys.version_info.minor)
     PY_VER_MAJ  = sys.version_info.major
     PY_VER_MIN  = sys.version_info.minor
-    return None
-  config = configparser.ConfigParser()
-  config.read(main_path() + "/build/cmake_cython.cfg")
-  CYTHON_COM  = config['cmake']['cython_command']
-  COMPILE_COM = config['cmake']['compile_command']
-  LINKER_COM  = config['cmake']['linker_command']
-  PYTHON_DIR  = config['cmake']['python_directory']
-  PY_VER_MAJ  = config['cmake']['python_version_major']
-  PY_VER_MIN  = config['cmake']['python_version_minor']
+  else:
+    config = configparser.ConfigParser()
+    config.read(main_path() + "/build/cmake_cython.cfg")
+    CYTHON_COM  = config['cmake']['cython_command']
+    COMPILE_COM = config['cmake']['compile_command']
+    LINKER_COM  = config['cmake']['linker_command']
+    PYTHON_DIR  = config['cmake']['python_directory']
+    PY_VER_MAJ  = config['cmake']['python_version_major']
+    PY_VER_MIN  = config['cmake']['python_version_minor']
+  if PY_VER_MAJ < 3:
+    print("Python versions below 3 are not supported!")
   assert PY_VER_MAJ == sys.version_info.major and PY_VER_MIN == sys.version_info.minor, \
          "Utilized Python version is not CMAKE's Python version!"
 
@@ -241,8 +243,8 @@ def need_compile(constructor, python_class):
   time_so = os.stat(main_path() + "/build/shared_objects/" + python_class + ".so").st_mtime
   if time_so < os.stat(os.path.abspath(__file__)).st_mtime:
     return True
-  if os.path.isfile(main_path() + "/build/cmake_cython.txt") \
-    and time_so < os.stat(main_path() + "/build/cmake_cython.txt").st_mtime:
+  if os.path.isfile(main_path() + "/build/cmake_cython.cfg") \
+    and time_so < os.stat(main_path() + "/build/cmake_cython.cfg").st_mtime:
     return True
   for file_end in ["pxd", "pyx", "cfg"]:
     time_in = os.stat(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + "." \
