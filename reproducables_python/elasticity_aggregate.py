@@ -47,7 +47,8 @@ const.debug_mode      = False
 PyDP = cython_import.cython_import(const)
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDP( "domains/aggregate_" + aggregate + ".pts" )
+HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
+                    "/../domains/aggregate_" + aggregate + ".pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the

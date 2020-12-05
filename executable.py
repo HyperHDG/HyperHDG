@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
+import os
 
 # Predefine problem to be solved.
 # problem = "AbstractProblem < Topology::Cubic< 1, 3 >, " \
@@ -36,7 +37,7 @@ PyDP = cython_import.cython_import(const)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 #HDG_wrapper = PyDP([1,1,1])
-HDG_wrapper = PyDP( "domains/triangle.pts" )
+HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/domains/triangle.pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
