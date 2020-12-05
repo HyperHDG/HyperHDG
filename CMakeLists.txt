@@ -38,4 +38,5 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output ${CMAKE_CURRENT_BINARY_DI
 file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(tests_c++)
+add_subdirectory(tests_python)
 # add_subdirectory(doc)
