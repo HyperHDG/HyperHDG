@@ -14,7 +14,9 @@ find_package (Python3 COMPONENTS Interpreter Development NumPy)
 find_program( CYTHON_EXECUTABLE
   NAMES cython cython.bat cython3)
 
-include_directories(include submodules/tensor_product_chain_complex.git/include/)
+include_directories(
+  include ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
+  )
 
 # This 
 get_directory_property (inc_dirs INCLUDE_DIRECTORIES)
@@ -38,5 +40,5 @@ list(JOIN inc_dirs " " INCLUDE_STRING)
 # file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(tests_c++)
-# add_subdirectory(tests_python)
+add_subdirectory(tests_python)
 # add_subdirectory(doc)
