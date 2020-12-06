@@ -5,6 +5,9 @@ NORMAL=$(tput sgr0)
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+echo -e "${RED}${BOLD}!! Initialize git-based submodules:${NC}"
+echo -e "${RED}   git submodule update --init --recursive${NC}"
+git submodule update --init --recursive
 echo -e "${RED}${BOLD}!! Remove previous build and __pycache__ directories:${NC}"
 echo -e "${RED}   rm -rf build __pycache__${NC}"
 rm -rf build __pycache__
