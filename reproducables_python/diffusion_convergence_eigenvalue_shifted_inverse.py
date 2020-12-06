@@ -76,6 +76,7 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
+  os.system("mkdir -p output")
   
   # Configure eigenvector/-value solver.
   exact_eigenval = dimension * (np.pi ** 2)

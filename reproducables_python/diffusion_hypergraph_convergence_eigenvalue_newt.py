@@ -49,6 +49,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
+  os.system("mkdir -p output")
 
   # Config Newton solver
   n_newton_steps = 10 ** 1
