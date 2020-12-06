@@ -38,5 +38,5 @@ list(JOIN inc_dirs " " INCLUDE_STRING)
 # file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(tests_c++)
-add_subdirectory(tests_python)
+# add_subdirectory(tests_python)
 # add_subdirectory(doc)
