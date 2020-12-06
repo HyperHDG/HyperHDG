@@ -39,6 +39,21 @@ list(JOIN inc_dirs " " INCLUDE_STRING)
 # file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output ${CMAKE_CURRENT_BINARY_DIR}/cython_files ${CMAKE_CURRENT_BINARY_DIR}/shared_objects)
 # file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  [cmake]\n)
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "cython_command       = ${CYTHON_EXECUTABLE}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "compile_command      = ${CMAKE_CXX_COMPILER}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "linker_command       = ${CMAKE_CXX_COMPILER}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "python_directory     = ${Python3_INCLUDE_DIRS}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "python_version_major = ${Python3_VERSION_MAJOR}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "python_version_minor = ${Python3_VERSION_MINOR}\n")
+
 add_subdirectory(tests_c++)
 add_subdirectory(tests_python)
 # add_subdirectory(doc)

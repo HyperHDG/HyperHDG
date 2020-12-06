@@ -182,9 +182,9 @@ def get_cmakes():
     PYTHON_DIR  = config['cmake']['python_directory']
     PY_VER_MAJ  = config['cmake']['python_version_major']
     PY_VER_MIN  = config['cmake']['python_version_minor']
-  if PY_VER_MAJ < 3:
+  if int(PY_VER_MAJ) < 3:
     print("Python versions below 3 are not supported!")
-  assert PY_VER_MAJ == sys.version_info.major and PY_VER_MIN == sys.version_info.minor, \
+  assert int(PY_VER_MAJ) == sys.version_info.major and int(PY_VER_MIN) == sys.version_info.minor, \
          "Utilized Python version is not CMAKE's Python version!"
 
 ## \brief   Add the files that need to be included for defining the problem to include list.
