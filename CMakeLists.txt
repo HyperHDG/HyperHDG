@@ -15,7 +15,9 @@ find_program( CYTHON_EXECUTABLE
   NAMES cython cython.bat cython3)
 
 include_directories(
-  include ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
+  ${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
   )
 
 # This 
@@ -40,7 +42,7 @@ list(JOIN inc_dirs " " INCLUDE_STRING)
 # file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
-  [cmake]\n)
+  "[cmake]\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
   "cython_command       = ${CYTHON_EXECUTABLE}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
@@ -53,6 +55,16 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
   "python_version_major = ${Python3_VERSION_MAJOR}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
   "python_version_minor = ${Python3_VERSION_MINOR}\n")
+
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "\n[includes]\ndir = [\n")
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "  \"${dir}\",\n")
+endforeach()
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
+  "  \"\"]")
 
 add_subdirectory(tests_c++)
 add_subdirectory(tests_python)
