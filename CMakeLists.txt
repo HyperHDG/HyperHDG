@@ -67,7 +67,7 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
   "  \"\"]")
 
 add_subdirectory(tests_c++)
-if(NOT DEFINED "${NOPYTHONTESTS}")
+if(NOT DEFINED NOPYTHONTESTS)
   add_subdirectory(tests_python)
 endif()
 
