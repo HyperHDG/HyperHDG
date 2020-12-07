@@ -247,10 +247,13 @@ def get_commands(python_class):
 
 ## \brief   Check whether recompilation of executable is necessary.
 def need_compile(constructor, python_class):
+  global PYTHON_DIR
   if not os.path.isfile(main_path() + "/build/shared_objects/" + python_class + ".so"):
     return True
   time_so = os.stat(main_path() + "/build/shared_objects/" + python_class + ".so").st_mtime
-  if time_so < os.stat(os.path.abspath(__file__)).st_mtime:
+  assert os.path.isfile(PYTHON_DIR + "/Python.h"), "Include file for Python needs to exist!"
+  if time_so < os.stat(PYTHON_DIR + "/Python.h").st_mtime \
+    or time_so < os.stat(os.path.abspath(__file__)).st_mtime:
     return True
   if os.path.isfile(main_path() + "/build/cmake_cython.cfg") \
     and time_so < os.stat(main_path() + "/build/cmake_cython.cfg").st_mtime:
