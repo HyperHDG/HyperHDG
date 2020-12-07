@@ -85,11 +85,11 @@ def cython_import(constructor):
   # Create folders and log files and check for consistency.
   os.system("mkdir -p " + main_path() + "/build " + main_path() + "/build/cython_files " \
             + main_path() + "/build/shared_objects")
-  if constructor.allow_file_output and not os.path.isfile(main_path() + "/build/cython_log.txt"):
+  if not os.path.isfile(main_path() + "/build/cython_log.txt"):
     file = open(main_path() + "/build/cython_log.txt", "w")
     file.write("Python version: " + str(sys.version_info))
     file.close()
-  elif os.path.isfile(main_path() + "/build/cython_log.txt"):
+  else:
     file = open(main_path() + "/build/cython_log.txt", "r")
     assert file.readline() == "Python version: " + str(sys.version_info), \
            "Wrong Python version!\n \
