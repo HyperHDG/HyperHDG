@@ -1,10 +1,9 @@
+#ifndef NOFILEOUT
+
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/local_solver/template.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
-
-#ifndef NOFILEOUT
 #include <HyperHDG/plot.hxx>
-#endif
 
 #include <iostream>
 #include <memory>
@@ -57,13 +56,20 @@ void test()
 
 int main()
 {
-#ifndef NOFILEOUT
   test<1, 1>();
   test<1, 2>();
   test<2, 2>();
   test<1, 3>();
   test<2, 3>();
   test<3, 3>();
-#endif
   return 0;
 }
+
+#else
+
+int main()
+{
+  return 0;
+}
+
+#endif
