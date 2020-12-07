@@ -13,7 +13,8 @@ operating system this can be done using the commands:
 $ sudo apt-get update
 $ sudo apt-get dist-upgrade
 $ sudo apt-get autoremove
-$ sudo apt-get install git python3-dev python3-numpy python3-scipy cython libblas-dev liblapack-dev
+$ sudo apt-get install git python3-dev python3-numpy python3-scipy cython libblas-dev \
+liblapack-dev
 ```
 
 The first three lines bring your operating system into a clear state. The last line installs the
