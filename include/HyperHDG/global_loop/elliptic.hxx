@@ -3,7 +3,10 @@
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
+
+#ifndef NOFILEOUT
 #include <HyperHDG/plot.hxx>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -56,10 +59,13 @@ class Elliptic
    * \brief   Instantiation of a local solver.
    ************************************************************************************************/
   const LocalSolverT local_solver_;
+
+#ifndef NOFILEOUT
   /*!***********************************************************************************************
    * \brief   Struct encoding the options for plotting.
    ************************************************************************************************/
   PlotOptions plot_options;
+#endif
 
  public:
   /*!***********************************************************************************************
@@ -367,7 +373,12 @@ class Elliptic
    ************************************************************************************************/
   std::string plot_option(const std::string& option, std::string value = "")
   {
+#ifndef NOFILEOUT
     return set_plot_option(plot_options, option, value);
+#else
+    hy_assert(false, "This is prohibited by the compile options!");
+    return "";
+#endif
   }
   /*!***********************************************************************************************
    * \brief   Plot solution in vtu format.
@@ -380,7 +391,11 @@ class Elliptic
    ************************************************************************************************/
   void plot_solution(const LargeVecT& lambda, const dof_value_t time = 0.)
   {
+#ifndef NOFILEOUT
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+#else
+    hy_assert(false, "This is prohibited by the compile options!");
+#endif
   }
 };  // end of class Elliptic
 

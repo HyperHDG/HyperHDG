@@ -94,8 +94,10 @@ int main(int argc, char* argv[])
 {
   int result = 0;
 
+#ifndef NOFILEOUT
   result += do_test<1, 1, float>() + do_test<1, 2, float>() + do_test<1, 3, float>();
   result += do_test<2, 2, float>() + do_test<2, 3, float>() + do_test<3, 3, float>();
+#endif
 
   return result;
 }

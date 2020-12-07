@@ -31,14 +31,15 @@ import configparser, os, sys, importlib, glob, re, datetime, json
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
 class hyperhdg_constructor:
-  global_loop = ""
-  local_solver = ""
-  topology = ""
-  geometry = ""
-  node_descriptor = ""
+  global_loop         = ""
+  local_solver        = ""
+  topology            = ""
+  geometry            = ""
+  node_descriptor     = ""
   cython_replacements = []
-  include_files = []
-  debug_mode = False
+  include_files       = []
+  debug_mode          = False
+  allow_file_output   = True
   def is_consistent(self):
     if not (isinstance(self.global_loop, str) and self.global_loop != ""):
       return False
@@ -51,6 +52,8 @@ class hyperhdg_constructor:
     if not (isinstance(self.node_descriptor, str) and self.node_descriptor != ""):
       return False
     if not isinstance(self.debug_mode, bool):
+      return False
+    if not isinstance(self.allow_file_output, bool):
       return False
     if not isinstance(self.cython_replacements, list):
       return False
@@ -117,6 +120,8 @@ def cython_import(constructor):
     cython_command, compile_command, link_command = get_commands(python_class)
     if not (constructor.debug_mode):
       compile_command += " -DNDEBUG";
+    if not (constructor.allow_file_output):
+      compile_command += " -DNOFILEOUT"
     #Actually compile the prepared files.
     assert os.system(cython_command) == 0
     assert os.system(compile_command) == 0
