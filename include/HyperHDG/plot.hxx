@@ -5,7 +5,10 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
+#ifndef NOFILEOUT
 #include <filesystem>
+#endif
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -471,7 +474,11 @@ void create_directory_if_needed(std::ofstream& output_file,
   {
     std::cerr << e.what() << std::endl;
     std::cout << "Trying to create output directory" << std::endl;
+#ifndef NOFILEOUT
     std::filesystem::create_directory(plot_options.outputDir);
+#else
+    hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
+#endif
   }
 }
 }  // end of namespace PlotFunctions
@@ -612,6 +619,7 @@ void plot_vtu(HyperGraphT& hyper_graph,
               const PlotOptions& plot_options,
               const floatT time = 0.)
 {
+#ifndef NOFILEOUT
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -696,6 +704,9 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "</VTKFile>" << std::endl;
   std::cout << plot_options.fileName << " was written\n";
   myfile.close();
+#else
+  hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
+#endif
 }  // end of void plot_vtu
 
 // -------------------------------------------------------------------------------------------------

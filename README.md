@@ -35,9 +35,10 @@ To do so, enter the directory you want to clone HyperHDG into and do the followi
 
        $ cd your_name
 
-3. Initialize submodules using
+3. Execute the script `setup.sh` to install HyperHDG by
 
-       $ git submodule update --init --recursive
+       $ chmod 700 setup.sh
+       $ ./setup.sh
 
 
 
