@@ -10,21 +10,31 @@
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
 
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-CYTHON_COM   = ""
+COMPILE_COM = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-COMPILE_COM  = ""
+COMPILE_INC = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-LINKER_COM   = ""
+COMPILE_FLG = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PYTHON_DIR   = ""
+COMPILE_STD = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PY_VER_MAJ   = -1
+LINK_COM = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PY_VER_MIN   = -1
+LINK_FLG = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-INCLUDE_DIRS = []
+LINK_LIB = ""
+## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
+CYTHON_COM = ""
+## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
+CYTHON_FLG = ""
+## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
+PY_VER_MAJ = ""
+## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
+PY_VER_MIN = ""
+## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
+PYTHON_DIR = ""
 
-import configparser, os, sys, importlib, glob, re, datetime, json
+import configparser, os, sys, importlib, glob, re, datetime
 
 ## \brief   Object that comprises all information for HyperHDG to create a problem.
 #
@@ -171,31 +181,44 @@ def evaluate_config(constructor):
 
 ## \brief   Read out parameters for Cython compilation provided by CMAKE.
 def get_cmakes():
-  global CYTHON_COM, COMPILE_COM, LINKER_COM, PYTHON_DIR, PY_VER_MAJ, PY_VER_MIN, INCLUDE_DIRS
+  global COMPILE_COM, COMPILE_INC, COMPILE_FLG, COMPILE_STD, LINK_COM, LINK_FLG, LINK_LIB, \
+    CYTHON_COM, CYTHON_FLG, PY_VER_MAJ, PY_VER_MIN, PYTHON_DIR
   if not os.path.isfile(main_path() + "/build/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
-    CYTHON_COM   = "cython"
-    COMPILE_COM  = "g++-8"
-    LINKER_COM   = "g++-8"
-    PYTHON_DIR   = "/usr/include/python"+str(sys.version_info.major)+"."+str(sys.version_info.minor)
-    PY_VER_MAJ   = sys.version_info.major
-    PY_VER_MIN   = sys.version_info.minor
-    INCLUDE_DIRS = [ ".", "include", \
-                     "submodules/tensor_product_chain_complex.git/include", PYTHON_DIR ]
+    COMPILE_COM = "g++"
+    COMPILE_INC = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
+      -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+    COMPILE_FLG = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong -Wformat \
+      -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
+    COMPILE_STD = "17"
+    LINK_COM = "g++"
+    LINK_FLG = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
+      -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
+      -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
+    LINK_LIB = "-llapack"
+    CYTHON_COM = "cython3"
+    CYTHON_FLG = "-3 --cplus"
+    PY_VER_MAJ = str(sys.version_info.major)
+    PY_VER_MIN = str(sys.version_info.minor)
+    PYTHON_DIR = "/usr/include/python"+str(sys.version_info.major)+"."+str(sys.version_info.minor)
   else:
     config = configparser.ConfigParser()
     config.read(main_path() + "/build/cmake_cython.cfg")
-    CYTHON_COM   = config['cmake']['cython_command']
-    COMPILE_COM  = config['cmake']['compile_command']
-    LINKER_COM   = config['cmake']['linker_command']
-    PYTHON_DIR   = config['cmake']['python_directory']
-    PY_VER_MAJ   = config['cmake']['python_version_major']
-    PY_VER_MIN   = config['cmake']['python_version_minor']
-    INCLUDE_DIRS = [x for x in json.loads(config.get("includes","dir")) if x != ""]
-    if PYTHON_DIR not in INCLUDE_DIRS:
-      INCLUDE_DIRS.append(PYTHON_DIR)
+    COMPILE_COM = config['compiler']['command']
+    COMPILE_INC = config['compiler']['includes']
+    COMPILE_FLG = config['compiler']['flags']
+    COMPILE_STD = config['compiler']['standard']
+    LINK_COM = config['linker']['command']
+    LINK_FLG = config['linker']['flags']
+    LINK_LIB = config['linker']['libs']
+    CYTHON_COM = config['cython']['command']
+    CYTHON_FLG = config['cython']['flags']
+    PY_VER_MAJ = config['python']['ver_maj']
+    PY_VER_MIN = config['python']['ver_min']
+    PYTHON_DIR = config['python']['dir']
   if int(PY_VER_MAJ) < 3:
     print("Python versions below 3 are not supported!")
+  assert PYTHON_DIR in COMPILE_INC, "Python directory must be included!"
   assert int(PY_VER_MAJ) == sys.version_info.major and int(PY_VER_MIN) == sys.version_info.minor, \
          "Utilized Python version is not CMAKE's Python version!"
 
@@ -234,20 +257,16 @@ def file_names(constructor):
 
 ## \brief   Generate shell commands from CMAKE parameters.
 def get_commands(python_class):
-  global INCLUDE_DIRS
-  cython_command = "cd " + main_path() + "/build/cython_files/; " + CYTHON_COM + " -3 --cplus " \
-    + python_class + ".pyx";
-  compile_command = "cd " + main_path() + "; " + COMPILE_COM + " -pthread -g "
-  for x in INCLUDE_DIRS:
-    compile_command += "-I" + str(x) + " "
-  compile_command += "-fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat \
-    -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC --std=c++17 -c \
+  global COMPILE_COM, COMPILE_INC, COMPILE_FLG, COMPILE_STD, LINK_COM, LINK_FLG, LINK_LIB, \
+    CYTHON_COM, CYTHON_FLG
+  cython_command = "cd " + main_path() + "/build/cython_files/; " \
+    + CYTHON_COM + " " + CYTHON_FLG + " " + python_class + ".pyx";
+  compile_command = "cd " + main_path() + "; " \
+    + COMPILE_COM + " " + COMPILE_INC + " " + COMPILE_FLG + " --std=gnu++" + COMPILE_STD + " -c \
     ./build/cython_files/" + python_class + ".cpp -o ./build/cython_files/" + python_class + ".o";
-  link_command = "cd " + main_path() + "; " + LINKER_COM + " -pthread -shared -Wl,-O1 \
-    -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-Bsymbolic-functions \
-    -Wl,-z,relro -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time \
-    -D_FORTIFY_SOURCE=2 ./build/cython_files/" + python_class + ".o " + "-o build/shared_objects/" \
-    + python_class + ".so -llapack -lstdc++fs";
+  link_command = "cd " + main_path() + "; " \
+    + LINK_COM + " " + LINK_FLG + " ./build/cython_files/" + python_class + ".o " \
+    + " -o build/shared_objects/" + python_class + ".so " + LINK_LIB;
   return cython_command, compile_command, link_command
 
 ## \brief   Check whether recompilation of executable is necessary.

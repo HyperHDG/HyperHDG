@@ -509,13 +509,15 @@ get_edge_dof_values(HyperGraphT& hyper_graph, hyEdge_index_t edge_index, const L
 template <class HyperGraphT,
           class LocalSolverT,
           typename LargeVecT,
+          typename floatT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
 void plot_edge_values(HyperGraphT& hyper_graph,
                       const LocalSolverT& local_solver,
                       const LargeVecT& lambda,
                       std::ofstream& myfile,
-                      SmallVec<n_subdivisions + 1, float> abscissas)
+                      SmallVec<n_subdivisions + 1, float> abscissas,
+                      const floatT time)
 {
   using dof_value_t = typename LargeVecT::value_type;
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
@@ -538,11 +540,11 @@ void plot_edge_values(HyperGraphT& hyper_graph,
           std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&,
           std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&)>::
         value)
-      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs);
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
     else
     {
       auto geometry = hyper_graph[he_number];
-      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry);
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
     }
 
     myfile << "      ";
@@ -688,8 +690,8 @@ void plot_vtu(HyperGraphT& hyper_graph,
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges)
     {
-      plot_edge_values<HyperGraphT, LocalSolverT, LargeVecT, n_subdivisions, hyEdge_index_t>(
-        hyper_graph, local_solver, lambda, myfile, abscissas);
+      plot_edge_values<HyperGraphT, LocalSolverT, LargeVecT, floatT, n_subdivisions,
+                       hyEdge_index_t>(hyper_graph, local_solver, lambda, myfile, abscissas, time);
     }
     if (plot_options.plot_edge_boundaries)
     {

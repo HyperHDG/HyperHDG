@@ -77,7 +77,7 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Return types of hypernode of given index.
      **********************************************************************************************/
-    const unsigned int operator[](const unsigned int index) const { return hyFace_types_[index]; }
+    unsigned int operator[](const unsigned int index) const { return hyFace_types_[index]; }
   };  // end of class hyEdge
 
  public:
