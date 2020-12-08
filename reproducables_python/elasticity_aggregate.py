@@ -13,7 +13,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 # --------------------------------------------------------------------------------------------------
 # THIS SECTION CAN BE CHANGED:
@@ -27,21 +26,30 @@ aggregate = "5"
 # Print starting time of diffusion test.
 start_time = datetime.now()
 print("Starting time is", start_time)
+os.system("mkdir -p output")
 
-# Predefine problem to be solved.
-problem = "GlobalLoop::Elliptic<Topology::File<1,3>,Geometry::File<1,3>,NodeDescriptor::File<1,3>,"\
-          +                    "LocalSolver::LengtheningBernoulliBendingBeam<1,3,1,2> > "
-filenames = [ "HyperHDG/geometry/file.hxx", "HyperHDG/node_descriptor/file.hxx", \
-              "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx", \
-              "HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx", \
-              "HyperHDG/local_solver/bernoulli_beams.hxx" ]
+try:
+  import cython_import
+except ImportError as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/.." )
+  import cython_import
+  
+const                 = cython_import.hyperhdg_constructor()
+const.global_loop     = "Elliptic"
+const.local_solver    = "LengtheningBernoulliBendingBeam<1,3,1,2>"
+const.topology        = "File<1,3>"
+const.geometry        = "File<1,3>"
+const.node_descriptor = "File<1,3>"
+const.cython_replacements = ["string", "string"]
+const.include_files   = [ "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx", \
+                          "HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx" ]
+const.debug_mode      = False
 
-# Import C++ wrapper class to use HDG method on graphs.
-from cython_import import cython_import
-PyDP = cython_import(["elliptic_loop", problem, "string", "string"], filenames, True)
+PyDP = cython_import.cython_import(const)
 
 # Initialising the wrapped C++ class HDG_wrapper.
-HDG_wrapper = PyDP( "domains/aggregate_" + aggregate + ".pts" )
+HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
+                    "/../domains/aggregate_" + aggregate + ".pts" )
 
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the

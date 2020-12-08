@@ -18,12 +18,12 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
+def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-  
+
   try:
     import cython_import
   except ImportError as error:
@@ -35,10 +35,10 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
   const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
+  const.local_solver    = "DiffusionAdvectionReaction<" + str(dimension) + "," + str(poly_degree) \
+    + "," + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.include_files   = ["reproducables_python/parameters/diffusion_advection_reaction.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = cython_import.cython_import(const)
@@ -56,18 +56,23 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
   if num_iter != 0:
-    raise RuntimeError("Linear solver did not converge!")
+    print("CG solver failed with a total number of ", num_iter, "iterations.")
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_advection_reaction_hypergraph_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_hyg-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_adv_reac_conv_hyg-" + str(dimension) + "-" \
+                           + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -87,7 +92,7 @@ def main(debug_mode):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
-          diffusion_test(poly_degree, dimension, iteration, debug_mode)
+          adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 

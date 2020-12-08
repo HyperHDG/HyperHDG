@@ -72,7 +72,10 @@ inline void __Hy_Assert(const char* expr_str,
 }
 
 #else  // alternative branch of ifndef NDEBUG
-#define hy_assert(Expr, Msg) ;
+#define hy_assert(Expr, Msg) \
+  {                          \
+    ;                        \
+  }
 #endif  // end of ifndef NDEBUG
 
 // -------------------------------------------------------------------------------------------------

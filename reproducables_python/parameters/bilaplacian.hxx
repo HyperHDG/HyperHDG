@@ -1,5 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <cmath>
 
 /*!*************************************************************************************************
@@ -103,7 +104,10 @@ struct HG
     static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                          const param_float_t time = 0.)
     {
-      return std::pow(point[0], 2.) + std::pow(point[1], 2.) + std::pow(point[2], 2.);
+      param_float_t result = 0;
+      for (unsigned int dim = 0; dim < space_dimT; ++dim)
+        result += point[dim] * point[dim];
+      return result;
     }
 
     static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
