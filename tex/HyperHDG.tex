@@ -324,7 +324,7 @@ Here, we formulate the standard diffusion equation in mixed form defined on a hy
  \Div \vec q & = f && \text{ in } \Edge,\label{EQ:div_is_f}
 \end{align}
 % 
-for a given functions $d \ge d_0 > 0$ and $f$. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$. Thus, $u$ is supposed to have an unique representation with respect to all $\Node \in \SetNode$. This mimics the continuity assumption that is necessary to obtain a global $H^1$ solution and is assumed to hold for all scalar unknowns in the remainder of this manuscript. It can be more rigorously formulated as:
+for given functions $d,f\colon \Edge \to \IR$, where $d \ge d_0 > 0$ is denoted diffusion coefficient and $f$ is denoted right-hand side. Here, $u$ may be considered as concentration and $\vec q$ as flux of a chemical species diffusing on the hypersurface $\Edge$. Thus, $u$ is supposed to have an unique representation with respect to all $\Node \in \SetNode$. This mimics the continuity assumption that is necessary to obtain a global $H^1$ solution and is assumed to hold for all scalar unknowns in the remainder of this manuscript. It can be more rigorously formulated as:
 
 We assume that for all hypernodes $\Node \in \SetNode$ there is $u_\node$ such that
 % 
@@ -757,7 +757,10 @@ Next, we consider a convergence example on a real hypergraph. It is constructed 
 % 
 where the Dirichlet nodes are those that are located on the boundary of $[0,1]^\globDim$ with $\globDim = 3$. All other nodes are supposed to be interior nodes. The local dimension $\locDim = 1, \ldots, 3$, solution $u = -x^2 - y^2 - z^2$, diffusion coefficient $d = 1$, and right-hand side $f = 2 \locDim$. Of course, polynomial degrees $\ge 2$ are supposed to exactly reproduce the given solution, which is true in our numerical experiments. Thus, we only plot the errors for $p = 1$.
 % 
-Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.\arwarning{Why?}
+Interestingly, the $L^2$ errors converge although with refinement, also the computational domain increases for $\locDim = 1$ and $\locDim = 2$. However, the rate of convergence is deteriorated by $1$ if $\locDim = 1$, and $\tfrac{1}{2}$ if $\locDim = 2$. The optimal order is obtained for $\locDim = 3$. Here, the optimal order appears to be $3 = p + 2$ instead of the expected $2 = p + 1$.
+\begin{envarerror}{To be verified!}
+ This might be due to the fact that the solution is quadratic and due to some super-convergence properties of LDG-H. For IP-H (cf.\ Section \ref{SEC:other_solvers}), this superconvergence does not apply.
+\end{envarerror}
 %
 % ---------------------------------------------------------------------
 \section{Structure of \hyperHDG}
@@ -801,10 +804,10 @@ The implementation of a loop over all hyperedges cares about the specific proper
 These loop classes can then also be used for related problems like the Bilaplacian, cf.\ Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
 % 
 % ---------------------------------------------------------------------
-\section{Related diffusion problems}\label{SEC:related_diffusion_problems}
+\section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------
 % 
-\subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}\arwarning{Only $\theta = 1$ has been implemented.}
+\subsection{Parabolic diffusion equation}\label{SEC:parabolic_diff}
 % 
 Next, we solve the parabolic diffusion equation, i.e., we want that
 % 
@@ -823,7 +826,7 @@ while \eqref{EQ:cont_const} needs to hold on all $\Node \in \SetNode$.
 As temporal discretization---and for the sake of simplicity, we choose the $\theta$-scheme, i.e.,
 % 
 \begin{equation}\label{EQ:theta_scheme}
- \partial_t u + \Div \vec q \approx \frac{ u^n - u^{n-1} }{\deltat} + \theta \Div \vec q^n - (1 - \theta) \Div \vec q^{n-1},
+ \partial_t u + \Div \vec q \approx \frac{ u^n - u^{n-1} }{\deltat} + \theta \Div \vec q^n + (1 - \theta) \Div \vec q^{n-1},
 \end{equation}
 %
 where $n+1$ is the index of the old time step, $n$ is the index of the new time-step, $\deltat = t^n - t^{n-1}$, and $\theta \in [0,1]$ defines the time-stepping scheme. Thus $\theta = 0$ represents a forward (explicit) Euler scheme, $\theta = 1$ is the backward (implicit) Euler scheme, and $\theta = \tfrac{1}{2}$ defines the Cranck--Nicolson scheme. For the numerical scheme with respect to time, we multiply \eqref{EQ:theta_scheme} and \eqref{EQ:div_is_f_parab} by $\deltat$, respectively.
@@ -858,7 +861,7 @@ where the right-hand side has the form
  (\bigstar) ~=~ & \theta \deltat \int_{\Edge} f^n v \dx + (1 - \theta) \deltat \int_\Edge f^{n-1} v \dx \\
  & + \int_\Edge U^{n-1} v \dx + \deltat (1-\theta) \int_\Edge \vec Q^{n-1} \cdot \Nabla v \dx \\
  & - \deltat (1-\theta) \int_{\partial \Edge} ( \vec Q^{n-1} \cdot \Normal + \tau  (U^{n-1} - \hat U^{n-1} ) v \ds,
-\end{align*}\arnote{Based on this, it might be wise to save the evaluated testing of $\localQ$ instead of its coefficients.}
+\end{align*}
 % 
 and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \localU^{n-1} f^{n-1}$ is the full HDG approximation of $u$ at time step $n$. The same holds for $\vec Q^{n-1}$, while $\hat U^{n-1}$ is $u^{n-1}_\textup D$ on Dirichlet nodes and $\lambda^{n-1}$ otherwise. \eqref{EQ:hdg_f_parab} induces the operators $\localU f$ \& $\localQ f$ in whose representation, the time step and the dependency on the old time step's solution is neglected. The global closing condition is formualted as \eqref{EQ:hdg_global}, i.e.,
 % 
@@ -868,30 +871,54 @@ and $U^{n-1} = \localU^{n-1} \lambda^{n-1} + \localU^{n-1} u^{n-1}_\textup D + \
 
 Thus, we recover \eqref{EQ:forms_def} as global system of equations with a re-interpretation of the local solution operators in each time step.
 
-The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container.
+The representation of $(\bigstar)$ raises the need to save information about the old time step, since it is needed in all summands (but the first). Hence, having solved for the $\lambda^n$ of the current time step, we construct $U^n$ and $\vec Q^n$. The $\lambda^n$ are saved in a global vector of unknowns, while the $U^n$ and $\vec Q^n$ are saved in hyperedge-local containers. Thus, in the parabolic case, a hyperedge consists of its topology, geometry, node descriptor, and a (non-trivial) data container. For the first step, we define $U^0$ as $L^2$ projection of $u_0$ and $\vec Q^0$ via
+%
+\begin{equation}
+ \int_\Edge \frac{1}{d} \vec Q^0 \cdot \vec p \dx = \int_\Edge u_0 \Div \vec p \dx - \int_{\partial \Edge} u_0 \vec p \cdot \Normal \ds,
+\end{equation}
+%
+which corresponds to \eqref{EQ:primal_dual_parab} at time $t=0$.
 
 \begin{table}[t]
- \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+ \begin{tabular}{ccc|@{\,}lcc@{\,}lcc@{\,}lcc}
   \toprule
-  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
-  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
-  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \multicolumn{3}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{5-6} \cmidrule{8-9} \cmidrule{11-12}
+  \multicolumn{3}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  \multirow{12,5}{*}{\rotatebox[origin=c]{90}{$\theta = 1$}}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
   & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.73e-3 & ---  \\
-  & $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
-  & $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
-  & $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
-  & $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
-  & $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
-  \midrule
-  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  && $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.99e-4 & 2.8  \\
+  && $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 8.03e-5 & 3.3  \\
+  && $i = 3$ && 4.91e-3 & 1.9 && 1.62e-4 & 2.8 && 5.83e-5 & 0.5  \\
+  && $i = 4$ && 1.27e-3 & 2.0 && 6.13e-5 & 1.4 && 5.81e-5 & 0.0  \\
+  && $i = 5$ && 3.27e-4 & 2.0 && 5.82e-5 & 0.8 && 5.81e-5 & 0.0  \\
+  \cmidrule{2-12}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
   & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
-  & $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
-  & $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
-  & $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
-  & $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
-  & $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
+  && $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.52e-4 & 2.7  \\
+  && $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 6.31e-5 & 3.4  \\
+  && $i = 3$ && 4.27e-3 & 1.8 && 1.41e-4 & 2.8 && 4.04e-5 & 0.6  \\
+  && $i = 4$ && 1.15e-3 & 1.9 && 4.42e-5 & 1.7 && 4.03e-5 & 0.0  \\
+  && $i = 5$ && 3.04e-4 & 1.9 && 4.04e-5 & 0.1 && 4.03e-5 & 0.0  \\
+  \midrule
+  \multirow{12,5}{*}{\rotatebox[origin=c]{90}{$\theta = 0.5$}}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 2.35e-1 & --- && 5.27e-2 & --- && 5.72e-3 & ---  \\
+  && $i = 1$ && 6.61e-2 & 1.8 && 8.05e-3 & 2.7 && 7.97e-4 & 2.8  \\
+  && $i = 2$ && 1.84e-2 & 1.8 && 1.14e-3 & 2.8 && 5.54e-5 & 3.8  \\
+  && $i = 3$ && 4.91e-3 & 1.9 && 1.51e-4 & 2.9 && 3.62e-6 & 3.9  \\
+  && $i = 4$ && 1.26e-3 & 2.0 && 1.94e-5 & 3.0 && 2.31e-7 & 4.0  \\
+  && $i = 5$ && 3.22e-4 & 2.0 && 2.46e-6 & 3.0 && 1.49e-8 & 4.0  \\
+  \cmidrule{2-12}
+  &\multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 1.34e-1 & --- && 3.92e-2 & --- && 4.22e-3 & ---  \\
+  && $i = 1$ && 4.88e-2 & 1.5 && 6.12e-3 & 2.7 && 6.50e-4 & 2.7  \\
+  && $i = 2$ && 1.50e-2 & 1.7 && 9.69e-4 & 2.7 && 4.85e-5 & 3.7  \\
+  && $i = 3$ && 4.27e-3 & 1.8 && 1.35e-4 & 2.8 && 3.32e-6 & 3.9  \\
+  && $i = 4$ && 1.15e-3 & 1.9 && 1.80e-5 & 2.9 && 2.18e-7 & 3.9  \\
+  && $i = 5$ && 3.02e-4 & 1.9 && 2.34e-5 & 2.9 && 1.40e-8 & 4.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic diffusion example.}\label{TAB:diff_pb_conv}
@@ -1233,10 +1260,52 @@ The convergence of the eigenvalue with the smallest magnitude is depicted in Tab
 % 
 Next, we use the approaches of the previous sections to approximate the smallest eigenvalue of the diffusion equation with homogeneous Dirichlet boundary conditions on the hypergraph related to problem \eqref{EQ:hypergraph_example}. Thus, we consider the hypercube $[0,1]^3$ and refine it $i$ times, i.e. into $i^3$ identical sub-cubes. Afterwards we solve the diffusive eigenvalue problem on the union of this refinement's edges (for $\locDim = 1$) and its faces (for $\locDim = 2$). The homogeneous Dirichlet conditions are supposed to be satisfied on the boundary of $[0,1]^3$. Thus, the smallest eigenvalue is $\eigenval = \locDim \pi^2$ and it is approximated using the shifted inverse (SI) and mass approximation (MA) approaches with $\sigma = \eigenval / 2$. The nonlinear (NL) method is applied afterwards. Its initial datum is the result of SI or MA, but the results of NL do not significantly depend on the choice. Thus, we illustrate only the results of which MA is used as initial value. The results are depicted in Table \ref{TAB:dif_hyg_eigenvalue_conv}. They suggest that the convergence rates to eigenvalues neither deteriorate, nor increase if one does the calculations on hypergraphs.
 % 
+\subsection{Different local solvers for the diffusion problem}\label{SEC:other_solvers}
 % 
-% ---------------------------------------------------------------------
-\section{Different local solvers for the diffusion problem}\label{SEC:other_solvers}
-% ---------------------------------------------------------------------
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 8.67e-2 & --- && 1.17e-2 & --- && 1.11e-3 & ---  \\
+  & $i = 1$ && 2.28e-2 & 1.9 && 1.52e-3 & 2.9 && 7.12e-5 & 4.0  \\
+  & $i = 2$ && 5.80e-3 & 2.0 && 1.94e-4 & 3.0 && 4.47e-6 & 4.0  \\
+  & $i = 3$ && 1.45e-3 & 2.0 && 2.52e-5 & 2.9 && 2.80e-7 & 4.0  \\
+  & $i = 4$ && 3.64e-4 & 2.0 && 3.57e-6 & 2.8 && 1.75e-8 & 4.0  \\
+  & $i = 5$ && 9.11e-5 & 2.0 && 6.11e-7 & 2.5 && 1.09e-9 & 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 5.25e-2 & --- && 1.10e-2 & --- && 9.57e-4 & ---  \\
+  & $i = 1$ && 1.66e-2 & 1.7 && 1.45e-3 & 2.9 && 6.51e-5 & 3.9  \\
+  & $i = 2$ && 4.06e-3 & 2.0 && 1.89e-4 & 2.9 && 4.26e-6 & 3.9  \\
+  & $i = 3$ && 1.00e-3 & 2.0 && 2.42e-5 & 3.0 && 2.73e-7 & 4.0  \\
+  & $i = 4$ && 2.51e-4 & 2.0 && 3.09e-6 & 3.0 && 1.72e-8 & 4.0  \\
+  & $i = 5$ && 6.26e-5 & 2.0 && 4.07e-7 & 2.9 && 1.08e-9 & 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of diffusion on a unit square calculated with IP-H.}\label{TAB:diff_el_conv_ip}
+\end{table}
+% 
+\begin{table}[t]
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 2.30e-1 & --- && 2.44e-1 & --- && 1.16e-1 & ---  \\
+  $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 2.91e-2 & 2.0  \\
+  $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 7.29e-3 & 2.0  \\
+  $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && 1.82e-3 & 2.0  \\
+  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-3 & 1.5 && \textcolor{red}{6.71e-6} & 3.0  \\
+  $i = 5$ && 3.72e-3 & 1.0 && 9.71e-4 & 1.5 && 8.43e-7 & 3.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.}\label{TAB:diff_hg_el_conv_ip}
+\end{table}
 % 
 Alternatively to the LDG-H method which is described in Section \ref{SEC:HDG_form}, we could also use different local solvers. For example, hybrid versions of the Raviart--Thomas or the Brezzi-Douglas--Marini methods can be obtained, by setting $\tau \equiv 0$ and adpating the spaces $V$ and $\vec W$.
 
@@ -1260,9 +1329,82 @@ while the global coupling condition is formulated as
  \sum_{\edge \in \setEdge} \sum^{\node \in \setNode \setminus \setNodeDir}_{\node \in \edge} \int_\Node [ - d \nabla U \cdot \Normal + \tau (U - \lambda) ] \mu \ds = \sum_{\node \in \setNode \setminus \setNodeDir} \int_\Node g_\textup N \mu \ds.
 \end{equation}
 % 
-The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller.\arnote{TODO: Check, whether matrix is still SPD!}
+The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
-A comparison of the total errors can be conducted evaluating Tables ??? -- ??? and comparing them to their LDG-H analogues.\arerror{TODO: Implement method and compare!}
+A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprisingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H.
+% 
+\subsection{Advection--diffusion--reaction problems}\label{SEC:advection_diffusion_reaction}
+% 
+\begin{table}[t]
+ \begin{tabular}{cc|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{2}{c|@{\,}}{poly.~deg.}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{4-5} \cmidrule{7-8} \cmidrule{10-11}
+  \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
+  & $i = 0$ && 1.27e-2 & --- && 1.40e-3 & --- && 3.54e-5 & ---  \\
+  & $i = 1$ && 3.20e-3 & 2.0 && 1.89e-4 & 2.9 && 2.29e-6 & 3.9  \\
+  & $i = 2$ && 7.98e-4 & 2.0 && 2.46e-5 & 2.9 && 1.43e-7 & 4.0  \\
+  & $i = 3$ && 1.98e-4 & 2.0 && 3.13e-6 & 3.0 && 8.96e-9 & 4.0  \\
+  & $i = 4$ && 4.95e-5 & 2.0 && 3.95e-7 & 3.0 && 5.58e-10 & 4.0  \\
+  & $i = 5$ && 1.23e-5 & 2.0 && 4.96e-8 & 3.0 && 3.48e-11 & 4.0  \\
+  \midrule
+  \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
+  & $i = 0$ && 4.85e-3 & --- && 7.14e-4 & --- && 1.98e-5 & ---  \\
+  & $i = 1$ && 1.76e-3 & 1.5 && 1.18e-4 & 2.6 && 1.60e-6 & 3.6  \\
+  & $i = 2$ && 5.45e-4 & 1.7 && 1.82e-5 & 2.7 && 1.14e-7 & 3.8  \\
+  & $i = 3$ && 1.55e-4 & 1.8 && 2.58e-6 & 2.8 && 7.72e-9 & 3.9  \\
+  & $i = 4$ && 4.21e-5 & 1.9 && 3.47e-7 & 2.9 && 5.05e-10 & 3.9  \\
+  & $i = 5$ && 1.10e-5 & 1.9 && 4.54e-8 & 2.9 && 3.25e-11 & 4.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of advectuion--diffusion--reaction on a unit square.}\label{TAB:dar_el_conv}
+\end{table}
+% 
+\begin{table}[t]
+ \begin{tabular}{c|@{\,}lcc@{\,}lcc@{\,}lcc}
+  \toprule
+  \multicolumn{1}{c|@{\,}}{dimension}  && \multicolumn{2}{c}{1}  && \multicolumn{2}{c}{2}   && \multicolumn{2}{c}{3} \\
+  \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
+  \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
+  \midrule
+  $i = 0$ && 7.71e-2 & --- && 5.64e-2 & --- && 2.33e-2 & ---  \\
+  $i = 1$ && 1.62e-2 & 2.2 && 9.45e-3 & 2.6 && 3.14e-3 & 2.9  \\
+  $i = 2$ && 3.50e-3 & 2.2 && 1.58e-3 & 2.6 && 4.09e-4 & 2.9  \\
+  $i = 3$ && 7.96e-4 & 2.1 && 2.70e-4 & 2.6 && 5.22e-5 & 3.0  \\
+  $i = 4$ && 1.88e-4 & 2.1 && 4.67e-5 & 2.5 && 6.60e-6 & 3.0  \\
+  $i = 5$ && 4.58e-5 & 2.0 && 8.18e-6 & 2.5 && 8.29e-7 & 3.0  \\
+  \bottomrule
+ \end{tabular}\vspace{1ex}
+ \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the advection--diffusion--reaction equation for a hypergraph.}\label{TAB:dar_hg_el_conv}
+\end{table}
+% 
+One could also consider advection--diffusion--reaction equation by replacing \eqref{EQ:primal_dual} \& \eqref{EQ:div_is_f} in \eqref{EQ:diffusion_mixed} by
+% 
+\begin{subequations}
+\begin{align}
+ \tfrac{1}{d} \vec q + \Nabla u - \tfrac{1}{d} \vec a_\Edge u & = 0 && \text{ in } \Edge, \\
+ \Div \vec q + r u & = f && \text{ in } \Edge.
+\end{align}
+\end{subequations}
+% 
+Here, $\vec a\colon \Edge \to \IR^\globDim$ is the advective velocity, while $r\colon \Edge \to \IR$ is the reaction rate. The term $\vec a_\Edge$ refers to the projection of $\vec a$ with respect to $\Edge$. Thus, $\vec a_\Edge \colon \Edge \to \IR^\locDim$, and in the local coordinate system $\basis = \{ b_1, \ldots, b_\locDim \}$ we have the identity $\vec a_{\Edge,i} = \vec a \cdot b_i$ for all $i = 1, \ldots, \locDim$. For implementation issues, we note that $\mathcal B$ is again chosen to consist of the columns of $Q$ in \eqref{EQ:QR_decomp}.
+
+Thus, the local solver of \eqref{EQ:hdg_scheme} needs to be adapted to
+% 
+\begin{subequations}
+ \begin{align}
+  \int_\Edge \frac{1}{d} \vec Q_\Edge \cdot \vec p \dx - \int_\Edge U_\Edge \Div \vec p \dx \quad \notag \\
+  - \int_\Edge \frac{1}{d} \vec a_\Edge U_\Edge \cdot \vec p \dx & = - \int_{\partial \Edge} \lambda \vec p \cdot \Normal \ds, \label{EQ:dar_primary}\\
+  - \int_\Edge \vec Q_\Edge \cdot \Nabla v \dx  + \int_{\partial \Edge} ( \vec Q_\Edge \cdot \Normal + \tau  U_\Edge ) v \ds \quad \notag \\
+  + \int_\Edge r U_\Edge v \dx & = \tau \int_{\partial \Edge} \lambda v \ds, \label{EQ:dar_flux}
+ \end{align}
+\end{subequations}
+% 
+changing the definitions of $\localU \lambda$ and $\localQ \lambda$. The defining equations for $\localU f$, $\localQ f$, $\localU u_\textup D$, and $\localQ_\textup D$ have to be manipulated analogously, while \eqref{EQ:construct_unk} \& \eqref{EQ:hdg_global} remain intact.
+
+Again, we conduct convergence tests utilizing the method of manufactured solutions and receive Tables \ref{TAB:dar_el_conv} \& \ref{TAB:dar_hg_el_conv}. These indicate that the convergence rates of the standard diffusion equation are reproduced for the advection--difusion--reaction equation.
 % 
 % ---------------------------------------------------------------------
 \section{Implementing the bilaplacian problem}\label{SEC:bilaplacian}
@@ -1407,20 +1549,20 @@ The convergence of an elliptic problem on a hypergraph is also investigated. Her
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && \textcolor{red}{6.80e-2} & --- && \textcolor{red}{8.20e-3} & --- && \textcolor{red}{8.04e-4} & ---  \\
-  & $i = 1$ && 1.08e-2 & 2.6 && 5.57e-4 & 3.8 && 2.63e-5 & 4.9  \\
-  & $i = 2$ && 2.12e-3 & 2.3 && 4.25e-5 & 3.7 && 9.15e-7 & 4.8  \\
-  & $i = 3$ && 4.86e-4 & 2.1 && 4.03e-6 & 3.3 && 3.76e-8 & 4.6  \\
-  & $i = 4$ && 1.18e-4 & 2.0 && 4.54e-7 & 3.1 && 1.92e-9 & 4.2  \\
-  & $i = 5$ && 2.95e-5 & 2.0 && 5.51e-8 & 3.0 && 1.12e-10& 4.0  \\
+  & $i = 0$ && 7.94e-1 & --- && 6.03e-1 & --- && \textcolor{red}{8.04e-4} & ---  \\
+  & $i = 1$ && 4.66e-1 & 0.8 && 4.48e-2 & 3.7 && 2.63e-5 & 4.9  \\
+  & $i = 2$ && 9.17e-2 & 2.3 && 4.84e-3 & 3.2 && 9.15e-7 & 4.8  \\
+  & $i = 3$ && 1.96e-2 & 2.2 && 5.54e-4 & 3.1 && 3.76e-8 & 4.6  \\
+  & $i = 4$ && 4.50e-3 & 2.1 && 6.69e-5 & 3.1 && 1.92e-9 & 4.2  \\
+  & $i = 5$ && 1.07e-3 & 2.1 && 1.37e-5 & 2.3 && 1.12e-10& 4.0  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.80e-2 & --- && 4.51e-3 & --- && 4.88e-4 & ---  \\
-  & $i = 1$ && 7.47e-3 & 1.9 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
-  & $i = 2$ && 1.45e-3 & 2.3 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
-  & $i = 3$ && 3.04e-4 & 2.2 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
-  & $i = 4$ && 7.08e-5 & 2.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
-  & $i = 5$ && 1.73e-5 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 0$ && 1.23e-1 & --- && \textcolor{red}{4.51e-3} & --- && 4.88e-4 & ---  \\
+  & $i = 1$ && 1.57e-1 & -.3 && 4.36e-4 & 3.3 && 2.15e-5 & 4.5  \\
+  & $i = 2$ && 5.11e-2 & 1.6 && 3.88e-5 & 3.4 && 8.41e-7 & 4.6  \\
+  & $i = 3$ && 1.41e-2 & 1.9 && 3.90e-6 & 3.3 && 4.86e-4 & 5  \\
+  & $i = 4$ && 3.70e-3 & 1.9 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 5$ && 9.50e-4 & 2.0 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for parabolic example.}\label{TAB:bil_pb_conv}
@@ -1473,7 +1615,7 @@ For a parabolic convergence test, we consider some initial datum $u_0$, $d = \pi
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue for a bilaplacian eigenvalue problem. Here, the shifted inverse (SI), mass approximation (MA) and nonlinear (NL) approaches are shown.
- \newline ``~*~'' inidcates that the Newton solver failed, since it could not solve the internal linear system for one of the two initial guesses. The other guess' error is given. If both guesses lead to failures, this is indicated by ``---''.}\label{TAB:bil_eigenvalue_conv}
+ \newline *) inidcates that the Newton solver failed, since it could not solve the internal linear system for one of the two initial guesses. The other guess' error is given. If both guesses lead to failures, this is indicated by ``---''.}\label{TAB:bil_eigenvalue_conv}
 \end{table}
 % 
 For an numerical test, we try to approximate the smallest $\eigenval$ that suffices \eqref{EQ:diffusion_eigen} on the unit hypercube, i.e., $\eigenval = (\globDim \pi^2)^2$. As starting value for the nonlinear (NL) approach, we use the result of the mass approximation (MA) approach, for which $\sigma = 3 \eigenval / 4$ is chosen. Moreover, we give the results of the shifted inverse (SI) approach with $\sigma = 3 \eigenval / 4$. The results of the NL approach for which the SI approach is used as initial guess vary insignificantly from the given results of the NL with MA. The absolute distances / errors (err) of the eigenvalue and its approximate, and the deduced estimated orders of convergence can be found in, Table \ref{TAB:bil_eigenvalue_conv}. Here, we observe that the order of convergence is $2p+1$.

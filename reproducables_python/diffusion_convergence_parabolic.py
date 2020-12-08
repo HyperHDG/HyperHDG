@@ -13,7 +13,6 @@ from datetime import datetime
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -23,29 +22,35 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
-  
-  # Predefine problem to be solved.
-  problem = "GlobalLoop::Parabolic<Topology::Cubic<" + str(dimension) + "," + str(dimension) + ">,"\
-          + "Geometry::UnitCube<" + str(dimension) + "," + str(dimension) + ",double>, " \
-          + "NodeDescriptor::Cubic<" + str(dimension) + "," + str(dimension) + ">, " \
-          + "LocalSolver::DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," \
-          + str(2*poly_degree) + ",TestParametersSinParab,double> >"
-  filenames = [ "HyperHDG/geometry/unit_cube.hxx" , "HyperHDG/node_descriptor/cubic.hxx", \
-                "HyperHDG/local_solver/diffusion_parab_ldgh.hxx", \
-                "reproducables_python/parameters/diffusion.hxx" ]
+  os.system("mkdir -p output")
   
   # Config time stepping.
+  theta       = 1.
   time_steps  = 10 ** 4
   delta_time  = 1 / time_steps
-
-  # Import C++ wrapper class to use HDG method on graphs.
-  from cython_import import cython_import
-  PyDP = cython_import \
-         ( ["parabolic_loop", problem, "vector[unsigned int]", "vector[unsigned int]", \
-            "double", "vector[double]"], filenames, debug_mode )
   
+  try:
+    import cython_import
+  except ImportError as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    import cython_import
+  
+  const                 = cython_import.hyperhdg_constructor()
+  const.global_loop     = "Parabolic"
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersSinParab,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
+    "double", "vector[double]"]
+  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.debug_mode      = debug_mode
+
+  PyDP = cython_import.cython_import(const)
+
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,delta_time] )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
@@ -57,9 +62,6 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
-    
-    if time_step > 0:
-      HDG_wrapper.set_data(vectorSolution, time_step * delta_time)
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
     vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
@@ -73,12 +75,17 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
       [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        raise RuntimeError("Both linear solvers did not converge!")
+        [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
+        if num_iter != 0:
+          print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
+          raise RuntimeError("All linear solvers did not converge!")
+
+    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
     
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
   print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/diffusion_convergence_parabolic.txt", "a")
+  f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()

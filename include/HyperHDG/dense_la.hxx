@@ -210,6 +210,7 @@ class SmallMat
    ************************************************************************************************/
   SmallMat<n_rowsT, 1, mat_entry_t> get_column(const unsigned int col) const
   {
+    hy_assert(col < n_colsT, "The column you requested does not exist!");
     SmallMat<n_rowsT, 1, mat_entry_t> column;
     for (unsigned int i = 0; i < n_rowsT; ++i)
       column[i] = operator()(i, col);
@@ -548,6 +549,21 @@ SmallMat<n_rows, n_cols, mat_entry_t> dyadic_product(const SmallMat<n_rows, 1, m
       dyad_prod(i, j) = left[i] * right[j];
   return dyad_prod;
 }
+/*!*************************************************************************************************
+ * \brief   Transpose given matrix.
+ *
+ * \param   mat           Matrix to be transposed.
+ * \retval  transposed    Transposed of the given matrix.
+ **************************************************************************************************/
+template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
+SmallMat<n_cols, n_rows, mat_entry_t> transposed(SmallMat<n_rows, n_cols, mat_entry_t> mat)
+{
+  SmallMat<n_cols, n_rows, mat_entry_t> transposed;
+  for (unsigned int j = 0; j < n_cols; ++j)
+    for (unsigned int i = 0; i < n_rows; ++i)
+      transposed(j, i) = mat(i, j);
+  return transposed;
+}
 
 // -------------------------------------------------------------------------------------------------
 // Fundamental functions returning scalar from two SmallMats:
@@ -667,13 +683,28 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> operator*(const SmallMat<n_rowsA, n_cols
 template <unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t>
 SmallMat<n_colsA, n_colsB, mat_entry_t> transposed_mat_times_mat(
   const SmallMat<n_rowsA, n_colsA, mat_entry_t>& A,
-  const SmallMat<n_colsA, n_colsB, mat_entry_t>& B)
+  const SmallMat<n_rowsA, n_colsB, mat_entry_t>& B)
 {
   SmallMat<n_colsA, n_colsB, mat_entry_t> result;
   for (unsigned int colB = 0; colB < n_colsB; ++colB)
     for (unsigned int colA = 0; colA < n_colsA; ++colA)
       for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
         result(colA, colB) += A(rowA, colA) * B(rowA, colB);
+  return result;
+}
+/*!*************************************************************************************************
+ * \brief   Multiply first matrix with transposed of second second.
+ **************************************************************************************************/
+template <unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_rowsB, typename mat_entry_t>
+SmallMat<n_rowsA, n_rowsB, mat_entry_t> mat_times_transposed_mat(
+  const SmallMat<n_rowsA, n_colsA, mat_entry_t>& A,
+  const SmallMat<n_rowsB, n_colsA, mat_entry_t>& B)
+{
+  SmallMat<n_colsA, n_rowsB, mat_entry_t> result;
+  for (unsigned int rowB = 0; rowB < n_rowsB; ++rowB)
+    for (unsigned int colA = 0; colA < n_colsA; ++colA)
+      for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
+        result(colA, rowB) += A(rowA, colA) * B(rowB, rowA);
   return result;
 }
 

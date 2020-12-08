@@ -10,22 +10,24 @@ from scipy.sparse.linalg import LinearOperator
 
 # Correct the python paths!
 import os, sys
-sys.path.append(os.path.dirname(__file__) + "/..")
 
-# Predefine problem to be solved.
-problem = "GlobalLoop::Elliptic < Topology::Cubic< 1, 3 >, " \
-         +                  "Geometry::UnitCube< 1, 3 >, " \
-         +                  "NodeDescriptor::Cubic< 1, 3 >, " \
-         +                  "LocalSolver::DiffusionUniform < 1, 1, 2 * 1 > " \
-         +                ">"
-filenames = [ "HyperHDG/geometry/unit_cube.hxx" , \
-              "HyperHDG/node_descriptor/cubic.hxx" , \
-              "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx" ]
+try:
+  import cython_import
+except ImportError as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+  import cython_import
 
-# Import C++ wrapper class to use HDG method on graphs.
-from cython_import import cython_import
-PyDiffusionProblem = cython_import \
-  (["elliptic_loop", problem, "vector[unsigned int]", "vector[unsigned int]"], filenames, True)
+const                     = cython_import.hyperhdg_constructor()
+const.global_loop         = "Elliptic"
+const.local_solver        = "DiffusionUniform < 1, 1, 2 * 1 >"
+const.topology            = "Cubic< 1, 3 >"
+const.geometry            = "UnitCube< 1, 3 >"
+const.node_descriptor     = "Cubic< 1, 3 >"
+const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+const.debug_mode          = True
+const.allow_file_output   = False
+
+PyDiffusionProblem = cython_import.cython_import(const)
 
 # Define tolerance
 tolerance = 1e-8
@@ -87,7 +89,4 @@ reference_solution = np.array(
     0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
     0.44719263, 0.3000305,  0. ])
     
-if np.linalg.norm(reference_solution - vectorSolution - vectorDirichlet, np.inf) > tolerance:
-  print("Diffusion test FAILED!")
-else:
-  print("Diffusion test SUCCEEDED!")
+assert np.linalg.norm(reference_solution - vectorSolution - vectorDirichlet, np.inf) < tolerance

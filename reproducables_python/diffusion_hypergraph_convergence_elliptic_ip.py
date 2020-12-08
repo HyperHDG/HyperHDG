@@ -35,7 +35,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
   const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.local_solver    = "DiffusionIP<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
@@ -44,7 +44,8 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   PyDP = cython_import.cython_import(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * 3 )
+  HDG_wrapper = PyDP( [2 ** iteration] * 3, \
+                      lsol_constr = 5 * (dimension + 1) * (poly_degree ** 3) * (2 ** iteration) )
 
   # Generate right-hand side vector.
   vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
@@ -56,12 +57,16 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
   if num_iter != 0:
-    raise RuntimeError("Linear solver did not converge!")
+    print("CG solver failed with a total number of ", num_iter, "iterations.")
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_hypergraph_convergence_elliptic_ip.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()

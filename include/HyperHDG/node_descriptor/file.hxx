@@ -69,7 +69,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Return hypernode type of given index.
      **********************************************************************************************/
-    const unsigned int operator[](const unsigned int index) const
+    unsigned int operator[](const unsigned int index) const
     {
       return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_][index];
     }

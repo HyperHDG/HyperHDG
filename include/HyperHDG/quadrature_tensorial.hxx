@@ -317,7 +317,7 @@ class IntegratorTensorial
   const std::array<std::array<return_t, quadrature_t::compute_n_quad_points(max_quad_degree)>,
                    max_poly_degree + 1>
     shape_fcts_at_quad_, shape_ders_at_quad_;
-  const std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_;
+  const std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_, trial_der_bdr_;
 
  public:
   /*!***********************************************************************************************
@@ -336,7 +336,8 @@ class IntegratorTensorial
                                                   quadrature_t,
                                                   shape_t,
                                                   return_t>()),
-    trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>())
+    trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>()),
+    trial_der_bdr_(shape_ders_at_bdrs<max_poly_degree, shape_t, return_t>())
   {
     hy_assert(quad_weights_.size() == quad_points_.size(),
               "Number of quadrature weights and points must be equal!");
@@ -580,6 +581,55 @@ class IntegratorTensorial
     return integral * geom.area();
   }
   /*!***********************************************************************************************
+   * \brief   Integrate product of shape functions times some function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  func          Function that is also to be integrated.
+   * \param   i             Local index of local shape function.
+   * \param   j             Local index of local shape function.
+   * \param   dimension     Local dimension with respect to which the vector-function is integrated.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which function is evaluated.
+   * \retval  integral      Integral of product of both shape functions.
+   ************************************************************************************************/
+  template <typename GeomT,
+            SmallVec<GeomT::space_dim(), return_t> fun(const Point<GeomT::space_dim(), return_t>&,
+                                                       const return_t)>
+  return_t integrate_vol_phiphivecfunc(const unsigned int i,
+                                       const unsigned int j,
+                                       const unsigned int dimension,
+                                       GeomT& geom,
+                                       const return_t time = 0.) const
+  {
+    return_t integral = 0., quad_val;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt;
+    const SmallSquareMat<GeomT::space_dim(), return_t> mat_q =
+      (SmallSquareMat<GeomT::space_dim(), return_t>)geom.mat_q();
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+    {
+      dec_q =
+        index_decompose<GeomT::hyEdge_dim(), quadrature_t::compute_n_quad_points(max_quad_degree)>(
+          q);
+      quad_val = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        quad_pt[dim] = quad_points_[dec_q[dim]];
+        quad_val *= quad_weights_[dec_q[dim]] * shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]] *
+                    shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
+      }
+      integral +=
+        scalar_product(fun(geom.map_ref_to_phys(quad_pt), time), mat_q.get_column(dimension)) *
+        quad_val;
+    }
+    return integral * geom.area();
+  }
+  /*!***********************************************************************************************
    * \brief   Integrate product of shape functions over some geometry.
    *
    * \tparam  GeomT         Geometry which is the integration domain.
@@ -741,12 +791,259 @@ class IntegratorTensorial
           integral[dim] *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
         else
           integral[dim] *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    SmallSquareMat<GeomT::hyEdge_dim(), return_t> mat_r_transposed;
-    for (unsigned int i = 0; i < GeomT::hyEdge_dim(); ++i)
-      for (unsigned int j = 0; j < GeomT::hyEdge_dim(); ++j)
-        mat_r_transposed(i, j) = geom.mat_r().operator()(j, i);
-    return geom.area() * integral / mat_r_transposed;
+    return geom.area() * integral / transposed(geom.mat_r());
   }
+  /*!***********************************************************************************************
+   * \brief   Integrate gradient of shape functions times other function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Weight function that is additionally integrated.
+   * \param   i             Local index of local shape function.
+   * \param   j             Local index of local shape function.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
+   * \retval  integral      Integral of product of both shape function's weighted gradients.
+   ************************************************************************************************/
+  template <typename GeomT,
+            return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
+  return_t integrate_vol_nablaphinablaphifunc(const unsigned int i,
+                                              const unsigned int j,
+                                              GeomT& geom,
+                                              return_t time = 0.) const
+  {
+    return_t integral = 0., quad_weight;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, nabla_phi_j;
+    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rrT =
+      mat_times_transposed_mat(geom.mat_r(), geom.mat_r());
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+    {
+      dec_q =
+        index_decompose<GeomT::hyEdge_dim(), quadrature_t::compute_n_quad_points(max_quad_degree)>(
+          q);
+      quad_weight = 1.;
+      nabla_phi_i = 1.;
+      nabla_phi_j = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        quad_pt[dim] = quad_points_[dec_q[dim]];
+        quad_weight *= quad_weights_[dec_q[dim]];
+        for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+        {
+          if (dim == dim_fct)
+          {
+            nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim]];
+            nabla_phi_j[dim_fct] *= shape_ders_at_quad_[dec_j[dim]][dec_q[dim]];
+          }
+          else
+          {
+            nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
+            nabla_phi_j[dim_fct] *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim]];
+          }
+        }
+      }
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) *
+                  scalar_product(nabla_phi_i, nabla_phi_j / rrT);
+    }
+    return geom.area() * integral;
+  }
+  /*!***********************************************************************************************
+   * \brief   Integrate derivative of shape function times other function over some geometry.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Weight function that is additionally integrated.
+   * \param   i             Local index of local shape function.
+   * \param   dim_der       Dimension with respect to which derivative is calculated.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
+   * \retval  integral      Integral of product of both shape function's weighted gradients.
+   ************************************************************************************************/
+  template <typename GeomT,
+            return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
+  return_t integrate_vol_derphifunc(const unsigned int i,
+                                    const unsigned int dim_der,
+                                    GeomT& geom,
+                                    return_t time = 0.) const
+  {
+    return_t integral = 0., quad_weight;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i;
+    const SmallSquareMat<GeomT::hyEdge_dim(), return_t> rT = transposed(geom.mat_r());
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim()); ++q)
+    {
+      dec_q =
+        index_decompose<GeomT::hyEdge_dim(), quadrature_t::compute_n_quad_points(max_quad_degree)>(
+          q);
+      quad_weight = 1.;
+      nabla_phi_i = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        quad_pt[dim] = quad_points_[dec_q[dim]];
+        quad_weight *= quad_weights_[dec_q[dim]];
+        for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+        {
+          if (dim == dim_fct)
+            nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim]];
+          else
+            nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
+        }
+      }
+      integral +=
+        quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * (nabla_phi_i / rT)[dim_der];
+    }
+    return geom.area() * integral;
+  }
+  /*!***********************************************************************************************
+   * \brief   Integrate gradient of shape function times shape function times other function times
+   *          normal over some geometry's boundary.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Weight function that is additionally integrated.
+   * \param   i             Local index of local shape function with gradient.
+   * \param   j             Local index of local shape function.
+   * \param   bdr           Index of the boundatry face to integrate over.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
+   * \retval  integral      Integral of product of both shape function's weighted gradients.
+   ************************************************************************************************/
+  template <typename GeomT,
+            return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
+  return_t integrate_bdr_nablaphiphinufunc(const unsigned int i,
+                                           const unsigned int j,
+                                           const unsigned int bdr,
+                                           GeomT& geom,
+                                           return_t time = 0.) const
+  {
+    return_t integral = 0., quad_weight, phi_j;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, normal;
+    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT =
+      transposed(geom.mat_r());
+    const unsigned int bdr_dim = bdr / 2, bdr_ind = bdr % 2;
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim() - 1); ++q)
+    {
+      dec_q = index_decompose<GeomT::hyEdge_dim() - 1,
+                              quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+      quad_weight = 1.;
+      phi_j = 1.;
+      nabla_phi_i = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        if (dim == bdr_dim)
+        {
+          normal[dim] = 2. * bdr_ind - 1.;
+          quad_pt[dim] = (return_t)bdr_ind;
+          phi_j *= trial_bdr_[dec_j[dim]][bdr_ind];
+        }
+        else
+        {
+          normal[dim] = 0.;
+          quad_pt[dim] = quad_points_[dec_q[dim - (dim > bdr_dim)]];
+          phi_j *= shape_fcts_at_quad_[dec_j[dim]][dec_q[dim - (dim > bdr_dim)]];
+          quad_weight *= quad_weights_[dec_q[dim - (dim > bdr_dim)]];
+        }
+        for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+        {
+          if (dim == dim_fct && dim == bdr_dim)
+            nabla_phi_i[dim_fct] *= trial_der_bdr_[dec_i[dim]][bdr_ind];
+          else if (dim == dim_fct)
+            nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
+          else if (dim == bdr_dim)
+            nabla_phi_i[dim_fct] *= trial_bdr_[dec_i[dim]][bdr_ind];
+          else
+            nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr)]];
+        }
+      }
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
+                  scalar_product(normal, nabla_phi_i / rT);
+    }
+    return geom.face_area(bdr) * integral;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Integrate gradient of shape function times shape function times other function times
+   *          normal over some geometry's boundary.
+   *
+   * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  fun           Weight function that is additionally integrated.
+   * \param   i             Local index of local shape function with gradient.
+   * \param   j             Local index of local shape function.
+   * \param   bdr           Index of the boundatry face to integrate over.
+   * \param   geom          Geometrical information.
+   * \param   time          Time at which fun is evaluated.
+   * \retval  integral      Integral of product of both shape function's weighted gradients.
+   ************************************************************************************************/
+  template <typename GeomT,
+            return_t fun(const Point<GeomT::space_dim(), return_t>&, const return_t)>
+  return_t integrate_bdr_nablaphipsinufunc(const unsigned int i,
+                                           const unsigned int j,
+                                           const unsigned int bdr,
+                                           GeomT& geom,
+                                           return_t time = 0.) const
+  {
+    return_t integral = 0., quad_weight, phi_j;
+    std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
+      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_j =
+      index_decompose<GeomT::hyEdge_dim() - 1, max_poly_degree + 1>(j);
+    std::array<unsigned int, std::max(GeomT::hyEdge_dim() - 1, 1U)> dec_q;
+    Point<GeomT::hyEdge_dim(), return_t> quad_pt, nabla_phi_i, normal;
+    const SmallMat<GeomT::hyEdge_dim(), GeomT::hyEdge_dim(), return_t> rT =
+      transposed(geom.mat_r());
+    const unsigned int bdr_dim = bdr / 2, bdr_ind = bdr % 2;
+
+    for (unsigned int q = 0; q < std::pow(quad_weights_.size(), GeomT::hyEdge_dim() - 1); ++q)
+    {
+      dec_q = index_decompose<GeomT::hyEdge_dim() - 1,
+                              quadrature_t::compute_n_quad_points(max_quad_degree)>(q);
+      quad_weight = 1.;
+      phi_j = 1.;
+      nabla_phi_i = 1.;
+      for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
+      {
+        if (dim == bdr_dim)
+        {
+          normal[dim] = 2. * bdr_ind - 1.;
+          quad_pt[dim] = (return_t)bdr_ind;
+        }
+        else
+        {
+          normal[dim] = 0.;
+          quad_pt[dim] = quad_points_[dec_q[dim - (dim > bdr_dim)]];
+          phi_j *= shape_fcts_at_quad_[dec_j[dim - (dim > bdr_dim)]][dec_q[dim - (dim > bdr_dim)]];
+          quad_weight *= quad_weights_[dec_q[dim - (dim > bdr_dim)]];
+        }
+        for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
+        {
+          if (dim == dim_fct && dim == bdr_dim)
+            nabla_phi_i[dim_fct] *= trial_der_bdr_[dec_i[dim]][bdr_ind];
+          else if (dim == dim_fct)
+            nabla_phi_i[dim_fct] *= shape_ders_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
+          else if (dim == bdr_dim)
+            nabla_phi_i[dim_fct] *= trial_bdr_[dec_i[dim]][bdr_ind];
+          else
+            nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim - (dim > bdr_dim)]];
+        }
+      }
+      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * phi_j *
+                  scalar_product(normal, nabla_phi_i / rT);
+    }
+    return geom.face_area(bdr) * integral;
+  }
+
   /*!***********************************************************************************************
    * \brief   Integrate product of shape functions over boundary face.
    *

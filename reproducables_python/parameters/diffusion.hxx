@@ -1,5 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <cmath>
 
 /*!*************************************************************************************************
@@ -15,6 +16,11 @@ struct TestParametersSinEllipt
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t time = 0.)
+  {
+    return 2. / pi;
+  }
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>& point,
                                                const param_float_t time = 0.)
   {
@@ -67,6 +73,11 @@ struct HG
       1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
       14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
     static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+    static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>& point,
+                                         const param_float_t time = 0.)
+    {
+      return 1.;
+    }
     static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>& point,
                                                  const param_float_t time = 0.)
     {
@@ -76,7 +87,10 @@ struct HG
     static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                          const param_float_t time = 0.)
     {
-      return -point[0] * point[0] - point[1] * point[1] - point[2] * point[2];
+      param_float_t result = 0;
+      for (unsigned int dim = 0; dim < space_dimT; ++dim)
+        result -= point[dim] * point[dim];
+      return result;
     }
 
     static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
