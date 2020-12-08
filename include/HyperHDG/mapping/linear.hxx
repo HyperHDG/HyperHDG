@@ -179,19 +179,21 @@ class Linear
       else
         return SmallVec<hyEdge_dimT, map_float_t>(+1.);
     }
+    else
+    {
+      SmallMat<hyEdge_dimT, hyEdge_dimT - 1, map_float_t> other_vectors;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        if (i != index)
+          other_vectors.set_column(i - (i > index), matrix_r_.get_column(i));
 
-    SmallMat<hyEdge_dimT, hyEdge_dimT - 1, map_float_t> other_vectors;
-    for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-      if (i != index)
-        other_vectors.set_column(i - (i > index), matrix_r_.get_column(i));
-
-    SmallVec<hyEdge_dimT, map_float_t> normal =
-      qr_decomp_q(other_vectors).get_column(hyEdge_dimT - 1);
-    map_float_t scalar_pdct = scalar_product(normal, matrix_r_.get_column(index));
-    hy_assert(scalar_pdct != 0., "Scalar product must not be zero!");
-    if (scalar_pdct > 0.)
-      normal *= -1.;
-    return normal;
+      SmallVec<hyEdge_dimT, map_float_t> normal =
+        qr_decomp_q(other_vectors).get_column(hyEdge_dimT - 1);
+      map_float_t scalar_pdct = scalar_product(normal, matrix_r_.get_column(index));
+      hy_assert(scalar_pdct != 0., "Scalar product must not be zero!");
+      if (scalar_pdct > 0.)
+        normal *= -1.;
+      return normal;
+    }
   }
   /*!***********************************************************************************************
    * \brief   Return inner normal of given index.
