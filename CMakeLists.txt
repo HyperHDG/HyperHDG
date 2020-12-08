@@ -7,12 +7,11 @@ project(HyperHDG LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-## Set the flags for the compiler and the linker!
+## Set the flags for the compiler and the linker.
 
-# AR: If I add -Wextra to the CMAKE_CXX_FLAGS, there are long warnings about unused parameters!
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-  -pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong -Wformat \
-  -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC")
+  -pthread -g -fwrapv -O2 -Wall -pedantic -Wextra -Wno-unused-parameter -g \
+  -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} \
   -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
   -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
@@ -49,6 +48,7 @@ include_directories(
 # file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output ${CMAKE_CURRENT_BINARY_DIR}/cython_files ${CMAKE_CURRENT_BINARY_DIR}/shared_objects)
 # file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+
 ## Prepare nice output for include string.
 
 get_directory_property (inc_dirs INCLUDE_DIRECTORIES)
@@ -77,6 +77,7 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "command = ${CYTHON_EXE
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "flags   = -3 --cplus\n")
 
 ## Write information about python.
+
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "\n[python]\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "ver_maj = ${Python3_VERSION_MAJOR}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "ver_min = ${Python3_VERSION_MINOR}\n")
