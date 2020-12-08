@@ -28,11 +28,12 @@ inline std::array<unsigned int, std::max(dimT, 1U)> index_decompose(unsigned int
   }
   else
   {
-    for (unsigned int dim = 0; dim < dimT; ++dim)
-    {
-      decomposition[dim] = index % range;
-      index /= range;
-    }
+    if constexpr (dimT>0)
+      for (unsigned int dim = 0; dim < dimT; ++dim)
+      {
+        decomposition[dim] = index % range;
+        index /= range;
+      }
     hy_assert(index == 0, "Index initially exceeded given maximum value range^dimT.");
   }
   return decomposition;

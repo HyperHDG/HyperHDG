@@ -87,8 +87,11 @@ class SmallMat
    ************************************************************************************************/
   static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
   {
-    hy_assert(0 <= row && row < n_rowsT, "Row index must be >= 0 and smaller than number of rows.");
-    hy_assert(0 <= column && column < n_colsT,
+    static_assert(n_rowsT>0, "Matrix must have at least one row");
+    static_assert(n_colsT>0, "Matrix must have at least one column");
+    
+    hy_assert(row < n_rowsT, "Row index must be >= 0 and smaller than number of rows.");
+    hy_assert(column < n_colsT,
               "Column index must be >= 0 and smaller than number of columns.");
 
     return column * n_rowsT + row;  // Encoded like this for easy use of LAPACK!
@@ -257,7 +260,7 @@ class SmallMat
    ************************************************************************************************/
   inline mat_entry_t operator[](const unsigned int index) const
   {
-    hy_assert(0 <= index && index < size(),
+    hy_assert(index < size(),
               "You can only access entries of a SmallMat's entries that have non-negaitive "
                 << "index that is smaller than its size (which is " << size() << ")."
                 << " However, you tried to access the " << index << "-th entry.");
@@ -271,7 +274,7 @@ class SmallMat
    ************************************************************************************************/
   inline mat_entry_t& operator[](const unsigned int index)
   {
-    hy_assert(0 <= index && index < size(),
+    hy_assert(index < size(),
               "You can only access entries of a SmallMat's entries that have non-negaitive "
                 << "index that is smaller than its size (which is " << size() << ")."
                 << " However, you tried to access the " << index << "-th entry.");

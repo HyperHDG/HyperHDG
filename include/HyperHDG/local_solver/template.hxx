@@ -30,7 +30,7 @@ class Template
   /*!***********************************************************************************************
    * \brief   Number of degrees of freedom per hypernode.
    *
-   * \note    This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.
+   * \note    \c n_dofs_per_nodeT of HyperNodeFactory must be equal to this number.
    ************************************************************************************************/
   static constexpr unsigned int n_glob_dofs_per_node() { return 0U; }
   /*!***********************************************************************************************
