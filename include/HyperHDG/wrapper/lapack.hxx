@@ -441,17 +441,18 @@ inline std::array<lapack_float_t, n_rows * n_rows> get_q_from_lapack_qr_result(
   SmallMat unity = diagonal<n_rows, n_rows, lapack_float_t>(1.), matQ = unity;
   SmallVec<n_rows, lapack_float_t> vec;
 
-  for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
-  {
-    for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
-      if (j < i)
-        vec[j] = 0.;
-      else if (j == i)
-        vec[j] = 1.;
-      else
-        vec[j] = dense_mat[i * n_rows + j];
-    matQ = matQ * (unity - tau[i] * dyadic_product(vec, vec));
-  }
+  if constexpr (rank > 0)
+    for (unsigned int i = 0; i < rank; ++i)  // i is column index column index, here!
+    {
+      for (unsigned int j = 0; j < n_rows; ++j)  // j is row index, here!
+        if (j < i)
+          vec[j] = 0.;
+        else if (j == i)
+          vec[j] = 1.;
+        else
+          vec[j] = dense_mat[i * n_rows + j];
+      matQ = matQ * (unity - tau[i] * dyadic_product(vec, vec));
+    }
 
   return matQ.data();
 }

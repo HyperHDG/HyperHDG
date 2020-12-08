@@ -112,11 +112,14 @@ class Linear
   {
     if constexpr (hyEdge_dimT == 1)
       return 1.;
-    SmallMat<space_dimT, hyEdge_dimT - 1, map_float_t> mat_face;
-    for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-      if (i != index)
-        mat_face.set_column(i - (i > index), matrix_.get_column(i));
-    return determinant(mat_face);
+    else
+    {
+      SmallMat<space_dimT, hyEdge_dimT - 1, map_float_t> mat_face;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        if (i != index)
+          mat_face.set_column(i - (i > index), matrix_.get_column(i));
+      return determinant(mat_face);
+    }
   }
   /*!***********************************************************************************************
    * \brief   Return vector representing matrix column of specified index.

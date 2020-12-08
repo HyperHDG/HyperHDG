@@ -87,12 +87,11 @@ class SmallMat
    ************************************************************************************************/
   static inline unsigned int loc_matrix_index(const unsigned int row, const unsigned int column)
   {
-    static_assert(n_rowsT>0, "Matrix must have at least one row");
-    static_assert(n_colsT>0, "Matrix must have at least one column");
-    
+    static_assert(n_rowsT > 0, "Matrix must have at least one row");
+    static_assert(n_colsT > 0, "Matrix must have at least one column");
+
     hy_assert(row < n_rowsT, "Row index must be >= 0 and smaller than number of rows.");
-    hy_assert(column < n_colsT,
-              "Column index must be >= 0 and smaller than number of columns.");
+    hy_assert(column < n_colsT, "Column index must be >= 0 and smaller than number of columns.");
 
     return column * n_rowsT + row;  // Encoded like this for easy use of LAPACK!
   }

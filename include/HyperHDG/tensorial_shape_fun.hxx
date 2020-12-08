@@ -28,7 +28,7 @@ inline std::array<unsigned int, std::max(dimT, 1U)> index_decompose(unsigned int
   }
   else
   {
-    if constexpr (dimT>0)
+    if constexpr (dimT > 0)
       for (unsigned int dim = 0; dim < dimT; ++dim)
       {
         decomposition[dim] = index % range;
