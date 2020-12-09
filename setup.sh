@@ -2,7 +2,7 @@
 
 
 BOLD=$(tput bold)
-COL='\033[0;33m'
+COL='\033[5;33m'
 NOR='\033[0m'
 
 
