@@ -160,7 +160,7 @@ def extract_classname(fullname):
 def find_definition(folder, classname):
   for file in glob.glob(main_path() + "/include/HyperHDG/" + folder + "/*.hxx"):
     with open(file, "r") as hxxfile:
-      if ("class " + classname or "struct " + classname) in hxxfile.read():
+      if ("class " + classname + "\n" or "struct " + classname + "\n") in hxxfile.read():
         return re.sub(main_path() + "/include/", '', file)
   assert False, "File containing defintion of " + classname + " has not been found!"
 
