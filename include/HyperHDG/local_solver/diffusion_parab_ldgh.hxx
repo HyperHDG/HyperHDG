@@ -652,10 +652,10 @@ class DiffusionParab
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hy_edge,
-    const lSol_float_t time = 0.) const
+  lSol_float_t calc_L2_error_squared(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                      2 * hyEdge_dimT>& UNUSED(lambda_values),
+                                     hyEdgeT& hy_edge,
+                                     const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
