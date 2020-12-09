@@ -464,7 +464,11 @@ void check_file_opened(const std::ofstream& output_file, const std::string filen
  **************************************************************************************************/
 void create_directory_if_needed(std::ofstream& output_file,
                                 const std::string filename,
+#ifndef NOFILEOUT
                                 const PlotOptions& plot_options)
+#else
+                                const PlotOptions&)
+#endif
 {
   try
   {
