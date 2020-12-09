@@ -150,9 +150,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new);
+      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge);
+      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -180,9 +180,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_total(lambda_old, lambda_new);
+      diffusion.numerical_flux_total(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_total(lambda_old, lambda_new, hyper_edge);
+      diffusion.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -213,9 +213,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      error = diffusion.calc_L2_error_squared(lambda);
+      error = diffusion.calc_L2_error_squared(lambda, time);
     else
-      error = diffusion.calc_L2_error_squared(lambda, hyper_edge);
+      error = diffusion.calc_L2_error_squared(lambda, hyper_edge, time);
 
     return error;
   }
@@ -246,7 +246,8 @@ class LengtheningBeam
       LengtheningBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
       result;
 
-    auto bulk = diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge));
+    auto bulk =
+      diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge), time);
     Point<space_dim, lSol_float_t> normal_vector =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
@@ -439,9 +440,9 @@ class BernoulliBendingBeam
                        2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                        2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new);
+        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge);
+        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -473,9 +474,9 @@ class BernoulliBendingBeam
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new);
+        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, hyper_edge);
+        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -511,9 +512,9 @@ class BernoulliBendingBeam
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        error += bilaplacian_solver.calc_L2_error_squared(lambda);
+        error += bilaplacian_solver.calc_L2_error_squared(lambda, time);
       else
-        error += bilaplacian_solver.calc_L2_error_squared(lambda, hyper_edge);
+        error += bilaplacian_solver.calc_L2_error_squared(lambda, hyper_edge, time);
     }
 
     return error;
@@ -548,7 +549,7 @@ class BernoulliBendingBeam
     for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
     {
       auto bulk = bilaplacian_solver.bulk_values(
-        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on));
+        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on), time);
       Point<space_dim, lSol_float_t> normal_vector =
         (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(dim_on);
 
@@ -668,8 +669,8 @@ class LengtheningBernoulliBendingBeam
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge);
-    ben_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge);
+    len_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
@@ -684,8 +685,8 @@ class LengtheningBernoulliBendingBeam
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge);
-    ben_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge);
+    len_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
@@ -706,8 +707,8 @@ class LengtheningBernoulliBendingBeam
     const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
-    error += len_beam.calc_L2_error_squared(lambda_values, hyper_edge);
-    error += ben_beam.calc_L2_error_squared(lambda_values, hyper_edge);
+    error += len_beam.calc_L2_error_squared(lambda_values, hyper_edge, time);
+    error += ben_beam.calc_L2_error_squared(lambda_values, hyper_edge, time);
     return error;
   }
   /*!***********************************************************************************************
@@ -732,8 +733,8 @@ class LengtheningBernoulliBendingBeam
   {
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
       result, auxiliary;
-    result = len_beam.bulk_values(abscissas, lambda_values, hyper_edge);
-    auxiliary = ben_beam.bulk_values(abscissas, lambda_values, hyper_edge);
+    result = len_beam.bulk_values(abscissas, lambda_values, hyper_edge, time);
+    auxiliary = ben_beam.bulk_values(abscissas, lambda_values, hyper_edge, time);
 
     for (unsigned int i = 0; i < system_dimension(); ++i)
       for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)

@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ## Set the flags for the compiler and the linker.
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-  -pthread -g -fwrapv -O2 -Wall -pedantic -Wextra -Wno-unused-parameter -g \
+  -pthread -g -fwrapv -O2 -Wall -pedantic -Wextra -g \
   -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} \
   -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \

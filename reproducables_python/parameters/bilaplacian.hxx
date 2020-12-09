@@ -121,7 +121,7 @@ struct HG
     {
       return analytic_result(point);
     }
-    static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
+    static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>&,
                                                  const param_float_t time = 0.)
     {
       return -2. * (param_float_t)hyEdge_dimT;
