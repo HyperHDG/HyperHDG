@@ -626,8 +626,6 @@ class BilaplacianParab
   /*!***********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary.
    *
-   * \todo    Implement this!
-   *
    * \tparam  absc_float_t      Floating type for the abscissa values.
    * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
    * \tparam  input_array_t     Input array type.
@@ -1031,9 +1029,12 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::la
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-                    BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT,
-                                     lSol_float_t>::node_system_dimension()>();
+  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
+                                   abscissa_float_t>
+    evaluation(abscissas);
+  return evaluation
+    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
+      lambda_values[boundary_number]);
 }
 
 // -------------------------------------------------------------------------------------------------

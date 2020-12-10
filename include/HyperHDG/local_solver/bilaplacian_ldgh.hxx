@@ -1277,9 +1277,6 @@ Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_
   return evaluation
     .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
       lambda_values[boundary_number]);
-  // return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-  // Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT,
-  // lSol_float_t>::node_system_dimension()>();
 }
 
 // -------------------------------------------------------------------------------------------------
