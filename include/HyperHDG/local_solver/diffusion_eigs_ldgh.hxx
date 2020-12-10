@@ -95,7 +95,7 @@ class DiffusionEigs
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct empty_class
+  typedef struct
   {
   } data_type;
 
