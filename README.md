@@ -9,7 +9,7 @@ defined on hypergraphs.
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
 
-    $ sudo apt-get install git python3-dev python3-numpy python3-scipy cython3 libblas-dev \
+    $ sudo apt-get install git cmake python3-dev python3-numpy python3-scipy cython3 libblas-dev \
     liblapack-dev
 
 This installs the packages that are necessary to fully use HyperHDG. Afterwards, you can start
@@ -58,7 +58,8 @@ As a contributor to this project, you agree that all of your contributions be go
 assignments for contributions. This means that the copyright for code contributions in the HyperHDG
 project is held by its respective contributors who have each agreed to release their contributed
 code under a compatible open source license (LGPL v2.1 for library code). The full text of the 
-Developer Certificate of Origin version 1.1 is quoted in [DeveloperCertificateOfOrigin.txt](DeveloperCertificateOfOrigin.txt).
+Developer Certificate of Origin version 1.1 is quoted in [DeveloperCertificateOfOrigin.txt](
+DeveloperCertificateOfOrigin.txt).
 
 
 ## Referencing the library
