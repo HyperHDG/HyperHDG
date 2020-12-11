@@ -8,21 +8,31 @@ defined on hypergraphs.
 
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
+
     $ sudo apt-get install git cmake python3-dev python3-numpy python3-scipy cython3 libblas-dev \
     liblapack-dev
+
 This installs the packages that are necessary to fully use HyperHDG. Afterwards, you can start
 obtaining HyperHDG.
 
 To do so, enter the directory you want to clone HyperHDG into and do the following steps:
 
 1. Clone the repository and give it the name "your_name":
+
    1. To clone this repository with https use
+
           $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
+
    2. To clone this repository with ssh use
+
           $ git git@github.com:AndreasRupp/HyperHDG.git your_name
+
 2. Enter directory using
+
        $ cd your_name
+
 3. Execute the script `setup.sh` to install HyperHDG by
+
        $ ./setup.sh
 
 
