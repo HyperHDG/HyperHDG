@@ -21,19 +21,19 @@ To do so, enter the directory you want to clone HyperHDG into and do the followi
 
    1. To clone this repository with https use
 
-        $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
+          $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
 
    2. To clone this repository with ssh use
 
-        $ git git@github.com:AndreasRupp/HyperHDG.git your_name
+          $ git git@github.com:AndreasRupp/HyperHDG.git your_name
 
 2. Enter directory using
 
-        $ cd your_name
+       $ cd your_name
 
 3. Execute the script `setup.sh` to install HyperHDG by
 
-        $ ./setup.sh
+       $ ./setup.sh
 
 
 
