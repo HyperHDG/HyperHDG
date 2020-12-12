@@ -854,7 +854,7 @@ These loop classes can then also be used for related problems like the Bilaplaci
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph.}\label{TAB:diff_hg_elpp_conv}
 \end{table}
 
-It is well known, both that the order of convergence of the LDG-H method can be increased by one using a local post-processing step and that the flux variable can be projected into $H^{\operatorname{div}}(\Omega)$ (by a Raviart--Thomas projection) without deterioration of convergence using a second local post-processing step.
+It is well known, both that the order of convergence of the LDG-H method can be increased by one using a local post-processing step and that the flux variable can be projected into $H^{\operatorname{div}}(\Omega)$ (by a Raviart--Thomas projection) without deterioration of convergence using a second local post-processing step. For further details on this topic, the reader may consult \cite{CockburnDGRS2009}.
 
 The first post-processing (better convergence) can be conducted constructing $U^\star \in \polynomials_{p+1}(\Edge)$ $\forall \Edge \in \Graph$ from $U$ and $\vec Q$ such that for all $\Edge \in \Graph$
 %
