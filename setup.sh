@@ -9,6 +9,9 @@ NOR='\033[0m'
 echo -e "${COL}${BOLD}Initialize git-based submodules ...${NOR}"
 (set -x; git submodule update --init --recursive)
 
+echo -e "${COL}${BOLD}\nMake doxygen ...${NOR}"
+(set -x; cd doxygen; rm -rf html latex doxy_log.txt; doxygen Doxyfile > doxy_log.txt)
+
 echo -e "${COL}${BOLD}\nDo the tests as if we were GitHub ...${NOR}"
 echo -e "${COL}Remove previous build and __pycache__ directories:${NOR}"
 (set -x; rm -rf build output */output __pycache__ */__pycache__)
