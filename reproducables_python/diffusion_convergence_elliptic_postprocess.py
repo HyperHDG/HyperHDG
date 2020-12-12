@@ -65,7 +65,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_convergence_elliptic_postprocess.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
