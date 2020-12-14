@@ -6,7 +6,7 @@ COL='\e[0;97;41m'
 NOR='\e[0m'
 
 
-echo -e "\n${COL}${BOLD}Clean up ...${NOR}"
+echo -e "${COL}${BOLD}Clean up ...${NOR}"
 (set -x; make clean)
 
 echo -e "\n${COL}${BOLD}Format the cxx and hxx files ...${NOR}"

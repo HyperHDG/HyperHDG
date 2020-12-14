@@ -3,7 +3,7 @@ PROJECT     	= HyperHDG
 								doxygen format submodules test_all_compilers test_github test_compiler
 
 
-TEST_COMPILER = g++-8 clang-10
+TEST_COMPILER = g++-8 g++-9 g++-10
 
 
 make:
