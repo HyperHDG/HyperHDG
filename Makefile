@@ -1,10 +1,22 @@
 PROJECT     	= HyperHDG
-.PHONY:       	default clean distclean doxygen new run with_PythonCompileOptions object_files format \
-								cython_cpp linking examples run_examples new_run_examples
+.PHONY:       	build clean clean_build clean_domains clean_doxygen clean_output clean_pycache \
+								doxygen format submodules test_all_compilers test_github test_compiler
+
+
+TEST_COMPILER = g++-8 clang-10
+
 
 make:
-	$(MAKE) install
-	
+	$(MAKE) build
+
+
+build:
+	mkdir -p build
+	cd build; cmake ..
+	cd build; make
+	cd build; make test
+
+
 clean:
 	$(MAKE) clean_build
 	$(MAKE) clean_domains
@@ -19,7 +31,7 @@ clean_domains:
 	rm -rf domains/*.pts.geo
 
 clean_doxygen:
-	cd doxygen; rm -rf html latex doxy_log.txt doxy_log.txt
+	rm -rf doxygen/html doxygen/latex doxygen/doxy_log.txt
 
 clean_output:
 	rm -rf output */output
@@ -27,14 +39,34 @@ clean_output:
 clean_pycache:
 	rm -rf __pycache__ */__pycache__
 
-	rm -rf $(BUILD_DIR) $(OBJECT_DIR) $(CYTHON_DIR) $(CYTHON_FILE).c* $(DOXY_DIR) __pycache__
-	rm -rf domains/*.pts.geo
 
 doxygen:
 	cd doxygen; doxygen Doxyfile
 
-install:
-	./setup.sh
+
+format:
+	clang-format -i reproducables_python/parameters/*.hxx tests_c++/*.cxx \
+		include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
+
 
 submodules:
 	git submodule update --init --recursive
+
+
+test_all_compilers:
+	$(foreach compiler, $(TEST_COMPILER), $(MAKE) test_compiler comp=${compiler};)
+
+test_github:
+	$(MAKE) clean
+	mkdir -p build
+	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
+		-DNOPYTHONTESTS=True ..
+	cd build; make
+	cd build; make test
+
+test_compiler:
+	$(MAKE) clean
+	mkdir -p build	
+	cd build; cmake -DCMAKE_CXX_COMPILER=$(comp) ..
+	cd build; make
+	cd build; make test
