@@ -1,6 +1,6 @@
 PROJECT     	= HyperHDG
-.PHONY:       	build clean clean_build clean_domains clean_doxygen clean_output clean_pycache \
-								doxygen format submodules test_all_compilers test_github test_compiler
+.PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
+								clean_pycache doxygen format submodules test_all_compilers test_github test_compiler
 
 
 TEST_COMPILER = g++-8 g++-9 g++-10
@@ -23,7 +23,7 @@ clean:
 	$(MAKE) clean_doxygen
 	$(MAKE) clean_pycache
 
-disctlean:
+distclean:
 	$(MAKE) clean
 	$(MAKE) clean_output
 
