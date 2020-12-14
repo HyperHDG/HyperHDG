@@ -21,8 +21,11 @@ clean:
 	$(MAKE) clean_build
 	$(MAKE) clean_domains
 	$(MAKE) clean_doxygen
-	$(MAKE) clean_output
 	$(MAKE) clean_pycache
+
+disctlean:
+	$(MAKE) clean
+	$(MAKE) clean_output
 
 clean_build:
 	rm -rf build

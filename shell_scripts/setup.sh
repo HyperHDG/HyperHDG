@@ -7,13 +7,13 @@ NOR='\e[0m'
 
 
 echo -e "${COL}${BOLD}Initialize git-based submodules ...${NOR}"
-(set -x; make submodules)
+(set -x; cd ..; make submodules)
 
 echo -e "\n${COL}${BOLD}Clean up ...${NOR}"
-(set -x; make clean)
+(set -x; cd ..; make distclean)
 
 echo -e "\n${COL}${BOLD}Make doxygen ...${NOR}"
-(set -x; make doxygen > doxygen/doxy_log.txt)
+(set -x; cd ..; make doxygen > doxygen/doxy_log.txt)
 
 echo -e "\n${COL}${BOLD}Install and test all components ...${NOR}"
-(set -x; make build)
+(set -x; cd ..; make build)
