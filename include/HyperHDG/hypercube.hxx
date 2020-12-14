@@ -25,8 +25,9 @@ struct Hypercube
   static constexpr unsigned int pow(unsigned int n)
   {
     unsigned int result = 1;
-    for (unsigned int i = 0; i < dim; ++i)
-      result *= n;
+    if constexpr (dim > 0)
+      for (unsigned int i = 0; i < dim; ++i)
+        result *= n;
     return result;
   }
 };  // end of struct Hypercube

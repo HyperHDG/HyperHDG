@@ -31,7 +31,7 @@ class BilaplacianUniform
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct empty_class
+  typedef struct
   {
   } data_type;
 
@@ -212,7 +212,7 @@ class BilaplacianUniform
   template <typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
                                            SmallMatOutT& lambda_values_out,
-                                           const lSol_float_t time = 0.) const
+                                           const lSol_float_t UNUSED(time) = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -242,16 +242,15 @@ class BilaplacianUniform
    * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
    * \param   lambda_values_in    Local part of vector x.
    * \param   lambda_values_out   Local part that will be added to A * x.
-   * \param   time          Time --- this parameter is redundant for this local solver.
-   * \retval  vecAx         Local part of vector A * x.
+   * \param   time                Time --- this parameter is redundant for this local solver.
+   * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
                                      SmallMatOutT& lambda_values_out,
-                                     const lSol_float_t time = 0.) const
+                                     const lSol_float_t UNUSED(time) = 0.) const
   {
-    return lambda_values_out =
-             numerical_flux_from_lambda(lambda_values_in, lambda_values_out, time);
+    return lambda_values_out = numerical_flux_from_lambda(lambda_values_in, lambda_values_out);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.
@@ -262,7 +261,7 @@ class BilaplacianUniform
    ************************************************************************************************/
   template <typename SmallMatT>
   lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
-                                     const lSol_float_t time = 0.) const
+                                     const lSol_float_t UNUSED(time) = 0.) const
   {
     return 0.;
   }
@@ -274,14 +273,14 @@ class BilaplacianUniform
    * \tparam  input_array_t     Type of input array.
    * \param   abscissas         Abscissas of the supporting points.
    * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   time              Time at which analytic functions are evaluated.
+   * \param   time              Time --- this parameter is redundant for this local solver.
    * \retval  function_values   Function values at quadrature points.
    ************************************************************************************************/
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dim> bulk_values(
     const std::array<abscissa_float_t, sizeT>& abscissas,
     const input_array_t& lambda_values,
-    const lSol_float_t time = 0.) const;
+    const lSol_float_t UNUSED(time) = 0.) const;
   /*!***********************************************************************************************
    * \brief   Evaluate the function lambda on tensor product points on the boundary
    *
@@ -542,7 +541,7 @@ std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
 BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
-  const lSol_float_t time) const
+  const lSol_float_t) const
 {
   std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
   std::array<lSol_float_t, n_loc_dofs_ / 2> first_half_of_coefficients;
