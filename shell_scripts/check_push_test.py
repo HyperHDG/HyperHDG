@@ -1,6 +1,6 @@
 import re
 
-with open("output/push_test.txt", "r") as file:
+with open(os.path.dirname(os.path.abspath(__file__)) + "../output/push_test.txt", "r") as file:
   content = file.read()
 
 assert ("warning" or "Warning" or "error" or "Error" or "Fail") not in content, \

@@ -41,7 +41,7 @@ namespace Geometry
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
-          template <typename> typename vectorT = std::vector,
+          template <typename...> typename vectorT = std::vector,
           typename pointT = Point<space_dimT, float>,
           template <unsigned int, unsigned int, typename> typename mapping_tM = Mapping::Linear,
           unsigned int hyEdge_dimTM = hyEdge_dimT,

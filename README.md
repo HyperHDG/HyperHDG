@@ -37,6 +37,13 @@ To do so, enter the directory you want to clone HyperHDG into and do the followi
        $ ./shell_scripts/setup.sh
 
 
+## How to contribute?
+
+If you want to contribute to HyperHDG, the easiest way to do so is via an issue, or a pull request.
+For the latter one, please consider the `Contributions` section and run the script
+`shell_scripts/push_test.sh` prior to submitting your pull request. The script ensures that your
+changes pass the basic tests that need to be satisfied for an successful merge to the master branch. 
+
 
 # Copyright, License, and Contribution Policy
 

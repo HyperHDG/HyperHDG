@@ -30,4 +30,4 @@ echo -e "\n${COL}${BOLD}Re-install and test all components ...${NOR}"
 (set -x; cd $(dirname $(readlink -f "$0"))/..; make build |& tee -a output/push_test.txt)
 
 echo -e "\n${COL}${BOLD}Check whether tests have passed ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; python3 chec_push_test.py)
+(set -x; cd $(dirname $(readlink -f "$0")); python3 check_push_test.py)

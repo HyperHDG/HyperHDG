@@ -350,11 +350,12 @@ class Diffusion
    * \note   This function is not use for elliptic problems.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT, typename SmallVecT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_loc_prob_cor(const SmallMatT& lambda_values,
-                                                                const SmallVecT& coeffs,
-                                                                hyEdgeT& hyper_edge,
-                                                                const lSol_float_t delta_time,
-                                                                const lSol_float_t time) const
+  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_loc_prob_cor(
+    const SmallMatT& lambda_values,
+    const SmallVecT& coeffs,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t UNUSED(delta_time),
+    const lSol_float_t time) const
   {
     try
     {
@@ -743,7 +744,7 @@ class Diffusion
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
       else
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = duals(i, j) + tau_ * primals(i, j);
     }
 

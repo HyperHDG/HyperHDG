@@ -260,7 +260,7 @@ class BilaplacianUniform
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
+  lSol_float_t calc_L2_error_squared(const SmallMatT& UNUSED(lambda_values),
                                      const lSol_float_t UNUSED(time) = 0.) const
   {
     return 0.;
@@ -567,9 +567,12 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::lambda_values
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<
-    std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-    BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::node_system_dimension()>();
+  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
+                                   abscissa_float_t>
+    evaluation(abscissas);
+  return evaluation
+    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
+      lambda_values[boundary_number]);
 }
 
 // -------------------------------------------------------------------------------------------------
