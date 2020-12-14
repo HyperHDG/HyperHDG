@@ -81,7 +81,7 @@ class Cubic
     /*!*********************************************************************************************
      * \brief   Return orienation of hypernode.
      **********************************************************************************************/
-    const NodeOrientationT get_hyNode_oriantation(unsigned int node) const
+    const NodeOrientationT get_hyNode_oriantation(unsigned int) const
     {
       return NodeOrientationT();
     }

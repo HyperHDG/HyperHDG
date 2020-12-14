@@ -29,40 +29,40 @@ struct DiffusionParametersDefault
   /*!***********************************************************************************************
    * \brief   Diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 1.;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
@@ -110,7 +110,7 @@ class DiffusionIP
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct empty_class
+  typedef struct
   {
   } data_type;
 
@@ -203,14 +203,14 @@ class DiffusionIP
    * \brief   Assemble local matrix for the local solver.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \param   tau           Penalty parameter.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \param   time          Time, when the local matrix is evaluated.
    * \retval  loc_mat       Matrix of the local solver.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
-  assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time) const;
+  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix(
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time) const;
   /*!***********************************************************************************************
    * \brief   Assemble local right-hand for the local solver (from skeletal).
    *
@@ -306,7 +306,7 @@ class DiffusionIP
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      return rhs / assemble_loc_matrix(tau_, hyper_edge, time);
+      return rhs / assemble_loc_matrix(hyper_edge, time);
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -574,7 +574,6 @@ inline SmallSquareMat<
   DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
 DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
-  const lSol_float_t tau,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {

@@ -18,7 +18,7 @@ class Template
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct empty_class
+  typedef struct
   {
   } data_type;
   /*!***********************************************************************************************
@@ -30,7 +30,7 @@ class Template
   /*!***********************************************************************************************
    * \brief   Number of degrees of freedom per hypernode.
    *
-   * \note    This number should be equal to \c n_dofs_per_nodeT of HyperNodeFactory.
+   * \note    \c n_dofs_per_nodeT of HyperNodeFactory must be equal to this number.
    ************************************************************************************************/
   static constexpr unsigned int n_glob_dofs_per_node() { return 0U; }
   /*!***********************************************************************************************
@@ -45,10 +45,9 @@ class Template
    * \brief   The local solver as needed by the HDG method
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out) const
+  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT&, SmallMatOutT&) const
   {
-    return lambda_values_out = SmallMatOutT();
+    return SmallMatOutT();
   }
   /*!***********************************************************************************************
    * \brief   The values of the local solution in quadrature points of the cell.
@@ -60,9 +59,9 @@ class Template
   template <typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
              system_dimension()>
-  bulk_values(const std::array<AbscissaType, AbscissaSize>& abscissas,
-              const InputArrayType& lambda_values,
-              const lSol_float_t time = 0.) const
+  bulk_values(const std::array<AbscissaType, AbscissaSize>&,
+              const InputArrayType&,
+              const lSol_float_t = 0.) const
   {
     return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
                       system_dimension()>();
@@ -73,9 +72,9 @@ class Template
   template <typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(AbscissaSize)>,
              node_system_dimension()>
-  lambda_values(const std::array<AbscissaType, AbscissaSize>& abscissas,
-                const InputArrayType& lambda_values,
-                unsigned int boundary_number) const
+  lambda_values(const std::array<AbscissaType, AbscissaSize>&,
+                const InputArrayType&,
+                unsigned int) const
   {
     return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(AbscissaSize)>,
                       node_system_dimension()>();

@@ -85,7 +85,7 @@ int do_test()
   return successful - 1;
 }
 
-int main(int argc, char* argv[])
+int main()
 {
   return do_test<float>() + do_test<double>();
 }

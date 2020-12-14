@@ -27,7 +27,7 @@ struct Legendre
   template <typename return_t, typename input_t>
   static inline return_t shape_fct_eval(const unsigned int index, const input_t x_val)
   {
-    hy_assert(0 <= index && index <= 5,
+    hy_assert(index <= 5,
               "The index of a shape function must be non-negative and smaller than or equal to 5 "
                 << "at the moment. Your choice has been " << index << ".");
     hy_assert(0. <= x_val && x_val <= 1.,
@@ -77,7 +77,7 @@ struct Legendre
   template <typename return_t, typename input_t>
   static inline return_t shape_der_eval(const unsigned int index, const input_t x_val)
   {
-    hy_assert(0 <= index && index <= 5,
+    hy_assert(index <= 5,
               "The index of a shape function must be non-negative and smaller than or equal to 5 "
                 << "at the moment. Your choice has been " << index << ".");
     hy_assert(0. <= x_val && x_val <= 1.,

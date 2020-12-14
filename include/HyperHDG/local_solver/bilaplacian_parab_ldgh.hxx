@@ -37,57 +37,56 @@ struct Bilaplacian_parameters_default
   /*!***********************************************************************************************
    * \brief   Inverse bilaplacian coefficient in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t inverse_bilaplacian_coefficient(
-    const Point<space_dimT, param_float_t>& point,
-    const param_float_t time = 0.)
+  static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                       const param_float_t = 0.)
   {
     return 1.;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution's Laplacian as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+  static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution's Laplacian as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                             const param_float_t time = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                             const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
@@ -1030,9 +1029,12 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::la
   const input_array_t& lambda_values,
   const unsigned int boundary_number) const
 {
-  return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-                    BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT,
-                                     lSol_float_t>::node_system_dimension()>();
+  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
+                                   abscissa_float_t>
+    evaluation(abscissas);
+  return evaluation
+    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
+      lambda_values[boundary_number]);
 }
 
 // -------------------------------------------------------------------------------------------------

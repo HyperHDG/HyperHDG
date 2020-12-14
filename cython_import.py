@@ -160,7 +160,7 @@ def extract_classname(fullname):
 def find_definition(folder, classname):
   for file in glob.glob(main_path() + "/include/HyperHDG/" + folder + "/*.hxx"):
     with open(file, "r") as hxxfile:
-      if ("class " + classname or "struct " + classname) in hxxfile.read():
+      if ("class " + classname + "\n" or "struct " + classname + "\n") in hxxfile.read():
         return re.sub(main_path() + "/include/", '', file)
   assert False, "File containing defintion of " + classname + " has not been found!"
 
@@ -196,7 +196,7 @@ def get_cmakes():
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
     LINK_LIB = "-llapack"
-    CYTHON_COM = "cython3"
+    CYTHON_COM = "cython"
     CYTHON_FLG = "-3 --cplus"
     PY_VER_MAJ = str(sys.version_info.major)
     PY_VER_MIN = str(sys.version_info.minor)

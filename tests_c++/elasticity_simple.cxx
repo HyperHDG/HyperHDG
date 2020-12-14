@@ -22,7 +22,7 @@ using namespace SparseLA;
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-int main(int argc, char* argv[])
+int main()
 {
   bool successful = true;
   const double solution_tolerance = 1e-7;

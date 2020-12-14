@@ -29,40 +29,40 @@ struct DiffusionParametersDefault
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
   {
     return 1.;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
@@ -652,10 +652,10 @@ class DiffusionParab
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
-    hyEdgeT& hy_edge,
-    const lSol_float_t time = 0.) const
+  lSol_float_t calc_L2_error_squared(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                      2 * hyEdge_dimT>& UNUSED(lambda_values),
+                                     hyEdgeT& hy_edge,
+                                     const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),

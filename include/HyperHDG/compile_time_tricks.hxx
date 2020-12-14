@@ -3,6 +3,11 @@
 // #include <type_traits>
 
 /*!*************************************************************************************************
+ * \brief   Unused parametes will neither result in g++, nor in doxygen warnings if wrapped by this.
+ **************************************************************************************************/
+#define UNUSED(x) /* nothing */
+
+/*!*************************************************************************************************
  * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.
  *
  * This struct generates a compile time error if the check is not correctly conducted!

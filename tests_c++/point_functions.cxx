@@ -342,7 +342,7 @@ bool testPoint()
   return success;
 }
 
-int main(int argc, char* argv[])
+int main()
 {
   bool success = true, worked;
 

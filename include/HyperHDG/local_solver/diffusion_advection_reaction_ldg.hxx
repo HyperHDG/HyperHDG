@@ -29,8 +29,8 @@ struct DiffusionAdvectionReactionParametersDefault
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
   {
     return 1.;
   }
@@ -38,48 +38,48 @@ struct DiffusionAdvectionReactionParametersDefault
    * \brief   The velocity of the advective part of the equation over the diffusion coefficient.
    ************************************************************************************************/
   static SmallVec<space_dimT, param_float_t> advective_velocity(
-    const Point<space_dimT, param_float_t>& point,
-    const param_float_t time = 0.)
+    const Point<space_dimT, param_float_t>&,
+    const param_float_t = 0.)
   {
     return SmallVec<space_dimT, param_float_t>();
   }
   /*!***********************************************************************************************
    * \brief   The reaction rate for the PDE.
    ************************************************************************************************/
-  static param_float_t reaction_rate(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t reaction_rate(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
@@ -129,7 +129,7 @@ class DiffusionAdvectionReaction
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct empty_class
+  typedef struct
   {
   } data_type;
 
