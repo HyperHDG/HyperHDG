@@ -377,7 +377,7 @@ inline void lapack_qr(int n_rows, int n_cols, float* mat_a, float* tau)
 // lapack_solve
 // -------------------------------------------------------------------------------------------------
 
-template <unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t>
+template <unsigned int system_size, unsigned int n_rhs_cols, typename lapack_float_t>
 std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
   std::array<lapack_float_t, system_size * system_size>& dense_mat,
   std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
