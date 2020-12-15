@@ -680,6 +680,26 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> operator*(const SmallMat<n_rowsA, n_cols
   return result;
 }
 /*!*************************************************************************************************
+ * \brief   Standard matrix--matrix multiplication with non-fitting dimensions.
+ **************************************************************************************************/
+template <unsigned int n_rowsA,
+          unsigned int n_colsA,
+          unsigned int n_rowsB,
+          unsigned int n_colsB,
+          typename mat_entry_t>
+SmallMat<n_rowsA, n_colsB, mat_entry_t> mat_times_mat_unfit(
+  const SmallMat<n_rowsA, n_colsA, mat_entry_t>& A,
+  const SmallMat<n_rowsB, n_colsB, mat_entry_t>& B)
+{
+  static constexpr rank = std::min(n_colsA, n_rowsB);
+  SmallMat<n_rowsA, n_colsB, mat_entry_t> result;
+  for (unsigned int colB = 0; colB < n_colsB; ++colB)
+    for (unsigned int colA = 0; colA < rank; ++colA)
+      for (unsigned int rowA = 0; rowA < n_rowsA; ++rowA)
+        result(rowA, colB) += A(rowA, colA) * B(colA, colB);
+  return result;
+}
+/*!*************************************************************************************************
  * \brief   Transpose first small/dense matrix and multiply it with second.
  **************************************************************************************************/
 template <unsigned int n_rowsA, unsigned int n_colsA, unsigned int n_colsB, typename mat_entry_t>
