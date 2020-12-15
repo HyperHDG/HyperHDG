@@ -794,6 +794,9 @@ class IntegratorTensorial
   /*!***********************************************************************************************
    * \brief   Integrate gradient of shape function times other shape function over some geometry.
    *
+   * \note    poly_deg_i and poly_deg_j must be set to max_poly_degree (which is also their default)
+   *          if the basis is not hierarchic.
+   *
    * \tparam  GeomT         Geometry which is the integration domain.
    * \tparam  poly_deg_i    Polynomial degree of shape functions associated to i.
    * \tparam  poly_deg_j    Polynomial degree of shape functions associated to j.
