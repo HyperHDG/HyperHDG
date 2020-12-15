@@ -20,54 +20,53 @@ struct TestParametersSinEllipt
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes{};
 
-  static param_float_t inverse_bilaplacian_coefficient(
-    const Point<space_dimT, param_float_t>& point,
-    const param_float_t time = 0.)
+  static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                       const param_float_t = 0.)
   {
     return pi;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
     return sin(pi * point[0]);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
     return pi * pi * pi * sin(pi * point[0]);
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
     return analytic_result(point);
   }
   static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+                                               const param_float_t = 0.)
   {
     return pi * analytic_result(point);
   }
 
   static param_float_t initial(const Point<space_dimT, param_float_t>& point,
-                               const param_float_t time = 0.)
+                               const param_float_t = 0.)
   {
-    return analytic_result(point, time);
+    return analytic_result(point);
   }
   static param_float_t initial_laplace(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
-    return analytic_result(point, time);
+    return analytic_result(point);
   }
 
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
-  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                             const param_float_t time = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                             const param_float_t = 0.)
   {
     return 0.;
   }
@@ -94,15 +93,14 @@ struct HG
     static constexpr std::array<unsigned int, 0U> neumann_nodes{};
     static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes{};
 
-    static param_float_t inverse_bilaplacian_coefficient(
-      const Point<space_dimT, param_float_t>& point,
-      const param_float_t time = 0.)
+    static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                         const param_float_t = 0.)
     {
       return 1.;
     }
 
     static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                         const param_float_t time = 0.)
+                                         const param_float_t = 0.)
     {
       param_float_t result = 0;
       for (unsigned int dim = 0; dim < space_dimT; ++dim)
@@ -110,41 +108,41 @@ struct HG
       return result;
     }
 
-    static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                         const param_float_t time = 0.)
+    static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                         const param_float_t = 0.)
     {
       return 0.;
     }
 
     static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                         const param_float_t time = 0.)
+                                         const param_float_t = 0.)
     {
       return analytic_result(point);
     }
-    static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                                 const param_float_t time = 0.)
+    static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>&,
+                                                 const param_float_t = 0.)
     {
       return -2. * (param_float_t)hyEdge_dimT;
     }  // This changes!
 
     static param_float_t initial(const Point<space_dimT, param_float_t>& point,
-                                 const param_float_t time = 0.)
+                                 const param_float_t = 0.)
     {
-      return analytic_result(point, time);
+      return analytic_result(point);
     }
     static param_float_t initial_laplace(const Point<space_dimT, param_float_t>& point,
-                                         const param_float_t time = 0.)
+                                         const param_float_t = 0.)
     {
-      return analytic_result(point, time);
+      return analytic_result(point);
     }
 
-    static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+    static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
     {
       return 0.;
     }
-    static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+    static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
     {
       return 0.;
     }
@@ -168,9 +166,8 @@ struct TestParametersSinParab
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes{};
 
-  static param_float_t inverse_bilaplacian_coefficient(
-    const Point<space_dimT, param_float_t>& point,
-    const param_float_t time = 0.)
+  static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                       const param_float_t = 0.)
   {
     return pi;
   }
@@ -209,13 +206,13 @@ struct TestParametersSinParab
     return pi * analytic_result(point, time);
   }
 
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
-  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                             const param_float_t time = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                             const param_float_t = 0.)
   {
     return 0.;
   }
@@ -237,38 +234,37 @@ struct TestParametersEigs
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static constexpr std::array<unsigned int, 0U> neumann_laplcian_nodes{};
 
-  static param_float_t inverse_bilaplacian_coefficient(
-    const Point<space_dimT, param_float_t>& point,
-    const param_float_t time = 0.)
+  static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                       const param_float_t = 0.)
   {
     return 1.;
   }
 
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
 
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
     return 0.;
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
-    return analytic_result(point, time);
+    return analytic_result(point);
   }
   static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t time = 0.)
+                                               const param_float_t = 0.)
   {
-    return analytic_result(point, time);
+    return analytic_result(point);
   }
 
   static param_float_t initial(const Point<space_dimT, param_float_t>& point,
-                               const param_float_t time = 0.)
+                               const param_float_t = 0.)
   {
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
@@ -276,7 +272,7 @@ struct TestParametersEigs
     return approx;
   }
   static param_float_t initial_laplace(const Point<space_dimT, param_float_t>& point,
-                                       const param_float_t time = 0.)
+                                       const param_float_t = 0.)
   {
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
@@ -285,13 +281,13 @@ struct TestParametersEigs
     return approx;
   }
 
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
-                                     const param_float_t time = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
-  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                             const param_float_t time = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                             const param_float_t = 0.)
   {
     return 0.;
   }

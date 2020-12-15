@@ -1,19 +1,38 @@
 #!/bin/bash
 
-BOLD=$(tput bold)
-NORMAL=$(tput sgr0)
-RED='\033[0;31m'
-NC='\033[0m' # No Color
 
-echo -e "${RED}${BOLD}!! Initialize git-based submodules:${NC}"
+BOLD=$(tput bold)
+COL='\033[5;33m'
+NOR='\033[0m'
+
+
+echo -e "${COL}${BOLD}Initialize git-based submodules ...${NOR}"
 (set -x; git submodule update --init --recursive)
-echo -e "${RED}${BOLD}!! Remove previous build and __pycache__ directories:${NC}"
+
+echo -e "${COL}${BOLD}\nMake doxygen ...${NOR}"
+(set -x; cd doxygen; rm -rf html latex doxy_log.txt; doxygen Doxyfile > doxy_log.txt)
+
+echo -e "${COL}${BOLD}\nDo the tests as if we were GitHub ...${NOR}"
+echo -e "${COL}Remove previous build and __pycache__ directories:${NOR}"
 (set -x; rm -rf build output */output __pycache__ */__pycache__)
-echo -e "${RED}${BOLD}!! Make new build directory:${NC}"
+echo -e "${COL}Make new build directory:${NOR}"
 (set -x; mkdir -p build)
-echo -e "${RED}${BOLD}!! Do the cmake:${NC}"
-(set -x; cd build; cmake ..)
-echo -e "${RED}${BOLD}!! Build the executables:${NC}"
+echo -e "${COL}Configure:${NOR}"
+(set -x; cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
+           -DNOPYTHONTESTS=True ..)
+echo -e "${COL}Build tests (C++):${NOR}"
 (set -x; cd build; make)
-echo -e "${RED}${BOLD}!! Conduct the tests:${NC}"
+echo -e "${COL}Run the tests (C++):${NOR}"
+(set -x; cd build; make test)
+
+echo -e "${COL}${BOLD}\nDo the full testing and installing of components ...${NOR}"
+echo -e "${COL}Remove previous build and __pycache__ directories:${NOR}"
+(set -x; rm -rf build output */output __pycache__ */__pycache__)
+echo -e "${COL}Make new build directory:${NOR}"
+(set -x; mkdir -p build)
+echo -e "${COL}Configure:${NOR}"
+(set -x; cd build; cmake ..)
+echo -e "${COL}Build the tests (C++):${NOR}"
+(set -x; cd build; make)
+echo -e "${COL}Run the tests (C++):${NOR}"
 (set -x; cd build; make test)
