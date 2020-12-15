@@ -817,20 +817,20 @@ These loop classes can then also be used for related problems like the Bilaplaci
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 1$}}
-  & $i = 0$ && \textcolor{red}{3.90e-2} & --- && 2.59e-3 & --- && 1.77e-4 & ---  \\
-  & $i = 1$ && 5.18e-3 & 2.9 && 1.67e-4 & 4.0 && 5.64e-6 & 5.0  \\
+  & $i = 0$ && 3.90e-2 & --- && 259e-3 & --- && 1.77e-4 & ---  \\
+  & $i = 1$ && 5.18e-3 & 2.9 && 167e-4 & 4.0 && 5.64e-6 & 5.0  \\
   & $i = 2$ && 6.66e-4 & 3.0 && 1.06e-5 & 4.0 && 1.77e-7 & 5.0  \\
   & $i = 3$ && 8.44e-5 & 3.0 && 6.64e-7 & 4.0 && 5.53e-9 & 5.0  \\
   & $i = 4$ && 1.06e-5 & 3.0 && 4.15e-8 & 4.0 && 1.72e-10 & 5.0  \\
-  & $i = 5$ && 1.33e-5 & 3.0 && 2.60e-9 & 4.0 && 5.40e-12 & 5.0  \\
+  & $i = 5$ && 1.33e-6 & 3.0 && 2.60e-9 & 4.0 && 5.40e-12 & 5.0  \\
   \midrule
   \multirow{6}{*}{\rotatebox[origin=c]{90}{$\globDim = 2$}}
-  & $i = 0$ && 2.55e-2 & --- && 3.14e-3 & --- && 2.08e-4 & ---  \\
-  & $i = 1$ && 4.83e-3 & 2.4 && 2.10e-4 & 3.9 && 6.98e-6 & 4.9  \\
-  & $i = 2$ && 7.18e-4 & 2.8 && 1.37e-5 & 3.9 && 2.23e-7 & 5.0  \\
-  & $i = 3$ && 1.01e-4 & 2.8 && 8.77e-7 & 4.0 && 7.08e-9 & 5.0  \\
-  & $i = 4$ && 1.41e-5 & 2.8 && 5.59e-8 & 4.0 && 2.25e-10 & 5.0  \\
-  & $i = 5$ && 1.98e-6 & 2.8 && 3.62e-9 & 3.9 && 7.27e-12 & 5.0  \\
+  & $i = 0$ && 2.57e-2 & --- && 2.87e-3 & --- && 189e-4 & ---  \\
+  & $i = 1$ && 4.82e-3 & 2.4 && 1.97e-4 & 3.9 && 6.55e-6 & 4.9  \\
+  & $i = 2$ && 7.14e-4 & 2.8 && 1.31e-5 & 3.9 && 2.12e-7 & 4.9  \\
+  & $i = 3$ && 1.01e-4 & 2.8 && 8.48e-7 & 4.0 && 6.82e-9 & 5.0  \\
+  & $i = 4$ && 1.41e-5 & 2.8 && 5.46e-8 & 4.0 && 2.19e-10 & 5.0  \\
+  & $i = 5$ && 1.97e-6 & 2.8 && 3.56e-9 & 3.9 && 7.14e-12 & 4.9  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) for elliptic example of diffusion on a unit square.}\label{TAB:diff_elpp_conv}
@@ -843,12 +843,12 @@ These loop classes can then also be used for related problems like the Bilaplaci
   \cmidrule{3-4} \cmidrule{6-7} \cmidrule{9-10}
   \multicolumn{1}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
-  $i = 0$ && \textcolor{red}{8.24e-2} & --- && 5.81e-2 & --- && 2.38e-2 & ---  \\
-  $i = 1$ && 1.66e-2 & 2.3 && 9.61e-3 & 2.6 && 3.20e-3 & 2.9  \\
-  $i = 2$ && 3.60e-3 & 2.2 && 1.61e-3 & 2.6 && 4.16e-4 & 2.9  \\
-  $i = 3$ && 8.28e-4 & 2.1 && 2.76e-4 & 2.5 && 5.31e-5 & 3.0  \\
-  $i = 4$ && 1.97e-4 & 2.1 && 4.79e-5 & 2.5 && 6.71e-6 & 3.0  \\
-  $i = 5$ && 4.82e-5 & 2.0 && 8.39e-6 & 2.5 && 8.43e-7 & 3.0  \\
+  $i = 0$ && 9.03e-2 & --- && 6.90e-2 & --- && 3.01e-2 & ---  \\
+  $i = 1$ && 1.82e-2 & 2.3 && 1.13e-2 & 2.6 && 4.05e-3 & 2.9  \\
+  $i = 2$ && 3.95e-3 & 2.2 && 1.90e-3 & 2.6 && 5.27e-4 & 2.9  \\
+  $i = 3$ && 9.07e-4 & 2.1 && 3.26e-4 & 2.5 && 6.72e-5 & 3.0  \\
+  $i = 4$ && 2.16e-4 & 2.1 && 5.67e-5 & 2.5 && 8.48e-6 & 3.0  \\
+  $i = 5$ && 5.28e-5 & 2.0 && 9.92e-6 & 2.5 && 1.06e-6 & 3.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph.}\label{TAB:diff_hg_elpp_conv}
