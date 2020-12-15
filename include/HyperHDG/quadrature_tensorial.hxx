@@ -252,7 +252,7 @@ std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_
  * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
  * \tparam  max_quad_degree   Desired degree of accuracy.
  * \tparam  quadrature_t      The quadrature rule applied.
- * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam   shape_t           Type of one-dimensional shape functions.
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of
  *                            quadrature points (the shape functions are evaluated at).
@@ -289,7 +289,7 @@ shape_fcts_at_quad_points()
  * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
  * \tparam  max_quad_degree   Desired degree of accuracy.
  * \tparam  quadrature_t      The quadrature rule applied.
- * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam   shape_t           Type of one-dimensional shape functions.
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of
  *                            quadrature points (the shape functions' derivatives are evaluated).

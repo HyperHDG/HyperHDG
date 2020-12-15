@@ -62,9 +62,6 @@ class Linear
  public:
   /*!***********************************************************************************************
    * \brief   Construct affine-linear mapping.
-   *
-   * \param   translation   The translation of the afine-linear mapping.
-   * \param   matrix        The matrix of the affine-linear mapping.
    ************************************************************************************************/
   Linear() = default;
   /*!***********************************************************************************************
