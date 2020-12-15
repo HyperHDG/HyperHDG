@@ -271,7 +271,7 @@ class DiffusionUniform
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
+  lSol_float_t calc_L2_error_squared(const SmallMatT& UNUSED(lambda_values),
                                      const lSol_float_t UNUSED(time) = 0.) const
   {
     return 0.;
