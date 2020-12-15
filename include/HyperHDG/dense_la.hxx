@@ -691,7 +691,7 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> mat_times_mat_unfit(
   const SmallMat<n_rowsA, n_colsA, mat_entry_t>& A,
   const SmallMat<n_rowsB, n_colsB, mat_entry_t>& B)
 {
-  static constexpr rank = std::min(n_colsA, n_rowsB);
+  static constexpr unsigned int rank = std::min(n_colsA, n_rowsB);
   SmallMat<n_rowsA, n_colsB, mat_entry_t> result;
   for (unsigned int colB = 0; colB < n_colsB; ++colB)
     for (unsigned int colA = 0; colA < rank; ++colA)
