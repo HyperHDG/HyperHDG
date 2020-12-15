@@ -157,10 +157,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Return matrix Q of the QR decomposition of the linear transoformation.
      **********************************************************************************************/
-    const SmallSquareMat<space_dimT, pt_coord_t> mat_q()
-    {
-      return mapping.mat_q();
-    }
+    const SmallSquareMat<space_dimT, pt_coord_t> mat_q() { return mapping.mat_q(); }
     /*!*********************************************************************************************
      * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
      **********************************************************************************************/

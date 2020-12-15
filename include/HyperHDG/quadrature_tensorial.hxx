@@ -802,13 +802,15 @@ class IntegratorTensorial
    * \param   geom          Geometrical information.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
-  template <typename GeomT, unsigned int poly_deg_i = max_poly_degree, unsigned int poly_deg_j = max_poly_degree>
+  template <typename GeomT,
+            unsigned int poly_deg_i = max_poly_degree,
+            unsigned int poly_deg_j = max_poly_degree>
   SmallVec<GeomT::hyEdge_dim(), return_t> integrate_vol_nablaphiphi(const unsigned int i,
                                                                     const unsigned int j,
                                                                     GeomT& geom) const
   {
     static_assert(poly_deg_i <= max_poly_degree && poly_deg_j <= max_poly_degree,
-      "The maximum polynomial degrees must be larger than or equal to the given ones.");
+                  "The maximum polynomial degrees must be larger than or equal to the given ones.");
     SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
       index_decompose<GeomT::hyEdge_dim(), poly_deg_i + 1>(i);
