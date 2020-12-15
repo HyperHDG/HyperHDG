@@ -795,28 +795,32 @@ class IntegratorTensorial
    * \brief   Integrate gradient of shape function times other shape function over some geometry.
    *
    * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  poly_deg_i    Polynomial degree of shape functions associated to i.
+   * \tparam  poly_deg_j    Polynomial degree of shape functions associated to j.
    * \param   i             Local index of local shape function with gradient.
    * \param   j             Local index of local shape function.
    * \param   geom          Geometrical information.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
-  template <typename GeomT>
+  template <typename GeomT, unsigned int poly_deg_i = max_poly_degree, unsigned int poly_deg_j = max_poly_degree>
   SmallVec<GeomT::hyEdge_dim(), return_t> integrate_vol_nablaphiphi(const unsigned int i,
                                                                     const unsigned int j,
                                                                     GeomT& geom) const
   {
+    static_assert(poly_deg_i <= max_poly_degree && poly_deg_j <= max_poly_degree,
+      "The maximum polynomial degrees must be larger than or equal to the given ones.");
     SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
-      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+      index_decompose<GeomT::hyEdge_dim(), poly_deg_i + 1>(i);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
-      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+      index_decompose<GeomT::hyEdge_dim(), poly_deg_j + 1>(j);
     for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
       for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         if (dim == dim_fct)
           integral[dim] *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
         else
           integral[dim] *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    return geom.area() * mat_times_mat_unfit(geom.mat_q(), integral / transposed(geom.mat_r()));
+    return geom.area() * integral / transposed(geom.mat_r());
   }
   /*!***********************************************************************************************
    * \brief   Integrate gradient of shape functions times other function over some geometry.
@@ -921,8 +925,8 @@ class IntegratorTensorial
             nabla_phi_i[dim_fct] *= shape_fcts_at_quad_[dec_i[dim]][dec_q[dim]];
         }
       }
-      integral += quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) *
-                  mat_times_mat_unfit(geom.mat_q(), nabla_phi_i / rT)[dim_der];
+      integral +=
+        quad_weight * fun(geom.map_ref_to_phys(quad_pt), time) * (nabla_phi_i / rT)[dim_der];
     }
     return geom.area() * integral;
   }

@@ -155,6 +155,13 @@ class File
      **********************************************************************************************/
     const SmallSquareMat<hyEdge_dimT, pt_coord_t>& mat_r() { return mapping.mat_r(); }
     /*!*********************************************************************************************
+     * \brief   Return matrix Q of the QR decomposition of the linear transoformation.
+     **********************************************************************************************/
+    const SmallSquareMat<space_dimT, pt_coord_t> mat_q()
+    {
+      return mapping.mat_q();
+    }
+    /*!*********************************************************************************************
      * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
      **********************************************************************************************/
     pt_coord_t area() { return std::abs(mapping.functional_determinant_hyEdge()); }

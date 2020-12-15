@@ -526,7 +526,7 @@ class DiffusionPostprocess
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
       {
         grad_int_vec =
-          integrator_pp.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(
+          integrator_pp.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry),poly_deg+1,poly_deg>(
             i, j, hy_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           vector[i] -= coefficients[dim * n_shape_fct_ + j] * grad_int_vec[dim];
