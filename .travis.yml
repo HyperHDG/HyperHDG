@@ -1,0 +1,25 @@
+language: cpp
+
+branches:
+    only:
+        - auto_doxy
+
+sudo: enabled
+
+before_install:
+      - sudo apt-get update
+      - sudo apt-get install -y doxygen
+
+script:
+    - make doxygen
+
+deploy:
+    provider: pages
+    skip-cleanup: true
+    github-token: $GITHUB_TOKEN
+    keep-history: false
+    on:
+        branch: auto_doxy
+    local-dir: doxygen/html
+    repo: AndreasRupp/HyperHDG
+    target-branch: gh-pages
