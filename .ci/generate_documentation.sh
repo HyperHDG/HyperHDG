@@ -56,10 +56,10 @@ cp -r ../doxygen/html .
 
 ##### Configure git.
 # Set the push default to simple i.e. push only the current branch.
-git config --global push.default simple
+#git config --global push.default simple
 # Pretend to be an user called Travis CI.
-git config user.name "Travis CI"
-git config user.email "travis@travis-ci.org"
+#git config user.name "Travis CI"
+#git config user.email "travis@travis-ci.org"
 
 # go back to first commit
 git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
