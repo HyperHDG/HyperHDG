@@ -1,3 +1,15 @@
+language: cpp
+
+branches:
+    only:
+        - auto_doxy
+
+sudo: enabled
+
+before_install:
+      - sudo apt-get update
+      - sudo apt-get install -y doxygen
+
 after_success:
   # Generate the docs only if master, the travis_build_docs is true and we can use secure variables
   - >-
