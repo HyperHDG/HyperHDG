@@ -47,43 +47,55 @@ struct Gaussian
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <unsigned int max_quad_degree, typename return_t = double>
-  static inline std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_points()
+  static inline std::array<return_t, compute_n_quad_points(max_quad_degree, 1)> quad_points()
   {
     constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
     static_assert(1 <= n_points && n_points <= 9, "Amount of points needs to be smaller than 10!");
     std::array<return_t, n_points> quad_points;
 
     if constexpr (n_points == 1)
-      quad_points = {0.};
+      quad_points = {static_cast<return_t>(0.)};
     if constexpr (n_points == 2)
-      quad_points = {-std::sqrt(1. / 3.), std::sqrt(1. / 3.)};
+      quad_points = {static_cast<return_t>(-std::sqrt(1. / 3.)),
+                     static_cast<return_t>(std::sqrt(1. / 3.))};
     if constexpr (n_points == 3)
-      quad_points = {-std::sqrt(3. / 5.), 0., std::sqrt(3. / 5.)};
+      quad_points = {static_cast<return_t>(-std::sqrt(3. / 5.)), static_cast<return_t>(0.),
+                     static_cast<return_t>(std::sqrt(3. / 5.))};
     if constexpr (n_points == 4)
-      quad_points = {-std::sqrt(3. / 7. + 2. / 7. * std::sqrt(6. / 5.)),
-                     -std::sqrt(3. / 7. - 2. / 7. * std::sqrt(6. / 5.)),
-                     std::sqrt(3. / 7. - 2. / 7. * std::sqrt(6. / 5.)),
-                     std::sqrt(3. / 7. + 2. / 7. * std::sqrt(6. / 5.))};
+      quad_points = {static_cast<return_t>(-std::sqrt(3. / 7. + 2. / 7. * std::sqrt(6. / 5.))),
+                     static_cast<return_t>(-std::sqrt(3. / 7. - 2. / 7. * std::sqrt(6. / 5.))),
+                     static_cast<return_t>(std::sqrt(3. / 7. - 2. / 7. * std::sqrt(6. / 5.))),
+                     static_cast<return_t>(std::sqrt(3. / 7. + 2. / 7. * std::sqrt(6. / 5.)))};
     if constexpr (n_points == 5)
-      quad_points = {-std::sqrt(5. + 2. * std::sqrt(10. / 7.)) / 3.,
-                     -std::sqrt(5. - 2. * std::sqrt(10. / 7.)) / 3., 0.,
-                     std::sqrt(5. - 2. * std::sqrt(10. / 7.)) / 3.,
-                     std::sqrt(5. + 2. * std::sqrt(10. / 7.)) / 3.};
+      quad_points = {static_cast<return_t>(-std::sqrt(5. + 2. * std::sqrt(10. / 7.)) / 3.),
+                     static_cast<return_t>(-std::sqrt(5. - 2. * std::sqrt(10. / 7.)) / 3.),
+                     static_cast<return_t>(0.),
+                     static_cast<return_t>(std::sqrt(5. - 2. * std::sqrt(10. / 7.)) / 3.),
+                     static_cast<return_t>(std::sqrt(5. + 2. * std::sqrt(10. / 7.)) / 3.)};
     if constexpr (n_points == 6)
-      quad_points = {0.6612093864662645, -0.6612093864662645, -0.2386191860831969,
-                     0.2386191860831969, -0.9324695142031521, 0.9324695142031521};
+      quad_points = {
+        static_cast<return_t>(0.6612093864662645),  static_cast<return_t>(-0.6612093864662645),
+        static_cast<return_t>(-0.2386191860831969), static_cast<return_t>(0.2386191860831969),
+        static_cast<return_t>(-0.9324695142031521), static_cast<return_t>(0.9324695142031521)};
     if constexpr (n_points == 7)
-      quad_points = {0.0000000000000000,  0.4058451513773972, -0.4058451513773972,
-                     -0.7415311855993945, 0.7415311855993945, -0.9491079123427585,
-                     0.9491079123427585};
+      quad_points = {
+        static_cast<return_t>(0.0000000000000000),  static_cast<return_t>(0.4058451513773972),
+        static_cast<return_t>(-0.4058451513773972), static_cast<return_t>(-0.7415311855993945),
+        static_cast<return_t>(0.7415311855993945),  static_cast<return_t>(-0.9491079123427585),
+        static_cast<return_t>(0.9491079123427585)};
     if constexpr (n_points == 8)
-      quad_points = {-0.1834346424956498, 0.1834346424956498,  -0.5255324099163290,
-                     0.5255324099163290,  -0.7966664774136267, 0.7966664774136267,
-                     -0.9602898564975363, 0.9602898564975363};
+      quad_points = {
+        static_cast<return_t>(-0.1834346424956498), static_cast<return_t>(0.1834346424956498),
+        static_cast<return_t>(-0.5255324099163290), static_cast<return_t>(0.5255324099163290),
+        static_cast<return_t>(-0.7966664774136267), static_cast<return_t>(0.7966664774136267),
+        static_cast<return_t>(-0.9602898564975363), static_cast<return_t>(0.9602898564975363)};
     if constexpr (n_points == 9)
-      quad_points = {0.0000000000000000,  -0.8360311073266358, 0.8360311073266358,
-                     -0.9681602395076261, 0.9681602395076261,  -0.3242534234038089,
-                     0.3123470770400029,  0.2606106964029354,  0.2606106964029354};
+      quad_points = {
+        static_cast<return_t>(0.0000000000000000), static_cast<return_t>(-0.8360311073266358),
+        static_cast<return_t>(0.8360311073266358), static_cast<return_t>(-0.9681602395076261),
+        static_cast<return_t>(0.9681602395076261), static_cast<return_t>(-0.3242534234038089),
+        static_cast<return_t>(0.3123470770400029), static_cast<return_t>(0.2606106964029354),
+        static_cast<return_t>(0.2606106964029354)};
 
     hy_assert(n_points == quad_points.size(),
               "The number of points should equal the size of the array to be returned. In this "
@@ -110,41 +122,54 @@ struct Gaussian
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <unsigned int max_quad_degree, typename return_t = double>
-  static inline std::array<return_t, compute_n_quad_points(max_quad_degree)> quad_weights()
+  static inline std::array<return_t, compute_n_quad_points(max_quad_degree, 1)> quad_weights()
   {
     constexpr unsigned int n_points = compute_n_quad_points(max_quad_degree);
     static_assert(1 <= n_points && n_points <= 9, "Amount of points needs to be smaller than 10!");
     std::array<return_t, n_points> quad_weights;
 
     if constexpr (n_points == 1)
-      quad_weights = {2.};
+      quad_weights = {static_cast<return_t>(2.)};
     if constexpr (n_points == 2)
-      quad_weights = {1., 1.};
+      quad_weights = {static_cast<return_t>(1.), static_cast<return_t>(1.)};
     if constexpr (n_points == 3)
-      quad_weights = {5. / 9., 8. / 9., 5. / 9.};
+      quad_weights = {static_cast<return_t>(5. / 9.), static_cast<return_t>(8. / 9.),
+                      static_cast<return_t>(5. / 9.)};
     if constexpr (n_points == 4)
-      quad_weights = {1. / 36. * (18. - std::sqrt(30.)), 1. / 36. * (18. + std::sqrt(30.)),
-                      1. / 36. * (18. + std::sqrt(30.)), 1. / 36. * (18. - std::sqrt(30.))};
+      quad_weights = {static_cast<return_t>(1. / 36. * (18. - std::sqrt(30.))),
+                      static_cast<return_t>(1. / 36. * (18. + std::sqrt(30.))),
+                      static_cast<return_t>(1. / 36. * (18. + std::sqrt(30.))),
+                      static_cast<return_t>(1. / 36. * (18. - std::sqrt(30.)))};
     if constexpr (n_points == 5)
-      quad_weights = {1. / 900. * (322. - 13. * std::sqrt(70.)),
-                      1. / 900. * (322. + 13. * std::sqrt(70.)), 1. / 900. * (322. + 190.),
-                      1. / 900. * (322. + 13. * std::sqrt(70.)),
-                      1. / 900. * (322. - 13. * std::sqrt(70.))};
+      quad_weights = {static_cast<return_t>(1. / 900. * (322. - 13. * std::sqrt(70.))),
+                      static_cast<return_t>(1. / 900. * (322. + 13. * std::sqrt(70.))),
+                      static_cast<return_t>(1. / 900. * (322. + 190.)),
+                      static_cast<return_t>(1. / 900. * (322. + 13. * std::sqrt(70.))),
+                      static_cast<return_t>(1. / 900. * (322. - 13. * std::sqrt(70.)))};
     if constexpr (n_points == 6)
-      quad_weights = {0.3607615730481386, 0.3607615730481386, 0.4679139345726910,
-                      0.4679139345726910, 0.1713244923791704, 0.1713244923791700};
+      quad_weights = {
+        static_cast<return_t>(0.3607615730481386), static_cast<return_t>(0.3607615730481386),
+        static_cast<return_t>(0.4679139345726910), static_cast<return_t>(0.4679139345726910),
+        static_cast<return_t>(0.1713244923791704), static_cast<return_t>(0.1713244923791700)};
     if constexpr (n_points == 7)
-      quad_weights = {0.4179591836734694, 0.3818300505051189, 0.3818300505051189,
-                      0.2797053914892766, 0.2797053914892766, 0.1294849661688697,
-                      0.1294849661688697};
+      quad_weights = {
+        static_cast<return_t>(0.4179591836734694), static_cast<return_t>(0.3818300505051189),
+        static_cast<return_t>(0.3818300505051189), static_cast<return_t>(0.2797053914892766),
+        static_cast<return_t>(0.2797053914892766), static_cast<return_t>(0.1294849661688697),
+        static_cast<return_t>(0.1294849661688697)};
     if constexpr (n_points == 8)
-      quad_weights = {0.3626837833783620, 0.3626837833783620, 0.3137066458778873,
-                      0.3137066458778873, 0.2223810344533745, 0.2223810344533745,
-                      0.1012285362903763, 0.1012285362903763};
+      quad_weights = {
+        static_cast<return_t>(0.3626837833783620), static_cast<return_t>(0.3626837833783620),
+        static_cast<return_t>(0.3137066458778873), static_cast<return_t>(0.3137066458778873),
+        static_cast<return_t>(0.2223810344533745), static_cast<return_t>(0.2223810344533745),
+        static_cast<return_t>(0.1012285362903763), static_cast<return_t>(0.1012285362903763)};
     if constexpr (n_points == 9)
-      quad_weights = {0.3302393550012598, 0.1806481606948574, 0.1806481606948574,
-                      0.0812743883615744, 0.0812743883615744, 0.3123470770400029,
-                      0.3123470770400029, 0.2606106964029354, 0.2606106964029354};
+      quad_weights = {
+        static_cast<return_t>(0.3302393550012598), static_cast<return_t>(0.1806481606948574),
+        static_cast<return_t>(0.1806481606948574), static_cast<return_t>(0.0812743883615744),
+        static_cast<return_t>(0.0812743883615744), static_cast<return_t>(0.3123470770400029),
+        static_cast<return_t>(0.3123470770400029), static_cast<return_t>(0.2606106964029354),
+        static_cast<return_t>(0.2606106964029354)};
 
     hy_assert(n_points == quad_weights.size(),
               "The number of points should equal the size of the array to be returned. In this "
@@ -227,7 +252,7 @@ std::array<return_t, compute_n_quad_points<quadrature_t>(max_quad_degree)> quad_
  * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
  * \tparam  max_quad_degree   Desired degree of accuracy.
  * \tparam  quadrature_t      The quadrature rule applied.
- * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam   shape_t           Type of one-dimensional shape functions.
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of
  *                            quadrature points (the shape functions are evaluated at).
@@ -264,7 +289,7 @@ shape_fcts_at_quad_points()
  * \tparam  max_poly_degree   Maximum degree of evaluated polynomials.
  * \tparam  max_quad_degree   Desired degree of accuracy.
  * \tparam  quadrature_t      The quadrature rule applied.
- * \param   shape_t           Type of one-dimensional shape functions.
+ * \tparam   shape_t           Type of one-dimensional shape functions.
  * \tparam  return_t          Floating type specification. Default is double.
  * \retval  quad_vals         \c std::array of polynomial degrees containing \c std::array of
  *                            quadrature points (the shape functions' derivatives are evaluated).
@@ -277,7 +302,7 @@ template <unsigned int max_poly_degree,
           typename quadrature_t,
           typename shape_t,
           typename return_t = double>
-std::array<std::array<return_t, quadrature_t::template compute_n_quad_points(max_quad_degree)>,
+std::array<std::array<return_t, quadrature_t::compute_n_quad_points(max_quad_degree)>,
            max_poly_degree + 1>
 shape_ders_at_quad_points()
 {
@@ -769,22 +794,31 @@ class IntegratorTensorial
   /*!***********************************************************************************************
    * \brief   Integrate gradient of shape function times other shape function over some geometry.
    *
+   * \note    poly_deg_i and poly_deg_j must be set to max_poly_degree (which is also their default)
+   *          if the basis is not hierarchic.
+   *
    * \tparam  GeomT         Geometry which is the integration domain.
+   * \tparam  poly_deg_i    Polynomial degree of shape functions associated to i.
+   * \tparam  poly_deg_j    Polynomial degree of shape functions associated to j.
    * \param   i             Local index of local shape function with gradient.
    * \param   j             Local index of local shape function.
    * \param   geom          Geometrical information.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
-  template <typename GeomT>
+  template <typename GeomT,
+            unsigned int poly_deg_i = max_poly_degree,
+            unsigned int poly_deg_j = max_poly_degree>
   SmallVec<GeomT::hyEdge_dim(), return_t> integrate_vol_nablaphiphi(const unsigned int i,
                                                                     const unsigned int j,
                                                                     GeomT& geom) const
   {
+    static_assert(poly_deg_i <= max_poly_degree && poly_deg_j <= max_poly_degree,
+                  "The maximum polynomial degrees must be larger than or equal to the given ones.");
     SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
-      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(i);
+      index_decompose<GeomT::hyEdge_dim(), poly_deg_i + 1>(i);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
-      index_decompose<GeomT::hyEdge_dim(), max_poly_degree + 1>(j);
+      index_decompose<GeomT::hyEdge_dim(), poly_deg_j + 1>(j);
     for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
       for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         if (dim == dim_fct)
