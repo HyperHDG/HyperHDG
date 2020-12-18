@@ -46,7 +46,7 @@ DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
 
 # Get the current gh-pages branch
-git clone -b gh-pages git@github.com:$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone -b gh-pages https://github.com:$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Copy DoxygenLayout.xml here
@@ -94,7 +94,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
     # Force push to the remote gh-pages branch.
     # The ouput is redirected to /dev/null to hide any sensitive credential data
     # that might otherwise be exposed.
-    git push --force "git@github.com:$GH_REPO_ORG/$GH_REPO_NAME.git" > /dev/null 2>&1
+    git push --force "https://github.com:$GH_REPO_ORG/$GH_REPO_NAME.git" > /dev/null 2>&1
 else
     echo '' >&2
     echo 'Warning: No documentation (html) files have been found!' >&2
