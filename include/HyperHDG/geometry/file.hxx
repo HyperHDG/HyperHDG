@@ -41,7 +41,7 @@ namespace Geometry
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
-          template <typename> typename vectorT = std::vector,
+          template <typename...> typename vectorT = std::vector,
           typename pointT = Point<space_dimT, float>,
           template <unsigned int, unsigned int, typename> typename mapping_tM = Mapping::Linear,
           unsigned int hyEdge_dimTM = hyEdge_dimT,
@@ -154,6 +154,10 @@ class File
      * \brief   Return reduced matrix R of the QR decomposition.
      **********************************************************************************************/
     const SmallSquareMat<hyEdge_dimT, pt_coord_t>& mat_r() { return mapping.mat_r(); }
+    /*!*********************************************************************************************
+     * \brief   Return matrix Q of the QR decomposition of the linear transoformation.
+     **********************************************************************************************/
+    const SmallSquareMat<space_dimT, pt_coord_t> mat_q() { return mapping.mat_q(); }
     /*!*********************************************************************************************
      * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
      **********************************************************************************************/

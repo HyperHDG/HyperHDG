@@ -32,7 +32,7 @@ namespace Topology
  **************************************************************************************************/
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
-          template <typename> typename vectorT = std::vector,
+          template <typename...> typename vectorT = std::vector,
           typename pointT = Point<space_dimT, float>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
@@ -79,10 +79,7 @@ class File
     /*!*********************************************************************************************
      * \brief   Return orienation of hypernode.
      **********************************************************************************************/
-    const NodeOrientationT get_hyNode_oriantation(unsigned int node) const
-    {
-      return NodeOrientationT();
-    }
+    const NodeOrientationT get_hyNode_oriantation(unsigned int) const { return NodeOrientationT(); }
   };  // end of class hyEdge
 
  public:

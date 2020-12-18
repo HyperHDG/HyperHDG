@@ -35,7 +35,7 @@ int do_test()
                        std::vector<test_float_t> >
     diffusion_problem(num_elements, num_elements, (test_float_t)1.);
 
-  vector<test_float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
+  vector<test_float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = (test_float_t)1.;
   vectorDirichlet[vectorDirichlet.size() - 1] = (test_float_t)0.;
 

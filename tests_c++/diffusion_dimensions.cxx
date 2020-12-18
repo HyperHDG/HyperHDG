@@ -39,7 +39,7 @@ int do_test_uniform()
                        LocalSolver::DiffusionUniform<1, 1, 2, float_t>, std::vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
+  vector<float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
@@ -153,7 +153,7 @@ int do_test_standard()
                        LocalSolver::Diffusion<1, 1, 2, TestParameters, float_t>, vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.template return_zero_vector();
+  vector<float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
@@ -270,7 +270,7 @@ int do_test_standard_dir()
                        vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorRHS = diffusion_problem.template return_zero_vector();
+  vector<float_t> vectorRHS = diffusion_problem.return_zero_vector();
   vectorRHS = diffusion_problem.total_flux_vector(vectorRHS);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;

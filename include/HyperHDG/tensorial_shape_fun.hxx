@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/hypercube.hxx>
 #include <HyperHDG/shape_fun_1d.hxx>
 
 #include <array>
@@ -64,11 +65,11 @@ class TensorialShapeFunctionEvaluation
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
-  static constexpr unsigned int n_shapefun_ = std::pow(polynomial_degree + 1, dimT);
+  static constexpr unsigned int n_shapefun_ = Hypercube<dimT>::pow(polynomial_degree + 1);
   /*!***********************************************************************************************
    * \brief   Number of dimT-dimensional abscissa values.
    ************************************************************************************************/
-  static constexpr unsigned int n_points_ = std::pow(abscissas_sizeT, dimT);
+  static constexpr unsigned int n_points_ = Hypercube<dimT>::pow(abscissas_sizeT);
   /*!***********************************************************************************************
    * \brief   Values of one-dimensional shape-functions at abscissas.
    ************************************************************************************************/

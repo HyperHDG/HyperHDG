@@ -49,7 +49,7 @@ bool is_unique(const vectorT& vec)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename>
+          template <typename...>
           typename vectorT,
           typename pointT,
           typename hyEdge_index_t = unsigned int,
@@ -163,7 +163,7 @@ struct DomainInfo
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename> typename vectorT = std::vector,
+          template <typename...> typename vectorT = std::vector,
           typename pointT = Point<space_dim, float>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
@@ -352,7 +352,7 @@ read_domain_geo(const std::string& filename)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename> typename vectorT = std::vector,
+          template <typename...> typename vectorT = std::vector,
           typename pointT = Point<space_dim, float>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,

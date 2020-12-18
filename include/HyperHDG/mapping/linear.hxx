@@ -62,9 +62,6 @@ class Linear
  public:
   /*!***********************************************************************************************
    * \brief   Construct affine-linear mapping.
-   *
-   * \param   translation   The translation of the afine-linear mapping.
-   * \param   matrix        The matrix of the affine-linear mapping.
    ************************************************************************************************/
   Linear() = default;
   /*!***********************************************************************************************
@@ -155,6 +152,10 @@ class Linear
   {
     return (phy_points - translation_) / matrix_;
   }
+  /*!***********************************************************************************************
+   * \brief   Return matrix Q of the QR decomposition.
+   ************************************************************************************************/
+  const SmallSquareMat<space_dimT, map_float_t>& mat_q() const { return matrix_q_; }
   /*!***********************************************************************************************
    * \brief   Return matrix R of the QR decomposition.
    ************************************************************************************************/
