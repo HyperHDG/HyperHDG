@@ -2,7 +2,7 @@ language: cpp
 
 branches:
     only:
-        - auto_doxy
+        - master
 
 sudo: enabled
 
@@ -19,7 +19,7 @@ deploy:
     github-token: $GITHUB_TOKEN
     keep-history: false
     on:
-        branch: auto_doxy
+        branch: master
     local-dir: doxygen/html
     repo: AndreasRupp/HyperHDG
     target-branch: gh-pages
