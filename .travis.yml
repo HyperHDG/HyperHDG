@@ -16,7 +16,7 @@ script:
 deploy:
     provider: pages
     skip-cleanup: true
-    github-token: $TRAVIS_GITHUB_TOKEN
+    github-token: $TRAVIS_ALL_RIGHTS_ON_REPO
     keep-history: false
     on:
         branch: auto_doxy
