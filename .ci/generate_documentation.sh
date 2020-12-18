@@ -1,16 +1,15 @@
 #!/bin/sh
-################################################################################
-# Title         : generateDocumentation.sh
-# Date created  : 2017
-# Notes         : original script from Jeroen de Bruijn
-__AUTHOR__="Francesco Romano"
+
+####################################################################################################
+# The original script is signed by Jeroen de Bruijn. A later version is signed by Francesco Romano.
+# This script is a further adaption of the script of Francesco Romano, which can be found under
+# https://gist.github.com/francesco-romano/351a6ae457860c14ee7e907f2b0fc1a5 (date: 20. Dec. 2020)
+#
 # Preconditions:
-# - Packages doxygen doxygen-doc doxygen-gui graphviz
-#   must be installed.
-# - Doxygen configuration file must have the destination directory empty and
-#   source code directory with a $(TRAVIS_BUILD_DIR) prefix.
-# - An gh-pages branch should already exist. See below for mor info on hoe to
-#   create a gh-pages branch.
+# - Packages doxygen doxygen-doc doxygen-gui graphviz must be installed.
+# - Doxygen configuration file must have the destination directory empty and source code directory
+#   with a $(TRAVIS_BUILD_DIR) prefix.
+# - An gh-pages branch should already exist in the github repository.
 #
 # Required global variables:
 # - TRAVIS_BUILD_NUMBER : The number of the current build.
@@ -58,8 +57,8 @@ cp -r ../doxygen/html .
 # Set the push default to simple i.e. push only the current branch.
 git config --global push.default simple
 # Pretend to be an user called Travis CI.
-git config user.name "AndreasRupp"
-git config user.email "HyperHDG@rupp.ink"
+#git config user.name "AndreasRupp"
+#git config user.email "HyperHDG@rupp.ink"
 
 # go back to first commit
 git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
