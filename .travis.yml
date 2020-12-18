@@ -19,15 +19,4 @@ after_success:
   #   if [[ "$TRAVIS_BRANCH" = "auto_doxy" && -n "$TRAVIS_BUILD_DOCS" && "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
       chmod 700 .ci/generate_documentation.sh;
       .ci/generate_documentation.sh || travis_terminate 1
-  #   fi
-
-deploy:
-    provider: pages
-    skip-cleanup: true
-    github-token: $TRAVIS_ALL_RIGHTS_ON_REPO
-    keep-history: false
-    on:
-        branch: auto_doxy
-    local-dir: code_doc
-    repo: AndreasRupp/HyperHDG
-    target-branch: gh-pages
+  #  fi

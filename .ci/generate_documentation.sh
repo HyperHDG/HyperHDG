@@ -96,7 +96,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
     # Force push to the remote gh-pages branch.
     # The ouput is redirected to /dev/null to hide any sensitive credential data
     # that might otherwise be exposed.
-    # git push --github-token=$TRAVIS_ALL_RIGHTS_ON_REPO
+    git push --force https://github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
     echo '' >&2
     echo 'Warning: No documentation (html) files have been found!' >&2
