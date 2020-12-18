@@ -20,15 +20,3 @@ after_success:
       chmod 700 .ci/generate_documentation.sh;
       .ci/generate_documentation.sh || travis_terminate 1
   #   fi
-
-deploy:
-  - provider: script
-    script: generate_documentation.sh
-    skip-cleanup: true
-    github-token: $GITHUB_TOKEN
-    keep-history: false
-    on:
-        branch: auto_doxy
-    local-dir: code_doc
-    repo: AndreasRupp/HyperHDG
-    target-branch: gh-pages
