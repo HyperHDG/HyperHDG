@@ -1,7 +1,7 @@
 after_success:
   # Generate the docs only if master, the travis_build_docs is true and we can use secure variables
   - >-
-    if [[ "$TRAVIS_BRANCH" = "master" && -n "$TRAVIS_BUILD_DOCS" && "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
+    if [[ "$TRAVIS_BRANCH" = "auto_doxy" && -n "$TRAVIS_BUILD_DOCS" && "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
       cd $PROJECT_DIR_ABS
       .ci/generate_documentation.sh || travis_terminate 1
     fi
