@@ -22,4 +22,4 @@ deploy:
         branch: auto_doxy
     local-dir: doxygen/html
     repo: AndreasRupp/HyperHDG
-    target-branch: gh-pages/html
+    target-branch: gh-pages/doxygen
