@@ -1,25 +1,7 @@
-language: cpp
-
-branches:
-    only:
-        - auto_doxy
-
-sudo: enabled
-
-before_install:
-      - sudo apt-get update
-      - sudo apt-get install -y doxygen
-
-script:
-    - make doxygen
-
-deploy:
-    provider: pages
-    skip-cleanup: true
-    github-token: $TRAVIS_ALL_RIGHTS_ON_REPO
-    keep-history: false
-    on:
-        branch: auto_doxy
-    local-dir: doxygen/html
-    repo: AndreasRupp/HyperHDG
-    target-branch: gh-pages/doxygen
+after_success:
+  # Generate the docs only if master, the travis_build_docs is true and we can use secure variables
+  - >-
+    if [[ "$TRAVIS_BRANCH" = "master" && -n "$TRAVIS_BUILD_DOCS" && "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
+      cd $PROJECT_DIR_ABS
+      .ci/generate_documentation.sh || travis_terminate 1
+    fi
