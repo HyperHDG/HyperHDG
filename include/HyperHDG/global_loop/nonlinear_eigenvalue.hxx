@@ -8,19 +8,6 @@
 #include <array>
 #include <cmath>
 
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_der, has_numerical_flux_der);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_initial, has_numerical_flux_initial);
-
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
@@ -44,6 +31,22 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class NonlinearEigenvalue
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_der, has_numerical_flux_der);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_initial, has_numerical_flux_initial);
+
+  /*!***********************************************************************************************
+   * \brief   Floating type is determined by floating type of large vector's entries.
+   ************************************************************************************************/
   using dof_value_t = typename LargeVecT::value_type;
 
  private:

@@ -15,11 +15,6 @@
 // #include <cmath>
 
 /*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
-
-/*!*************************************************************************************************
  * \brief   A class storing options for plotting.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
@@ -232,6 +227,10 @@ void plot(HyperGraphT& hyper_graph,
  **************************************************************************************************/
 namespace PlotFunctions
 {
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
 /*!*************************************************************************************************
  * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
  *
@@ -542,14 +541,15 @@ void plot_edge_values(HyperGraphT& hyper_graph,
       std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
       LocalSolverT::system_dimension()>
       local_values;
-    if constexpr (has_bulk_values<LocalSolverT, decltype(local_solver)(decltype(abscissas.data())&,
-                                                                       decltype(hyEdge_dofs)&,
-                                                                       decltype(time))>::value)
+    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT,
+                                                 decltype(local_values)(decltype(abscissas.data())&,
+                                                                        decltype(hyEdge_dofs)&,
+                                                                        decltype(time))>::value)
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
-    else if constexpr (has_bulk_values<LocalSolverT,
-                                       decltype(local_solver)(
+    else if constexpr (PlotFunctions::has_bulk_values<
+                         LocalSolverT, decltype(local_values)(
                                          decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
-                                         decltype(hyper_graph[he_number]), decltype(time))>::value)
+                                         decltype(hyper_graph[he_number])&, decltype(time))>::value)
     {
       auto geometry = hyper_graph[he_number];
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);

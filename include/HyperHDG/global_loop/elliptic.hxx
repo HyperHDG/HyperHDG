@@ -10,19 +10,6 @@
 #include <cmath>
 #include <vector>
 
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
-
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
@@ -46,6 +33,19 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class Elliptic
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
    ************************************************************************************************/

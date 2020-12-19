@@ -8,15 +8,6 @@
 #include <array>
 #include <cmath>
 
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_from_mass, has_numerical_flux_from_mass);
-
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
@@ -41,6 +32,15 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class MassApproxEigenvalue
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_mass, has_numerical_flux_from_mass);
+
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
    ************************************************************************************************/

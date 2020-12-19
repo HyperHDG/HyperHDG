@@ -8,11 +8,6 @@
 #include <array>
 #include <cmath>
 
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
-
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
@@ -37,6 +32,11 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class ShiftedInverseEigenvalue
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
    ************************************************************************************************/
