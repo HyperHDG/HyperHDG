@@ -63,8 +63,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
     -m "Commit: ${TRAVIS_COMMIT}"
 
   # Force push to the remote gh-pages branch.
-  git push --force \
-    https://AndreasRupp:$TEST_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
+  git push --force https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
   echo '' >&2
   echo 'Warning: No documentation (html) files have been found!' >&2
