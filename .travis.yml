@@ -14,9 +14,9 @@ script:
   - make doxygen
 
 after_success:
-    # Generate the docs only if we can use secure variables
-    if [[ "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
-      chmod 700 .ci/generate_documentation.sh;
-      .ci/generate_documentation.sh || travis_terminate 1
-    fi
+  # Generate the docs only if we can use secure variables
+  #if [[ "$TRAVIS_PULL_REQUEST" = "false" ]] ; then
+    chmod 700 .ci/generate_documentation.sh;
+    .ci/generate_documentation.sh || travis_terminate 1
+  #fi
 
