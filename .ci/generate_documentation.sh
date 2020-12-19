@@ -38,7 +38,8 @@ GH_REPO_NAME=HyperHDG_pages
 DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
 # Get the current gh-pages branch and enter its directory.
-git clone -b master https://github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone -b master \
+  https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
