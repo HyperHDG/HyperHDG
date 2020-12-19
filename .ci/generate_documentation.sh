@@ -64,7 +64,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
 
   # Force push to the remote gh-pages branch.
   git push --force \
-    https://AndreasRupp:$TRAVIS_ALL_RIGHTS_ON_REPO@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
+    https://AndreasRupp:$TEST_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
   echo '' >&2
   echo 'Warning: No documentation (html) files have been found!' >&2
