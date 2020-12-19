@@ -8,6 +8,27 @@
 #include <array>
 #include <cmath>
 
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(numerical_flux_initial, has_numerical_flux_initial);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(set_data, has_set_data);
+
 namespace GlobalLoop
 {
 /*!*************************************************************************************************
@@ -161,13 +182,13 @@ class Parabolic
       }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
+      if constexpr (has_numerical_flux_from_lambda<
+                      LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                               2 * TopologyT::hyEdge_dim()>&(
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+                                                 2 * TopologyT::hyEdge_dim()>&,
+                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                 2 * TopologyT::hyEdge_dim()>&)>::value)
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, time);
       else
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
@@ -218,13 +239,13 @@ class Parabolic
       }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+      if constexpr (has_numerical_flux_total<LocalSolverT,
+                                             std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                        2 * TopologyT::hyEdge_dim()>&(
+                                               std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                          2 * TopologyT::hyEdge_dim()>&,
+                                               std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                          2 * TopologyT::hyEdge_dim()>&)>::value)
       {
         local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, time);
       }
@@ -264,13 +285,10 @@ class Parabolic
                                                      hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+      if constexpr (has_set_data<LocalSolverT,
+                                 void(std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                 2 * TopologyT::hyEdge_dim()>&,
+                                      dof_value_t)>::value)
       {
         local_solver_.set_data(hyEdge_dofs, time);
       }
@@ -305,13 +323,11 @@ class Parabolic
         hyEdge_dofs[hyNode].fill(0.);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
+      if constexpr (has_numerical_flux_initial<
+                      LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                               2 * TopologyT::hyEdge_dim()>&(
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+                                                 2 * TopologyT::hyEdge_dim()>&)>::value)
       {
         local_solver_.numerical_flux_initial(hyEdge_dofs, time);
       }
@@ -355,13 +371,10 @@ class Parabolic
 
       // Turn degrees of freedom of x_vec that have been stored locally into local errors.
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+      if constexpr (has_calc_L2_error_squared<
+                      LocalSolverT, dof_value_t(std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                           2 * TopologyT::hyEdge_dim()>&,
+                                                dof_value_t)>::value)
       {
         result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
       }

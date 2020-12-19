@@ -341,12 +341,8 @@ class Elliptic
 
       // Turn degrees of freedom of x_vec that have been stored locally into local errors.
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (has_calc_L2_error_squared<LocalSolverT,
-                                              std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                         2 * TopologyT::hyEdge_dim()>&(
-                                                std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                           2 * TopologyT::hyEdge_dim()>&,
-                                                std::array<std::array<dof_value_t, n_dofs_per_node>,
+      if constexpr (has_calc_L2_error_squared<
+                      LocalSolverT, dof_value_t(std::array<std::array<dof_value_t, n_dofs_per_node>,
                                                            2 * TopologyT::hyEdge_dim()>&)>::value)
         result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
       else
