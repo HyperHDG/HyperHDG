@@ -37,7 +37,7 @@ GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG_pages
 DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
-# Get the current gh-pages branch and enter its directory.
+# Retrieve master branch of the repositoy containing the GitHub pages.
 git clone -b master \
   https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
@@ -65,7 +65,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
   git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUMBER}" \
     -m "Commit: ${TRAVIS_COMMIT}"
 
-  # Force push to the remote gh-pages branch.
+  # Force push to the remote GitHub pages branch.
   git push --force https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
   echo '' >&2
