@@ -33,8 +33,8 @@ set -e
 # Set global variables.
 # GH_REPO_ORG=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 1`
 # GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
-GH_REPO_ORG  = AndreasRupp
-GH_REPO_NAME = HyperHDG_pages
+GH_REPO_ORG=AndreasRupp
+GH_REPO_NAME=HyperHDG_pages
 DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
 # Get the current gh-pages branch and enter its directory.
