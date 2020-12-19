@@ -2,7 +2,7 @@ language: cpp
 
 branches:
   only:
-    - master
+    - auto_doxy
 
 sudo: enabled
 

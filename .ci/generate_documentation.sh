@@ -31,12 +31,14 @@ echo 'Setting up the script...'
 set -e
 
 # Set global variables.
-GH_REPO_ORG=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 1`
-GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
+# GH_REPO_ORG=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 1`
+# GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
+GH_REPO_ORG  = AndreasRupp
+GH_REPO_NAME = HyperHDG_pages
 DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
 # Get the current gh-pages branch and enter its directory.
-git clone -b gh-pages https://github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone -b master https://github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
