@@ -4,7 +4,7 @@ This repository contains the code to write a hybrid discontinuous Galerkin based
 defined on hypergraphs.
 
 
-## How to start?
+## How to setup HyperHDG?
 
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
@@ -35,6 +35,16 @@ To do so, enter the directory you want to clone HyperHDG into and do the followi
 3. Execute the script `setup.sh` to install HyperHDG by
 
        $ ./shell_scripts/setup.sh
+
+
+## How to write your own HyperHDG program?
+
+
+### Finding the documentations
+
+Having setup HyperHDG, the latest documentation is available by opening `doxygen/html/index.html` in
+the HyperHDG repository. Alternatively, you can find the full documentation on the [Doxygen page](
+https://andreasrupp.github.io/HyperHDG_pages/).
 
 
 ## How to contribute?
