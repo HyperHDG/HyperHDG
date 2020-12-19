@@ -10,7 +10,18 @@
 #include <cmath>
 #include <vector>
 
-HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, not_uses_geometry);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
 
 namespace GlobalLoop
 {
@@ -200,13 +211,13 @@ class Elliptic
       }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
+      if constexpr (has_numerical_flux_from_lambda<
+                      LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                               2 * TopologyT::hyEdge_dim()>&(
                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+                                                 2 * TopologyT::hyEdge_dim()>&,
+                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                 2 * TopologyT::hyEdge_dim()>&)>::value)
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, time);
       else
         local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
@@ -268,13 +279,13 @@ class Elliptic
       }
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+      if constexpr (has_numerical_flux_total<LocalSolverT,
+                                             std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                        2 * TopologyT::hyEdge_dim()>&(
+                                               std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                          2 * TopologyT::hyEdge_dim()>&,
+                                               std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                          2 * TopologyT::hyEdge_dim()>&)>::value)
       {
         local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, time);
       }
@@ -330,13 +341,13 @@ class Elliptic
 
       // Turn degrees of freedom of x_vec that have been stored locally into local errors.
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (not_uses_geometry<LocalSolverT,
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&(
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&,
-                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                   2 * TopologyT::hyEdge_dim()>&)>::value)
+      if constexpr (has_calc_L2_error_squared<LocalSolverT,
+                                              std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                         2 * TopologyT::hyEdge_dim()>&(
+                                                std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                           2 * TopologyT::hyEdge_dim()>&,
+                                                std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                           2 * TopologyT::hyEdge_dim()>&)>::value)
         result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
       else
         result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge, time);
