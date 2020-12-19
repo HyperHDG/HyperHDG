@@ -10,6 +10,8 @@
 #include <cmath>
 #include <vector>
 
+HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, not_uses_geometry);
+
 namespace GlobalLoop
 {
 /*!*************************************************************************************************

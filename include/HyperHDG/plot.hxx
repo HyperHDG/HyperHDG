@@ -14,6 +14,8 @@
 #include <iostream>
 // #include <cmath>
 
+HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
+
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
  *
@@ -538,7 +540,7 @@ void plot_edge_values(HyperGraphT& hyper_graph,
       LocalSolverT::system_dimension()>
       local_values;
     if constexpr (
-      not_uses_geometry<
+      has_bulk_values<
         LocalSolverT,
         std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&(
           std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&,
