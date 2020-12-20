@@ -48,8 +48,8 @@ doxygen:
 
 
 format:
-	clang-format -i reproducables_python/parameters/*.hxx examples/parameters/*.hxx tests_c++/*.cxx \
-		include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
+	clang-format -i reproducables_python/parameters/*.hxx examples/parameters/*.hxx examples/*.cxx \
+		tests_c++/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
 
 
 submodules:
