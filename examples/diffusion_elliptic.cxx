@@ -16,7 +16,7 @@ int main()
                        Geometry::UnitCube<hyEdge_dim, space_dim>,
                        NodeDescriptor::Cubic<hyEdge_dim, space_dim>,
                        LocalSolver::Diffusion<hyEdge_dim, poly_degree, 2 * poly_degree,
-                                              TestParametersSinEllipt, double> >
+                                              HG<hyEdge_dim>::DiffusionElliptic, double> >
     HDG_wrapper(std::vector<unsigned int>(space_dim, 1 << refinement));
 
   std::vector<double> vectorRHS = HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector());
