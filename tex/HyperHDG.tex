@@ -895,8 +895,48 @@ Additionally, we can plot the calculated solution after setting some plot option
 %
 Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories of the submodules need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing. Moreover, \hyperHDG needs to be linked to LAPACK, compiled with a standard of C++17, and the compiler needs to be able to find the parameters file in this example. Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
 
-\lstinputlisting[language=C++, firstline=1, lastline=45, firstnumber=1]{../examples/diffusion_elliptic.cxx}
+The code of the C++ program that does exactly the same as the aforementioned Python script can be found in the file \code{examples/\-diffusion\_elliptic.cxx}.
 
+Since for C++, we do not have \code{cython\_import} that finds all the necessary files, we need to include them by hand. Since, we want to conduct the same example again, we have to include the geometry and the topology of a unit cube, as well as the elliptic global loop and the diffusion solver. Additionally, we need a sparse linear algebra providing the CG solver. Last, but not least the parameters need to be included.
+%
+\lstinputlisting[language=C++, firstline=1, lastline=6, firstnumber=1]{../examples/diffusion_elliptic.cxx}
+%
+This has prepared us to define the \code{main} function which will surround the rest of the code
+%
+\lstinputlisting[language=C++, firstline=8, lastline=9, firstnumber=8]{../examples/diffusion_elliptic.cxx}
+%
+and starts with defining the very same parameters as before.
+%
+\lstinputlisting[language=C++, firstline=10, lastline=13, firstnumber=10]{../examples/diffusion_elliptic.cxx}
+%
+Next, we define the problem class, where the different components have exactly the same meaning as in the \code{hyperhdg\_\-constructor} of the Python script. The only difference consists in the fact that this class can immediately be instantiated, which has not been the case in Python, where \code{cython\_import} had to build it first.
+%
+\lstinputlisting[language=C++, firstline=15, lastline=20, firstnumber=15]{../examples/diffusion_elliptic.cxx}
+%
+The remainder of the program also works analogously to the Python script, i.e., we first define the right-hand side as negative, homogeneous residuum,
+%
+\lstinputlisting[language=C++, firstline=22, lastline=24, firstnumber=22]{../examples/diffusion_elliptic.cxx}
+%
+solve the global system of equations using the CG method,
+%
+\lstinputlisting[language=C++, firstline=26, lastline=26, firstnumber=26]{../examples/diffusion_elliptic.cxx}
+%
+and print the $L^2$ error.
+%
+\lstinputlisting[language=C++, firstline=28, lastline=28, firstnumber=28]{../examples/diffusion_elliptic.cxx}
+%
+At the end, we plot the solution
+%
+\lstinputlisting[language=C++, firstline=30, lastline=33, firstnumber=30]{../examples/diffusion_elliptic.cxx}
+%
+and end the program returning 0.
+%
+\lstinputlisting[language=C++, firstline=35, lastline=36, firstnumber=35]{../examples/diffusion_elliptic.cxx}
+%
+\subsection{Writing global loops}
+%
+\textcolor{red}{TODO}\arnote{TODO!}
+%
 % ---------------------------------------------------------------------
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------

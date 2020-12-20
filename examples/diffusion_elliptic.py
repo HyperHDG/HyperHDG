@@ -20,7 +20,7 @@ const.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
 const.node_descriptor = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
-const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+const.include_files   = ["examples/parameters/diffusion.hxx"]
 const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode      = debug_mode
 

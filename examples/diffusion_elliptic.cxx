@@ -3,7 +3,7 @@
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/sparse_la.hxx>
-#include <reproducables_python/parameters/diffusion.hxx>
+#include <examples/parameters/diffusion.hxx>
 
 int main()
 {
