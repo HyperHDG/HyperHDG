@@ -39,7 +39,7 @@ if num_iter != 0:
 
 print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
 
-HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic" )
+HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic_py" )
 HDG_wrapper.plot_option( "printFileNumber" , "false" )
 HDG_wrapper.plot_option( "scale" , "0.95" )
 HDG_wrapper.plot_solution(vectorSolution)
