@@ -161,7 +161,7 @@
 
 \begin{document}
 
-\title[\hyperHDG --- HDG on hypergraphs]{\hyperHDG --- Hybrid disontinuous Galerkin methods for PDEs on hypergraphs} 
+\title[\hyperHDG --- HDG on hypergraphs]{\hyperHDG --- Hybrid discontinuous Galerkin methods for PDEs on hypergraphs and self-intersecting surfaces} 
 
 \author{Andreas Rupp}
 \address{Interdisciplinary Center for Scientific Computing (IWR), Heidelberg University, Mathematikon, Im Neuenheimer Feld 205, 69120 Heidelberg, Germany}
@@ -221,7 +221,7 @@ Analogously, a hypergraph of which all hyperedges consist of $\locDim+1$ hyperno
 
 \paragraph{Cubic/simplicial (topological) embeddings of hypergraphs to global dimension $\globDim$}
 % 
-If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embedding to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\node \in \setNode$ the representation of a hypernode $\Node \in \SetNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be \emph{topologically embedded} into $\IR^\globDim$ if
+If one wants to represent the whole hypergraph at once (instead of only single hyperedges), an embedding to an $\globDim$ dimensional space is needed. To allow for an easy notation, we denote by $\Edge \in \SetEdge$ the representation of $\edge \in \setEdge$ as (relatively) open, but smoothly deformed hypercube/simplex, by $\Node \in \SetNode$ the representation of a hypernode $\node \in \setNode$ as (relatively) open (deformed) face, and set $\Graph = (\SetNode, \SetEdge)$. A cubic/simplicial hypergraph can be \emph{topologically embedded} into $\IR^\globDim$ if
 % 
 \begin{enumerate}
  \item there is a way to assemble all deformed hypercubes/simplices (representing the hyperedges) such that for two different hyperedges $\edge^+ \neq \edge^-$ and two hypernodes $\node^- \neq \node^+$, we have $\Edge^- \cap \Edge^+ = \emptyset$ and $\Node^- \cap \Node^+ = \emptyset$.
@@ -292,7 +292,7 @@ If the hypergraph can be topologically embedded to dimension $\globDim$ and carr
 
 \paragraph{Smoothness assumptions}
 % 
-We assume that all hyperedges $\IR^\globDim \supset \Edge \in \SetEdge$ allow for a $C^\infty$ diffeomorphism
+We assume that each hyperedge $\IR^\globDim \supset \Edge \in \SetEdge$ allows for a $C^\infty$ diffeomorphism
 % 
 \begin{equation*}
  \diffeo_\Edge \colon \; \IR^\locDim \supset \RefEdge ~\mapsto~ \Edge \subset \IR^\globDim,
@@ -300,17 +300,17 @@ We assume that all hyperedges $\IR^\globDim \supset \Edge \in \SetEdge$ allow fo
 % 
 where the reference element $\RefEdge$ is either a unit simplex of a unit hypercube.
 
-Thus, the $\Edge\in \setEdge$ are \emph{Riemannian manifolds}, i.e., they are real, smooth manifolds, and for all $x \in \Edge$, they are equipped with an inner product $(\cdot,\cdot)_{\tangent(x)}$ with respect to the \emph{tangent space} $\tangent(x)[\Edge] \subset \IR^\globDim$ of the manifold $\Edge$ evaluated at point $x$. If no confusion is possible, the expression $[\Edge]$ is dropped. We set the inner product as standard \emph{Euclidean scalar product}
+Thus, the $\Edge\in \SetEdge$ are \emph{Riemannian manifolds}, i.e., they are real, smooth manifolds, and for all $x \in \Edge$, they are equipped with an inner product $(\cdot,\cdot)_{\tangent(x)}$ with respect to the \emph{tangent space} $\tangent(x)[\Edge] \subset \IR^\globDim$ of the manifold $\Edge$ evaluated at point $x$. If no confusion is possible, the expression $[\Edge]$ is dropped. We set the inner product as standard \emph{Euclidean scalar product}
 % 
 \begin{equation*}
- (a,b)_{\tangent(x)} = (a,b)_{\IR^\globDim} =: (a,b) \qquad \text{ for all } a,b \in \tangent(x) \text{ and } x \in \Edge
+ (a,b)_{\tangent(x)} := (a,b)_{\IR^\globDim} =: (a,b) \qquad \text{ for all } a,b \in \tangent(x) \text{ and } x \in \Edge
 \end{equation*}
 % 
 and define $\| x \|^2 := (x,x)$ for $x \in \IR^\globDim$.
 
 \paragraph{Linear hypergraphs}
 % 
-A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation matrix is square if and only is $\locDim = \globDim$.
+A cubic/simplicial hypergraph is called \emph{linear} if all hyperedges $\SetEdge \ni \Edge \subset \IR^\globDim$ can be represented as image of an affine-linear mapping of a (reference) unit hypercube/simplex $\RefEdge \subset \IR^\locDim$. This implies that all faces are straight and that the transformation matrix is square if, and only if, $\locDim = \globDim$.
 % 
 % ---------------------------------------------------------------------
 \section{Elliptic model equation and interpretation}\label{SEC:model_eq}
@@ -359,7 +359,7 @@ turning the vector function $\vec q$ to a scalar and being defined for all hyppe
 % 
 Thus, \eqref{EQ:diffusion_mixed} is a direct generalization of the standard diffusion equation in the whole space---even with the same notation---if we manage to find proper direct generalizations of normals and differential operators.
 
-\eqref{EQ:int_cond} is the analog to the assumption that $\vec q \in H^\textup{div}$ resulting in $u \in H^2$. Moreover, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} can be equivalently rewritten assuming that $g_\text N \equiv 0$ on all $\Node \in \SetNodeInt$. Thus, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} will be formulated as
+\eqref{EQ:int_cond} is the analog to the assumption that $\vec q \in H^\textup{div}$ resulting in $u \in H^2$ (under appropriate regularity constraints). Moreover, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} can be equivalently rewritten assuming that $g_\text N \equiv 0$ on all $\Node \in \SetNodeInt$. Thus, \eqref{EQ:neu_cond} \& \eqref{EQ:int_cond} will be formulated as
 % 
 \begin{equation}\label{EQ:Neumann_cond1}
  \jump{\vec q} ~=~ g_\textup N \qquad \text{ on } \Node \in \SetNode \setminus \SetNodeDir
@@ -425,7 +425,7 @@ Accordingly, the \emph{derivative} is defined as
  \Der f(x) \colon \tangent(x) \to \IR, \qquad \text{ \eqref{EQ:direc_der} holds for all $v \in \tangent(x)$.}
 \end{equation*}
 % 
-Thus, $\Der f(x) \in \tangent^\star(x)$ which is the dual space of $\tangent (x)$ and there is a well-defined mapping $\Der f \colon \Edge \to \tangent^\star(x)$. According to Riesz representation theorem, there is a unique \emph{gradient} $\Nabla f \colon \Edge \to \tangent(x)$ with
+Thus, $\Der f(x) \in \tangent^\star(x)$ which is the dual space of $\tangent (x)$ and there is a well-defined mapping $\Der f \colon \Edge \to \tangent^\star(x)$. According to Riesz' representation theorem, there is a unique \emph{gradient} $\Nabla f \colon \Edge \to \tangent(x)$ with
 % 
 \begin{equation*}
  (\Nabla f(x), v) = [\Der f(x)](v) \qquad \forall x \in \Edge, \forall v \in \tangent(x).
@@ -1362,8 +1362,8 @@ Next, we use the approaches of the previous sections to approximate the smallest
   $i = 1$ && 8.66e-2 & 1.4 && 7.50e-2 & 1.7 && 2.91e-2 & 2.0  \\
   $i = 2$ && 3.60e-2 & 1.3 && 2.42e-2 & 1.6 && 7.29e-3 & 2.0  \\
   $i = 3$ && 1.62e-2 & 1.2 && 8.11e-3 & 1.6 && 1.82e-3 & 2.0  \\
-  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-3 & 1.5 && \textcolor{red}{6.71e-6} & 3.0  \\
-  $i = 5$ && 3.72e-3 & 1.0 && 9.71e-4 & 1.5 && 8.43e-7 & 3.0  \\
+  $i = 4$ && 7.66e-3 & 1.1 && 2.78e-3 & 1.5 && 4.55e-4 & 2.0  \\
+  $i = 5$ && 3.72e-3 & 1.0 && 9.71e-4 & 1.5 && 1.13e-4 & 2.0  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{$L^2$ errors (err) and estimated orders of convergence (eoc) of linear approximation to the diffusion equation for hypergraph using IP-H.}\label{TAB:diff_hg_el_conv_ip}
@@ -1393,7 +1393,7 @@ while the global coupling condition is formulated as
 % 
 The flux unknown can be obtained in an additional post-processing step via $\vec Q = - d \nabla U$. Nevertheless the most significant difference between the IP-H and the LDG-H methods consists in the fact that the local problems for IP-H are significantly smaller. However, one major drawback consists in the fact that the penalty parameter $\tau > 0$ needs to be chosen more carefully than for the LDG-H methods.
 
-A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprisingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H.
+A comparison of the total errors can be conducted evaluating the errors of Tables \ref{TAB:diff_el_conv_ip} \& \ref{TAB:diff_hg_el_conv_ip} and comparing them to their LDG-H analogues, i.e.\ Tables \ref{TAB:diff_el_conv} \& \ref{TAB:diff_hg_el_conv}. Here, we recognize that both schemes behave similarly if the convergence test is conducted on a standard domain (not a real hypergraph), while the surprisingly good results of LDG-H on real hypergraphs cannot be reproduced by IP-H. Interestingly, using GMRES for solving the (global) linear system of equations arising of IP-H on hypergraphs is significantly (by approximately one order of magnitude) faster than using CG.\arwarning{This appears somewhat strange to me!}
 % 
 \subsection{Advection--diffusion--reaction problems}\label{SEC:advection_diffusion_reaction}
 % 
@@ -1690,7 +1690,7 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, SI}}
-  & $i = 2$ && \textcolor{red}{5.11e0} & --- && \textcolor{red}{5.52e-2} & --- && \textcolor{red}{7.53e-2} & ---  \\
+  & $i = 2$ && 5.11e0 & --- && \textcolor{red}{5.52e-2} & --- && \textcolor{red}{7.53e-2} & ---  \\
   & $i = 3$ && 5.48e-1 & 3.2 && 4.22e-3 & 3.7 && 4.79e-3 & 4.0  \\
   & $i = 4$ && 6.29e-2 & 3.1 && 2.84e-4 & 3.9 && 3.01e-4 & 4.0  \\
   & $i = 5$ && 7.53e-3 & 3.1 && 1.83e-5 & 4.0 && 1.88e-5 & 4.0  \\
@@ -1708,7 +1708,7 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
   & $i = 5$ && 7.61e-3 & 3.1 && 7.18e-7 & 5.0 && 1.39e-8 & -2  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, SI}}
-  & $i = 2$ && 2.92e-2 & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
+  & $i = 2$ && \textcolor{red}{2.92e-2} & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
   & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
   & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
   & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
