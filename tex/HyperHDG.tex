@@ -893,11 +893,9 @@ Additionally, we can plot the calculated solution after setting some plot option
 %
 \subsection{Using \hyperHDG via C++}
 %
-Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing.
+Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories of the submodules need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing. Moreover, \hyperHDG needs to be linked to LAPACK, compiled with a standard of C++17, and the compiler needs to be able to find the parameters file in this example. Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
 
-Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
-
-
+\lstinputlisting[language=C++, firstline=1, lastline=45, firstnumber=1]{../examples/diffusion_elliptic.cxx}
 
 % ---------------------------------------------------------------------
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
