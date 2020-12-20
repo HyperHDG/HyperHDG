@@ -3,13 +3,11 @@
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/sparse_la.hxx>
-
-// #include <type_traits>
+#include <reproducables_python/parameters/diffusion.hxx>
 
 using namespace std;
-using namespace SparseLA;
 
-int diffusion_elliptic()
+void diffusion_elliptic()
 {
   const unsigned int poly_degree = 1;
   const unsigned int hyEdge_dim = 1;
@@ -25,13 +23,13 @@ int diffusion_elliptic()
                                               TestParametersSinEllipt, double> >
     HDG_wrapper(num_elements);
 
-  vector<double> vectorRHS = HDG_wrapper.matrix_vector_multiply(HDG_wrapper.return_zero_vector());
+  vector<double> vectorRHS = HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector());
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= -1.;
 
-  vector<double> vectorSolution = conjugate_gradient(vectorRHS, HDG_wrapper);
+  vector<double> vectorSolution = SparseLA::conjugate_gradient(vectorRHS, HDG_wrapper);
 
-  std::cout << "Error: " << HDG_wrapper.calculate_L2_error(vectorSolution);
+  cout << "Error: " << HDG_wrapper.calculate_L2_error(vectorSolution) << endl;
 
   HDG_wrapper.plot_option("fileName", "diffusion_elliptic_c++");
   HDG_wrapper.plot_option("printFileNumber", "false");
@@ -41,5 +39,6 @@ int diffusion_elliptic()
 
 int main()
 {
+  diffusion_elliptic();
   return 0;
 }
