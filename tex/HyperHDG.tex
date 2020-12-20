@@ -21,6 +21,7 @@
 \usepackage{booktabs,multirow}
 \usepackage{amsfonts}
 \usepackage{dsfont}
+\usepackage[final]{listings}
 
 %%%%%%%%%% Packages to help editing %%%%%%%%%%
 \usepackage[notref,notcite]{showkeys} % Show labels.
@@ -148,6 +149,41 @@
   \z@\z@{-\fontdimen2\font}%
   {\normalfont\scshape}}
 \makeatother
+
+% ---------------------------------------------------------------------------
+
+% Define style of listings!
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+\lstset{ 
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\tiny,                % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+%  firstnumber= ,                   % start line enumeration with line 1000
+  frame=single,                    % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,                       % sets default tabsize to 2 spaces
+%  caption={\lstname}                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
 
 % ---------------------------------------------------------------------------
 
@@ -464,7 +500,7 @@ At first, we recognize that (assuming that we have some $\lambda \in \skeletalSp
 \end{align}
 \end{subequations}
 % 
-allows for an unique solution on all edges $\Edge \in \SetEdge$. Thus, there is a linear mapping $\lambda \mapsto (\localU \lambda, \localQ\lambda)$ which is iduced by solving this problem.
+allows for an unique solution on all edges $\Edge \in \SetEdge$. Thus, there is a linear mapping $\lambda \mapsto (\localU \lambda, \localQ\lambda)$ which is induced by solving this problem.
 
 Moroever, the same holds for the problem to find $u_\Edge \in L^2(\Edge)$ and $\vec q_\Edge \in H^{\operatorname{div}}(\Edge)$ such that
 % 
@@ -766,31 +802,31 @@ Interestingly, the $L^2$ errors converge although with refinement, also the comp
 \section{Structure of \hyperHDG}
 % ---------------------------------------------------------------------
 % 
-The software library \hyperHDG implements the hybrid discontinuous Galerkin method on hypergraphs. Therefore, \hyperHDG is basically divided into two parts: The implementation of an \code{HDGhyperGraph} and of a \code{LocalSolver}. The program is then structured as a loop over all hyperedges for which the local problems are solved and the results are then written into some global \code{std::vector}.
+The software library \hyperHDG implements the hybrid discontinuous Galerkin method on hypergraphs. Therefore, \hyperHDG is divided into two parts: The implementation of an \code{HDGhyperGraph} and of a \code{LocalSolver}. The program then runs as a loop over all hyperedges for which the local problems are solved and the results are written into some appropriate data structure.
 % 
 \subsection{Implementation of the HDG hypergraph}
 % 
-An \code{HDG\-Hyper\-Graph} consists of four parts:
+An \code{HDG\-Hyper\-Graph} consists of five parts:
 % 
 \begin{enumerate}
- \item Its \code{Topology} which is implemented as an abstract container class of \code{Topology::hyEdge}s. Each hyperedge comprises of an \code{std::array} of indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
- \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, etc.
- \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices of all of thei hypernodes describing them. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have indices 1 and 2, Neumann nodes \ldots.
+ \item Its \code{Topology} which is implemented as an abstract container class of \code{Topology::hyEdge}s. Each hyperedge knows the indices of the hypernodes which are adjoint to the hyperedge. Therefore, the full topology of the hypergraph can be reconstructed using this class only.
+ \item Its \code{Geometry} which is also implemented as an abstract container class of \code{Geometry::hyEdge}s. Each hyperedge comprises its geometrical information (usually using a \code{Mapping} from some sort of reference element to the physical element. These \code{Geometry::\-¸hyEdge}s also contain information about all kinds of normals, transformation rules, etc.
+ \item Its \code{NodeDescriptor} which is also implemented as an abstract container class of \code{NodeDescriptor::hyEdge}s. These hyperedges contain indices for all of their hypernodes. These indices, however describe the properties of the respective hypernodes. For example, all interior nodes (in whatever sense) might have index 0, Dirichlet nodes might have index 1, and Neumann nodes might have index 2 \ldots.
  \item A \code{DataContainer} (for each hyperedge) which is also implemented as an abstract container class of some auxiliary data the local solvers might produce and/or need, but cannot be (easily) constructed from other data, and thus needs to be stored. Since its structure depends on the respective local solver, its entries need to be defined in the local solver classes. For the aforementioned elliptic problem, its entries are empty, while for the following parabolic problem it might contain information about $U$ and $\vec Q$ of the previous time step.
- \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves as unit mapping hypernodes to entries in the global vector of unknowns and vice versa.
+ \item Its \code{HyperNodeFactory}. This class is the interface of the hypergraph to the global vector of unknowns. Thus, it serves via mapping hypernodes to entries in the global vector of unknowns and vice versa.
 \end{enumerate}
 % 
-Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structures that are needed for the description of the PDE (i.e.\ its boundary conditions). By this the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a separate class that is responsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
+Using this abstraction, we basically decouple the topology from the geometry. The advantages of this approach have been discussed in Section \ref{SEC:hypergraph}. Moreover, the hypergraph is decoupled from the structures that are needed for the description of the PDE (i.e.\ its boundary conditions). To this end, the notion of different types of nodes arises which is not present in the definition of hypergraphs in Section \ref{SEC:hypergraph} but useful for our purposes. Last, but not least we have a separate class that is responsible for the local--to--global and global--to--local communication with respect to degrees of freedom.
 
-Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract containers, we define the return value of an \code{HDGhyperGraph} as a \code{hyEdge} which contains its topological, geometrical, and node describing information.
+Since \code{Topology}, \code{Geometry}, and \code{NodeDescriptor} are abstract containers, we define the return value of an \code{HDGhyperGraph} as a \code{hyEdge} which contains the topological, geometrical, and nodal information of a hyperedge.
 % 
 \subsection{Local problem solvers}
 % 
-The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f} to construct the individual summands (with respect to single hyperedges) of \eqref{EQ:forms_def}. Thus, the local solvers' implementation carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc.
+The \code{LocalSolver} receives all the local data, i.e. the \code{hyEdge} and the local degrees of freedom, and solves \eqref{EQ:hdg_scheme} and/or \eqref{EQ:hdg_f}. Afterwards, it uses the local solution to provide the local contribution to the overall problem (which is then appropriately recombined by the global loops). Thus, the local solvers' implementations carry all information with respect to the partial differential equation and the HDG scheme. This includes the mapping of a node descriptor value to the type of node and the right-hand side function, etc. Typically, the local solvers return the local contributions to a matrix--vector product evaluation ($\vecc x \mapsto \vecc A \vecc x$), residual evaluation ($\vecc x \mapsto \vecc A \vecc x - \vecc b$), some error ($L^2$, \ldots), or they evaluate $U$ or $\vec Q$ for plotting.
 % 
 \subsection{Loops over all hyperedges}
 % 
-The implementation of a loop over all hyperedges cares about the specific properties of the local solvers. Thus, there is one prototypical loop class for elliptic problems, and one for each of the problem types that are discussed in Section \ref{SEC:related_diffusion_problems}. That is,
+Global loops basically do the mapping of global degrees of freedom which are handed over to the local solver. Afterwards, they use the local solver's results and generate a global result---such as a global error number or global vector. Hence, the implementation of a loop over all hyperedges cares about the specific properties of the local solvers and the problem type. For that reason, there is one prototypical loop class for each PDE type. That is, we implemented global loops for (linear) elliptic problems, and one for each of the problem types that are discussed in Section \ref{SEC:related_diffusion_problems}. That is,
 % 
 \begin{itemize}
  \item one class for elliptic problems, cf. Section \ref{SEC:hdg_graph},
@@ -800,9 +836,34 @@ The implementation of a loop over all hyperedges cares about the specific proper
  \item and one loop class for the mass matrix approximation and its application to eigenvalue problems as discussed in Section \ref{SEC:approx_mass}.
  \item Additionally, we need a loop class for the solution of parabolic problems using an approximated mass matrix. However, this example is purely academical and not conducted in full detail.
 \end{itemize}
-
-These loop classes can then also be used for related problems like the Bilaplacian, cf.\ Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}.
+%
+These loop classes can then also be used for related problems like the Bilaplacian, cf.\ Section \ref{SEC:bilaplacian}, or elastic graphs, cf. Section \ref{SEC:elastic_beam}. Additionally, the plotting function technically is a global loop which does not refer to a specific problem type, but rather can be used by (almost) all problem types.
 % 
+% ---------------------------------------------------------------------
+\section{Usage of \hyperHDG}
+% ---------------------------------------------------------------------
+%
+"Using" \hyperHDG can be conducted in several steps: The first step consists in the ability to actually run and configure a problem that has been implemented in \hyperHDG in C++ or Python. Afterwards, we will describe the implementation requirements for local solvers and global loops such that new equations can be implemented. At last, we will briefly illuminate the implementation of hypergraphs.
+%
+\subsection{Using \hyperHDG via Python}
+%
+Using \hyperHDG in a Python script can be done by exploiting the script \code{cython\_import}. This way is discussed for the aforementioned elliptic diffusion problem by an example application. The script can be found in \hyperHDG's file \code{../\-examples/\-diffusion\_elliptic.py}.
+
+We start with importing the print function, and the packages \code{numpy}, \code{os}, \code{sys}, and \code{scipy}'s linear algebra tools. These packages will be used in the remainder of the Python script.
+%
+\lstinputlisting[language=Python, firstline=1, lastline=3, firstnumber=1]{../examples/diffusion_elliptic.py}
+%
+Next, we define some basic parameters such as the polynomial degree of both, the (discontinuous) polynomials which live on the skeletal, and the polynomials which are utilized by the local solvers, the dimension of a hyperedge $\locDim$, the dimension of the surrounding space $\globDim$, the refinement level of the domain, and whether we want the C++ code to be compiled in debug or release mode.
+%
+\lstinputlisting[language=Python, firstline=5, lastline=9, firstnumber=5]{../examples/diffusion_elliptic.py}
+%
+For the output files of our script, we create an empty directory \code{output} in case that it did not exist before.
+%
+\lstinputlisting[language=Python, firstline=11, lastline=11, firstnumber=11]{../examples/diffusion_elliptic.py}
+%\lstinputlisting[language=Python]{../python/diffusion_elliptic.py}
+
+
+%
 % ---------------------------------------------------------------------
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------
