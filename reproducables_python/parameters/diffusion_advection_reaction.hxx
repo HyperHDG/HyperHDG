@@ -12,7 +12,7 @@
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinEllipt
 {
-  static constexpr double pi = acos(-1);
+  static constexpr double pi = 3.141592653589793238462643383279502884197169399375105820974944592307;
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
@@ -75,7 +75,6 @@ struct HG
   template <unsigned int space_dimT, typename param_float_t = double>
   struct TestParametersQuadEllipt
   {
-    static constexpr double pi = acos(-1);
     static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
       1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
       14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
