@@ -844,10 +844,12 @@ These loop classes can then also be used for related problems like the Bilaplaci
 % ---------------------------------------------------------------------
 %
 "Using" \hyperHDG can be conducted in several steps: The first step consists in the ability to actually run and configure a problem that has been implemented in \hyperHDG in C++ or Python. Afterwards, we will describe the implementation requirements for local solvers and global loops such that new equations can be implemented. At last, we will briefly illuminate the implementation of hypergraphs.
+
+In any case, it is important to read the README of \hyperHDG (especially the setup and installation guide) prior to using it. Installation of \hyperHDG is not explained in this manuscript.
 %
 \subsection{Using \hyperHDG via Python}
 %
-Using \hyperHDG in a Python script can be done by exploiting the script \code{cython\_import}. This way is discussed for the aforementioned elliptic diffusion problem by an example application. The script can be found in \hyperHDG's file \code{../\-examples/\-diffusion\_elliptic.py}.
+Using \hyperHDG in a Python script can be done by exploiting the script \code{cython\_import}. This way is discussed for the aforementioned elliptic diffusion problem by an example application. The script can be found in \hyperHDG's file \code{examples/\-diffusion\_elliptic.py}.
 
 We start with importing the print function, and the packages \code{numpy}, \code{os}, \code{sys}, and \code{scipy}'s linear algebra tools. These packages will be used in the remainder of the Python script.
 %
@@ -857,13 +859,46 @@ Next, we define some basic parameters such as the polynomial degree of both, the
 %
 \lstinputlisting[language=Python, firstline=5, lastline=9, firstnumber=5]{../examples/diffusion_elliptic.py}
 %
-For the output files of our script, we create an empty directory \code{output} in case that it did not exist before.
+We have not used \hyperHDG so far. This will be changed in the next lines which try to import the interface \code{cython\_import}. If this is not successful, we add the path to \code{cython\_import}'s directory, which is the main directory of the repository, manually. Thus, the expression \code{os.path.dirname( os.path.abspath( \_\_file\_\_ ) ) + "/.."} might be changed to the path of \hyperHDG in self-written scripts.
 %
-\lstinputlisting[language=Python, firstline=11, lastline=11, firstnumber=11]{../examples/diffusion_elliptic.py}
-%\lstinputlisting[language=Python]{../python/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=11, lastline=15, firstnumber=11]{../examples/diffusion_elliptic.py}
+%
+Having imported \hyperHDG, we want to configure the possible problem, \hyperHDG should deal with. That is why, we create a \code{hyperhdg\_\-constructor} and set its properties to define our problem. Our problem is a standard elliptic problem, for which an elliptic global loop can be used. To inform ourselves about the features of an elliptic loop and those of possible other loops, the \code{doxygen} pages may be used. Our problem will be defined on a $\globDim$ dimensional (refined) unit cube's $\locDim$ dimensional elements. Thus, we need a cubic topology, a cubic node--descriptor, and the geometry of a unit cube. Moreover, the local solver to be chosen is our diffusion solver. Again, the meaning of the respective template arguments can be found in the \code{doxygen}. Here, \code{poly\_degree} refers to the order of the polynomial space, \code{2 * poly\_degree} refers to the order of the quadrature rule, the next parameter refers to a \code{struct} in which the utilized parameters (such as right-hand side, diffusivity, \ldots) are defined, and \code{double} is the used floating point arithmetic of the local solvers. The file in which the parameters \code{struct} is defined needs to be known to \hyperHDG. Thus, it is added to a list of (additional) include files. The other files are automatically found by \code{cython\_import}. The cython replacements define the constructor arguments (also denoted \code{constructor\_values} in the \code{doxygen}) of the topology and the geometry, and the debug mode is also transmitted to \code{cython\_import}.
+%
+\lstinputlisting[language=Python, firstline=17, lastline=25, firstnumber=17]{../examples/diffusion_elliptic.py}
+%
+With the statical configuration (the one that is needed for compilation of the C++ files) done, we can now define the class \code{hyperHDG} and create an element of this class by using its constructor. Note that it automatically fills the constructors for geometry and local solver with appropriate values. Nonetheless, the constructor might also comprise upto three elements. In this case, two vectors and an positive number (which represents the penalty in the LDG-H method). 
+%
+\lstinputlisting[language=Python, firstline=27, lastline=28, firstnumber=27]{../examples/diffusion_elliptic.py}
+%
+Now, we can start dealing with the actual problem. To do so, we create the global right hand side by evaluating the residual of $\vecc A \vecc x - \vecc b$ for $\vecc x = \vecc 0$ and multiplying the result by $-1$.
+%
+\lstinputlisting[language=Python, firstline=30, lastline=30, firstnumber=30]{../examples/diffusion_elliptic.py}
+%
+The matrix $\vecc A$ will not be calculated by \hyperHDG. Instead, the operator $\vecc x \mapsto \vecc A \vecc x$ is realized in a matrix-free fashion. Python's \code{scipy} package provides solvers for matrix-free situations. These solver require the definition of a \code{LinearOperator}, which is done in two lines:
+%
+\lstinputlisting[language=Python, firstline=32, lastline=33, firstnumber=32]{../examples/diffusion_elliptic.py}
+%
+Solving the linear system of equations can then be done using the CG method in one line. The remaining lines check that the CG method has converged.
+%
+\lstinputlisting[language=Python, firstline=35, lastline=38, firstnumber=38]{../examples/diffusion_elliptic.py}
+%
+In the case that the analytical solution is known, we can also evaluate the error and print it using:
+%
+\lstinputlisting[language=Python, firstline=40, lastline=40, firstnumber=40]{../examples/diffusion_elliptic.py}
+%
+Additionally, we can plot the calculated solution after setting some plot options whose meaning can be found in the \code{doxygen}.\begin{envarwarning}{To be adapted in code and tex!}However, this needs that a directory denoted \code{output} exists. If this is not the case, the directory, but not the actual output is created and the script needs to be rerun.\end{envarwarning}
+%
+\lstinputlisting[language=Python, firstline=42, lastline=45, firstnumber=45]{../examples/diffusion_elliptic.py}
+%
+\subsection{Using \hyperHDG via C++}
+%
+Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing.
+
+Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
 
 
-%
+
 % ---------------------------------------------------------------------
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
 % ---------------------------------------------------------------------

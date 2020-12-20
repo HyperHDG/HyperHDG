@@ -7,8 +7,6 @@ hyEdge_dim  = 1
 space_dim   = 2
 refinement  = 1
 debug_mode  = True
-
-os.system("mkdir -p output")
   
 try:
   import cython_import
@@ -22,8 +20,8 @@ const.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
 const.node_descriptor = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
-const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode      = debug_mode
 
 hyperHDG    = cython_import.cython_import(const)
@@ -37,13 +35,9 @@ A = sp_lin_alg.LinearOperator( (system_size,system_size), matvec= HDG_wrapper.ma
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
 if num_iter != 0:
   print("CG solver failed with a total number of ", num_iter, "iterations.")
-  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
-  if num_iter != 0:
-    print("GMRES also failed with a total number of ", num_iter, "iterations.")
-    raise RuntimeError("Linear solvers did not converge!")
+  raise RuntimeError("Linear solvers did not converge!")
 
-error = HDG_wrapper.calculate_L2_error(vectorSolution)
-print("Error: ", error)
+print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
 
 HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic" )
 HDG_wrapper.plot_option( "printFileNumber" , "false" )
