@@ -847,7 +847,7 @@ These loop classes can then also be used for related problems like the Bilaplaci
 
 In any case, it is important to read the README of \hyperHDG (especially the setup and installation guide) prior to using it. Installation of \hyperHDG is not explained in this manuscript.
 %
-\subsection{Using \hyperHDG via Python}
+\subsection{Using \hyperHDG via Python}\label{SEC:python_script}
 %
 Using \hyperHDG in a Python script can be done by exploiting the script \code{cython\_import}. This way is discussed for the aforementioned elliptic diffusion problem by an example application. The script can be found in \hyperHDG's file \code{examples/\-diffusion\_elliptic.py}.
 
@@ -891,7 +891,7 @@ Additionally, we can plot the calculated solution after setting some plot option
 %
 \lstinputlisting[language=Python, firstline=43, lastline=46, firstnumber=43]{../examples/diffusion_elliptic.py}
 %
-\subsection{Using \hyperHDG via C++}
+\subsection{Using \hyperHDG via C++}\label{SEC:cpp_program}
 %
 Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories of the submodules need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing. Moreover, \hyperHDG needs to be linked to LAPACK, compiled with a standard of C++17, and the compiler needs to be able to find the parameters file in this example. Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
 
@@ -935,7 +935,13 @@ and end the program returning 0.
 %
 \subsection{Writing global loops}
 %
-\textcolor{red}{TODO}\arnote{TODO!}
+When it comes to writing a global loop, the first step consists in finding out what functions the global loop is supposed to provide. In our case, this means, defining the functions \code{HDG\_wrapper} has been used in Sections \ref{SEC:python_script} and \ref{SEC:cpp_program}: a constructor with a single vector as argument, the functions \code{total\_\-flux\_\-vector}, \code{return\_\-zero\_\-vector}, \code{size\_\-of\_\-system}, \code{matrix\_\-vector\_\-multiply}, \code{calculate\_\-L2\_\-error}, \code{plot\_\-option}, and \code{plot\_\-solution}. These functions have to be provided as \code{public} by the global loop \code{Elliptic}.
+
+The detailed implementation of these functions can be found in \code{include/\-HyperHDG/\-global\_loop/elliptic.hxx}, which will not be fully discussed in the following. However, we highlight the following aspects: The global loop typically holds a member of \code{HDGHyperGraph}, which itself provides a function to return a single hyperedge, and also provides the hypernode factory which can do the mapping of local to global indices and vice versa. Thus, the hypernode factory also has information about the amount of degrees of freedom, which can be used to create a vector of the correct size (and containing only zeros). Beyond that, the global loop typically includes \code{plot.hxx} and holds an instance of plotting options. Thus, the functions related to plotting are simply handed over to the plotting tools. Last, but not least, the global loop has an instance of the local solver.
+
+A typical function of the global loop, such as \code{matrix\_\-vector\_\-multiply}, consists of three phases: First, a phase where some variables are created. These variables can be global constants or the vector which will later on be filled. Second, a loop over all hyperedges. In this loop, typically at first the hypernode factory is used to do a global to local mapping. Afterwards, the local solver transforms the local degrees of freedom (in this case from numerical traces to numerical fluxes). Eventually, the hypernode does of local to global mapping for the numerical fluxes, afterwards. Third, some sort of post-processing step. In our implementation, for example, some Dirichlet nodes could be set to zero, although this part of the code is not used in the aforementioned examples.
+
+Global loops also form the most prominent Python interface, which we create using Cython. Thus, there are three "elliptic" files in the cython directory. Note that these file need to have a name which corresponds to the class name which has been decapitalized (with some underscores). The \code{.pxd} file includes the \code{.hxx} file and serves as interface between C++ and Cython. Thus, it defines all global functions of the class that should be accessible from Python in an intermediate Cython language. The \code{.pyx} file, on the other hand defines a Python class which can use both Python functions and those functions that are defined in the \code{.pxd} file. The \code{.cfg} file defines some default values for e.g. template parameters that should be inserted in the \code{.pxd} and \code{.pyx} files. For more details on Cython, we refer to \arnote{TODO!}.
 %
 % ---------------------------------------------------------------------
 \section{Related diffusion problems and approaches}\label{SEC:related_diffusion_problems}
