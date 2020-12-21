@@ -19,7 +19,8 @@ const.global_loop     = "Elliptic"
 const.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
 const.node_descriptor = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
-const.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(2*poly_degree) + ",HG<" + str(hyEdge_dim) + ">::DiffusionElliptic,double>"
+const.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(
+  2*poly_degree) + ",HG<" + str(hyEdge_dim) + ">::DiffusionElliptic,double>"
 const.include_files   = ["examples/parameters/diffusion.hxx"]
 const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode      = debug_mode
@@ -30,7 +31,7 @@ HDG_wrapper = hyperHDG( [2 ** refinement] * space_dim )
 vectorRHS = numpy.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
 
 system_size = HDG_wrapper.size_of_system()
-A = sp_lin_alg.LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+A = sp_lin_alg.LinearOperator((system_size,system_size), matvec=HDG_wrapper.matrix_vector_multiply)
 
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
 if num_iter != 0:

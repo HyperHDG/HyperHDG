@@ -869,27 +869,27 @@ Having imported \hyperHDG, we want to configure the possible problem, \hyperHDG 
 %
 With the statical configuration (the one that is needed for compilation of the C++ files) done, we can now define the class \code{hyperHDG} and create an element of this class by using its constructor. Note that it automatically fills the constructors for geometry and local solver with appropriate values. Nonetheless, the constructor might also comprise upto three elements. In this case, two vectors and an positive number (which represents the penalty in the LDG-H method). 
 %
-\lstinputlisting[language=Python, firstline=27, lastline=28, firstnumber=27]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=28, lastline=29, firstnumber=28]{../examples/diffusion_elliptic.py}
 %
 Now, we can start dealing with the actual problem. To do so, we create the global right hand side by evaluating the residual of $\vecc A \vecc x - \vecc b$ for $\vecc x = \vecc 0$ and multiplying the result by $-1$.
 %
-\lstinputlisting[language=Python, firstline=30, lastline=30, firstnumber=30]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=31, lastline=31, firstnumber=31]{../examples/diffusion_elliptic.py}
 %
 The matrix $\vecc A$ will not be calculated by \hyperHDG. Instead, the operator $\vecc x \mapsto \vecc A \vecc x$ is realized in a matrix-free fashion. Python's \code{scipy} package provides solvers for matrix-free situations. These solver require the definition of a \code{LinearOperator}, which is done in two lines:
 %
-\lstinputlisting[language=Python, firstline=32, lastline=33, firstnumber=32]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=33, lastline=34, firstnumber=33]{../examples/diffusion_elliptic.py}
 %
 Solving the linear system of equations can then be done using the CG method in one line. The remaining lines check that the CG method has converged.
 %
-\lstinputlisting[language=Python, firstline=35, lastline=38, firstnumber=38]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=36, lastline=39, firstnumber=36]{../examples/diffusion_elliptic.py}
 %
 In the case that the analytical solution is known, we can also evaluate the error and print it using:
 %
-\lstinputlisting[language=Python, firstline=40, lastline=40, firstnumber=40]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=41, lastline=41, firstnumber=41]{../examples/diffusion_elliptic.py}
 %
 Additionally, we can plot the calculated solution after setting some plot options whose meaning can be found in the \code{doxygen}.\begin{envarwarning}{To be adapted in code and tex!}However, this needs that a directory denoted \code{output} exists. If this is not the case, the directory, but not the actual output is created and the script needs to be rerun.\end{envarwarning}
 %
-\lstinputlisting[language=Python, firstline=42, lastline=45, firstnumber=45]{../examples/diffusion_elliptic.py}
+\lstinputlisting[language=Python, firstline=43, lastline=46, firstnumber=43]{../examples/diffusion_elliptic.py}
 %
 \subsection{Using \hyperHDG via C++}
 %
