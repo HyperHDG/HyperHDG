@@ -23,28 +23,24 @@ class helper_ev_approx():
     self.hdg_wrapper       = hdg_wrapper
     self.sigma             = sigma
     self.dirichlet_inidces = hdg_wrapper.dirichlet_indices()
+    self.index_vector      = [-1] * self.short_vector_size()
+    self.vector_index      = [-1] * self.long_vector_size()
+    n_indices = 0
+    for i in range(len(self.index_vector)):
+      while n_indices < len(self.dirichlet_inidces) and \
+            i + n_indices == self.dirichlet_inidces[n_indices]:
+        n_indices = n_indices + 1
+      self.index_vector[i] = i + n_indices
+      self.vector_index[i + n_indices] = i
+    assert -1 not in self.index_vector
   def long_vector_size(self):
     return self.hdg_wrapper.size_of_system()
   def short_vector_size(self):
     return self.hdg_wrapper.size_of_system() - len(self.dirichlet_inidces)
   def long_vector(self, vector):
-    vec = [0.] * (len(vector)+len(self.dirichlet_inidces))
-    n_indices = 0
-    for i in range(len(vector)):
-      while n_indices < len(self.dirichlet_inidces) and \
-            i + n_indices == self.dirichlet_inidces[n_indices]:
-        n_indices = n_indices + 1
-      vec[i + n_indices] = vector[i]
-    return vec
+    return [vector[x] if x > -1 else 0. for x in self.vector_index]
   def short_vector(self, vector):
-    vec = [0.] * (len(vector)-len(self.dirichlet_inidces))
-    n_indices = 0
-    for i in range(len(vec)):
-      while n_indices < len(self.dirichlet_inidces) and \
-            i + n_indices == self.dirichlet_inidces[n_indices]:
-        n_indices = n_indices + 1
-      vec[i] = vector[i + n_indices]
-    return vec
+    return [vector[x] for x in self.index_vector]
   def multiply_stiff(self, vector):
     vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply( self.long_vector(vector) ), -1.)
     vec = self.short_vector(vec)
