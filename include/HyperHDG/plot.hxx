@@ -481,8 +481,6 @@ void create_directory_if_needed(std::ofstream& output_file,
     std::cout << "Trying to create output directory" << std::endl;
     std::filesystem::create_directory(plot_options.outputDir);
   }
-#else
-  // hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
 #endif
 }  // end of namespace PlotFunctions
 
@@ -632,7 +630,6 @@ void plot_vtu(
   const PlotOptions&,
   const floatT = 0.)
 #endif
-
 {
 #ifndef NOFILEOUT
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
@@ -719,8 +716,6 @@ void plot_vtu(
   myfile << "</VTKFile>" << std::endl;
   std::cout << plot_options.fileName << " was written\n";
   myfile.close();
-#else
-  // hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
 #endif
 }  // end of void plot_vtu
 
