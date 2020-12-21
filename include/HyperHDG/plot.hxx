@@ -470,6 +470,7 @@ void create_directory_if_needed(std::ofstream& output_file,
                                 const PlotOptions&)
 #endif
 {
+#ifndef NOFILEOUT
   try
   {
     check_file_opened(output_file, filename);
@@ -478,13 +479,11 @@ void create_directory_if_needed(std::ofstream& output_file,
   {
     std::cerr << e.what() << std::endl;
     std::cout << "Trying to create output directory" << std::endl;
-#ifndef NOFILEOUT
     std::filesystem::create_directory(plot_options.outputDir);
-#else
-    hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
-#endif
   }
-}
+#else
+  hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
+#endif
 }  // end of namespace PlotFunctions
 
 /*!*************************************************************************************************
