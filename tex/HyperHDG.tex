@@ -1836,7 +1836,7 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
   \multicolumn{2}{c|@{\,}}{mesh}    && err & eoc && err & eoc && err & eoc   \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, SI}}
-  & $i = 2$ && 5.11e0 & --- && \textcolor{red}{5.52e-2} & --- && \textcolor{red}{7.53e-2} & ---  \\
+  & $i = 2$ && 5.11e0 & --- && 5.52e-2 & --- && 7.53e-2 & ---  \\
   & $i = 3$ && 5.48e-1 & 3.2 && 4.22e-3 & 3.7 && 4.79e-3 & 4.0  \\
   & $i = 4$ && 6.29e-2 & 3.1 && 2.84e-4 & 3.9 && 3.01e-4 & 4.0  \\
   & $i = 5$ && 7.53e-3 & 3.1 && 1.83e-5 & 4.0 && 1.88e-5 & 4.0  \\
@@ -1850,26 +1850,26 @@ For an numerical test, we try to approximate the smallest $\eigenval$ that suffi
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 1$, NL}}
   & $i = 2$ && 5.52e0 & --- && 2.94e-2 & --- && 8.50e-5 & ---  \\
   & $i = 3$ && 5.71e-1 & 3.3 && 8.06e-3 & 5.2 && 6.20e-7 & 7.1  \\
-  & $i = 4$ && 6.42e-2 & 3.2 && 2.36e-5 & 5.1 && 4.83e-9 & 7.0  \\
-  & $i = 5$ && 7.61e-3 & 3.1 && 7.18e-7 & 5.0 && 1.39e-8 & -2  \\
+  & $i = 4$ && 6.42e-2 & 3.2 && 2.36e-5 & 5.1 && 4.71e-9 & 7.0  \\
+  & $i = 5$ && 7.61e-3 & 3.1 && 7.07e-7 & 5.1 && 8.67e-9 & -.9  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, SI}}
-  & $i = 2$ && \textcolor{red}{2.92e-2} & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
-  & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 2$ && 2.16e1 & --- && 1.11e-1 & --- && \textcolor{red}{8.61e-6} & 7.3  \\
+  & $i = 3$ && 2.26e0 & 3.3 && 1.20e-2 & 3.2 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 2.55e-1 & 3.1 && 8.87e-4 & 3.8 && 4.86e-4 & 5  \\
+  & $i = 5$ && 3.03e-2 & 3.1 && 5.92e-5 & 3.9 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, MA}}
-  & $i = 2$ && 2.92e-2 & --- && 3.08e-2 & --- && 8.61e-6 & 7.3  \\
-  & $i = 3$ && 7.68e-3 & 1.9 && 7.73e-3 & 1.9 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 2$ && 2.00e1 & --- && 8.01e-1 & --- && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 2.21e0 & 3.2 && 5.78e-2 & 3.8 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 2.52e-1 & 3.1 && 3.83e-3 & 3.9 && 4.86e-4 & 5  \\
+  & $i = 5$ && 3.01e-2 & 3.1 && 2.45e-4 & 4.0 && 4.86e-4 & 5  \\
   \midrule
   \multirow{4}{*}{\rotatebox[origin=c]{90}{$\locDim = 2$, NL}}
-  & $i = 2$ && 5.68e-1 & 3.0 && 2.98e-3 & 5.5 && 8.61e-6 & 7.3  \\
-  & $i = 3$ && 5.80e-2 & 3.3 && 8.16e-5 & 5.2 && 6.18e-8 & 7.1  \\
-  & $i = 4$ && 6.50e-3 & 3.2 && 2.39e-6 & 5.1 && 4.86e-4 & 5  \\
-  & $i = 5$ && 7.71e-5 & 3.1 && 2.12e-3 & 5 && 4.86e-4 & 5  \\
+  & $i = 2$ && 2.21e1 & --- && 1.17e-1 & --- && 8.61e-6 & 7.3  \\
+  & $i = 3$ && 2.28e0* & 3.3 && 3.22e-3 & 5.2 && 6.18e-8 & 7.1  \\
+  & $i = 4$ && 2.56e-1 & 3.2 && 9.45e-5 & 5.1 && 4.86e-4 & 5  \\
+  & $i = 5$ && ---    & --- && --- & --- && 4.86e-4 & 5  \\
   \bottomrule
  \end{tabular}\vspace{1ex}
  \caption{Absolute errors (err) and estimated orders of convergence (eoc) of the smallest eigenvalue for a bilaplacian problem on a real hypergraph. Here, the shifted inverse (SI), mass approximation (MA), and nonlinear (NL) approaches are shown.}\label{TAB:bil_hyg_eigenvalue_conv}
