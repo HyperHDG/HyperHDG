@@ -619,11 +619,21 @@ template <class HyperGraphT,
           typename floatT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
-void plot_vtu(HyperGraphT& hyper_graph,
-              const LocalSolverT& local_solver,
-              const LargeVecT& lambda,
-              const PlotOptions& plot_options,
-              const floatT time = 0.)
+void plot_vtu(
+#ifndef NOFILEOUT
+  HyperGraphT& hyper_graph,
+  const LocalSolverT& local_solver,
+  const LargeVecT& lambda,
+  const PlotOptions& plot_options,
+  const floatT time = 0.)
+#else
+  HyperGraphT&,
+  const LocalSolverT&,
+  const LargeVecT&,
+  const PlotOptions&,
+  const floatT = 0.)
+#endif
+
 {
 #ifndef NOFILEOUT
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
