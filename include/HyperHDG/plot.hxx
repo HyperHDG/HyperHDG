@@ -462,12 +462,15 @@ void check_file_opened(const std::ofstream& output_file, const std::string filen
 /*!*************************************************************************************************
  * \brief   Check if an outputstream has opened a file
  **************************************************************************************************/
-void create_directory_if_needed(std::ofstream& output_file,
-                                const std::string filename,
+void create_directory_if_needed(
 #ifndef NOFILEOUT
-                                const PlotOptions& plot_options)
+  std::ofstream& output_file,
+  const std::string filename,
+  const PlotOptions& plot_options)
 #else
-                                const PlotOptions&)
+  std::ofstream&,
+  const std::string,
+  const PlotOptions&)
 #endif
 {
 #ifndef NOFILEOUT
