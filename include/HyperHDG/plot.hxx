@@ -485,6 +485,7 @@ void create_directory_if_needed(
     std::filesystem::create_directory(plot_options.outputDir);
   }
 #endif
+}
 }  // end of namespace PlotFunctions
 
 /*!*************************************************************************************************
