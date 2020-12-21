@@ -482,7 +482,7 @@ void create_directory_if_needed(std::ofstream& output_file,
     std::filesystem::create_directory(plot_options.outputDir);
   }
 #else
-  hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
+  // hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
 #endif
 }  // end of namespace PlotFunctions
 
@@ -720,7 +720,7 @@ void plot_vtu(
   std::cout << plot_options.fileName << " was written\n";
   myfile.close();
 #else
-  hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
+  // hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
 #endif
 }  // end of void plot_vtu
 
