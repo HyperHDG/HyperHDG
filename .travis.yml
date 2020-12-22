@@ -2,7 +2,7 @@ language: cpp
 
 branches:
   only:
-    - secure_travis
+    - master
 
 sudo: enabled
 
