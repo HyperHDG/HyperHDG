@@ -140,13 +140,6 @@ class SmallMat
       entries_[i] = entries[i];
   }
   /*!***********************************************************************************************
-   * \brief   Move constructor from std::vector.
-   ************************************************************************************************/
-  SmallMat(std::vector<mat_entry_t>&& entries) noexcept : entries_(std::move(entries))
-  {
-    hy_assert(entries.size() == size(), "std::vector and SmallMat must have compatible sizes!");
-  }
-  /*!***********************************************************************************************
    * \brief   Copy constructor.
    ************************************************************************************************/
   SmallMat(const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other) : entries_(other.entries_) {}

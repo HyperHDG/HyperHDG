@@ -466,14 +466,18 @@ void check_file_opened(const std::ofstream& output_file, const std::string filen
 /*!*************************************************************************************************
  * \brief   Check if an outputstream has opened a file
  **************************************************************************************************/
-void create_directory_if_needed(std::ofstream& output_file,
-                                const std::string filename,
+void create_directory_if_needed(
 #ifndef NOFILEOUT
-                                const PlotOptions& plot_options)
+  std::ofstream& output_file,
+  const std::string filename,
+  const PlotOptions& plot_options)
 #else
-                                const PlotOptions&)
+  std::ofstream&,
+  const std::string,
+  const PlotOptions&)
 #endif
 {
+#ifndef NOFILEOUT
   try
   {
     check_file_opened(output_file, filename);
@@ -482,12 +486,9 @@ void create_directory_if_needed(std::ofstream& output_file,
   {
     std::cerr << e.what() << std::endl;
     std::cout << "Trying to create output directory" << std::endl;
-#ifndef NOFILEOUT
     std::filesystem::create_directory(plot_options.outputDir);
-#else
-    hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
-#endif
   }
+#endif
 }
 }  // end of namespace PlotFunctions
 
@@ -625,11 +626,20 @@ template <class HyperGraphT,
           typename floatT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
-void plot_vtu(HyperGraphT& hyper_graph,
-              const LocalSolverT& local_solver,
-              const LargeVecT& lambda,
-              const PlotOptions& plot_options,
-              const floatT time = 0.)
+void plot_vtu(
+#ifndef NOFILEOUT
+  HyperGraphT& hyper_graph,
+  const LocalSolverT& local_solver,
+  const LargeVecT& lambda,
+  const PlotOptions& plot_options,
+  const floatT time = 0.)
+#else
+  HyperGraphT&,
+  const LocalSolverT&,
+  const LargeVecT&,
+  const PlotOptions&,
+  const floatT = 0.)
+#endif
 {
 #ifndef NOFILEOUT
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
@@ -716,8 +726,6 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "</VTKFile>" << std::endl;
   std::cout << plot_options.fileName << " was written\n";
   myfile.close();
-#else
-  hy_assert(false, "This function uses filesystem which is forbidden by compile options!");
 #endif
 }  // end of void plot_vtu
 

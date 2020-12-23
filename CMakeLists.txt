@@ -16,7 +16,6 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} \
   -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro \
   -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
   -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic -Wextra -D_GLIBCXX_DEBUG")
 
 ## Find packages that might become necessary.
 
@@ -31,23 +30,6 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
   ${Python3_INCLUDE_DIRS})
-
-# CONFIGURE_FILE(
-#   ${CMAKE_CURRENT_SOURCE_DIR}/cython_import.py.in
-#   ${CMAKE_CURRENT_BINARY_DIR}/cython_import.py
-#   @ONLY)
-
-# CONFIGURE_FILE(
-#   ${CMAKE_CURRENT_SOURCE_DIR}/cython/cythonize.cxx.in
-#   ${CMAKE_CURRENT_BINARY_DIR}/cython/cythonize.cxx
-#   @ONLY)
-
-# add_executable(cythonize ${CMAKE_CURRENT_BINARY_DIR}/cython/cythonize.cxx)
-# target_compile_definitions(cythonize PUBLIC PYVERMAJ=${Python3_VERSION_MAJOR} PYVERMIN=${Python3_VERSION_MINOR})
-
-# file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output ${CMAKE_CURRENT_BINARY_DIR}/cython_files ${CMAKE_CURRENT_BINARY_DIR}/shared_objects)
-# file(COPY domains reproducables_python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
 
 ## Prepare nice output for include string.
 
@@ -83,11 +65,10 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "ver_maj = ${Python3_VE
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "ver_min = ${Python3_VERSION_MINOR}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "dir     = ${Python3_INCLUDE_DIRS}\n")
 
-
 ## Add subdirectories of tests.
 
 add_subdirectory(tests_c++)
 if(NOT NOPYTHONTESTS)
   add_subdirectory(tests_python)
 endif()
-# add_subdirectory(doc)
+add_subdirectory(examples)

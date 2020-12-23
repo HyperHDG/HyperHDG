@@ -12,31 +12,30 @@
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinEllipt
 {
-  static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                        const param_float_t = 0.)
   {
-    return 2. / pi;
+    return 2. / M_PI;
   }
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                const param_float_t = 0.)
   {
-    return 0.5 * pi;
+    return 0.5 * M_PI;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return sin(0.5 * pi * point[0]);
+    return sin(0.5 * M_PI * point[0]);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return 0.5 * pi * sin(0.5 * pi * point[0]);
+    return 0.5 * M_PI * sin(0.5 * M_PI * point[0]);
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
@@ -68,7 +67,6 @@ struct HG
   template <unsigned int space_dimT, typename param_float_t = double>
   struct TestParametersQuadEllipt
   {
-    static constexpr double pi = acos(-1);
     static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
       1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
       14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
@@ -126,26 +124,25 @@ struct HG
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinParab
 {
-  static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                const param_float_t = 0.)
   {
-    return pi;
+    return M_PI;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return sin(pi * (point[0] + time));
+    return sin(M_PI * (point[0] + time));
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return pi * (sin(pi * (point[0] + time)) + cos(pi * (point[0] + time)));
+    return M_PI * (sin(M_PI * (point[0] + time)) + cos(M_PI * (point[0] + time)));
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
@@ -174,7 +171,6 @@ struct TestParametersSinParab
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersEigs
 {
-  static constexpr double pi = acos(-1);
   static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
@@ -198,7 +194,7 @@ struct TestParametersEigs
   {
     param_float_t approx = 1.;
     for (unsigned int dim = 0; dim < space_dimT; ++dim)
-      approx *= sin(pi * point[dim]) + 1e-6 * ((std::rand() % 201) - 100);  // Random noise!
+      approx *= sin(M_PI * point[dim]) + 1e-6 * ((std::rand() % 201) - 100);  // Random noise!
     return approx;
   }
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
