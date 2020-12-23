@@ -1,5 +1,3 @@
-#ifndef NOFILEOUT
-
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
@@ -99,12 +97,3 @@ int main()
   result += do_test<2, 2, float>() + do_test<2, 3, float>() + do_test<3, 3, float>();
   return result;
 }
-
-#else
-
-int main()
-{
-  return 0;
-}
-
-#endif

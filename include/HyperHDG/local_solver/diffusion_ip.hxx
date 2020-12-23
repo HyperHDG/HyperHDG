@@ -545,7 +545,7 @@ class DiffusionIP
   lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
                 const input_array_t& lambda_values,
                 const unsigned int boundary_number) const;
-};  // end of class Diffusion
+};  // end of class DiffusionIP
 
 // -------------------------------------------------------------------------------------------------
 /// \cond EXCLUDE_CODE

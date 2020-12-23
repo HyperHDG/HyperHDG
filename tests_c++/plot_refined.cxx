@@ -1,5 +1,3 @@
-#ifndef NOFILEOUT
-
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/local_solver/template.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
@@ -64,12 +62,3 @@ int main()
   test<3, 3, 2>();
   return 0;
 }
-
-#else
-
-int main()
-{
-  return 0;
-}
-
-#endif
