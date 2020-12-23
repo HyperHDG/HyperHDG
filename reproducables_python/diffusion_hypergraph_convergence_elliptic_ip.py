@@ -40,6 +40,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
+  const.allow_file_output = False
 
   PyDP = cython_import.cython_import(const)
 
@@ -55,13 +56,10 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+  [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
   if num_iter != 0:
-    print("CG solver failed with a total number of ", num_iter, "iterations.")
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
-    if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      raise RuntimeError("Linear solvers did not converge!")
+    print("GMRES also failed with a total number of ", num_iter, "iterations.")
+    raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.calculate_L2_error(vectorSolution)
