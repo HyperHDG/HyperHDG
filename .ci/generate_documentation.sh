@@ -5,23 +5,7 @@
 # This script is a further adaption of the script of Francesco Romano, which can be found under
 # https://gist.github.com/francesco-romano/351a6ae457860c14ee7e907f2b0fc1a5 (date: 20. Dec. 2020)
 #
-# Preconditions:
-# - Packages doxygen doxygen-doc doxygen-gui graphviz must be installed.
-# - Doxygen configuration file must have the destination directory empty and source code directory
-#   with a $(TRAVIS_BUILD_DIR) prefix.
-# - An gh-pages branch should already exist in the github repository.
-#
-# Required global variables:
-# - TRAVIS_BUILD_NUMBER : The number of the current build.
-# - TRAVIS_COMMIT       : The commit that the current build is testing.
-# - DOXYFILE            : The Doxygen configuration file.
-# - GH_REPO_NAME        : The name of the repository.
-# - GH_REPO_REF         : The GitHub reference to the repository.
-# - GH_REPO_TOKEN       : Secure token to the github repository.
-#
-# This script will generate Doxygen documentation and push the documentation to the gh-pages branch
-# of a repository specified by GH_REPO_REF. Before this script is used there should already be a
-# gh-pages branch in the repository.
+# Authors: Andreas Rupp and Guido Kanschat, Heidelberg University, 2020
 ###################################################################################################
 
 # Setup this script and get the current gh-pages branch.
@@ -35,11 +19,9 @@ set -e
 # GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG_pages
-DOXYFILE=$TRAVIS_BUILD_DIR/doxygen/Doxyfile
 
 # Retrieve master branch of the repositoy containing the GitHub pages.
-git clone -b master \
-  https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
@@ -66,7 +48,7 @@ if [ -d "html" ] && [ -f "html/index.html" ]; then
     -m "Commit: ${TRAVIS_COMMIT}"
 
   # Force push to the remote GitHub pages branch.
-  git push --force https://AndreasRupp:$TRAVIS_REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
+  git push --force https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
   echo '' >&2
   echo 'Warning: No documentation (html) files have been found!' >&2
