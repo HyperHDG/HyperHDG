@@ -44,7 +44,7 @@ To do so, enter the directory you want to clone HyperHDG into and do the followi
 
 Having setup HyperHDG, the latest documentation is available by opening `doxygen/html/index.html` in
 the HyperHDG repository. Alternatively, you can find the full documentation on the [Doxygen page](
-https://andreasrupp.github.io/HyperHDG_pages/).
+https://andreasrupp.github.io/HyperHDG/).
 
 
 ## How to contribute?
