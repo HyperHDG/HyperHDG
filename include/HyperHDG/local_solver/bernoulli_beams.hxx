@@ -24,6 +24,19 @@ template <unsigned int hyEdge_dimT,
             DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
 class LengtheningBeam
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+
  public:
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
@@ -142,7 +155,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (not_uses_geometry<
+    if constexpr (has_numerical_flux_from_lambda<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -172,7 +185,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (not_uses_geometry<
+    if constexpr (has_numerical_flux_total<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -205,7 +218,7 @@ class LengtheningBeam
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
-    if constexpr (not_uses_geometry<
+    if constexpr (has_calc_L2_error_squared<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -298,6 +311,19 @@ template <unsigned int hyEdge_dimT,
             BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
 class BernoulliBendingBeam
 {
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+
  public:
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
@@ -432,7 +458,7 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        not_uses_geometry<
+        has_numerical_flux_from_lambda<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                      2 * hyEdge_dimT>&(
@@ -469,7 +495,7 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        not_uses_geometry<
+        has_numerical_flux_total<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
@@ -507,7 +533,7 @@ class BernoulliBendingBeam
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
 
       if constexpr (
-        not_uses_geometry<
+        has_calc_L2_error_squared<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,

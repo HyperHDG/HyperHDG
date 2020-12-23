@@ -228,6 +228,10 @@ void plot(HyperGraphT& hyper_graph,
 namespace PlotFunctions
 {
 /*!*************************************************************************************************
+ * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
+/*!*************************************************************************************************
  * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
  *
  * \tparam  dim         The dimension of the cube.
@@ -538,19 +542,21 @@ void plot_edge_values(HyperGraphT& hyper_graph,
       std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
       LocalSolverT::system_dimension()>
       local_values;
-    if constexpr (
-      not_uses_geometry<
-        LocalSolverT,
-        std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&(
-          std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&,
-          std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>&)>::
-        value)
+    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT,
+                                                 decltype(local_values)(decltype(abscissas.data())&,
+                                                                        decltype(hyEdge_dofs)&,
+                                                                        decltype(time))>::value)
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
-    else
+    else if constexpr (PlotFunctions::has_bulk_values<
+                         LocalSolverT, decltype(local_values)(
+                                         decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
+                                         decltype(hyper_graph[he_number])&, decltype(time))>::value)
     {
       auto geometry = hyper_graph[he_number];
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
     }
+    else
+      hy_assert(false, "Function seems not to be implemented!");
 
     myfile << "      ";
     for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner)

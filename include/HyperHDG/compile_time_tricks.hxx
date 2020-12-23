@@ -8,35 +8,37 @@
 #define UNUSED(x) /* nothing */
 
 /*!*************************************************************************************************
- * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.
+ * \brief   Check if some class implements some function with some signature.
  *
- * This struct generates a compile time error if the check is not correctly conducted!
- **************************************************************************************************/
-template <typename, typename T>
-struct not_uses_geometry
-{
-  static_assert(std::integral_constant<T, false>::value,  // This is my way to write false ;)
-                "Second template parameter needs to be of function type.");
-};
-/*!*************************************************************************************************
- * \brief   Check if local solver uses geometry in numerical_flux_from_lambda.
+ * This macro receives the name of the function that is checked to be implemented with a given
+ * signature (not handled to the macro itself) and the name of a struct (output) that can be used
+ * to check whether function func is implemented.
  *
- * This struct has value true if the function does not use a geometry!
+ * Having invoked the macro, we are able to use the template struct \c name to check whether
+ * function \c fun is a (static or non-static) member function of an element of class \c C, where
+ * \c Ret(Args) is the supposed signature.
+ *
+ * \param   func  The name of the function that is checked to be implemented
+ * \param   name  The resulting struct whose value is true if the function is implemented
  **************************************************************************************************/
-template <typename C, typename Ret, typename... Args>
-struct not_uses_geometry<C, Ret(Args...)>
-{
- private:
-  template <typename T>
-  static constexpr auto check(T*) -> typename std::is_same<
-    decltype(std::declval<T>().numerical_flux_from_lambda(std::declval<Args>()...)),
-    Ret>::type;
-
-  template <typename>
-  static constexpr std::false_type check(...);
-
-  typedef decltype(check<C>(0)) type;
-
- public:
-  static constexpr bool value = type::value;
-};
+#define HAS_MEMBER_FUNCTION(func, name)                                                            \
+  template <typename, typename T>                                                                  \
+  struct name                                                                                      \
+  {                                                                                                \
+    static_assert(std::integral_constant<T, false>::value,                                         \
+                  "Second template parameter must be function signature.");                        \
+  };                                                                                               \
+  template <typename C, typename Ret, typename... Args>                                            \
+  struct name<C, Ret(Args...)>                                                                     \
+  {                                                                                                \
+   private:                                                                                        \
+    template <typename T>                                                                          \
+    static constexpr auto check(T*) ->                                                             \
+      typename std::is_same<decltype(std::declval<T>().func(std::declval<Args>()...)), Ret>::type; \
+    template <typename>                                                                            \
+    static constexpr std::false_type check(...);                                                   \
+    typedef decltype(check<C>(0)) type;                                                            \
+                                                                                                   \
+   public:                                                                                         \
+    static constexpr bool value = type::value;                                                     \
+  }
