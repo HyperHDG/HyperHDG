@@ -33,6 +33,20 @@ git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
 # Create .nojekyll file.
 echo "" > .nojekyll
 
+# Overwrite index.html file.
+echo "<!DOCTYPE HTML>" > index.html
+echo "<html lang=\"en-US\">" >> index.html
+echo "  <head>" >> index.html
+echo "    <meta charset=\"UTF-8\">" >> index.html
+echo "    <meta http-equiv=\"refresh\" content=\"0;url=html/index.html\">" >> index.html
+echo "    <title>Page Redirection</title>" >> index.html
+echo "  </head>" >> index.html
+echo "  <body>" >> index.html
+echo "    If you are not redirected automatically, follow the" >> index.html
+echo "    <a href=\"html/index.html\">link to the documentation.</a>" >> index.html
+echo "  </body>" >> index.html
+echo "</html>" >> index.html
+
 # Copy doxygen into current branch.
 cp -r ../doxygen/html .
 
