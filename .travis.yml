@@ -5,5 +5,5 @@ branches:
 if: type = push
 
 script:
-  - .ci/generate_wiki.sh
+  - ./generate_wiki.sh
 
