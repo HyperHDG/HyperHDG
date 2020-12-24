@@ -5,5 +5,5 @@ branches:
 if: type = push
 
 script:
-  - ./generate_wiki.sh
+  - chmod 700 ./generate_wiki.sh; ./generate_wiki.sh
 
