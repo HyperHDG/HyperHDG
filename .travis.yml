@@ -1,0 +1,9 @@
+branches:
+  only:
+    - master
+
+if: type = push
+
+script:
+  - .ci/generate_wiki.sh
+
