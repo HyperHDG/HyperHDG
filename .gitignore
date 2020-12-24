@@ -4,6 +4,9 @@
 # Additional files created by Cython end with .so
 *.so
 
+# Directory which is internally created in pushes to master
+code_docs/
+
 # Build directory created by Cython
 [Bb]uild/
 

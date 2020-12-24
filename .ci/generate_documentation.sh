@@ -38,17 +38,17 @@ echo "<!DOCTYPE HTML>" > index.html
 echo "<html lang=\"en-US\">" >> index.html
 echo "  <head>" >> index.html
 echo "    <meta charset=\"UTF-8\">" >> index.html
-echo "    <meta http-equiv=\"refresh\" content=\"0;url=html/index.html\">" >> index.html
+echo "    <meta http-equiv=\"refresh\" content=\"0;url=doxygen/index.html\">" >> index.html
 echo "    <title>Page Redirection</title>" >> index.html
 echo "  </head>" >> index.html
 echo "  <body>" >> index.html
 echo "    If you are not redirected automatically, follow the" >> index.html
-echo "    <a href=\"html/index.html\">link to the documentation.</a>" >> index.html
+echo "    <a href=\"doxygen/index.html\">link to the documentation.</a>" >> index.html
 echo "  </body>" >> index.html
 echo "</html>" >> index.html
 
 # Copy doxygen into current branch.
-cp -r ../doxygen/html .
+cp -r ../doxygen/html ./doxygen
 
 # Only upload if Doxygen successfully created the documentation.
 if [ -d "html" ] && [ -f "html/index.html" ]; then
