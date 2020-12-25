@@ -18,16 +18,16 @@ set -e
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG.wiki
 
+# Pretend to be user Andreas Rupp CI.
+git config --global user.name "Andreas Rupp CI"
+git config --global user.email "HyperHDG@rupp.ink"
+
 # Retrieve master branch of the repositoy containing the wiki.
 git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
 git config --global push.default simple
-
-# Pretend to be user Andreas Rupp CI.
-git config user.name "Andreas Rupp CI"
-git config user.email "HyperHDG@rupp.ink"
 
 # Go back to first commit.
 git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
@@ -42,10 +42,10 @@ echo 'Uploading documentation to the wiki branch...'
 # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
 git add --all
 
-# Commit the added files with a title and description containing the Travis CI build number and
+# Commit the added files with a title and description containing the GitHub actions build number and
 # the GitHub commit reference that issued this build.
-git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUMBER}" \
-  -m "Commit: ${TRAVIS_COMMIT}"
+git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}"
+  -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
 # Force push to the remote GitHub pages branch.
 git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
