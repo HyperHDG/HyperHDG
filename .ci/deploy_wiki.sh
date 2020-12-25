@@ -25,6 +25,7 @@ cd code_docs
 # Set the push default to simple i.e. push only the current branch.
 git config --global push.default simple
 
+# Pretend to be user Andreas Rupp CI.
 git config user.name "Andreas Rupp CI"
 git config user.email "HyperHDG@rupp.ink"
 
