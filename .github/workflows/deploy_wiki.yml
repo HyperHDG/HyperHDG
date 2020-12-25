@@ -1,13 +1,17 @@
 name: Deploy wiki
+
 on:
   push:
     branches:
     - gh-wiki
     - change_wiki
+
 jobs:
   deploy_wiki:
     runs-on: ubuntu-latest
     steps:
     - name: Run wiki_deploy script
+      env:
+        REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
       run: ./.generate_wiki.sh
       shell: bash

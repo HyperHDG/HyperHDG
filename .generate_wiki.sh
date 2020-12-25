@@ -21,7 +21,7 @@ GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG.wiki
 
 # Retrieve master branch of the repositoy containing the wiki.
-git clone https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
@@ -46,5 +46,4 @@ git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUM
   -m "Commit: ${TRAVIS_COMMIT}"
 
 # Force push to the remote GitHub pages branch.
-git push --force https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
-
+git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
