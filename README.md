@@ -1,17 +1,12 @@
-# What is HyperHDG?
-
-This repository contains the code to write a hybrid discontinuous Galerkin based solver for PDEs
-defined on hypergraphs. 
-
-
 # Welcome to HyperHDG!
 
 It contains a C++ based library implementing hybrid discontinuous Galerkin methods on extremely
-general domains &mdsh; that is, all standard (volume) domains, graphs, self-intersecting surfaces,
+general domains &mdash; that is, all standard (volume) domains, graphs, self-intersecting surfaces,
 and several other types of "domains" that can be interpreted as hypergraphs.
 
-The C++ library can be embedded to C++ programs and/or Python scripts. This makes the library a good
-choice for writing both, high performance codes and easy to handle teaching scripts / programs.
+The C++ library can be embedded to C++ programs and/or Python scripts using [Cython](
+https://cython.org/). This makes the library a good choice for writing both, high performance codes
+and easy to handle teaching scripts/programs.
 
 For more details on HyperHDG, you may visit
 
