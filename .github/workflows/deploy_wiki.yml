@@ -15,5 +15,5 @@ jobs:
     - name: Run wiki_deploy script
       env:
         REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
-      run: .ci/deploy_wiki.sh
+      run: chmod 700 .ci/deploy_wiki.sh; .ci/deploy_wiki.sh
       shell: bash
