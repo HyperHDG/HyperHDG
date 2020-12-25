@@ -15,17 +15,19 @@ echo 'Setting up the script...'
 set -e
 
 # Set global variables.
-# GH_REPO_ORG=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 1`
-# GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG.wiki
 
 # Retrieve master branch of the repositoy containing the wiki.
-git clone https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
 git config --global push.default simple
+
+# Pretend to be user Andreas Rupp CI.
+git config user.name "Andreas Rupp CI"
+git config user.email "HyperHDG@rupp.ink"
 
 # Go back to first commit.
 git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
@@ -46,5 +48,4 @@ git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUM
   -m "Commit: ${TRAVIS_COMMIT}"
 
 # Force push to the remote GitHub pages branch.
-git push --force https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
-
+git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
