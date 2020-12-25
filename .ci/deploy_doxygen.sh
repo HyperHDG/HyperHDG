@@ -58,10 +58,10 @@ if [ -d "doxygen" ] && [ -f "doxygen/index.html" ]; then
   # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
   git add --all
 
-  # Commit the added files with a title and description containing the Travis CI build number and
-  # the GitHub commit reference that issued this build.
-  git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUMBER}" \
-    -m "Commit: ${TRAVIS_COMMIT}"
+  # Commit the added files with a title and description containing the GitHub actions build number
+  # and the GitHub commit reference that issued this build.
+  git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}"
+    -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
   # Force push to the remote GitHub pages branch.
   git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
