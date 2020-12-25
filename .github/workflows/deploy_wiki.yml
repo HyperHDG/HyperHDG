@@ -2,9 +2,9 @@ name: clang-format Check
 
 on:
   push
-  branches:
-    - gh-wiki
-    - change_wiki
+    branches:
+      - gh-wiki
+      - change_wiki
 
 jobs:
   deploy_wiki:
