@@ -1,10 +1,9 @@
-name: Deploy wiki
+name: Deploy Wiki
 
 on:
   push:
     branches:
     - gh-wiki
-    - change_wiki
 
 jobs:
   deploy_wiki:
@@ -12,7 +11,7 @@ jobs:
     steps:
     - name: Checkout current branch
       uses: actions/checkout@v2
-    - name: Run wiki_deploy script
+    - name: Run deploy_wiki script
       env:
         REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
       run: chmod 700 .ci/deploy_wiki.sh; .ci/deploy_wiki.sh

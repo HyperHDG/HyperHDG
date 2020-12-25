@@ -31,9 +31,9 @@ debug_mode  = True
 ```
 
 We have not used HyperHDG so far. This will be changed in the next lines which try to import the
-interface `cython_import`. If this is not successful, we add the path to `cython\_import`'s
+interface `cython_import`. If this is not successful, we add the path to `cython_import`'s
 directory, which is the main directory of the repository, manually. Thus, the expression 
-`os.path.dirname( os.path.abspath( \_\_file\_\_ ) ) + "/.."` might be changed to the path of
+`os.path.dirname( os.path.abspath( __file__ ) ) + "/.."` might be changed to the path of
 HyperHDG in self-written scripts.
 
 ```
@@ -58,10 +58,10 @@ the quadrature rule, the next parameter refers to a `struct` in which the utiliz
 as right-hand side, diffusivity, ...) are defined, and `double` is the used floating point 
 arithmetic of the local solvers. The file in which the parameters `struct` is defined needs to be
 known to HyperHDG. Thus, it is added to a list of (additional) include files. The other files are
-automatically found by `cython\_import`. The cython replacements define the constructor arguments
+automatically found by `cython_import`. The cython replacements define the constructor arguments
 (also denoted `constructor_values` in the [Doxygen](
 https://andreasrupp.github.io/HyperHDG_pages/doxygen)) of the topology and the geometry, and the
-debug mode is also transmitted to `cython\_import`.
+debug mode is also transmitted to `cython_import`.
 
 ```
 const                 = cython_import.hyperhdg_constructor()
@@ -132,42 +132,95 @@ HDG_wrapper.plot_solution(vectorSolution)
 
 ## Write a C++ program
 
-Alternatively, one can use \hyperHDG as C++ library. Please note that for this purpose, the \code{include} directory of \hyperHDG as well as the \code{include} directories of the submodules need to be added to the compiler's include paths. The flag \code{-DNDEBUG} compiles in release mode, while the code is created in debug mode if the flag is missing. Moreover, \hyperHDG needs to be linked to LAPACK, compiled with a standard of C++17, and the compiler needs to be able to find the parameters file in this example. Please check that your compiler meets the standards of \hyperHDG. Compilers that are tested against in pushes to the master branch and therefore should be safe can be found in the \code{Makefile}.
+Alternatively, one can use HyperHDG as C++ library. Please note that for this purpose, the `include`
+directory of HyperHDG as well as the `include` directories of the submodules need to be added to the
+compiler's include paths. The flag `-DNDEBUG` compiles in release mode, while the code is created in
+debug mode if the flag is missing. Moreover, HyperHDG needs to be linked to LAPACK, compiled with a
+standard of C++17, and the compiler needs to be able to find the parameters file in this example.
+Please check that your compiler meets the standards of HyperHDG. Compilers that are tested against
+in pushes to the `master` branch and therefore should be safe can be found in the `Makefile`.
 
-The code of the C++ program that does exactly the same as the aforementioned Python script can be found in the file \code{examples/\-diffusion\_elliptic.cxx}.
+The code of the C++ program that does exactly the same as the aforementioned Python script can be
+found in the file `examples/diffusion_elliptic.cxx`.
 
-Since for C++, we do not have \code{cython\_import} that finds all the necessary files, we need to include them by hand. Since, we want to conduct the same example again, we have to include the geometry and the topology of a unit cube, as well as the elliptic global loop and the diffusion solver. Additionally, we need a sparse linear algebra providing the CG solver. Last, but not least the parameters need to be included.
-%
-\lstinputlisting[language=C++, firstline=1, lastline=6, firstnumber=1]{../examples/diffusion_elliptic.cxx}
-%
-This has prepared us to define the \code{main} function which will surround the rest of the code
-%
-\lstinputlisting[language=C++, firstline=8, lastline=9, firstnumber=8]{../examples/diffusion_elliptic.cxx}
-%
+Since for C++, we do not have `cython_import` that finds all the necessary files, we need to include
+them by hand. Since, we want to conduct the same example again, we have to include the geometry and
+the topology of a unit cube, as well as the elliptic global loop and the diffusion solver.
+Additionally, we need a sparse linear algebra providing the CG solver. Last, but not least the
+parameters need to be included.
+
+```
+#include <HyperHDG/geometry/unit_cube.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/sparse_la.hxx>
+#include <examples/parameters/diffusion.hxx>
+```
+
+This has prepared us to define the `main` function which will surround the rest of the code
+
+```
+int main()
+{
+```
+
 and starts with defining the very same parameters as before.
-%
-\lstinputlisting[language=C++, firstline=10, lastline=13, firstnumber=10]{../examples/diffusion_elliptic.cxx}
-%
-Next, we define the problem class, where the different components have exactly the same meaning as in the \code{hyperhdg\_\-constructor} of the Python script. The only difference consists in the fact that this class can immediately be instantiated, which has not been the case in Python, where \code{cython\_import} had to build it first.
-%
-\lstinputlisting[language=C++, firstline=15, lastline=20, firstnumber=15]{../examples/diffusion_elliptic.cxx}
-%
-The remainder of the program also works analogously to the Python script, i.e., we first define the right-hand side as negative, homogeneous residuum,
-%
-\lstinputlisting[language=C++, firstline=22, lastline=24, firstnumber=22]{../examples/diffusion_elliptic.cxx}
-%
+
+```
+  const unsigned int poly_degree = 1;
+  const unsigned int hyEdge_dim = 1;
+  const unsigned int space_dim = 2;
+  const unsigned int refinement = 1;
+```
+
+Next, we define the problem class, where the different components have exactly the same meaning as
+in the `hyperhdg_constructor` of the Python script. The only difference consists in the fact that
+this class can immediately be instantiated, which has not been the case in Python, where
+`cython_import` had to build it first.
+
+```
+  GlobalLoop::Elliptic<Topology::Cubic<hyEdge_dim, space_dim>,
+                       Geometry::UnitCube<hyEdge_dim, space_dim>,
+                       NodeDescriptor::Cubic<hyEdge_dim, space_dim>,
+                       LocalSolver::Diffusion<hyEdge_dim, poly_degree, 2 * poly_degree,
+                                              HG<hyEdge_dim>::DiffusionElliptic, double> >
+    HDG_wrapper(std::vector<unsigned int>(space_dim, 1 << refinement));
+```
+
+The remainder of the program also works analogously to the Python script, i.e., we first define the
+right-hand side as negative, homogeneous residuum,
+
+```
+  std::vector<double> vectorRHS = HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector());
+  for (unsigned int i = 0; i < vectorRHS.size(); ++i)
+    vectorRHS[i] *= -1.;
+```
+
 solve the global system of equations using the CG method,
-%
-\lstinputlisting[language=C++, firstline=26, lastline=26, firstnumber=26]{../examples/diffusion_elliptic.cxx}
-%
-and print the $L^2$ error.
-%
-\lstinputlisting[language=C++, firstline=28, lastline=28, firstnumber=28]{../examples/diffusion_elliptic.cxx}
-%
+
+```
+  std::vector<double> vectorSolution = SparseLA::conjugate_gradient(vectorRHS, HDG_wrapper);
+```
+
+and print the L^2 error.
+
+```
+  std::cout << "Error: " << HDG_wrapper.calculate_L2_error(vectorSolution) << std::endl;
+```
+
 At the end, we plot the solution
-%
-\lstinputlisting[language=C++, firstline=30, lastline=33, firstnumber=30]{../examples/diffusion_elliptic.cxx}
-%
+
+```
+  HDG_wrapper.plot_option("fileName", "diffusion_elliptic_c++");
+  HDG_wrapper.plot_option("printFileNumber", "false");
+  HDG_wrapper.plot_option("scale", "0.95");
+  HDG_wrapper.plot_solution(vectorSolution);
+```
+
 and end the program returning 0.
-%
-\lstinputlisting[language=C++, firstline=35, lastline=36, firstnumber=35]{../examples/diffusion_elliptic.cxx}
+
+```
+  return 0;
+}
+```
