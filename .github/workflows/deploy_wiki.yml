@@ -1,15 +1,13 @@
 name: clang-format Check
-
 on:
   push:
     branches:
-      - gh-wiki
-      - change_wiki
-
+    - gh-wiki
+    - change_wiki
 jobs:
   deploy_wiki:
     steps:
-      - name: Run wiki_deploy script
-        runs-on: ubuntu-latest
-        run: .generate_wiki.sh
-        shell: bash
+    - name: Run wiki_deploy script
+      runs-on: ubuntu-latest
+      run: .generate_wiki.sh
+      shell: bash
