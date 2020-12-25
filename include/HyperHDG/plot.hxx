@@ -452,44 +452,6 @@ void plot_vtu_unstructured_geometry(std::ostream& output,
   output << "        </DataArray>" << std::endl;
   output << "      </Cells>" << std::endl;
 }  // end of void plot_vtu_unstructured_geometry
-
-/*!*************************************************************************************************
- * \brief   Check if some file exists and can be opened
- **************************************************************************************************/
-void check_file_opened(const std::ofstream& output_file, const std::string filename)
-{
-  if (!output_file.is_open())
-  {
-    throw std::ios_base::failure("File  " + filename + " could not be opened");
-  }
-}
-/*!*************************************************************************************************
- * \brief   Check if an outputstream has opened a file
- **************************************************************************************************/
-void create_directory_if_needed(
-#ifndef NOFILEOUT
-  std::ofstream& output_file,
-  const std::string filename,
-  const PlotOptions& plot_options)
-#else
-  std::ofstream&,
-  const std::string,
-  const PlotOptions&)
-#endif
-{
-#ifndef NOFILEOUT
-  try
-  {
-    check_file_opened(output_file, filename);
-  }
-  catch (std::ios_base::failure& e)
-  {
-    std::cerr << e.what() << std::endl;
-    std::cout << "Trying to create output directory" << std::endl;
-    std::filesystem::create_directory(plot_options.outputDir);
-  }
-#endif
-}
 }  // end of namespace PlotFunctions
 
 /*!*************************************************************************************************
@@ -669,8 +631,10 @@ void plot_vtu(
   }
   filename.append(".vtu");
 
+  if (std::filesystem::create_directory(plot_options.outputDir))
+    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
+
   myfile.open(filename);
-  PlotFunctions::create_directory_if_needed(myfile, filename, plot_options);
   myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
