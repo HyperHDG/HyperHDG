@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - gh-wiki
+      - correct_push
 
 # In that case do the job 'deploy_wiki'
 jobs:
@@ -19,5 +20,7 @@ jobs:
       - name: Run deploy_wiki script
         env:
           REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT_TAG: ${{ github.event }}
         run: chmod 700 .ci/deploy_wiki.sh; .ci/deploy_wiki.sh
         shell: bash
