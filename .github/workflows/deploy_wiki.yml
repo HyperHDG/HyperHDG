@@ -4,7 +4,7 @@ on:
   push
   branches:
     - gh-wiki
-    - change-wiki
+    - change_wiki
 
 jobs:
   deploy_wiki:
