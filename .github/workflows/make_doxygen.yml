@@ -1,0 +1,28 @@
+name: Doxygen
+
+# Act only if a 'push' occurred.
+on: push
+
+# In that case do the job 'make_and_deploy_doxygen'
+jobs:
+  make_and_deploy_doxygen:
+    runs-on: ubuntu-latest
+    # which needs the following steps to be executed:
+    steps:
+      # 1. Checkout current branch of GitHub repository.
+      - name: Checkout current branch
+        uses: actions/checkout@v2
+      # 2. Install doxygen and its auxiliary components.
+      - name: Install doxygen components
+        run: sudo apt-get update; sudo apt-get install -y doxygen graphviz
+      # 3. Create the doxygen pages.
+      - name: Create the doxygen
+        run: make doxygen
+      # 4. Run the deployment script for which the secret token CI_REPO_TOKEN is named REPO_TOKEN
+      #    if the previous step succeeded, and the event is a push to master branch.
+      - name: Run deploy_doxygen script
+        env:
+          REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
+        run: chmod 700 .ci/deploy_doxygen.sh; .ci/deploy_doxygen.sh
+        shell: bash
+        if: success() && github.event == 'push' && github.ref == 'master'
