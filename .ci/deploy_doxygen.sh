@@ -19,8 +19,8 @@ GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG_pages
 
 # Pretend to be user Andreas Rupp CI.
-git config user.name "Andreas Rupp CI"
-git config user.email "HyperHDG@rupp.ink"
+git config --global user.name "Andreas Rupp CI"
+git config --global user.email "HyperHDG@rupp.ink"
 
 # Retrieve master branch of the repositoy containing the GitHub pages.
 git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
