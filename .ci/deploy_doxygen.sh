@@ -15,13 +15,15 @@ echo 'Setting up the script...'
 set -e
 
 # Set global variables.
-# GH_REPO_ORG=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 1`
-# GH_REPO_NAME=`echo $TRAVIS_REPO_SLUG | cut -d "/" -f 2`
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG_pages
 
+# Pretend to be user Andreas Rupp CI.
+git config --global user.name "Andreas Rupp CI"
+git config --global user.email "HyperHDG@rupp.ink"
+
 # Retrieve master branch of the repositoy containing the GitHub pages.
-git clone https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
+git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
 
 # Set the push default to simple i.e. push only the current branch.
@@ -33,26 +35,39 @@ git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
 # Create .nojekyll file.
 echo "" > .nojekyll
 
+# Overwrite index.html file.
+echo "<!DOCTYPE HTML>" > index.html
+echo "<html lang=\"en-US\">" >> index.html
+echo "  <head>" >> index.html
+echo "    <meta charset=\"UTF-8\">" >> index.html
+echo "    <meta http-equiv=\"refresh\" content=\"0;url=doxygen/index.html\">" >> index.html
+echo "    <title>Page Redirection</title>" >> index.html
+echo "  </head>" >> index.html
+echo "  <body>" >> index.html
+echo "    If you are not redirected automatically, follow the" >> index.html
+echo "    <a href=\"doxygen/index.html\">link to the documentation.</a>" >> index.html
+echo "  </body>" >> index.html
+echo "</html>" >> index.html
+
 # Copy doxygen into current branch.
-cp -r ../doxygen/html .
+cp -r ../doxygen/html ./doxygen
 
 # Only upload if Doxygen successfully created the documentation.
-if [ -d "html" ] && [ -f "html/index.html" ]; then
-  echo 'Uploading documentation to the gh-pages branch...'
+if [ -d "doxygen" ] && [ -f "doxygen/index.html" ]; then
+  echo 'Uploading documentation to the HyperHDG_pages repository...'
   # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
   git add --all
 
-  # Commit the added files with a title and description containing the Travis CI build number and
-  # the GitHub commit reference that issued this build.
-  git commit -m "Deploy code docs to GitHub Pages Travis build: ${TRAVIS_BUILD_NUMBER}" \
-    -m "Commit: ${TRAVIS_COMMIT}"
+  # Commit the added files with a title and description containing the GitHub actions build number
+  # and the GitHub commit reference that issued this build.
+  git commit -m "Deploy Doxygen to GitHub master build: ${GITHUB_RUN_NUMBER}" \
+    -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
   # Force push to the remote GitHub pages branch.
-  git push --force https://AndreasRuppTravis:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
+  git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
 else
   echo '' >&2
   echo 'Warning: No documentation (html) files have been found!' >&2
   echo 'Warning: Not going to push the documentation to GitHub!' >&2
   exit 1
 fi
-

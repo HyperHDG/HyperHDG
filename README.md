@@ -1,58 +1,20 @@
-# What is HyperHDG?
+# Welcome to HyperHDG!
 
-This repository contains the code to write a hybrid discontinuous Galerkin based solver for PDEs
-defined on hypergraphs. 
+It contains a C++ based library implementing hybrid discontinuous Galerkin methods on extremely
+general domains &mdash; that is, all standard (volume) domains, graphs, self-intersecting surfaces,
+and several other types of "domains" that can be interpreted as hypergraphs.
 
+The C++ library can be embedded to C++ programs and/or Python scripts using [Cython](
+https://cython.org/). This makes the library a good choice for writing both, high performance codes
+and easy to handle teaching scripts/programs.
 
-## How to setup HyperHDG?
+For more details on HyperHDG, you may visit
 
-Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
-operating system this can be done using
-
-    $ sudo apt-get install git doxygen graphviz cmake python3-dev python3-numpy python3-scipy \
-    cython3 libblas-dev liblapack-dev
-
-This installs the packages that are necessary to fully use HyperHDG. Moreover, to visualize the
-output of simulations, we recommend to install `ParaView`. Afterwards, you can start obtaining
-HyperHDG.
-
-To do so, enter the directory you want to clone HyperHDG into and do the following steps:
-
-1. Clone the repository and give it the name `your_name`:
-
-   1. To clone this repository with https use
-
-          $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
-
-   2. To clone this repository with ssh use
-
-          $ git git@github.com:AndreasRupp/HyperHDG.git your_name
-
-2. Enter directory using
-
-       $ cd your_name
-
-3. Execute the script `setup.sh` to install HyperHDG by
-
-       $ ./shell_scripts/setup.sh
-
-
-## How to write your own HyperHDG program?
-
-
-### Finding the documentations
-
-Having setup HyperHDG, the latest documentation is available by opening `doxygen/html/index.html` in
-the HyperHDG repository. Alternatively, you can find the full documentation on the [Doxygen page](
-https://andreasrupp.github.io/HyperHDG/).
-
-
-## How to contribute?
-
-If you want to contribute to HyperHDG, the easiest way to do so is via an issue, or a pull request.
-For the latter one, please consider the `Contributions` section and run the script
-`shell_scripts/push_test.sh` prior to submitting your pull request. The script ensures that your
-changes pass the basic tests that need to be satisfied for an successful merge to the master branch. 
+- the [website of HyperHDG](https://andreasrupp.github.io/HyperHDG),
+- the [Doxygen page](https://andreasrupp.github.io/HyperHDG_pages/doxygen),
+- or its [Wiki](https://github.com/AndreasRupp/HyperHDG/wiki) containing guides on how to [setup](
+https://github.com/AndreasRupp/HyperHDG/wiki/Setup) and [use](
+https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 
 # Copyright, License, and Contribution Policy
