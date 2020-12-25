@@ -1,8 +1,7 @@
-name: Deploy Doxygen
+name: Doxygen
 
 # Act only if a 'push' occurred.
-on: 
-  push:
+on: push
 
 # In that case do the job 'make_and_deploy_doxygen'
 jobs:
