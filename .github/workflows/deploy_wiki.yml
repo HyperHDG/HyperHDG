@@ -1,7 +1,7 @@
 name: clang-format Check
 
 on:
-  push
+  push:
     branches:
       - gh-wiki
       - change_wiki
