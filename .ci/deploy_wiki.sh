@@ -42,9 +42,10 @@ echo 'Uploading documentation to the wiki branch...'
 # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
 git add --all
 
-# Commit the added files with a title and description containing the Travis CI build number and
+# Commit the added files with a title and description containing the GitHub actions build number and
 # the GitHub commit reference that issued this build.
-git commit -m "Deploy Wiki to GitHub gh-wiki build: ${RUN_NUMBER}" -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
+git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}"
+  -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
 # Force push to the remote GitHub pages branch.
 git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
