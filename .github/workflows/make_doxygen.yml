@@ -1,10 +1,7 @@
 name: Deploy Doxygen
 
-# Act only if a 'push' or a pull-request to the branch 'master' occurred.
+# Act only if a 'push' occurred.
 on: 
-  pull_request:
-    branches:
-      - master
   push:
 
 # In that case do the job 'make_and_deploy_doxygen'
