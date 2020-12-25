@@ -25,4 +25,4 @@ jobs:
           REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
         run: chmod 700 .ci/deploy_doxygen.sh; .ci/deploy_doxygen.sh
         shell: bash
-        if: success()
+        if: success() && github.ref == 'push_doxygen'

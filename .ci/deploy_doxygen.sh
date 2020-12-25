@@ -18,6 +18,10 @@ set -e
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG_pages
 
+# Pretend to be user Andreas Rupp CI.
+git config user.name "Andreas Rupp CI"
+git config user.email "HyperHDG@rupp.ink"
+
 # Retrieve master branch of the repositoy containing the GitHub pages.
 git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
 cd code_docs
@@ -50,7 +54,7 @@ cp -r ../doxygen/html ./doxygen
 
 # Only upload if Doxygen successfully created the documentation.
 if [ -d "doxygen" ] && [ -f "doxygen/index.html" ]; then
-  echo 'Uploading documentation to the gh-pages branch...'
+  echo 'Uploading documentation to the HyperHDG_pages repository...'
   # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
   git add --all
 
