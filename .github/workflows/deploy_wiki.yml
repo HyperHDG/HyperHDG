@@ -10,6 +10,8 @@ jobs:
   deploy_wiki:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout current branch
+      uses: actions/checkout@v2
     - name: Run wiki_deploy script
       env:
         REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
