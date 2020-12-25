@@ -1,0 +1,26 @@
+name: Deploy Wiki
+
+# Act only if a 'push' to the branch 'gh-wiki' occurred.
+on:
+  push:
+    branches:
+      - make_wiki
+
+# In that case do the job 'deploy_wiki'
+jobs:
+  deploy_wiki:
+    runs-on: ubuntu-latest
+    # which needs the following steps to be executed:
+    steps:
+      # 1. Checkout current branch of GitHub repository.
+      - name: Checkout current branch
+        uses: actions/checkout@v2
+      # 2. Create the dpxygen.
+      - name: Create the doxygen
+        run: make doxygen
+      # 3. Run the deployment script for which the secret token CI_REPO_TOKEN is named REPO_TOKEN.
+      - name: Run deploy_doxygen script
+        env:
+          REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
+        run: chmod 700 .ci/deploy_doxygen.sh; .ci/deploy_doxygen.sh
+        shell: bash
