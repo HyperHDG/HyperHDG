@@ -60,7 +60,7 @@ if [ -d "doxygen" ] && [ -f "doxygen/index.html" ]; then
 
   # Commit the added files with a title and description containing the GitHub actions build number
   # and the GitHub commit reference that issued this build.
-  git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}"
+  git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}" \
     -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
   # Force push to the remote GitHub pages branch.
