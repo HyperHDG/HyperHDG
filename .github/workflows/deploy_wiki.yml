@@ -1,4 +1,4 @@
-name: clang-format Check
+name: Deploy wiki
 on:
   push:
     branches:
@@ -6,8 +6,8 @@ on:
     - change_wiki
 jobs:
   deploy_wiki:
+    runs-on: ubuntu-latest
     steps:
     - name: Run wiki_deploy script
-      runs-on: ubuntu-latest
-      run: .generate_wiki.sh
+      run: ./.generate_wiki.sh
       shell: bash
