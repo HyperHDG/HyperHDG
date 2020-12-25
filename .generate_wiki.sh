@@ -30,12 +30,11 @@ git config --global push.default simple
 # Go back to first commit.
 git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`
 
-# Copy wiki into current branch and remove auxiliary files.
-cp  ../* .
-rm -f .travis.yml .generate_wiki.sh .gitignore
+# Copy wiki (consisiting of .md files) into current branch and remove auxiliary files.
+cp  ../*.md .
+rm -f README.md
 
 # Start uploading the wiki pages.
-
 echo 'Uploading documentation to the wiki branch...'
 
 # Add everything in this directory (the Doxygen code documentation) to the gh-pages branch.
