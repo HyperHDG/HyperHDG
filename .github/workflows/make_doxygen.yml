@@ -5,7 +5,7 @@ on:
   pull_request:
     branches:
       - master
-  push
+  push:
 
 # In that case do the job 'make_and_deploy_doxygen'
 jobs:
