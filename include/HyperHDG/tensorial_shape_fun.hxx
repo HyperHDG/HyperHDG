@@ -48,44 +48,16 @@ inline std::array<unsigned int, std::max(dimT, 1U)> tensorial_index_decompose(un
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  * \authors   Simon Schmidt, Heidelberg University, 2020.
  **************************************************************************************************/
-template <typename shape_t, unsigned int dimT unsigned int polynomial_degree>
-class TensorialShapeFun
+template <typename shape_t,
+          unsigned int dimT
+          unsigned int polynomial_degree>
+struct ShapeFunTensorial
 {
- private:
+  typedef shape_t shape_fun_1d_t;
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
   static constexpr unsigned int n_shapefun_ = Hypercube<dimT>::pow(polynomial_degree + 1);
-
- public:
-  /*!***********************************************************************************************
-   * \brief   Constructor.
-   *
-   * \param   abscissas                 Array containing one-dimensional abscissa values.
-   ************************************************************************************************/
-  TensorialShapeFunctionEvaluation(){};
-  /*!***********************************************************************************************
-   * \brief   Return shape function of given index at abscissa of given index.
-   *
-   * \param   tensorial_function_index  Index of the tensorial function.
-   * \param   tensorial_point_index     Index of tensorial point to be evaluated.
-   * \retval  function_value            Value of function evaluated at point.
-   ************************************************************************************************/
-  template <float_t>
-  inline return_t evaluate_in_tensorial_point(unsigned int tensorial_function_index,
-                                              float_t tensorial_point_index) const
-  {
-    std::array<unsigned int, std::max(dimT, 1U)> decomposed_function_index =
-      index_decompose<dimT>(tensorial_function_index, polynomial_degree + 1);
-    std::array<unsigned int, std::max(dimT, 1U)> decomposed_point_index =
-      index_decompose<dimT, abscissas_sizeT>(tensorial_point_index);
-    return_t function_value = 1.;
-    for (unsigned int d = 0; d < std::max(dimT, 1U); ++d)
-    {
-      function_value *= values_1D[decomposed_function_index[d]][decomposed_point_index[d]];
-    }
-    return function_value;
-  }
   /*!***********************************************************************************************
    * \brief   Evaluate a multidimensional linear combination of tensor product shapefunctions in
    *          tensor product points.

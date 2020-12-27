@@ -5,6 +5,11 @@
 #include <array>
 #include <cmath>
 
+/*!*************************************************************************************************
+ * \todo  Introduce enum of structs that can be plugged into ShapeFun1D's template parameters.
+ **************************************************************************************************/
+
+
 // Definition of Legendre type shape functions
 
 struct Legendre
@@ -133,7 +138,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t>
-  inline return_t shape_fct_eval(const unsigned int index, const input_t x_val)
+  static inline return_t shape_fct_eval(const unsigned int index, const input_t x_val)
   {
     return shape_t::template shape_fct_eval<return_t>(index, x_val);
   }
@@ -154,7 +159,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t>
-  inline return_t shape_der_eval(const unsigned int index, const input_t x_val)
+  static inline return_t shape_der_eval(const unsigned int index, const input_t x_val)
   {
     return shape_t::template shape_der_eval<return_t>(index, x_val);
   }
@@ -177,7 +182,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t, std::size_t sizeX>
-  inline std::array<return_t, sizeX> shape_fct_eval(const unsigned int index,
+  static inline std::array<return_t, sizeX> shape_fct_eval(const unsigned int index,
                                                     const std::array<input_t, sizeX>& x_val)
   {
     std::array<return_t, sizeX> result;
@@ -203,7 +208,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t, std::size_t sizeX>
-  inline std::array<return_t, sizeX> shape_der_eval(const unsigned int index,
+  static inline std::array<return_t, sizeX> shape_der_eval(const unsigned int index,
                                                     const std::array<input_t, sizeX>& x_val)
   {
     std::array<return_t, sizeX> result;
@@ -229,7 +234,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t, std::size_t sizeInd>
-  inline std::array<return_t, sizeInd> shape_fct_eval(
+  static inline std::array<return_t, sizeInd> shape_fct_eval(
     const std::array<unsigned int, sizeInd>& index,
     const input_t x_val)
   {
@@ -256,7 +261,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <typename return_t, typename input_t, std::size_t sizeInd>
-  inline std::array<return_t, sizeInd> shape_der_eval(
+  static inline std::array<return_t, sizeInd> shape_der_eval(
     const std::array<unsigned int, sizeInd>& index,
     const input_t x_val)
   {
@@ -287,7 +292,7 @@ struct ShapeFun1D
             typename input_t,
             std::size_t sizeInd,
             std::size_t sizeX>
-  inline std::array<std::array<return_t, sizeX>, sizeInd> shape_fct_eval(
+  static inline std::array<std::array<return_t, sizeX>, sizeInd> shape_fct_eval(
     const std::array<unsigned int, sizeInd>& index,
     const std::array<input_t, sizeX>& x_val)
   {
@@ -318,7 +323,7 @@ struct ShapeFun1D
             typename input_t,
             std::size_t sizeInd,
             std::size_t sizeX>
-  inline std::array<std::array<return_t, sizeX>, sizeInd> shape_der_eval(
+  static inline std::array<std::array<return_t, sizeX>, sizeInd> shape_der_eval(
     const std::array<unsigned int, sizeInd>& index,
     const std::array<input_t, sizeX>& x_val)
   {
@@ -344,7 +349,7 @@ struct ShapeFun1D
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <unsigned int max_poly_degree, typename return_t = double>
-  std::array<std::array<return_t, 2>, max_poly_degree + 1> shape_fcts_at_bdrs()
+  static inline std::array<std::array<return_t, 2>, max_poly_degree + 1> shape_fcts_at_bdrs()
   {
     std::array<return_t, 2> bdrs = {0., 1.};
     std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
@@ -364,13 +369,13 @@ struct ShapeFun1D
    * \tparam  return_t            Floating type specification. Default is double.
    * \retval  corner_vals         \c std::array of polynomial degrees containing \c std::array of
    *                              corner indices (the shape functions' derivatives are evaluated
-   *at).
+   *                              at).
    *
    * \authors   Guido Kanschat, Heidelberg University, 2020.
    * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
   template <unsigned int max_poly_degree, typename return_t = double>
-  std::array<std::array<return_t, 2>, max_poly_degree + 1> shape_ders_at_bdrs()
+  static inline std::array<std::array<return_t, 2>, max_poly_degree + 1> shape_ders_at_bdrs()
   {
     std::array<return_t, 2> bdrs = {0., 1.};
     std::array<unsigned int, max_poly_degree + 1> poly_deg_index;
