@@ -7,6 +7,35 @@
 #include <cmath>
 #include <numeric>
 
+#ifndef TENSORIAL_INDEX_DECOMPOSE
+#define TENSORIAL_INDEX_DECOMPOSE
+/*!*************************************************************************************************
+ * \brief   Decompose index of tensorial shape function or tensorial point with respect to the
+ *          local dimension.
+ *
+ * The index of the shape function needs to be decomposed into dim indices of one-dimensional shape
+ * functions or points.
+ *
+ * \tparam  dimT          Local dimension of the shape function's domain or the point.
+ * \param   index         Local index of the shape function or point.
+ * \param   range         Range (maximum) of the 1D indices.
+ * \retval  decomposition Array consisting of respective one-dimensional indices.
+ **************************************************************************************************/
+template <unsigned int dimT>
+inline std::array<unsigned int, std::max(dimT, 1U)> tensorial_index_decompose(unsigned int index,
+                                                                              unsigned int range)
+{
+  std::array<unsigned int, std::max(dimT, 1U)> decomposition;
+  for (unsigned int dim = 0; dim < decomposition.size(); ++dim)
+  {
+    decomposition[dim] = index % range;
+    index /= range;
+  }
+  hy_assert(index == 0, "Index initially exceeded given maximum value range^dimT.");
+  return decomposition;
+}
+#endif  // ifndef TENSORIAL_INDEX_DECOMPOSE
+
 struct Gaussian
 {
   /*!***********************************************************************************************
