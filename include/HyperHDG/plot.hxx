@@ -548,24 +548,24 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
                           SmallVec<n_subdivisions + 1, float> abscissas)
 {
   using dof_value_t = typename LargeVecT::value_type;
-  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+  constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
-  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * hyEdge_dim> hyEdge_dofs;
   std::array<
     std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,
     LocalSolverT::node_system_dimension()>
     local_values;
   for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index)
   {
-    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
+    hyEdge_dofs = get_edge_dof_values<hyEdge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
       hyper_graph, edge_index, lambda);
-    for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index)
+    for (unsigned int bdr_index = 0; bdr_index < hyEdge_dim * 2; ++bdr_index)
     {
       myfile << "      ";
 
       local_values = local_solver.lambda_values(abscissas.data(), hyEdge_dofs, bdr_index);
-      for (unsigned int corner = 0; corner < Hypercube<edge_dim - 1>::n_vertices(); ++corner)
+      for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim - 1>::n_vertices(); ++corner)
       {
         myfile << "  ";
         for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
