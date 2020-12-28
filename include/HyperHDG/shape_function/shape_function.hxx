@@ -1,4 +1,4 @@
-
+#include <HyperHDG/shape_function/tensorial.hxx>
 
 /*!*************************************************************************************************
  * \brief   Class that handles the evaluation of tensorial shape functions in tensor product points.

@@ -1,9 +1,10 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
+#include <HyperHDG/shape_function/one_dimensional.hxx>
+
+#include <array>
 
 namespace ShapeType
 {
@@ -27,7 +28,7 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fun() { return Hypercube<dimT>::pow(poly_deg + 1); }
+  static constexpr unsigned int n_shape_fun() { return Hypercube<dimT>::pow(shape_fun_1d::n_shape_fun()); }
 
   static constexpr unsigned int dim() { return dimT; }
 

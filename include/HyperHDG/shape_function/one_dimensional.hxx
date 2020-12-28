@@ -2,7 +2,6 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
-#include <array>
 #include <cmath>
 
 namespace ShapeType
