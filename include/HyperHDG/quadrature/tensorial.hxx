@@ -1,29 +1,16 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
 
 #include <array>
 #include <cmath>
 //#include <numeric>
 
-/*!*************************************************************************************************
- * \brief   Calculate the amount of quadrature points.
- *
- * \tparam  quadrature_t      The quadrature rule applied.
- * \param   max_quad_degree   Desired degree of accuracy.
- * \param   local_dimensions  Dimension of the underlying domain. Defaullt is one.
- * \retval  n_quad_points     Amount of needed quadrature points.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2020.
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- **************************************************************************************************/
-template <typename quadrature_t>
-constexpr unsigned int compute_n_quad_points(const unsigned int max_quad_degree,
-                                             const unsigned int local_dimensions = 1)
+namespace Quadrature
 {
-  return quadrature_t::compute_n_quad_points(max_quad_degree, local_dimensions);
-}
+
 /*!*************************************************************************************************
  * \brief   Quadrature points on one-dimensional unit interval.
  *
@@ -152,240 +139,36 @@ shape_ders_at_quad_points()
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template <unsigned int max_poly_degree,
-          unsigned int max_quad_degree,
-          typename quadrature_t,
+template <typename quadrature_t,
           typename shape_t,
           typename return_t = double>
-class IntegratorTensorial
+struct Tensorial
 {
- private:
-  const std::array<return_t, quadrature_t::compute_n_quad_points(max_quad_degree)> quad_points_,
-    quad_weights_;
-  const std::array<std::array<return_t, quadrature_t::compute_n_quad_points(max_quad_degree)>,
-                   max_poly_degree + 1>
-    shape_fcts_at_quad_, shape_ders_at_quad_;
-  const std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_, trial_der_bdr_;
-
- public:
+  static constexpr unsigned int dim() { return shape_t::dim(); }
   /*!***********************************************************************************************
-   * \brief   Constructor for general integrator class.
-   ************************************************************************************************/
-  IntegratorTensorial()
-  : quad_points_(quadrature_t::template quad_points<max_quad_degree, return_t>()),
-    quad_weights_(quadrature_t::template quad_weights<max_quad_degree, return_t>()),
-    shape_fcts_at_quad_(shape_fcts_at_quad_points<max_poly_degree,
-                                                  max_quad_degree,
-                                                  quadrature_t,
-                                                  shape_t,
-                                                  return_t>()),
-    shape_ders_at_quad_(shape_ders_at_quad_points<max_poly_degree,
-                                                  max_quad_degree,
-                                                  quadrature_t,
-                                                  shape_t,
-                                                  return_t>()),
-    trial_bdr_(shape_fcts_at_bdrs<max_poly_degree, shape_t, return_t>()),
-    trial_der_bdr_(shape_ders_at_bdrs<max_poly_degree, shape_t, return_t>())
-  {
-    hy_assert(quad_weights_.size() == quad_points_.size(),
-              "Number of quadrature weights and points must be equal!");
-    hy_assert(shape_fcts_at_quad_.size() == shape_ders_at_quad_.size(),
-              "Number of shape functions and their derivatives must be equal!");
-    for (unsigned int i = 0; i < shape_fcts_at_quad_.size(); ++i)
-      hy_assert(quad_points_.size() == shape_fcts_at_quad_[i].size() &&
-                  shape_fcts_at_quad_[i].size() == shape_ders_at_quad_[i].size(),
-                "Number of quadrature points needs to be equal in all cases!");
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of one-dimensional shape functions.
+   * \brief   Calculate the amount of quadrature points.
    *
-   * \param   i             Local index of local one-dimensional shape function.
-   * \param   j             Local index of local one-dimensional shape function.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  inline return_t integrate_1D_phiphi(const unsigned int i, const unsigned int j) const
-  {
-    hy_assert(i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size(),
-              "Indices of shape functions must be smaller than amount of shape functions.");
-    return_t result = 0.;
-
-    for (unsigned int q = 0; q < quad_weights_.size(); ++q)
-      result += quad_weights_[q] * shape_fcts_at_quad_[i][q] * shape_fcts_at_quad_[j][q];
-
-    return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of one-dimensional shape function and one derivative.
+   * \tparam  quadrature_t      The quadrature rule applied.
+   * \param   max_quad_degree   Desired degree of accuracy.
+   * \param   local_dimensions  Dimension of the underlying domain. Defaullt is one.
+   * \retval  n_quad_points     Amount of needed quadrature points.
    *
-   * \param   i             Local index of local one-dimensional shape function.
-   * \param   j             Local index of local one-dimensional shape function (with derivative).
-   * \retval  integral      Integral of product of both shape functions.
+   * \authors   Guido Kanschat, Heidelberg University, 2020.
+   * \authors   Andreas Rupp, Heidelberg University, 2020.
    ************************************************************************************************/
-  inline return_t integrate_1D_phiDphi(const unsigned int i, const unsigned int j) const
+  static constexpr unsigned int n_quad_points()
   {
-    hy_assert(i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size(),
-              "Indices of shape functions must be smaller than amount of shape functions.");
-    return_t result = 0.;
+    return Hypercube<dim()>::pow(quadrature_t::n_quad_points());
+  }
 
-    for (unsigned int q = 0; q < quad_weights_.size(); ++q)
-      result += quad_weights_[q] * shape_fcts_at_quad_[i][q] * shape_ders_at_quad_[j][q];
 
-    return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of one-dimensional shape function and one derivative.
-   *
-   * \param   i             Local index of local one-dimensional shape function (with derivative).
-   * \param   j             Local index of local one-dimensional shape function.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  inline return_t integrate_1D_Dphiphi(const unsigned int i, const unsigned int j) const
-  {
-    hy_assert(i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size(),
-              "Indices of shape functions must be smaller than amount of shape functions.");
-    return_t result = 0.;
+  static constexpr std::array<Point<dim(), return_t>, n_quad_points()> quad_points
+  static constexpr std::array<return_t, n_quad_points()> quad_weights
+  static constexpr std::array<std::array<return_t,n_quad_points()>,shape_t::n_shape_fun()> shape_fcts_at_quad
+  static constexpr std::array<std::array<Point<dim(), return_t>,n_quad_points()>,shape_t::n_shape_fun()> shape_ders_at_quad
+  static constexpr std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_,
+  static constexpr std::array<std::array<Point<dim(), return_t>, 2>, max_poly_degree + 1> trial_der_bdr_;
 
-    for (unsigned int q = 0; q < quad_weights_.size(); ++q)
-      result += quad_weights_[q] * shape_ders_at_quad_[i][q] * shape_fcts_at_quad_[j][q];
-
-    return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of two one-dimensional shape functions' derivatives.
-   *
-   * \param   i             Local index of local one-dimensional shape function (with derivative).
-   * \param   j             Local index of local one-dimensional shape function (with derivative).
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  inline return_t integrate_1D_DphiDphi(const unsigned int i, const unsigned int j) const
-  {
-    hy_assert(i < shape_fcts_at_quad_.size() && j < shape_fcts_at_quad_.size(),
-              "Indices of shape functions must be smaller than amount of shape functions.");
-    return_t result = 0.;
-
-    for (unsigned int q = 0; q < quad_weights_.size(); ++q)
-      result += quad_weights_[q] * shape_ders_at_quad_[i][q] * shape_ders_at_quad_[j][q];
-
-    return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional unit volume.
-   *
-   * \tparam  dimT          Dimension of the volume.
-   * \param   i             Local index of local shape function.
-   * \param   j             Local index of local shape function.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  template <unsigned int dimT>
-  return_t integrate_vol_phiphi(const unsigned int i, const unsigned int j) const
-  {
-    return_t integral = 1.;
-    std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree + 1>(i);
-    std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree + 1>(j);
-    for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
-      integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    return integral;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of shape function amd derivative over dimT-dimensional unit volume.
-   *
-   * \tparam  dimT          Dimension of the volume.
-   * \param   i             Local index of local shape function.
-   * \param   j             Local index of local shape function (with derivative).
-   * \param   dim           Dimension of the derivative.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  template <unsigned int dimT>
-  return_t integrate_vol_phiDphi(const unsigned int i,
-                                 const unsigned int j,
-                                 const unsigned int dim) const
-  {
-    return_t integral = 1.;
-    std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree + 1>(i);
-    std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree + 1>(j);
-    for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
-      if (dim == dim_fct)
-        integral *= integrate_1D_phiDphi(dec_i[dim_fct], dec_j[dim_fct]);
-      else
-        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    return integral;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of shape function and derivative over dimT-dimensional unit volume.
-   *
-   * \tparam  dimT          Dimension of the volume.
-   * \param   i             Local index of local shape function (with derivative).
-   * \param   j             Local index of local shape function.
-   * \param   dim           Dimension of the derivative.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  template <unsigned int dimT>
-  return_t integrate_vol_Dphiphi(const unsigned int i,
-                                 const unsigned int j,
-                                 const unsigned int dim) const
-  {
-    return_t integral = 1.;
-    std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree + 1>(i);
-    std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree + 1>(j);
-    for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
-      if (dim == dim_fct)
-        integral *= integrate_1D_Dphiphi(dec_i[dim_fct], dec_j[dim_fct]);
-      else
-        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    return integral;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of shape functions over dimT-dimensional volume's boundary.
-   *
-   * \tparam  dimT          Dimension of the volume.
-   * \param   i             Local index of local shape function.
-   * \param   j             Local index of local shape function.
-   * \param   bdr           Boundary face index.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  template <unsigned int dimT>
-  return_t integrate_bdr_phiphi(const unsigned int i,
-                                const unsigned int j,
-                                const unsigned int bdr) const
-  {
-    return_t integral = 1.;
-    std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree + 1>(i);
-    std::array<unsigned int, dimT> dec_j = index_decompose<dimT, max_poly_degree + 1>(j);
-    unsigned int dim = bdr / 2, bdr_ind = bdr % 2;
-    for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
-      if (dim == dim_fct)
-        integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind] * trial_bdr_[dec_j[dim_fct]][bdr_ind];
-      else
-        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct]);
-    return integral;
-  }
-  /*!***********************************************************************************************
-   * \brief   Integrate product of shape function of volume times shape function of volume's face
-   *          over dimT-dimensional volume's boundary.
-   *
-   * \tparam  dimT          Dimension of the volume.
-   * \param   i             Local index of local volume shape function.
-   * \param   j             Local index of local boundary shape function.
-   * \param   bdr           Boundary face index.
-   * \retval  integral      Integral of product of both shape functions.
-   ************************************************************************************************/
-  template <unsigned int dimT>
-  return_t integrate_bdr_phipsi(const unsigned int i,
-                                const unsigned int j,
-                                const unsigned int bdr) const
-  {
-    return_t integral = 1.;
-    std::array<unsigned int, dimT> dec_i = index_decompose<dimT, max_poly_degree + 1>(i);
-    std::array<unsigned int, std::max(dimT - 1, 1U)> dec_j =
-      index_decompose<dimT - 1, max_poly_degree + 1>(j);
-    unsigned int dim = bdr / 2, bdr_ind = bdr % 2;
-    for (unsigned int dim_fct = 0; dim_fct < dimT; ++dim_fct)
-      if (dim == dim_fct)
-        integral *= trial_bdr_[dec_i[dim_fct]][bdr_ind];
-      else
-        integral *= integrate_1D_phiphi(dec_i[dim_fct], dec_j[dim_fct - (dim_fct > dim)]);
-    return integral;
-  }
   /*!***********************************************************************************************
    * \brief   Integrate product of shape functions times some function over some geometry.
    *
@@ -1133,3 +916,5 @@ class IntegratorTensorial
     return integral * geom.area();
   }
 };  // end of class Integrator
+
+} // end of namespace Quadrature

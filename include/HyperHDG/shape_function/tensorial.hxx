@@ -33,30 +33,7 @@ struct Tensorial
   static constexpr unsigned int dim() { return dimT; }
 
   static constexpr unsigned int degree() { return poly_deg; }
-  /*!***********************************************************************************************
-   * \brief   Decompose index of tensorial shape function or tensorial point with respect to the
-   *          local dimension.
-   *
-   * The index of the shape function needs to be decomposed into dim indices of one-dimensional
-   * shape functions or points.
-   *
-   * \param   index         Local index of the shape function or point.
-   * \param   range         Range (maximum, excluded) of the 1D indices.
-   * \retval  decomposition Array consisting of respective one-dimensional indices.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, std::max(dimT, 1U)> index_decompose(
-    unsigned int index,
-    const unsigned int range = poly_deg + 1)
-  {
-    std::array<unsigned int, std::max(dimT, 1U)> decomposition;
-    for (unsigned int dim = 0; dim < decomposition.size(); ++dim)
-    {
-      decomposition[dim] = index % range;
-      index /= range;
-    }
-    hy_assert(index == 0, "Index initially exceeded given maximum value range^dimT.");
-    return decomposition;
-  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate value of one shape function.
    *
@@ -82,7 +59,7 @@ struct Tensorial
       return (return_t)1.;
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index,poly_deg+1);
     for (unsigned int dim = 0; dim < dimT; ++dim)
       value += shape_fun_1d::template fct_val<return_t>(index_dim[dim], point[dim]);
 
@@ -113,7 +90,7 @@ struct Tensorial
     hy_assert(der_dim < dimT, "The derivative needs to be with respect to a valid dimension.");
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index,poly_deg+1);
     for (unsigned int dim = 0; dim < dimT; ++dim)
       if (der_dim == dim)
         value += shape_fun_1d::template der_val<return_t>(index_dim[dim], point[dim]);

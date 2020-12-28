@@ -5,7 +5,7 @@
 
 #include <array>
 #include <cmath>
-#include <numeric>
+//#include <numeric>
 
 namespace Quadrature
 {
