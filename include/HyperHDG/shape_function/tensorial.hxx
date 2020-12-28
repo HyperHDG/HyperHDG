@@ -28,7 +28,10 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fun() { return Hypercube<dimT>::pow(shape_fun_1d::n_shape_fun()); }
+  static constexpr unsigned int n_shape_fun()
+  {
+    return Hypercube<dimT>::pow(shape_fun_1d::n_shape_fun());
+  }
 
   static constexpr unsigned int dim() { return dimT; }
 
@@ -59,7 +62,7 @@ struct Tensorial
       return (return_t)1.;
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index,poly_deg+1);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index, poly_deg + 1);
     for (unsigned int dim = 0; dim < dimT; ++dim)
       value += shape_fun_1d::template fct_val<return_t>(index_dim[dim], point[dim]);
 
@@ -90,7 +93,7 @@ struct Tensorial
     hy_assert(der_dim < dimT, "The derivative needs to be with respect to a valid dimension.");
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index,poly_deg+1);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index, poly_deg + 1);
     for (unsigned int dim = 0; dim < dimT; ++dim)
       if (der_dim == dim)
         value += shape_fun_1d::template der_val<return_t>(index_dim[dim], point[dim]);

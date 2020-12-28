@@ -9,7 +9,6 @@
 
 namespace Quadrature
 {
-
 template <unsigned int quad_deg>
 struct Gaussian
 {
@@ -185,4 +184,4 @@ struct Gaussian
   }
 };  // end of struct Gaussian
 
-} // end of namespace Quadrature
+}  // end of namespace Quadrature

@@ -1,7 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/tensorial_shape_fun.hxx>
 
 #include <array>
@@ -10,7 +10,6 @@
 
 namespace Quadrature
 {
-
 /*!*************************************************************************************************
  * \brief   Quadrature points on one-dimensional unit interval.
  *
@@ -139,9 +138,7 @@ shape_ders_at_quad_points()
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-template <typename quadrature_t,
-          typename shape_t,
-          typename return_t = double>
+template <typename quadrature_t, typename shape_t, typename return_t = double>
 struct Tensorial
 {
   static constexpr unsigned int dim() { return shape_t::dim(); }
@@ -161,13 +158,17 @@ struct Tensorial
     return Hypercube<dim()>::pow(quadrature_t::n_quad_points());
   }
 
-
-  static constexpr std::array<Point<dim(), return_t>, n_quad_points()> quad_points
-  static constexpr std::array<return_t, n_quad_points()> quad_weights
-  static constexpr std::array<std::array<return_t,n_quad_points()>,shape_t::n_shape_fun()> shape_fcts_at_quad
-  static constexpr std::array<std::array<Point<dim(), return_t>,n_quad_points()>,shape_t::n_shape_fun()> shape_ders_at_quad
-  static constexpr std::array<std::array<return_t, 2>, max_poly_degree + 1> trial_bdr_,
-  static constexpr std::array<std::array<Point<dim(), return_t>, 2>, max_poly_degree + 1> trial_der_bdr_;
+  static constexpr std::array<Point<dim(), return_t>, n_quad_points()>
+    quad_points static constexpr std::array<return_t, n_quad_points()>
+      quad_weights static constexpr std::array<std::array<return_t, n_quad_points()>,
+                                               shape_t::n_shape_fun()>
+        shape_fcts_at_quad static constexpr std::
+          array<std::array<Point<dim(), return_t>, n_quad_points()>, shape_t::n_shape_fun()>
+            shape_ders_at_quad static constexpr std::array<std::array<return_t, 2>,
+                                                           max_poly_degree + 1>
+              trial_bdr_,
+    static constexpr std::array<std::array<Point<dim(), return_t>, 2>, max_poly_degree + 1>
+      trial_der_bdr_;
 
   /*!***********************************************************************************************
    * \brief   Integrate product of shape functions times some function over some geometry.
@@ -917,4 +918,4 @@ struct Tensorial
   }
 };  // end of class Integrator
 
-} // end of namespace Quadrature
+}  // end of namespace Quadrature
