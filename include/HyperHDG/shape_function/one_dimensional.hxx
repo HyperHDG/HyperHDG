@@ -15,7 +15,7 @@ namespace ShapeType
 template <unsigned int poly_deg>
 struct Legendre
 {
-  static constexpr unsigned int n_shape_fun(){return degree() + 1};
+  static constexpr unsigned int n_fun() { return degree() + 1; }
 
   static constexpr unsigned int dim() { return 1U; }
 

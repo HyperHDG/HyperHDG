@@ -895,6 +895,17 @@ mat_entry_t norm_p(const SmallMat<n_rows, n_cols, mat_entry_t>& mat, const mat_e
     norm += std::pow(std::abs(mat[index]), power);
   return std::pow(norm, 1. / power);
 }
+/*!*************************************************************************************************
+ * \brief   Return product of all entries.
+ **************************************************************************************************/
+template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
+mat_entry_t entries_product(const SmallMat<n_rows, n_cols, mat_entry_t>& mat)
+{
+  mat_entry_t product = 1.;
+  for (unsigned int index = 0; index < mat.size(); ++index)
+    product *= mat[index];
+  return product;
+}
 
 // -------------------------------------------------------------------------------------------------
 // Output of SmallMat:

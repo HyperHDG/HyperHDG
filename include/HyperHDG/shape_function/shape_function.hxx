@@ -20,7 +20,7 @@ struct ShapeFunction
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fun() { return shape_t::n_shape_fun() }
+  static constexpr unsigned int n_fun() { return shape_t::n_fun(); }
 
   static constexpr unsigned int dim() { return shape_t::dim(); }
 
@@ -143,8 +143,8 @@ struct ShapeFunction
   template <typename return_t, typename coeffs_t, typename point_t>
   static inline return_t lin_comb_fct_val(const coeffs_t& coeffs, const point_t& point)
   {
-    static_assert(point_t::size() == dimT, "Point needs to have correct dimension.");
-    static_assert(coeffs_t::size() == n_shape_fun, "Coeffs size must coincide with poly space!");
+    static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
+    static_assert(coeffs_t::size() == n_fun(), "Coeffs size must coincide with poly space!");
 
     return_t value = 0.;
     for (unsigned int index = 0; index < coeffs_t::size(); ++index)
@@ -172,8 +172,8 @@ struct ShapeFunction
                                           const point_t& point,
                                           const unsigned int der_dim)
   {
-    static_assert(point_t::size() == dimT, "Point needs to have correct dimension.");
-    static_assert(coeffs_t::size() == n_shape_fun, "Coeffs size must coincide with poly space!");
+    static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
+    static_assert(coeffs_t::size() == n_fun(), "Coeffs size must coincide with poly space!");
 
     return_t value = 0.;
     for (unsigned int index = 0; index < coeffs_t::size(); ++index)

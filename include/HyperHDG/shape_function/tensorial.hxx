@@ -21,21 +21,18 @@ namespace ShapeType
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  * \authors   Simon Schmidt, Heidelberg University, 2020.
  **************************************************************************************************/
-template <template <unsigned int> typename shape_t, unsigned int dimT, unsigned int poly_deg>
+template <typename shape_t, unsigned int dimT>
 struct Tensorial
 {
-  using shape_fun_1d = shape_t<poly_deg>;
+  typedef shape_t shape_fun_1d;
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fun()
-  {
-    return Hypercube<dimT>::pow(shape_fun_1d::n_shape_fun());
-  }
+  static constexpr unsigned int n_fun() { return Hypercube<dimT>::pow(shape_fun_1d::n_fun()); }
 
   static constexpr unsigned int dim() { return dimT; }
 
-  static constexpr unsigned int degree() { return poly_deg; }
+  static constexpr unsigned int degree() { return shape_t::degree(); }
 
   /*!***********************************************************************************************
    * \brief   Evaluate value of one shape function.
@@ -56,13 +53,14 @@ struct Tensorial
   template <typename return_t, typename point_t>
   static inline return_t fct_val(const unsigned int index, const point_t& point)
   {
-    static_assert(point_t::size() == dimT, "Point needs to have correct dimension.");
+    static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
 
     if constexpr (dimT == 0)
       return (return_t)1.;
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index, poly_deg + 1);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim =
+      Hypercube<dimT>::index_decompose(index, shape_fun_1d::n_fun());
     for (unsigned int dim = 0; dim < dimT; ++dim)
       value += shape_fun_1d::template fct_val<return_t>(index_dim[dim], point[dim]);
 
@@ -89,11 +87,12 @@ struct Tensorial
                                  const point_t& point,
                                  const unsigned int der_dim)
   {
-    static_assert(point_t::size() == dimT, "Point needs to have correct dimension.");
+    static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
     hy_assert(der_dim < dimT, "The derivative needs to be with respect to a valid dimension.");
 
     return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim = index_decompose(index, poly_deg + 1);
+    std::array<unsigned int, std::max(dimT, 1U)> index_dim =
+      Hypercube<dimT>::index_decompose(index, shape_fun_1d::n_fun());
     for (unsigned int dim = 0; dim < dimT; ++dim)
       if (der_dim == dim)
         value += shape_fun_1d::template der_val<return_t>(index_dim[dim], point[dim]);
