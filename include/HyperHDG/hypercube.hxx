@@ -31,13 +31,9 @@ struct Hypercube
     return result;
   }
   /*!***********************************************************************************************
-   * \brief   Decompose index of tensorial shape function or tensorial point with respect to the
-   *          local dimension.
+   * \brief   Decompose global index of tensorial structure with respect to its dimensions.
    *
-   * The index of the shape function needs to be decomposed into dim indices of one-dimensional
-   * shape functions or points.
-   *
-   * \param   index         Local index of the shape function or point.
+   * \param   index         Local tensorial index (e.g. of the shape function or point).
    * \param   range         Range (maximum, excluded) of the 1D indices.
    * \retval  decomposition Array consisting of respective one-dimensional indices.
    ************************************************************************************************/
@@ -45,7 +41,6 @@ struct Hypercube
     unsigned int index,
     const unsigned int range)
   {
-    hy_assert(range > 1 || index == 0, "The range must be non-trivial!");
     std::array<unsigned int, std::max(dimT, 1U)> decomposition;
     for (unsigned int dim = 0; dim < decomposition.size(); ++dim)
     {
@@ -55,7 +50,13 @@ struct Hypercube
     hy_assert(index == 0, "Index initially exceeded given maximum value range^dimT.");
     return decomposition;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Generate tensorial point whose entries are elements of an array.
+   *
+   * \param   index         Local tensorial index (e.g. of the shape function or point).
+   * \param   points        Array of possible values of point components.
+   * \retval  point         Tensorial point of given index.
+   ************************************************************************************************/
   template <typename point_t, typename array_t>
   static constexpr point_t tensorial_pt(const unsigned int index, const array_t& points)
   {

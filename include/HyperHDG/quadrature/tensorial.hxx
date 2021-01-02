@@ -623,9 +623,9 @@ struct Tensorial
                   "The maximum polynomial degrees must be larger than or equal to the given ones.");
     SmallVec<GeomT::hyEdge_dim(), return_t> integral(1.);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_i =
-      Hypercube<GeomT::hyEdge_dim()>::index_decompose(i, n_fun_1D);
+      Hypercube<GeomT::hyEdge_dim()>::index_decompose(i, poly_deg_i + 1);
     std::array<unsigned int, GeomT::hyEdge_dim()> dec_j =
-      Hypercube<GeomT::hyEdge_dim()>::index_decompose(j, n_fun_1D);
+      Hypercube<GeomT::hyEdge_dim()>::index_decompose(j, poly_deg_j + 1);
     for (unsigned int dim = 0; dim < GeomT::hyEdge_dim(); ++dim)
       for (unsigned int dim_fct = 0; dim_fct < GeomT::hyEdge_dim(); ++dim_fct)
         if (dim == dim_fct)
