@@ -55,9 +55,9 @@
 template <typename float_t>
 static constexpr float_t heron_root(const float_t square)
 {
-  static_assert(square >= 0., "Each square of a number must be non-negative!");
+  hy_assert(square >= 0., "Each square of a number must be non-negative!");
 
-  if constexpr (square == 0.)
+  if (square == 0.)
     return 0.;
 
   constexpr float_t corr_fac = 1. - 10. * std::numeric_limits<float_t>::epsilon();
