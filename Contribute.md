@@ -1,8 +1,8 @@
 # How to contribute to HyperHDG?
 
 If you want to contribute to HyperHDG, which is great, we encourage you to re-read the [README](
-blob/master/README.md) and especially its [Contributions](
-tree/master#contributions) section. There are several ways
+https://github.com/AndreasRupp/HyperHDG/blob/master/README.md) and especially its [Contributions](
+https://github.com/AndreasRupp/HyperHDG/tree/master#contributions) section. There are several ways
 of contributing to HyperHDG:
 
 
@@ -26,7 +26,8 @@ merged to the master branch after an additional revision of one of the [Authors]
 https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt) if it can be automatically merged.
 You will receive a feedback if any problems with the pull request occurred.
 
-The doxygen is automatically generated after a successful merge to the `master` branch.
+The [doxygen](https://andreasrupp.github.io/HyperHDG_pages/doxygen) is automatically generated after
+a successful merge to the `master` branch.
 
 
 ## Contributing to HyperHDG's website / branch `gh-pages`
@@ -47,3 +48,6 @@ of the [Authors](https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt
 
 ## Other ways of contribution
 
+If you would like to contribute to HyperHDG in a way that is not covered by the aforementioned
+points, please contact one of the [Authors](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt).
