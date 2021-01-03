@@ -62,4 +62,4 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used. Next, we
 will briefly describe [how to write your own program using HyperHDG](
-https://github.com/AndreasRupp/HyperHDG/wiki/Usage).
+https://github.com/AndreasRupp/HyperHDG/wiki/Employ).

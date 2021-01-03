@@ -1,2 +1,9 @@
-# Directory which is internally created in pushes to master
+# Directory which is internally created within pushes to gh-wiki and must not be used.
 code_docs/
+
+# Directories that might survive branch switching.
+__pycache__/
+doxygen/
+[Bb]uild/
+[Oo]utput*/
+submodules/

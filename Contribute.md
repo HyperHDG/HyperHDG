@@ -1,0 +1,38 @@
+# How to contribute to HyperHDG?
+
+If you want to contribute to HyperHDG, which is great, we encourage you to read through the [REDME](
+https://github.com/AndreasRupp/HyperHDG/blob/master/README.md) and especially its [Contributions](
+https://github.com/AndreasRupp/HyperHDG/tree/master#contributions) section. There are several ways
+of contributing to HyperHDG:
+
+
+## Contributing to HyperHDG's code / master branch
+
+If you want to add contributions to HyperHDG's [master](
+https://github.com/AndreasRupp/HyperHDG/tree/master) branch, it is important to ensure that its
+[push-test](https://github.com/AndreasRupp/HyperHDG/blob/master/shell_scripts/push_test.sh) script
+succeeds. This is one of two basic requirement for pull-requests to the [master](
+https://github.com/AndreasRupp/HyperHDG/tree/master) branch to be merged. However, to execute the
+script you might need to install `clang-format` (which is used to format all C++ based source code)
+and the compilers  specified as `TEST_COMPILER`s in the [Makefile](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). The other basic requirement is that
+the GitHub tests specified in the [workflows](
+https://github.com/AndreasRupp/HyperHDG/tree/master/.github/workflows) folder succeed. This is
+indicated by a green check mark (as opposed to a red cross) on top of the file list of your branch.
+A yellow dot indicated that the tests are still running.
+
+With the aforementioned two requirements fulfilled, you can create a pull request which will be
+merged to the master branch after an additional revision of one of the [Authors](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt) if it can be automatically merged.
+You will receive a feedback if any problems with the pull request occurred.
+
+
+## Contributing to HyperHDG's wiki / branch gh-wiki
+
+
+
+## Contributing to HyperHDG's website / branch gh-pages
+
+
+## Other ways of contribution
+
