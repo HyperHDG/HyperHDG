@@ -1,12 +1,12 @@
 # How to contribute to HyperHDG?
 
-If you want to contribute to HyperHDG, which is great, we encourage you to read through the [REDME](
+If you want to contribute to HyperHDG, which is great, we encourage you to re-read the [README](
 https://github.com/AndreasRupp/HyperHDG/blob/master/README.md) and especially its [Contributions](
 https://github.com/AndreasRupp/HyperHDG/tree/master#contributions) section. There are several ways
 of contributing to HyperHDG:
 
 
-## Contributing to HyperHDG's code / master branch
+## Contributing to HyperHDG's code & doxygen / branch `master`
 
 If you want to add contributions to HyperHDG's [master](
 https://github.com/AndreasRupp/HyperHDG/tree/master) branch, it is important to ensure that its
@@ -26,12 +26,23 @@ merged to the master branch after an additional revision of one of the [Authors]
 https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt) if it can be automatically merged.
 You will receive a feedback if any problems with the pull request occurred.
 
-
-## Contributing to HyperHDG's wiki / branch gh-wiki
-
+The doxygen is automatically generated after a successful merge to the `master` branch.
 
 
-## Contributing to HyperHDG's website / branch gh-pages
+## Contributing to HyperHDG's website / branch `gh-pages`
+
+The website of HyperHDG is automatically created from the branch `gh-pages`. Thus, in order to
+change the website, please create a pull-request to this branch. Changes will be implemented after
+a successful revision of one of the [Authors](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt).
+
+
+## Contributing to HyperHDG's wiki / branch `gh-wiki`
+
+Please do not try to directly change pages within the wiki of HyperHDG. These pages are 
+automatically generated from the repository's branch `gh-wiki`. Thus, to change the wiki, please
+create a pull-request to this branch. Changes will be implemented after a successful revision of one
+of the [Authors](https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt).
 
 
 ## Other ways of contribution
