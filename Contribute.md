@@ -1,8 +1,8 @@
 # How to contribute to HyperHDG?
 
 If you want to contribute to HyperHDG, which is great, we encourage you to re-read the [README](
-https://github.com/AndreasRupp/HyperHDG/blob/master/README.md) and especially its [Contributions](
-https://github.com/AndreasRupp/HyperHDG/tree/master#contributions) section. There are several ways
+master/README.md) and especially its [Contributions](
+master#contributions) section. There are several ways
 of contributing to HyperHDG:
 
 
