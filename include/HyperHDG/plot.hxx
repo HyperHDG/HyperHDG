@@ -534,10 +534,44 @@ void plot_edge_values(HyperGraphT& hyper_graph,
     myfile << std::endl;
   }
 }
+
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
- *
- * \todo    Implement the function for systems of size larger than 1.
+ **************************************************************************************************/
+template <unsigned int component,
+          typename LocalSolverT,
+          typename dof_value_t,
+          typename lv_t,
+          typename hd_t,
+          typename pt_t>
+void fancy_recursion(lv_t& local_values,
+                     const hd_t& hyEdge_dofs,
+                     const pt_t& point,
+                     const unsigned int k,
+                     const unsigned int bdr_index)
+{
+  if constexpr (component == LocalSolverT::node_system_dimension())
+    return;
+  else
+  {
+    std::array<
+      dof_value_t,
+      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::n_fun()>
+      helper_arr;
+    for (unsigned int k = 0; k < helper_arr.size(); ++k)
+      helper_arr[k] =
+        hyEdge_dofs[bdr_index][LocalSolverT::node_element::template first_dof<component>() + k];
+
+    local_values[component][k] =
+      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
+        template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
+                                         point);
+    fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point, k,
+                                                              bdr_index);
+  }
+}
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge boundary.
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
@@ -568,23 +602,10 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
       myfile << "      ";
 
       for (unsigned int lval = 0; lval < local_values.size(); ++lval)
-      {
-        Point<hyEdge_dim - 1> helper =
-          Hypercube<hyEdge_dim - 1>::template tensorial_pt<Point<hyEdge_dim - 1> >(lval, abscissas);
-        for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
-        {
-          std::array<
-            dof_value_t,
-            std::tuple_element<0, typename LocalSolverT::node_element::functions>::type::n_fun()>
-            helper_arr;
-          for (unsigned int k = 0; k < helper_arr.size(); ++k)
-            helper_arr[k] = hyEdge_dofs[bdr_index][0 + k];
-          local_values[d][lval] =
-            std::tuple_element<0, typename LocalSolverT::node_element::functions>::type::
-              template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
-                                               helper);
-        }
-      }
+        fancy_recursion<0, LocalSolverT, dof_value_t>(
+          local_values, hyEdge_dofs,
+          Hypercube<hyEdge_dim - 1>::template tensorial_pt<Point<hyEdge_dim - 1> >(lval, abscissas),
+          lval, bdr_index);
       for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim - 1>::n_vertices(); ++corner)
       {
         myfile << "  ";
