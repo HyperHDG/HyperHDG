@@ -113,7 +113,9 @@ class Diffusion
   typedef struct
   {
   } data_type;
-
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
   typedef struct
   {
     typedef std::tuple<

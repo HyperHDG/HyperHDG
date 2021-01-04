@@ -45,6 +45,15 @@ class LengtheningBeam
   {
   } data_type;
   /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  } node_element;
+  /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
    * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
@@ -270,30 +279,6 @@ class LengtheningBeam
 
     return result;
   }
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary.
-   *
-   * \tparam  absc_float_t    Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
-   * \param   abscissas       Abscissas of the supporting points.
-   * \param   lambda_values   The values of the skeletal variable's coefficients.
-   * \param   boundary_number Number of the boundary on which to evaluate the function.
-   * \retval  func_values     Function values at tensorial points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-             node_system_dimension()>
-  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const
-  {
-    TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
-                                     abscissa_float_t>
-      evaluation(abscissas);
-    return evaluation
-      .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-        lambda_values[boundary_number]);
-  }
 };  // end of class LengtheningBeam
 
 /*!*************************************************************************************************
@@ -331,6 +316,15 @@ class BernoulliBendingBeam
   typedef struct
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  } node_element;
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -586,30 +580,6 @@ class BernoulliBendingBeam
 
     return values;
   }
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary.
-   *
-   * \tparam  absc_float_t    Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
-   * \param   abscissas       Abscissas of the supporting points.
-   * \param   lambda_values   The values of the skeletal variable's coefficients.
-   * \param   boundary_number Number of the boundary on which to evaluate the function.
-   * \retval  func_values     Function values at tensorial points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-             node_system_dimension()>
-  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const
-  {
-    TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
-                                     abscissa_float_t>
-      evaluation(abscissas);
-    return evaluation
-      .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-        lambda_values[boundary_number]);
-  }
 };  // end of class BernoulliBendingBeam
 
 /*!*************************************************************************************************
@@ -633,6 +603,15 @@ class LengtheningBernoulliBendingBeam
   typedef struct
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  } node_element;
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -764,36 +743,6 @@ class LengtheningBernoulliBendingBeam
 
     for (unsigned int i = 0; i < system_dimension(); ++i)
       for (unsigned int j = 0; j < Hypercube<hyEdge_dimT>::pow(sizeT); ++j)
-        result[i][j] += auxiliary[i][j];
-
-    return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary.
-   *
-   * \tparam  absc_float_t    Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
-   * \param   abscissas       Abscissas of the supporting points.
-   * \param   lambda_values   The values of the skeletal variable's coefficients.
-   * \param   boundary_number Number of the boundary on which to evaluate the function.
-   * \retval  func_values     Function values at tensorial points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-             node_system_dimension()>
-  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const
-  {
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-               node_system_dimension()>
-      result = len_beam.lambda_values(abscissas, lambda_values, boundary_number);
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-               node_system_dimension()>
-      auxiliary = ben_beam.lambda_values(abscissas, lambda_values, boundary_number);
-
-    for (unsigned int i = 0; i < node_system_dimension(); ++i)
-      for (unsigned int j = 0; j < Hypercube<hyEdge_dimT - 1>::pow(sizeT); ++j)
         result[i][j] += auxiliary[i][j];
 
     return result;

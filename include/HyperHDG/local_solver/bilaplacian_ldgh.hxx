@@ -125,6 +125,15 @@ class Bilaplacian
   typedef struct
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  } node_element;
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -883,22 +892,6 @@ class Bilaplacian
     const input_array_t& lambda_values,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const;
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary
-   *
-   * \tparam  absc_float_t      Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
-   * \tparam  input_array_t     Type of input array.
-   * \param   abscissas         Abscissas of the supporting points.
-   * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   boundary_number   number of the boundary on which to evaluate the function.
-   * \retval  function_values   Function values at quadrature points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>, node_system_dim>
-  lambda_values(const std::array<abscissa_float_t, sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const;
 };  // end of class Bilaplacian
 
 // -------------------------------------------------------------------------------------------------
@@ -1256,28 +1249,6 @@ Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_va
     .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
       first_half_of_coefficients);
 }  // end of Bilaplacian::bulk_values
-
-template <unsigned int hyEdge_dimT,
-          unsigned int poly_deg,
-          unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
-          typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(sizeT)>,
-           Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dim>
-Bilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, sizeT>& abscissas,
-  const input_array_t& lambda_values,
-  const unsigned int boundary_number) const
-{
-  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg, sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-      lambda_values[boundary_number]);
-}
 
 // -------------------------------------------------------------------------------------------------
 /// \endcond
