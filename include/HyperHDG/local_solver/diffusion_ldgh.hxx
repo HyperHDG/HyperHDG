@@ -5,6 +5,7 @@
 #include <HyperHDG/quadrature/tensorial.hxx>
 #include <HyperHDG/shape_function/shape_function.hxx>
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -112,6 +113,26 @@ class Diffusion
   typedef struct
   {
   } data_type;
+
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+    /*  static constexpr unsigned int first_dof(unsigned int index)
+      {
+        hy_assert( index < std::tuple_size(functions), "Index is too large!" );
+        unsigned int initial = 0;
+        for (unsigned int i = 0; i < index; ++i)
+          initial += std::tuple_element<i, functions>::size();
+        return initial;
+      }
+      static inline unsigned int last_dof(unsigned int index)
+      {
+        hy_assert( index < std::tuple_size(functions), "Index is too large!" );
+        return first_dof(index) + std::tuple_elment<index, functions>::size();
+      } */
+  } node_element;
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions

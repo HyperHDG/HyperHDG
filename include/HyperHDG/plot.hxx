@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <tuple>
 // #include <cmath>
 
 /*!*************************************************************************************************
@@ -535,6 +536,8 @@ void plot_edge_values(HyperGraphT& hyper_graph,
 }
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
+ *
+ * \todo    Implement the function for systems of size larger than 1.
  **************************************************************************************************/
 template <class HyperGraphT,
           class LocalSolverT,
@@ -564,7 +567,24 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
     {
       myfile << "      ";
 
-      local_values = local_solver.lambda_values(abscissas.data(), hyEdge_dofs, bdr_index);
+      for (unsigned int lval = 0; lval < local_values.size(); ++lval)
+      {
+        Point<hyEdge_dim - 1> helper =
+          Hypercube<hyEdge_dim - 1>::template tensorial_pt<Point<hyEdge_dim - 1> >(lval, abscissas);
+        for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
+        {
+          std::array<
+            dof_value_t,
+            std::tuple_element<0, typename LocalSolverT::node_element::functions>::type::n_fun()>
+            helper_arr;
+          for (unsigned int k = 0; k < helper_arr.size(); ++k)
+            helper_arr[k] = hyEdge_dofs[bdr_index][0 + k];
+          local_values[d][lval] =
+            std::tuple_element<0, typename LocalSolverT::node_element::functions>::type::
+              template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
+                                               helper);
+        }
+      }
       for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim - 1>::n_vertices(); ++corner)
       {
         myfile << "  ";

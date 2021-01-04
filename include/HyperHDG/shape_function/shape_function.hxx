@@ -147,7 +147,7 @@ struct ShapeFunction
     static_assert(coeffs_t::size() == n_fun(), "Coeffs size must coincide with poly space!");
 
     return_t value = 0.;
-    for (unsigned int index = 0; index < coeffs_t::size(); ++index)
+    for (unsigned int index = 0; index < coeffs.size(); ++index)
       value += coeffs[index] * fct_val<return_t>(index, point);
     return value;
   }
@@ -176,7 +176,7 @@ struct ShapeFunction
     static_assert(coeffs_t::size() == n_fun(), "Coeffs size must coincide with poly space!");
 
     return_t value = 0.;
-    for (unsigned int index = 0; index < coeffs_t::size(); ++index)
+    for (unsigned int index = 0; index < coeffs.size(); ++index)
       value += coeffs[index] * der_val<return_t>(index, point, der_dim);
     return value;
   }
