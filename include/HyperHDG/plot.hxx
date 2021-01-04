@@ -538,6 +538,18 @@ void plot_edge_values(HyperGraphT& hyper_graph,
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
  **************************************************************************************************/
+template <unsigned int index, typename functions>
+static constexpr unsigned int first_dof()
+{
+  hy_assert(index <= std::tuple_size<functions>(), "Index is too large!");
+  if constexpr (index == 0)
+    return 0;
+  else
+    return std::tuple_element<index - 1, functions>::n_fun() + first_dof<index - 1>();
+}
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge boundary.
+ **************************************************************************************************/
 template <unsigned int component,
           typename LocalSolverT,
           typename dof_value_t,
@@ -560,7 +572,8 @@ void fancy_recursion(lv_t& local_values,
       helper_arr;
     for (unsigned int k = 0; k < helper_arr.size(); ++k)
       helper_arr[k] =
-        hyEdge_dofs[bdr_index][LocalSolverT::node_element::template first_dof<component>() + k];
+        hyEdge_dofs[bdr_index]
+                   [first_dof<component, typename LocalSolverT::node_element::functions>() + k];
 
     local_values[component][k] =
       std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
