@@ -2,30 +2,32 @@ from __future__ import print_function
 import numpy, os, sys
 import scipy.sparse.linalg as sp_lin_alg
 
+try:
+  import cython_import
+except ImportError as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+  import cython_import
+
+# Importing done
+
 poly_degree = 1
 hyEdge_dim  = 1
 space_dim   = 2
 refinement  = 1
 debug_mode  = True
   
-try:
-  import cython_import
-except ImportError as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-  import cython_import
-  
-const                 = cython_import.hyperhdg_constructor()
-const.global_loop     = "Elliptic"
-const.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
-const.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
-const.node_descriptor = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
-const.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(
+hdg_config                 = cython_import.hyperhdg_constructor()
+hdg_config.global_loop     = "Elliptic"
+hdg_config.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
+hdg_config.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
+hdg_config.node_descriptor = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
+hdg_config.local_solver    = "Diffusion<" + str(hyEdge_dim) + "," + str(poly_degree) + "," + str(
   2*poly_degree) + ",HG<" + str(hyEdge_dim) + ">::DiffusionElliptic,double>"
-const.include_files   = ["examples/parameters/diffusion.hxx"]
-const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-const.debug_mode      = debug_mode
+hdg_config.include_files   = ["examples/parameters/diffusion.hxx"]
+hdg_config.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+hdg_config.debug_mode      = debug_mode
 
-hyperHDG    = cython_import.cython_import(const)
+hyperHDG    = cython_import.cython_import(hdg_config)
 HDG_wrapper = hyperHDG( [2 ** refinement] * space_dim )
 
 vectorRHS = numpy.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
