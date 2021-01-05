@@ -2,10 +2,10 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <HyperHDG/quadrature/tensorial.hxx>
+#include <HyperHDG/shape_function/shape_function.hxx>
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -219,7 +219,11 @@ class BilaplacianEigs
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
+    integrator;
 
   // -----------------------------------------------------------------------------------------------
   // Private, internal functions for the local solver
@@ -631,7 +635,6 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::ass
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
 
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, vol_func_integral, face_integral, helper;
@@ -859,17 +862,11 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bul
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
-  std::array<lSol_float_t, n_loc_dofs_> coefficients =
-    solve_local_problem(lambda_values, hyper_edge, time);
-
-  std::array<lSol_float_t, n_loc_dofs_ / 2> first_half_of_coefficients;
-  std::copy_n(coefficients.begin(), n_loc_dofs_ / 2, first_half_of_coefficients.begin());
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
-      first_half_of_coefficients);
+  std::array<
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+    BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+    a;
+  return a;
 }  // end of BilaplacianEigs::bulk_values
 
 // -------------------------------------------------------------------------------------------------

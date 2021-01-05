@@ -556,11 +556,11 @@ template <unsigned int component,
           typename lv_t,
           typename hd_t,
           typename pt_t>
-void fancy_recursion(lv_t& local_values,
-                     const hd_t& hyEdge_dofs,
-                     const pt_t& point,
-                     const unsigned int k,
-                     const unsigned int bdr_index)
+void fancy_recursion(__attribute__((unused)) lv_t& local_values,
+                     __attribute__((unused)) const hd_t& hyEdge_dofs,
+                     __attribute__((unused)) const pt_t& point,
+                     __attribute__((unused)) const unsigned int k,
+                     __attribute__((unused)) const unsigned int bdr_index)
 {
   if constexpr (component == LocalSolverT::node_system_dimension())
     return;
@@ -592,7 +592,6 @@ template <class HyperGraphT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
 void plot_boundary_values(HyperGraphT& hyper_graph,
-                          const LocalSolverT& local_solver,
                           const LargeVecT& lambda,
                           std::ofstream& myfile,
                           SmallVec<n_subdivisions + 1, float> abscissas)
@@ -734,7 +733,7 @@ void plot_vtu(
     if (plot_options.plot_edge_boundaries)
     {
       plot_boundary_values<HyperGraphT, LocalSolverT, LargeVecT, n_subdivisions, hyEdge_index_t>(
-        hyper_graph, local_solver, lambda, myfile, boundary_abscissas);
+        hyper_graph, lambda, myfile, boundary_abscissas);
     }
     myfile << "        </DataArray>" << std::endl;
   }

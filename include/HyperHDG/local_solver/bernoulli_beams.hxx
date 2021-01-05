@@ -3,9 +3,9 @@
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <HyperHDG/quadrature/tensorial.hxx>
+#include <HyperHDG/shape_function/shape_function.hxx>
+#include <tuple>
 
 namespace LocalSolver
 {

@@ -2,10 +2,10 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <HyperHDG/quadrature/tensorial.hxx>
+#include <HyperHDG/shape_function/shape_function.hxx>
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -202,11 +202,18 @@ class DiffusionPostprocess
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
+    integrator;
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals of postprocessing.
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg + 1, quad_deg + 2, Gaussian, Legendre, lSol_float_t>
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg + 2>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg + 1>, hyEdge_dimT> >,
+    lSol_float_t>
     integrator_pp;
 
   // -----------------------------------------------------------------------------------------------
@@ -603,7 +610,6 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
   assemble_loc_matrix(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
@@ -852,15 +858,11 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
-  SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-    solve_local_problem(lambda_values, 1U, hyper_edge, time);
-
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
-      coefficients.data());
+  std::array<
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+    DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+    a;
+  return a;
 }
 // end of DiffusionPostprocess::bulk_values
 

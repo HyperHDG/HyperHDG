@@ -1,3 +1,5 @@
+#pragma once  // Ensure that file is included only once in a single compilation.
+
 #include <HyperHDG/shape_function/tensorial.hxx>
 
 /*!*************************************************************************************************

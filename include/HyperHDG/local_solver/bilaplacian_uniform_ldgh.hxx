@@ -2,10 +2,10 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <HyperHDG/quadrature/tensorial.hxx>
+#include <HyperHDG/shape_function/shape_function.hxx>
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -126,7 +126,11 @@ class BilaplacianUniform
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
+    integrator;
 
   // -----------------------------------------------------------------------------------------------
   // Private, internal functions for the local solver
@@ -319,7 +323,10 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
   const lSol_float_t tau)
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >, lSol_float_t>
+    integrator;
   lSol_float_t integral;
 
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
@@ -329,7 +336,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      integral = integrator.template integrate_vol_phiphi<hyEdge_dimT>(i, j);
+      integral = integrator.integrate_vol_phiphi(i, j);
       local_mat(hyEdge_dimT * n_shape_fct_ + i, n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) -=
         integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
@@ -343,7 +350,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
       {
         // Integral_element - nabla phi_i \vec phi_j dx
         // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-        integral = integrator.template integrate_vol_Dphiphi<hyEdge_dimT>(i, j, dim);
+        integral = integrator.integrate_vol_Dphiphi(i, j, dim);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= integral;
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= integral;
         local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
@@ -352,7 +359,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
                   n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) -= integral;
 
         // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 1);
+        integral = integrator.integrate_bdr_phiphi(i, j, 2 * dim + 1);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += integral;
         local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
                   n_dofs_lap + dim * n_shape_fct_ + j) +=
@@ -362,7 +369,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
         local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
                   n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) += tau * integral;
         // Corresponding boundary integrals from integration by parts in left lower blocks
-        integral = integrator.template integrate_bdr_phiphi<hyEdge_dimT>(i, j, 2 * dim + 0);
+        integral = integrator.integrate_bdr_phiphi(i, j, 2 * dim + 0);
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= integral;
         local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
                   n_dofs_lap + dim * n_shape_fct_ + j) -=
@@ -408,7 +415,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
     {
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 0);
         right_hand_side[dim * n_shape_fct_ + i] += lambda_values[2 * dim + 0][j] * integral;
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
           tau_ * lambda_values[2 * dim + 0][j] * integral;
@@ -417,7 +424,7 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_rhs(
         right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] +=
           tau_ * lambda_values[2 * dim + 0][n_shape_bdr_ + j] * integral;
 
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 1);
         right_hand_side[dim * n_shape_fct_ + i] -= lambda_values[2 * dim + 1][j] * integral;
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
           tau_ * lambda_values[2 * dim + 1][j] * integral;
@@ -460,12 +467,12 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::primal_at_bou
     {
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 0);
         bdr_values[2 * dim + 0][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
         bdr_values[2 * dim + 0][n_shape_bdr_ + j] +=
           coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
 
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 1);
         bdr_values[2 * dim + 1][j] += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
         bdr_values[2 * dim + 1][n_shape_bdr_ + j] +=
           coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] * integral;
@@ -504,12 +511,12 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::dual_at_bound
     {
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 0);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 0);
         bdr_values[2 * dim + 0][j] -= coeffs[dim * n_shape_fct_ + i] * integral;
         bdr_values[2 * dim + 0][n_shape_bdr_ + j] -=
           coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
 
-        integral = integrator.template integrate_bdr_phipsi<hyEdge_dimT>(i, j, 2 * dim + 1);
+        integral = integrator.integrate_bdr_phipsi(i, j, 2 * dim + 1);
         bdr_values[2 * dim + 1][j] += coeffs[dim * n_shape_fct_ + i] * integral;
         bdr_values[2 * dim + 1][n_shape_bdr_ + j] +=
           coeffs[n_dofs_lap + dim * n_shape_fct_ + i] * integral;
@@ -536,16 +543,10 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
   const input_array_t& lambda_values,
   const lSol_float_t) const
 {
-  std::array<lSol_float_t, n_loc_dofs_> coefficients = solve_local_problem(lambda_values);
-  std::array<lSol_float_t, n_loc_dofs_ / 2> first_half_of_coefficients;
-  std::copy_n(coefficients.begin(), n_loc_dofs_ / 2, first_half_of_coefficients.begin());
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
-      first_half_of_coefficients);
-
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+             BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dim>
+    a;
+  return a;
 }  // end of BilaplacianUniform::bulk_values
 
 // -------------------------------------------------------------------------------------------------
