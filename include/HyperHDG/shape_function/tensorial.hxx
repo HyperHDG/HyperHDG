@@ -53,7 +53,8 @@ struct Tensorial
    * \retval  fct_value     Evaluated value of shape function.
    ************************************************************************************************/
   template <typename return_t, typename point_t>
-  static inline return_t fct_val(const unsigned int index, const point_t& point)
+  static inline return_t fct_val(__attribute__((unused)) const unsigned int index,
+                                 __attribute__((unused)) const point_t& point)
   {
     static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
 
