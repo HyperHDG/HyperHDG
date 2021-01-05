@@ -48,11 +48,11 @@ Having imported HyperHDG, we want to configure the possible problem, HyperHDG sh
 is why, we create a `hyperhdg_constructor` and set its properties to define our problem. Our problem
 is a standard elliptic problem, for which an elliptic global loop can be used. To inform ourselves
 about the features of an elliptic loop and those of possible other loops, the [Doxygen](
-https://andreasrupp.github.io/HyperHDG_pages/doxygen) pages may be used. Our problem will be defined
+https://hyperhdg.github.io/auto_pages/doxygen) pages may be used. Our problem will be defined
 on a `space_dim` dimensional (refined) unit cube's `hyEdge_dim` dimensional elements. Thus, we need
 a cubic topology, a cubic node--descriptor, and the geometry of a unit cube. Moreover, the local
 solver to be chosen is our diffusion solver. Again, the meaning of the respective template arguments
-can be found in the [Doxygen](https://andreasrupp.github.io/HyperHDG_pages/doxygen). Here, 
+can be found in the [Doxygen](https://hyperhdg.github.io/auto_pages/doxygen). Here, 
 `poly_degree` refers to the order of the polynomial space, `2 * poly_degree` refers to the order of
 the quadrature rule, the next parameter refers to a `struct` in which the utilized parameters (such
 as right-hand side, diffusivity, ...) are defined, and `double` is the used floating point 
@@ -60,7 +60,7 @@ arithmetic of the local solvers. The file in which the parameters `struct` is de
 known to HyperHDG. Thus, it is added to a list of (additional) include files. The other files are
 automatically found by `cython_import`. The cython replacements define the constructor arguments
 (also denoted `constructor_values` in the [Doxygen](
-https://andreasrupp.github.io/HyperHDG_pages/doxygen)) of the topology and the geometry, and the
+hhttps://hyperhdg.github.io/auto_pages/doxygen)) of the topology and the geometry, and the
 debug mode is also transmitted to `cython_import`.
 
 ```
@@ -120,7 +120,7 @@ print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
 ```
 
 Additionally, we can plot the calculated solution after setting some plot options whose meaning can
-be found in the [Doxygen](https://andreasrupp.github.io/HyperHDG_pages/doxygen).
+be found in the [Doxygen](https://hyperhdg.github.io/auto_pages/doxygen).
 
 ```
 HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic_py" )

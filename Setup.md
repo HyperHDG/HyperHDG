@@ -18,7 +18,7 @@ administrate HyperHDG.
 - `doxygen` and `graphviz` provide the documentation system for all C++ and Python code. These
 packages are used to create a Doxygen documentation on your computer. This is useful to look up 
 interfaces and properties of functions utilized in HyperHDG. An on-line version of the documentation
-can also be found under this [link](https://andreasrupp.github.io/HyperHDG_pages/doxygen).
+can also be found under this [link](https://hyperhdg.github.io/auto_pages/doxygen).
 
 - `cmake` is used to control the software compilation process in an compiler independent form.
 

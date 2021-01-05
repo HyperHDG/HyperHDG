@@ -3,6 +3,7 @@ code_docs/
 
 # Directories that might survive branch switching.
 __pycache__/
+domains/
 doxygen/
 [Bb]uild/
 [Oo]utput*/

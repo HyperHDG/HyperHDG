@@ -26,7 +26,7 @@ merged to the master branch after an additional revision by one of the [Authors]
 https://github.com/AndreasRupp/HyperHDG/blob/master/Authors.txt) if it can be automatically merged.
 You will receive a feedback if any problems with the pull request occurred.
 
-The [doxygen](https://andreasrupp.github.io/HyperHDG_pages/doxygen) is automatically generated after
+The [doxygen](https://hyperhdg.github.io/auto_pages/doxygen) is automatically generated after
 a successful merge to the `master` branch.
 
 
