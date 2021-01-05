@@ -15,8 +15,8 @@ echo 'Setting up the script...'
 set -e
 
 # Set global variables.
-GH_REPO_ORG=AndreasRupp
-GH_REPO_NAME=HyperHDG_pages
+GH_REPO_ORG=HyperHDG
+GH_REPO_NAME=auto_pages
 
 # Pretend to be user Andreas Rupp CI.
 git config --global user.name "Andreas Rupp CI"
