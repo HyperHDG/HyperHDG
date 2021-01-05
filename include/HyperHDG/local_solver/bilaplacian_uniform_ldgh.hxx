@@ -543,10 +543,25 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::bulk_values(
   const input_array_t& lambda_values,
   const lSol_float_t) const
 {
+  SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
+    solve_local_problem(lambda_values, 1U, hyper_edge, time);
+  SmallVec<n_shape_fct_, lSol_float_t> coeffs;
+  SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
+
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
              BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::system_dim>
-    a;
-  return a;
+    point_vals;
+
+  for (unsigned int d = 0; d < system_dim; ++d)
+  {
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      coeffs[i] = coefficients[d * n_shape_fct_ + i];
+    for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(sizeT); ++pt)
+      point_vals[d][pt] = decltype(integrator)::shape_fun_t::template lin_comb_fct_val<float>(
+        coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+  }
+
+  return point_vals;
 }  // end of BilaplacianUniform::bulk_values
 
 // -------------------------------------------------------------------------------------------------

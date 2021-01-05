@@ -25,6 +25,7 @@ namespace Quadrature
 template <typename quadrature_t, typename shape_t, typename return_t = double>
 struct Tensorial
 {
+  typedef shape_t shape_fun_t;
   static constexpr unsigned int dim() { return shape_t::dim(); }
   static constexpr unsigned int n_fun_1D = shape_t::shape_fun_t::shape_fun_1d::n_fun();
   /*!***********************************************************************************************
