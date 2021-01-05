@@ -57,15 +57,16 @@ struct Tensorial
   {
     static_assert(point_t::size() == dim(), "Point needs to have correct dimension.");
 
+    return_t value = 0.;
     if constexpr (dimT == 0)
       return (return_t)1.;
-
-    return_t value = 0.;
-    std::array<unsigned int, std::max(dimT, 1U)> index_dim =
-      Hypercube<dimT>::index_decompose(index, shape_fun_1d::n_fun());
-    for (unsigned int dim = 0; dim < dimT; ++dim)
-      value += shape_fun_1d::template fct_val<return_t>(index_dim[dim], point[dim]);
-
+    else
+    {
+      std::array<unsigned int, std::max(dimT, 1U)> index_dim =
+        Hypercube<dimT>::index_decompose(index, shape_fun_1d::n_fun());
+      for (unsigned int dim = 0; dim < dimT; ++dim)
+        value += shape_fun_1d::template fct_val<return_t>(index_dim[dim], point[dim]);
+    }
     return value;
   }
   /*!***********************************************************************************************
