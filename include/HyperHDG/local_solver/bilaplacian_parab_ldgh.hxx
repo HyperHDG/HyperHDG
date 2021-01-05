@@ -1000,7 +1000,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bu
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
-  SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
+  SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
   std::array<
     std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
