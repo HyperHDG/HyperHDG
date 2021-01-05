@@ -605,6 +605,9 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
     std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,
     LocalSolverT::node_system_dimension()>
     local_values;
+  for (unsigned int i = 0; i < local_values.size(); ++i)
+    local_values[i].fill(0.);
+
   for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index)
   {
     hyEdge_dofs = get_edge_dof_values<hyEdge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
