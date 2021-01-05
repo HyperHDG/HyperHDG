@@ -4,37 +4,46 @@
 
 #include <cmath>
 
+/*!*************************************************************************************************
+ * \brief   Namespace for auxiliary functions and classes needed for struct shap_function.
+ *
+ * \authors   Andreas Rupp, Heidelberg University, 2021.
+ **************************************************************************************************/
 namespace ShapeType
 {
 /*!*************************************************************************************************
- * \todo  Introduce enum of structs that can be plugged into ShapeFun1D's template parameters.
+ * \brief   Struct that handles the evaluation of one-dimensional Legendre polynomials.
+ *
+ * \tparam  poly_deg  The maximum degree of the polynomial.
+ *
+ * \authors   Andreas Rupp, Heidelberg University, 2021.
  **************************************************************************************************/
-
-// Definition of Legendre type shape functions
-
 template <unsigned int poly_deg>
 struct Legendre
 {
-  static constexpr unsigned int n_fun() { return degree() + 1; }
-
-  static constexpr unsigned int dim() { return 1U; }
-
-  static constexpr unsigned int degree() { return poly_deg; }
-
   /*!***********************************************************************************************
-   * \brief   Evaluate value of orthonormal shape function.
+   * \brief   Number of shape functions that span the local polynomial space.
+   ************************************************************************************************/
+  static constexpr unsigned int n_fun() { return degree() + 1; }
+  /*!***********************************************************************************************
+   * \brief   Dimension of abscissas of the polynomials.
+   ************************************************************************************************/
+  static constexpr unsigned int dim() { return 1U; }
+  /*!***********************************************************************************************
+   * \brief   Maximum degree of all polynomials.
+   ************************************************************************************************/
+  static constexpr unsigned int degree() { return poly_deg; }
+  /*!***********************************************************************************************
+   * \brief   Evaluate value of one shape function.
    *
-   * Evaluates the value of the \c index orthonormal, one-dimensional shape function on the
-   * reference interval \f$[0,1]\f$ at abscissa \c x_val.
+   * Evaluates value of the \c index one-dimensional shape function on the reference interval
+   * \f$[0,1]\f$ at abscissas \c x_val.
    *
-   * \tparam  return_t            Floating type specification for return value.
-   * \tparam  input_t             Floating type specification for input value.
-   * \param   index               Index of evaluated shape function.
-   * \param   x_val               Abscissa of evaluated shape function.
-   * \retval  fct_value           Evaluated value of shape function.
-   *
-   * \authors   Guido Kanschat, Heidelberg University, 2020.
-   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   * \tparam  return_t    Floating type specification for return value.
+   * \tparam  input_t     Floating type specification for input value.
+   * \param   index       Index of evaluated shape function.
+   * \param   x_val       Abscissa of evaluated shape function.
+   * \retval  fct_value   Evaluated value of shape function.
    ************************************************************************************************/
   template <typename return_t, typename input_t>
   static inline return_t fct_val(const unsigned int index, const input_t x_val)
@@ -77,14 +86,11 @@ struct Legendre
    * Evaluates the value of the derivative of the \c index orthonormal, one-dimensional shape
    * function on the reference interval \f$[0,1]\f$ at abscissa \c x_val.
    *
-   * \tparam  return_t            Floating type specification for return value.
-   * \tparam  input_t             Floating type specification for input value.
-   * \param   index               Index of evaluated shape function.
-   * \param   x_val               Abscissa of evaluated shape function.
-   * \retval  fct_value           Evaluated value of shape function's derivative.
-   *
-   * \authors   Guido Kanschat, Heidelberg University, 2020.
-   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   * \tparam  return_t    Floating type specification for return value.
+   * \tparam  input_t     Floating type specification for input value.
+   * \param   index       Index of evaluated shape function.
+   * \param   x_val       Abscissa of evaluated shape function.
+   * \retval  fct_value   Evaluated value of shape function's derivative.
    ************************************************************************************************/
   template <typename return_t, typename input_t>
   static inline return_t der_val(const unsigned int index, const input_t x_val)

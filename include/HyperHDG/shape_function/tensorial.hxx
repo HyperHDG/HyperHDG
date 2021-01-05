@@ -6,49 +6,51 @@
 
 #include <array>
 
+/*!*************************************************************************************************
+ * \brief   Namespace for auxiliary functions and classes needed for struct shap_function.
+ *
+ * \authors   Andreas Rupp, Heidelberg University, 2021.
+ **************************************************************************************************/
 namespace ShapeType
 {
 /*!*************************************************************************************************
- * \brief   Class that handles the evaluation of tensorial shape functions in tensor product points.
+ * \brief   Struct that handles the evaluation of tensorial shape functions.
  *
- * \tparam  dimT              Local dimension of the shape function's domain or the point.
- * \tparam  return_t          The floating type that is returned.
- * \tparam  polynomial_degree Maximum polynomial degree that can be evaluated.
- * \tparam  abscissas_sizeT   Size of abszissas array.
- * \tparam  abscissa_float_t  Floating type for the abscissa values.
- * \tparam  shape_t           Type of 1D shapefunctions.
+ * \tparam  shape_t   The typename of the one dimensional shape functions.
+ * \tparam  dimT      Local dimension of the shape function's domain or the point.
  *
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- * \authors   Simon Schmidt, Heidelberg University, 2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2021.
  **************************************************************************************************/
 template <typename shape_t, unsigned int dimT>
 struct Tensorial
 {
+  /*!***********************************************************************************************
+   * \brief   Make type of one-dimensional shape functions accessable to everyone.
+   ************************************************************************************************/
   typedef shape_t shape_fun_1d;
   /*!***********************************************************************************************
    * \brief   Number of shape functions that span the local polynomial space.
    ************************************************************************************************/
   static constexpr unsigned int n_fun() { return Hypercube<dimT>::pow(shape_fun_1d::n_fun()); }
-
+  /*!***********************************************************************************************
+   * \brief   Dimension of abscissas of the polynomials.
+   ************************************************************************************************/
   static constexpr unsigned int dim() { return dimT; }
-
+  /*!***********************************************************************************************
+   * \brief   Maximum degree of all polynomials.
+   ************************************************************************************************/
   static constexpr unsigned int degree() { return shape_t::degree(); }
-
   /*!***********************************************************************************************
    * \brief   Evaluate value of one shape function.
    *
    * Evaluates value of the \c index one-dimensional shape function on the reference interval
-   * \f$[0,1]\f$ at abscissas \c x_val.
+   * \f$[0,1]\f$ at abscissas \c point.
    *
-   * \tparam  return_t            Floating type specification for return value.
-   * \tparam  shape_t             Type of shape functions, e.g. Legendre.
-   * \tparam  input_t             Floating type specification for input value.
-   * \param   index               Index of evaluated shape function.
-   * \param   x_val               Abscissa of evaluated shape function.
-   * \retval  fct_value           Evaluated value of shape function.
-   *
-   * \authors   Guido Kanschat, Heidelberg University, 2020.
-   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   * \tparam  return_t      Floating type specification for return value.
+   * \tparam  point_t       Type of abscissa value.
+   * \param   index         Index of evaluated shape function.
+   * \param   point         Abscissa / function argument.
+   * \retval  fct_value     Evaluated value of shape function.
    ************************************************************************************************/
   template <typename return_t, typename point_t>
   static inline return_t fct_val(const unsigned int index, const point_t& point)
@@ -72,15 +74,12 @@ struct Tensorial
    * Evaluates value of the \c index one-dimensional shape function on the reference interval
    * \f$[0,1]\f$ at abscissas \c x_val.
    *
-   * \tparam  return_t            Floating type specification for return value.
-   * \tparam  shape_t             Type of shape functions, e.g. Legendre.
-   * \tparam  input_t             Floating type specification for input value.
-   * \param   index               Index of evaluated shape function.
-   * \param   x_val               Abscissa of evaluated shape function.
-   * \retval  fct_value           Evaluated value of shape function.
-   *
-   * \authors   Guido Kanschat, Heidelberg University, 2020.
-   * \authors   Andreas Rupp, Heidelberg University, 2020.
+   * \tparam  return_t      Floating type specification for return value.
+   * \tparam  point_t       Type of abscissa value.
+   * \param   index         Index of evaluated shape function.
+   * \param   point         Abscissa / function argument.
+   * \param   der_dim       Dimension with respect to which derivative is evaluated.
+   * \retval  fct_value     Evaluated value of shape function's derivative.
    ************************************************************************************************/
   template <typename return_t, typename point_t>
   static inline return_t der_val(const unsigned int index,
@@ -101,6 +100,6 @@ struct Tensorial
 
     return value;
   }
-};
+};  // end of struct Tensorial
 
 }  // end of namespace ShapeType

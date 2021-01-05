@@ -265,7 +265,6 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Integrate product of shape functions over dimT-dimensional unit volume.
    *
-   * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function.
    * \param   j             Local index of local shape function.
    * \retval  integral      Integral of product of both shape functions.
@@ -282,10 +281,9 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Integrate product of shape function amd derivative over dimT-dimensional unit volume.
    *
-   * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function.
    * \param   j             Local index of local shape function (with derivative).
-   * \param   dim           Dimension of the derivative.
+   * \param   dim_der       Dimension of the derivative.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
   return_t integrate_vol_phiDphi(const unsigned int i,
@@ -305,10 +303,9 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Integrate product of shape function and derivative over dimT-dimensional unit volume.
    *
-   * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function (with derivative).
    * \param   j             Local index of local shape function.
-   * \param   dim           Dimension of the derivative.
+   * \param   dim_der       Dimension of the derivative.
    * \retval  integral      Integral of product of both shape functions.
    ************************************************************************************************/
   return_t integrate_vol_Dphiphi(const unsigned int i,
@@ -328,7 +325,6 @@ struct Tensorial
   /*!***********************************************************************************************
    * \brief   Integrate product of shape functions over dimT-dimensional volume's boundary.
    *
-   * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local shape function.
    * \param   j             Local index of local shape function.
    * \param   bdr           Boundary face index.
@@ -353,7 +349,6 @@ struct Tensorial
    * \brief   Integrate product of shape function of volume times shape function of volume's face
    *          over dimT-dimensional volume's boundary.
    *
-   * \tparam  dimT          Dimension of the volume.
    * \param   i             Local index of local volume shape function.
    * \param   j             Local index of local boundary shape function.
    * \param   bdr           Boundary face index.
