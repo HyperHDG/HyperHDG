@@ -63,8 +63,9 @@ struct Hypercube
     static_assert(point_t::size() == dimT, "Point must have appropriate dimension!");
     point_t point;
     std::array<unsigned int, std::max(dimT, 1U)> decomp = index_decompose(index, array_t::size());
-    for (unsigned int dim = 0; dim < dimT; ++dim)
-      point[dim] = points[decomp[dim]];
+    if constexpr (dimT > 0)
+      for (unsigned int dim = 0; dim < dimT; ++dim)
+        point[dim] = points[decomp[dim]];
     return point;
   }
 };  // end of struct Hypercube

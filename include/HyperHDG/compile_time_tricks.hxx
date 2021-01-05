@@ -52,7 +52,7 @@
  * \param[in]   square  The number whose square-root is evaluated.
  * \retval      root    The square root of the given number.
  **************************************************************************************************/
-template <typename float_t>
+/*template <typename float_t>
 static constexpr float_t heron_root(const float_t square)
 {
   hy_assert(square >= 0., "Each square of a number must be non-negative!");
@@ -70,4 +70,4 @@ static constexpr float_t heron_root(const float_t square)
   }
 
   return 0.5 * (lower_root + upper_root);
-}
+}*/

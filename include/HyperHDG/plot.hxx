@@ -541,7 +541,7 @@ void plot_edge_values(HyperGraphT& hyper_graph,
 template <unsigned int index, typename functions>
 static constexpr unsigned int first_dof()
 {
-  hy_assert(index <= std::tuple_size<functions>(), "Index is too large!");
+  static_assert(index <= std::tuple_size<functions>(), "Index is too large!");
   if constexpr (index == 0)
     return 0;
   else
