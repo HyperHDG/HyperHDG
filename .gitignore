@@ -1,4 +1,4 @@
-# Directory which is internally created within pushes to gh-wiki and must not be used.
+# Directory which is internally created by pushes to gh-wiki and must not be used.
 code_docs/
 
 # Directories that might survive branch switching.
