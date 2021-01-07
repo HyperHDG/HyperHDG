@@ -1,30 +1,7 @@
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-COMPILE_COM = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-COMPILE_INC = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-COMPILE_FLG = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-COMPILE_STD = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-LINK_COM = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-LINK_FLG = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-LINK_LIB = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-CYTHON_COM = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-CYTHON_FLG = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PY_VER_MAJ = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PY_VER_MIN = ""
-## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
-PYTHON_DIR = ""
-
 import configparser, os, sys, importlib, glob, re, datetime
-import hy_config
+from .cmake import get_options
+from .config import config, consistent
+from .paths import main_dir
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
 #
@@ -35,21 +12,21 @@ import hy_config
 def cython_import(conf):
   start_time = datetime.datetime.now()
   # Check that conf is appropriatelly filled.
-  assert isinstance(conf, config) and conf.is_consistent()
+  assert isinstance(conf, config) and consistent(conf)
 
   # Start program.
-  get_cmakes()
+  options = get_options()
   print("Cythonizing ... ", end='', flush=True)
 
   # Create folders and log files and check for consistency.
-  os.system("mkdir -p " + main_path() + "/build " + main_path() + "/build/cython_files " \
-            + main_path() + "/build/shared_objects")
-  if not os.path.isfile(main_path() + "/build/cython_log.txt"):
-    file = open(main_path() + "/build/cython_log.txt", "w")
+  os.system("mkdir -p " + main_dir() + "/build " + main_dir() + "/build/cython_files " \
+            + main_dir() + "/build/shared_objects")
+  if not os.path.isfile(main_dir() + "/build/cython_log.txt"):
+    file = open(main_dir() + "/build/cython_log.txt", "w")
     file.write("Python version: " + str(sys.version_info))
     file.close()
   else:
-    file = open(main_path() + "/build/cython_log.txt", "r")
+    file = open(main_dir() + "/build/cython_log.txt", "r")
     assert file.readline() == "Python version: " + str(sys.version_info), \
            "Wrong Python version!\n \
             Remove build directory and reinstall HyperHDG or use previous Python version."
@@ -64,7 +41,7 @@ def cython_import(conf):
   if compilation_necessary:
     # Copy pyx and pxd files from cython directory.
     for file_end in ["pxd", "pyx"]:
-      with open(main_path() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
+      with open(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
         + file_end, "r") as file:
         content = file.read()
       content = re.sub("C\+\+ClassName", "\"" + cpp_class + "\"", content)
@@ -73,7 +50,7 @@ def cython_import(conf):
       content = re.sub("IncludeFiles", include_string, content)
       for i in range(len(cy_replace)):
         content = re.sub("CyReplace" + '%02d' % (i+1), cy_replace[i], content)
-      with open(main_path() + "/build/cython_files/" + python_class + "." + file_end, "w") as file:
+      with open(main_dir() + "/build/cython_files/" + python_class + "." + file_end, "w") as file:
         file.write(content)
     # Prepare the compilation commands.
     cython_command, compile_command, link_command = get_commands(python_class)
@@ -89,7 +66,7 @@ def cython_import(conf):
   try:
     mod = importlib.import_module(python_class)
   except ImportError as error:
-    sys.path.append(main_path() + "/build/shared_objects")
+    sys.path.append(main_dir() + "/build/shared_objects")
     mod = importlib.import_module(python_class)
 
   delta_time_ms = 1000 * (datetime.datetime.now() - start_time).total_seconds()

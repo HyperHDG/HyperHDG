@@ -48,8 +48,7 @@ def consistent(conf):
   return True
 
 ## \brief   Add the files that need to be included for defining the problem to include list.
-def extract_includes(conf):
-  assert isinstance(conf, config) and consistent(conf)
+def extract_include(conf):
   helper = find_definition("geometry", extract_classname(conf.geometry))
   if helper not in conf.include_files:
     conf.include_files.append(helper)

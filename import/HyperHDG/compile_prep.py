@@ -1,45 +1,4 @@
-## \brief   Read out parameters for Cython compilation provided by CMAKE.
-def cmakes_options():
-  global COMPILE_COM, COMPILE_INC, COMPILE_FLG, COMPILE_STD, LINK_COM, LINK_FLG, LINK_LIB, \
-    CYTHON_COM, CYTHON_FLG, PY_VER_MAJ, PY_VER_MIN, PYTHON_DIR
-  if not os.path.isfile(main_path() + "/build/cmake_cython.cfg"):
-    print("CMAKE files do not exist ... using default values for Cython!")
-    COMPILE_COM = "g++"
-    COMPILE_INC = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
-      -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
-    COMPILE_FLG = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong -Wformat \
-      -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
-    COMPILE_STD = "17"
-    LINK_COM = "g++"
-    LINK_FLG = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
-      -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
-      -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
-    LINK_LIB = "-llapack"
-    CYTHON_COM = "cython"
-    CYTHON_FLG = "-3 --cplus"
-    PY_VER_MAJ = str(sys.version_info.major)
-    PY_VER_MIN = str(sys.version_info.minor)
-    PYTHON_DIR = "/usr/include/python"+str(sys.version_info.major)+"."+str(sys.version_info.minor)
-  else:
-    config = configparser.ConfigParser()
-    config.read(main_path() + "/build/cmake_cython.cfg")
-    COMPILE_COM = config['compiler']['command']
-    COMPILE_INC = config['compiler']['includes']
-    COMPILE_FLG = config['compiler']['flags']
-    COMPILE_STD = config['compiler']['standard']
-    LINK_COM = config['linker']['command']
-    LINK_FLG = config['linker']['flags']
-    LINK_LIB = config['linker']['libs']
-    CYTHON_COM = config['cython']['command']
-    CYTHON_FLG = config['cython']['flags']
-    PY_VER_MAJ = config['python']['ver_maj']
-    PY_VER_MIN = config['python']['ver_min']
-    PYTHON_DIR = config['python']['dir']
-  if int(PY_VER_MAJ) < 3:
-    print("Python versions below 3 are not supported!")
-  assert PYTHON_DIR in COMPILE_INC, "Python directory must be included!"
-  assert int(PY_VER_MAJ) == sys.version_info.major and int(PY_VER_MIN) == sys.version_info.minor, \
-         "Utilized Python version is not CMAKE's Python version!"
+
 
 ## \brief   Generate shell commands from CMAKE parameters.
 def compile_commands(python_class):

@@ -8,3 +8,6 @@
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2021.
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
+
+from .config import config
+from .cython_import import cython_import
