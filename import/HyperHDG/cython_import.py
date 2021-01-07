@@ -75,7 +75,7 @@ class hyperhdg_constructor:
 def cython_import(constructor):
   start_time = datetime.datetime.now()
   # Check that constructor is appropriatelly filled.
-  assert isinstance(constructor, hyperhdg_constructor) and constructor.is_consistent()
+  assert isinstance(constructor, config) and constructor.is_consistent()
 
   # Start program.
   get_cmakes()
