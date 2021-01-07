@@ -5,7 +5,7 @@
 *.so
 
 # Directory which is internally created in pushes to master
-code_docs/
+doxy_docs_ci/
 
 # Build directory created by Cython
 [Bb]uild/
