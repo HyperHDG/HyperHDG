@@ -1,8 +1,10 @@
+import configparser
+
 ## \brief   Object that comprises all information for HyperHDG to create a problem.
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2021.
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
-class hy_config:
+class config:
   global_loop         = ""
   local_solver        = ""
   topology            = ""
@@ -14,9 +16,9 @@ class hy_config:
   debug_mode          = False
   allow_file_output   = True
 
-## \brief   Check that hy_config is consistent.
-def is_consistent(conf):
-  assert isinstance(conf, hy_config)
+## \brief   Check that config is consistent.
+def consistent(conf):
+  assert isinstance(conf, config)
   if not (isinstance(conf.global_loop, str) and conf.global_loop != ""):
      return False
   if not (isinstance(conf.local_solver, str) and  conf.local_solver != ""):
@@ -45,9 +47,31 @@ def is_consistent(conf):
       return False
   return True
 
-## \brief   Evaluate hy_config file that needs to be present for all .pyx/.pxd files.
+## \brief   Add the files that need to be included for defining the problem to include list.
+def extract_includes(conf):
+  helper = find_definition("geometry", extract_classname(conf.geometry))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("node_descriptor", extract_classname(conf.node_descriptor))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("topology", extract_classname(conf.topology))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("global_loop", extract_classname(conf.global_loop))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("local_solver", extract_classname(conf.local_solver))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  include_string = ""
+  for x in conf.include_files:
+    include_string = include_string + "cdef extern from \"<" + x + ">\": pass\n"
+  return include_string
+
+## \brief   Evaluate config file that needs to be present for all .pyx/.pxd files.
 def generate_cy_replace(conf):
-  assert isinstance(conf, hy_config) and conf.is_consistent()
+  assert isinstance(conf, config) and consistent(conf)
   config_file = configparser.ConfigParser()
   config_file.read(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + ".cfg")
   n_replacements = int(config_file['default']['n_replacements'])
