@@ -4,9 +4,6 @@ from .names import cython_from_cpp
 from .paths import main_dir
 
 ## \brief   Object that comprises all information for HyperHDG to create a problem.
-#
-#  \authors   Guido Kanschat, Heidelberg University, 2021.
-#  \authors   Andreas Rupp, Heidelberg University, 2021.
 class config:
   global_loop         = ""
   local_solver        = ""

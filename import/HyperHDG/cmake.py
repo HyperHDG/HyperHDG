@@ -2,9 +2,6 @@ import configparser, os, sys
 from .paths import main_dir
 
 ## \brief   Object that comprises all information for HyperHDG to create a problem.
-#
-#  \authors   Guido Kanschat, Heidelberg University, 2021.
-#  \authors   Andreas Rupp, Heidelberg University, 2021.
 class options:
   compile_com = ""
   compile_inc = ""

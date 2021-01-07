@@ -7,10 +7,7 @@ from .paths import main_dir
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
 #
-#  \param   conf hyperhdg_conf object.
-#
-#  \authors   Guido Kanschat, Heidelberg University, 2020.
-#  \authors   Andreas Rupp, Heidelberg University, 2020.
+#  \param   conf  Object of type config.
 def include(conf):
   start_time = datetime.datetime.now()
   # Check that conf is appropriatelly filled.
