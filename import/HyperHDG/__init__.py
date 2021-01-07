@@ -10,4 +10,4 @@
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
 
 from .config import config
-from .cython_import import cython_import
+from .include import include

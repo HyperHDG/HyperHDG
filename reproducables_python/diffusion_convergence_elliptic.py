@@ -25,12 +25,12 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   try:
-    from HyperHDG import cython_import, config
+    import HyperHDG
   except (ImportError, ModuleNotFoundError) as error:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-    from HyperHDG import cython_import, config
+    import HyperHDG
   
-  const                 = config()
+  const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
@@ -42,7 +42,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.debug_mode      = debug_mode
   const.allow_file_output = False
 
-  PyDP = cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )

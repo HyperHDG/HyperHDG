@@ -11,7 +11,7 @@ from .paths import main_dir
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
-def cython_import(conf):
+def include(conf):
   start_time = datetime.datetime.now()
   # Check that conf is appropriatelly filled.
   assert isinstance(conf, config) and consistent(conf)

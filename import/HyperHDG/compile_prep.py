@@ -1,7 +1,7 @@
-import os, re
+import glob, os, re
 from .cmake import options
 from .names import cython_from_cpp
-from .paths import main_dir
+from .paths import main_dir, this_dir
 
 ## \brief   Generate shell commands from CMAKE parameters.
 def compile_commands(python_class, opt):
@@ -33,6 +33,9 @@ def need_compile(conf, python_class, opt):
     time_in = os.stat(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
       + file_end).st_mtime
     if time_so < time_in:
+      return True
+  for file in glob.glob(this_dir()):
+    if time_so < os.stat(file).st_mtime:
       return True
   dependent_files = [ x for x in conf.include_files if "HyperHDG/" in x ]
   return need_compile_check_hy_files(dependent_files, time_so)
