@@ -1,34 +1,36 @@
-
+import os, re
+from .cmake import options
+from .names import cython_from_cpp
+from .paths import main_dir
 
 ## \brief   Generate shell commands from CMAKE parameters.
-def compile_commands(python_class):
-  global COMPILE_COM, COMPILE_INC, COMPILE_FLG, COMPILE_STD, LINK_COM, LINK_FLG, LINK_LIB, \
-    CYTHON_COM, CYTHON_FLG
-  cython_command = "cd " + main_path() + "/build/cython_files/; " \
-    + CYTHON_COM + " " + CYTHON_FLG + " " + python_class + ".pyx";
-  compile_command = "cd " + main_path() + "; " \
-    + COMPILE_COM + " " + COMPILE_INC + " " + COMPILE_FLG + " --std=gnu++" + COMPILE_STD + " -c \
-    ./build/cython_files/" + python_class + ".cpp -o ./build/cython_files/" + python_class + ".o";
-  link_command = "cd " + main_path() + "; " \
-    + LINK_COM + " " + LINK_FLG + " ./build/cython_files/" + python_class + ".o " \
-    + " -o build/shared_objects/" + python_class + ".so " + LINK_LIB;
+def compile_commands(python_class, opt):
+  assert isinstance(opt, options)
+  cython_command = "cd " + main_dir() + "/build/cython_files/; " \
+    + opt.cython_com + " " + opt.cython_flg + " " + python_class + ".pyx";
+  compile_command = "cd " + main_dir() + "; " + opt.compile_com + " " + opt.compile_inc + " " + \
+    opt.compile_flg + " --std=gnu++" + opt.compile_std + " -c ./build/cython_files/" + \
+    python_class + ".cpp -o ./build/cython_files/" + python_class + ".o";
+  link_command = "cd " + main_dir() + "; " \
+    + opt.link_com + " " + opt.link_flg + " ./build/cython_files/" + python_class + ".o " \
+    + " -o build/shared_objects/" + python_class + ".so " + opt.link_lib;
   return cython_command, compile_command, link_command
 
 ## \brief   Check whether recompilation of executable is necessary.
-def need_compile(conf, python_class):
-  global PYTHON_DIR
-  if not os.path.isfile(main_path() + "/build/shared_objects/" + python_class + ".so"):
+def need_compile(conf, python_class, opt):
+  assert isinstance(opt, options)
+  if not os.path.isfile(main_dir() + "/build/shared_objects/" + python_class + ".so"):
     return True
-  time_so = os.stat(main_path() + "/build/shared_objects/" + python_class + ".so").st_mtime
-  assert os.path.isfile(PYTHON_DIR + "/Python.h"), "Include file for Python needs to exist!"
-  if time_so < os.stat(PYTHON_DIR + "/Python.h").st_mtime \
+  time_so = os.stat(main_dir() + "/build/shared_objects/" + python_class + ".so").st_mtime
+  assert os.path.isfile(opt.py_dir + "/Python.h"), "Include file for Python needs to exist!"
+  if time_so < os.stat(opt.py_dir + "/Python.h").st_mtime \
     or time_so < os.stat(os.path.abspath(__file__)).st_mtime:
     return True
-  if os.path.isfile(main_path() + "/build/cmake_cython.cfg") \
-    and time_so < os.stat(main_path() + "/build/cmake_cython.cfg").st_mtime:
+  if os.path.isfile(main_dir() + "/build/cmake_cython.cfg") \
+    and time_so < os.stat(main_dir() + "/build/cmake_cython.cfg").st_mtime:
     return True
   for file_end in ["pxd", "pyx", "cfg"]:
-    time_in = os.stat(main_path() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
+    time_in = os.stat(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
       + file_end).st_mtime
     if time_so < time_in:
       return True
@@ -38,9 +40,9 @@ def need_compile(conf, python_class):
 ## \brief   Check whether any dependent files have been changed.
 def need_compile_check_hy_files(dependent_files, time_so):
   for x in dependent_files:
-    filename = main_path() + "/include/" + x
+    filename = main_dir() + "/include/" + x
     if not os.path.isfile(filename):
-      filename = main_path + x
+      filename = main_dir + x
     if time_so < os.stat(filename).st_mtime:
       return True
     with open(filename, 'r') as file:

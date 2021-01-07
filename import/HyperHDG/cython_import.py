@@ -1,6 +1,8 @@
-import configparser, os, sys, importlib, glob, re, datetime
+import os, sys, importlib, re, datetime
 from .cmake import get_options
-from .config import config, consistent
+from .compile_prep import compile_commands, need_compile
+from .config import *
+from .names import files, cython_from_cpp
 from .paths import main_dir
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
@@ -35,9 +37,9 @@ def cython_import(conf):
   # Evaluate configfile, define include files, and define dependent files.
   cy_replace      = generate_cy_replace(conf)
   include_string  = extract_includes(conf)
-  cpp_class, python_class, cython_class = file_names(conf)
+  cpp_class, python_class, cython_class = files(conf)
 
-  compilation_necessary = need_compile(conf, python_class)
+  compilation_necessary = need_compile(conf, python_class, options)
   if compilation_necessary:
     # Copy pyx and pxd files from cython directory.
     for file_end in ["pxd", "pyx"]:
@@ -53,7 +55,7 @@ def cython_import(conf):
       with open(main_dir() + "/build/cython_files/" + python_class + "." + file_end, "w") as file:
         file.write(content)
     # Prepare the compilation commands.
-    cython_command, compile_command, link_command = get_commands(python_class)
+    cython_command, compile_command, link_command = compile_commands(python_class, options)
     if not (conf.debug_mode):
       compile_command += " -DNDEBUG";
     if not (conf.allow_file_output):

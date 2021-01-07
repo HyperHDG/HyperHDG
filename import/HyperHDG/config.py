@@ -1,4 +1,7 @@
 import configparser
+from .cpp import find_definition, extract_classname
+from .names import cython_from_cpp
+from .paths import main_dir
 
 ## \brief   Object that comprises all information for HyperHDG to create a problem.
 #
@@ -74,12 +77,12 @@ def extract_includes(conf):
 def generate_cy_replace(conf):
   assert isinstance(conf, config) and consistent(conf)
   config_file = configparser.ConfigParser()
-  config_file.read(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + ".cfg")
+  config_file.read(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + ".cfg")
   n_replacements = int(config_file['default']['n_replacements'])
   cy_replace = []
   for i in range(n_replacements):
-    if i < len(constructor.cython_replacements) and constructor.cython_replacements[i] != "":
-      cy_replace.append(constructor.cython_replacements[i])
+    if i < len(conf.cython_replacements) and conf.cython_replacements[i] != "":
+      cy_replace.append(conf.cython_replacements[i])
     else:
       assert config_file.has_option('default','replacement' + '%02d' % (i+1))
       cy_replace.append(config_file['default']['replacement' + '%02d' % (i+1)])
