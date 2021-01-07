@@ -26,7 +26,7 @@ GH_USER_NAME=HyperHDG-CI
 GH_USER_MAIL=HyperHDG@rupp.ink
 
 # Set name of auxiliary directory which is internally created. It should not be used elsewhere.
-GH_AUX_REP=code_docy
+GH_AUX_REP=wiki_docs_ci
 
 # END OF: SET VARIABLES
 ####################################################################################################
