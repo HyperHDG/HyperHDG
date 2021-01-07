@@ -1,14 +1,3 @@
-## \package cython_import
-# 
-#  \brief   Python interface for HyperHDG library.
-#
-#  This file is the main ingredient to use the HyperHDG library within Python scripts. Its function
-#  \c cython_import compiles the necessary components just-in-time and provides the as classes that
-#  can be used within Python. To this end, the Cython package is heavily used. 
-#
-#  \authors   Guido Kanschat, Heidelberg University, 2020.
-#  \authors   Andreas Rupp, Heidelberg University, 2020.
-
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
 COMPILE_COM = ""
 ## \brief   Parameter that might be set by cmake using the function get_cmakes() (cf. below).
@@ -311,7 +300,7 @@ def check_dependent_files(dependent_files, time_so):
 
 ## Return path to main directory of HyperHDG.
 def main_path():
-  return os.path.dirname(os.path.abspath(__file__))
+  return os.path.dirname(os.path.abspath(__file__)) + "/../.."
 
 ## Transform C++ class name to cython file name.
 def cython_from_cpp(name):
