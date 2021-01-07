@@ -14,17 +14,30 @@ echo 'Setting up the script...'
 # Exit with nonzero exit code if anything fails.
 set -e
 
-# Set global variables.
+####################################################################################################
+# SET VARIABLES:
+
+# Set global variables of the repository to be changed.
 GH_REPO_ORG=AndreasRupp
 GH_REPO_NAME=HyperHDG.wiki
 
+# Set global variables of the CI Account with write acces to the repositories.
+GH_USER_NAME=HyperHDG-CI
+GH_USER_MAIL=HyperHDG@rupp.ink
+
+# Set name of auxiliary directory which is internally created. It should not be used elsewhere.
+GH_AUX_REP=wiki_docs_ci
+
+# END OF: SET VARIABLES
+####################################################################################################
+
 # Pretend to be user Andreas Rupp CI.
-git config --global user.name "Andreas Rupp CI"
-git config --global user.email "HyperHDG@rupp.ink"
+git config --global user.name $GH_USER_NAME
+git config --global user.email $GH_USER_MAIL
 
 # Retrieve master branch of the repositoy containing the wiki.
-git clone https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git code_docs
-cd code_docs
+git clone https://$GH_USER_NAME:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git $GH_AUX_REP
+cd $GH_AUX_REP
 
 # Set the push default to simple i.e. push only the current branch.
 git config --global push.default simple
@@ -48,4 +61,4 @@ git commit -m "Deploy Wiki to GitHub gh-wiki build: ${GITHUB_RUN_NUMBER}" \
   -m "Commit: $(git rev-parse --short "$GITHUB_SHA")"
 
 # Force push to the remote GitHub pages branch.
-git push --force https://AndreasRuppCI:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
+git push --force https://$GH_USER_NAME:$REPO_TOKEN@github.com/$GH_REPO_ORG/$GH_REPO_NAME.git
