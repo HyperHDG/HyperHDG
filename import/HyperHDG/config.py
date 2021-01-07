@@ -51,7 +51,7 @@ def consistent(conf):
   return True
 
 ## \brief   Add the files that need to be included for defining the problem to include list.
-def extract_includes(conf):
+def extract_includes(conf, cpp_inc=""):
   assert isinstance(conf, config) and consistent(conf)
   helper = find_definition("geometry", extract_classname(conf.geometry))
   if helper not in conf.include_files:
@@ -70,7 +70,9 @@ def extract_includes(conf):
     conf.include_files.append(helper)
   include_string = ""
   for x in conf.include_files:
-    include_string = include_string + "cdef extern from \"<" + x + ">\": pass\n"
+    include_string += "cdef extern from \"<" + x + ">\": pass\n"
+  if cpp_inc != "":
+    include_string += "cdef extern from \"<" + cpp_inc + ">\": pass\n"
   return include_string
 
 ## \brief   Evaluate config file that needs to be present for all .pyx/.pxd files.

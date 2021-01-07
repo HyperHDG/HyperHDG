@@ -19,6 +19,8 @@ def compile_commands(python_class, opt):
 ## \brief   Check whether recompilation of executable is necessary.
 def need_compile(conf, python_class, opt):
   assert isinstance(opt, options)
+  if own_code(conf, python_class):
+    return True
   if not os.path.isfile(main_dir() + "/build/shared_objects/" + python_class + ".so"):
     return True
   time_so = os.stat(main_dir() + "/build/shared_objects/" + python_class + ".so").st_mtime
@@ -58,3 +60,16 @@ def need_compile_check_hy_files(dependent_files, time_so):
       if name not in dependent_files:
         dependent_files.append(name)
   return False
+
+## \brief   Check whether own code differs from last iteration.
+def own_code(conf, python_class):
+  if conf.cpp_code == "":
+    return False
+  if os.path.isfile(main_dir() + "/build/cython_files/" + python_class + ".hxx"):
+    with  open(main_dir() + "/build/cython_files/" + python_class + ".hxx", "r") as file:
+      content = file.read()
+    if content == conf.cpp_code:
+      return False
+  with  open(main_dir() + "/build/cython_files/" + python_class + ".hxx", "w") as file:
+    file.write(conf.cpp_code)
+  return True

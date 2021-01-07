@@ -35,9 +35,12 @@ def include(conf):
     file.close()
 
   # Evaluate configfile, define include files, and define dependent files.
-  cy_replace      = generate_cy_replace(conf)
-  include_string  = extract_includes(conf)
+  cy_replace = generate_cy_replace(conf)
   cpp_class, python_class, cython_class = files(conf)
+  if conf.cpp_code == "":
+    include_string = extract_includes(conf)
+  else:
+    include_string = extract_includes(conf, main_dir()+"/build/cython_files/"+python_class+".hxx")
 
   compilation_necessary = need_compile(conf, python_class, options)
   if compilation_necessary:
