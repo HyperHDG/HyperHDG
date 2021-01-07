@@ -1,5 +1,5 @@
 /*!*************************************************************************************************
- * \page exdiffcpp Example C++ code for diffusion
+ * \page  exdiffcpp   Example C++ code for diffusion
  *
  * Alternatively, one can use HyperHDG as C++ library. Please note that for this purpose, the
  * include directory of HyperHDG as well as the include directories of the submodules need to be
