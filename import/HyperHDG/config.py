@@ -2,7 +2,7 @@
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2021.
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
-class config:
+class hy_config:
   global_loop         = ""
   local_solver        = ""
   topology            = ""
@@ -14,9 +14,9 @@ class config:
   debug_mode          = False
   allow_file_output   = True
 
-## \brief   Check that config is consistent.
+## \brief   Check that hy_config is consistent.
 def is_consistent(conf):
-  assert isinstance(conf, config)
+  assert isinstance(conf, hy_config)
   if not (isinstance(conf.global_loop, str) and conf.global_loop != ""):
      return False
   if not (isinstance(conf.local_solver, str) and  conf.local_solver != ""):
@@ -45,9 +45,9 @@ def is_consistent(conf):
       return False
   return True
 
-## \brief   Evaluate config file that needs to be present for all .pyx/.pxd files.
+## \brief   Evaluate hy_config file that needs to be present for all .pyx/.pxd files.
 def generate_cy_replace(conf):
-  assert isinstance(conf, config) and conf.is_consistent()
+  assert isinstance(conf, hy_config) and conf.is_consistent()
   config_file = configparser.ConfigParser()
   config_file.read(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + ".cfg")
   n_replacements = int(config_file['default']['n_replacements'])

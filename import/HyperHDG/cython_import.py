@@ -24,58 +24,18 @@ PY_VER_MIN = ""
 PYTHON_DIR = ""
 
 import configparser, os, sys, importlib, glob, re, datetime
-
-## \brief   Object that comprises all information for HyperHDG to create a problem.
-#
-#  \authors   Guido Kanschat, Heidelberg University, 2020.
-#  \authors   Andreas Rupp, Heidelberg University, 2020.
-class hyperhdg_constructor:
-  global_loop         = ""
-  local_solver        = ""
-  topology            = ""
-  geometry            = ""
-  node_descriptor     = ""
-  cython_replacements = []
-  include_files       = []
-  debug_mode          = False
-  allow_file_output   = True
-  def is_consistent(self):
-    if not (isinstance(self.global_loop, str) and self.global_loop != ""):
-      return False
-    if not (isinstance(self.local_solver, str) and  self.local_solver != ""):
-      return False
-    if not (isinstance(self.topology, str) and self.topology != ""):
-      return False
-    if not (isinstance(self.geometry, str) and self.geometry != ""):
-      return False
-    if not (isinstance(self.node_descriptor, str) and self.node_descriptor != ""):
-      return False
-    if not isinstance(self.debug_mode, bool):
-      return False
-    if not isinstance(self.allow_file_output, bool):
-      return False
-    if not isinstance(self.cython_replacements, list):
-      return False
-    for entry in self.cython_replacements:
-      if not isinstance(entry, str):
-        return False
-    if not isinstance(self.include_files, list):
-      return False
-    for entry in self.include_files:
-      if not isinstance(entry, str):
-        return False
-    return True
+import config
 
 ## \brief   Function to import classes of the HyperHDG package using Cython.
 #
-#  \param   constructor hyperhdg_constructor object.
+#  \param   conf hyperhdg_conf object.
 #
 #  \authors   Guido Kanschat, Heidelberg University, 2020.
 #  \authors   Andreas Rupp, Heidelberg University, 2020.
-def cython_import(constructor):
+def cython_import(conf):
   start_time = datetime.datetime.now()
-  # Check that constructor is appropriatelly filled.
-  assert isinstance(constructor, config) and constructor.is_consistent()
+  # Check that conf is appropriatelly filled.
+  assert isinstance(conf, config) and conf.is_consistent()
 
   # Start program.
   get_cmakes()
@@ -96,15 +56,15 @@ def cython_import(constructor):
     file.close()
 
   # Evaluate configfile, define include files, and define dependent files.
-  cy_replace      = evaluate_config(constructor)
-  include_string  = extract_includes(constructor)
-  cpp_class, python_class, cython_class = file_names(constructor)
+  cy_replace      = generate_cy_replace(conf)
+  include_string  = extract_includes(conf)
+  cpp_class, python_class, cython_class = file_names(conf)
 
-  compilation_necessary = need_compile(constructor, python_class)
+  compilation_necessary = need_compile(conf, python_class)
   if compilation_necessary:
     # Copy pyx and pxd files from cython directory.
     for file_end in ["pxd", "pyx"]:
-      with open(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + "." \
+      with open(main_path() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
         + file_end, "r") as file:
         content = file.read()
       content = re.sub("C\+\+ClassName", "\"" + cpp_class + "\"", content)
@@ -117,9 +77,9 @@ def cython_import(constructor):
         file.write(content)
     # Prepare the compilation commands.
     cython_command, compile_command, link_command = get_commands(python_class)
-    if not (constructor.debug_mode):
+    if not (conf.debug_mode):
       compile_command += " -DNDEBUG";
-    if not (constructor.allow_file_output):
+    if not (conf.allow_file_output):
       compile_command += " -DNOFILEOUT"
     #Actually compile the prepared files.
     assert os.system(cython_command) == 0
@@ -152,21 +112,6 @@ def find_definition(folder, classname):
       if ("\nclass " + classname + "\n{" or "\nstruct " + classname + "\n{") in hxxfile.read():
         return re.sub(main_path() + "/include/", '', file)
   assert False, "File containing defintion of " + classname + " has not been found!"
-
-## \brief   Evaluate config file that needs to be present for all .pyx/.pxd files.
-def evaluate_config(constructor):
-  config = configparser.ConfigParser()
-  config.read(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + ".cfg")
-  n_replacements = int(config['default']['n_replacements'])
-  cy_replace = []
-  for i in range(n_replacements):
-    if i < len(constructor.cython_replacements) and constructor.cython_replacements[i] != "":
-      cy_replace.append(constructor.cython_replacements[i])
-    else:
-      assert config.has_option('default','replacement' + '%02d' % (i+1))
-      cy_replace.append(config['default']['replacement' + '%02d' % (i+1)])
-  assert n_replacements == len(cy_replace)
-  return cy_replace
 
 ## \brief   Read out parameters for Cython compilation provided by CMAKE.
 def get_cmakes():
@@ -212,33 +157,33 @@ def get_cmakes():
          "Utilized Python version is not CMAKE's Python version!"
 
 ## \brief   Add the files that need to be included for defining the problem to include list.
-def extract_includes(constructor):
-  helper = find_definition("geometry", extract_classname(constructor.geometry))
-  if helper not in constructor.include_files:
-    constructor.include_files.append(helper)
-  helper = find_definition("node_descriptor", extract_classname(constructor.node_descriptor))
-  if helper not in constructor.include_files:
-    constructor.include_files.append(helper)
-  helper = find_definition("topology", extract_classname(constructor.topology))
-  if helper not in constructor.include_files:
-    constructor.include_files.append(helper)
-  helper = find_definition("global_loop", extract_classname(constructor.global_loop))
-  if helper not in constructor.include_files:
-    constructor.include_files.append(helper)
-  helper = find_definition("local_solver", extract_classname(constructor.local_solver))
-  if helper not in constructor.include_files:
-    constructor.include_files.append(helper)
+def extract_includes(conf):
+  helper = find_definition("geometry", extract_classname(conf.geometry))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("node_descriptor", extract_classname(conf.node_descriptor))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("topology", extract_classname(conf.topology))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("global_loop", extract_classname(conf.global_loop))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
+  helper = find_definition("local_solver", extract_classname(conf.local_solver))
+  if helper not in conf.include_files:
+    conf.include_files.append(helper)
   include_string = ""
-  for x in constructor.include_files:
+  for x in conf.include_files:
     include_string = include_string + "cdef extern from \"<" + x + ">\": pass\n"
   return include_string
 
 ## \brief   Generate names of auxiliary classes that will be constructed (internal use only).
-def file_names(constructor):
-  cpp_class    = "GlobalLoop::" + constructor.global_loop + "<Topology::" + constructor.topology \
-                 + ",Geometry::" + constructor.geometry + ",NodeDescriptor::" \
-                 + constructor.node_descriptor + ",LocalSolver::" + constructor.local_solver + " >"
-  cython_file  = cpp_class + "_deb" if constructor.debug_mode else cpp_class + "_rel"
+def file_names(conf):
+  cpp_class    = "GlobalLoop::" + conf.global_loop + "<Topology::" + conf.topology \
+                 + ",Geometry::" + conf.geometry + ",NodeDescriptor::" \
+                 + conf.node_descriptor + ",LocalSolver::" + conf.local_solver + " >"
+  cython_file  = cpp_class + "_deb" if conf.debug_mode else cpp_class + "_rel"
   cython_file  = re.sub(' ', '', cython_file)
   cython_file  = re.sub('\+|\-|\*|\/|<|>|\,|\:', '_', cython_file)
   cython_class = cython_file + "CP"
@@ -259,7 +204,7 @@ def get_commands(python_class):
   return cython_command, compile_command, link_command
 
 ## \brief   Check whether recompilation of executable is necessary.
-def need_compile(constructor, python_class):
+def need_compile(conf, python_class):
   global PYTHON_DIR
   if not os.path.isfile(main_path() + "/build/shared_objects/" + python_class + ".so"):
     return True
@@ -272,11 +217,11 @@ def need_compile(constructor, python_class):
     and time_so < os.stat(main_path() + "/build/cmake_cython.cfg").st_mtime:
     return True
   for file_end in ["pxd", "pyx", "cfg"]:
-    time_in = os.stat(main_path() + "/cython/" + cython_from_cpp(constructor.global_loop) + "." \
+    time_in = os.stat(main_path() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
       + file_end).st_mtime
     if time_so < time_in:
       return True
-  dependent_files = [ x for x in constructor.include_files if "HyperHDG/" in x ]
+  dependent_files = [ x for x in conf.include_files if "HyperHDG/" in x ]
   return check_dependent_files(dependent_files, time_so)
 
 ## \brief   Check whether any dependent files have been changed.
