@@ -1,0 +1,60 @@
+/*!*************************************************************************************************
+ * \page exdiffcpp Example C++ code for diffusion
+ *
+ * Alternatively, one can use HyperHDG as C++ library. Please note that for this purpose, the
+ * include directory of HyperHDG as well as the include directories of the submodules need to be
+ * added to the compiler's include paths. The flag -DNDEBUG compiles in release mode, while the code
+ * is created in debug mode if the flag is missing. Moreover, HyperHDG needs to be linked to LAPACK,
+ * compiled with a standard of C++17, and the compiler needs to be able to find the parameters file
+ * in this example.
+ *
+ * Please check that your compiler meets the standards of HyperHDG. Compilers that are tested
+ * against in pushes to the master branch and therefore should be safe can be found in the Makefile.
+ * 
+ * The code of the C++ program that does exactly the same as the aforementioned Python script can be
+ * found in the file examples/diffusion_elliptic.cxx.
+ *
+ * Since for C++, we do not have cython_import that finds all the necessary files, we need to
+ * include them by hand. Since, we want to conduct the same example again, we have to include the
+ * geometry and the topology of a unit cube, as well as the elliptic global loop and the diffusion
+ * solver. Additionally, we need a sparse linear algebra providing the CG solver. Last, but not
+ * least the parameters need to be included.
+ *
+ * \dontinclude diffusion_elliptic.cxx \until <examples/parameters/diffusion.hxx>
+ *
+ * This has prepared us to define the `main` function which will surround the rest of the code
+ *
+ * \until {
+ *
+ * and starts with defining the very same parameters as before.
+ *
+ * \until refinement = 1;
+ *
+ * Next, we define the problem class, where the different components have exactly the same meaning
+ * as in the hyperhdg_constructor of the Python script. The only difference consists in the fact
+ * that this class can immediately be instantiated, which has not been the case in Python, where
+ * cython_import had to build it first.
+ *
+ * \until 1 << refinement));
+ *
+ * The remainder of the program also works analogously to the Python script, i.e., we first define
+ * the right-hand side as negative, homogeneous residuum,
+ *
+ * \until -1.;
+ *
+ * solve the global system of equations using the CG method,
+ *
+ * \until HDG_wrapper);
+ *
+ * and print the L^2 error.
+ *
+ * \until std::endl;
+ *
+ * At the end, we plot the solution
+ *
+ * \until vectorSolution);
+ *
+ * and end the program returning 0.
+ *
+ * \until }
+ **************************************************************************************************/

@@ -1,6 +1,6 @@
 //using namespace HyperHDG;
 /**
- * \page exdiff Example Python code for diffusion
+ * \page exdiffpy Example Python code for diffusion
 
 Using HyperHDG in a Python script can be done by exploiting the script
 `cython_import.py`. This way is exemplary discussed for the an
