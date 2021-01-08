@@ -90,8 +90,8 @@ class SmallMat
     static_assert(n_rowsT > 0, "Matrix must have at least one row");
     static_assert(n_colsT > 0, "Matrix must have at least one column");
 
-    hy_assert(row < n_rowsT, "Row index must be >= 0 and smaller than number of rows.");
-    hy_assert(column < n_colsT, "Column index must be >= 0 and smaller than number of columns.");
+    hy_assert(row < n_rowsT, "Row index must be smaller than number of rows.");
+    hy_assert(column < n_colsT, "Column index must be smaller than number of columns.");
 
     return column * n_rowsT + row;  // Encoded like this for easy use of LAPACK!
   }
@@ -894,6 +894,17 @@ mat_entry_t norm_p(const SmallMat<n_rows, n_cols, mat_entry_t>& mat, const mat_e
   for (unsigned int index = 0; index < mat.size(); ++index)
     norm += std::pow(std::abs(mat[index]), power);
   return std::pow(norm, 1. / power);
+}
+/*!*************************************************************************************************
+ * \brief   Return product of all entries.
+ **************************************************************************************************/
+template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
+mat_entry_t entries_product(const SmallMat<n_rows, n_cols, mat_entry_t>& mat)
+{
+  mat_entry_t product = 1.;
+  for (unsigned int index = 0; index < mat.size(); ++index)
+    product *= mat[index];
+  return product;
 }
 
 // -------------------------------------------------------------------------------------------------
