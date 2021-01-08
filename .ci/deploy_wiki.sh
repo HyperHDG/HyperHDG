@@ -31,7 +31,7 @@ GH_AUX_REP=wiki_docs_ci
 # END OF: SET VARIABLES
 ####################################################################################################
 
-# Pretend to be user Andreas Rupp CI.
+# Pretend to be user GH_USER_NAME.
 git config --global user.name $GH_USER_NAME
 git config --global user.email $GH_USER_MAIL
 
