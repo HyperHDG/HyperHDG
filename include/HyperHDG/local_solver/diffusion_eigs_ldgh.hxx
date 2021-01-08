@@ -2,10 +2,10 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <HyperHDG/quadrature/tensorial.hxx>
+#include <HyperHDG/shape_function/shape_function.hxx>
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -98,6 +98,15 @@ class DiffusionEigs
   typedef struct
   {
   } data_type;
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  typedef struct
+  {
+    typedef std::tuple<
+      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  } node_element;
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -178,7 +187,11 @@ class DiffusionEigs
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  const Quadrature::Tensorial<
+    Quadrature::Gaussian<quad_deg>,
+    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
+    integrator;
 
   // -----------------------------------------------------------------------------------------------
   // Private, internal functions for the local solver
@@ -518,22 +531,6 @@ class DiffusionEigs
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary.
-   *
-   * \tparam  absc_float_t    Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT Size of the array of array of abscissas.
-   * \param   abscissas       Abscissas of the supporting points.
-   * \param   lambda_values   The values of the skeletal variable's coefficients.
-   * \param   boundary_number Number of the boundary on which to evaluate the function.
-   * \retval  func_values     Function values at tensorial points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-             node_system_dim>
-  lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const;
 };  // end of class DiffusionEigs
 
 // -------------------------------------------------------------------------------------------------
@@ -568,7 +565,6 @@ DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
   const lSol_float_t eig) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
@@ -758,39 +754,27 @@ DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
-  std::array<lSol_float_t, n_loc_dofs_> coefficients =
-    solve_local_problem(lambda_values, hyper_edge, time);
+  SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
+    solve_local_problem(lambda_values, 1U, hyper_edge, time);
+  SmallVec<n_shape_fct_, lSol_float_t> coeffs;
+  SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(coefficients);
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+             DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+    point_vals;
+
+  for (unsigned int d = 0; d < system_dim; ++d)
+  {
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      coeffs[i] = coefficients[d * n_shape_fct_ + i];
+    for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
+      point_vals[d][pt] = decltype(integrator)::shape_fun_t::template lin_comb_fct_val<float>(
+        coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+  }
+
+  return point_vals;
 }
 // end of DiffusionEigs::bulk_values
-
-template <unsigned int hyEdge_dimT,
-          unsigned int poly_deg,
-          unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
-          typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-std::array<
-  std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-  DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dim>
-DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-  const input_array_t& lambda_values,
-  const unsigned int boundary_number) const
-{
-  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg,
-                                   abscissas_sizeT, abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-      lambda_values[boundary_number]);
-}
 
 // -------------------------------------------------------------------------------------------------
 /// \endcond

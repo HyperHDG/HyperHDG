@@ -6,7 +6,7 @@
 # https://gist.github.com/francesco-romano/351a6ae457860c14ee7e907f2b0fc1a5 (date: 20. Dec. 2020)
 #
 # Authors: Andreas Rupp and Guido Kanschat, Heidelberg University, 2020
-###################################################################################################
+####################################################################################################
 
 # Setup this script and get the current gh-pages branch.
 echo 'Setting up the script...'

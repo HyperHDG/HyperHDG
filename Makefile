@@ -3,7 +3,7 @@ PROJECT     	= HyperHDG
 								clean_pycache doxygen format submodules test_all_compilers test_github test_compiler
 
 
-TEST_COMPILER = clang++-9 clang++-10 g++-8 g++-9 g++-10
+TEST_COMPILER = clang++-9 clang++-10 g++-9 g++-10
 
 
 make:
