@@ -2,8 +2,8 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature/tensorial.hxx>
-#include <HyperHDG/shape_function/shape_function.hxx>
+#include <tpp/quadrature/tensorial.hxx>
+#include <tpp/shape_function/shape_function.hxx>
 #include <algorithm>
 #include <tuple>
 

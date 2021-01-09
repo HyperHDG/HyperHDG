@@ -29,6 +29,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
+  ${PROJECT_SOURCE_DIR}/submodules/tensor_product_polynomials.git/include/
   ${Python3_INCLUDE_DIRS})
 
 ## Prepare nice output for include string.
