@@ -1,3 +1,6 @@
 [submodule "submodules/tensor_product_chain_complex.git"]
 	path = submodules/tensor_product_chain_complex.git
 	url = https://github.com/HyperHDG/TPCC.git
+[submodule "submodules/tensor_product_polynomials.git"]
+	path = submodules/tensor_product_polynomials.git
+	url = https://github.com/HyperHDG/tensor_product_polynomials.git
