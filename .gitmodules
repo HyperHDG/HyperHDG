@@ -4,3 +4,4 @@
 [submodule "submodules/tensor_product_polynomials.git"]
 	path = submodules/tensor_product_polynomials.git
 	url = https://github.com/HyperHDG/tensor_product_polynomials.git
+  branch = main
