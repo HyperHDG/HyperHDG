@@ -45,7 +45,7 @@ struct Legendre
    * \param   x_val       Abscissa of evaluated shape function.
    * \retval  fct_value   Evaluated value of shape function.
    ************************************************************************************************/
-  template <typename return_t, typename input_t>
+  /*template <typename return_t, typename input_t>
   static inline return_t fct_val(const unsigned int index, const input_t x_val)
   {
     hy_assert(index <= 5 && index < poly_deg + 1,
@@ -79,7 +79,74 @@ struct Legendre
                         << "however, is never supposed to appear. Something went wrong in the core "
                         << "program.");
     return 0.;
+  }*/
+  /*!***********************************************************************************************
+   * \brief   Evaluate value of one shape function.
+   *
+   * https://en.wikipedia.org/wiki/Clenshaw_algorithm
+   * https://en.wikipedia.org/wiki/Legendre_polynomials
+   *
+   * \tparam  return_t    Floating type specification for return value.
+   * \tparam  input_t     Floating type specification for input value.
+   * \param   index       Index of evaluated shape function.
+   * \param   x_val       Abscissa of evaluated shape function.
+   * \retval  fct_value   Evaluated value of shape function.
+   ************************************************************************************************/
+  template <typename return_t, typename input_t>
+  static constexpr return_t clenshaw_alpha(const unsigned int k, const input_t& x)
+  {
+    return (((return_t)(2 * k + 1)) / ((return_t)(k + 1))) * ((return_t)x);
   }
+
+  template <typename return_t, typename input_t>
+  static constexpr return_t clenshaw_beta(const unsigned int k, const input_t& UNUSED(x))
+  {
+    return -((return_t)k) / ((return_t)(k + 1));
+  }
+
+  template <typename return_t, typename input_t>
+  static constexpr return_t clenshaw_b(const unsigned int k, const unsigned int n, const input_t& x)
+  {
+    if (k > n)
+      return (return_t)0.;
+    else if (k == n)
+      return (return_t)1.;
+    else
+      return clenshaw_alpha<return_t>(k, x) * clenshaw_b<return_t>(k + 1, n, x) +
+             clenshaw_beta<return_t>(k + 1, x) * clenshaw_b<return_t>(k + 2, n, x);
+  }
+
+  template <typename return_t, typename input_t>
+  static inline return_t fct_val(const unsigned int index, const input_t x_val)
+  {
+    hy_assert(index <= 5 && index < poly_deg + 1,
+              "The index of a shape function must be non-negative and smaller than or equal to 5 "
+                << "at the moment. Your choice has been " << index << ".");
+    hy_assert(0. <= x_val && x_val <= 1.,
+              "The abscissa / x for which the shape function is evaluated has been set to be in "
+                << "the closed interval [0,1]. Your choice has been " << x_val << ".");
+
+    // Transform x value from reference interval [0,1] -> [-1,1].
+    const return_t x = 2. * (return_t)x_val - 1.;
+
+    // Evaluate the value of the Legendre polynomial at x.
+    return_t legendre_val;
+    switch (index)
+    {
+      case 0:
+        legendre_val = 1.;
+        break;
+      case 1:
+        legendre_val = x;
+        break;
+      default:
+        legendre_val = ((return_t)x) * clenshaw_b<return_t>(1,index,x) + 0.5 * clenshaw_b<return_t>(2,index,x);
+    }
+
+    // Return L^2 normalized value.
+    return std::sqrt(2. * index + 1.) * legendre_val;
+  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate value of the derivative of orthonormal shape function.
    *
@@ -109,7 +176,7 @@ struct Legendre
       case 0:
         return 0.;
       case 1:
-        return -std::sqrt(12);
+        return std::sqrt(12);
       case 2:
         return std::sqrt(5) * (12. * x - 6.);
       case 3:
