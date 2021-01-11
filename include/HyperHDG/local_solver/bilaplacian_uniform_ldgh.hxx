@@ -324,9 +324,10 @@ BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_
   const lSol_float_t tau)
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >, lSol_float_t>
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
     integrator;
   lSol_float_t integral;
 
