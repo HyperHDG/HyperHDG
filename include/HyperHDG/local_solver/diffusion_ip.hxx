@@ -203,7 +203,7 @@ class DiffusionIP
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const TPP::Quadrature::Tensorial<
+  typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
     TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
     lSol_float_t>
@@ -516,7 +516,7 @@ class DiffusionIP
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
       solve_local_problem(lambda_values, 1U, hy_edge, time);
-    return integrator.template integrate_vol_diffsquare_discana<
+    return integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coefficients.data(),
                                                                       hy_edge.geometry, time);
@@ -583,7 +583,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      local_mat(i, j) += integrator.template integrate_vol_nablaphinablaphifunc<
+      local_mat(i, j) += integrator::template integrate_vol_nablaphinablaphifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::diffusion_coeff, Point<hyEdge_dimT, lSol_float_t> >(i, j, hyper_edge.geometry,
                                                                         time);
@@ -591,9 +591,9 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
         local_mat(i, j) +=
-          tau_ * integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+          tau_ * integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
                    i, j, face, hyper_edge.geometry);
-        local_mat(i, j) -= integrator.template integrate_bdr_nablaphiphinufunc<
+        local_mat(i, j) -= integrator::template integrate_bdr_nablaphiphinufunc<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::diffusion_coeff,
           Point<hyEdge_dimT, lSol_float_t> >(j, i, face, hyper_edge.geometry);
@@ -635,9 +635,10 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        right_hand_side[i] += tau_ * lambda_values[face][j] *
-                              integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                                i, j, face, hyper_edge.geometry);
+        right_hand_side[i] +=
+          tau_ * lambda_values[face][j] *
+          integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+            i, j, face, hyper_edge.geometry);
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
@@ -664,7 +665,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[i] = integrator.template integrate_vol_phifunc<
+    right_hand_side[i] = integrator::template integrate_vol_phifunc<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
@@ -672,7 +673,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
         continue;
       right_hand_side[i] +=
-        tau_ * integrator.template integrate_bdr_phifunc<
+        tau_ * integrator::template integrate_bdr_phifunc<
                  Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
                  decltype(hyEdgeT::geometry), parameters::dirichlet_value,
                  Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time);
@@ -704,7 +705,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        coeffs[j] * integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        coeffs[j] * integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_coeffs
@@ -734,7 +735,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values(face, j) +=
-          coeffs[i] * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+          coeffs[i] * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                         i, j, face, hyper_edge.geometry);
 
   return bdr_values;
@@ -766,7 +767,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values(face, j) -=
-          integrator.template integrate_bdr_nablaphipsinufunc<
+          integrator::template integrate_bdr_nablaphipsinufunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::diffusion_coeff,
             Point<hyEdge_dimT, lSol_float_t> >(i, j, face, hyper_edge.geometry) *
@@ -811,7 +812,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_va
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[d * n_shape_fct_ + i];
     for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
-      point_vals[d][pt] = decltype(integrator)::shape_fun_t::template lin_comb_fct_val<float>(
+      point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
         coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
   }
 
