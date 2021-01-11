@@ -119,7 +119,7 @@ class Diffusion
   typedef struct
   {
     typedef std::tuple<
-      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
 
@@ -202,9 +202,9 @@ class Diffusion
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
     lSol_float_t>
     integrator;
 
