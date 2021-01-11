@@ -2,8 +2,9 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature/tensorial.hxx>
-#include <HyperHDG/shape_function/shape_function.hxx>
+#include <tpp/quadrature/tensorial.hxx>
+#include <tpp/shape_function/shape_function.hxx>
+
 #include <algorithm>
 #include <tuple>
 
@@ -103,8 +104,8 @@ class DiffusionEigs
    ************************************************************************************************/
   typedef struct
   {
-    typedef std::tuple<
-      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+    typedef std::tuple<TPP::ShapeFunction<
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
 
@@ -187,9 +188,9 @@ class DiffusionEigs
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
     lSol_float_t>
     integrator;
 
@@ -400,10 +401,10 @@ class DiffusionEigs
           lambda_values[i][j] = 0.;
       else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] =
-            integrator
-              .template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
-                j, i, hyper_edge.geometry, time);
+          lambda_values[i][j] = integrator.template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
+            j, i, hyper_edge.geometry, time);
     }
 
     return lambda_values;
@@ -505,9 +506,10 @@ class DiffusionEigs
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                                parameters::analytic_result>(
-      coeffs, hy_edge.geometry, eig);
+    return integrator.template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
+                                                                      time);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -574,14 +576,16 @@ DiffusionEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      vol_integral =
-        integrator.template integrate_vol_phiphifunc<decltype(hyEdgeT::geometry),
-                                                     parameters::inverse_diffusion_coeff>(
-          i, j, hyper_edge.geometry);
+      vol_integral = integrator.template integrate_vol_phiphifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::inverse_diffusion_coeff, Point<hyEdge_dimT, lSol_float_t> >(
+        i, j, hyper_edge.geometry, eig);
       // Integral_element - nabla phi_i \vec phi_j dx
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(
-        i, j, hyper_edge.geometry);
+      grad_int_vec =
+        integrator.template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                      decltype(hyEdgeT::geometry)>(
+          i, j, hyper_edge.geometry);
 
       face_integral = 0.;
       normal_int_vec = 0.;

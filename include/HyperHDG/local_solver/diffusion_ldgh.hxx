@@ -4,6 +4,7 @@
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
+
 #include <algorithm>
 #include <tuple>
 
@@ -118,8 +119,8 @@ class Diffusion
    ************************************************************************************************/
   typedef struct
   {
-    typedef std::tuple<
-      TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+    typedef std::tuple<TPP::ShapeFunction<
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
 
@@ -789,9 +790,10 @@ class Diffusion
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                                parameters::analytic_result>(
-      coeffs, hy_edge.geometry, time);
+    return integrator.template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
+                                                                      time);
   }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
@@ -906,14 +908,16 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      vol_integral =
-        integrator.template integrate_vol_phiphifunc<decltype(hyEdgeT::geometry),
-                                                     parameters::inverse_diffusion_coeff>(
-          i, j, hyper_edge.geometry, time);
+      vol_integral = integrator.template integrate_vol_phiphifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::inverse_diffusion_coeff, Point<hyEdge_dimT, lSol_float_t> >(
+        i, j, hyper_edge.geometry, time);
       // Integral_element - nabla phi_i \vec phi_j dx
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(
-        i, j, hyper_edge.geometry);
+      grad_int_vec =
+        integrator.template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                      decltype(hyEdgeT::geometry)>(
+          i, j, hyper_edge.geometry);
 
       face_integral = 0.;
       normal_int_vec = 0.;
@@ -1006,18 +1010,17 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
-      integrator
-        .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
-          i, hyper_edge.geometry, time);
+    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] = integrator.template integrate_vol_phifunc<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
         continue;
-      integral =
-        integrator
-          .template integrate_bdr_phifunc<decltype(hyEdgeT::geometry), parameters::dirichlet_value>(
-            i, face, hyper_edge.geometry, time);
+      integral = integrator.template integrate_bdr_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
+                                                                        hyper_edge.geometry, time);
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=

@@ -2,8 +2,9 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature/tensorial.hxx>
-#include <HyperHDG/shape_function/shape_function.hxx>
+#include <tpp/quadrature/tensorial.hxx>
+#include <tpp/shape_function/shape_function.hxx>
+
 #include <algorithm>
 #include <tuple>
 
@@ -49,8 +50,8 @@ class DiffusionUniform
    ************************************************************************************************/
   typedef struct
   {
-    typedef std::tuple<
-      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+    typedef std::tuple<TPP::ShapeFunction<
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
   // -----------------------------------------------------------------------------------------------
@@ -135,9 +136,9 @@ class DiffusionUniform
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
     lSol_float_t>
     integrator;
 
@@ -332,9 +333,10 @@ SmallSquareMat<DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::
 DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>::assemble_loc_matrix(
   const lSol_float_t tau)
 {
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >, lSol_float_t>
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
     integrator;
   lSol_float_t integral;
 

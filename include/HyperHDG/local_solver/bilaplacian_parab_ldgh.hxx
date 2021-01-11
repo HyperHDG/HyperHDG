@@ -2,8 +2,9 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature/tensorial.hxx>
-#include <HyperHDG/shape_function/shape_function.hxx>
+#include <tpp/quadrature/tensorial.hxx>
+#include <tpp/shape_function/shape_function.hxx>
+
 #include <algorithm>
 #include <tuple>
 
@@ -212,9 +213,9 @@ class BilaplacianParab
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const Quadrature::Tensorial<
-    Quadrature::Gaussian<quad_deg>,
-    ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+  const TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
     lSol_float_t>
     integrator;
 
@@ -386,8 +387,8 @@ class BilaplacianParab
    ************************************************************************************************/
   typedef struct
   {
-    typedef std::tuple<
-      ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+    typedef std::tuple<TPP::ShapeFunction<
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
   /*!***********************************************************************************************
@@ -610,10 +611,10 @@ class BilaplacianParab
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       hy_assert(coeffs[i] == coeffs[i], "The " << i << "-th coeff is NaN!");
 
-    lSol_float_t result =
-      integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                           parameters::analytic_result>(
-        coeffs, hy_edge.geometry, time);
+    lSol_float_t result = ntegrator.template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
+                                                                      time);
     hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
     return result;
   }
@@ -683,14 +684,16 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::as
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
       vol_integral = integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
-      vol_func_integral =
-        integrator.template integrate_vol_phiphifunc<decltype(hyEdgeT::geometry),
-                                                     parameters::inverse_bilaplacian_coefficient>(
-          i, j, hyper_edge.geometry, time);
+      vol_func_integral = integrator.template integrate_vol_phiphifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::inverse_bilaplacian_coefficient, Point<hyEdge_dimT, lSol_float_t> >(
+        i, j, hyper_edge.geometry, time);
       // Integral_element - nabla phi_i \vec phi_j dx
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
-      grad_int_vec = integrator.template integrate_vol_nablaphiphi<decltype(hyEdgeT::geometry)>(
-        i, j, hyper_edge.geometry);
+      grad_int_vec =
+        integrator.template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                      decltype(hyEdgeT::geometry)>(
+          i, j, hyper_edge.geometry);
 
       face_integral = 0.;
       normal_int_vec = 0.;
@@ -815,13 +818,15 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   {
     right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] =
       theta_ * delta_t_ *
-        integrator
-          .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
-            i, hyper_edge.geometry, time) +
-      (1 - theta_) * delta_t_ *
-        integrator
-          .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
-            i, hyper_edge.geometry, time - delta_t_);
+      integrator.template integrate_vol_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
+                                                                        time);
+    +(1 - theta_) *
+      delta_t_* integrator.template integrate_vol_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
+                                                                        time - delta_t_);
 
     // THIS HAS TO BE EXTENDED FOR THETA != 1
 
@@ -829,9 +834,10 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
       {
-        integral = integrator.template integrate_bdr_phifunc<decltype(hyEdgeT::geometry),
-                                                             parameters::dirichlet_value>(
-          i, face, hyper_edge.geometry, time);
+        integral = integrator.template integrate_bdr_phifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+          Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time);
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
