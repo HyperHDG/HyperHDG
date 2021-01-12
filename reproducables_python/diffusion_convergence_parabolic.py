@@ -54,18 +54,18 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
 
   # Generate right-hand side vector.
-  vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
+  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
+    vectorRHS = np.multiply(HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.

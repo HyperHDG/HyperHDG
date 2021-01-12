@@ -22,12 +22,12 @@ cdef class PythonClassName :
         self.thisptr = new CythonClassName (topo_constr, geom_constr, lsol_constr)
   def __dealloc__(self):
     del self.thisptr
-  def matrix_vector_multiply(self, vec, time = 0.):
-    return self.thisptr.matrix_vector_multiply (vec, time)
-  def matrix_vector_der_multiply(self, vec, eig, vec_val, eig_val):
-    return self.thisptr.matrix_vector_der_multiply (vec, eig, vec_val, eig_val)
-  def initial_flux_vector(self, vec, time = 0.):
-    return self.thisptr.initial_flux_vector (vec, time)
+  def trace_to_flux(self, vec, time = 0.):
+    return self.thisptr.trace_to_flux (vec, time)
+  def jacobian_of_trace_to_flux(self, vec, eig, vec_val, eig_val):
+    return self.thisptr.jacobian_of_trace_to_flux (vec, eig, vec_val, eig_val)
+  def make_initial(self, vec, time = 0.):
+    return self.thisptr.make_initial (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

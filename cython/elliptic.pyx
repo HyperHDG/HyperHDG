@@ -24,12 +24,12 @@ cdef class PythonClassName :
     del self.thisptr
   def read_dirichlet_indices(self, indices):
     self.thisptr.read_dirichlet_indices (indices)
-  def return_zero_vector(self):
-    return self.thisptr.return_zero_vector ()
-  def matrix_vector_multiply(self, vec):
-    return self.thisptr.matrix_vector_multiply (vec)
-  def total_flux_vector(self, vec):
-    return self.thisptr.total_flux_vector (vec)
+  def zero_vector(self):
+    return self.thisptr.zero_vector ()
+  def trace_to_flux(self, vec):
+    return self.thisptr.trace_to_flux (vec)
+  def trace_and_data_to_flux(self, vec):
+    return self.thisptr.trace_and_data_to_flux (vec)
   def calculate_L2_error(self, vec):
     return self.thisptr.calculate_L2_error (vec)
   def size_of_system(self):

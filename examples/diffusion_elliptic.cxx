@@ -19,7 +19,7 @@ int main()
                                               HG<hyEdge_dim>::DiffusionElliptic, double> >
     HDG_wrapper(std::vector<unsigned int>(space_dim, 1 << refinement));
 
-  std::vector<double> vectorRHS = HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector());
+  std::vector<double> vectorRHS = HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector());
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= -1.;
 

@@ -49,11 +49,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
                       lsol_constr = 5 * (dimension + 1) * (poly_degree ** 3) * (2 ** iteration) )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
+  vectorRHS = np.multiply( HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector()), -1. )
 
   # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)

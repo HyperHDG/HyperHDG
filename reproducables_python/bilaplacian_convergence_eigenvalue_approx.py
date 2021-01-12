@@ -42,11 +42,11 @@ class helper_ev_approx():
   def short_vector(self, vector):
     return [vector[x] for x in self.index_vector]
   def multiply_stiff(self, vector):
-    vec = np.multiply(self.hdg_wrapper.matrix_vector_multiply( self.long_vector(vector) ), -1.)
+    vec = np.multiply(self.hdg_wrapper.trace_to_flux( self.long_vector(vector) ), -1.)
     vec = self.short_vector(vec)
     return vec
   def multiply_mass(self, vector):
-    vec = self.short_vector( self.hdg_wrapper.mass_matrix_multiply( self.long_vector(vector) ) )
+    vec = self.short_vector( self.hdg_wrapper.trace_to_mass_flux( self.long_vector(vector) ) )
     return vec
   def shifted_mult(self, vector):
     vec = np.multiply( self.multiply_mass(vector), self.sigma)

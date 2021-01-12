@@ -140,7 +140,7 @@ class NonlinearEigenvalue
    * \retval  y_vec         A vector containing the residual.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t eig = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -202,10 +202,10 @@ class NonlinearEigenvalue
    * \retval  y_vec         Corresponds to directional derivative.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_der_multiply(const LargeVecT& x_vec,
-                                       const dof_value_t eig,
-                                       const LargeVecT& x_val,
-                                       const dof_value_t eig_val)
+  LargeVecT jacobian_of_trace_to_flux(const LargeVecT& x_vec,
+                                      const dof_value_t eig,
+                                      const LargeVecT& x_val,
+                                      const dof_value_t eig_val)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -274,7 +274,7 @@ class NonlinearEigenvalue
    * \retval  y_vec         A vector containing initial flux vector.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT initial_flux_vector(const LargeVecT& x_vec, const dof_value_t eig = 0.)
+  LargeVecT make_initial(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
