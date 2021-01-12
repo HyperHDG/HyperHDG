@@ -73,7 +73,7 @@ test_github:
 	$(MAKE) clean
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
-		-DNOPYTHONTESTS=True ..
+		-DNOPYTHONTESTS=True -DCMAKE_CXX_COMPILER=$(DEFAULT_COMPILER) ..
 	cd build; make
 	cd build; make test
 
