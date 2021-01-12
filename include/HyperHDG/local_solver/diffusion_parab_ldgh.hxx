@@ -358,19 +358,19 @@ class DiffusionParab
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
     SmallVec<n_shape_fct_, lSol_float_t> u_old, flux_old;
-  } data_type;
+  };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
-  typedef struct
+  struct node_element
   {
     typedef std::tuple<TPP::ShapeFunction<
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
-  } node_element;
+  };
   /*!***********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    ************************************************************************************************/

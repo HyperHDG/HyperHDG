@@ -42,18 +42,18 @@ class LengtheningBeam
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
-  typedef struct
+  struct node_element
   {
     typedef std::tuple<TPP::ShapeFunction<
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
-  } node_element;
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -314,18 +314,18 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
-  typedef struct
+  struct node_element
   {
     typedef std::tuple<TPP::ShapeFunction<
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
-  } node_element;
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -601,18 +601,18 @@ class LengtheningBernoulliBendingBeam
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
-  typedef struct
+  struct node_element
   {
     typedef std::tuple<TPP::ShapeFunction<
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
-  } node_element;
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
