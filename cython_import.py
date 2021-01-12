@@ -185,14 +185,14 @@ def get_cmakes():
     CYTHON_COM, CYTHON_FLG, PY_VER_MAJ, PY_VER_MIN, PYTHON_DIR
   if not os.path.isfile(main_path() + "/build/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
-    COMPILE_COM = "clang++-10" # TODO: Change back to g++
+    COMPILE_COM = "g++-10"
     COMPILE_INC = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
       -I submodules/tensor_product_polynomials.git/include \
       -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
     COMPILE_FLG = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
     COMPILE_STD = "20"
-    LINK_COM = "clang++-10" # TODO: Change back to g++
+    LINK_COM = "g++-10"
     LINK_FLG = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
