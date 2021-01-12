@@ -35,7 +35,7 @@ class ShiftedInverseEigenvalue
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
 
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
@@ -193,22 +193,21 @@ class ShiftedInverseEigenvalue
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, sigma);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, sigma);
       else if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             decltype(hyper_edge)&, dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
-                                                 sigma);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, sigma);
       else
         hy_assert(false, "Function seems not to be implemented!");
 

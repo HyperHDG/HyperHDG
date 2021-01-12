@@ -467,10 +467,10 @@ class DiffusionAdvectionReaction
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -531,10 +531,10 @@ class DiffusionAdvectionReaction
    * \retval  vecAx               Local part of vector A * x - b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
+                                       SmallMatOutT& lambda_values_out,
+                                       hyEdgeT& hyper_edge,
+                                       const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -580,9 +580,9 @@ class DiffusionAdvectionReaction
    * \retval  lambda_vakues L2 projected lambda ar initial state.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  SmallMatT& numerical_flux_initial(SmallMatT& lambda_values,
-                                    hyEdgeT& hyper_edge,
-                                    const lSol_float_t time = 0.) const
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -607,7 +607,7 @@ class DiffusionAdvectionReaction
   }
 
   /*template < class hyEdgeT >
-  std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > numerical_flux_from_mass
+  std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > trace_to_mass_flux
   (
     const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
     hyEdgeT                                                                   & hyper_edge,
@@ -696,10 +696,10 @@ class DiffusionAdvectionReaction
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_mass(const SmallMatInT& lambda_values_in,
-                                         SmallMatOutT& lambda_values_out,
-                                         hyEdgeT& hyper_edge,
-                                         const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_mass_flux(const SmallMatInT& lambda_values_in,
+                                   SmallMatOutT& lambda_values_out,
+                                   hyEdgeT& hyper_edge,
+                                   const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,

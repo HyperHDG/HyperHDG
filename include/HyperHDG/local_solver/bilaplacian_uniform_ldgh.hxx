@@ -223,9 +223,9 @@ class BilaplacianUniform
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           const lSol_float_t UNUSED(time) = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              const lSol_float_t UNUSED(time) = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -259,11 +259,11 @@ class BilaplacianUniform
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     const lSol_float_t UNUSED(time) = 0.) const
+  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
+                                       SmallMatOutT& lambda_values_out,
+                                       const lSol_float_t UNUSED(time) = 0.) const
   {
-    return lambda_values_out = numerical_flux_from_lambda(lambda_values_in, lambda_values_out);
+    return lambda_values_out = trace_to_flux(lambda_values_in, lambda_values_out);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.

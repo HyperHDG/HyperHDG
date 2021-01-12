@@ -34,15 +34,15 @@ class Parabolic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(trace_and_data_to_flux, has_trace_and_data_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_initial, has_numerical_flux_initial);
+  HAS_MEMBER_FUNCTION(make_initial, has_make_initial);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -183,22 +183,21 @@ class Parabolic
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, time);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
       else if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             decltype(hyper_edge)&, dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
-                                                 time);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
       else
         hy_assert(false, "Function seems not to be implemented!");
 
@@ -248,24 +247,24 @@ class Parabolic
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_numerical_flux_total<
+        has_trace_and_data_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, time);
+        local_solver_.trace_and_data_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
       }
       else if constexpr (
-        has_numerical_flux_total<
+        has_trace_and_data_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             decltype(hyper_edge)&, dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
+        local_solver_.trace_and_data_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
       }
       else
         hy_assert(false, "Function seems not to be implemented!");
@@ -345,23 +344,23 @@ class Parabolic
         hyEdge_dofs[hyNode].fill(0.);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (has_numerical_flux_initial<
-                      LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                               2 * TopologyT::hyEdge_dim()>&(
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&,
-                                      dof_value_t)>::value)
+      if constexpr (has_make_initial<LocalSolverT,
+                                     std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                2 * TopologyT::hyEdge_dim()>&(
+                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                  2 * TopologyT::hyEdge_dim()>&,
+                                       dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_initial(hyEdge_dofs, time);
+        local_solver_.make_initial(hyEdge_dofs, time);
       }
-      else if constexpr (has_numerical_flux_initial<
-                           LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                    2 * TopologyT::hyEdge_dim()>&(
-                                           std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                      2 * TopologyT::hyEdge_dim()>&,
-                                           decltype(hyper_edge)&, dof_value_t)>::value)
+      else if constexpr (has_make_initial<LocalSolverT,
+                                          std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                     2 * TopologyT::hyEdge_dim()>&(
+                                            std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                       2 * TopologyT::hyEdge_dim()>&,
+                                            decltype(hyper_edge)&, dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, time);
+        local_solver_.make_initial(hyEdge_dofs, hyper_edge, time);
       }
       else
         hy_assert(false, "Function seems not to be implemented!");

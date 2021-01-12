@@ -27,11 +27,11 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(trace_and_data_to_flux, has_trace_and_data_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -152,10 +152,10 @@ class LengtheningBeam
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
@@ -164,7 +164,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (has_numerical_flux_from_lambda<
+    if constexpr (has_trace_to_flux<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -172,9 +172,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, time);
+      diffusion.trace_to_flux(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
+      diffusion.trace_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -182,10 +182,10 @@ class LengtheningBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
+                                       SmallMatOutT& lambda_values_out,
+                                       hyEdgeT& hyper_edge,
+                                       const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
@@ -194,7 +194,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (has_numerical_flux_total<
+    if constexpr (has_trace_and_data_to_flux<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -202,9 +202,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_total(lambda_old, lambda_new, time);
+      diffusion.trace_and_data_to_flux(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
+      diffusion.trace_and_data_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -299,11 +299,11 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(trace_and_data_to_flux, has_trace_and_data_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -436,10 +436,10 @@ class BernoulliBendingBeam
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -452,7 +452,7 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                      2 * hyEdge_dimT>&(
@@ -460,9 +460,9 @@ class BernoulliBendingBeam
                        2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                        2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, time);
+        bilaplacian_solver.trace_to_flux(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
+        bilaplacian_solver.trace_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -473,10 +473,10 @@ class BernoulliBendingBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
+                                       SmallMatOutT& lambda_values_out,
+                                       hyEdgeT& hyper_edge,
+                                       const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -489,14 +489,14 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        has_numerical_flux_total<
+        has_trace_and_data_to_flux<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, time);
+        bilaplacian_solver.trace_and_data_to_flux(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
+        bilaplacian_solver.trace_and_data_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -667,15 +667,15 @@ class LengtheningBernoulliBendingBeam
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
-    ben_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
+    len_beam.trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
@@ -683,15 +683,15 @@ class LengtheningBernoulliBendingBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
+                                       SmallMatOutT& lambda_values_out,
+                                       hyEdgeT& hyper_edge,
+                                       const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
-    ben_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
+    len_beam.trace_and_data_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.trace_and_data_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
