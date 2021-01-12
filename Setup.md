@@ -6,11 +6,15 @@
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
 
-    $ sudo apt-get install git doxygen graphviz cmake python3-dev python3-numpy python3-scipy \
-    cython3 libblas-dev liblapack-dev
+    $ sudo apt-get install g++-10 git doxygen graphviz cmake python3-dev python3-numpy \
+    python3-scipy cython3 libblas-dev liblapack-dev
 
 
 This command installs
+
+- `g++-10` is the default compiler under which HyperHDG is implemented. In principle, you may use
+any other C++ compiler as well. However, HyperHDG is regularly checked against the compilers in the
+set `TEST_COMPILER` of the [Makefile](https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile).
 
 - `git` is the revision control system, GitHub is based on. It is the recommended tool to obtain and
 administrate HyperHDG.
@@ -60,6 +64,4 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
        $ ./shell_scripts/setup.sh
 
 
-With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used. Next, we
-will briefly describe [how to write your own program using HyperHDG](
-https://github.com/AndreasRupp/HyperHDG/wiki/Employ).
+With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
