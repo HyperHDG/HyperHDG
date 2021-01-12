@@ -391,6 +391,43 @@ class BilaplacianParab
       functions;
   } node_element;
   /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
+  /*!***********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    ************************************************************************************************/
   typedef std::vector<lSol_float_t> constructor_value_type;
@@ -590,9 +627,9 @@ class BilaplacianParab
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(SmallMatT& lambda_values,
-                                     hyEdgeT& hy_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(SmallMatT& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -615,7 +652,7 @@ class BilaplacianParab
                                                            parameters::analytic_result>(
         coeffs, hy_edge.geometry, time);
     hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
-    return result;
+    return std::array<lSol_float_t, 1U>({result});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.

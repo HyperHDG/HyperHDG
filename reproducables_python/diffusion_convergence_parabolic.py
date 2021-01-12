@@ -84,7 +84,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
     
   # Print error.
-  error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
+  error = HDG_wrapper.errors(vectorSolution, 1.)[0]
   print( "Iteration: ", iteration, " Error: ", error )
   f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \

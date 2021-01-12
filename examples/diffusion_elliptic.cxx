@@ -25,7 +25,7 @@ int main()
 
   std::vector<double> vectorSolution = SparseLA::conjugate_gradient(vectorRHS, HDG_wrapper);
 
-  std::cout << "Error: " << HDG_wrapper.calculate_L2_error(vectorSolution) << std::endl;
+  std::cout << "Error: " << HDG_wrapper.errors(vectorSolution)[0] << std::endl;
 
   HDG_wrapper.plot_option("fileName", "diffusion_elliptic_c++");
   HDG_wrapper.plot_option("printFileNumber", "false");

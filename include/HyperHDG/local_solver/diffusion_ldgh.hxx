@@ -122,6 +122,43 @@ class Diffusion
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -774,9 +811,9 @@ class Diffusion
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
-                                     hyEdgeT& hy_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -789,9 +826,9 @@ class Diffusion
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                                parameters::analytic_result>(
-      coeffs, hy_edge.geometry, time);
+
+    return std::array<lSol_float_t, 1U>({integrator.template integrate_vol_diffsquare_discana<
+      decltype(hyEdgeT::geometry), parameters::analytic_result>(coeffs, hy_edge.geometry, time)});
   }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
@@ -808,11 +845,11 @@ class Diffusion
    * \retval  vec_b               Local part of vector b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared_temp(const SmallMatT& lambda_values_new,
-                                          const SmallMatT& lambda_values_old,
-                                          hyEdgeT& hy_edge,
-                                          const lSol_float_t delta_t,
-                                          const lSol_float_t time) const
+  lSol_float_t errors_temp(const SmallMatT& lambda_values_new,
+                           const SmallMatT& lambda_values_old,
+                           hyEdgeT& hy_edge,
+                           const lSol_float_t delta_t,
+                           const lSol_float_t time) const
   {
     hy_assert(lambda_values_new.size() == lambda_values_old.size() &&
                 lambda_values_new.size() == 2 * hyEdge_dimT,

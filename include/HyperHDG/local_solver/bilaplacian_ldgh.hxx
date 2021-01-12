@@ -134,6 +134,43 @@ class Bilaplacian
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -811,9 +848,9 @@ class Bilaplacian
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
-                                     hyEdgeT& hy_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -836,7 +873,7 @@ class Bilaplacian
                                                            parameters::analytic_result>(
         coeffs, hy_edge.geometry, time);
     hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
-    return result;
+    return std::array<lSol_float_t, 1U>({result});
   }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
@@ -853,11 +890,11 @@ class Bilaplacian
    * \retval  vec_b               Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared_temp(const SmallMatT& lambda_values_new,
-                                          const SmallMatT& lambda_values_old,
-                                          hyEdgeT& hy_edge,
-                                          const lSol_float_t delta_t,
-                                          const lSol_float_t time) const
+  lSol_float_t errors_temp(const SmallMatT& lambda_values_new,
+                           const SmallMatT& lambda_values_old,
+                           hyEdgeT& hy_edge,
+                           const lSol_float_t delta_t,
+                           const lSol_float_t time) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 

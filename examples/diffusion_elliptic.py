@@ -38,7 +38,7 @@ if num_iter != 0:
   print("CG solver failed with a total number of ", num_iter, "iterations.")
   raise RuntimeError("Linear solvers did not converge!")
 
-print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
+print("Error: ", HDG_wrapper.errors(vectorSolution)[0])
 
 HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic_py" )
 HDG_wrapper.plot_option( "printFileNumber" , "false" )

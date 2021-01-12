@@ -30,8 +30,8 @@ cdef class PythonClassName :
     return self.thisptr.trace_to_flux (vec)
   def trace_and_data_to_flux(self, vec):
     return self.thisptr.trace_and_data_to_flux (vec)
-  def calculate_L2_error(self, vec):
-    return self.thisptr.calculate_L2_error (vec)
+  def errors(self, vec):
+    return self.thisptr.errors (vec)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

@@ -32,8 +32,8 @@ cdef class PythonClassName :
     self.thisptr.set_data (vec, time)
   def make_initial(self, vec, time = 0.):
     return self.thisptr.make_initial (vec, time)
-  def calculate_L2_error(self, vec, time = 0.):
-    return self.thisptr.calculate_L2_error (vec, time)
+  def errors(self, vec, time = 0.):
+    return self.thisptr.errors (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

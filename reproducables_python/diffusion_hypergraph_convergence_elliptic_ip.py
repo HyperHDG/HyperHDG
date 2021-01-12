@@ -62,7 +62,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
-  error = HDG_wrapper.calculate_L2_error(vectorSolution)
+  error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/diffusion_hypergraph_convergence_elliptic_ip.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
