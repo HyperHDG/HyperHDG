@@ -81,17 +81,17 @@
       for (unsigned int node = 0; node < hyNodes.size(); ++node)                                   \
         hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);            \
                                                                                                    \
-      if constexpr (has_errors<LocalSolverT,                                                       \
-                               error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,        \
-                                                  2 * hyEdge_dim>&,                                \
-                                       dof_value_t)>::value)                                       \
-        result = LocalSolverT::error_def::sum_error(result, local_solver_.errors(dofs, time));     \
-      else if constexpr (has_errors<LocalSolverT,                                                  \
-                                    error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,   \
-                                                       2 * hyEdge_dim>&,                           \
-                                            decltype(hyper_edge)&, dof_value_t)>::value)           \
-        result = LocalSolverT::error_def::sum_error(result,                                        \
-                                                    local_solver_.errors(dofs, hyper_edge, time)); \
+      if constexpr (has_fun_name<LocalSolverT,                                                     \
+                                 error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,      \
+                                                    2 * hyEdge_dim>&,                              \
+                                         dof_value_t)>::value)                                     \
+        result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time));   \
+      else if constexpr (has_fun_name<LocalSolverT,                                                \
+                                      error_t(std::array<std::array<dof_value_t, n_dofs_per_node>, \
+                                                         2 * hyEdge_dim>&,                         \
+                                              decltype(hyper_edge)&, dof_value_t)>::value)         \
+        result = LocalSolverT::error_def::sum_error(                                               \
+          result, local_solver_.fun_name(dofs, hyper_edge, time));                                 \
       else                                                                                         \
         hy_assert(false, "Function seems not to be ímplemented");                                  \
     });                                                                                            \
