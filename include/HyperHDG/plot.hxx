@@ -232,6 +232,34 @@ namespace PlotFunctions
  * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
 HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
+
+
+std::ofstream generate_offstream(const PlotOptions& plot_options, const bool append = false)
+{
+  std::ofstream myfile;
+
+  std::string filename = plot_options.outputDir;
+  filename.append("/");
+  filename.append(plot_options.fileName);
+  if (plot_options.printFileNumber)
+  {
+    filename.append(".");
+    filename.append(std::to_string(plot_options.fileNumber));
+  }
+  filename.append(".");
+  #define PROCESS_VAL(ending) [](){ return #ending; }()
+  filename.append(PROCESS_VAL(plot_options.fileEnding));
+  #undef PROCESS_VAL
+
+  if (std::filesystem::create_directory(plot_options.outputDir))
+    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
+
+  myfile.open(filename);
+  return myfile; 
+}
+
+
+
 /*!*************************************************************************************************
  * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
  *
@@ -675,22 +703,12 @@ void plot_vtu(
     abscissas[i] = plot_options.scale * (1. * i / n_subdivisions - 0.5) + 0.5;
 
   static_assert(edge_dim <= 3, "Plotting hyperedges with dimensions larger than 3 is hard.");
-  std::ofstream myfile;
+  
 
-  std::string filename = plot_options.outputDir;
-  filename.append("/");
-  filename.append(plot_options.fileName);
-  if (plot_options.printFileNumber)
-  {
-    filename.append(".");
-    filename.append(std::to_string(plot_options.fileNumber));
-  }
-  filename.append(".vtu");
+  std::ofstream myfile = PlotFunctions::generate_offstream(plot_options, false);
 
-  if (std::filesystem::create_directory(plot_options.outputDir))
-    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
 
-  myfile.open(filename);
+
   myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
