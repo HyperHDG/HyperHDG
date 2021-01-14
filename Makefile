@@ -62,7 +62,7 @@ test_all_compilers:
 test_github:
 	$(MAKE) clean
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
+	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILESYS" \
 		-DNOPYTHONTESTS=True ..
 	cd build; make
 	cd build; make test

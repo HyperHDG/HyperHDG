@@ -131,7 +131,7 @@ def cython_import(constructor):
     if not (constructor.debug_mode):
       compile_command += " -DNDEBUG";
     if not (constructor.allow_file_output):
-      compile_command += " -DNOFILEOUT"
+      compile_command += " -DNOFILESYS"
     #Actually compile the prepared files.
     assert os.system(cython_command) == 0
     assert os.system(compile_command) == 0
