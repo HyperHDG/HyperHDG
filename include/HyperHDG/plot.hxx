@@ -265,9 +265,9 @@ std::ofstream open_ofstream(const PlotOptions& plot_options, const bool append =
             "The file has not been created. Most likely, the filesystem could not"
               << " create the output directory, since std::filesystem has not been available."
               << std::endl
-              << "Please, try to create the output directoy manually and run the code again.")
+              << "Please, try to create the output directoy manually and run the code again.");
 
-    return myfile;
+  return myfile;
 }
 
 void close_ofstream(std::ofstream& myfile)
