@@ -392,7 +392,7 @@ class Parabolic
   template <typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(errors, has_errors)();
+    auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************

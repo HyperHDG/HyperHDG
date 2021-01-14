@@ -199,7 +199,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux)();
+    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -231,7 +231,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_and_data_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_and_data_to_flux, has_trace_and_data_to_flux)();
+    auto vec_Ax = prototype_mat_vec_multiply(trace_and_data_to_flux, has_trace_and_data_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -257,7 +257,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(errors, has_errors)();
+    auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************

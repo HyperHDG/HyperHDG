@@ -51,7 +51,7 @@
     });                                                                                         \
                                                                                                 \
     return vec_Ax;                                                                              \
-  }
+  }()
 
 /*!*************************************************************************************************
  * \brief   Macro that allows to use an implemented error evaluation.
@@ -97,4 +97,4 @@
     });                                                                                            \
                                                                                                    \
     return LocalSolverT::error_def::postprocess_error(result);                                     \
-  }
+  }()
