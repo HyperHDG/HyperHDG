@@ -24,7 +24,7 @@ class helper_ev_newt():
     self.hdg_wrapper = hdg_wrapper
     self.val = [0] * (hdg_wrapper.size_of_system() + 1)
   def eval_residual(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_multiply(vector, vector[len(vector)-1])
+    vec = self.hdg_wrapper.trace_to_flux(vector, vector[len(vector)-1])
     temp = vector[len(vector)-1]
     vector[len(vector)-1] = 0.
     vec[len(vec)-1] = np.linalg.norm(vector) ** 2 - 1.
@@ -33,7 +33,7 @@ class helper_ev_newt():
   def set_val(self, val):
     self.val = val;
   def eval_jacobian(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_der_multiply \
+    vec = self.hdg_wrapper.jacobian_of_trace_to_flux \
             ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
     temp = self.val[len(self.val)-1]
     self.val[len(self.val)-1] = 0.
@@ -59,12 +59,12 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   beta           = 0.5
 
   try:
-    import cython_import
-  except ImportError as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-    import cython_import
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
   
-  const                 = cython_import.hyperhdg_constructor()
+  const                 = HyperHDG.config()
   const.global_loop     = "NonlinearEigenvalue"
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
@@ -74,9 +74,8 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
   const.debug_mode      = debug_mode
-  const.allow_file_output = False
 
-  PyDP = cython_import.cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
@@ -90,7 +89,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   # Initialize solution vector [lambda, eig].
   if initial == "default":
     vectorSolution = [0] * system_size
-    vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
+    vectorSolution = HDG_wrapper.make_initial(vectorSolution)
     vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
     vectorSolution[system_size-1]= (dimension * (np.pi ** 2)) ** 2 + 1e-3 * random.randint(-100,100)
   else:

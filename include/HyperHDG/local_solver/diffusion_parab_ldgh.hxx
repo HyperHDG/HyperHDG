@@ -372,6 +372,43 @@ class DiffusionParab
       functions;
   };
   /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
+  /*!***********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    ************************************************************************************************/
   typedef std::vector<lSol_float_t> constructor_value_type;
@@ -402,10 +439,10 @@ class DiffusionParab
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -454,10 +491,10 @@ class DiffusionParab
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -563,9 +600,9 @@ class DiffusionParab
    * \retval  vecAx         L2 projected initial datum.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT& numerical_flux_initial(SmallMatT& lambda_values,
-                                    hyEdgeT& hyper_edge,
-                                    const lSol_float_t time = 0.) const
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -668,10 +705,10 @@ class DiffusionParab
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
-                                                      2 * hyEdge_dimT>& UNUSED(lambda_values),
-                                     hyEdgeT& hy_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                       2 * hyEdge_dimT>& UNUSED(lambda_values),
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 

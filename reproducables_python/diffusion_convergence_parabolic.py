@@ -30,12 +30,12 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   delta_time  = 1 / time_steps
   
   try:
-    import cython_import
-  except ImportError as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-    import cython_import
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
   
-  const                 = cython_import.hyperhdg_constructor()
+  const                 = HyperHDG.config()
   const.global_loop     = "Parabolic"
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
@@ -46,26 +46,25 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     "double", "vector[double]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
-  const.allow_file_output = False
 
-  PyDP = cython_import.cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
 
   # Generate right-hand side vector.
-  vectorSolution = HDG_wrapper.initial_flux_vector(HDG_wrapper.return_zero_vector())
+  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
   
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector(), \
+    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
@@ -84,7 +83,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
     
   # Print error.
-  error = HDG_wrapper.calculate_L2_error(vectorSolution, 1.)
+  error = HDG_wrapper.errors(vectorSolution, 1.)[0]
   print( "Iteration: ", iteration, " Error: ", error )
   f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \

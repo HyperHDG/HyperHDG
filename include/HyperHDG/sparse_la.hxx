@@ -178,7 +178,7 @@ vectorT conjugate_gradient(const vectorT& b,
 
   for (unsigned int k = 0; k < n_iterations; ++k)
   {
-    vectorT z = problem.matrix_vector_multiply(d);
+    vectorT z = problem.trace_to_flux(d);
     r_square_old = r_square_new;
 
     typename vectorT::value_type alpha = r_square_old / inner_product(d, z);

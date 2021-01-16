@@ -51,7 +51,7 @@ class Template
    * \brief   The local solver as needed by the HDG method
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT&, SmallMatOutT&) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT&, SmallMatOutT&) const
   {
     return SmallMatOutT();
   }

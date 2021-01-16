@@ -1,6 +1,6 @@
 PROJECT     	= HyperHDG
 .PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
-                clean_pycache doxygen format submodules test_all_compilers test_github test_compiler
+								clean_pycache doxygen format submodules test_all_compilers test_compiler
 
 # List of compilers that HyperHDG is tested to run with.
 TEST_COMPILER = clang++-10 clang++-11 g++-10
@@ -50,7 +50,7 @@ clean_output:
 	rm -rf output */output
 
 clean_pycache:
-	rm -rf __pycache__ */__pycache__
+	rm -rf __pycache__ */__pycache__ */*/__pycache__
 
 
 doxygen:
@@ -68,14 +68,6 @@ submodules:
 
 test_all_compilers:
 	$(foreach compiler, $(TEST_COMPILER), $(MAKE) test_compiler comp=${compiler};)
-
-test_github:
-	$(MAKE) clean
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
-		-DNOPYTHONTESTS=True -DCMAKE_CXX_COMPILER=$(DEFAULT_COMPILER) ..
-	cd build; make
-	cd build; make test
 
 test_compiler:
 	$(MAKE) clean
