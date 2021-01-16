@@ -1,6 +1,6 @@
 PROJECT     	= HyperHDG
 .PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
-								clean_pycache doxygen format submodules test_all_compilers test_github test_compiler
+								clean_pycache doxygen format submodules test_all_compilers test_compiler
 
 
 TEST_COMPILER = clang++-9 clang++-10 g++-9 g++-10
@@ -58,14 +58,6 @@ submodules:
 
 test_all_compilers:
 	$(foreach compiler, $(TEST_COMPILER), $(MAKE) test_compiler comp=${compiler};)
-
-test_github:
-	$(MAKE) clean
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="-DNOFILEOUT" \
-		-DNOPYTHONTESTS=True ..
-	cd build; make
-	cd build; make test
 
 test_compiler:
 	$(MAKE) clean
