@@ -40,7 +40,7 @@ clean_output:
 	rm -rf output */output
 
 clean_pycache:
-	rm -rf __pycache__ */__pycache__
+	rm -rf __pycache__ */__pycache__ */*/__pycache__
 
 
 doxygen:

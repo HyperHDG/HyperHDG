@@ -61,7 +61,7 @@ int do_test()
     LocalSolver::Diffusion<hyEdge_dim, 1, 2, TestParameters, test_float_t>, vector<test_float_t> >
     diffusion_problem(num_elements, (test_float_t)1.);
 
-  std::vector<test_float_t> helper = diffusion_problem.return_zero_vector();
+  std::vector<test_float_t> helper = diffusion_problem.zero_vector();
 
   std::string file_name = "diff_t-" + std::to_string(hyEdge_dim) + "-" + std::to_string(space_dim);
   std::string print_file_number = "false", scale = "0.8";

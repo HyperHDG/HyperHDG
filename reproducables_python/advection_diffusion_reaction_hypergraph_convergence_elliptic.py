@@ -25,12 +25,12 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
 
   try:
-    import cython_import
-  except ImportError as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-    import cython_import
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
   
-  const                 = cython_import.hyperhdg_constructor()
+  const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
@@ -41,17 +41,17 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   const.include_files   = ["reproducables_python/parameters/diffusion_advection_reaction.hxx"]
   const.debug_mode      = debug_mode
 
-  PyDP = cython_import.cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
+  vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1.)
 
   # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
@@ -63,7 +63,7 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
       raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
-  error = HDG_wrapper.calculate_L2_error(vectorSolution)
+  error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/diffusion_advection_reaction_hypergraph_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \

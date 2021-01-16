@@ -19,13 +19,13 @@ int main()
                                               HG<hyEdge_dim>::DiffusionElliptic, double> >
     HDG_wrapper(std::vector<unsigned int>(space_dim, 1 << refinement));
 
-  std::vector<double> vectorRHS = HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector());
+  std::vector<double> vectorRHS = HDG_wrapper.residual_flux(HDG_wrapper.zero_vector());
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= -1.;
 
   std::vector<double> vectorSolution = SparseLA::conjugate_gradient(vectorRHS, HDG_wrapper);
 
-  std::cout << "Error: " << HDG_wrapper.calculate_L2_error(vectorSolution) << std::endl;
+  std::cout << "Error: " << HDG_wrapper.errors(vectorSolution)[0] << std::endl;
 
   HDG_wrapper.plot_option("fileName", "diffusion_elliptic_c++");
   HDG_wrapper.plot_option("printFileNumber", "false");

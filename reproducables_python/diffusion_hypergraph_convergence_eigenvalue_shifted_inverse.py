@@ -42,16 +42,16 @@ class helper_ev_approx():
   def short_vector(self, vector):
     return [vector[x] for x in self.index_vector]
   def multiply_stiff(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector))
+    vec = self.hdg_wrapper.trace_to_flux(self.long_vector(vector))
     vec = np.multiply(self.short_vector(vec), -1.)
     return vec
   def shifted_mult(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector), self.sigma)
+    vec = self.hdg_wrapper.trace_to_flux(self.long_vector(vector), self.sigma)
     vec = np.multiply(self.short_vector(vec), -1.)
     return vec
   def multiply_mass(self, vector):
-    vec = self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector), self.sigma)
-    vec = np.subtract( self.hdg_wrapper.matrix_vector_multiply(self.long_vector(vector)) , vec )
+    vec = self.hdg_wrapper.trace_to_flux(self.long_vector(vector), self.sigma)
+    vec = np.subtract( self.hdg_wrapper.trace_to_flux(self.long_vector(vector)) , vec )
     vec = np.multiply( self.short_vector(vec) , -1. / self.sigma )
     return vec
   def shifted_inverse(self, vector):
@@ -77,12 +77,12 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   sigma          = exact_eigenval / 2.
 
   try:
-    import cython_import
-  except ImportError as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-    import cython_import
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
   
-  const                 = cython_import.hyperhdg_constructor()
+  const                 = HyperHDG.config()
   const.global_loop     = "ShiftedInverseEigenvalue"
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
@@ -93,7 +93,7 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
-  PyDP = cython_import.cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
