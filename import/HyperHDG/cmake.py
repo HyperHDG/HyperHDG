@@ -54,6 +54,6 @@ def get_options():
     opt.py_dir = config['python']['dir']
   assert int(opt.py_ver_maj), "Python versions below 3 are not supported!"
   assert opt.py_dir in opt.compile_inc, "Python directory must be included!"
-  assert int(opt.py_ver_maj) == sys.version_info.major and 
+  assert int(opt.py_ver_maj) == sys.version_info.major and \
     int(opt.py_ver_min) == sys.version_info.minor, "Python version is not CMAKE's Python version!"
   return opt
