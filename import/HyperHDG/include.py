@@ -57,9 +57,7 @@ def include(conf):
     # Prepare the compilation commands.
     cython_command, compile_command, link_command = compile_commands(python_class, options)
     if not (conf.debug_mode):
-      compile_command += " -DNDEBUG";
-    if not (conf.allow_file_output):
-      compile_command += " -DNOFILEOUT"
+      compile_command += " -DNDEBUG"
     #Actually compile the prepared files.
     assert os.system(cython_command) == 0
     assert os.system(compile_command) == 0

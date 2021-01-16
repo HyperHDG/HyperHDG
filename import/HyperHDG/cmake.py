@@ -21,18 +21,18 @@ def get_options():
   opt = options()
   if not os.path.isfile(main_dir() + "/build/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
-    opt.compile_com = "g++"
+    opt.compile_com = "g++-10"
     opt.compile_inc = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
       -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
     opt.compile_flg = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong \
       -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
-    opt.compile_std = "17"
-    opt.link_com = "g++"
+    opt.compile_std = "20"
+    opt.link_com = "g++-10"
     opt.link_flg = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
     opt.link_lib = "-llapack"
-    opt.cython_com = "cython"
+    opt.cython_com = "cython3"
     opt.cython_flg = "-3 --cplus"
     opt.py_ver_maj = str(sys.version_info.major)
     opt.py_ver_min = str(sys.version_info.minor)
@@ -55,6 +55,5 @@ def get_options():
   assert int(opt.py_ver_maj), "Python versions below 3 are not supported!"
   assert opt.py_dir in opt.compile_inc, "Python directory must be included!"
   assert int(opt.py_ver_maj) == sys.version_info.major and \
-           int(opt.py_ver_min) == sys.version_info.minor, \
-           "Utilized Python version is not CMAKE's Python version!"
+    int(opt.py_ver_min) == sys.version_info.minor, "Python version is not CMAKE's Python version!"
   return opt

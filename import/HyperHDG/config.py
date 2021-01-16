@@ -14,7 +14,6 @@ class config:
   cpp_code            = ""
   include_files       = []
   debug_mode          = False
-  allow_file_output   = True
 
 ## \brief   Check that config is consistent.
 def consistent(conf):
@@ -32,8 +31,6 @@ def consistent(conf):
   if not isinstance(conf.cpp_code, str):
     return False
   if not isinstance(conf.debug_mode, bool):
-    return False
-  if not isinstance(conf.allow_file_output, bool):
     return False
   if not isinstance(conf.cython_replacements, list):
     return False
