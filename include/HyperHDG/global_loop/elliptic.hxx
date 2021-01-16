@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/plot.hxx>
@@ -33,25 +34,32 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class Elliptic
 {
+ private:
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+  HAS_MEMBER_FUNCTION(errors, has_errors);
+  /*!***********************************************************************************************
+   * \brief   Some constant variable that might be helpful.
+   ************************************************************************************************/
+  static constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+  /*!***********************************************************************************************
+   * \brief   Some constant variable that might be helpful.
+   ************************************************************************************************/
+  static constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
    ************************************************************************************************/
   using dof_value_t = typename LargeVecT::value_type;
-
- private:
   /*!***********************************************************************************************
    * \brief   Instantiation of a hypergraph.
    ************************************************************************************************/
@@ -174,7 +182,7 @@ class Elliptic
    *
    * \retval  zero            A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
-  LargeVecT return_zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -189,53 +197,9 @@ class Elliptic
    * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
-    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
-
-    LargeVecT vec_Ax(x_vec.size(), 0.);
-    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
-      hyEdge_dofs_new;
-
-    // Do matrix--vector multiplication by iterating over all hyperedges.
-    std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
-      // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-      hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-      {
-        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs_old[hyNode]);
-        hyEdge_dofs_new[hyNode].fill(0.);
-      }
-
-      // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (
-        has_numerical_flux_from_lambda<
-          LocalSolverT,
-          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, time);
-      else if constexpr (
-        has_numerical_flux_from_lambda<
-          LocalSolverT,
-          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            decltype(hyper_edge)&, dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge,
-                                                 time);
-      else
-        hy_assert(false, "Function seems not to be implemented.");
-
-      // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs_new[hyNode]);
-    });
+    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -265,56 +229,9 @@ class Elliptic
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT total_flux_vector(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
-    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
-
-    LargeVecT vec_Ax(x_vec.size(), 0.);
-    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
-      hyEdge_dofs_new;
-
-    // Do matrix--vector multiplication by iterating over all hyperedges.
-    std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
-      // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-      hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-      {
-        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs_old[hyNode]);
-        hyEdge_dofs_new[hyNode].fill(0.);
-      }
-
-      // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (
-        has_numerical_flux_total<
-          LocalSolverT,
-          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            dof_value_t)>::value)
-      {
-        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, time);
-      }
-      else if constexpr (
-        has_numerical_flux_total<
-          LocalSolverT,
-          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-            decltype(hyper_edge)&, dof_value_t)>::value)
-      {
-        local_solver_.numerical_flux_total(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
-      }
-      else
-        hy_assert(false, "Function seems not to be implemented!");
-
-      // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                        hyEdge_dofs_new[hyNode]);
-    });
+    auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -338,43 +255,10 @@ class Elliptic
    * \retval  error           A vector containing the errors.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  dof_value_t calculate_L2_error(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
-    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
-
-    dof_value_t result = 0.;
-
-    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
-
-    // Calculate errors by iteration over all hyperedges.
-    std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {
-      // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-      hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
-      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                     hyEdge_dofs[hyNode]);
-
-      // Turn degrees of freedom of x_vec that have been stored locally into local errors.
-      // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (has_calc_L2_error_squared<
-                      LocalSolverT, dof_value_t(std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                           2 * TopologyT::hyEdge_dim()>&,
-                                                dof_value_t)>::value)
-        result += local_solver_.calc_L2_error_squared(hyEdge_dofs, time);
-      else if constexpr (has_calc_L2_error_squared<
-                           LocalSolverT,
-                           dof_value_t(std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                  2 * TopologyT::hyEdge_dim()>&,
-                                       decltype(hyper_edge)&, dof_value_t)>::value)
-        result += local_solver_.calc_L2_error_squared(hyEdge_dofs, hyper_edge, time);
-      else
-        hy_assert(false, "Function seems not to be ímplemented");
-    });
-
-    hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
-    return std::sqrt(result);
+    auto result = prototype_errors(errors, has_errors);
+    return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.

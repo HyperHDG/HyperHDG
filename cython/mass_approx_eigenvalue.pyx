@@ -24,10 +24,10 @@ cdef class PythonClassName :
     del self.thisptr
   def dirichlet_indices(self):
     return self.thisptr.dirichlet_indices ()
-  def matrix_vector_multiply(self, vec, time = 0.):
-    return self.thisptr.matrix_vector_multiply (vec, time)
-  def mass_matrix_multiply(self, vec, time = 0.):
-    return self.thisptr.mass_matrix_multiply (vec, time)
+  def trace_to_flux(self, vec, time = 0.):
+    return self.thisptr.trace_to_flux (vec, time)
+  def trace_to_mass_flux(self, vec, time = 0.):
+    return self.thisptr.trace_to_mass_flux (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

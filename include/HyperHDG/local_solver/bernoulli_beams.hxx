@@ -27,15 +27,15 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+  HAS_MEMBER_FUNCTION(errors, has_errors);
 
  public:
   /*!***********************************************************************************************
@@ -53,6 +53,43 @@ class LengtheningBeam
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -152,10 +189,10 @@ class LengtheningBeam
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
@@ -164,7 +201,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (has_numerical_flux_from_lambda<
+    if constexpr (has_trace_to_flux<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -172,9 +209,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, time);
+      diffusion.trace_to_flux(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
+      diffusion.trace_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -182,10 +219,10 @@ class LengtheningBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *hyEdge_dimT>
@@ -194,7 +231,7 @@ class LengtheningBeam
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
-    if constexpr (has_numerical_flux_total<
+    if constexpr (has_residual_flux<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -202,9 +239,9 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      diffusion.numerical_flux_total(lambda_old, lambda_new, time);
+      diffusion.residual_flux(lambda_old, lambda_new, time);
     else
-      diffusion.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
+      diffusion.residual_flux(lambda_old, lambda_new, hyper_edge, time);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -219,15 +256,15 @@ class LengtheningBeam
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
+                                      hyEdgeT& hyper_edge,
+                                      const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
-    if constexpr (has_calc_L2_error_squared<
+    if constexpr (has_errors<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
@@ -235,11 +272,11 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&,
                       std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
-      error = diffusion.calc_L2_error_squared(lambda, time);
+      error = diffusion.errors(lambda, time);
     else
-      error = diffusion.calc_L2_error_squared(lambda, hyper_edge, time);
+      error = diffusion.errors(lambda, hyper_edge, time);
 
-    return error;
+    return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -299,15 +336,15 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_total, has_numerical_flux_total);
+  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(calc_L2_error_squared, has_calc_L2_error_squared);
+  HAS_MEMBER_FUNCTION(errors, has_errors);
 
  public:
   /*!***********************************************************************************************
@@ -325,6 +362,43 @@ class BernoulliBendingBeam
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -436,10 +510,10 @@ class BernoulliBendingBeam
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -452,7 +526,7 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                      2 * hyEdge_dimT>&(
@@ -460,9 +534,9 @@ class BernoulliBendingBeam
                        2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>,
                        2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, time);
+        bilaplacian_solver.trace_to_flux(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_from_lambda(lambda_old, lambda_new, hyper_edge, time);
+        bilaplacian_solver.trace_to_flux(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -473,10 +547,10 @@ class BernoulliBendingBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "The beam must be one-dimensional!");
     std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
@@ -489,14 +563,14 @@ class BernoulliBendingBeam
         lambda_new[i].fill(0.);
 
       if constexpr (
-        has_numerical_flux_total<
+        has_residual_flux<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, time);
+        bilaplacian_solver.residual_flux(lambda_old, lambda_new, time);
       else
-        bilaplacian_solver.numerical_flux_total(lambda_old, lambda_new, hyper_edge, time);
+        bilaplacian_solver.residual_flux(lambda_old, lambda_new, hyper_edge, time);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -513,7 +587,7 @@ class BernoulliBendingBeam
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
+  std::array<lSol_float_t, 1U> errors(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
       lambda_values,
     hyEdgeT& hyper_edge,
@@ -527,17 +601,17 @@ class BernoulliBendingBeam
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
 
       if constexpr (
-        has_calc_L2_error_squared<
+        has_errors<
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        error += bilaplacian_solver.calc_L2_error_squared(lambda, time);
+        error += bilaplacian_solver.errors(lambda, time);
       else
-        error += bilaplacian_solver.calc_L2_error_squared(lambda, hyper_edge, time);
+        error += bilaplacian_solver.errors(lambda, hyper_edge, time);
     }
 
-    return error;
+    return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -613,6 +687,43 @@ class LengtheningBernoulliBendingBeam
       functions;
   } node_element;
   /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
+  /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
    * \retval  hyEdge_dimT    Dimension of hypergraph's hyperedges.
@@ -667,15 +778,15 @@ class LengtheningBernoulliBendingBeam
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
-    ben_beam.numerical_flux_from_lambda(lambda_values_in, lambda_values_out, hyper_edge, time);
+    len_beam.trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
@@ -683,15 +794,15 @@ class LengtheningBernoulliBendingBeam
    * \brief   Evaluate local contribution to residual.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     static_assert(hyEdge_dimT == 1, "A beam must be one-dimensional!");
 
-    len_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
-    ben_beam.numerical_flux_total(lambda_values_in, lambda_values_out, hyper_edge, time);
+    len_beam.residual_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
+    ben_beam.residual_flux(lambda_values_in, lambda_values_out, hyper_edge, time);
 
     return lambda_values_out;
   }
@@ -705,16 +816,16 @@ class LengtheningBernoulliBendingBeam
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
+  std::array<lSol_float_t, 1U> errors(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
       lambda_values,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
-    error += len_beam.calc_L2_error_squared(lambda_values, hyper_edge, time);
-    error += ben_beam.calc_L2_error_squared(lambda_values, hyper_edge, time);
-    return error;
+    error += len_beam.errors(lambda_values, hyper_edge, time);
+    error += ben_beam.errors(lambda_values, hyper_edge, time);
+    return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.

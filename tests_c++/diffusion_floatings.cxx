@@ -35,14 +35,14 @@ int do_test()
                        std::vector<test_float_t> >
     diffusion_problem(num_elements, num_elements, (test_float_t)1.);
 
-  vector<test_float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
+  vector<test_float_t> vectorDirichlet = diffusion_problem.zero_vector();
   vectorDirichlet[0] = (test_float_t)1.;
   vectorDirichlet[vectorDirichlet.size() - 1] = (test_float_t)0.;
 
   const vector<unsigned int> index_vector = {0, (unsigned int)vectorDirichlet.size() - 1};
   diffusion_problem.read_dirichlet_indices(index_vector);
 
-  vector<test_float_t> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  vector<test_float_t> vectorRHS = diffusion_problem.trace_to_flux(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (test_float_t)-1.;
 

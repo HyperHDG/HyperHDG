@@ -34,15 +34,15 @@ class NonlinearEigenvalue
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_from_lambda, has_numerical_flux_from_lambda);
+  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_der, has_numerical_flux_der);
+  HAS_MEMBER_FUNCTION(jacobian_of_trace_to_flux, has_jacobian_of_trace_to_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(numerical_flux_initial, has_numerical_flux_initial);
+  HAS_MEMBER_FUNCTION(make_initial, has_make_initial);
 
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
@@ -140,7 +140,7 @@ class NonlinearEigenvalue
    * \retval  y_vec         A vector containing the residual.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_multiply(const LargeVecT& x_vec, const dof_value_t eig = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -163,21 +163,21 @@ class NonlinearEigenvalue
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, eig);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, eig);
       else if constexpr (
-        has_numerical_flux_from_lambda<
+        has_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             decltype(hyper_edge)&, dof_value_t)>::value)
-        local_solver_.numerical_flux_from_lambda(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, eig);
+        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, eig);
       else
         hy_assert(false, "Function seems not to be implemented!");
 
@@ -202,10 +202,10 @@ class NonlinearEigenvalue
    * \retval  y_vec         Corresponds to directional derivative.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT matrix_vector_der_multiply(const LargeVecT& x_vec,
-                                       const dof_value_t eig,
-                                       const LargeVecT& x_val,
-                                       const dof_value_t eig_val)
+  LargeVecT jacobian_of_trace_to_flux(const LargeVecT& x_vec,
+                                      const dof_value_t eig,
+                                      const LargeVecT& x_val,
+                                      const dof_value_t eig_val)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -230,7 +230,7 @@ class NonlinearEigenvalue
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_numerical_flux_der<
+        has_jacobian_of_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
@@ -239,11 +239,11 @@ class NonlinearEigenvalue
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_der(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
-                                         eig_val);
+        local_solver_.jacobian_of_trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
+                                                eig_val);
       }
       else if constexpr (
-        has_numerical_flux_der<
+        has_jacobian_of_trace_to_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
@@ -252,8 +252,8 @@ class NonlinearEigenvalue
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t, decltype(hyper_edge)&)>::value)
       {
-        local_solver_.numerical_flux_der(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
-                                         eig_val, hyper_edge);
+        local_solver_.jacobian_of_trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, eig, hyEdge_vals,
+                                                eig_val, hyper_edge);
       }
       else
         hy_assert(false, "Function seems not to be implemented!");
@@ -274,7 +274,7 @@ class NonlinearEigenvalue
    * \retval  y_vec         A vector containing initial flux vector.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT initial_flux_vector(const LargeVecT& x_vec, const dof_value_t eig = 0.)
+  LargeVecT make_initial(const LargeVecT& x_vec, const dof_value_t eig = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -292,23 +292,23 @@ class NonlinearEigenvalue
                                                      hyEdge_dofs[hyNode]);
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-      if constexpr (has_numerical_flux_initial<
-                      LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                               2 * TopologyT::hyEdge_dim()>&(
-                                      std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                 2 * TopologyT::hyEdge_dim()>&,
-                                      dof_value_t)>::value)
+      if constexpr (has_make_initial<LocalSolverT,
+                                     std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                2 * TopologyT::hyEdge_dim()>&(
+                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                  2 * TopologyT::hyEdge_dim()>&,
+                                       dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_initial(hyEdge_dofs, eig);
+        local_solver_.make_initial(hyEdge_dofs, eig);
       }
-      else if constexpr (has_numerical_flux_initial<
-                           LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                    2 * TopologyT::hyEdge_dim()>&(
-                                           std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                      2 * TopologyT::hyEdge_dim()>&,
-                                           decltype(hyper_edge)&, dof_value_t)>::value)
+      else if constexpr (has_make_initial<LocalSolverT,
+                                          std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                     2 * TopologyT::hyEdge_dim()>&(
+                                            std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                       2 * TopologyT::hyEdge_dim()>&,
+                                            decltype(hyper_edge)&, dof_value_t)>::value)
       {
-        local_solver_.numerical_flux_initial(hyEdge_dofs, hyper_edge, eig);
+        local_solver_.make_initial(hyEdge_dofs, hyper_edge, eig);
       }
       else
         hy_assert(false, "Function seems not to be implemented!");

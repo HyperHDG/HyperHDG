@@ -42,7 +42,7 @@ HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/domains/trian
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
 # index vector (next) will cause a wrong representation of the final result.
-vectorDirichlet = HDG_wrapper.return_zero_vector()
+vectorDirichlet = HDG_wrapper.zero_vector()
 vectorDirichlet[0] = 1.
 # vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
@@ -59,7 +59,7 @@ print("Dirichlet values: ", vectorDirichlet)
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
+vectorRHS = [-i for i in HDG_wrapper.trace_to_flux(vectorDirichlet)]
 
 # Print right-hand side vector.
 print("Right-hand side: ", vectorRHS)
@@ -67,7 +67,7 @@ print("Right-hand side: ", vectorRHS)
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
 system_size = HDG_wrapper.size_of_system()
-A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=1500, tol=1e-9) # Parameters for CG.

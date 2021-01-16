@@ -32,14 +32,14 @@ int main()
                        LocalSolver::LengtheningBeam<1, 2, 1, 2> >
     diffusion_problem(filename, 1.);
 
-  vector<double> vectorDirichlet = diffusion_problem.return_zero_vector();
+  vector<double> vectorDirichlet = diffusion_problem.zero_vector();
   vectorDirichlet[0] = 1.;
   vectorDirichlet[2] = 0.;
 
   const vector<unsigned int> index_vector = {0, 1, 8, 9};
   diffusion_problem.read_dirichlet_indices(index_vector);
 
-  vector<double> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  vector<double> vectorRHS = diffusion_problem.trace_to_flux(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= -1.;
 

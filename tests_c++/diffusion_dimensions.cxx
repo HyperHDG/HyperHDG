@@ -39,14 +39,14 @@ int do_test_uniform()
                        LocalSolver::DiffusionUniform<1, 1, 2, float_t>, std::vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
+  vector<float_t> vectorDirichlet = diffusion_problem.zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
   const vector<unsigned int> index_vector = {0, 1};
   diffusion_problem.read_dirichlet_indices(index_vector);
 
-  vector<float_t> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  vector<float_t> vectorRHS = diffusion_problem.trace_to_flux(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;
 
@@ -153,14 +153,14 @@ int do_test_standard()
                        LocalSolver::Diffusion<1, 1, 2, TestParameters, float_t>, vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorDirichlet = diffusion_problem.return_zero_vector();
+  vector<float_t> vectorDirichlet = diffusion_problem.zero_vector();
   vectorDirichlet[0] = (float_t)0.;
   vectorDirichlet[1] = (float_t)1.;
 
   const vector<unsigned int> index_vector = {0, 1};
   diffusion_problem.read_dirichlet_indices(index_vector);
 
-  vector<float_t> vectorRHS = diffusion_problem.matrix_vector_multiply(vectorDirichlet);
+  vector<float_t> vectorRHS = diffusion_problem.trace_to_flux(vectorDirichlet);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;
 
@@ -270,8 +270,8 @@ int do_test_standard_dir()
                        vector<float_t> >
     diffusion_problem(file_name, (float_t)1.);
 
-  vector<float_t> vectorRHS = diffusion_problem.return_zero_vector();
-  vectorRHS = diffusion_problem.total_flux_vector(vectorRHS);
+  vector<float_t> vectorRHS = diffusion_problem.zero_vector();
+  vectorRHS = diffusion_problem.residual_flux(vectorRHS);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;
 
