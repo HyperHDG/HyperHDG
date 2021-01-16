@@ -29,12 +29,12 @@ print("Starting time is", start_time)
 os.system("mkdir -p output")
 
 try:
-  import cython_import
-except ImportError as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/.." )
-  import cython_import
+  import HyperHDG
+except (ImportError, ModuleNotFoundError) as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+  import HyperHDG
   
-const                 = cython_import.hyperhdg_constructor()
+const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
 const.local_solver    = "LengtheningBernoulliBendingBeam<1,3,1,2>"
 const.topology        = "File<1,3>"
@@ -45,7 +45,7 @@ const.include_files   = [ "HyperHDG/local_solver/diffusion_uniform_ldgh.hxx", \
                           "HyperHDG/local_solver/bilaplacian_uniform_ldgh.hxx" ]
 const.debug_mode      = False
 
-PyDP = cython_import.cython_import(const)
+PyDP = HyperHDG.include(const)
 
 # Initialising the wrapped C++ class HDG_wrapper.
 HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \

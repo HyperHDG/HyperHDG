@@ -12,12 +12,12 @@ from scipy.sparse.linalg import LinearOperator
 import os, sys
 
 try:
-  import cython_import
-except ImportError as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-  import cython_import
+  import HyperHDG
+except (ImportError, ModuleNotFoundError) as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+  import HyperHDG
 
-const                     = cython_import.hyperhdg_constructor()
+const                     = HyperHDG.config()
 const.global_loop         = "Elliptic"
 const.local_solver        = "DiffusionUniform < 1, 1, 2 * 1 >"
 const.topology            = "Cubic< 1, 3 >"
@@ -27,7 +27,7 @@ const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode          = True
 const.allow_file_output   = False
 
-PyDiffusionProblem = cython_import.cython_import(const)
+PyDiffusionProblem = HyperHDG.include(const)
 
 # Define tolerance
 tolerance = 1e-8

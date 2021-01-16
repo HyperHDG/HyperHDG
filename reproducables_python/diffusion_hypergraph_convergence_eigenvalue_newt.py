@@ -59,12 +59,12 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   beta           = 0.5
 
   try:
-    import cython_import
-  except ImportError as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-    import cython_import
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
   
-  const                 = cython_import.hyperhdg_constructor()
+  const                 = HyperHDG.config()
   const.global_loop     = "NonlinearEigenvalue"
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
@@ -76,7 +76,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   const.debug_mode      = debug_mode
   const.allow_file_output = False
 
-  PyDP = cython_import.cython_import(const)
+  PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
