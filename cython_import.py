@@ -49,7 +49,6 @@ class hyperhdg_constructor:
   cython_replacements = []
   include_files       = []
   debug_mode          = False
-  allow_file_output   = True
   def is_consistent(self):
     if not (isinstance(self.global_loop, str) and self.global_loop != ""):
       return False
@@ -129,9 +128,7 @@ def cython_import(constructor):
     # Prepare the compilation commands.
     cython_command, compile_command, link_command = get_commands(python_class)
     if not (constructor.debug_mode):
-      compile_command += " -DNDEBUG";
-    if not (constructor.allow_file_output):
-      compile_command += " -DNOFILESYS"
+      compile_command += " -DNDEBUG"
     #Actually compile the prepared files.
     assert os.system(cython_command) == 0
     assert os.system(compile_command) == 0

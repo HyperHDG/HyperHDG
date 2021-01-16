@@ -5,10 +5,7 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
-#ifndef NOFILESYS
 #include <filesystem>
-#endif
-
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -232,7 +229,9 @@ namespace PlotFunctions
  * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
 HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
-
+/*!*************************************************************************************************
+ * \brief   Turn fileType enum into string.
+ **************************************************************************************************/
 std::string fileType_to_string(const PlotOptions::fileType& type)
 {
   switch (type)
@@ -243,7 +242,9 @@ std::string fileType_to_string(const PlotOptions::fileType& type)
   hy_assert(false, "File type seems to be invalid.");
   return "";
 }
-
+/*!*************************************************************************************************
+ * \brief   Open stream to file.
+ **************************************************************************************************/
 std::ofstream open_ofstream(const PlotOptions& plot_options, const bool append = false)
 {
   std::ofstream myfile;
@@ -252,10 +253,8 @@ std::ofstream open_ofstream(const PlotOptions& plot_options, const bool append =
   if (plot_options.printFileNumber)
     filename += "." + std::to_string(plot_options.fileNumber);
   filename += "." + fileType_to_string(plot_options.fileEnding);
-#ifndef NOFILESYS
   if (std::filesystem::create_directory(plot_options.outputDir))
     std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
-#endif
 
   if (append)
     myfile.open(filename, std::ios_base::app);
@@ -269,7 +268,9 @@ std::ofstream open_ofstream(const PlotOptions& plot_options, const bool append =
 
   return myfile;
 }
-
+/*!*************************************************************************************************
+ * \brief   Close stream to file.
+ **************************************************************************************************/
 void close_ofstream(std::ofstream& myfile)
 {
   myfile.close();
