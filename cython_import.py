@@ -196,7 +196,7 @@ def get_cmakes():
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
     LINK_LIB = "-llapack"
-    CYTHON_COM = "cython"
+    CYTHON_COM = "cython3"
     CYTHON_FLG = "-3 --cplus"
     PY_VER_MAJ = str(sys.version_info.major)
     PY_VER_MIN = str(sys.version_info.minor)
