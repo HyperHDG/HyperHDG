@@ -9,12 +9,12 @@ refinement  = 1
 debug_mode  = True
   
 try:
-  import cython_import
-except ImportError as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-  import cython_import
+  import HyperHDG
+except (ImportError, ModuleNotFoundError) as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+  import HyperHDG
   
-const                 = cython_import.hyperhdg_constructor()
+const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
 const.topology        = "Cubic<" + str(hyEdge_dim) + "," + str(space_dim) + ">"
 const.geometry        = "UnitCube<" + str(hyEdge_dim) + "," + str(space_dim) + ",double>"
@@ -25,7 +25,7 @@ const.include_files   = ["examples/parameters/diffusion.hxx"]
 const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode      = debug_mode
 
-hyperHDG    = cython_import.cython_import(const)
+hyperHDG    = HyperHDG.include(const)
 HDG_wrapper = hyperHDG( [2 ** refinement] * space_dim )
 
 vectorRHS = numpy.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
