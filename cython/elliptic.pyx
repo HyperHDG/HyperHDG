@@ -28,8 +28,8 @@ cdef class PythonClassName :
     return self.thisptr.zero_vector ()
   def trace_to_flux(self, vec):
     return self.thisptr.trace_to_flux (vec)
-  def trace_and_data_to_flux(self, vec):
-    return self.thisptr.trace_and_data_to_flux (vec)
+  def residual_flux(self, vec):
+    return self.thisptr.residual_flux (vec)
   def errors(self, vec):
     return self.thisptr.errors (vec)
   def size_of_system(self):
