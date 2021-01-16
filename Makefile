@@ -1,6 +1,6 @@
 PROJECT     	= HyperHDG
 .PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
-								clean_pycache doxygen format submodules test_all_compilers test_compiler
+                clean_pycache doxygen format submodules test_all_compilers test_compiler
 
 # List of compilers that HyperHDG is tested to run with.
 TEST_COMPILER = clang++-10 clang++-11 g++-10
