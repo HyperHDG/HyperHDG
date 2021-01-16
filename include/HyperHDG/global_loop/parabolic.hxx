@@ -39,7 +39,7 @@ class Parabolic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_and_data_to_flux, has_trace_and_data_to_flux);
+  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -232,8 +232,8 @@ class Parabolic
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> trace_and_data_to_flux(const std::vector<dof_value_t>& x_vec,
-                                                  const dof_value_t time = 0.)
+  std::vector<dof_value_t> residual_flux(const std::vector<dof_value_t>& x_vec,
+                                         const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -256,24 +256,24 @@ class Parabolic
 
       // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
       if constexpr (
-        has_trace_and_data_to_flux<
+        has_residual_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             dof_value_t)>::value)
       {
-        local_solver_.trace_and_data_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
+        local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
       }
       else if constexpr (
-        has_trace_and_data_to_flux<
+        has_residual_flux<
           LocalSolverT,
           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
             decltype(hyper_edge)&, dof_value_t)>::value)
       {
-        local_solver_.trace_and_data_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
+        local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
       }
       else
         hy_assert(false, "Function seems not to be implemented!");

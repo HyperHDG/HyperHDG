@@ -65,7 +65,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   for time_step in range(time_steps):
     
     # Assemble right-hand side vextor and "mass_matrix * old solution".
-    vectorRHS = np.multiply(HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector(), \
+    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.

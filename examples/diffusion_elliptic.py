@@ -28,7 +28,7 @@ const.debug_mode      = debug_mode
 hyperHDG    = HyperHDG.include(const)
 HDG_wrapper = hyperHDG( [2 ** refinement] * space_dim )
 
-vectorRHS = numpy.multiply( HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector()), -1. )
+vectorRHS = numpy.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
 system_size = HDG_wrapper.size_of_system()
 A = sp_lin_alg.LinearOperator((system_size,system_size), matvec=HDG_wrapper.trace_to_flux)

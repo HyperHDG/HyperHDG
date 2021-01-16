@@ -305,9 +305,9 @@ class DiffusionUniform
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
-                                       SmallMatOutT& lambda_values_out,
-                                       const lSol_float_t UNUSED(time) = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              const lSol_float_t UNUSED(time) = 0.) const
   {
     return lambda_values_out = trace_to_flux(lambda_values_in, lambda_values_out);
   }

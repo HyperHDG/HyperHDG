@@ -271,7 +271,7 @@ int do_test_standard_dir()
     diffusion_problem(file_name, (float_t)1.);
 
   vector<float_t> vectorRHS = diffusion_problem.zero_vector();
-  vectorRHS = diffusion_problem.trace_and_data_to_flux(vectorRHS);
+  vectorRHS = diffusion_problem.residual_flux(vectorRHS);
   for (unsigned int i = 0; i < vectorRHS.size(); ++i)
     vectorRHS[i] *= (float_t)-1.;
 

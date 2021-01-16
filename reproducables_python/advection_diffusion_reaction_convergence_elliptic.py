@@ -48,7 +48,7 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply( HDG_wrapper.trace_and_data_to_flux(HDG_wrapper.zero_vector()), -1. )
+  vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
   # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system()

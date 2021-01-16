@@ -42,7 +42,7 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_and_data_to_flux, has_trace_and_data_to_flux);
+  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -229,9 +229,9 @@ class Elliptic
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT trace_and_data_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_and_data_to_flux, has_trace_and_data_to_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)

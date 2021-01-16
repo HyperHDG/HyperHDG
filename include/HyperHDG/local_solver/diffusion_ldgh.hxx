@@ -550,10 +550,10 @@ class Diffusion
    * \retval  vecAx               Local part of vector A * x - b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& trace_and_data_to_flux(const SmallMatInT& lambda_values_in,
-                                       SmallMatOutT& lambda_values_out,
-                                       hyEdgeT& hyper_edge,
-                                       const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
