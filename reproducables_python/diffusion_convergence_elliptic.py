@@ -40,7 +40,6 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
-  const.allow_file_output = True
 
   PyDP = cython_import.cython_import(const)
 

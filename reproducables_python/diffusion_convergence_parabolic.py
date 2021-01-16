@@ -46,7 +46,6 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     "double", "vector[double]"]
   const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
-  const.allow_file_output = False
 
   PyDP = cython_import.cython_import(const)
 

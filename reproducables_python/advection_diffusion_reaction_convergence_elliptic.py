@@ -40,7 +40,6 @@ def adv_dif_reac_test(poly_degree, dimension, iteration, debug_mode=False):
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducables_python/parameters/diffusion_advection_reaction.hxx"]
   const.debug_mode      = debug_mode
-  const.allow_file_output = False
 
   PyDP = cython_import.cython_import(const)
 

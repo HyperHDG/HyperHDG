@@ -62,8 +62,6 @@ class hyperhdg_constructor:
       return False
     if not isinstance(self.debug_mode, bool):
       return False
-    if not isinstance(self.allow_file_output, bool):
-      return False
     if not isinstance(self.cython_replacements, list):
       return False
     for entry in self.cython_replacements:
