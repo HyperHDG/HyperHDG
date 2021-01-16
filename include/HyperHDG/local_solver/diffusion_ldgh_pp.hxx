@@ -591,10 +591,10 @@ class DiffusionPostprocess
 
     sol = vector / matrix;
 
-    return integrator_pp::template integrate_vol_diffsquare_discana<
+    return std::array<lSol_float_t, 1U>({integrator_pp::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(sol.data(), hy_edge.geometry,
-                                                                      time);
+                                                                      time)});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate non-post-processed local reconstruction at tensorial products of abscissas.

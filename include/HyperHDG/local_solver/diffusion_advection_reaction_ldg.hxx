@@ -845,10 +845,10 @@ class DiffusionAdvectionReaction
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return integrator::template integrate_vol_diffsquare_discana<
+    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
-                                                                      time);
+                                                                      time)});
   }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
