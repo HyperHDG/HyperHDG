@@ -122,7 +122,7 @@ class Diffusion
     typedef std::tuple<TPP::ShapeFunction<
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
-};
+  };
   /*!***********************************************************************************************
    *  \brief  Define how errors are evaluated.
    ************************************************************************************************/
