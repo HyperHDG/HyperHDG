@@ -107,6 +107,43 @@ class DiffusionEigs
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -321,10 +358,10 @@ class DiffusionEigs
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t eig = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t eig = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -387,9 +424,9 @@ class DiffusionEigs
    * \retval  bdr_values    Coefficients of L2 projection.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT& numerical_flux_initial(SmallMatT& lambda_values,
-                                    hyEdgeT& hyper_edge,
-                                    const lSol_float_t time = 0.) const
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -426,12 +463,12 @@ class DiffusionEigs
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_der(const SmallMatInT& lambda_values_in,
-                                   SmallMatOutT& lambda_values_out,
-                                   const lSol_float_t eig,
-                                   const SmallMatInT& lambda_vals,
-                                   const lSol_float_t eig_val,
-                                   hyEdgeT& hyper_edge) const
+  SmallMatOutT& jacobian_of_trace_to_flux(const SmallMatInT& lambda_values_in,
+                                          SmallMatOutT& lambda_values_out,
+                                          const lSol_float_t eig,
+                                          const SmallMatInT& lambda_vals,
+                                          const lSol_float_t eig_val,
+                                          hyEdgeT& hyper_edge) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -494,7 +531,7 @@ class DiffusionEigs
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
-  lSol_float_t calc_L2_error_squared(
+  std::array<lSol_float_t, 1U> errors(
     const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
     hyEdgeT& hy_edge,
     const lSol_float_t eig = 0.) const
@@ -505,9 +542,8 @@ class DiffusionEigs
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                                parameters::analytic_result>(
-      coeffs, hy_edge.geometry, eig);
+    return std::array<lSol_float_t, 1U>({integrator.template integrate_vol_diffsquare_discana<
+      decltype(hyEdgeT::geometry), parameters::analytic_result>(coeffs, hy_edge.geometry, eig)});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.

@@ -48,12 +48,12 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1.)
+  vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1.)
 
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
@@ -65,7 +65,7 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
         raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
-  error = HDG_wrapper.calculate_L2_error(vectorSolution)
+  error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \

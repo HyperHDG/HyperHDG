@@ -28,17 +28,17 @@ const.debug_mode      = debug_mode
 hyperHDG    = HyperHDG.include(const)
 HDG_wrapper = hyperHDG( [2 ** refinement] * space_dim )
 
-vectorRHS = numpy.multiply( HDG_wrapper.total_flux_vector(HDG_wrapper.return_zero_vector()), -1. )
+vectorRHS = numpy.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
 system_size = HDG_wrapper.size_of_system()
-A = sp_lin_alg.LinearOperator((system_size,system_size), matvec=HDG_wrapper.matrix_vector_multiply)
+A = sp_lin_alg.LinearOperator((system_size,system_size), matvec=HDG_wrapper.trace_to_flux)
 
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
 if num_iter != 0:
   print("CG solver failed with a total number of ", num_iter, "iterations.")
   raise RuntimeError("Linear solvers did not converge!")
 
-print("Error: ", HDG_wrapper.calculate_L2_error(vectorSolution))
+print("Error: ", HDG_wrapper.errors(vectorSolution)[0])
 
 HDG_wrapper.plot_option( "fileName" , "diffusion_elliptic_py" )
 HDG_wrapper.plot_option( "printFileNumber" , "false" )

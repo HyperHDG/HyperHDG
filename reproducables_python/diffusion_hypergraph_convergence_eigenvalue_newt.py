@@ -26,14 +26,14 @@ class helper_ev_newt():
   def set_val(self, val):
     self.val         = val
   def eval_residual(self, vector):
-    vec  = self.hdg_wrapper.matrix_vector_multiply(vector, vector[len(vector)-1])
+    vec  = self.hdg_wrapper.trace_to_flux(vector, vector[len(vector)-1])
     temp = vector[len(vector)-1]
     vector[len(vector)-1] = 0.
     vec[len(vec)-1]       = np.linalg.norm(vector) ** 2 - 1.
     vector[len(vector)-1] = temp
     return vec
   def eval_jacobian(self, vector):
-    vec  = self.hdg_wrapper.matrix_vector_der_multiply \
+    vec  = self.hdg_wrapper.jacobian_of_trace_to_flux \
              ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
     temp = self.val[len(self.val)-1]
     self.val[len(self.val)-1] = 0.
@@ -89,7 +89,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   # Initialize solution vector [lambda, eig].
   if initial == "default":
     vectorSolution = [0] * system_size
-    vectorSolution = HDG_wrapper.initial_flux_vector(vectorSolution)
+    vectorSolution = HDG_wrapper.make_initial(vectorSolution)
     vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
     vectorSolution[system_size-1] = dimension * (np.pi ** 2) + 1e-3 * random.randint(-100,100)
   else:

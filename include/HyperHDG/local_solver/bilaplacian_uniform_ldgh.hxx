@@ -43,6 +43,43 @@ class BilaplacianUniform
       ShapeFunction<ShapeType::Tensorial<ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   } node_element;
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -223,9 +260,9 @@ class BilaplacianUniform
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           const lSol_float_t UNUSED(time) = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              const lSol_float_t UNUSED(time) = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -259,11 +296,11 @@ class BilaplacianUniform
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     const lSol_float_t UNUSED(time) = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              const lSol_float_t UNUSED(time) = 0.) const
   {
-    return lambda_values_out = numerical_flux_from_lambda(lambda_values_in, lambda_values_out);
+    return lambda_values_out = trace_to_flux(lambda_values_in, lambda_values_out);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local squared L2 error.
@@ -273,10 +310,10 @@ class BilaplacianUniform
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& UNUSED(lambda_values),
-                                     const lSol_float_t UNUSED(time) = 0.) const
+  std::array<lSol_float_t, 1U> errors(const SmallMatT& UNUSED(lambda_values),
+                                      const lSol_float_t UNUSED(time) = 0.) const
   {
-    return 0.;
+    return std::array<lSol_float_t, 1U>({0.});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local reconstruction at tensorial products of abscissas.
