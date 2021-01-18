@@ -18,15 +18,15 @@ class Template
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
-  typedef struct
+  struct node_element
   {
-  } node_element;
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *

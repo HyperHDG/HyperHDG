@@ -23,6 +23,7 @@ def get_options():
     print("CMAKE files do not exist ... using default values for Cython!")
     opt.compile_com = "g++-10"
     opt.compile_inc = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
+      -Isubmodules/tensor_product_polynomials.git/include \
       -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
     opt.compile_flg = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong \
       -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
