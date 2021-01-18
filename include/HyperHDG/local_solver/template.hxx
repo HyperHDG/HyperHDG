@@ -18,9 +18,15 @@ class Template
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  struct node_element
+  {
+  };
   /*!***********************************************************************************************
    * \brief   Return template parameter \c hyEdge_dimT.
    *
@@ -45,7 +51,7 @@ class Template
    * \brief   The local solver as needed by the HDG method
    ************************************************************************************************/
   template <typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT&, SmallMatOutT&) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT&, SmallMatOutT&) const
   {
     return SmallMatOutT();
   }
@@ -65,19 +71,6 @@ class Template
   {
     return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(AbscissaSize)>,
                       system_dimension()>();
-  }
-  /*!***********************************************************************************************
-   * \brief   The values of the skeletal variable in quadrature points of faces.
-   ************************************************************************************************/
-  template <typename AbscissaType, std::size_t AbscissaSize, class InputArrayType>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(AbscissaSize)>,
-             node_system_dimension()>
-  lambda_values(const std::array<AbscissaType, AbscissaSize>&,
-                const InputArrayType&,
-                unsigned int) const
-  {
-    return std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(AbscissaSize)>,
-                      node_system_dimension()>();
   }
 };  // end of class Template
 

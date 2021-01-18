@@ -11,7 +11,7 @@ and easy to handle teaching scripts/programs.
 For more details on HyperHDG, you may visit
 
 - the [website of HyperHDG](https://andreasrupp.github.io/HyperHDG),
-- the [Doxygen page](https://andreasrupp.github.io/HyperHDG_pages/doxygen),
+- the [Doxygen page](https://hyperhdg.github.io/auto_pages/doxygen),
 - or its [Wiki](https://github.com/AndreasRupp/HyperHDG/wiki) containing guides on how to [setup](
 https://github.com/AndreasRupp/HyperHDG/wiki/Setup) and [use](
 https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.

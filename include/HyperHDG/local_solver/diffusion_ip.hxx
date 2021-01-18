@@ -2,10 +2,11 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
-#include <HyperHDG/quadrature_tensorial.hxx>
-#include <HyperHDG/shape_fun_1d.hxx>
-#include <HyperHDG/tensorial_shape_fun.hxx>
+#include <tpp/quadrature/tensorial.hxx>
+#include <tpp/shape_function/shape_function.hxx>
+
 #include <algorithm>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -110,9 +111,55 @@ class DiffusionIP
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  typedef struct
+  struct data_type
   {
-  } data_type;
+  };
+  /*!***********************************************************************************************
+   *  \brief  Define type of node elements, especially with respect to nodal shape functions.
+   ************************************************************************************************/
+  struct node_element
+  {
+    typedef std::tuple<TPP::ShapeFunction<
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      functions;
+  };
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
 
   // -----------------------------------------------------------------------------------------------
   // Public, static constexpr functions
@@ -193,7 +240,11 @@ class DiffusionIP
   /*!***********************************************************************************************
    * \brief   An integrator helps to easily evaluate integrals (e.g. via quadrature).
    ************************************************************************************************/
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
+  typedef TPP::Quadrature::Tensorial<
+    TPP::Quadrature::GaussLegendre<quad_deg>,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    lSol_float_t>
+    integrator;
 
   // -----------------------------------------------------------------------------------------------
   // Private, internal functions for the local solver
@@ -379,10 +430,10 @@ class DiffusionIP
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_from_lambda(const SmallMatInT& lambda_values_in,
-                                           SmallMatOutT& lambda_values_out,
-                                           hyEdgeT& hyper_edge,
-                                           const lSol_float_t time = 0.) const
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -443,10 +494,10 @@ class DiffusionIP
    * \retval  vecAx               Local part of vector A * x - b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& numerical_flux_total(const SmallMatInT& lambda_values_in,
-                                     SmallMatOutT& lambda_values_out,
-                                     hyEdgeT& hyper_edge,
-                                     const lSol_float_t time = 0.) const
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -490,9 +541,9 @@ class DiffusionIP
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  lSol_float_t calc_L2_error_squared(const SmallMatT& lambda_values,
-                                     hyEdgeT& hy_edge,
-                                     const lSol_float_t time = 0.) const
+  std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -502,9 +553,10 @@ class DiffusionIP
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
       solve_local_problem(lambda_values, 1U, hy_edge, time);
-    return integrator.template integrate_vol_diffsquare_discana<decltype(hyEdgeT::geometry),
-                                                                parameters::analytic_result>(
-      coefficients.data(), hy_edge.geometry, time);
+    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coefficients.data(),
+                                                                      hy_edge.geometry, time)});
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local reconstruction at tensorial products of abscissas.
@@ -528,23 +580,6 @@ class DiffusionIP
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const;
-  /*!***********************************************************************************************
-   * \brief   Evaluate the function lambda on tensor product points on the boundary
-   *
-   * \tparam  absc_float_t      Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
-   * \tparam  input_array_t     Type of input array.
-   * \param   abscissas         Abscissas of the supporting points.
-   * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   boundary_number   number of the boundary on which to evaluate the function.
-   * \retval  function_values   Function values at quadrature points.
-   ************************************************************************************************/
-  template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-             node_system_dim>
-  lambda_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-                const input_array_t& lambda_values,
-                const unsigned int boundary_number) const;
 };  // end of class DiffusionIP
 
 // -------------------------------------------------------------------------------------------------
@@ -578,7 +613,6 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  const IntegratorTensorial<poly_deg, quad_deg, Gaussian, Legendre, lSol_float_t> integrator;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -586,20 +620,20 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      local_mat(i, j) +=
-        integrator.template integrate_vol_nablaphinablaphifunc<decltype(hyEdgeT::geometry),
-                                                               parameters::diffusion_coeff>(
-          i, j, hyper_edge.geometry, time);
+      local_mat(i, j) += integrator::template integrate_vol_nablaphinablaphifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::diffusion_coeff, Point<hyEdge_dimT, lSol_float_t> >(i, j, hyper_edge.geometry,
+                                                                        time);
 
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
         local_mat(i, j) +=
-          tau_ * integrator.template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+          tau_ * integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
                    i, j, face, hyper_edge.geometry);
-        local_mat(i, j) -=
-          integrator.template integrate_bdr_nablaphiphinufunc<decltype(hyEdgeT::geometry),
-                                                              parameters::diffusion_coeff>(
-            j, i, face, hyper_edge.geometry);
+        local_mat(i, j) -= integrator::template integrate_bdr_nablaphiphinufunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::diffusion_coeff,
+          Point<hyEdge_dimT, lSol_float_t> >(j, i, face, hyper_edge.geometry);
       }
     }
   }
@@ -638,9 +672,10 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        right_hand_side[i] += tau_ * lambda_values[face][j] *
-                              integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                                i, j, face, hyper_edge.geometry);
+        right_hand_side[i] +=
+          tau_ * lambda_values[face][j] *
+          integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+            i, j, face, hyper_edge.geometry);
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
@@ -667,19 +702,18 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[i] =
-      integrator
-        .template integrate_vol_phifunc<decltype(hyEdgeT::geometry), parameters::right_hand_side>(
-          i, hyper_edge.geometry, time);
+    right_hand_side[i] = integrator::template integrate_vol_phifunc<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
         continue;
       right_hand_side[i] +=
-        tau_ *
-        integrator
-          .template integrate_bdr_phifunc<decltype(hyEdgeT::geometry), parameters::dirichlet_value>(
-            i, face, hyper_edge.geometry, time);
+        tau_ * integrator::template integrate_bdr_phifunc<
+                 Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                 decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+                 Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time);
     }
   }
 
@@ -708,7 +742,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        coeffs[j] * integrator.template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        coeffs[j] * integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_coeffs
@@ -738,7 +772,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values(face, j) +=
-          coeffs[i] * integrator.template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+          coeffs[i] * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                         i, j, face, hyper_edge.geometry);
 
   return bdr_values;
@@ -770,9 +804,10 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         bdr_values(face, j) -=
-          integrator.template integrate_bdr_nablaphipsinufunc<decltype(hyEdgeT::geometry),
-                                                              parameters::diffusion_coeff>(
-            i, j, face, hyper_edge.geometry) *
+          integrator::template integrate_bdr_nablaphipsinufunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::diffusion_coeff,
+            Point<hyEdge_dimT, lSol_float_t> >(i, j, face, hyper_edge.geometry) *
           coeffs[i];
 
   return bdr_values;
@@ -802,37 +837,25 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_va
 {
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
+  SmallVec<n_shape_fct_, lSol_float_t> coeffs;
+  SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
-  TensorialShapeFunctionEvaluation<hyEdge_dimT, lSol_float_t, Legendre, poly_deg, abscissas_sizeT,
-                                   abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<system_dimension()>(
-      coefficients.data());
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+             DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+    point_vals;
+
+  for (unsigned int d = 0; d < system_dim; ++d)
+  {
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      coeffs[i] = coefficients[d * n_shape_fct_ + i];
+    for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
+      point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
+        coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+  }
+
+  return point_vals;
 }
 // end of Diffusion::bulk_values
-
-template <unsigned int hyEdge_dimT,
-          unsigned int poly_deg,
-          unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
-          typename lSol_float_t>
-template <typename abscissa_float_t, std::size_t abscissas_sizeT, class input_array_t>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT - 1>::pow(abscissas_sizeT)>,
-           DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::node_system_dim>
-DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::lambda_values(
-  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-  const input_array_t& lambda_values,
-  const unsigned int boundary_number) const
-{
-  TensorialShapeFunctionEvaluation<hyEdge_dimT - 1, lSol_float_t, Legendre, poly_deg,
-                                   abscissas_sizeT, abscissa_float_t>
-    evaluation(abscissas);
-  return evaluation
-    .template evaluate_linear_combination_in_all_tensorial_points<node_system_dimension()>(
-      lambda_values[boundary_number]);
-}
 
 // -------------------------------------------------------------------------------------------------
 /// \endcond

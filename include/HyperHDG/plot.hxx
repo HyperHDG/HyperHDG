@@ -5,14 +5,11 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
-#ifndef NOFILEOUT
 #include <filesystem>
-#endif
-
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-// #include <cmath>
+#include <tuple>
 
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
@@ -231,6 +228,53 @@ namespace PlotFunctions
  * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
 HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
+/*!*************************************************************************************************
+ * \brief   Turn fileType enum into string.
+ **************************************************************************************************/
+std::string fileType_to_string(const PlotOptions::fileType& type)
+{
+  switch (type)
+  {
+    case PlotOptions::fileType::vtu:
+      return "vtu";
+  }
+  hy_assert(false, "File type seems to be invalid.");
+  return "";
+}
+/*!*************************************************************************************************
+ * \brief   Open stream to file.
+ **************************************************************************************************/
+std::ofstream open_ofstream(const PlotOptions& plot_options, const bool append = false)
+{
+  std::ofstream myfile;
+
+  std::string filename = plot_options.outputDir + "/" + plot_options.fileName;
+  if (plot_options.printFileNumber)
+    filename += "." + std::to_string(plot_options.fileNumber);
+  filename += "." + fileType_to_string(plot_options.fileEnding);
+  if (std::filesystem::create_directory(plot_options.outputDir))
+    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
+
+  if (append)
+    myfile.open(filename, std::ios_base::app);
+  else
+    myfile.open(filename, std::ios_base::out);
+  hy_assert(myfile.is_open(),
+            "The file has not been created. Most likely, the filesystem could not"
+              << " create the output directory, since std::filesystem has not been available."
+              << std::endl
+              << "Please, try to create the output directoy manually and run the code again.");
+
+  return myfile;
+}
+/*!*************************************************************************************************
+ * \brief   Close stream to file.
+ **************************************************************************************************/
+void close_ofstream(std::ofstream& myfile)
+{
+  myfile.close();
+}
+
 /*!*************************************************************************************************
  * \brief   Output of the cubes of the subdivision of an edge in lexicographic order.
  *
@@ -533,6 +577,55 @@ void plot_edge_values(HyperGraphT& hyper_graph,
     myfile << std::endl;
   }
 }
+
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge boundary.
+ **************************************************************************************************/
+template <unsigned int index, typename functions>
+static constexpr unsigned int first_dof()
+{
+  static_assert(index <= std::tuple_size<functions>(), "Index is too large!");
+  if constexpr (index == 0)
+    return 0;
+  else
+    return std::tuple_element<index - 1, functions>::n_fun() + first_dof<index - 1>();
+}
+/*!*************************************************************************************************
+ * \brief   Auxiliary function to plot solution values on edge boundary.
+ **************************************************************************************************/
+template <unsigned int component,
+          typename LocalSolverT,
+          typename dof_value_t,
+          typename lv_t,
+          typename hd_t,
+          typename pt_t>
+void fancy_recursion(__attribute__((unused)) lv_t& local_values,
+                     __attribute__((unused)) const hd_t& hyEdge_dofs,
+                     __attribute__((unused)) const pt_t& point,
+                     __attribute__((unused)) const unsigned int k,
+                     __attribute__((unused)) const unsigned int bdr_index)
+{
+  if constexpr (component == LocalSolverT::node_system_dimension())
+    return;
+  else
+  {
+    std::array<
+      dof_value_t,
+      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::n_fun()>
+      helper_arr;
+    for (unsigned int k = 0; k < helper_arr.size(); ++k)
+      helper_arr[k] =
+        hyEdge_dofs[bdr_index]
+                   [first_dof<component, typename LocalSolverT::node_element::functions>() + k];
+
+    local_values[component][k] =
+      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
+        template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
+                                         point);
+    fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point, k,
+                                                              bdr_index);
+  }
+}
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
  **************************************************************************************************/
@@ -542,30 +635,36 @@ template <class HyperGraphT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
 void plot_boundary_values(HyperGraphT& hyper_graph,
-                          const LocalSolverT& local_solver,
                           const LargeVecT& lambda,
                           std::ofstream& myfile,
                           SmallVec<n_subdivisions + 1, float> abscissas)
 {
   using dof_value_t = typename LargeVecT::value_type;
-  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+  constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
-  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * hyEdge_dim> hyEdge_dofs;
   std::array<
     std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim() - 1>::pow(n_subdivisions + 1)>,
     LocalSolverT::node_system_dimension()>
     local_values;
+  for (unsigned int i = 0; i < local_values.size(); ++i)
+    local_values[i].fill(0.);
+
   for (hyEdge_index_t edge_index = 0; edge_index < n_edges; ++edge_index)
   {
-    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
+    hyEdge_dofs = get_edge_dof_values<hyEdge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
       hyper_graph, edge_index, lambda);
-    for (unsigned int bdr_index = 0; bdr_index < edge_dim * 2; ++bdr_index)
+    for (unsigned int bdr_index = 0; bdr_index < hyEdge_dim * 2; ++bdr_index)
     {
       myfile << "      ";
 
-      local_values = local_solver.lambda_values(abscissas.data(), hyEdge_dofs, bdr_index);
-      for (unsigned int corner = 0; corner < Hypercube<edge_dim - 1>::n_vertices(); ++corner)
+      for (unsigned int lval = 0; lval < local_values.size(); ++lval)
+        fancy_recursion<0, LocalSolverT, dof_value_t>(
+          local_values, hyEdge_dofs,
+          Hypercube<hyEdge_dim - 1>::template tensorial_pt<Point<hyEdge_dim - 1> >(lval, abscissas),
+          lval, bdr_index);
+      for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim - 1>::n_vertices(); ++corner)
       {
         myfile << "  ";
         for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
@@ -588,22 +687,12 @@ template <class HyperGraphT,
           typename floatT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int>
-void plot_vtu(
-#ifndef NOFILEOUT
-  HyperGraphT& hyper_graph,
-  const LocalSolverT& local_solver,
-  const LargeVecT& lambda,
-  const PlotOptions& plot_options,
-  const floatT time = 0.)
-#else
-  HyperGraphT&,
-  const LocalSolverT&,
-  const LargeVecT&,
-  const PlotOptions&,
-  const floatT = 0.)
-#endif
+void plot_vtu(HyperGraphT& hyper_graph,
+              const LocalSolverT& local_solver,
+              const LargeVecT& lambda,
+              const PlotOptions& plot_options,
+              const floatT time = 0.)
 {
-#ifndef NOFILEOUT
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -619,22 +708,9 @@ void plot_vtu(
     abscissas[i] = plot_options.scale * (1. * i / n_subdivisions - 0.5) + 0.5;
 
   static_assert(edge_dim <= 3, "Plotting hyperedges with dimensions larger than 3 is hard.");
-  std::ofstream myfile;
 
-  std::string filename = plot_options.outputDir;
-  filename.append("/");
-  filename.append(plot_options.fileName);
-  if (plot_options.printFileNumber)
-  {
-    filename.append(".");
-    filename.append(std::to_string(plot_options.fileNumber));
-  }
-  filename.append(".vtu");
+  std::ofstream myfile = PlotFunctions::open_ofstream(plot_options, false);
 
-  if (std::filesystem::create_directory(plot_options.outputDir))
-    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
-
-  myfile.open(filename);
   myfile << "<?xml version=\"1.0\"?>" << std::endl;
   myfile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
          << "compressor=\"vtkZLibDataCompressor\">" << std::endl;
@@ -680,7 +756,7 @@ void plot_vtu(
     if (plot_options.plot_edge_boundaries)
     {
       plot_boundary_values<HyperGraphT, LocalSolverT, LargeVecT, n_subdivisions, hyEdge_index_t>(
-        hyper_graph, local_solver, lambda, myfile, boundary_abscissas);
+        hyper_graph, lambda, myfile, boundary_abscissas);
     }
     myfile << "        </DataArray>" << std::endl;
   }
@@ -689,8 +765,7 @@ void plot_vtu(
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
   std::cout << plot_options.fileName << " was written\n";
-  myfile.close();
-#endif
+  PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
 
 // -------------------------------------------------------------------------------------------------

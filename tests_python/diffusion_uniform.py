@@ -12,12 +12,12 @@ from scipy.sparse.linalg import LinearOperator
 import os, sys
 
 try:
-  import cython_import
-except ImportError as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-  import cython_import
+  import HyperHDG
+except (ImportError, ModuleNotFoundError) as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+  import HyperHDG
 
-const                     = cython_import.hyperhdg_constructor()
+const                     = HyperHDG.config()
 const.global_loop         = "Elliptic"
 const.local_solver        = "DiffusionUniform < 1, 1, 2 * 1 >"
 const.topology            = "Cubic< 1, 3 >"
@@ -27,7 +27,7 @@ const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.debug_mode          = True
 const.allow_file_output   = False
 
-PyDiffusionProblem = cython_import.cython_import(const)
+PyDiffusionProblem = HyperHDG.include(const)
 
 # Define tolerance
 tolerance = 1e-8
@@ -38,7 +38,7 @@ HDG_wrapper = PyDiffusionProblem([4,2,2])
 # Initialize vector containing the Dirichlet values: Indices not set in the index_vector are ignored
 # here. However, values not equal zero in vectorDirichlet that have indices that do not occur in the
 # index vector (next) will cause a wrong representation of the final result.
-vectorDirichlet = HDG_wrapper.return_zero_vector()
+vectorDirichlet = HDG_wrapper.zero_vector()
 vectorDirichlet[0] = 1.
 # vectorDirichlet[len(vectorDirichlet)-1] = 1. # Comment if checking for trivial solution.
 
@@ -54,7 +54,7 @@ HDG_wrapper.read_dirichlet_indices(index_vector)
 
 # Generate right-hand side vector "vectorRHS = - A * vectorDirichlet", where vectorDirichlet is the
 # vector of Dirichlet values.
-vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
+vectorRHS = [-i for i in HDG_wrapper.trace_to_flux(vectorDirichlet)]
 
 # Print right-hand side vector.
 # print("Right-hand side: ", vectorRHS)
@@ -62,7 +62,7 @@ vectorRHS = [-i for i in HDG_wrapper.matrix_vector_multiply(vectorDirichlet)]
 # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
 # fashion.
 system_size = HDG_wrapper.size_of_system()
-A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.matrix_vector_multiply )
+A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
 # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
 [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.

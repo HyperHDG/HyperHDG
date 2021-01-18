@@ -4,7 +4,7 @@ set(default_build_type "Debug")
 
 project(HyperHDG LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 ## Set the flags for the compiler and the linker.
@@ -29,6 +29,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include/
+  ${PROJECT_SOURCE_DIR}/submodules/tensor_product_polynomials.git/include/
   ${Python3_INCLUDE_DIRS})
 
 ## Prepare nice output for include string.

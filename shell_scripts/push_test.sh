@@ -13,9 +13,6 @@ echo -e "\n${COL}${BOLD}Format the cxx and hxx files ...${NOR}"
 (set -x; cd $(dirname $(readlink -f "$0"))/..; make format |& tee -a output/push_test.txt)
 
 echo -e "\n${COL}${BOLD}Do the GitHub run tests ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; make test_github |& tee -a output/push_test.txt)
-
-echo -e "\n${COL}${BOLD}Do the GitHub run tests ...${NOR}"
 (set -x; cd $(dirname $(readlink -f "$0"))/..; \
   make test_all_compilers |& tee -a output/push_test.txt)
 

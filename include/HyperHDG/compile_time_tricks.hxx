@@ -1,6 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-// #include <type_traits>
+#include <limits>
+#include <type_traits>
+#include <utility>
 
 /*!*************************************************************************************************
  * \brief   Unused parametes will neither result in g++, nor in doxygen warnings if wrapped by this.
@@ -18,8 +20,8 @@
  * function \c fun is a (static or non-static) member function of an element of class \c C, where
  * \c Ret(Args) is the supposed signature.
  *
- * \param   func  The name of the function that is checked to be implemented
- * \param   name  The resulting struct whose value is true if the function is implemented
+ * \param[in]   func    The name of the function that is checked to be implemented.
+ * \param[out]  name    The resulting struct whose value is true if the function is implemented.
  **************************************************************************************************/
 #define HAS_MEMBER_FUNCTION(func, name)                                                            \
   template <typename, typename T>                                                                  \
