@@ -12,7 +12,7 @@ operating system this can be done using
 
 This command installs
 
-- `g++-10` currently is the default compiler under which HyperHDG is implemented. In principle, you
+- `g++-10` currently is the `DEFAULT_COMPILER` for which HyperHDG is implemented. In principle, you
 may use any other C++ compiler that can supports `C++20` as well. However, HyperHDG is regularly 
 checked against the compilers in the set `TEST_COMPILER` of the [Makefile](
 https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). Thus, we recommend to use one of
@@ -61,7 +61,13 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
 
        $ cd your_name
 
-3. Execute the script `setup.sh` to install HyperHDG by
+3. If (and only if) you want to use a compiler different from the `DEFAULT_COMPILER` you need to
+change this variable to represent your chosen compiler within the [Makefile](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). That is, you need to change the line
+
+       DEFAULT_COMPILER = g++-10
+
+4. Execute the script `setup.sh` to install HyperHDG by
 
        $ ./shell_scripts/setup.sh
 
