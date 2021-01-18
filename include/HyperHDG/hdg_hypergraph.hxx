@@ -232,21 +232,6 @@ class HDGHyperGraph
     {
       return index_ == other.index_ && std::addressof(hyGraph_) == std::addressof(other.hyGraph_);
     }
-    /*!*********************************************************************************************
-     * \brief   Check for unequality with another iterator.
-     *
-     * This function checks whether the current iterator is equal to anoother \c iterator. In this
-     * context unequal means that they do not refer to the same \c HDGHyperGraph or do not have
-     * the same index.
-     *
-     * \param   other         \c iterator which is checked to be unequal.
-     * \retval  is_equal      \c boolean which is false if both iterators are equal and true
-     *                        otherwise.
-     **********************************************************************************************/
-    bool operator!=(const iterator& other)
-    {
-      return index_ != other.index_ || std::addressof(hyGraph_) != std::addressof(other.hyGraph_);
-    }
   };  // end of class iterator
 
  public:
