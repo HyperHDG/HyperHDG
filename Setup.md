@@ -12,9 +12,11 @@ operating system this can be done using
 
 This command installs
 
-- `g++-10` is the default compiler under which HyperHDG is implemented. In principle, you may use
-any other C++ compiler as well. However, HyperHDG is regularly checked against the compilers in the
-set `TEST_COMPILER` of the [Makefile](https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile).
+- `g++-10` currently is the default compiler under which HyperHDG is implemented. In principle, you
+may use any other C++ compiler that can supports `C++20` as well. However, HyperHDG is regularly 
+checked against the compilers in the set `TEST_COMPILER` of the [Makefile](
+https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). Thus, we recommend to use one of
+these if you want to be sure that HyperHDG works.
 
 - `git` is the revision control system, GitHub is based on. It is the recommended tool to obtain and
 administrate HyperHDG.
