@@ -1,7 +1,9 @@
 # https://github.com/marketplace/actions/clang-format-check
 
-name: clang-format Check
+name: clang-format
+
 on: [push]
+
 jobs:
   formatting-check:
     name: Formatting check
