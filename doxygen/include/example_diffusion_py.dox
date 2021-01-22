@@ -16,6 +16,7 @@ in the remainder of the Python script.
 
 Then, we import our own importer for C++ code based on cython.
 
+\skip try
 \until done
 
 Next, we define some basic parameters such as the polynomial degree of
@@ -25,37 +26,60 @@ of a hyperedge, the dimension of the surrounding space, the refinement
 level of the domain, and whether we want the C++ code to be compiled
 in debug or release mode.
 
+\skip poly
 \until debug
 
 Now we configure the discretization we want to work on as a textual
-representation, which is then fed into `cython_import`.
+representation, which is then fed into `cython_import`. Several
+aspects are combined here. First, there is the mesh topology and
+geometry, which in this case are hypercube Geometry::UnitCube with its
+topology Topology::Cubic. This geometry, like most geometries, has two
+dimension parameters. The first, denoted `hyEdge_dim` is the dimension
+of the hyper-edges, the mesh cells in conventional naming. The second
+is in this case `cube_dim`, which is the dimension of the
+hypecube. The combination here means our mesh will consist of the
+edges in a subdivided unit square. Thus, we are not solving a
+differential equation on the square, but rather on the graph
+consisting of the edges.
 
+The second aspect of discretization after the mesh is the local solver
+of the HDG method. Local solvers are the HDG way of specifying a
+partial differential equation. Here, we decide for a simple diffusion
+problem, LocalSolvers::Diffusion. Since the HDG method is specified by
+local polynomials spaces, this local solver receives the polynomial
+degree as one of its arguments.
+
+\skip hdg
 \until debug
 
-This text is compiled into C++ code and then to a linkable object file, which creates a Python class. This in turn is used to create an object
-\todo Why don't we construct in cython right away?
-\todo explain arguments
+This text is compiled into C++ code and then to a linkable object file, which creates a Python class.
 
-\until wrapper
+This in turn is used to create an object. The constructor in this case is a vector of integers of length `space_dim`, which is the constructor argument specified for Geometry::UnitCube.
+
+\skip hyper
+\until Object
 
 Now, we can start dealing with the actual problem. To do so, we create the global right hand side by evaluating the residual of A x - b for x = 0 and multiplying the result by -1.
 
-\until multiply
+\skipline multiply
 
 Python's Scipy package provides solvers for matrix-free situations. These solver require the definition of a LinearOperator, which is done in two lines:
 
+\skip system
 \until sp_lin_alg
 
 Solving the linear system of equations can then be done using the CG method in one line. The remaining lines check that the CG method has converged.
 
+\skip vector
 \until RuntimeError
 
 In the case that the analytical solution is known, we can evaluate the error and print it using:
 
-\until Error
+\skipline Error
 
 Additionally, we can plot the calculated solution after setting some options found in PlotOptions:
 
+\skip plot
 \until plot_solution
 
  */
