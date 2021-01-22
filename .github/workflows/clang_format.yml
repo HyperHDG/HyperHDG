@@ -1,6 +1,6 @@
 # https://github.com/marketplace/actions/clang-format-check
 
-name: clang-format
+name: Clang
 
 on: [push]
 
