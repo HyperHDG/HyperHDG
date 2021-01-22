@@ -4,7 +4,7 @@ name: clang-format Check
 on: [push]
 jobs:
   formatting-check:
-    name: Formatting Check
+    name: Formatting check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
