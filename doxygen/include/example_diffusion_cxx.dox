@@ -20,10 +20,12 @@
  * solver. Additionally, we need a sparse linear algebra providing the CG solver. Last, but not
  * least the parameters need to be included.
  *
- * \dontinclude diffusion_elliptic.cxx \until <examples/parameters/diffusion.hxx>
+ * \dontinclude{lineno} diffusion_elliptic.cxx
+ * \until <examples/parameters/diffusion.hxx>
  *
  * This has prepared us to define the `main` function which will surround the rest of the code
  *
+ * \skip int
  * \until {
  *
  * and starts with defining the very same parameters as before.
@@ -35,26 +37,32 @@
  * that this class can immediately be instantiated, which has not been the case in Python, where
  * cython_import had to build it first.
  *
+ * \skip GlobalLoop
  * \until 1 << refinement));
  *
  * The remainder of the program also works analogously to the Python script, i.e., we first define
  * the right-hand side as negative, homogeneous residuum,
  *
+ * \skip std::vector
  * \until -1.;
  *
  * solve the global system of equations using the CG method,
  *
+ * \skip std::vector
  * \until HDG_wrapper);
  *
  * and print the L^2 error.
  *
+ * \skip std::cout
  * \until std::endl;
  *
  * At the end, we plot the solution
  *
+ * \skip HDG_wrapper
  * \until vectorSolution);
  *
  * and end the program returning 0.
  *
+ * \skip return
  * \until }
  **************************************************************************************************/
