@@ -15,7 +15,7 @@ jobs:
     #      managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     env:
-      BUILD_DIRECTORY: build_gpp
+      BUILD_DIRECTORY: build
       CXX_COMPILER: g++-10
 
     steps:
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_DIRECTORY: build_clangpp
-      CXX_COMPILER: clang++-11
+      CXX_COMPILER: clang++-10
 
     steps:
     - name: Checkout
