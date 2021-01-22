@@ -38,6 +38,12 @@ get_directory_property (inc_dirs INCLUDE_DIRECTORIES)
 list(TRANSFORM inc_dirs PREPEND "-I")
 list(JOIN inc_dirs " " INCLUDE_STRING)
 
+## Prepare nice output for linked libraries.
+
+foreach (linked_lib ${LAPACK_LIBRARIES})
+  string(APPEND LINKED_STRING ${linked_lib} " ")
+endforeach()
+
 ## Write commands for compiler.
 
 file(WRITE  ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "[compiler]\n")
@@ -51,7 +57,7 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "standard = ${CMAKE_CXX
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "\n[linker]\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "command = ${CMAKE_CXX_COMPILER}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "flags   = ${CMAKE_SHARED_LINKER_FLAGS}\n")
-file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "libs    = ${LAPACK_lapack_LIBRARY}\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "libs    = ${LINKED_STRING}\n")
 
 ## Write commands for cython.
 

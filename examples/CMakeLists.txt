@@ -6,7 +6,7 @@ file (GLOB cpp_sources *.cxx)
 foreach(ccfile ${cpp_sources})
   get_filename_component(file ${ccfile} NAME_WE)
   add_executable(${file} ${ccfile})
-  target_link_libraries(${file} ${LAPACK_lapack_LIBRARY})
+  target_link_libraries(${file} ${LAPACK_LIBRARIES})
   add_test(NAME "${file}_cxx" COMMAND "${file}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 
