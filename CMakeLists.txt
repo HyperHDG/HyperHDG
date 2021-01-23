@@ -8,11 +8,19 @@ project(HyperHDG LANGUAGES CXX)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
-    message(FATAL_ERROR "Insufficient gcc/g++ version!")
+    message(
+      FATAL_ERROR
+      "Insufficient gcc/g++ version! Minimum version required is 10.
+       Consider setting the flags CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
+    )
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
-    message(FATAL_ERROR "Insufficient clang/clang++ version!")
+    message(
+      FATAL_ERROR
+      "Insufficient clang/clang++ version! Minimum version required is 10.
+       Consider setting the flags CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
+    )
   endif()
 endif()
 
