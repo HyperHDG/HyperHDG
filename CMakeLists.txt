@@ -4,6 +4,20 @@ set(default_build_type "Debug")
 
 project(HyperHDG LANGUAGES CXX)
 
+## Check whether appropriate compiler version is used
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
+    message(FATAL_ERROR "Insufficient gcc/g++ version!")
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
+    message(FATAL_ERROR "Insufficient clang/clang++ version!")
+  endif()
+endif()
+
+## Configure C++ standard.
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
