@@ -6,6 +6,7 @@ on: push
 # In that case do the job 'make_and_deploy_doxygen'
 jobs:
   make_and_deploy_doxygen:
+    name: Make and deploy doxygen
     runs-on: ubuntu-latest
     # which needs the following steps to be executed:
     steps:

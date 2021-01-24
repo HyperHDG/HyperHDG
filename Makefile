@@ -7,31 +7,23 @@ TEST_COMPILER = clang++-10 clang++-11 g++-10
 
 
 ####################################################################################################
-# Choose the default compiler for the project!
-# The DEFAULT_COMPILER value might be set by the user. The respective compiler should be available
-# on the current operating system and support C++20. If the DEFAULT_COMPILER is chosen to be one of
-# the TEST_COMPILER, the code is pretty safe to run, since it is tested against the usage of all
+# The default compiler of GNUmake is CXX=g++. This can be changed by
+# an environment variable of the same name or by the command line
+# argument CXX=compiler when running make
+#
+# The respective compiler must support C++20. If $(CXX) is listed in
+# $(TEST_COMPILER), the code is pretty safe to run, since it is tested against the usage of all
 # compilers defined as TEST_COMPILER.
-DEFAULT_COMPILER = g++-10
 ####################################################################################################
 
-
-## Default command used for building the library.
-#  Use "make" to build the library using the above defined DEFAULT_COMPILER and use "make compiler="
-#  followed by the name of your favorite compiler to configure this compiler to be used.
-#  Alternatively, you may change the DEFAULT_COMPILER to your favorite compiler enusring that it is
-#  used, even if you need o rebuild the library.
-make:
-	@[ "${compiler}" ] || ( \
-		echo "THE COMPILER FLAG compiler=... HAS NOT BEEN SET! USING DEFAULT_COMPILER!"; \
-		$(MAKE) build comp=$(DEFAULT_COMPILER) \
-	)
-	@[ "${compiler}" ] && $(MAKE) build comp=$(compiler)
-
+####################################################################################################
+# The default target generates a build subdirectory and then configures the library there, builds
+# it and runs the tests
+####################################################################################################
 
 build:
 	mkdir -p build
-	cd build; cmake -DCMAKE_CXX_COMPILER=$(comp) ..
+	cd build; cmake -DCMAKE_CXX_COMPILER=$(CXX) ..
 	cd build; make
 	cd build; make test
 
@@ -83,12 +75,12 @@ submodules:
 
 ## Perform a test that checks the library to work with all TEST_COMPILER.
 test_all_compilers:
-	$(foreach compiler, $(TEST_COMPILER), $(MAKE) test_compiler comp=${compiler};)
+	$(foreach compiler, $(TEST_COMPILER), $(MAKE) CXX=${compiler} test_compiler;)
 
 ## Test the library to work with a certain compiler (given via the flag "comp").
 test_compiler:
 	$(MAKE) clean
 	mkdir -p build	
-	cd build; cmake -DCMAKE_CXX_COMPILER=$(comp) ..
+	cd build; cmake -DCMAKE_CXX_COMPILER=$(CXX) ..
 	cd build; make
 	cd build; make test
