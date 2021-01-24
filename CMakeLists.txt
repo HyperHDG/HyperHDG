@@ -4,6 +4,12 @@ set(default_build_type "Debug")
 
 project(HyperHDG LANGUAGES CXX)
 
+# Prohibit configuration in source directory
+
+if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+   message(SEND_ERROR "In-source builds are not allowed.")
+endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+
 ## Check whether appropriate compiler version is used
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -11,7 +17,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(
       FATAL_ERROR
       "Insufficient gcc/g++ version! Minimum version required is 10.
-       Consider setting the flags CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
+       Consider setting variable CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
     )
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -19,7 +25,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     message(
       FATAL_ERROR
       "Insufficient clang/clang++ version! Minimum version required is 10.
-       Consider setting the flags CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
+       Consider setting variable CXX in Makefile or CMAKE_CXX_COMPILER in CMake, respectively."
     )
   endif()
 endif()
