@@ -37,7 +37,7 @@ template <unsigned int hyEdge_dimT,
           typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
           typename hyEdge_index_t = typename NodeIndexVecT::value_type,
           typename NodeOrientationT = SmallVec<2 * hyEdge_dimT - 2, unsigned int> >
-class Cubic
+class CubicRefined
 {
   using hyNode_index_t = typename NodeIndexVecT::value_type;
   /*!***********************************************************************************************
@@ -156,7 +156,7 @@ class Cubic
    *
    * \param   n_elements      A vector / array containing number of elements per dimension.
    ************************************************************************************************/
-  Cubic(const constructor_value_type& n_elements)
+  CubicRefined(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
@@ -183,7 +183,7 @@ class Cubic
    *
    * \param   other           Hypergraph to be copied.
    ************************************************************************************************/
-  Cubic(const Cubic<hyEdge_dimT, space_dimT>& other)
+  CubicRefined(const Cubic<hyEdge_dimT, space_dimT>& other)
   : n_elements_(other.n_elements_),
     tpcc_elements_(other.tpcc_elements_),
     tpcc_faces_(other.tpcc_faces_),
@@ -250,6 +250,6 @@ class Cubic
    * \retval  n_hypernodes    The total amount of hypernodes of a hypergraph.
    ************************************************************************************************/
   const hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
-};  // end of class Cubic
+};  // end of class CubicRefined
 
 }  // end of namespace Topology

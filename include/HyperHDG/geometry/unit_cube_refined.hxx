@@ -35,7 +35,7 @@ template <unsigned int hyEdge_dimT,
           typename pt_coord_t = double,
           typename ConstructorVecT = SmallVec<space_dimT, unsigned int>,
           typename hyEdge_index_t = unsigned int>
-class UnitCube
+class UnitCubeRefined
 {
   /*!***********************************************************************************************
    * \brief   Definition of the geometry of a single hyperedge.
@@ -431,7 +431,7 @@ class UnitCube
    *
    * \param   n_elements    The number of elements per spatial dimension.
    ************************************************************************************************/
-  UnitCube(const constructor_value_type& n_elements)
+  UnitCubeRefined(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
@@ -450,7 +450,7 @@ class UnitCube
    *
    * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
    ************************************************************************************************/
-  UnitCube(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
+  UnitCubeRefined(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
