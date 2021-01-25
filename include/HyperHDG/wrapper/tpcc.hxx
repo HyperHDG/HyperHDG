@@ -76,6 +76,7 @@ auto tpcc_faces(const auto& elements)
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
+template <typename index_t = unsigned int>
 index_t n_elements(const auto& tpcc)
 {
   return tpcc.size();
@@ -97,7 +98,8 @@ auto get_element(const auto& tpcc, const auto index)
 /*!*************************************************************************************************
  * \brief   Return index of given element within TPCC.
  **************************************************************************************************/
-auto get_index(const auto& tpcc, const auto& elem)
+template <typename index_t = unsigned int>
+index_t get_index(const auto& tpcc, const auto& elem)
 {
   index_t index = tpcc.index(elem);
   hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");

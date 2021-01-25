@@ -52,19 +52,15 @@ class Cubic
     hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, unsigned int>(
-          node_desc.tpcc_elements_, index);
+        Wrapper::get_element(node_desc.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
-        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
-          Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = Wrapper::get_face(elem, i);
         hyFace_types_[i] = 0;
         for (unsigned int dim = 0; dim < space_dimT - hyEdge_dimT + 1; ++dim)
         {
-          unsigned int coordinate =
-            Wrapper::exterior_coordinate<hyEdge_dimT - 1, space_dimT>(face, dim);
-          unsigned int direction =
-            Wrapper::exterior_direction<hyEdge_dimT - 1, space_dimT>(face, dim);
+          unsigned int coordinate = Wrapper::exterior_coordinate(face, dim);
+          unsigned int direction = Wrapper::exterior_direction(face, dim);
           if (coordinate == 0 || coordinate == node_desc.n_elements().operator[](direction))
             hyFace_types_[i] += (1 + (coordinate != 0)) * std::pow(3, direction);
         }

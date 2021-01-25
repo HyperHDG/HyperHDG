@@ -63,15 +63,11 @@ class Cubic
     hyEdge(const hyEdge_index_t index, const Cubic& topology)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, unsigned int>(
-          topology.tpcc_elements_, index);
+        Wrapper::get_element(topology.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
       {
-        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
-          Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
-        hyNode_indices_[i] =
-          Wrapper::get_index<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, unsigned int>(
-            topology.tpcc_faces_, face);
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = Wrapper::get_face(elem, i);
+        hyNode_indices_[i] = Wrapper::get_index(topology.tpcc_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -144,11 +140,8 @@ class Cubic
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
         n_elements)),
     tpcc_faces_(Wrapper::tpcc_faces<TPCC::boundaries::both>(tpcc_elements_)),
-    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-      tpcc_elements_)),
-    n_hyNodes_(
-      Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-        tpcc_faces_))
+    n_hyEdges_(Wrapper::n_elements(tpcc_elements_)),
+    n_hyNodes_(Wrapper::n_elements(tpcc_faces_))
   {
   }
   /*!***********************************************************************************************

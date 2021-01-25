@@ -17,6 +17,15 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Setup) and [use](
 https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 
+## Status of continuous integration
+
+| Task / Test   | Status                                                                          |
+|---------------|---------------------------------------------------------------------------------|
+| Format code   | ![Clang](https://github.com/AndreasRupp/HyperHDG/workflows/Clang/badge.svg)     |
+| Build library | ![CMake](https://github.com/AndreasRupp/HyperHDG/workflows/CMake/badge.svg)     |
+| Make doxygen  | ![Doxygen](https://github.com/AndreasRupp/HyperHDG/workflows/Doxygen/badge.svg) |
+
+
 # Copyright, License, and Contribution Policy
 
 This directory contains the HyperHDG library.

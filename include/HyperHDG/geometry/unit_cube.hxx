@@ -86,11 +86,9 @@ class UnitCube
         if (index == 0)
           for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
           {
-            unsigned int ext_dim =
-              Wrapper::exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
-            translation[ext_dim] =
-              (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
-              (pt_coord_t)geometry.n_elements_[ext_dim];
+            unsigned int ext_dim = Wrapper::exterior_direction(elem, dim_pt);
+            translation[ext_dim] = (pt_coord_t)Wrapper::exterior_coordinate(elem, dim_pt) /
+                                   (pt_coord_t)geometry.n_elements_[ext_dim];
             hy_assert(0. <= translation[ext_dim] && translation[ext_dim] <= 1.,
                       "The unit cube has only these cooridnates.");
           }
@@ -100,11 +98,9 @@ class UnitCube
         if (index == (unsigned int)1 << dim && char_length[dim] == 0.)
           for (unsigned int dim_pt = 0; dim_pt < space_dimT; ++dim_pt)
           {
-            unsigned int ext_dim =
-              Wrapper::exterior_direction<hyEdge_dimTT, space_dimT>(elem, dim_pt);
-            pt_coord_t helper =
-              (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimTT, space_dimT>(elem, dim_pt) /
-              (pt_coord_t)geometry.n_elements_[ext_dim];
+            unsigned int ext_dim = Wrapper::exterior_direction(elem, dim_pt);
+            pt_coord_t helper = (pt_coord_t)Wrapper::exterior_coordinate(elem, dim_pt) /
+                                (pt_coord_t)geometry.n_elements_[ext_dim];
             hy_assert(0. <= helper && helper <= 1., "The unit cube has only these cooridnates.");
             if (helper != translation[ext_dim])
             {
@@ -118,8 +114,7 @@ class UnitCube
       else
       {
         for (unsigned int i = 2 * hyEdge_dimTT - 2; i < 2 * hyEdge_dimTT; ++i)
-          index = fill_data<hyEdge_dimTT - 1>(
-            index, Wrapper::get_face<hyEdge_dimTT, space_dimT>(elem, i), geometry);
+          index = fill_data<hyEdge_dimTT - 1>(index, Wrapper::get_face(elem, i), geometry);
       }
       return index;
     }
@@ -142,8 +137,7 @@ class UnitCube
     hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-          geometry.tpcc_elements_, index);
+        Wrapper::get_element(geometry.tpcc_elements_, index);
       fill_data<hyEdge_dimT>(0, elem, geometry);
     }
 
