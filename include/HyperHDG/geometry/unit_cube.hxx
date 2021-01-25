@@ -66,8 +66,8 @@ class UnitCube
      *
      * Recursive function that fills \c translation, \c dim_indices, and \¢ char_length. To do so,
      * it considers a single hyperedge and takes its zeroth and first faces, and the zeroth and
-     *first faces of these faces, and so on to determine the positions of the translation and the
-     *other spanning points of the interface.
+     * first faces of these faces, and so on to determine the positions of the translation and the
+     * other spanning points of the interface.
      *
      * \tparam  hyEdge_dimTT  Dimension of the hyperedge or face that is considered.
      * \param   index         Variable that indicates which point is investigated.

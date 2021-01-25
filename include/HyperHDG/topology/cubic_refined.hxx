@@ -64,13 +64,11 @@ class Cubic
     hyEdge(const hyEdge_index_t index, const Cubic& topology)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, unsigned int>(topology.tpcc_elements_, index);
+        Wrapper::get_element(topology.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
       {
-        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
-          Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
-        hyNode_indices_[i] =
-          Wrapper::get_index<hyEdge_dimT - 1, space_dimT, unsigned int>(topology.tpcc_faces_, face);
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = Wrapper::get_face(elem, i);
+        hyNode_indices_[i] = Wrapper::get_index(topology.tpcc_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -107,11 +105,13 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_faces_;
 
   const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, hyNode_index_t> tpcc_ref_elem_;
   const Wrapper::tpcc_t<hyEdge_dimT - 1, hyEdge_dimT, hyNode_index_t> tpcc_ref_faces_;
@@ -144,19 +144,20 @@ class Cubic
    ************************************************************************************************/
   Cubic(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
-    tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
-      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
-    tpcc_ref_faces_(Wrapper::tpcc_faces<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_elem_)),
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        n_elements)),
+    tpcc_faces_(Wrapper::tpcc_faces<TPCC::boundaries::both>(tpcc_elements_)),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
+    tpcc_ref_faces_(Wrapper::tpcc_faces<TPCC::boundaries::none>(tpcc_ref_elem_)),
 
-    n_elem_per_elem(Wrapper::n_elements<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_elem_)),
-    n_face_per_face(Hypercube<hyEdge_dimT - 1>::pow(n_subintervalsT))
-      .n_face_per_elem(
-        Wrapper::n_elements<hyEdge_dimT - 1, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_faces_) -
-        2 * hyEdge_dimT * n_face_per_face),
-    n_coarse_elem(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    c_coarse_face(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_)),
+    n_elem_per_elem(Wrapper::n_elements(tpcc_ref_elem_)),
+    n_face_per_face(Hypercube<hyEdge_dimT - 1>::pow(n_subintervalsT)),
+    n_face_per_elem(Wrapper::n_elements(tpcc_ref_faces_)),
+    n_coarse_elem(Wrapper::n_elements(tpcc_elements_)),
+    c_coarse_face(Wrapper::n_elements(tpcc_faces_)),
     n_hyEdges_(n_coarse_elem * n_elem_per_elem),
     n_hyNodes_(n_coarse_face * n_face_per_face + n_coarse_elem * n_face_per_elem)
   {
@@ -172,6 +173,13 @@ class Cubic
   : n_elements_(other.n_elements_),
     tpcc_elements_(other.tpcc_elements_),
     tpcc_faces_(other.tpcc_faces_),
+    tpcc_ref_elem_(other.tpcc_ref_elem_),
+    tpcc_ref_faces_(other.tpcc_ref_faces_),
+    n_elem_per_elem(other.n_elem_per_elem),
+    n_face_per_face(other.n_face_per_face),
+    n_face_per_elem(other.n_face_per_elem),
+    n_coarse_elem(other.n_coarse_elem),
+    n_coarse_face(other.n_coarse_face),
     n_hyEdges_(other.n_hyEdges_),
     n_hyNodes_(other.n_hyNodes_)
   {
@@ -203,14 +211,16 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t>& tpcc_elem() const
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>&
+  tpcc_elem() const
   {
     return tpcc_elements_;
   }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t>& tpcc_face() const
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>&
+  tpcc_face() const
   {
     return tpcc_faces_;
   }

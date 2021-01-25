@@ -391,11 +391,13 @@ class UnitCube
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>
+    tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for refined elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t> tpcc_ref_elem_;
+  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>
+    tpcc_ref_elem_;
   /*!***********************************************************************************************
    * \brief   Number of refined elements per element..
    ************************************************************************************************/
@@ -431,9 +433,12 @@ class UnitCube
    ************************************************************************************************/
   UnitCube(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
-      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        n_elements)),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
     n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervalsT))
   {
   }
@@ -448,9 +453,11 @@ class UnitCube
   UnitCube(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(
-      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(other.n_elements())),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
-      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        other.n_elements())),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
     n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervalsT))
   {
   }
