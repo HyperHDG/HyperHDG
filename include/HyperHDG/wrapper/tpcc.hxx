@@ -106,6 +106,16 @@ index_t get_index(const auto& tpcc, const auto& elem)
   return index;
 }
 /*!*************************************************************************************************
+ * \brief   Return index of given element within TPCC.
+ **************************************************************************************************/
+template <typename index_t = unsigned int>
+index_t get_index_in_slice(const auto& tpcc, const auto& elem)
+{
+  index_t index = tpcc.index_in_slice(elem);
+  hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");
+  return index;
+}
+/*!*************************************************************************************************
  * \brief   Return i-th element facet.
  **************************************************************************************************/
 auto get_face(const auto& elem, const unsigned int index)
