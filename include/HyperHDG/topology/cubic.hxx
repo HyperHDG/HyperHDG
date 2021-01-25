@@ -63,13 +63,15 @@ class Cubic
     hyEdge(const hyEdge_index_t index, const Cubic& topology)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, unsigned int>(topology.tpcc_elements_, index);
+        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, unsigned int>(
+          topology.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
           Wrapper::get_face<hyEdge_dimT, space_dimT>(elem, i);
         hyNode_indices_[i] =
-          Wrapper::get_index<hyEdge_dimT - 1, space_dimT, unsigned int>(topology.tpcc_faces_, face);
+          Wrapper::get_index<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, unsigned int>(
+            topology.tpcc_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -106,11 +108,13 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_faces_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges.
    ************************************************************************************************/
@@ -136,10 +140,17 @@ class Cubic
    ************************************************************************************************/
   Cubic(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
-    tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyNodes_(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_))
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        n_elements)),
+    tpcc_faces_(
+      Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        tpcc_elements_)),
+    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+      tpcc_elements_)),
+    n_hyNodes_(
+      Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        tpcc_faces_))
   {
   }
   /*!***********************************************************************************************
@@ -184,14 +195,16 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t>& tpcc_elem() const
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>&
+  tpcc_elem() const
   {
     return tpcc_elements_;
   }
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t>& tpcc_face() const
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>&
+  tpcc_face() const
   {
     return tpcc_faces_;
   }

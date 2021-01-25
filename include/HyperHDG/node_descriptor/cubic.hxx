@@ -52,8 +52,8 @@ class Cubic
     hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, unsigned int>(node_desc.tpcc_elements_,
-                                                                    index);
+        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, unsigned int>(
+          node_desc.tpcc_elements_, index);
       for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face =
@@ -102,11 +102,13 @@ class Cubic
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyNode_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_elements_;
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for faces.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_faces_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges in hypergraph.
    ************************************************************************************************/
@@ -128,9 +130,14 @@ class Cubic
    ************************************************************************************************/
   Cubic(const ConstructorVecT& n_elements)
   : n_elements_(n_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
-    tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_))
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        n_elements)),
+    tpcc_faces_(
+      Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        tpcc_elements_)),
+    n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+      tpcc_elements_))
   {
   }
   /*!***********************************************************************************************

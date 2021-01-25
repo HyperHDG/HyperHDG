@@ -142,8 +142,8 @@ class UnitCube
     hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element<hyEdge_dimT, space_dimT, hyEdge_index_t>(geometry.tpcc_elements_,
-                                                                      index);
+        Wrapper::get_element<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+          geometry.tpcc_elements_, index);
       fill_data<hyEdge_dimT>(0, elem, geometry);
     }
 
@@ -383,7 +383,8 @@ class UnitCube
   /*!***********************************************************************************************
    * \brief   Tensor product chain complex for elements.
    ************************************************************************************************/
-  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, hyEdge_index_t> tpcc_elements_;
+  const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>
+    tpcc_elements_;
 
  public:
   /*!***********************************************************************************************
@@ -415,7 +416,9 @@ class UnitCube
    ************************************************************************************************/
   UnitCube(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
-    tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements))
+    tpcc_elements_(
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        n_elements))
   {
   }
   /*!***********************************************************************************************
@@ -429,7 +432,8 @@ class UnitCube
   UnitCube(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(
-      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(other.n_elements()))
+      Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        other.n_elements()))
   {
   }
   /*!***********************************************************************************************

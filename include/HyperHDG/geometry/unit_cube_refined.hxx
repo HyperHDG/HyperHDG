@@ -127,11 +127,12 @@ class UnitCube
 
     void adapt_data(const Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT>& elem)
     {
-      for(unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
-        char_length[dim] /= (pt_coord_t) n_subintervalsT;
-        translation[dim_indices[dim]] += (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimT, hyEdge_dimT>(
-          elem, dim) / char_length[dim];
+        char_length[dim] /= (pt_coord_t)n_subintervalsT;
+        translation[dim_indices[dim]] +=
+          (pt_coord_t)Wrapper::exterior_coordinate<hyEdge_dimT, hyEdge_dimT>(elem, dim) /
+          char_length[dim];
       }
     }
 
@@ -439,7 +440,8 @@ class UnitCube
   UnitCube(const constructor_value_type& n_elements)
   : n_elements_(n_elements),
     tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(SmallVec<hyEdge_dimT,unsigned int>(n_subintervalsT))),
+    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
+      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
     n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervalsT))
   {
   }
@@ -455,7 +457,8 @@ class UnitCube
   : n_elements_(other.n_elements()),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(other.n_elements())),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(SmallVec<hyEdge_dimT,unsigned int>(n_subintervalsT))),
+    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
+      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
     n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervalsT))
   {
   }

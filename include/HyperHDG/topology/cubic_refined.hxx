@@ -113,12 +113,11 @@ class Cubic
    ************************************************************************************************/
   const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, hyNode_index_t> tpcc_faces_;
 
-
   const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, hyNode_index_t> tpcc_ref_elem_;
   const Wrapper::tpcc_t<hyEdge_dimT - 1, hyEdge_dimT, hyNode_index_t> tpcc_ref_faces_;
 
-  const unsigned int n_elem_per_elem, n_face_per_face, n_face_per_elem, n_coarse_elem, n_coarse_face;
-
+  const unsigned int n_elem_per_elem, n_face_per_face, n_face_per_elem, n_coarse_elem,
+    n_coarse_face;
 
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges.
@@ -128,7 +127,6 @@ class Cubic
    * \brief   Total amount of hypernodes.
    ************************************************************************************************/
   const hyNode_index_t n_hyNodes_;
-
 
  public:
   /*!***********************************************************************************************
@@ -148,15 +146,18 @@ class Cubic
   : n_elements_(n_elements),
     tpcc_elements_(Wrapper::create_tpcc<hyEdge_dimT, space_dimT, hyEdge_index_t>(n_elements)),
     tpcc_faces_(Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
-    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(SmallVec<hyEdge_dimT,unsigned int>(n_subintervalsT))),
+    tpcc_ref_elem_(Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(
+      SmallVec<hyEdge_dimT, unsigned int>(n_subintervalsT))),
     tpcc_ref_faces_(Wrapper::tpcc_faces<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_elem_)),
 
     n_elem_per_elem(Wrapper::n_elements<hyEdge_dimT, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_elem_)),
-    n_face_per_face(Hypercube<hyEdge_dimT-1>::pow(n_subintervalsT)).
-    n_face_per_elem(Wrapper::n_elements<hyEdge_dimT - 1, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_faces_) - 2 * hyEdge_dimT * n_face_per_face),
+    n_face_per_face(Hypercube<hyEdge_dimT - 1>::pow(n_subintervalsT))
+      .n_face_per_elem(
+        Wrapper::n_elements<hyEdge_dimT - 1, hyEdge_dimT, hyEdge_index_t>(tpcc_ref_faces_) -
+        2 * hyEdge_dimT * n_face_per_face),
     n_coarse_elem(Wrapper::n_elements<hyEdge_dimT, space_dimT, hyEdge_index_t>(tpcc_elements_)),
     c_coarse_face(Wrapper::n_elements<hyEdge_dimT - 1, space_dimT, hyEdge_index_t>(tpcc_faces_)),
-    n_hyEdges_(n_coarse_elem* n_elem_per_elem),
+    n_hyEdges_(n_coarse_elem * n_elem_per_elem),
     n_hyNodes_(n_coarse_face * n_face_per_face + n_coarse_elem * n_face_per_elem)
   {
   }
