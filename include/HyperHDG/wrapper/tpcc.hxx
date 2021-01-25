@@ -130,7 +130,7 @@ unsigned int exterior_direction(const auto& elem, const unsigned int index)
   hy_assert(index < elem.n_val - elem.k_val,
             "There are only " << elem.n_val - elem.k_val << " exterior directions.");
   unsigned int acr_dir = elem.across_direction(index);
-  hy_assert(acr_dir < decltype(elem)::n_val,
+  hy_assert(acr_dir < elem.n_val,
             "Exterior direction must be smaller than amount of spatial dimensions!");
   return acr_dir;
 }
