@@ -37,7 +37,7 @@ unsigned int binomial(unsigned int n, unsigned int k)
  * \brief   Type of a tensor product chain complex.
  **************************************************************************************************/
 template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT = TPCC::boundaries::both, typename index_t = unsigned int>
-using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>;
+using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, bndT, index_t, unsigned int, unsigned int>;
 /*!*************************************************************************************************
  * \brief   Type of an element of a tensor product chain complex.
  **************************************************************************************************/
