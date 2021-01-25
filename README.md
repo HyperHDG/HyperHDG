@@ -21,9 +21,11 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 <div align="center">
 
-| Task / Test   | Status                                                                          |
+| Task / Test   | Status                                                                          |\
+ Details |
 |---------------|---------------------------------------------------------------------------------|
-| Format code   | ![Clang](https://github.com/AndreasRupp/HyperHDG/workflows/Clang/badge.svg)     |
+| Format code   | ![Clang](https://github.com/AndreasRupp/HyperHDG/workflows/Clang/badge.svg)     |\
+
 | Build library | ![CMake](https://github.com/AndreasRupp/HyperHDG/workflows/CMake/badge.svg)     |
 | Make doxygen  | ![Doxygen](https://github.com/AndreasRupp/HyperHDG/workflows/Doxygen/badge.svg) |
 
