@@ -21,13 +21,11 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 <div align="center">
 
-| Task / Test   | Status                                                                          |\
- Details |
-|---------------|---------------------------------------------------------------------------------|
-| Format code   | ![Clang](https://github.com/AndreasRupp/HyperHDG/workflows/Clang/badge.svg)     |\
-
-| Build library | ![CMake](https://github.com/AndreasRupp/HyperHDG/workflows/CMake/badge.svg)     |
-| Make doxygen  | ![Doxygen](https://github.com/AndreasRupp/HyperHDG/workflows/Doxygen/badge.svg) |
+| Task / Test   | Status                                                                          | Details                                                   |
+|:--------------|:--------------------------------------------------------------------------------|:----------------------------------------------------------|
+| Format code   | ![Clang](https://github.com/AndreasRupp/HyperHDG/workflows/Clang/badge.svg)     | Check, whether C++ code obeys the formatting rules.       |
+| Build library | ![CMake](https://github.com/AndreasRupp/HyperHDG/workflows/CMake/badge.svg)     | Build and test library to work for predefined test cases. |
+| Make doxygen  | ![Doxygen](https://github.com/AndreasRupp/HyperHDG/workflows/Doxygen/badge.svg) | Automatically generate and deploy doxygen to web-page.    |
 
 </div>
 
