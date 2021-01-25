@@ -19,7 +19,7 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 ## Status of continuous integration
 
-<p style="text-align:center">
+<div style="text-align:center">
 
 | Task / Test   | Status                                                                          |
 |---------------|---------------------------------------------------------------------------------|
@@ -27,7 +27,7 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 | Build library | ![CMake](https://github.com/AndreasRupp/HyperHDG/workflows/CMake/badge.svg)     |
 | Make doxygen  | ![Doxygen](https://github.com/AndreasRupp/HyperHDG/workflows/Doxygen/badge.svg) |
 
-</p>
+</div>
 
 The status given in the table refers to the `main` branch. The build test covers building the
 library and testing it with several compilers. For more details on the tests, please refer to the
