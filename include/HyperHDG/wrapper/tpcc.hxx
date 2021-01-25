@@ -36,7 +36,7 @@ unsigned int binomial(unsigned int n, unsigned int k)
 /*!*************************************************************************************************
  * \brief   Type of a tensor product chain complex.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int>
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT = TPCC::boundaries::both, typename index_t = unsigned int>
 using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>;
 /*!*************************************************************************************************
  * \brief   Type of an element of a tensor product chain complex.
@@ -51,26 +51,26 @@ using tpcc_elem_t = TPCC::Element<space_dim, hyEdge_dim, unsigned int, unsigned 
 /*!*************************************************************************************************
  * \brief   Create a tensor product chain complex.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int>
-tpcc_t<hyEdge_dim, space_dim, index_t> create_tpcc(const SmallVec<space_dim, index_t>& vec)
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT = TPCC::boundaries::both, typename index_t = unsigned int>
+tpcc_t<hyEdge_dim, space_dim, bndT, index_t> create_tpcc(const SmallVec<space_dim, index_t>& vec)
 {
   static_assert(space_dim >= hyEdge_dim, "Hypercube dim must not be bigger than spatial dim!");
-  return TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>(
+  return TPCC::Lexicographic<space_dim, hyEdge_dim, bndT, index_t, unsigned int, unsigned int>(
     vec.data());
 }
 /*!*************************************************************************************************
  * \brief   Create a tensor product chain complex associated to the facets.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-tpcc_t<hyEdge_dim - 1, space_dim, index_t> tpcc_faces(
-  const tpcc_t<hyEdge_dim, space_dim, index_t>& elements)
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT, typename index_t>
+tpcc_t<hyEdge_dim - 1, space_dim, bndT, index_t> tpcc_faces(
+  const tpcc_t<hyEdge_dim, space_dim, bndT, index_t>& elements)
 {
   return elements.boundary();
 }
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT, typename index_t>
 index_t n_elements(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc)
 {
   return tpcc.size();
@@ -83,8 +83,8 @@ index_t n_elements(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc)
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-tpcc_elem_t<hyEdge_dim, space_dim> get_element(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc,
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT typename index_t>
+tpcc_elem_t<hyEdge_dim, space_dim> get_element(const tpcc_t<hyEdge_dim, space_dim, bndT, index_t>& tpcc,
                                                const index_t index)
 {
   hy_assert(index < tpcc.size(), "Index " << index << " must not be bigger than the TPCC "
@@ -94,8 +94,8 @@ tpcc_elem_t<hyEdge_dim, space_dim> get_element(const tpcc_t<hyEdge_dim, space_di
 /*!*************************************************************************************************
  * \brief   Return index of given element within TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-index_t get_index(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc,
+template <unsigned int hyEdge_dim, unsigned int space_dim, typename TPCC::boundaries bndT, typename index_t>
+index_t get_index(const tpcc_t<hyEdge_dim, space_dim, bndT, index_t>& tpcc,
                   const tpcc_elem_t<hyEdge_dim, space_dim>& elem)
 {
   index_t index = tpcc.index(elem);
