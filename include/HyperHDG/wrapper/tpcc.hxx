@@ -108,12 +108,12 @@ index_t get_index(const auto& tpcc, const auto& elem)
 /*!*************************************************************************************************
  * \brief   Return i-th element facet.
  **************************************************************************************************/
-auto get_face(const auto& element, const unsigned int index)
+auto get_face(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < 2 * hyEdge_dim, "An element hast only " << 2 * hyEdge_dim << "facets. "
-                                                            << "You requested number " << index
-                                                            << ".");
-  return element.facet(index);
+  hy_assert(index < elem.n_facets(), "An element hast only " << elem.n_facets() << "facets. "
+                                                             << "You requested number " << index
+                                                             << ".");
+  return elem.facet(index);
 }
 /*!*************************************************************************************************
  * \brief   Determine the orientation of an element.
@@ -127,10 +127,10 @@ unsigned int elem_orientation(const auto& elem)
  **************************************************************************************************/
 unsigned int exterior_direction(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < space_dim - hyEdge_dim,
-            "There are only " << space_dim - hyEdge_dim << " exterior directions.");
+  hy_assert(index < elem.n_val - elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
   unsigned int acr_dir = elem.across_direction(index);
-  hy_assert(acr_dir < space_dim,
+  hy_assert(acr_dir < decltype(elem)::n_val,
             "Exterior direction must be smaller than amount of spatial dimensions!");
   return acr_dir;
 }
@@ -139,8 +139,8 @@ unsigned int exterior_direction(const auto& elem, const unsigned int index)
  **************************************************************************************************/
 unsigned int exterior_coordinate(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < space_dim - hyEdge_dim,
-            "There are only " << space_dim - hyEdge_dim << " exterior directions.");
+  hy_assert(index < elem.n_val - elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
   return elem.across_coordinate(index);
 }
 
