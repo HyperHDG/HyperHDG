@@ -19,7 +19,7 @@ https://github.com/AndreasRupp/HyperHDG/wiki/Usage) the library.
 
 ## Status of continuous integration
 
-<div style="text-align:center">
+<div align="center">
 
 | Task / Test   | Status                                                                          |
 |---------------|---------------------------------------------------------------------------------|
