@@ -143,9 +143,7 @@ class Cubic
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
         n_elements)),
-    tpcc_faces_(
-      Wrapper::tpcc_faces<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-        tpcc_elements_)),
+    tpcc_faces_(Wrapper::tpcc_faces<TPCC::boundaries::both>(tpcc_elements_)),
     n_hyEdges_(Wrapper::n_elements<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
       tpcc_elements_)),
     n_hyNodes_(
