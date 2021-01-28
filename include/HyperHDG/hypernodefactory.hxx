@@ -57,6 +57,22 @@ class HyperNodeFactory
    ************************************************************************************************/
   HyperNodeFactory(const HyperNodeFactory<n_dofs_per_nodeT>& hnf) : n_hyNodes_(hnf.n_hyNodes_) {}
   /*!***********************************************************************************************
+   * \brief   Copy assignment.
+   ************************************************************************************************/
+  HyperNodeFactory<n_dofs_per_nodeT>& operator=(const HyperNodeFactory<n_dofs_per_nodeT>& other)
+  {
+    n_hyNodes_ = other.n_hyNodes_;
+    return *this;
+  }
+  /*!***********************************************************************************************
+   * \brief   Move assignment.
+   ************************************************************************************************/
+  HyperNodeFactory<n_dofs_per_nodeT>& operator=(HyperNodeFactory<n_dofs_per_nodeT>&& other) noexcept
+  {
+    n_hyNodes_ = other.n_hyNodes_;
+    return *this;
+  }
+  /*!***********************************************************************************************
    * \brief   Returns the total amount of hypernodes in the considered hypergraph.
    *
    * \retval  n_hypernodes        The total amount of hypernodes in the considered hypergraph.
