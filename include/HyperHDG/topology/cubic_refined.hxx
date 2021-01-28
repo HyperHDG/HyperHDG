@@ -78,11 +78,12 @@ class CubicRefined
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
         if (Wrapper::exterior_coordinate(face, 0) == 0 ||
-            Wrapper::exterior_coordinate(face, 0) == n_subintervalsT + 1)
+            Wrapper::exterior_coordinate(face, 0) == n_subintervalsT)
           hyNode_indices_[i] = topology.n_face_per_face * hyNode_indices_[i] +
                                Wrapper::get_index_in_slice(topology.tpcc_ref_faces_, face);
         else
           hyNode_indices_[i] =
+            topology.n_coarse_face * topology.n_face_per_face +
             topology.n_face_per_elem * Wrapper::get_index(topology.tpcc_ref_elem_, ref_elem) +
             Wrapper::get_index(topology.tpcc_ref_faces_, face);
       }
@@ -241,6 +242,12 @@ class CubicRefined
   tpcc_face() const
   {
     return tpcc_faces_;
+  }
+
+  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t>&
+  tpcc_ref_elem() const
+  {
+    return tpcc_ref_elem_;
   }
   /*!***********************************************************************************************
    * \brief   Return the number of hyperedges making up the hypergraph.

@@ -73,7 +73,7 @@ class CubicRefined
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
         if (Wrapper::exterior_coordinate(face, 0) != 0 &&
-            Wrapper::exterior_coordinate(face, 0) != n_subintervalsT + 1)
+            Wrapper::exterior_coordinate(face, 0) != n_subintervalsT)
           hyFace_types_[i] = 0;
       }
     }
@@ -152,7 +152,7 @@ class CubicRefined
   CubicRefined(const Topology::CubicRefined<hyEdge_dimT, space_dimT, n_subintervalsT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(other.tpcc_elem()),
-    tpcc_ref_elem_(other.tpcc_ref_elem_),
+    tpcc_ref_elem_(other.tpcc_ref_elem()),
     n_hyEdges_(other.n_hyEdges())
   {
   }

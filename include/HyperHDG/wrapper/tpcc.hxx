@@ -112,7 +112,7 @@ template <typename index_t = unsigned int>
 index_t get_index_in_slice(const auto& tpcc, const auto& elem)
 {
   index_t index = tpcc.index_in_slice(elem);
-  hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");
+  // hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");
   return index;
 }
 /*!*************************************************************************************************
@@ -145,13 +145,22 @@ unsigned int exterior_direction(const auto& elem, const unsigned int index)
   return acr_dir;
 }
 /*!*************************************************************************************************
- * \brief   Return coordinate value with respect to index-th orthonormal direction of element.
+ * \brief   Return coordinate value with respect to index-th orthonormal direction on element.
  **************************************************************************************************/
 unsigned int exterior_coordinate(const auto& elem, const unsigned int index)
 {
   hy_assert(index < elem.n_val - elem.k_val,
             "There are only " << elem.n_val - elem.k_val << " exterior directions.");
   return elem.across_coordinate(index);
+}
+/*!*************************************************************************************************
+ * \brief   Return coordinate value with respect to index-th orthonormal direction of element.
+ **************************************************************************************************/
+unsigned int interior_coordinate(const auto& elem, const unsigned int index)
+{
+  hy_assert(index < elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
+  return elem.along_coordinate(index);
 }
 
 }  // end of namespace Wrapper

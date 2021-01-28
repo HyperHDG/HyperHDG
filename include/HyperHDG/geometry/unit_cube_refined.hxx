@@ -126,7 +126,7 @@ class UnitCubeRefined
       {
         char_length[dim] /= (pt_coord_t)n_subintervalsT;
         translation[dim_indices[dim]] +=
-          (pt_coord_t)Wrapper::exterior_coordinate(elem, dim) / char_length[dim];
+          (pt_coord_t)Wrapper::interior_coordinate(elem, dim) / char_length[dim];
       }
     }
 
@@ -149,7 +149,7 @@ class UnitCubeRefined
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
         Wrapper::get_element(geometry.tpcc_elements_, index / geometry.n_loc_ref_elem);
-      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> loc_elem =
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> loc_elem =
         Wrapper::get_element(geometry.tpcc_ref_elem_, index % geometry.n_loc_ref_elem);
       fill_data<hyEdge_dimT>(0, elem, geometry);
       adapt_data(loc_elem);
