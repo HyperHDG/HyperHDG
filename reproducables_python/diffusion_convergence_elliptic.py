@@ -32,9 +32,9 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "CubicRefined<" + str(dimension) + "," + str(dimension) + ",1>"
-  const.geometry        = "UnitCubeRefined<" + str(dimension) + "," + str(dimension) + ",1,double>"
-  const.node_descriptor = "CubicRefined<" + str(dimension) + "," + str(dimension) + ",1>"
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
