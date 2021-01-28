@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/hypercube.hxx>
 #include <HyperHDG/wrapper/tpcc.hxx>
 
 namespace Topology
@@ -61,7 +62,7 @@ class CubicRefined
      * \param   index               The index of the hyperedge to be created.
      * \param   topology            A cubic topology.
      **********************************************************************************************/
-    hyEdge(const hyEdge_index_t index, const Cubic& topology)
+    hyEdge(const hyEdge_index_t index, const CubicRefined& topology)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
         Wrapper::get_element(topology.tpcc_elements_, index / topology.n_elem_per_elem);
@@ -78,11 +79,12 @@ class CubicRefined
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
         if (Wrapper::exterior_coordinate(face, 0) == 0 ||
             Wrapper::exterior_coordinate(face, 0) == n_subintervalsT + 1)
-          hyNode_indices_[i] = n_face_per_face * hyNode_indices_[i] +
-                               Wraper::get_index_in_slice(topology.tpcc_ref_faces_, face);
+          hyNode_indices_[i] = topology.n_face_per_face * hyNode_indices_[i] +
+                               Wrapper::get_index_in_slice(topology.tpcc_ref_faces_, face);
         else
-          hyNode_indices_[i] = n_face_per_elem * index(topology.tpcc_ref_elem_, ref_elem) +
-                               Wrapper::get_index(topology.tpcc_ref_faces_, face);
+          hyNode_indices_[i] =
+            topology.n_face_per_elem * Wrapper::get_index(topology.tpcc_ref_elem_, ref_elem) +
+            Wrapper::get_index(topology.tpcc_ref_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -127,8 +129,10 @@ class CubicRefined
   const Wrapper::tpcc_t<hyEdge_dimT - 1, space_dimT, TPCC::boundaries::both, hyNode_index_t>
     tpcc_faces_;
 
-  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, hyNode_index_t> tpcc_ref_elem_;
-  const Wrapper::tpcc_t<hyEdge_dimT - 1, hyEdge_dimT, hyNode_index_t> tpcc_ref_faces_;
+  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_ref_elem_;
+  const Wrapper::tpcc_t<hyEdge_dimT - 1, hyEdge_dimT, TPCC::boundaries::none, hyNode_index_t>
+    tpcc_ref_faces_;
 
   const unsigned int n_elem_per_elem, n_face_per_face, n_face_per_elem, n_coarse_elem,
     n_coarse_face;
@@ -171,7 +175,7 @@ class CubicRefined
     n_face_per_face(Hypercube<hyEdge_dimT - 1>::pow(n_subintervalsT)),
     n_face_per_elem(Wrapper::n_elements(tpcc_ref_faces_)),
     n_coarse_elem(Wrapper::n_elements(tpcc_elements_)),
-    c_coarse_face(Wrapper::n_elements(tpcc_faces_)),
+    n_coarse_face(Wrapper::n_elements(tpcc_faces_)),
     n_hyEdges_(n_coarse_elem * n_elem_per_elem),
     n_hyNodes_(n_coarse_face * n_face_per_face + n_coarse_elem * n_face_per_elem)
   {
@@ -183,7 +187,7 @@ class CubicRefined
    *
    * \param   other           Hypergraph to be copied.
    ************************************************************************************************/
-  CubicRefined(const Cubic<hyEdge_dimT, space_dimT>& other)
+  CubicRefined(const CubicRefined<hyEdge_dimT, space_dimT, n_subintervalsT>& other)
   : n_elements_(other.n_elements_),
     tpcc_elements_(other.tpcc_elements_),
     tpcc_faces_(other.tpcc_faces_),

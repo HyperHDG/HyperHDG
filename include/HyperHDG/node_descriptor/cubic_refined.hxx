@@ -1,7 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/hy_assert.hxx>
-#include <HyperHDG/topology/cubic.hxx>
+#include <HyperHDG/topology/cubic_refined.hxx>
 #include <cmath>
 
 namespace NodeDescriptor
@@ -50,10 +50,10 @@ class CubicRefined
      * \param   index           The index of the hyperedge to be created.
      * \param   node_desc       Cubic node descriptor.
      **********************************************************************************************/
-    hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
+    hyEdge(const hyEdge_index_t index, const CubicRefined& node_desc)
     {
-      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element(node_desc.tpcc_elements_, index / Wrapper::n_elements(tpcc_ref_elem_));
+      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem = Wrapper::get_element(
+        node_desc.tpcc_elements_, index / Wrapper::n_elements(node_desc.tpcc_ref_elem_));
       for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = Wrapper::get_face(elem, i);
@@ -67,14 +67,14 @@ class CubicRefined
         }
       }
 
-      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> ref_elem =
-        Wrapper::get_element(topology.tpcc_ref_elem_, index % Wrapper::n_elements(tpcc_ref_elem_));
-      for (unsigned int i = 0; i < hyNode_indices_.size(); ++i)
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> ref_elem = Wrapper::get_element(
+        node_desc.tpcc_ref_elem_, index % Wrapper::n_elements(node_desc.tpcc_ref_elem_));
+      for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
         if (Wrapper::exterior_coordinate(face, 0) != 0 &&
             Wrapper::exterior_coordinate(face, 0) != n_subintervalsT + 1)
-          hyNode_indices_[i] = 0;
+          hyFace_types_[i] = 0;
       }
     }
     /*!*********************************************************************************************
@@ -112,7 +112,8 @@ class CubicRefined
   const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>
     tpcc_elements_;
 
-  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, hyNode_index_t> tpcc_ref_elem_;
+  const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t>
+    tpcc_ref_elem_;
   /*!***********************************************************************************************
    * \brief   Total amount of hyperedges in hypergraph.
    ************************************************************************************************/
@@ -148,7 +149,7 @@ class CubicRefined
    *
    * \param   other         Topology to which the node descriptor will fit.
    ************************************************************************************************/
-  Cubicrefined(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
+  CubicRefined(const Topology::CubicRefined<hyEdge_dimT, space_dimT, n_subintervalsT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(other.tpcc_elem()),
     tpcc_ref_elem_(other.tpcc_ref_elem_),

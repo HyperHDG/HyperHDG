@@ -2,7 +2,7 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
-#include <HyperHDG/topology/cubic.hxx>
+#include <HyperHDG/topology/cubic_refined.hxx>
 
 #include <algorithm>
 
@@ -80,7 +80,7 @@ class UnitCubeRefined
     template <unsigned int hyEdge_dimTT>
     unsigned int fill_data(unsigned int index,
                            const Wrapper::tpcc_elem_t<hyEdge_dimTT, space_dimT>& elem,
-                           const UnitCube& geometry)
+                           const UnitCubeRefined& geometry)
     {
       if constexpr (hyEdge_dimTT == 0)
       {
@@ -145,12 +145,12 @@ class UnitCubeRefined
      * \param   index         The index of the hyperedge to be created.
      * \param   geometry      The surrounding unit hypercube.
      **********************************************************************************************/
-    hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
+    hyEdge(const hyEdge_index_t index, const UnitCubeRefined& geometry)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element(geometry.tpcc_elements_, index / n_loc_ref_elem);
+        Wrapper::get_element(geometry.tpcc_elements_, index / geometry.n_loc_ref_elem);
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> loc_elem =
-        Wrapper::get_element(geometry.tpcc_ref_elem_, index % n_loc_ref_elem);
+        Wrapper::get_element(geometry.tpcc_ref_elem_, index % geometry.n_loc_ref_elem);
       fill_data<hyEdge_dimT>(0, elem, geometry);
       adapt_data(loc_elem);
     }
@@ -450,7 +450,7 @@ class UnitCubeRefined
    *
    * \param   other       The topology of the hypergraph that has the geometry of the unit cube.
    ************************************************************************************************/
-  UnitCubeRefined(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
+  UnitCubeRefined(const Topology::CubicRefined<hyEdge_dimT, space_dimT, n_subintervalsT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
