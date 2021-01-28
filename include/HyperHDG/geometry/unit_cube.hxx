@@ -118,6 +118,19 @@ class UnitCube
       }
       return index;
     }
+    /*!*********************************************************************************************
+     * \brief   Refine coarse elememnt.
+     **********************************************************************************************/
+    void adapt_data(const Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT>& elem,
+                    const UnitCube& geometry)
+    {
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      {
+        char_length[dim] /= (pt_coord_t)geometry.n_subintervals_;
+        translation[dim_indices[dim]] +=
+          (pt_coord_t)Wrapper::interior_coordinate(elem, dim) * char_length[dim];
+      }
+    }
 
    public:
     /*!*********************************************************************************************
@@ -137,8 +150,11 @@ class UnitCube
     hyEdge(const hyEdge_index_t index, const UnitCube& geometry)
     {
       Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element(geometry.tpcc_elements_, index);
+        Wrapper::get_element(geometry.tpcc_elements_, index / geometry.n_loc_ref_elem);
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> loc_elem =
+        Wrapper::get_element(geometry.tpcc_ref_elem_, index % geometry.n_loc_ref_elem);
       fill_data<hyEdge_dimT>(0, elem, geometry);
+      adapt_data(loc_elem, geometry);
     }
 
     /*!*********************************************************************************************
@@ -379,6 +395,18 @@ class UnitCube
    ************************************************************************************************/
   const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>
     tpcc_elements_;
+  /*!***********************************************************************************************
+   * \brief   Refinment level corresponds to number of subintervals per dimension.
+   ************************************************************************************************/
+  unsigned int n_subintervals_;
+  /*!***********************************************************************************************
+   * \brief   Tensor product chain complex for refined elements.
+   ************************************************************************************************/
+  Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t> tpcc_ref_elem_;
+  /*!***********************************************************************************************
+   * \brief   Number of refined elements per element.
+   ************************************************************************************************/
+  unsigned int n_loc_ref_elem;
 
  public:
   /*!***********************************************************************************************
@@ -412,7 +440,12 @@ class UnitCube
   : n_elements_(n_elements),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-        n_elements))
+        n_elements)),
+    n_subintervals_(1),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_))),
+    n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervals_))
   {
   }
   /*!***********************************************************************************************
@@ -427,7 +460,12 @@ class UnitCube
   : n_elements_(other.n_elements()),
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
-        other.n_elements()))
+        other.n_elements())),
+    n_subintervals_(other.get_refinement()),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_))),
+    n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervals_))
   {
   }
   /*!***********************************************************************************************
@@ -441,6 +479,21 @@ class UnitCube
    * \retval  hyperedge   Geometrical information on the hyperedge (cf. \c value_type).
    ************************************************************************************************/
   const value_type operator[](const hyEdge_index_t index) const { return hyEdge(index, *this); }
+  /*!***********************************************************************************************
+   * \brief   Return the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  unsigned int get_refinement() const { return n_subintervals_; }
+  /*!***********************************************************************************************
+   * \brief   Set the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  void set_refinement(unsigned int level)
+  {
+    n_subintervals_ = level;
+    tpcc_ref_elem_ =
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_));
+    n_loc_ref_elem = Hypercube<hyEdge_dimT>::pow(n_subintervals_);
+  }
 };  // end class UnitCube
 
 }  // end namespace Geometry

@@ -399,7 +399,7 @@ class UnitCubeRefined
   const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>
     tpcc_ref_elem_;
   /*!***********************************************************************************************
-   * \brief   Number of refined elements per element..
+   * \brief   Number of refined elements per element.
    ************************************************************************************************/
   const unsigned int n_loc_ref_elem;
 

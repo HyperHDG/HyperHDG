@@ -51,8 +51,8 @@ class Cubic
      **********************************************************************************************/
     hyEdge(const hyEdge_index_t index, const Cubic& node_desc)
     {
-      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem =
-        Wrapper::get_element(node_desc.tpcc_elements_, index);
+      Wrapper::tpcc_elem_t<hyEdge_dimT, space_dimT> elem = Wrapper::get_element(
+        node_desc.tpcc_elements_, index / Wrapper::n_elements(node_desc.tpcc_ref_elem_));
       for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
       {
         Wrapper::tpcc_elem_t<hyEdge_dimT - 1, space_dimT> face = Wrapper::get_face(elem, i);
@@ -64,6 +64,16 @@ class Cubic
           if (coordinate == 0 || coordinate == node_desc.n_elements().operator[](direction))
             hyFace_types_[i] += (1 + (coordinate != 0)) * std::pow(3, direction);
         }
+      }
+
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> ref_elem = Wrapper::get_element(
+        node_desc.tpcc_ref_elem_, index % Wrapper::n_elements(node_desc.tpcc_ref_elem_));
+      for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
+      {
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
+        if (Wrapper::exterior_coordinate(face, 0) != 0 &&
+            Wrapper::exterior_coordinate(face, 0) != node_desc.n_subintervals_)
+          hyFace_types_[i] = 0;
       }
     }
     /*!*********************************************************************************************
@@ -101,9 +111,17 @@ class Cubic
   const Wrapper::tpcc_t<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyNode_index_t>
     tpcc_elements_;
   /*!***********************************************************************************************
+   * \brief   Refinment level corresponds to number of subintervals per dimension.
+   ************************************************************************************************/
+  unsigned int n_subintervals_;
+  /*!***********************************************************************************************
+   * \brief   Tensor product chain complex for refined elements of hypergedge.
+   ************************************************************************************************/
+  Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t> tpcc_ref_elem_;
+  /*!***********************************************************************************************
    * \brief   Total amount of hyperedges in hypergraph.
    ************************************************************************************************/
-  const hyEdge_index_t n_hyEdges_;
+  hyEdge_index_t n_hyEdges_;
 
  public:
   /*!***********************************************************************************************
@@ -124,6 +142,10 @@ class Cubic
     tpcc_elements_(
       Wrapper::create_tpcc<hyEdge_dimT, space_dimT, TPCC::boundaries::both, hyEdge_index_t>(
         n_elements)),
+    n_subintervals_(1),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_))),
     n_hyEdges_(Wrapper::n_elements(tpcc_elements_))
   {
   }
@@ -135,6 +157,8 @@ class Cubic
   Cubic(const Topology::Cubic<hyEdge_dimT, space_dimT>& other)
   : n_elements_(other.n_elements()),
     tpcc_elements_(other.tpcc_elem()),
+    n_subintervals_(other.get_refinement()),
+    tpcc_ref_elem_(other.tpcc_ref_elem()),
     n_hyEdges_(other.n_hyEdges())
   {
   }
@@ -167,6 +191,22 @@ class Cubic
    * \retval  n_hyperedges  The total amount of hyperedges of a hypergraph.
    ************************************************************************************************/
   const hyEdge_index_t n_hyEdges() const { return n_hyEdges_; }
+  /*!***********************************************************************************************
+   * \brief   Return the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  unsigned int get_refinement() const { return n_subintervals_; }
+  /*!***********************************************************************************************
+   * \brief   Set the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  void set_refinement(unsigned int level)
+  {
+    n_subintervals_ = level;
+    tpcc_ref_elem_ =
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_));
+    n_hyEdges_ = Wrapper::n_elements(tpcc_elements_);
+  }
+
 };  // end of class Cubic
 
 }  // end of namespace NodeDescriptor

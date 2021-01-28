@@ -36,7 +36,7 @@ class HyperNodeFactory
    * the correct size, to check whether a vector has the appropriate size, and to check whether a
    * degree of freedom has a valid index.
    ************************************************************************************************/
-  const hyNode_index_t n_hyNodes_;
+  hyNode_index_t n_hyNodes_;
 
  public:
   /*!***********************************************************************************************
