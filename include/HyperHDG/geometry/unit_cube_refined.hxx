@@ -126,7 +126,7 @@ class UnitCubeRefined
       {
         char_length[dim] /= (pt_coord_t)n_subintervalsT;
         translation[dim_indices[dim]] +=
-          (pt_coord_t)Wrapper::interior_coordinate(elem, dim) / char_length[dim];
+          (pt_coord_t)Wrapper::interior_coordinate(elem, dim) * char_length[dim];
       }
     }
 

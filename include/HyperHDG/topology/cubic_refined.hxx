@@ -82,10 +82,9 @@ class CubicRefined
           hyNode_indices_[i] = topology.n_face_per_face * hyNode_indices_[i] +
                                Wrapper::get_index_in_slice(topology.tpcc_ref_faces_, face);
         else
-          hyNode_indices_[i] =
-            topology.n_coarse_face * topology.n_face_per_face +
-            topology.n_face_per_elem * (index / topology.n_elem_per_elem) +
-            Wrapper::get_index(topology.tpcc_ref_faces_, face);
+          hyNode_indices_[i] = topology.n_coarse_face * topology.n_face_per_face +
+                               topology.n_face_per_elem * (index / topology.n_elem_per_elem) +
+                               Wrapper::get_index(topology.tpcc_ref_faces_, face);
       }
     }
     /*!*********************************************************************************************
@@ -180,7 +179,8 @@ class CubicRefined
     n_hyEdges_(n_coarse_elem * n_elem_per_elem),
     n_hyNodes_(n_coarse_face * n_face_per_face + n_coarse_elem * n_face_per_elem)
   {
-    std::cout << n_elem_per_elem << n_face_per_face << n_face_per_elem << n_coarse_elem << n_coarse_face << std::endl;
+    std::cout << n_elem_per_elem << n_face_per_face << n_face_per_elem << n_coarse_elem
+              << n_coarse_face << std::endl;
   }
   /*!***********************************************************************************************
    * \brief   Construct a hypergraph topology from another hypergraph topology.
