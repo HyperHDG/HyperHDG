@@ -179,8 +179,6 @@ class CubicRefined
     n_hyEdges_(n_coarse_elem * n_elem_per_elem),
     n_hyNodes_(n_coarse_face * n_face_per_face + n_coarse_elem * n_face_per_elem)
   {
-    std::cout << n_elem_per_elem << n_face_per_face << n_face_per_elem << n_coarse_elem
-              << n_coarse_face << std::endl;
   }
   /*!***********************************************************************************************
    * \brief   Construct a hypergraph topology from another hypergraph topology.
