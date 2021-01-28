@@ -30,9 +30,9 @@ void test()
   typedef Geometry::UnitCube<edge_dim, space_dim> Geo;
   typedef NodeDescriptor::Cubic<edge_dim, space_dim> Node;
 
-  auto topo = std::make_shared<const Topo>(num_elements);
-  auto geo = std::make_shared<const Geo>(*topo);
-  auto node = std::make_shared<const Node>(num_elements);
+  auto topo = std::make_shared<Topo>(num_elements);
+  auto geo = std::make_shared<Geo>(*topo);
+  auto node = std::make_shared<Node>(num_elements);
 
   typedef LocalSolver::Template<edge_dim, double> SolverType;
   SolverType lsolver;
