@@ -2,25 +2,25 @@ PROJECT     	= HyperHDG
 .PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
                 clean_pycache doxygen format submodules test_all_compilers test_compiler
 
-# List of compilers that HyperHDG is tested to run with.
+
+####################################################################################################
+# The default compiler of GNUmake is CXX=g++. This can be changed by an environment variable of the
+# same name or by the command line argument CXX=compiler when running make.
+#
+# The respective compiler must support C++20. If $(CXX) is listed in $(TEST_COMPILER), the code is
+# quite safe to run, since it is tested against the usage of all compilers defined as TEST_COMPILER.
+####################################################################################################
+
+## List of compilers that HyperHDG is tested to run with (using 'make test_all_compilers'.
 TEST_COMPILER = clang++-10 clang++-11 g++-10
 
 
 ####################################################################################################
-# The default compiler of GNUmake is CXX=g++. This can be changed by
-# an environment variable of the same name or by the command line
-# argument CXX=compiler when running make
-#
-# The respective compiler must support C++20. If $(CXX) is listed in
-# $(TEST_COMPILER), the code is pretty safe to run, since it is tested against the usage of all
-# compilers defined as TEST_COMPILER.
-####################################################################################################
-
-####################################################################################################
 # The default target generates a build subdirectory and then configures the library there, builds
-# it and runs the tests
+# it, and runs the tests.
 ####################################################################################################
 
+## Default target executed by 'make' or 'make build'.
 build:
 	mkdir -p build
 	cd build; cmake -DCMAKE_CXX_COMPILER=$(CXX) ..

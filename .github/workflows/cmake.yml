@@ -8,8 +8,8 @@ env:
   PYTHON: python3-dev python3-numpy python3-scipy cython3
 
 jobs:
-  build_gnu:
-    name: Test build with g++
+  build_gnu10:
+    name: Test build with g++-10
     # The CMake configure and build commands are platform agnostic and should work equally well on
     # Windows or Mac.  You can convert this to a matrix build if you need# cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/
@@ -56,12 +56,40 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C $BUILD_TYPE
 
-  build_clang:
-    name: Test build with clang++
+  build_clang10:
+    name: Test build with clang++-10
     runs-on: ubuntu-latest
     env:
-      BUILD_DIRECTORY: build_clang
+      BUILD_DIRECTORY: build_clang10
       CXX: clang++-10
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+       submodules: recursive
+    - name: Install Compiler
+      run: sudo apt-get update; sudo apt-get install -y $CXX $PYTHON
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/env.BUILD_DIRECTORY
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/env.BUILD_DIRECTORY
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    - name: Build
+      working-directory: ${{runner.workspace}}/env.BUILD_DIRECTORY
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+    - name: Test
+      working-directory: ${{runner.workspace}}/env.BUILD_DIRECTORY
+      shell: bash
+      run: ctest -C $BUILD_TYPE
+
+  build_clang11:
+    name: Test build with clang++-11
+    runs-on: ubuntu-latest
+    env:
+      BUILD_DIRECTORY: build_clang11
+      CXX: clang++-11
     steps:
     - name: Checkout
       uses: actions/checkout@v2
