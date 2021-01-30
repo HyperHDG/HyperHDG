@@ -1,9 +1,7 @@
 name: Doxygen
 
-# Act only if a 'push' occurred.
 on: push
 
-# In that case do the job 'make_and_deploy_doxygen'
 jobs:
   make_and_deploy_doxygen:
     name: Make and deploy doxygen
@@ -18,9 +16,9 @@ jobs:
       with:
         deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
         doxygen_command: "make doxygen"
-        # ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
-        # ci_user_name: HyperHDG-CI
-        # ci_user_mail: HyperHDG@rupp.ink
-        # pages_repo_organization: HyperHDG
-        # pages_repo_name: auto_pages
-        # doxygen_path: doxygen/html
+        ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
+        ci_user_name: HyperHDG-CI
+        ci_user_mail: HyperHDG@rupp.ink
+        pages_repo_organization: HyperHDG
+        pages_repo_name: auto_pages
+        doxygen_path: doxygen/html
