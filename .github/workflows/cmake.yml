@@ -22,5 +22,4 @@ jobs:
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
-      with:
-        cxx_compiler: ${{env.CXX}}
+      
