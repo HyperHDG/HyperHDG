@@ -16,7 +16,7 @@ jobs:
     - name: Run bulild and deploy action
       uses: HyperHDG/actions@doxygen
       with:
-        deploy_doxygen: ${{ github.ref == 'refs/heads/auto_actions' }}
+        deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
         doxygen_command: "make doxygen"
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
