@@ -88,5 +88,6 @@ reference_solution = np.array(
     0.63876017, 0.57986777, 0.5,        0.42013223, 0.36123983, 0.60792184,
     0.5571756,  0.47616658, 0.37646469, 0.27150911, 0.58408351, 0.53640684,
     0.44719263, 0.3000305,  0. ])
-    
+
+assert 0==1
 assert np.linalg.norm(reference_solution - vectorSolution - vectorDirichlet, np.inf) < tolerance
