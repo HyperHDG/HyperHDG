@@ -10,10 +10,6 @@ env:
 jobs:
   build_gnu10:
     name: Test build with g++-10
-    # The CMake configure and build commands are platform agnostic and should work equally well on
-    # Windows or Mac.  You can convert this to a matrix build if you need# cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/
-    #      managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     env:
       BUILD_DIRECTORY: build_gnu
@@ -29,4 +25,4 @@ jobs:
       run: sudo apt-get update; sudo apt-get install -y $CXX $PYTHON
 
     - name: Conduct CMake test
-      uses: HyperHDG/actions@cmake 
+      uses: HyperHDG/actions@cmake
