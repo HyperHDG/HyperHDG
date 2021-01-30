@@ -13,10 +13,10 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: recursive
-    - name: Conduct CMake test
+    - name: Run bulild and deploy action
       uses: HyperHDG/actions@doxygen
       with:
-        deploy_doxygen: true
+        deploy_doxygen: ${{ github.ref == 'refs/heads/auto_actions' }}
         doxygen_command: "make doxygen"
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
@@ -24,9 +24,3 @@ jobs:
         pages_repo_organization: HyperHDG
         pages_repo_name: auto_pages
         doxygen_path: doxygen/html
-      # - name: Run deploy_doxygen script
-      #   env:
-      #     REPO_TOKEN: ${{ secrets.CI_REPO_TOKEN }}
-      #   run: chmod 700 .ci/deploy_doxygen.sh; .ci/deploy_doxygen.sh
-      #   shell: bash
-      #   if: ${{ success() && github.ref == 'refs/heads/main' }}
