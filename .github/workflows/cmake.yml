@@ -12,17 +12,15 @@ jobs:
     name: Test build with g++-10
     runs-on: ubuntu-latest
     env:
-      BUILD_DIRECTORY: build_gnu
-      CXX: g++-10
-
+      CXX=g++-10
     steps:
     - name: Checkout
       uses: actions/checkout@v2
       with:
        submodules: recursive
-
-    - name: Install Compiler
-      run: sudo apt-get update; sudo apt-get install -y $CXX $PYTHON
-
+    - name: Install Python
+      run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
+      with:
+        cxx_compiler: ${{env.CXX}}
