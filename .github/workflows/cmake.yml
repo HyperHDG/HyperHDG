@@ -86,7 +86,7 @@ jobs:
 
   build_clang11:
     name: Test build with clang++-11
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       BUILD_DIRECTORY: build_clang11
       CXX: clang++-11
