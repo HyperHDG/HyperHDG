@@ -20,4 +20,4 @@ jobs:
     - name: Run CMake test
       uses: HyperHDG/actions@cmake
       with:
-        compiler: g++-10
+        compiler: g++-10 
