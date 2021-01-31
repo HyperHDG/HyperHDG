@@ -18,5 +18,5 @@ jobs:
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
         ci_user_mail: HyperHDG@rupp.ink
-        pages_repo_organization: AndreasRupp
-        pages_repo_name: HyperHDG.wiki
+        wiki_repo_organization: AndreasRupp
+        wiki_repo_name: HyperHDG.wiki
