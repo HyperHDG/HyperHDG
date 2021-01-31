@@ -6,17 +6,11 @@
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
 
-    $ sudo apt-get install g++-10 git doxygen graphviz cmake python3-dev python3-numpy \
-    python3-scipy cython3 libblas-dev liblapack-dev
+    $ sudo apt-get install git doxygen graphviz cmake python3-dev python3-numpy python3-scipy \
+    cython3 libblas-dev liblapack-dev
 
 
 This command installs
-
-- `g++-10` currently is the `DEFAULT_COMPILER` for which HyperHDG is implemented. In principle, you
-may use any other C++ compiler that can supports `C++20` as well. However, HyperHDG is regularly 
-checked against the compilers in the set `TEST_COMPILER` of the [Makefile](
-https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). Thus, we recommend to use one of
-these if you want to be sure that HyperHDG works.
 
 - `git` is the revision control system, GitHub is based on. It is the recommended tool to obtain and
 administrate HyperHDG.
@@ -40,7 +34,9 @@ efficient solvers for dense linear equation systems and which are used to solve 
 systems of equations defined by the local hybrid discontinuous Galerkin (HDG) solvers.
 
 
-Moreover, to visualize the output of simulations, we recommend to install `ParaView`.
+Compilation of the C++ code can be done using a compiler that can deal with the standard `C++20`. A
+list of compilers that are regularly check to work can be found in the `Makefile`. Moreover, to
+visualize the output of simulations, we recommend to install `ParaView`.
 
 
 ## Obtain and install HyperHDG
@@ -61,15 +57,16 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
 
        $ cd your_name
 
-3. If (and only if) you want to use a compiler different from the `DEFAULT_COMPILER` you need to
-change this variable to represent your chosen compiler within the [Makefile](
-https://github.com/AndreasRupp/HyperHDG/blob/master/Makefile). That is, you need to change the line
-
-       DEFAULT_COMPILER = g++-10
-
-4. Execute the script `setup.sh` to install HyperHDG by
+3. Execute the script `setup.sh` to install HyperHDG by
 
        $ ./shell_scripts/setup.sh
+
+   If the default compiler of your system does not support `C-++20`, please obtain a compiler that
+   does so and run
+
+       $ CXX=compiler_name ./shell_scripts/setup.sh
+
+   instead. This configures the default compiler of HyperHDG to be `compiler_name`.
 
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
