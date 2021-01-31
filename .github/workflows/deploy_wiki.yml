@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - gh-wiki
-    - wiki_actions
 
 jobs:
   deploy_wiki:
