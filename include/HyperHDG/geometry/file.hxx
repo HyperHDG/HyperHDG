@@ -349,6 +349,18 @@ class File
                 << index << "!");
     return hyEdge(*this, index);
   }
+  /*!***********************************************************************************************
+   * \brief   Return the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  unsigned int get_refinement() const
+  {
+    hy_assert(false, "Not implemented");
+    return 0;
+  }
+  /*!***********************************************************************************************
+   * \brief   Set the refinement level (equal to number of subintervals).
+   ************************************************************************************************/
+  void set_refinement(unsigned int) { hy_assert(false, "Not implemented"); }
 };  // end class File
 
 }  // end namespace Geometry

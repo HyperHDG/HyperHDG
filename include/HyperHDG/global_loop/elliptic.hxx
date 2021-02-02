@@ -299,6 +299,14 @@ class Elliptic
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
+  /*!***********************************************************************************************
+   * \brief   Return refinement level.
+   ************************************************************************************************/
+  unsigned int get_refinement() { return hyper_graph_.get_refinement(); }
+  /*!***********************************************************************************************
+   * \brief   Set refinement level.
+   ************************************************************************************************/
+  void set_refinement(unsigned int level) { hyper_graph_.set_refinement(level); }
 };  // end of class Elliptic
 
 }  // end of namespace GlobalLoop

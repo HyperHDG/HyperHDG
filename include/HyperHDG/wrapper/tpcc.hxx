@@ -36,8 +36,12 @@ unsigned int binomial(unsigned int n, unsigned int k)
 /*!*************************************************************************************************
  * \brief   Type of a tensor product chain complex.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int>
-using tpcc_t = TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>;
+template <unsigned int hyEdge_dim,
+          unsigned int space_dim,
+          typename TPCC::boundaries bndT = TPCC::boundaries::both,
+          typename index_t = unsigned int>
+using tpcc_t =
+  TPCC::Lexicographic<space_dim, hyEdge_dim, bndT, index_t, unsigned int, unsigned int>;
 /*!*************************************************************************************************
  * \brief   Type of an element of a tensor product chain complex.
  **************************************************************************************************/
@@ -51,27 +55,29 @@ using tpcc_elem_t = TPCC::Element<space_dim, hyEdge_dim, unsigned int, unsigned 
 /*!*************************************************************************************************
  * \brief   Create a tensor product chain complex.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t = unsigned int>
-tpcc_t<hyEdge_dim, space_dim, index_t> create_tpcc(const SmallVec<space_dim, index_t>& vec)
+template <unsigned int hyEdge_dim,
+          unsigned int space_dim,
+          typename TPCC::boundaries bndT = TPCC::boundaries::both,
+          typename index_t = unsigned int>
+tpcc_t<hyEdge_dim, space_dim, bndT, index_t> create_tpcc(const SmallVec<space_dim, index_t>& vec)
 {
   static_assert(space_dim >= hyEdge_dim, "Hypercube dim must not be bigger than spatial dim!");
-  return TPCC::Lexicographic<space_dim, hyEdge_dim, index_t, unsigned int, unsigned int>(
+  return TPCC::Lexicographic<space_dim, hyEdge_dim, bndT, index_t, unsigned int, unsigned int>(
     vec.data());
 }
 /*!*************************************************************************************************
  * \brief   Create a tensor product chain complex associated to the facets.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-tpcc_t<hyEdge_dim - 1, space_dim, index_t> tpcc_faces(
-  const tpcc_t<hyEdge_dim, space_dim, index_t>& elements)
+template <typename TPCC::boundaries bndT>
+auto tpcc_faces(const auto& elements)
 {
-  return elements.boundary();
+  return elements.template boundary<bndT>();
 }
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-index_t n_elements(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc)
+template <typename index_t = unsigned int>
+index_t n_elements(const auto& tpcc)
 {
   return tpcc.size();
 }
@@ -83,9 +89,7 @@ index_t n_elements(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc)
 /*!*************************************************************************************************
  * \brief   Return the element of given index the TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-tpcc_elem_t<hyEdge_dim, space_dim> get_element(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc,
-                                               const index_t index)
+auto get_element(const auto& tpcc, const auto index)
 {
   hy_assert(index < tpcc.size(), "Index " << index << " must not be bigger than the TPCC "
                                           << "size, which is " << tpcc.size() << ".");
@@ -94,58 +98,69 @@ tpcc_elem_t<hyEdge_dim, space_dim> get_element(const tpcc_t<hyEdge_dim, space_di
 /*!*************************************************************************************************
  * \brief   Return index of given element within TPCC.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim, typename index_t>
-index_t get_index(const tpcc_t<hyEdge_dim, space_dim, index_t>& tpcc,
-                  const tpcc_elem_t<hyEdge_dim, space_dim>& elem)
+template <typename index_t = unsigned int>
+index_t get_index(const auto& tpcc, const auto& elem)
 {
   index_t index = tpcc.index(elem);
   hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");
   return index;
 }
 /*!*************************************************************************************************
+ * \brief   Return index of given element within TPCC.
+ **************************************************************************************************/
+template <typename index_t = unsigned int>
+index_t get_index_in_slice(const auto& tpcc, const auto& elem)
+{
+  index_t index = tpcc.index_in_slice(elem);
+  // hy_assert(index < tpcc.size(), "Returned index is larger than number of elements!");
+  return index;
+}
+/*!*************************************************************************************************
  * \brief   Return i-th element facet.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-tpcc_elem_t<hyEdge_dim - 1, space_dim> get_face(const tpcc_elem_t<hyEdge_dim, space_dim>& element,
-                                                const unsigned int index)
+auto get_face(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < 2 * hyEdge_dim, "An element hast only " << 2 * hyEdge_dim << "facets. "
-                                                            << "You requested number " << index
-                                                            << ".");
-  return element.facet(index);
+  hy_assert(index < elem.n_facets(), "An element hast only " << elem.n_facets() << "facets. "
+                                                             << "You requested number " << index
+                                                             << ".");
+  return elem.facet(index);
 }
 /*!*************************************************************************************************
  * \brief   Determine the orientation of an element.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-unsigned int elem_orientation(const tpcc_elem_t<hyEdge_dim, space_dim>& elem)
+unsigned int elem_orientation(const auto& elem)
 {
   return elem.direction_index();
 }
 /*!*************************************************************************************************
  * \brief   Return the index-th orthonormal direction to element.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-unsigned int exterior_direction(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
-                                const unsigned int index)
+unsigned int exterior_direction(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < space_dim - hyEdge_dim,
-            "There are only " << space_dim - hyEdge_dim << " exterior directions.");
+  hy_assert(index < elem.n_val - elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
   unsigned int acr_dir = elem.across_direction(index);
-  hy_assert(acr_dir < space_dim,
+  hy_assert(acr_dir < elem.n_val,
             "Exterior direction must be smaller than amount of spatial dimensions!");
   return acr_dir;
 }
 /*!*************************************************************************************************
+ * \brief   Return coordinate value with respect to index-th orthonormal direction on element.
+ **************************************************************************************************/
+unsigned int exterior_coordinate(const auto& elem, const unsigned int index)
+{
+  hy_assert(index < elem.n_val - elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
+  return elem.across_coordinate(index);
+}
+/*!*************************************************************************************************
  * \brief   Return coordinate value with respect to index-th orthonormal direction of element.
  **************************************************************************************************/
-template <unsigned int hyEdge_dim, unsigned int space_dim>
-unsigned int exterior_coordinate(const tpcc_elem_t<hyEdge_dim, space_dim>& elem,
-                                 const unsigned int index)
+unsigned int interior_coordinate(const auto& elem, const unsigned int index)
 {
-  hy_assert(index < space_dim - hyEdge_dim,
-            "There are only " << space_dim - hyEdge_dim << " exterior directions.");
-  return elem.across_coordinate(index);
+  hy_assert(index < elem.k_val,
+            "There are only " << elem.n_val - elem.k_val << " exterior directions.");
+  return elem.along_coordinate(index);
 }
 
 }  // end of namespace Wrapper
