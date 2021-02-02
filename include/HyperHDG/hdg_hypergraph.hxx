@@ -261,20 +261,20 @@ class HDGHyperGraph
    * This object contains the topology of the hypergraph, i.e., it encodes which hyperedges
    * connect which hypernodes.
    ************************************************************************************************/
-  std::shared_ptr<const TopoT> hyGraph_topology_;
+  std::shared_ptr<TopoT> hyGraph_topology_;
   /*!***********************************************************************************************
    * \brief   Geometry of the hypergraph.
    *
    * This object contains the geometry of the hypergraph, i.e., it encodes the geometry of the
    * various hyperedges.
    ************************************************************************************************/
-  std::shared_ptr<const GeomT> hyGraph_geometry_;
+  std::shared_ptr<GeomT> hyGraph_geometry_;
   /*!***********************************************************************************************
    * \brief   Node descriptions of the hypergraph.
    *
    * This object contains the nodal information of the hypergraph.
    ************************************************************************************************/
-  std::shared_ptr<const NodeT> hyGraph_node_des_;
+  std::shared_ptr<NodeT> hyGraph_node_des_;
   /*!***********************************************************************************************
    * \brief   Hypernode factory administrating the access to degrees of freedom.
    *
@@ -282,7 +282,7 @@ class HDGHyperGraph
    * are located in some \c std::vector. Note that this HyperNodeFactory has the same index type
    * for the hypernodes as this class for the hyperedges.
    ************************************************************************************************/
-  const HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t> hyNode_factory_;
+  HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t> hyNode_factory_;
   /*!***********************************************************************************************
    * \brief   Hypernode factory administrating the access to degrees of freedom.
    *
@@ -304,9 +304,9 @@ class HDGHyperGraph
    *                                to construct a \c HDGHyperGraph.
    ************************************************************************************************/
   HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo)
-  : hyGraph_topology_(std::make_shared<const TopoT>(construct_topo)),
-    hyGraph_geometry_(std::make_shared<const GeomT>(*hyGraph_topology_)),
-    hyGraph_node_des_(std::make_shared<const NodeT>(*hyGraph_topology_)),
+  : hyGraph_topology_(std::make_shared<TopoT>(construct_topo)),
+    hyGraph_geometry_(std::make_shared<GeomT>(*hyGraph_topology_)),
+    hyGraph_node_des_(std::make_shared<NodeT>(*hyGraph_topology_)),
     hyNode_factory_(hyGraph_topology_->n_hyNodes()),
     hyData_cont_(hyGraph_topology_->n_hyEdges())
   {
@@ -336,9 +336,9 @@ class HDGHyperGraph
    ************************************************************************************************/
   HDGHyperGraph(const typename TopoT::constructor_value_type& construct_topo,
                 const typename GeomT::constructor_value_type& construct_geom)
-  : hyGraph_topology_(std::make_shared<const TopoT>(construct_topo)),
-    hyGraph_geometry_(std::make_shared<const GeomT>(construct_geom)),
-    hyGraph_node_des_(std::make_shared<const NodeT>(*hyGraph_topology_)),
+  : hyGraph_topology_(std::make_shared<TopoT>(construct_topo)),
+    hyGraph_geometry_(std::make_shared<GeomT>(construct_geom)),
+    hyGraph_node_des_(std::make_shared<NodeT>(*hyGraph_topology_)),
     hyNode_factory_(hyGraph_topology_->n_hyNodes()),
     hyData_cont_(hyGraph_topology_->n_hyEdges())
   {
@@ -367,9 +367,9 @@ class HDGHyperGraph
    * \param   geom                  Information needed to deduce geometrical data.
    * \param   node                  Information needed to deduce nodal data.
    ************************************************************************************************/
-  HDGHyperGraph(std::shared_ptr<const TopoT> topo,
-                std::shared_ptr<const GeomT> geom,
-                std::shared_ptr<const NodeT> node)
+  HDGHyperGraph(std::shared_ptr<TopoT> topo,
+                std::shared_ptr<GeomT> geom,
+                std::shared_ptr<NodeT> node)
   : hyGraph_topology_(topo),
     hyGraph_geometry_(geom),
     hyGraph_node_des_(node),
@@ -514,5 +514,20 @@ class HDGHyperGraph
   const dof_index_t n_global_dofs() const
   {
     return hyNode_factory_.n_global_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Return the refinement level of the hypergraph.
+   ************************************************************************************************/
+  unsigned int get_refinement() const { return hyGraph_topology_->get_refinement(); }
+  /*!***********************************************************************************************
+   * \brief   Set the refinement level of the hypergraph.
+   ************************************************************************************************/
+  void set_refinement(unsigned int level)
+  {
+    hyGraph_topology_->set_refinement(level);
+    hyGraph_geometry_->set_refinement(level);
+    hyGraph_node_des_->set_refinement(level);
+    hyNode_factory_ =
+      HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t>(hyGraph_topology_->n_hyNodes());
   }
 };  // end of class HDGHyperGraph

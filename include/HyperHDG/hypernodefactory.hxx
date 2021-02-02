@@ -36,7 +36,7 @@ class HyperNodeFactory
    * the correct size, to check whether a vector has the appropriate size, and to check whether a
    * degree of freedom has a valid index.
    ************************************************************************************************/
-  const hyNode_index_t n_hyNodes_;
+  hyNode_index_t n_hyNodes_;
 
  public:
   /*!***********************************************************************************************
@@ -56,6 +56,22 @@ class HyperNodeFactory
    * \param   hnf                 A \c HyperNodeFactory to be copied.
    ************************************************************************************************/
   HyperNodeFactory(const HyperNodeFactory<n_dofs_per_nodeT>& hnf) : n_hyNodes_(hnf.n_hyNodes_) {}
+  /*!***********************************************************************************************
+   * \brief   Copy assignment.
+   ************************************************************************************************/
+  HyperNodeFactory<n_dofs_per_nodeT>& operator=(const HyperNodeFactory<n_dofs_per_nodeT>& other)
+  {
+    n_hyNodes_ = other.n_hyNodes_;
+    return *this;
+  }
+  /*!***********************************************************************************************
+   * \brief   Move assignment.
+   ************************************************************************************************/
+  HyperNodeFactory<n_dofs_per_nodeT>& operator=(HyperNodeFactory<n_dofs_per_nodeT>&& other) noexcept
+  {
+    n_hyNodes_ = other.n_hyNodes_;
+    return *this;
+  }
   /*!***********************************************************************************************
    * \brief   Returns the total amount of hypernodes in the considered hypergraph.
    *

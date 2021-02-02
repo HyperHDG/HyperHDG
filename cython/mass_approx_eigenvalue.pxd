@@ -14,3 +14,5 @@ cdef extern from "<HyperHDG/global_loop/mass_approx_eigenvalue.hxx>" :
     int size_of_system ()
     string plot_option (string, string)
     void plot_solution (vector[ CyReplace03 ], CyReplace03 )
+    unsigned int get_refinement()
+    void set_refinement(unsigned int)

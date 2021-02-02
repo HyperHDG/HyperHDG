@@ -45,3 +45,9 @@ cdef class PythonClassName :
     return return_val
   def plot_solution(self, vec):
     self.thisptr.plot_solution (vec)
+  def refine(self, n_ref = 'default'):
+    if n_ref == 'default':
+      return self.thisptr.get_refinement()
+    else:
+      self.thisptr.set_refinement(n_ref)
+      return n_ref
