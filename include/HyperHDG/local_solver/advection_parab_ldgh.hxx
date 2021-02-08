@@ -174,6 +174,13 @@ class AdvectionParab
                      node_type) != parameters::dirichlet_nodes.end();
   }
 
+  template <typename parameters>
+  static constexpr bool is_outflow(const unsigned int node_type)
+  {
+    return std::find(parameters::outflow_nodes.begin(), parameters::outflow_nodes.end(),
+                     node_type) != parameters::outflow_nodes.end();
+  }
+
   // -----------------------------------------------------------------------------------------------
   // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
   // -----------------------------------------------------------------------------------------------
@@ -529,16 +536,33 @@ class AdvectionParab
              tau_ * integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
                       i, j, face, hyper_edge.geometry));
       }
-      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+          // if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+            hyper_edge.data.flux_old[i] +=
+              lambda_values[face][j] *
+              (integrator::template integrate_bdr_phipsinuvecfunc_cutwind<
+                 Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                 decltype(hyEdgeT::geometry), parameters::velocity,
+                 Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) -
+               tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                        i, j, face, hyper_edge.geometry));
+        // else
+        //   for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        //     hyper_edge.data.flux_old[i] -=
+        //       tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+        //               i, j, face, hyper_edge.geometry);
+        else
           hyper_edge.data.flux_old[i] +=
-            lambda_values[face][j] *
-            (integrator::template integrate_bdr_phipsinuvecfunc_cutwind<
-               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-               decltype(hyEdgeT::geometry), parameters::velocity, Point<hyEdge_dimT, lSol_float_t>>(
-               i, j, face, hyper_edge.geometry, time) -
-             tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                      i, j, face, hyper_edge.geometry));
+            integrator::template integrate_bdr_phifuncnuvecfunc_cutwind<
+              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+              decltype(hyEdgeT::geometry), parameters::dirichlet_value, parameters::velocity,
+              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time) -
+            tau_ * integrator::template integrate_bdr_phifunc<
+                     Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                     decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+                     Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
     }
   }
   /*!***********************************************************************************************
@@ -601,16 +625,33 @@ class AdvectionParab
              tau_ * integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
                       i, j, face, hyper_edge.geometry));
       }
-      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+          // if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+            hyper_edge.data.flux_old[i] +=
+              lambda_values[face][j] *
+              (integrator::template integrate_bdr_phipsinuvecfunc_cutwind<
+                 Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                 decltype(hyEdgeT::geometry), parameters::velocity,
+                 Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) -
+               tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                        i, j, face, hyper_edge.geometry));
+        // else
+        //   for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        //     hyper_edge.data.flux_old[i] -=
+        //       tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+        //               i, j, face, hyper_edge.geometry);
+        else
           hyper_edge.data.flux_old[i] +=
-            lambda_values[face][j] *
-            (integrator::template integrate_bdr_phipsinuvecfunc_cutwind<
-               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-               decltype(hyEdgeT::geometry), parameters::velocity, Point<hyEdge_dimT, lSol_float_t>>(
-               i, j, face, hyper_edge.geometry, time) -
-             tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                      i, j, face, hyper_edge.geometry));
+            integrator::template integrate_bdr_phifuncnuvecfunc_cutwind<
+              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+              decltype(hyEdgeT::geometry), parameters::dirichlet_value, parameters::velocity,
+              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time) -
+            tau_ * integrator::template integrate_bdr_phifunc<
+                     Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                     decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+                     Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
     }
 
     return lambda_values;
@@ -802,17 +843,17 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
-        right_hand_side[i] +=
+        right_hand_side[i] -=
           theta_ * delta_t_ *
             integrator::template integrate_bdr_phifuncnuvecfunc_cutwind<
               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
               decltype(hyEdgeT::geometry), parameters::dirichlet_value, parameters::velocity,
-              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time) +
-          (1. - theta_) * delta_t_ *
-            integrator::template integrate_bdr_phifuncnuvecfunc_cutwind<
+              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time) -
+          tau_ * theta_ * delta_t_ *
+            integrator::template integrate_bdr_phifunc<
               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-              decltype(hyEdgeT::geometry), parameters::dirichlet_value, parameters::velocity,
-              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time - delta_t_);
+              decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+              Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
     }
   }
 
@@ -854,25 +895,35 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::flux
   for (unsigned int i = 0; i < n_shape_bdr_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        bdr_values[face][i] +=
-          coeffs[j] *
-          (integrator::template integrate_bdr_psiphinuvecfunc_cutwind<
-             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-             decltype(hyEdgeT::geometry), parameters::velocity,
-             SmallVec<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) +
-           tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                    i, j, face, hyper_edge.geometry));
+        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+          bdr_values[face][i] +=
+            coeffs[j] *
+            (integrator::template integrate_bdr_psiphinuvecfunc_cutwind<
+               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+               decltype(hyEdgeT::geometry), parameters::velocity,
+               SmallVec<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) +
+             tau_ * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                      i, j, face, hyper_edge.geometry));
+        else
+          bdr_values[face][i] +=
+            tau_ * coeffs[j] *
+            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
 
   for (unsigned int i = 0; i < n_shape_bdr_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        bdr_values[face][i] +=
-          lambda_values[face][j] *
-          (integrator::template integrate_bdr_psipsinuvecfunc_cutwind<
-             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-             decltype(hyEdgeT::geometry), parameters::velocity,
-             SmallVec<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) -
-           tau_ * hyper_edge.geometry.face_area(face));
+        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+          bdr_values[face][i] +=
+            lambda_values[face][j] *
+            (integrator::template integrate_bdr_psipsinuvecfunc_cutwind<
+               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+               decltype(hyEdgeT::geometry), parameters::velocity,
+               SmallVec<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time) -
+             tau_ * hyper_edge.geometry.face_area(face));
+        else
+          bdr_values[face][i] -=
+            lambda_values[face][j] * tau_ * hyper_edge.geometry.face_area(face);
 
   return bdr_values;
 }  // end of AdvectionParab::primal_at_boundary

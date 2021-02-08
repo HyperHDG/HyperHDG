@@ -25,10 +25,10 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  theta       = 1.
-  time_steps  = 10 ** 4
+  theta       = 0.
+  time_steps  = 2#10 ** 4
   time_end    = 1.
-  delta_time  = time_end / time_steps
+  delta_time  = 0.001#time_end / time_steps
   
   try:
     import HyperHDG
@@ -108,7 +108,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
+    for dimension in range(1,2):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:

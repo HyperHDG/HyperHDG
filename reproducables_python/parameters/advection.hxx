@@ -14,24 +14,25 @@ struct TestParametersSinParab
 {
   static constexpr std::array<unsigned int, 9U> dirichlet_nodes{1, 4, 7, 10, 13, 16, 19, 22, 25};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  static constexpr std::array<unsigned int, 9U> outflow_nodes{2, 5, 8, 11, 14, 17, 20, 23, 26};
   static SmallVec<space_dimT, param_float_t> velocity(const Point<space_dimT, param_float_t>&,
                                                       const param_float_t = 0.)
   {
     SmallVec<space_dimT, param_float_t> velocity;
     velocity[0] = 1. / M_PI;
-    return velocity;
+    return 0.01;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return sin(M_PI * (point[0] + time));
+    return 1.;  // sin(M_PI * (point[0] + time));
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return (1. + M_PI) * cos(M_PI * (point[0] + time));
+    return 0.;  //(1. + M_PI) * cos(M_PI * (point[0] + time));
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
