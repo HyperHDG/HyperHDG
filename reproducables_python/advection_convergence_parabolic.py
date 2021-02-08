@@ -25,10 +25,10 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  theta       = 0.
-  time_steps  = 2#10 ** 4
+  theta       = 1.
+  time_steps  = 10 ** 4
   time_end    = 1.
-  delta_time  = 0.001#time_end / time_steps
+  delta_time  = time_end / time_steps
   
   try:
     import HyperHDG
@@ -51,7 +51,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
+  HDG_wrapper = PyDP([2 ** iteration] * dimension, lsol_constr= [2 ** -iteration,theta,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())

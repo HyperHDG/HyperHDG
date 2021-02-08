@@ -20,19 +20,19 @@ struct TestParametersSinParab
   {
     SmallVec<space_dimT, param_float_t> velocity;
     velocity[0] = 1. / M_PI;
-    return 0.01;
+    return velocity;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return 1.;  // sin(M_PI * (point[0] + time));
+    return sin(M_PI * (point[0] + time));
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return 0.;  //(1. + M_PI) * cos(M_PI * (point[0] + time));
+    return (1. + M_PI) * cos(M_PI * (point[0] + time));
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
