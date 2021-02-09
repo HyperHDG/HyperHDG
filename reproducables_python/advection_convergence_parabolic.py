@@ -51,7 +51,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP([2 ** iteration] * dimension, lsol_constr= [2 ** -iteration,theta,delta_time] )
+  HDG_wrapper = PyDP([2 ** iteration] * dimension, lsol_constr= [1.,theta,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
@@ -108,7 +108,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
