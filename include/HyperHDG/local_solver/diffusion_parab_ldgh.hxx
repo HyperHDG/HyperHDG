@@ -361,6 +361,7 @@ class DiffusionParab
   struct data_type
   {
     SmallVec<n_shape_fct_, lSol_float_t> u_old, flux_old;
+    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> boundary_flux_old;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -467,9 +468,12 @@ class DiffusionParab
           lambda_values_out[i][j] = 0.;
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        {
           lambda_values_out[i][j] =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
+          lambda_values_out[i][j] *= theta_;
+        }
 
     return lambda_values_out;
   }
@@ -520,9 +524,13 @@ class DiffusionParab
           lambda_values_out[i][j] = 0.;
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+        {
           lambda_values_out[i][j] =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
+          lambda_values_out[i][j] *= theta_;
+          lambda_values_out[i][j] += (1. - theta_) * hyper_edge.data.boundary_flux_old(j, i);
+        }
     }
 
     return lambda_values_out;
@@ -587,6 +595,22 @@ class DiffusionParab
             tau_ * lambda_values[face][j] *
             integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               i, j, face, hyper_edge.geometry);
+    }
+
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+      primal_at_boundary(coeffs, hyper_edge)),
+      duals(dual_at_boundary(coeffs, hyper_edge));
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    {
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          hyper_edge.data.boundary_flux_old(j, i) = 0.;
+      else
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          hyper_edge.data.boundary_flux_old(j, i) =
+            duals[i][j] + tau_ * primals[i][j] -
+            tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
     }
   }
   /*!***********************************************************************************************
@@ -691,6 +715,28 @@ class DiffusionParab
             tau_ * lambda_values[face][j] *
             integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               i, j, face, hyper_edge.geometry);
+    }
+
+    std::array<lSol_float_t, n_loc_dofs_> coeffs;
+    for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        coeffs[dim * n_shape_fct_ + i] = q_components[dim][i];
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      coeffs[hyEdge_dimT * n_shape_fct_ + i] = hyper_edge.data.u_old[i];
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+      primal_at_boundary(coeffs, hyper_edge)),
+      duals(dual_at_boundary(coeffs, hyper_edge));
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    {
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          hyper_edge.data.boundary_flux_old(j, i) = 0.;
+      else
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          hyper_edge.data.boundary_flux_old(j, i) =
+            duals[i][j] + tau_ * primals[i][j] -
+            tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
     }
 
     return lambda_values;
