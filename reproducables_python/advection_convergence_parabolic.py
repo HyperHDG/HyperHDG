@@ -75,7 +75,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     #         ". Trying GMRES!")
     [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
     if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      # print("GMRES also failed with a total number of ", num_iter, "iterations.")
       [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
       if num_iter != 0:
         print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
@@ -86,7 +86,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
   print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
+  f = open("output/advection_convergence_parabolic_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
@@ -106,11 +106,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in range(1,4):
+  for poly_degree in range(1,2):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
+    for dimension in range(1,2):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(6):
+      for iteration in range(0,8):
         try:
           diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
