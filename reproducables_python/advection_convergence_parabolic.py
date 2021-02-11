@@ -108,11 +108,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in range(1,2):
+  for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
+    for dimension in range(1,3):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(0,8):
+      for iteration in range(6):
         try:
           diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
