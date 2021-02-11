@@ -1027,11 +1027,7 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::flux
     {
       bdr_values[face][i] *= theta_;
       if (residual)
-      {
         bdr_values[face][i] += (1. - theta_) * hyper_edge.data.boundary_flux_old(i, face);
-        // std::cout << (1. - theta_) << " " << hyper_edge.data.boundary_flux_old(i,face) <<
-        // std::endl;
-      }
     }
   return bdr_values;
 }  // end of AdvectionParab::primal_at_boundary

@@ -43,6 +43,8 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.local_solver    = "AdvectionParab<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersSinParab,double>"
+  # const.local_solver    = "AdvectionParab<" + str(dimension) + "," + str(poly_degree) + "," \
+  #   + str(2*poly_degree) + ",LeVeque,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
     "double", "vector[double]"]
   const.include_files   = ["reproducables_python/parameters/advection.hxx"]
