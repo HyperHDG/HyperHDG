@@ -167,18 +167,38 @@ class AdvectionParab
   /*!***********************************************************************************************
    * \brief   Find out whether a node is of Dirichlet type.
    ************************************************************************************************/
-  template <typename parameters>
-  static constexpr bool is_dirichlet(const unsigned int node_type)
+  template <typename parameters, typename hyEdge_t>
+  static constexpr bool is_dirichlet(const hyEdge_t& edge,
+                                     const unsigned int face,
+                                     const lSol_float_t time)
   {
-    return std::find(parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
-                     node_type) != parameters::dirichlet_nodes.end();
+    const unsigned int node_type = edge.node_descriptor[face];
+    if (std::find(parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
+                  node_type) != parameters::dirichlet_nodes.end())
+      return true;
+    auto node =
+      std::find(parameters::boundary_nodes.begin(), parameters::boundary_nodes.end(), node_type);
+    if (node == parameters::boundary_nodes.end())
+      return false;
+    return scalar_product(edge.geometry.inner_normal(face),
+                          parameters::velocity(edge.geometry.face_barycenter(face), time)) <= 0.;
   }
 
-  template <typename parameters>
-  static constexpr bool is_outflow(const unsigned int node_type)
+  template <typename parameters, typename hyEdge_t>
+  static constexpr bool is_outflow(const hyEdge_t& edge,
+                                   const unsigned int face,
+                                   const lSol_float_t time)
   {
-    return std::find(parameters::outflow_nodes.begin(), parameters::outflow_nodes.end(),
-                     node_type) != parameters::outflow_nodes.end();
+    const unsigned int node_type = edge.node_descriptor[face];
+    if (std::find(parameters::outflow_nodes.begin(), parameters::outflow_nodes.end(), node_type) !=
+        parameters::outflow_nodes.end())
+      return true;
+    auto node =
+      std::find(parameters::boundary_nodes.begin(), parameters::boundary_nodes.end(), node_type);
+    if (node == parameters::boundary_nodes.end())
+      return false;
+    return scalar_product(edge.geometry.inner_normal(face),
+                          parameters::velocity(edge.geometry.face_barycenter(face), time)) > 0.;
   }
 
   // -----------------------------------------------------------------------------------------------
@@ -436,7 +456,7 @@ class AdvectionParab
       flux_at_boundary(lambda_values_in, coeffs, hyper_edge, false, time));
 
     for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+      if (is_dirichlet<parameters>(hyper_edge, i, time))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
       else
@@ -486,7 +506,7 @@ class AdvectionParab
 
     for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
     {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+      if (is_dirichlet<parameters>(hyper_edge, i, time))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
       else
@@ -542,7 +562,7 @@ class AdvectionParab
                       Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time));
       }
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_dirichlet<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_bdr_; ++j)
             hyper_edge.data.flux_old[i] -=
               lambda_values[face][j] *
@@ -565,7 +585,7 @@ class AdvectionParab
     for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_fct_; ++j)
             hyper_edge.data.boundary_flux_old(i, face) +=
               hyper_edge.data.u_old[j] *
@@ -586,7 +606,7 @@ class AdvectionParab
                 decltype(hyEdgeT::geometry), parameters::velocity,
                 Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time);
 
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_bdr_; ++j)
             hyper_edge.data.boundary_flux_old(i, face) +=
               lambda_values[face][j] *
@@ -628,7 +648,7 @@ class AdvectionParab
     // Set skeltal variable!
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+      if (is_dirichlet<parameters>(hyper_edge, i, time))
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] = 0.;
       else
@@ -672,7 +692,7 @@ class AdvectionParab
                       Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time));
       }
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_dirichlet<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_bdr_; ++j)
             hyper_edge.data.flux_old[i] -=
               lambda_values[face][j] *
@@ -695,7 +715,7 @@ class AdvectionParab
     for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_fct_; ++j)
             hyper_edge.data.boundary_flux_old(i, face) +=
               hyper_edge.data.u_old[j] *
@@ -716,7 +736,7 @@ class AdvectionParab
                 decltype(hyEdgeT::geometry), parameters::velocity,
                 Point<hyEdge_dimT, lSol_float_t>>(i, j, face, hyper_edge.geometry, time);
 
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           for (unsigned int j = 0; j < n_shape_bdr_; ++j)
             hyper_edge.data.boundary_flux_old(i, face) +=
               lambda_values[face][j] *
@@ -932,7 +952,7 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+      if (is_dirichlet<parameters>(hyper_edge, face, time))
         right_hand_side[i] -=
           theta_ * delta_t_ *
           integrator::template integrate_bdr_phifuncnuvecfunc_cutwind<
@@ -981,7 +1001,7 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::flux
   for (unsigned int i = 0; i < n_shape_bdr_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           bdr_values[face][i] +=
             coeffs[j] *
             (integrator::template integrate_bdr_psiphinuvecfunc_cutwind<
@@ -1003,7 +1023,7 @@ AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::flux
   for (unsigned int i = 0; i < n_shape_bdr_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        if (!is_outflow<parameters>(hyper_edge.node_descriptor[face]))
+        if (!is_outflow<parameters>(hyper_edge, face, time))
           bdr_values[face][i] +=
             lambda_values[face][j] *
             (integrator::template integrate_bdr_psipsinuvecfunc_cutwind<

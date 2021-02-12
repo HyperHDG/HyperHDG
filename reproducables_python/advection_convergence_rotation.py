@@ -26,7 +26,7 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   
   # Config time stepping.
   time_steps  = 10 ** 4
-  time_end    = 1.
+  time_end    = 2. * math.pi
   delta_time  = time_end / time_steps
   
   try:
@@ -41,7 +41,7 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.local_solver    = "AdvectionParab<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",TestParametersSinParab,double>"
+    + str(2*poly_degree) + ",LeVeque,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
     "double", "vector[double]"]
   const.include_files   = ["reproducables_python/parameters/advection.hxx"]
@@ -85,13 +85,13 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
   print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/advection_convergence_parabolic_theta"+str(theta)+".txt", "a")
+  f = open("output/advection_convergence_rotation_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "adv_conv_parab" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "adv_conv_rotat" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution, time_end)
@@ -109,9 +109,9 @@ def main(debug_mode):
     print("\n Theta is set to be ", theta, "\n\n")
     for poly_degree in range(1,4):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for dimension in range(1,3):
+      for dimension in range(2,3):
         print("\n Dimension is ", dimension, "\n")
-        for iteration in range(6):
+        for iteration in range(5,9):
           try:
             diffusion_test(theta, poly_degree, dimension, iteration, debug_mode)
           except RuntimeError as error:

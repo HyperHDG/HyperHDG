@@ -165,7 +165,7 @@ class UnitCube
      **********************************************************************************************/
     template <unsigned int n_vec>
     SmallMat<space_dimT, n_vec, pt_coord_t> map_ref_to_phys(
-      const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& points)
+      const SmallMat<hyEdge_dimT, n_vec, pt_coord_t>& points) const
     {
       for (unsigned int i = 0; i < points.size(); ++i)
         hy_assert(points[i] >= 0. && points[i] <= 1., "Point must lie in reference square!");
@@ -186,7 +186,7 @@ class UnitCube
      **********************************************************************************************/
     template <unsigned int n_vec>
     SmallMat<space_dimT, n_vec, pt_coord_t>& map_ref_to_phys(
-      SmallMat<space_dimT, n_vec, pt_coord_t>& points)
+      SmallMat<space_dimT, n_vec, pt_coord_t>& points) const
     {
       hy_assert(hyEdge_dimT == space_dimT, "This is only valid of the problem is of volumetype.");
       for (unsigned int i = 0; i < points.size(); ++i)
@@ -207,7 +207,7 @@ class UnitCube
      * \param   index   Index of the matrix column to be returned.
      * \retval  column  The specified matrix column.
      **********************************************************************************************/
-    SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index)
+    SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index) const
     {
       hy_assert(index < hyEdge_dimT, "There are only " << hyEdge_dimT << " spanning vectors.");
 
@@ -219,14 +219,14 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Return reduced matrix R of the QR decomposition of the linear transoformation.
      **********************************************************************************************/
-    const SmallSquareMat<hyEdge_dimT, pt_coord_t> mat_r()
+    const SmallSquareMat<hyEdge_dimT, pt_coord_t> mat_r() const
     {
       return diagonal<hyEdge_dimT, hyEdge_dimT, pt_coord_t>(char_length);
     }
     /*!*********************************************************************************************
      * \brief   Return matrix Q of the QR decomposition of the linear transoformation.
      **********************************************************************************************/
-    const SmallSquareMat<space_dimT, pt_coord_t> mat_q()
+    const SmallSquareMat<space_dimT, pt_coord_t> mat_q() const
     {
       const auto& dim_ind = dim_indices.data();
       SmallSquareMat<space_dimT, pt_coord_t> mat_q;
@@ -246,7 +246,7 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Return Haussdorff/Lebesque measure of the hyperedge.
      **********************************************************************************************/
-    pt_coord_t area()
+    pt_coord_t area() const
     {
       pt_coord_t area = 1.;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
@@ -256,7 +256,7 @@ class UnitCube
     /*!*********************************************************************************************
      * \brief   Return Haussdorff measure of the specified hypernode.
      **********************************************************************************************/
-    pt_coord_t face_area(const unsigned int index)
+    pt_coord_t face_area(const unsigned int index) const
     {
       hy_assert(index < 2 * hyEdge_dimT, "A hyperedge has 2 * dim(hyEdge) faces.");
       pt_coord_t area = 1.;
@@ -273,7 +273,7 @@ class UnitCube
      * but the vector of the given index. This is an element of the same dimension as the
      * reference element.
      **********************************************************************************************/
-    Point<hyEdge_dimT, pt_coord_t> local_normal(const unsigned int index)
+    Point<hyEdge_dimT, pt_coord_t> local_normal(const unsigned int index) const
     {
       hy_assert(index < 2 * hyEdge_dimT, "A hyperedge has 2 * dim(hyEdge) inner normals.");
       Point<hyEdge_dimT, pt_coord_t> normal;
@@ -288,7 +288,7 @@ class UnitCube
      * the span of the columns of the local transformation matrix. This is an element of the same
      * dimension as the full space.
      **********************************************************************************************/
-    Point<space_dimT, pt_coord_t> inner_normal(const unsigned int index)
+    Point<space_dimT, pt_coord_t> inner_normal(const unsigned int index) const
     {
       hy_assert(index < 2 * hyEdge_dimT, "A hyperedge has 2 * dim(hyEdge) inner normals.");
       Point<space_dimT, pt_coord_t> normal;
@@ -296,11 +296,21 @@ class UnitCube
       return normal;
     }
     /*!*********************************************************************************************
+     * \brief   Return barycenter of face of given index.
+     **********************************************************************************************/
+    Point<space_dimT, pt_coord_t> face_barycenter(const unsigned int index) const
+    {
+      hy_assert(index < 2 * hyEdge_dimT, "A hyperedge has 2 * dim(hyEdge) inner normals.");
+      Point<hyEdge_dimT, pt_coord_t> local_center(0.5);
+      local_center[dim_indices[index / 2]] = index % 2 ? 1. : 0.;
+      return map_ref_to_phys(local_center);
+    }
+    /*!*********************************************************************************************
      * \brief   Return outer normal of given index.
      *
      * Return unit normal with respect to the hyperedge within the full space.
      **********************************************************************************************/
-    Point<space_dimT, pt_coord_t> outer_normal(const unsigned int index)
+    Point<space_dimT, pt_coord_t> outer_normal(const unsigned int index) const
     {
       hy_assert(index < space_dimT - hyEdge_dimT,
                 "This function returns one of the dim(space) - dim(hyEdge) orthonormal vectors "
@@ -321,7 +331,7 @@ class UnitCube
     template <unsigned int n_sub_points, typename one_dim_float_t>
     Point<space_dimT, pt_coord_t> lexicographic(
       unsigned int index,
-      const SmallVec<n_sub_points, one_dim_float_t>& points_1d)
+      const SmallVec<n_sub_points, one_dim_float_t>& points_1d) const
     {
       static_assert(n_sub_points > 0, "No subpoints do not make sense!");
       hy_assert(index < std::pow(n_sub_points, hyEdge_dimT),
@@ -344,7 +354,7 @@ class UnitCube
       unsigned int index,
       unsigned int boundary_number,
       float boundary_scale,
-      const SmallVec<n_sub_points, one_dim_float_t>& points_1d)
+      const SmallVec<n_sub_points, one_dim_float_t>& points_1d) const
     {
       static_assert(n_sub_points > 0, "No subpoints do not make sense!");
       hy_assert(index < std::pow(n_sub_points, hyEdge_dimT - 1) * hyEdge_dimT * 2,
