@@ -529,5 +529,6 @@ class HDGHyperGraph
     hyGraph_node_des_->set_refinement(level);
     hyNode_factory_ =
       HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t>(hyGraph_topology_->n_hyNodes());
+    hyData_cont_ = HyDataContainer<DataT>(hyGraph_topology_->n_hyEdges());
   }
 };  // end of class HDGHyperGraph

@@ -204,7 +204,7 @@ class Cubic
     tpcc_ref_elem_ =
       Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
         SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_));
-    n_hyEdges_ = Wrapper::n_elements(tpcc_elements_);
+    n_hyEdges_ = Wrapper::n_elements(tpcc_elements_) * Wrapper::n_elements(tpcc_ref_elem_);
   }
 
 };  // end of class Cubic
