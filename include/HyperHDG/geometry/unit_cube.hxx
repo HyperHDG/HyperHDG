@@ -302,7 +302,7 @@ class UnitCube
     {
       hy_assert(index < 2 * hyEdge_dimT, "A hyperedge has 2 * dim(hyEdge) inner normals.");
       Point<hyEdge_dimT, pt_coord_t> local_center(0.5);
-      local_center[dim_indices[index / 2]] = index % 2 ? 1. : 0.;
+      local_center[index / 2] = index % 2 ? 1. : 0.;
       return map_ref_to_phys(local_center);
     }
     /*!*********************************************************************************************
