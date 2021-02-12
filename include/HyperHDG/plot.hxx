@@ -764,7 +764,9 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
-  std::cout << plot_options.fileName << " was written\n";
+  std::cout << plot_options.fileName;
+  if (plot_options.printFileNumber)
+    std::cout << "." << plot_options.fileNumber << " was written\n";
   PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
 
