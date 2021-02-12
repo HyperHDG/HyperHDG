@@ -26,7 +26,7 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   
   # Config time stepping.
   time_steps  = 10 ** 4
-  time_end    = 2. * math.pi
+  time_end    = 2. * np.pi
   delta_time  = time_end / time_steps
   
   try:
