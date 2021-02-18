@@ -1,4 +1,4 @@
-import re
+import hashlib, re
 
 ## \brief   Transform C++ class name to cython file name.
 def cython_from_cpp(name):
@@ -12,6 +12,7 @@ def files(conf):
                  + conf.node_descriptor + ",LocalSolver::" + conf.local_solver + " >"
   cython_file  = cpp_class + "_deb" if conf.debug_mode else cpp_class + "_rel"
   cython_file  = re.sub(' ', '', cython_file)
+  cython_file  = "mod" + str(hashlib.sha256(cython_file.encode('utf-8')).hexdigest())
   cython_file  = re.sub('\+|\-|\*|\/|<|>|\,|\:', '_', cython_file)
   cython_class = cython_file + "CP"
   return cpp_class, cython_file, cython_class
