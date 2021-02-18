@@ -90,7 +90,7 @@ class Linear
    * formula of measures by a factor of g = sqrt( (D Phi)^T (D Phi) ).
    * The difference in the sign will become important for the transformation of gradients.
    ************************************************************************************************/
-  map_float_t functional_determinant_hyEdge()
+  map_float_t functional_determinant_hyEdge() const
   {
     map_float_t determinant = 1.;
     for (unsigned int i = 0; i < hyEdge_dimT; ++i)
