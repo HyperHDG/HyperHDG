@@ -38,12 +38,15 @@ def diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinemen
   
   const                 = HyperHDG.config()
   const.global_loop     = "Parabolic"
-  const.topology        = "Cubic<" + str(edge_dim) + "," + str(space_dim) + ">"
-  const.geometry        = "UnitCube<" + str(edge_dim) + "," + str(space_dim) + ",double>"
-  const.node_descriptor = "Cubic<" + str(edge_dim) + "," + str(space_dim) + ">"
+  const.topology        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
+    + str(space_dim) + ",double> >"
+  const.geometry        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
+    + str(space_dim) + ",double> >"
+  const.node_descriptor = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
+    + str(space_dim) + ",double> >"
   const.local_solver    = "AdvectionParab<" + str(edge_dim) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",injection,double>"
-  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
+  const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducables_python/parameters/advection.hxx"]
   const.debug_mode      = debug_mode
@@ -51,8 +54,9 @@ def diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinemen
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP([2 ** iteration] * space_dim, lsol_constr= [1.,theta,delta_time])
-  HDG_wrapper.refine( 2 ** refinement )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
+    "/../domains/injection_test.geo", lsol_constr= [1.,theta,delta_time])
+  # HDG_wrapper.refine( 2 ** refinement )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
@@ -120,7 +124,7 @@ def main(debug_mode):
     print("\n Theta is set to be ", theta, "\n\n")
     for poly_degree in range(1,4):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for refinement in range(6):
+      for refinement in range(1):
         try:
           diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinement, debug_mode)
         except RuntimeError as error:

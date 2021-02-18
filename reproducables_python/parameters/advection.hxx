@@ -129,14 +129,14 @@ struct LeVeque
 template <unsigned int space_dimT, typename param_float_t = double>
 struct injection
 {
-  static constexpr std::array<unsigned int, 26U> boundary_nodes{
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
-  static constexpr std::array<unsigned int, 0U> dirichlet_nodes{};
-  static constexpr std::array<unsigned int, 0U> outflow_nodes{};
-  static SmallVec<space_dimT, param_float_t> velocity(const Point<space_dimT, param_float_t>&,
-                                                      const param_float_t = 0.)
+  static constexpr std::array<unsigned int, 0U> boundary_nodes{};
+  static constexpr std::array<unsigned int, 1U> dirichlet_nodes{1};
+  static constexpr std::array<unsigned int, 1U> outflow_nodes{2};
+  static SmallVec<space_dimT, param_float_t> velocity(const auto&, const param_float_t = 0.)
   {
-    return SmallVec<space_dimT, param_float_t>(1.);
+    SmallVec<space_dimT, param_float_t> velocity;
+    velocity[0] = 1.;
+    return velocity;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
