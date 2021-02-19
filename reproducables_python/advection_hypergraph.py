@@ -18,8 +18,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinement, \
-  debug_mode=False):
+def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -55,14 +54,13 @@ def diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinemen
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/injection_test.geo", lsol_constr= [1.,theta,delta_time])
-  # HDG_wrapper.refine( 2 ** refinement )
+    "/../domains/injection_test.geo", lsol_constr= [tau,theta,delta_time])
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
 
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(edge_dim) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
   HDG_wrapper.plot_option( "printFileNumber" , "true" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution, time_end)
@@ -95,7 +93,7 @@ def diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinemen
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
 
     # Plot obtained solution.
-    HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(edge_dim) + "-" + str(iteration) )
+    HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
     HDG_wrapper.plot_option( "printFileNumber" , "true" )
     HDG_wrapper.plot_option( "scale" , "0.95" )
     HDG_wrapper.plot_solution(vectorSolution, time_end)
@@ -120,15 +118,13 @@ def main(debug_mode):
   edge_dim = 1
   space_dim = 2
   iteration = 2
-  for theta in [0.5]:
-    print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(3,4):
-      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for refinement in range(1):
-        try:
-          diffusion_test(theta, poly_degree, edge_dim, space_dim, iteration, refinement, debug_mode)
-        except RuntimeError as error:
-          print("ERROR: ", error)
+  poly_degree = 3
+  theta = 0.5
+  for tau in [0, 1]:
+    try:
+      diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode)
+    except RuntimeError as error:
+      print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------

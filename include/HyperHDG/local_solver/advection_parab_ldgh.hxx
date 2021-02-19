@@ -260,6 +260,7 @@ class AdvectionParab
    * \tparam  SmallMatT     The data type of the \¢ lambda_values.
    * \param   lambda_values Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time          The time at which functions are evbaluated.
    * \retval  loc_rhs       Local right hand side of the locasl solver.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
