@@ -795,7 +795,6 @@ class AdvectionParab
    * \tparam  input_array_t     Input array type.
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
    * \param   abscissas         Abscissas of the supporting points.
-   * \param   lambda_values     The values of the skeletal variable's coefficients.
    * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
    * \param   time              Time at which function is plotted.
    * \retval  func_vals         Array of function values.
@@ -806,9 +805,9 @@ class AdvectionParab
             class hyEdgeT>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>, system_dim>
   bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-              const input_array_t& lambda_values,
+              const input_array_t&,
               hyEdgeT& hyper_edge,
-              const lSol_float_t time = 0.) const;
+              const lSol_float_t UNUSED(time) = 0.) const;
 
 };  // namespace LocalSolver
 
@@ -1075,9 +1074,9 @@ std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)
            AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
 AdvectionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-  const input_array_t& lambda_values,
+  const input_array_t&,
   hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+  const lSol_float_t) const
 {
   SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
