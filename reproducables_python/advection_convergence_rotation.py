@@ -25,7 +25,7 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  time_steps  = 10 ** 4
+  time_steps  = 10 ** 3
   time_end    = 2. * np.pi
   delta_time  = time_end / time_steps
   
@@ -110,7 +110,7 @@ def main(debug_mode):
   dimension = 2
   for theta in [0.5, 1.]:
     print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(1,4):
+    for poly_degree in range(3):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
       try:
         diffusion_test(theta, poly_degree, dimension, iteration, debug_mode)
