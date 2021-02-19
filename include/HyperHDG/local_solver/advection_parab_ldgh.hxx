@@ -327,14 +327,15 @@ class AdvectionParab
     }
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate primal variable at boundary.
+   * \brief   Evaluate flux at boundary.
    *
-   * Function to evaluate primal variable of the solution. This function is needed to calculate
-   * the local numerical fluxes.
-   *
-   * \tparam  hyEdgeT      The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT     The tyoe of lambda_values.
+   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values Coefficients of skeletal variable.
    * \param   coeffs        Coefficients of the local solution.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
+   * \param   residual      Boolean to discriminate betweeen lambda_to_flux and residual_flux.
+   * \param   time          Time at which functions are evaluated.
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
   template <typename SmallMatT, typename hyEdgeT>
