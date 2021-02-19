@@ -72,7 +72,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   const.local_solver    = "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersEigs,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)

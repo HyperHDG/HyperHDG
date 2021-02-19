@@ -88,7 +88,7 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
   const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersEigs,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)

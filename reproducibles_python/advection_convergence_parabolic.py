@@ -44,7 +44,7 @@ def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
     + str(2*poly_degree) + ",TestParametersSinParab,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
     "double", "vector[double]"]
-  const.include_files   = ["reproducables_python/parameters/advection.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
