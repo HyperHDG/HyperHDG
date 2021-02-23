@@ -22,22 +22,22 @@ import os, sys
 class helper_ev_newt():
   def __init__(self, hdg_wrapper):
     self.hdg_wrapper = hdg_wrapper
-    self.val = [0] * (hdg_wrapper.size_of_system() + 1)
+    self.val         = [0] * (hdg_wrapper.size_of_system() + 1)
+  def set_val(self, val):
+    self.val         = val
   def eval_residual(self, vector):
-    vec = self.hdg_wrapper.trace_to_flux(vector, vector[len(vector)-1])
+    vec  = self.hdg_wrapper.trace_to_flux(vector, vector[len(vector)-1])
     temp = vector[len(vector)-1]
     vector[len(vector)-1] = 0.
-    vec[len(vec)-1] = np.linalg.norm(vector) ** 2 - 1.
+    vec[len(vec)-1]       = np.linalg.norm(vector) ** 2 - 1.
     vector[len(vector)-1] = temp
     return vec
-  def set_val(self, val):
-    self.val = val;
   def eval_jacobian(self, vector):
-    vec = self.hdg_wrapper.jacobian_of_trace_to_flux \
-            ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
+    vec  = self.hdg_wrapper.jacobian_of_trace_to_flux \
+             ( vector, vector[len(vector)-1], self.val, self.val[len(self.val)-1] )
     temp = self.val[len(self.val)-1]
     self.val[len(self.val)-1] = 0.
-    vec[len(vec)-1] = 2. * np.dot(vector,self.val)
+    vec[len(vec)-1]           = 2. * np.dot(vector,self.val)
     self.val[len(self.val)-1] = temp
     return vec
 
@@ -52,7 +52,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   os.system("mkdir -p output")
 
   # Config Newton solver
-  n_newton_steps = 25
+  n_newton_steps = 10 ** 1
   scaling_fac    = 1e-2
   norm_exact     = 1e-9
   alpha          = 0.1
@@ -66,23 +66,22 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   
   const                 = HyperHDG.config()
   const.global_loop     = "NonlinearEigenvalue"
-  const.topology        = "Cubic<" + str(dimension) + ",3>"
-  const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
-  const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
-  const.local_solver    = "BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersEigs,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * 3 )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
   helper = helper_ev_newt(HDG_wrapper)
 
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
+  # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
   system_size = HDG_wrapper.size_of_system() + 1
   A = LinearOperator( (system_size,system_size), matvec= helper.eval_jacobian )
   
@@ -91,7 +90,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     vectorSolution = [0] * system_size
     vectorSolution = HDG_wrapper.make_initial(vectorSolution)
     vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
-    vectorSolution[system_size-1]= (dimension * (np.pi ** 2)) ** 2 + 1e-3 * random.randint(-100,100)
+    vectorSolution[system_size-1] = dimension * (np.pi ** 2) + 1e-3 * random.randint(-100,100)
   else:
     vectorSolution = initial
     temp = initial[len(vectorSolution)-1]
@@ -111,12 +110,12 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     gamma = 1
     
     # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    [vectorUpdate, num_iter] = sp_lin_alg.bicgstab(A,residual,tol=min(1e-9,scaling_fac * norm_res))
+    [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= scaling_fac * norm_res)
     if num_iter != 0:
-      print("BiCGStab failed with a total number of ", num_iter, "iterations.")
-      [vectorUpdate, num_iter] = sp_lin_alg.gmres(A,residual,tol=min(1e-9,scaling_fac * norm_res))
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      [vectorUpdate, num_iter] = sp_lin_alg.bicgsatb(A, residual, tol= scaling_fac * norm_res)
       if num_iter != 0:
-        print("GMRES also failed with a total number of ", num_iter, "iterations.")
+        print("BiCGStab also failed with ", num_iter, "iterations")
         raise RuntimeError("Linear solvers did not converge!")
     
     vectorHelper = np.subtract(vectorSolution, vectorUpdate)
@@ -134,23 +133,22 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     vectorSolution = vectorHelper
     
     if norm_res < norm_exact:
-      print("Newton solver converged after ", newton_step+1, " steps with a residual of norm ",\
-            norm_res)
-      break  
-  
+      print("Newton solver converged after ", newton_step+1, " iterations.")
+      break
+      
   if norm_res >= norm_exact:
     raise RuntimeError("Newton solver did not converge!")
-
+  
   # Print error.
-  error = np.absolute( vectorSolution[system_size-1] - (dimension * (np.pi ** 2)) ** 2 )
+  error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_hypergraph_convergence_eigenvalue_newton.txt", "a")
+  f = open("output/diffusion_convergence_eigenvalue_newton.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bil_eig_newt-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_eig_newt-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
@@ -168,9 +166,9 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
   for poly_degree in range(1,4):
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
     for dimension in range(1,3):
-      print("Dimension is ", dimension, "\n")
+      print("\nDimension is ", dimension, "\n")
       for iteration in range(2,6):
         try:
           eigenvalue_newt(poly_degree, dimension, iteration, "default", debug_mode)

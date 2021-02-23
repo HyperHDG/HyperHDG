@@ -132,7 +132,7 @@ class File
   /*!***********************************************************************************************
    * \brief   Copy constructor.
    ************************************************************************************************/
-  File(const File<hyEdge_dimT, space_dimT>& other) : domain_info_(other.domain_info) {}
+  File(const File<hyEdge_dimT, space_dimT>& other) : domain_info_(other.domain_info()) {}
 
   /*!***********************************************************************************************
    * \brief   Get topological hyperedge of given index.

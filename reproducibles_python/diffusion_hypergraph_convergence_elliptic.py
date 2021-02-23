@@ -18,12 +18,12 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
+def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-
+  
   try:
     import HyperHDG
   except (ImportError, ModuleNotFoundError) as error:
@@ -35,10 +35,10 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
   const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
-  const.local_solver    = "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
@@ -61,17 +61,15 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print error.
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_hypergraph_convergence_elliptic.txt", "a")
+  f = open("output/diffusion_hypergraph_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bil_conv_hyg-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_conv_hyg-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_option("boundaryScale", "0.9")
-  HDG_wrapper.plot_option( "plotEdgeBoundaries", "true")
   HDG_wrapper.plot_solution(vectorSolution)
   
   # Print ending time of diffusion test.
@@ -85,11 +83,11 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
+    for dimension in range(1,4):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
-          bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
+          diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 

@@ -71,10 +71,10 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-
+  
   # Configure eigenvector/-value solver.
-  exact_eigenval = (dimension * (np.pi ** 2)) ** 2
-  sigma          = 3. * exact_eigenval / 4.
+  exact_eigenval = dimension * (np.pi ** 2)
+  sigma          = exact_eigenval / 2.
 
   try:
     import HyperHDG
@@ -87,10 +87,10 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.local_solver    = "BilaplacianEigs<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.local_solver    = "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersEigs,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
@@ -104,14 +104,14 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   Stiff       = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
   Mass        = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
   ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
-  
+    
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
+  vals, vecs = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
 
   # Print error.
   error = np.absolute(vals[0] - exact_eigenval)
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_convergence_eigenvalue_shifted_inverse.txt", "a")
+  f = open("output/diffusion_convergence_eigenvalue_shifted_inverse.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
@@ -120,10 +120,10 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
   solution = helper.long_vector([x[0].real for x in vecs])
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bil_eig_shifi-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_eig_shifi-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(solution);
+  HDG_wrapper.plot_solution(solution, vals[0].real)
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
