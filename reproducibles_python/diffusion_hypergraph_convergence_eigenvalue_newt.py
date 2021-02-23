@@ -66,19 +66,19 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   
   const                 = HyperHDG.config()
   const.global_loop     = "NonlinearEigenvalue"
-  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
-  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.topology        = "Cubic<" + str(dimension) + ",3>"
+  const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
   const.local_solver    = "DiffusionEigs<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersEigs,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * 3 )
   helper = helper_ev_newt(HDG_wrapper)
 
   # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
@@ -109,10 +109,10 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     norm_old = norm_res
     gamma = 1
     
-    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+    # Solve "A * x = b" in matrix-free fashion using scipy's GMRES or BiCGStab algorithms.
     [vectorUpdate, num_iter] = sp_lin_alg.gmres(A, residual, tol= scaling_fac * norm_res)
     if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      print("GMRES failed with a total number of ", num_iter, "iterations.")
       [vectorUpdate, num_iter] = sp_lin_alg.bicgsatb(A, residual, tol= scaling_fac * norm_res)
       if num_iter != 0:
         print("BiCGStab also failed with ", num_iter, "iterations")
@@ -124,7 +124,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     
     while norm_res > (1 - alpha * gamma) * norm_old:
       if gamma < 1e-4:
-        raise RuntimeError("Newton step is too small!")
+        raise RuntimeError("Newton step is too small")
       gamma = beta * gamma
       vectorHelper = np.subtract(vectorSolution, np.multiply(vectorUpdate, gamma))
       residual = helper.eval_residual(vectorHelper)
@@ -142,7 +142,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   # Print error.
   error = np.absolute(vectorSolution[system_size-1] - dimension * (np.pi ** 2))
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_eigenvalue_newton.txt", "a")
+  f = open("output/diffusion_hypergraph_convergence_eigenvalue_newton.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()

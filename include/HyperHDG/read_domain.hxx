@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -360,6 +361,8 @@ template <unsigned int hyEdge_dim,
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
 read_domain(std::string filename)
 {
+  hy_assert(std::filesystem::exists(filename), "File does not exist.");
+
   if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
   {
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");

@@ -23,6 +23,10 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
+  
+  # Config time stepping.
+  time_steps  = 10 ** 4
+  delta_time  = 1 / time_steps
 
   try:
     import HyperHDG
@@ -31,53 +35,63 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
     import HyperHDG
   
   const                 = HyperHDG.config()
-  const.global_loop     = "Elliptic"
+  const.global_loop     = "Parabolic"
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.local_solver    = "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
-  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/bilaplacian.hxx"]
+  const.local_solver    = "BilaplacianParab<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersSinParab,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
+    "double", "vector[double]"]
+  const.include_files   = ["reproducibles_python/parameters/bilaplacian.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
 
   # Initialising the wrapped C++ class HDG_wrapper.
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension, lsol_constr= [1.,1.,delta_time] )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1.)
-
+  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
+  
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
-
-  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-  if num_iter != 0:
-      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+  
+  # For loop over the respective time-steps.
+  for time_step in range(time_steps):
+    
+    if time_step > 0:
+      HDG_wrapper.set_data(vectorSolution, time_step * delta_time)
+    
+    # Assemble right-hand side vextor and "mass_matrix * old solution".
+    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
+                 (time_step+1) * delta_time), -1.)
+    
+    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
+    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+    if num_iter != 0:
+      print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
+            ". Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
         raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
-  error = HDG_wrapper.errors(vectorSolution)[0]
+  error = HDG_wrapper.errors(vectorSolution, 1.)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/bilaplacian_convergence_elliptic.txt", "a")
+  f = open("output/bilaplacian_convergence_parabolic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "bil_conv_ellip-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "bil_conv_parab-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_option("boundaryScale", "0.9")
-  HDG_wrapper.plot_option( "plotEdgeBoundaries", "true")
-  HDG_wrapper.plot_solution(vectorSolution)
+  HDG_wrapper.plot_solution(vectorSolution, 1.)
   
   # Print ending time of diffusion test.
   end_time = datetime.now()

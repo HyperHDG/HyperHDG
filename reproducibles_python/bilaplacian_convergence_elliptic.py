@@ -18,12 +18,12 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
+def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-  
+
   try:
     import HyperHDG
   except (ImportError, ModuleNotFoundError) as error:
@@ -35,10 +35,10 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
   const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
   const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.local_solver    = "DiffusionPostprocess<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.local_solver    = "Bilaplacian<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
-  const.include_files   = ["reproducables_python/parameters/diffusion.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/bilaplacian.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
@@ -47,33 +47,36 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
   # Generate right-hand side vector.
-  vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
+  vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1.)
 
-  # Define LinearOperator in terms of C++ functions to use scipy in a matrix-free fashion.
+  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
+  # fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
   # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
   if num_iter != 0:
-    print("CG solver failed with a total number of ", num_iter, "iterations.")
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
-    if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      raise RuntimeError("Linear solvers did not converge!")
+      print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-9)
+      if num_iter != 0:
+        print("GMRES also failed with a total number of ", num_iter, "iterations.")
+        raise RuntimeError("Linear solvers did not converge!")
 
   # Print error.
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_elliptic_postprocess.txt", "a")
+  f = open("output/bilaplacian_convergence_elliptic.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_ellip-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "bil_conv_ellip-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_option("boundaryScale", "0.9")
+  HDG_wrapper.plot_option( "plotEdgeBoundaries", "true")
   HDG_wrapper.plot_solution(vectorSolution)
   
   # Print ending time of diffusion test.
@@ -91,7 +94,7 @@ def main(debug_mode):
       print("Dimension is ", dimension, "\n")
       for iteration in range(6):
         try:
-          diffusion_test(poly_degree, dimension, iteration, debug_mode)
+          bilaplacian_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 

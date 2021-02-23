@@ -39,7 +39,7 @@ def need_compile(conf, python_class, opt):
   for file in glob.glob(this_dir()):
     if time_so < os.stat(file).st_mtime:
       return True
-  dependent_files = [ x for x in conf.include_files if "HyperHDG/" in x ]
+  dependent_files = [ x for x in conf.include_files if ".hxx" in x ]
   return need_compile_check_hy_files(dependent_files, time_so)
 
 ## \brief   Check whether any dependent files have been changed.
@@ -47,7 +47,8 @@ def need_compile_check_hy_files(dependent_files, time_so):
   for x in dependent_files:
     filename = main_dir() + "/include/" + x
     if not os.path.isfile(filename):
-      filename = main_dir + x
+      filename = main_dir() + "/" + x
+    assert os.path.isfile(filename), "Included file could not be found by import command."
     if time_so < os.stat(filename).st_mtime:
       return True
     with open(filename, 'r') as file:
