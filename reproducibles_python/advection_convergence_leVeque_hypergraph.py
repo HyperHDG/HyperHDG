@@ -18,15 +18,15 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode=False):
+def diffusion_test(theta, poly_degree, iteration, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-
+  
   # Config time stepping.
-  time_steps  = 10 ** 3
-  time_end    = 10
+  time_steps  = 10 ** 1
+  time_end    = 2. * np.pi
   delta_time  = time_end / time_steps
   
   try:
@@ -37,14 +37,11 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
   
   const                 = HyperHDG.config()
   const.global_loop     = "Parabolic"
-  const.topology        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.geometry        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.node_descriptor = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.local_solver    = "AdvectionParab<" + str(edge_dim) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",injection,double>"
+  const.topology        = "File<2,3,std::vector,Point<3,double> >"
+  const.geometry        = "File<2,3,std::vector,Point<3,double> >"
+  const.node_descriptor = "File<2,3,std::vector,Point<3,double> >"
+  const.local_solver    = "AdvectionParab<2," + str(poly_degree) + "," + str(2*poly_degree) + \
+    ",LeVequeHG,double>"
   const.cython_replacements = ["string", "string", "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
   const.debug_mode      = debug_mode
@@ -53,17 +50,11 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/injection_test.geo", lsol_constr= [tau,theta,delta_time] )
+    "/../domains/leVeque_hg.geo", lsol_constr= [0.,theta,delta_time] )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-
-  # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-  HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
-
+  
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
@@ -90,20 +81,21 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
         raise RuntimeError("All linear solvers did not converge!")
 
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
-
-    # Plot obtained solution.
-    HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-    HDG_wrapper.plot_option( "printFileNumber" , "true" )
-    HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time_end)
     
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
   print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/advection_injection_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". edge_dim = " + str(edge_dim) \
+  f = open("output/advection_convergence_rotation_theta"+str(theta)+".txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Theta = " + str(theta) \
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
+  
+  # Plot obtained solution.
+  HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
+    + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution, time_end)
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
@@ -114,16 +106,15 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  edge_dim = 1
-  space_dim = 2
-  iteration = 2
-  poly_degree = 3
-  theta = 0.5
-  for tau in [0, 1]:
-    try:
-      diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode)
-    except RuntimeError as error:
-      print("ERROR: ", error)
+  for theta in [0.5]:
+    print("\n Theta is set to be ", theta, "\n\n")
+    for poly_degree in range(1):
+      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+      for iteration in range(5,6):
+        try:
+          diffusion_test(theta, poly_degree, iteration, debug_mode)
+        except RuntimeError as error:
+          print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------
