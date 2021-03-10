@@ -71,8 +71,8 @@ def include(conf):
 
   delta_time_ms = 1000 * (datetime.datetime.now() - start_time).total_seconds()
   if compilation_necessary:
-    print("DONE with compilation in " + "{:.2f}".format(delta_time_ms) + " milliseconds.")
+    print("DONE with compilation in " + "{:,.2f}".format(delta_time_ms) + " milliseconds.")
   else:
-    print("DONE without compilation in " + "{:.2f}".format(delta_time_ms) + " milliseconds.")
+    print("DONE without compilation in " + "{:,.2f}".format(delta_time_ms) + " milliseconds.")
 
   return getattr(mod, python_class)
