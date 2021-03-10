@@ -276,7 +276,9 @@ class File
   {
     return domain_info_;
   }
-
+  /*!***********************************************************************************************
+   * \brief   Tensor product chain complex of 'local' / refined elements.
+   ************************************************************************************************/
   const Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t>&
   tpcc_ref_elem() const
   {
