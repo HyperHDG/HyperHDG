@@ -14,7 +14,6 @@ from datetime import datetime
 # Correct the python paths!
 import os, sys
 
-
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
@@ -25,8 +24,8 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  time_steps  = 10 ** 1
-  time_end    = 2. * np.pi
+  time_steps  = 10 ** 4
+  time_end    = 5
   delta_time  = time_end / time_steps
   
   try:
@@ -61,6 +60,13 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
+  # Plot obtained solution.
+  HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
+    + "-" + str(refinement) )
+  HDG_wrapper.plot_option( "printFileNumber" , "true" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution, time_end)
+
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
     
@@ -82,6 +88,8 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
         raise RuntimeError("All linear solvers did not converge!")
 
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
+
+    HDG_wrapper.plot_solution(vectorSolution, time_end)
     
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
@@ -92,11 +100,11 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   f.close()
   
   # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
-    + "-" + str(refinement) )
-  HDG_wrapper.plot_option( "printFileNumber" , "false" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
+  # HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
+  #   + "-" + str(refinement) )
+  # HDG_wrapper.plot_option( "printFileNumber" , "true" )
+  # HDG_wrapper.plot_option( "scale" , "0.95" )
+  # HDG_wrapper.plot_solution(vectorSolution, time_end)
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
@@ -107,11 +115,11 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for theta in [0.5]:
+  for theta in [0.5, 1.]:
     print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(1):
+    for poly_degree in range(3):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for refinement in range(1,2):
+      for refinement in range(5,8):
         try:
           diffusion_test(theta, poly_degree, refinement, debug_mode)
         except RuntimeError as error:

@@ -138,6 +138,8 @@ struct LeVequeHG
     static_assert(space_dimT == 3, "Example is defined in two spatial dimensions.");
     SmallVec<space_dimT, param_float_t> velocity;
     velocity[0] = 1.;
+    if ((point[1] > 0 && point[0] < 0) || (point[1] < 0 && point[0] > 0))
+      velocity[0] = 2.;
     return velocity;
   }
 
