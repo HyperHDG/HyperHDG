@@ -24,10 +24,10 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  time_steps      = 10 ** 4
+  time_steps      = 10 ** 3
   time_end        = 5
   delta_time      = time_end / time_steps
-  output_interval = 100
+  output_interval = 20
   
   try:
     import HyperHDG
