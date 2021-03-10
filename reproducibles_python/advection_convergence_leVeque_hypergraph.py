@@ -24,9 +24,10 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   os.system("mkdir -p output")
   
   # Config time stepping.
-  time_steps  = 10 ** 4
-  time_end    = 5
-  delta_time  = time_end / time_steps
+  time_steps      = 10 ** 4
+  time_end        = 5
+  delta_time      = time_end / time_steps
+  output_interval = 100
   
   try:
     import HyperHDG
@@ -89,7 +90,8 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
 
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
 
-    HDG_wrapper.plot_solution(vectorSolution, time_end)
+    if (time_step+1) % output_interval == 0:
+      HDG_wrapper.plot_solution(vectorSolution, time_end)
     
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
