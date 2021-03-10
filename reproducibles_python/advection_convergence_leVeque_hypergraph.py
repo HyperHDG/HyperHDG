@@ -18,7 +18,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(theta, poly_degree, iteration, debug_mode=False):
+def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
@@ -51,6 +51,7 @@ def diffusion_test(theta, poly_degree, iteration, debug_mode=False):
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
     "/../domains/leVeque_hg.geo", lsol_constr= [0.,theta,delta_time] )
+  HDG_wrapper.refine( 2 ** refinement )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
@@ -84,15 +85,15 @@ def diffusion_test(theta, poly_degree, iteration, debug_mode=False):
     
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
+  print( "Iteration: ", refinement, " Error: ", error )
   f = open("output/advection_convergence_rotation_theta"+str(theta)+".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Theta = " + str(theta) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+          + ". Iteration = " + str(refinement) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
-    + "-" + str(iteration) )
+    + "-" + str(refinement) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution, time_end)
@@ -110,9 +111,9 @@ def main(debug_mode):
     print("\n Theta is set to be ", theta, "\n\n")
     for poly_degree in range(1):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for iteration in range(5,6):
+      for refinement in range(1,2):
         try:
-          diffusion_test(theta, poly_degree, iteration, debug_mode)
+          diffusion_test(theta, poly_degree, refinement, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 
