@@ -152,7 +152,7 @@ struct LeVequeHG
     Point<space_dimT, param_float_t> center;
     center[0] = 0.5 - 2.;
     center[2] = 0.75;
-    if (norm_2(point - center) <= r && (x <= 0.475 || x >= 0.525 || y >= 0.85))
+    if (norm_2(point - center) <= r && (x <= 0.475 - 2. || x >= 0.525 - 2. || y >= 0.85 - 2.))
       return 1.;
     center[0] = 0.5 - 2.;
     center[2] = 0.25;
