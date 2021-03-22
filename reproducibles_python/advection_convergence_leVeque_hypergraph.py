@@ -75,11 +75,7 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
     vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
 
-    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    # [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
-    # if num_iter != 0:
-    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
-    #         ". Trying GMRES!")
+    # Solve "A * x = b" in matrix-free fashion using scipy's GMRES algorithm.
     [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
     if num_iter != 0:
       # print("GMRES also failed with a total number of ", num_iter, "iterations.")
@@ -100,13 +96,6 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   f.write("Polynomial degree = " + str(poly_degree) + ". Theta = " + str(theta) \
           + ". Iteration = " + str(refinement) + ". Error = " + str(error) + ".\n")
   f.close()
-  
-  # Plot obtained solution.
-  # HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
-  #   + "-" + str(refinement) )
-  # HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  # HDG_wrapper.plot_option( "scale" , "0.95" )
-  # HDG_wrapper.plot_solution(vectorSolution, time_end)
   
   # Print ending time of diffusion test.
   end_time = datetime.now()
