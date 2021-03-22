@@ -65,7 +65,7 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
     + "-" + str(refinement) )
   HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
+  # HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution, time_end)
 
   # For loop over the respective time-steps.
