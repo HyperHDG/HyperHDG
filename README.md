@@ -1,8 +1,8 @@
 # Welcome to HyperHDG!
 
 It contains a C++ based library implementing hybrid discontinuous Galerkin methods on extremely
-general domains &mdash; that is, all standard (volume) domains, graphs, self-intersecting surfaces,
-and several other types of "domains" that can be interpreted as hypergraphs.
+general domains &mdash; that is, all standard (volume) domains, graphs, intersecting surfaces, and
+several other types of "domains" that can be interpreted as hypergraphs.
 
 The C++ library can be embedded to C++ programs and/or Python scripts using [Cython](
 https://cython.org/). This makes the library a good choice for writing both, high performance codes
