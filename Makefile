@@ -64,7 +64,7 @@ doxygen:
 
 ## Format all .cxx and .hxx files that are parts of the library.
 format:
-	clang-format -i reproducables_python/parameters/*.hxx examples/parameters/*.hxx examples/*.cxx \
+	clang-format -i reproducibles_python/parameters/*.hxx examples/parameters/*.hxx examples/*.cxx \
 		tests_c++/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
 
 

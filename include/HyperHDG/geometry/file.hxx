@@ -88,6 +88,15 @@ class File
      * \brief   Hold an instance of a mapping type to be able to calculate normals and so on.
      **********************************************************************************************/
     mapping_t mapping;
+    /*!*********************************************************************************************
+     * \brief   Return vertex of specified index of a hyperedge.
+     **********************************************************************************************/
+    pointT point(const unsigned int pt_index) const
+    {
+      return hyGraph_geometry_.domain_info_
+        .points[hyGraph_geometry_.domain_info_
+                  .points_hyEdge[index_ / hyGraph_geometry_.n_loc_ref_elem][pt_index]];
+    }
 
    public:
     /*!*********************************************************************************************
@@ -100,15 +109,14 @@ class File
       SmallMat<space_dimT, hyEdge_dimT, pt_coord_t> matrix;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         matrix.set_column(dim, point(1 << dim) - translation);
+
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> elem = Wrapper::get_element(
+        hyGraph_geometry.tpcc_ref_elem_, index % hyGraph_geometry_.n_loc_ref_elem);
+      matrix /= (pt_coord_t)hyGraph_geometry_.n_subintervals_;
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        translation += (pt_coord_t)Wrapper::interior_coordinate(elem, dim) * matrix.get_column(dim);
+
       mapping = mapping_t(translation, matrix);
-    }
-    /*!*********************************************************************************************
-     * \brief   Return vertex of specified index of a hyperedge.
-     **********************************************************************************************/
-    pointT point(const unsigned int pt_index) const
-    {
-      return hyGraph_geometry_.domain_info_
-        .points[hyGraph_geometry_.domain_info_.points_hyEdge[index_][pt_index]];
     }
     /*!*********************************************************************************************
      * \brief   Map n_vec points from reference to physical element.
@@ -303,6 +311,19 @@ class File
                    hyNode_index_t,
                    pt_index_t>& domain_info_;
 
+  /*!***********************************************************************************************
+   * \brief   Refinment level corresponds to number of subintervals per dimension.
+   ************************************************************************************************/
+  unsigned int n_subintervals_;
+  /*!***********************************************************************************************
+   * \brief   Tensor product chain complex for refined elements.
+   ************************************************************************************************/
+  Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t> tpcc_ref_elem_;
+  /*!***********************************************************************************************
+   * \brief   Number of refined elements per element.
+   ************************************************************************************************/
+  unsigned int n_loc_ref_elem;
+
  public:
   /*!***********************************************************************************************
    * \brief   Defines the return value of the class.
@@ -327,7 +348,15 @@ class File
    *
    * \param   topology     The topology of the hypergraph that has the geometry of the unit cube.
    ************************************************************************************************/
-  File(const constructor_value_type& topology) : domain_info_(topology.domain_info()) {}
+  File(const constructor_value_type& topology)
+  : domain_info_(topology.domain_info()),
+    n_subintervals_(topology.get_refinement()),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_))),
+    n_loc_ref_elem(Hypercube<hyEdge_dimT>::pow(n_subintervals_))
+  {
+  }
   /*!***********************************************************************************************
    * \brief   Get geometrical hyperedge of given index.
    *
@@ -353,7 +382,7 @@ class File
    ************************************************************************************************/
   value_type get_hyEdge(const hyEdge_index_t index) const
   {
-    hy_assert(index < domain_info_.n_hyEdges && index >= 0,
+    hy_assert(index < domain_info_.n_hyEdges * Wrapper::n_elements(tpcc_ref_elem_) && index >= 0,
               "Index must be non-negative and smaller than "
                 << domain_info_.n_hyEdges << " (which is the amount of hyperedges). It was "
                 << index << "!");
@@ -362,15 +391,18 @@ class File
   /*!***********************************************************************************************
    * \brief   Return the refinement level (equal to number of subintervals).
    ************************************************************************************************/
-  unsigned int get_refinement() const
-  {
-    hy_assert(false, "Not implemented");
-    return 0;
-  }
+  unsigned int get_refinement() const { return n_subintervals_; }
   /*!***********************************************************************************************
    * \brief   Set the refinement level (equal to number of subintervals).
    ************************************************************************************************/
-  void set_refinement(unsigned int) { hy_assert(false, "Not implemented"); }
+  void set_refinement(unsigned int level)
+  {
+    n_subintervals_ = level;
+    tpcc_ref_elem_ =
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_));
+    n_loc_ref_elem = Hypercube<hyEdge_dimT>::pow(n_subintervals_);
+  }
 };  // end class File
 
 }  // end namespace Geometry

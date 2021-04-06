@@ -51,28 +51,39 @@ class File
      **********************************************************************************************/
     const hyEdge_index_t index_;
 
+    /*!*********************************************************************************************
+     * \brief   Indices of the hypernodes adjacent to the hyperedge.
+     **********************************************************************************************/
+    std::array<hyNode_index_t, 2 * hyEdge_dimT> hyFace_types_;
+
    public:
     /*!*********************************************************************************************
      * \brief   Construct hyperedge from hypergraph and index.
      **********************************************************************************************/
-    hyEdge(const File& hyGraph_topology, const hyEdge_index_t index)
-    : hyGraph_topology_(hyGraph_topology), index_(index)
+    hyEdge(const File& node_desc, const hyEdge_index_t index)
+    : hyGraph_topology_(node_desc), index_(index)
     {
+      hyFace_types_ = node_desc.domain_info_
+                        .hyFaces_hyEdge[index / Wrapper::n_elements(node_desc.tpcc_ref_elem_)];
+
+      Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT> ref_elem = Wrapper::get_element(
+        node_desc.tpcc_ref_elem_, index % Wrapper::n_elements(node_desc.tpcc_ref_elem_));
+      for (unsigned int i = 0; i < hyFace_types_.size(); ++i)
+      {
+        Wrapper::tpcc_elem_t<hyEdge_dimT - 1, hyEdge_dimT> face = Wrapper::get_face(ref_elem, i);
+        if (Wrapper::exterior_coordinate(face, 0) != 0 &&
+            Wrapper::exterior_coordinate(face, 0) != node_desc.n_subintervals_)
+          hyFace_types_[i] = 0;
+      }
     }
     /*!*********************************************************************************************
      * \brief   Return hypernode types of the \c hyEdge.
      **********************************************************************************************/
-    const auto& get_hyFaces_types() const
-    {
-      return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_];
-    }
+    const auto& get_hyFaces_types() const { return hyFace_types_; }
     /*!*********************************************************************************************
      * \brief   Return hypernode type of given index.
      **********************************************************************************************/
-    unsigned int operator[](const unsigned int index) const
-    {
-      return hyGraph_topology_.domain_info_.hyFaces_hyEdge[index_][index];
-    }
+    unsigned int operator[](const unsigned int index) const { return hyFace_types_[index]; }
   };  // end of class hyEdge
 
  public:
@@ -97,6 +108,19 @@ class File
                    hyNode_index_t,
                    pt_index_t>& domain_info_;
 
+  /*!***********************************************************************************************
+   * \brief   Refinment level corresponds to number of subintervals per dimension.
+   ************************************************************************************************/
+  unsigned int n_subintervals_;
+  /*!***********************************************************************************************
+   * \brief   Tensor product chain complex for refined elements of hypergedge.
+   ************************************************************************************************/
+  Wrapper::tpcc_t<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyNode_index_t> tpcc_ref_elem_;
+  /*!***********************************************************************************************
+   * \brief   Total amount of hyperedges in hypergraph.
+   ************************************************************************************************/
+  hyEdge_index_t n_hyEdges_;
+
  public:
   /*!***********************************************************************************************
    * \brief   Define the return value of the class.
@@ -111,7 +135,13 @@ class File
   /*!***********************************************************************************************
    * \brief   Construct a node descriptor from a file topology.
    ************************************************************************************************/
-  File(const constructor_value_type& topology) : domain_info_(topology.domain_info()) {}
+  File(const constructor_value_type& topology)
+  : domain_info_(topology.domain_info()),
+    n_subintervals_(topology.get_refinement()),
+    tpcc_ref_elem_(topology.tpcc_ref_elem()),
+    n_hyEdges_(topology.n_hyEdges())
+  {
+  }
   /*!***********************************************************************************************
    * \brief   Copy constructor.
    ************************************************************************************************/
@@ -122,7 +152,12 @@ class File
                   hyEdge_index_t,
                   hyNode_index_t,
                   pt_index_t>& other)
-  : domain_info_(other.domain_info)
+  : domain_info_(other.domain_info),
+    n_subintervals_(1),
+    tpcc_ref_elem_(
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_))),
+    n_hyEdges_(domain_info_.n_hyEdges)
   {
   }
 
@@ -135,7 +170,7 @@ class File
    ************************************************************************************************/
   value_type get_hyEdge(const hyEdge_index_t index) const
   {
-    hy_assert(index < domain_info_.n_hyEdges && index >= 0,
+    hy_assert(index < domain_info_.n_hyEdges * Wrapper::n_elements(tpcc_ref_elem_) && index >= 0,
               "Index must be non-negative and smaller than "
                 << domain_info_.n_hyEdges << " (which is the amount of hyperedges). It was "
                 << index << "!");
@@ -144,15 +179,18 @@ class File
   /*!***********************************************************************************************
    * \brief   Return the refinement level (equal to number of subintervals).
    ************************************************************************************************/
-  unsigned int get_refinement() const
-  {
-    hy_assert(false, "Not implemented");
-    return 0;
-  }
+  unsigned int get_refinement() const { return n_subintervals_; }
   /*!***********************************************************************************************
    * \brief   Set the refinement level (equal to number of subintervals).
    ************************************************************************************************/
-  void set_refinement(unsigned int) { hy_assert(false, "Not implemented"); }
+  void set_refinement(unsigned int level)
+  {
+    n_subintervals_ = level;
+    tpcc_ref_elem_ =
+      Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
+        SmallVec<hyEdge_dimT, unsigned int>(n_subintervals_));
+    n_hyEdges_ = domain_info_.n_hyEdges * Wrapper::n_elements(tpcc_ref_elem_);
+  }
 };  // end of class File
 
 }  // namespace NodeDescriptor

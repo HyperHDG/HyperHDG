@@ -14,20 +14,20 @@ from datetime import datetime
 # Correct the python paths!
 import os, sys
 
-
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode=False):
+def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
   # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
-
+  
   # Config time stepping.
-  time_steps  = 10 ** 3
-  time_end    = 10
-  delta_time  = time_end / time_steps
+  time_steps      = 10 ** 3
+  time_end        = 5
+  delta_time      = time_end / time_steps
+  output_interval = 20
   
   try:
     import HyperHDG
@@ -37,14 +37,11 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
   
   const                 = HyperHDG.config()
   const.global_loop     = "Parabolic"
-  const.topology        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.geometry        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.node_descriptor = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.local_solver    = "AdvectionParab<" + str(edge_dim) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",injection,double>"
+  const.topology        = "File<2,3,std::vector,Point<3,double> >"
+  const.geometry        = "File<2,3,std::vector,Point<3,double> >"
+  const.node_descriptor = "File<2,3,std::vector,Point<3,double> >"
+  const.local_solver    = "AdvectionParab<2," + str(poly_degree) + "," + str(2*poly_degree) + \
+    ",LeVequeHG,double>"
   const.cython_replacements = ["string", "string", "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
   const.debug_mode      = debug_mode
@@ -53,21 +50,23 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
 
   # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/injection_test.geo", lsol_constr= [tau,theta,delta_time] )
+    "/../domains/leVeque_hg.geo", lsol_constr= [0.,theta,delta_time] )
+  HDG_wrapper.refine( 2 ** refinement )
 
   # Generate right-hand side vector.
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-
-  # Plot obtained solution.
-  HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-  HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
-
+  
   # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
   # fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
+
+  # Plot obtained solution.
+  HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
+    + "-" + str(refinement) )
+  HDG_wrapper.plot_option( "printFileNumber" , "true" )
+  # HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution, time_end)
 
   # For loop over the respective time-steps.
   for time_step in range(time_steps):
@@ -76,11 +75,7 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
     vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
 
-    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-    # [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
-    # if num_iter != 0:
-    #   print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
-    #         ". Trying GMRES!")
+    # Solve "A * x = b" in matrix-free fashion using scipy's GMRES algorithm.
     [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
     if num_iter != 0:
       # print("GMRES also failed with a total number of ", num_iter, "iterations.")
@@ -91,18 +86,15 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
 
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
 
-    # Plot obtained solution.
-    HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-    HDG_wrapper.plot_option( "printFileNumber" , "true" )
-    HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time_end)
+    if (time_step+1) % output_interval == 0:
+      HDG_wrapper.plot_solution(vectorSolution, time_end)
     
   # Print error.
   error = HDG_wrapper.errors(vectorSolution, time_end)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/advection_injection_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". edge_dim = " + str(edge_dim) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  print( "Iteration: ", refinement, " Error: ", error )
+  f = open("output/advection_convergence_rotation_theta"+str(theta)+".txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Theta = " + str(theta) \
+          + ". Iteration = " + str(refinement) + ". Error = " + str(error) + ".\n")
   f.close()
   
   # Print ending time of diffusion test.
@@ -114,16 +106,15 @@ def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debu
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  edge_dim = 1
-  space_dim = 2
-  iteration = 2
-  poly_degree = 3
-  theta = 0.5
-  for tau in [0, 1]:
-    try:
-      diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode)
-    except RuntimeError as error:
-      print("ERROR: ", error)
+  for theta in [0.5, 1.]:
+    print("\n Theta is set to be ", theta, "\n\n")
+    for poly_degree in range(3):
+      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+      for refinement in range(5,8):
+        try:
+          diffusion_test(theta, poly_degree, refinement, debug_mode)
+        except RuntimeError as error:
+          print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------
