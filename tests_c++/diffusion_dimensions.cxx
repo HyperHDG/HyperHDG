@@ -86,7 +86,6 @@ int do_test_uniform()
   return successful - 1;
 }
 
-
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParameters
 {
@@ -190,7 +189,6 @@ int do_test_standard()
   return successful - 1;
 }
 
-
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersDir
 {
@@ -286,7 +284,6 @@ int do_test_standard_dir()
 
   return successful - 1;
 }
-
 
 int main()
 {
