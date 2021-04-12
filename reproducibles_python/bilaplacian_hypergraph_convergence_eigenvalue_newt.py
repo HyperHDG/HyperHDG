@@ -1,18 +1,12 @@
-# Python running example for HDG solution of an elasticity problem on a superaggregate!
-
-# Import printing functions.
 from __future__ import print_function
 
-# Import numpy and spares linear algebra from scipy to use the Python maths libraries.
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 import random
 
-# Import package to print date and time of start and end of program.
 from datetime import datetime
 
-# Correct the python paths!
 import os, sys
 
 
@@ -46,12 +40,10 @@ class helper_ev_newt():
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_mode=False):
-  # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
 
-  # Config Newton solver
   n_newton_steps = 25
   scaling_fac    = 1e-2
   norm_exact     = 1e-9
@@ -76,17 +68,13 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-
-  # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * 3 )
+  
   helper = helper_ev_newt(HDG_wrapper)
 
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
   system_size = HDG_wrapper.size_of_system() + 1
   A = LinearOperator( (system_size,system_size), matvec= helper.eval_jacobian )
   
-  # Initialize solution vector [lambda, eig].
   if initial == "default":
     vectorSolution = [0] * system_size
     vectorSolution = HDG_wrapper.make_initial(vectorSolution)
@@ -99,18 +87,15 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
     vectorSolution = np.multiply(vectorSolution, 1./np.linalg.norm(vectorSolution))
     vectorSolution[len(vectorSolution)-1] = temp
   
-  # Initial residual.
   residual = helper.eval_residual( vectorSolution )
   norm_res = np.linalg.norm( residual )
   
-  # For loop over the respective time-steps.
   for newton_step in range(n_newton_steps):
     
     helper.set_val(vectorSolution)
     norm_old = norm_res
     gamma = 1
     
-    # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
     [vectorUpdate, num_iter] = sp_lin_alg.bicgstab(A,residual,tol=min(1e-9,scaling_fac * norm_res))
     if num_iter != 0:
       print("BiCGStab failed with a total number of ", num_iter, "iterations.")
@@ -141,7 +126,6 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   if norm_res >= norm_exact:
     raise RuntimeError("Newton solver did not converge!")
 
-  # Print error.
   error = np.absolute( vectorSolution[system_size-1] - (dimension * (np.pi ** 2)) ** 2 )
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_hypergraph_convergence_eigenvalue_newton.txt", "a")
@@ -149,17 +133,14 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bil_eig_newt-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution,vectorSolution[system_size-1])
   
-  # Print ending time of diffusion test.
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
   
-  # Return smallest eigenvalue and corresponding eigenvector.
   return vectorSolution[system_size-1], vectorSolution, error
   
 

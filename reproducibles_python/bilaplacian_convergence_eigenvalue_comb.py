@@ -1,14 +1,9 @@
-# Python running example for HDG solution of an elasticity problem on a superaggregate!
-
-# Import printing functions.
 from __future__ import print_function
 
-# Import other eigenvalue solvers.
 from bilaplacian_convergence_eigenvalue_approx import eigenvalue_approx_MA
 from bilaplacian_convergence_eigenvalue_shifted_inverse import eigenvalue_approx_SI
 from bilaplacian_convergence_eigenvalue_newt import eigenvalue_newt
 
-# Correct the python paths!
 import os, sys
   
 
