@@ -1,4 +1,4 @@
-# File containing geometric and topologic information for of Hypegraph being a triangle.
+# File containing geometric and topological information for of hypergraph being a triangle.
 
 # The following parameters need to be given in the specified order!
 
@@ -10,7 +10,7 @@ N_HyperNodes  = 2;  # Number of hypernodes that are contained in the hypergraph.
 N_HyperEdges  = 1;  # Number of hyperedges that are contained in the hypergraph.
 
 
-# After "POINTS:" the coordinates of the points have to appear. That is, the next lines conatain one
+# After "POINTS:" the coordinates of the points have to appear. That is, the next lines contain one
 # point and therefore "Space_Dimension" numbers.
 
 POINTS:
