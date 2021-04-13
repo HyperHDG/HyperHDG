@@ -476,8 +476,9 @@ class BilaplacianEigs
       else
       {
         for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          lambda_values[i][j] = integrator ::tempate
-            integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
+          lambda_values[i][j] =
+            integrator ::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
+                                                           parameters::initial>(
               i, j, hyper_edge.geometry, time);
         for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] =
@@ -902,7 +903,7 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bul
   const lSol_float_t time) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-    solve_local_problem(lambda_values, 1U, hyper_edge, time);
+    solve_local_problem(lambda_values, hyper_edge, time);
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
   SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
