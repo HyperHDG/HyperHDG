@@ -16,3 +16,6 @@ do
   (set -x; cd $(dirname $(readlink -f "$0"))/..; \
     timeout $TIME python3 $file True |& tee -a output/reproducibles_test.txt)
 done
+
+echo -e "\n${COL}${BOLD}Check whether tests have passed ...${NOR}"
+(set -x; cd $(dirname $(readlink -f "$0")); python3 check_reproducibles_test.py)
