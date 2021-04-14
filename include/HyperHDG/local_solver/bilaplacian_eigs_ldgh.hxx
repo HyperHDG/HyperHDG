@@ -462,9 +462,9 @@ class BilaplacianEigs
    * \retval  bdr_values    Coefficients of L2 projection.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT make_initial(SmallMatT& lambda_values,
-                         hyEdgeT& hyper_edge,
-                         const lSol_float_t time = 0.) const
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -476,15 +476,15 @@ class BilaplacianEigs
       else
       {
         for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          lambda_values[i][j] =
-            integrator ::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
-                                                           parameters::initial>(
-              i, j, hyper_edge.geometry, time);
+          lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
+            j, i, hyper_edge.geometry, time);
         for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] =
-            integrator::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
-                                                          parameters::initial_laplace>(
-              i, j, hyper_edge.geometry, time);
+          lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial_laplace,
+            Point<hyEdge_dimT, lSol_float_t> >(j, i, hyper_edge.geometry, time);
       }
     }
 
