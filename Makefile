@@ -22,10 +22,11 @@ TEST_COMPILER = clang++-10 clang++-11 g++-10
 
 ## Default target executed by 'make' or 'make build'.
 build:
+	$(MAKE) clean_build
 	mkdir -p build
 	cd build; cmake -DCMAKE_CXX_COMPILER=$(CXX) ..
-	cd build; make
-	cd build; make test
+	cd build; $(MAKE)
+	cd build; $(MAKE) test
 
 
 ## Clean up the automatically generated files of the library.
@@ -75,12 +76,4 @@ submodules:
 
 ## Perform a test that checks the library to work with all TEST_COMPILER.
 test_all_compilers:
-	$(foreach compiler, $(TEST_COMPILER), $(MAKE) CXX=${compiler} test_compiler;)
-
-## Test the library to work with a certain compiler (given via the flag "comp").
-test_compiler:
-	$(MAKE) clean
-	mkdir -p build	
-	cd build; cmake -DCMAKE_CXX_COMPILER=$(CXX) ..
-	cd build; make
-	cd build; make test
+	$(foreach compiler, $(TEST_COMPILER), CXX=${compiler} $(MAKE) build;)
