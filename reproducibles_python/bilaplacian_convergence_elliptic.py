@@ -1,17 +1,11 @@
-# Python running example for HDG solution of an elasticity problem on a superaggregate!
-
-# Import printing functions.
 from __future__ import print_function
 
-# Import numpy and spares linear algebra from scipy to use the Python maths libraries.
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
-# Import package to print date and time of start and end of program.
 from datetime import datetime
 
-# Correct the python paths!
 import os, sys
 
 
@@ -19,7 +13,6 @@ import os, sys
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
-  # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -42,19 +35,13 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-
-  # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
-  # Generate right-hand side vector.
   vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1.)
 
-  # Define LinearOperator in terms of C++ functions to use scipy linear solvers in a matrix-free
-  # fashion.
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
-  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
   [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
   if num_iter != 0:
       print("CG failed with a total number of ", num_iter, " iterations. Trying GMRES!")
@@ -63,7 +50,6 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
         raise RuntimeError("Linear solvers did not converge!")
 
-  # Print error.
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_elliptic.txt", "a")
@@ -71,7 +57,6 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "bil_conv_ellip-" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
@@ -79,7 +64,6 @@ def bilaplacian_test(poly_degree, dimension, iteration, debug_mode=False):
   HDG_wrapper.plot_option( "plotEdgeBoundaries", "true")
   HDG_wrapper.plot_solution(vectorSolution)
   
-  # Print ending time of diffusion test.
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
   

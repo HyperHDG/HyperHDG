@@ -7,12 +7,6 @@
 
 using namespace std;
 
-/*!*************************************************************************************************
- * \brief   Set the test parameters.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParameters
 {
@@ -41,15 +35,7 @@ struct TestParameters
     return 0.;
   }
 };
-/*!*************************************************************************************************
- * \brief   Function that tests several aspects of the C++ implementation against a given reference
- *          solution obtained with the Python interface.
- *
- * This function implements an alternative to Executable.py (which usses the Cython interface).
- *
- * \authors   Guido Kanschat, Heidelberg University, 2020.
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- **************************************************************************************************/
+
 template <unsigned int hyEdge_dim, unsigned int space_dim, typename test_float_t>
 int do_test()
 {

@@ -8,14 +8,8 @@
 
 using namespace std;
 
-/*!*************************************************************************************************
- * \brief   Output cubic geometries
- *
- * \authors   Guido Kanschat, Heidelberg University, 2020.
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- **************************************************************************************************/
 template <int edge_dim, int space_dim, int nsub>
-void test()
+void output_cubic()
 {
   vector<unsigned int> num_elements;
 
@@ -54,11 +48,11 @@ void test()
 
 int main()
 {
-  test<1, 1, 2>();
-  test<1, 2, 2>();
-  test<1, 3, 2>();
-  test<2, 2, 2>();
-  test<2, 3, 3>();
-  test<3, 3, 2>();
+  output_cubic<1, 1, 2>();
+  output_cubic<1, 2, 2>();
+  output_cubic<1, 3, 2>();
+  output_cubic<2, 2, 2>();
+  output_cubic<2, 3, 3>();
+  output_cubic<3, 3, 2>();
   return 0;
 }

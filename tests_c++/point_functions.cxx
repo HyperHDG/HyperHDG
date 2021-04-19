@@ -1,11 +1,3 @@
-/*!*************************************************************************************************
- * \file    examples_c++/PointTest.C
- * \brief   File that tests several aspects of the C++ implementation of Point (NOT FINISHED YET).
- *
- * \authors   Guido Kanschat, Heidelberg University, 2020.
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- **************************************************************************************************/
-
 #include <HyperHDG/dense_la.hxx>
 
 #include <array>
@@ -19,15 +11,6 @@ bool almost_equal(pt_coord_t a, pt_coord_t b)
   return (a - b < 1e-5 && b - a < 1e-5);
 }
 
-/*!*************************************************************************************************
- * \brief   Function that tests several aspects of the C++ implementation against a given reference
- *          solution obtained with the Python interface.
- *
- * This function implements an alternative to Executable.py (which usses the Cython interface).
- *
- * \authors   Guido Kanschat, Heidelberg University, 2020.
- * \authors   Andreas Rupp, Heidelberg University, 2020.
- **************************************************************************************************/
 template <unsigned int space_dim, typename pt_coord_t>
 bool testPoint()
 {
