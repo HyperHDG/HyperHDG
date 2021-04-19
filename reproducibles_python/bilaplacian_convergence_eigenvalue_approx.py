@@ -1,17 +1,11 @@
-# Python running example for HDG solution of an elasticity problem on a superaggregate!
-
-# Import printing functions.
 from __future__ import print_function
 
-# Import numpy and spares linear algebra from scipy to use the Python maths libraries.
 import numpy as np
 import scipy.sparse.linalg as sp_lin_alg
 from scipy.sparse.linalg import LinearOperator
 
-# Import package to print date and time of start and end of program.
 from datetime import datetime
 
-# Correct the python paths!
 import os, sys
 
 
@@ -65,12 +59,10 @@ class helper_ev_approx():
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
 def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
-  # Print starting time of diffusion test.
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
     
-  # Configure eigenvector/-value solver.
   exact_eigenval = (dimension * (np.pi ** 2)) ** 2
   sigma          = 3. * exact_eigenval / 4.
   
@@ -92,21 +84,17 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-
-  # Initialising the wrapped C++ class HDG_wrapper.
   HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  
   helper = helper_ev_approx(HDG_wrapper, sigma)
 
-  # Define LinearOperator in terms of C++ functions to use scipy's matrix-free linear solvers.
   system_size = helper.short_vector_size()
   Stiff       = LinearOperator( (system_size,system_size), matvec= helper.multiply_stiff )
   Mass        = LinearOperator( (system_size,system_size), matvec= helper.multiply_mass )
   ShiftedInv  = LinearOperator( (system_size,system_size), matvec= helper.shifted_inverse )
   
-  # Solve "A * x = b" in matrix-free fashion using scipy's CG algorithm.
-  [vals, vecs] = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
+  vals, vecs = sp_lin_alg.eigsh(Stiff, k=1, M=Mass, sigma= sigma, which='LM', OPinv= ShiftedInv)
 
-  # Print error.
   error = np.absolute(vals[0] - exact_eigenval)
   print("Iteration: ", iteration, " Error: ", error)
   f = open("output/bilaplacian_convergence_eigenvalue_approx.txt", "a")
@@ -114,20 +102,16 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
           + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  # Postprocess solution vector.
   solution = helper.long_vector([x[0].real for x in vecs])
   
-  # Plot obtained solution.
   HDG_wrapper.plot_option( "fileName" , "diff_e-" + str(dimension) + "-" + str(iteration) );
   HDG_wrapper.plot_option( "printFileNumber" , "false" );
   HDG_wrapper.plot_option( "scale" , "0.95" );
   HDG_wrapper.plot_solution(helper.long_vector(solution))
   
-  # Print ending time of diffusion test.
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
   
-  # Return smallest eigenvalue and corresponding eigenvector.
   return vals[0].real, solution, error
   
 

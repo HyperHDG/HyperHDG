@@ -3,12 +3,6 @@
 #include <HyperHDG/dense_la.hxx>
 #include <cmath>
 
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinParab
 {
@@ -52,12 +46,6 @@ struct TestParametersSinParab
   }
 };
 
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct LeVeque
 {
@@ -120,12 +108,6 @@ struct LeVeque
   }
 };
 
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct LeVequeHG
 {
@@ -188,12 +170,6 @@ struct LeVequeHG
   }
 };
 
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct injection
 {

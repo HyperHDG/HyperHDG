@@ -109,7 +109,7 @@ class BilaplacianUniform
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return 2; }
+  static constexpr unsigned int node_system_dimension() { return 1; }
 
  private:
   // -----------------------------------------------------------------------------------------------

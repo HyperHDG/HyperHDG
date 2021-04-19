@@ -198,7 +198,7 @@ class BilaplacianEigs
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return 2; }
+  static constexpr unsigned int node_system_dimension() { return 1; }
 
  private:
   // -----------------------------------------------------------------------------------------------
@@ -462,9 +462,9 @@ class BilaplacianEigs
    * \retval  bdr_values    Coefficients of L2 projection.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT make_initial(SmallMatT& lambda_values,
-                         hyEdgeT& hyper_edge,
-                         const lSol_float_t time = 0.) const
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -476,14 +476,15 @@ class BilaplacianEigs
       else
       {
         for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
-          lambda_values[i][j] = integrator ::tempate
-            integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry), parameters::initial>(
-              i, j, hyper_edge.geometry, time);
+          lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
+            j, i, hyper_edge.geometry, time);
         for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] =
-            integrator::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
-                                                          parameters::initial_laplace>(
-              i, j, hyper_edge.geometry, time);
+          lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial_laplace,
+            Point<hyEdge_dimT, lSol_float_t> >(j, i, hyper_edge.geometry, time);
       }
     }
 
@@ -902,7 +903,7 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bul
   const lSol_float_t time) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-    solve_local_problem(lambda_values, 1U, hyper_edge, time);
+    solve_local_problem(lambda_values, hyper_edge, time);
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
   SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
