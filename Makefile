@@ -1,6 +1,7 @@
-PROJECT     	= HyperHDG
-.PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
-                clean_pycache doxygen format submodules test_all_compilers test_compiler
+PROJECT       = HyperHDG
+.PHONY:         build clean distclean clean_build clean_domains clean_doxygen clean_jupyter \
+                clean_output clean_pycache doxygen format submodules test_all_compilers \
+                test_compiler
 
 
 ####################################################################################################
@@ -33,6 +34,7 @@ clean:
 	$(MAKE) clean_build
 	$(MAKE) clean_domains
 	$(MAKE) clean_doxygen
+	$(MAKE) clean_jupyter
 	$(MAKE) clean_pycache
 
 
@@ -49,6 +51,9 @@ clean_domains:
 
 clean_doxygen:
 	rm -rf doxygen/html doxygen/latex doxygen/doxy_log.txt
+
+clean_jupyter:
+	rm -rf .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints
 
 clean_output:
 	rm -rf output */output
