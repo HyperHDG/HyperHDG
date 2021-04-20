@@ -6,3 +6,6 @@
 	path = submodules/tensor_product_polynomials.git
 	url = https://github.com/HyperHDG/tensor_product_polynomials.git
 	branch = main
+[submodule "submodules/docker.git"]
+	path = submodules/docker.git
+	url = git@github.com:HyperHDG/docker.git

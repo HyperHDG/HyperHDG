@@ -1,7 +1,7 @@
 PROJECT       = HyperHDG
 .PHONY:         build clean distclean clean_build clean_domains clean_doxygen clean_jupyter \
-                clean_output clean_pycache doxygen format submodules test_all_compilers \
-                test_compiler
+                clean_output clean_pycache cocker_build docker_run doxygen format submodules \
+                test_all_compilers test_compiler
 
 
 ####################################################################################################
@@ -61,6 +61,15 @@ clean_output:
 clean_pycache:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__
 
+
+## Create docker container for the whole project.
+docker_build:
+	sudo docker build --build-arg INIT_COMMAND=volatile/shell_scripts/setup.sh --build-arg \
+		CXX=$(CXX) -f submodules/docker.git/Dockerfile -t hyperhdg_docker .
+
+## Run already built docker container.
+docker_run:
+	sudo docker run -p 8888:8888 hyperhdg_docker
 
 ## Generate the doxygen within the "doxygen" folder.
 doxygen:
