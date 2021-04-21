@@ -1,7 +1,13 @@
 # How to setup HyperHDG?
 
+There are two basic types of setting up HyperHDG at the moment: a regular installation and a Docker
+container based installation. The following two paragraphs describe how to regularly install
+HyperHDG, while the last paragraph deals with the Docker based installation.
 
-## Install required packages
+
+## Regular installation
+
+### Install required packages
 
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
@@ -39,7 +45,7 @@ list of compilers that are regularly check to work can be found in the `Makefile
 visualize the output of simulations, we recommend to install `ParaView`.
 
 
-## Obtain and install HyperHDG
+### Obtain and install HyperHDG
 
 To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do the following steps:
 
@@ -52,6 +58,8 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
    2. To clone this repository with ssh use
 
           $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
+
+   3. Download and extract the `.zip` file from https://github.com/AndreasRupp/HyperHDG.git
 
 2. Enter directory using
 
@@ -70,3 +78,20 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
 
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
+
+
+
+## Docker based installation
+
+For the Docker based installation, you will need to have [Docker](https://www.docker.com/) installed
+on your computer. Afterwards, obtain HyperHDG (see the first point in the above paragraph) and enter
+the directory of HyperHDG. If you have `git` installed, run `make submodules`. Otherwise, obtain the
+[Dockerfile](https://github.com/HyperHDG/docker) and copy it to `submodules/docker`.
+
+To build the Docker image from the Dockerfile run
+
+    make docker_build
+
+in HyperHDG's main directory. Afterwards, you can use the `run` command illustrated in the README of
+the [docker page](https://github.com/HyperHDG/docker) with the `tag` set to `hyperhdg_docker`. For
+the usage of the Docker notebook, please also refer to the README.
