@@ -93,5 +93,5 @@ To build the Docker image from the Dockerfile run
     make docker_build
 
 in HyperHDG's main directory. Afterwards, you can use the `run` command illustrated in the README of
-the [docker page](https://github.com/HyperHDG/docker) with the `tag` set to `hyperhdg_docker`. For
+the [docker page](https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For
 the usage of the Docker notebook, please also refer to the README.
