@@ -90,8 +90,10 @@ the directory of HyperHDG. If you have `git` installed, run `make submodules`. O
 
 To build the Docker image from the Dockerfile run
 
-    make docker_build
+    CXX=<compiler> make docker_build
 
-in HyperHDG's main directory. Afterwards, you can use the `run` command illustrated in the README of
-the [docker page](https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For
-the usage of the Docker notebook, please also refer to the README.
+in HyperHDG's main directory. Here, `<compiler>` is the name of some C++ compiler that support C++20
+(see `TEST_COMPILER` in the Makefile). The compiler need not be installed on your system; it will be
+installed in the Docker. Afterwards, you can use the `run` command illustrated in the README of the
+[docker page](https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For the
+usage of the Docker notebook, please also refer to the README.
