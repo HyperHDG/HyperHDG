@@ -66,7 +66,9 @@ clean_pycache:
 ## Create docker container for the whole project.
 docker_build:
 	sudo docker build --build-arg INIT_COMMAND="apt-get install -y git doxygen graphviz cmake \
-		cython3 libblas-dev liblapack-dev ipython3 $(CXX) && CXX=$(CXX) shell_scripts/setup.sh" \
+		cython3 libblas-dev liblapack-dev ipython3 $(CXX) && CXX=$(CXX) shell_scripts/setup.sh && \
+		cd build; rm -r CMakeCache.txt CMakeFiles CTestTestfile.cmake Makefile Testing \
+		cmake_install.cmake cython_files cython_log.txt examples shared_objects tests_c++ tests_python"\
 		-f submodules/docker.git/Dockerfile -t hyperhdg_docker .
 
 ## Generate the doxygen within the "doxygen" folder.
