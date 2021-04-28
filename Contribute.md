@@ -20,7 +20,7 @@ indicated by a green check mark (as opposed to a red cross) on top of the file l
 A yellow dot indicated that the tests are still running.
 
 With the aforementioned two requirements fulfilled, you can create a pull request which will be
-merged to the master branch after an additional revision by one of the [Authors](Authors.md) if it
+merged to the master branch after an additional revision by one of the [Authors](wiki/Authors) if it
 can be automatically merged. You will receive a feedback if any problems with the pull request
 occurred.
 
@@ -32,7 +32,7 @@ a successful merge to the `master` branch.
 
 The website of HyperHDG is automatically created from the branch `gh-pages`. Thus, in order to
 change the website, please create a pull-request to this branch. Changes will be implemented after
-a successful revision by one of the [Authors](Authors.md).
+a successful revision by one of the [Authors](wiki/Authors).
 
 
 # Contributing to HyperHDG's wiki: branch `gh-wiki`
@@ -40,10 +40,10 @@ a successful revision by one of the [Authors](Authors.md).
 Please do not try to directly change pages within the wiki of HyperHDG. These pages are 
 automatically generated from the repository's branch `gh-wiki`. Thus, to change the wiki, please
 create a pull-request to this branch. Changes will be implemented after a successful revision by one
-of the [Authors](Authors.md).
+of the [Authors](wiki/Authors).
 
 
 # Other ways of contribution
 
 If you would like to contribute to HyperHDG in a way that is not covered by the aforementioned
-points, please contact one of the [Authors](Authors.md).
+points, please contact one of the [Authors](wiki/Authors).
