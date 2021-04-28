@@ -84,7 +84,7 @@ With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready 
 # Docker based installation
 
 For the Docker based installation, you will need to have [Docker](https://www.docker.com/) installed
-on your computer. Afterwards, obtain HyperHDG (see the [corresponding paragraph](#obtain-hyperhdg))
+on your computer. Afterwards, obtain HyperHDG (see the [[corresponding paragraph|#obtain-hyperhdg]])
 and enter its directory. If you have `git` installed, run `make submodules`. Otherwise, obtain the
 [Dockerfile](https://github.com/HyperHDG/docker), and copy it to the subdirectory
 `submodules/docker`. (You might have to create it, first.)
