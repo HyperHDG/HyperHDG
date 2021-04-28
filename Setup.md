@@ -57,7 +57,7 @@ and give it the name `your_name` using one of the following ways:
        $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
 
 - Download the `.zip` file from https://github.com/AndreasRupp/HyperHDG.git and extract it to a
-directory called`your_name`.
+directory called `your_name`.
 
 
 ## Install HyperHDG
