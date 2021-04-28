@@ -1,6 +1,7 @@
-PROJECT     	= HyperHDG
-.PHONY:       	build clean distclean clean_build clean_domains clean_doxygen clean_output \
-                clean_pycache doxygen format submodules test_all_compilers test_compiler
+PROJECT       = HyperHDG
+.PHONY:         build clean distclean clean_build clean_domains clean_doxygen clean_jupyter \
+                clean_output clean_pycache docker_build doxygen format submodules \
+                test_all_compilers test_compiler
 
 
 ####################################################################################################
@@ -34,6 +35,7 @@ clean:
 	$(MAKE) clean_build
 	$(MAKE) clean_domains
 	$(MAKE) clean_doxygen
+	$(MAKE) clean_jupyter
 	$(MAKE) clean_pycache
 
 
@@ -51,12 +53,23 @@ clean_domains:
 clean_doxygen:
 	rm -rf doxygen/html doxygen/latex doxygen/doxy_log.txt
 
+clean_jupyter:
+	rm -rf .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints
+
 clean_output:
 	rm -rf output */output
 
 clean_pycache:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__
 
+
+## Create docker container for the whole project.
+docker_build:
+	sudo docker build --build-arg INIT_COMMAND="apt-get install -y git doxygen graphviz cmake \
+		cython3 libblas-dev liblapack-dev ipython3 $(CXX) && CXX=$(CXX) shell_scripts/setup.sh && \
+		cd build; rm -r CMakeCache.txt CMakeFiles CTestTestfile.cmake Makefile Testing \
+		cmake_install.cmake cython_files cython_log.txt examples shared_objects tests_c++ tests_python"\
+		-f submodules/docker.git/Dockerfile -t hyperhdg_docker .
 
 ## Generate the doxygen within the "doxygen" folder.
 doxygen:
