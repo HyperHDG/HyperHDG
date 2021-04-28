@@ -1,5 +1,9 @@
-# How to setup HyperHDG?
+There are two basic types of setting up HyperHDG at the moment: a regular installation and a Docker
+container based installation. The following three paragraphs describe how to regularly install
+HyperHDG, while the last paragraph deals with the Docker based installation.
 
+
+# Regular installation
 
 ## Install required packages
 
@@ -39,25 +43,30 @@ list of compilers that are regularly check to work can be found in the `Makefile
 visualize the output of simulations, we recommend to install `ParaView`.
 
 
-## Obtain and install HyperHDG
+## Obtain HyperHDG
 
-To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do the following steps:
+To obtain HyperHDG, enter the directory you want to clone HyperHDG into. Then, clone the repository
+and give it the name `your_name` using one of the following ways:
 
-1. Clone the repository and give it the name `your_name`:
+- Clone the repository using `git` and `https`:
 
-   1. To clone this repository with https use
+       $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
 
-          $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
+- Clone the repository using `git` and `ssh`:
 
-   2. To clone this repository with ssh use
+       $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
 
-          $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
+- Download the `.zip` file from https://github.com/AndreasRupp/HyperHDG.git and extract it to a
+directory called`your_name`.
 
-2. Enter directory using
+
+## Install HyperHDG
+
+1. Enter directory using
 
        $ cd your_name
 
-3. Execute the script `setup.sh` to install HyperHDG by
+2. Execute the script `setup.sh` to install HyperHDG by
 
        $ ./shell_scripts/setup.sh
 
@@ -70,3 +79,22 @@ To obtain HyperHDG, enter the directory you want to clone HyperHDG into and do t
 
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
+
+
+# Docker based installation
+
+For the Docker based installation, you will need to have [Docker](https://www.docker.com/) installed
+on your computer. Afterwards, obtain HyperHDG (see the [corresponding paragraph](#obtain-hyperhdg))
+and enter its directory. If you have `git` installed, run `make submodules`. Otherwise, obtain the
+[Dockerfile](https://github.com/HyperHDG/docker), and copy it to the subdirectory
+`submodules/docker`. (You might have to create it, first.)
+
+To build the Docker image from the Dockerfile run
+
+    CXX=<compiler> make docker_build
+
+in HyperHDG's main directory. Here, `<compiler>` is the name of some C++ compiler that support C++20
+(see `TEST_COMPILER` in the Makefile). The compiler need not be installed on your system; it will be
+installed within the Docker container. Afterwards, you can use the `run` command illustrated in the
+README of the HyperHDG [docker page](https://github.com/HyperHDG/docker) with the `<tag>` set to
+`hyperhdg_docker`. For the usage of the Docker notebook, please also refer to the README.

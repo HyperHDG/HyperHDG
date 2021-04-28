@@ -7,4 +7,5 @@ domains/
 doxygen/
 [Bb]uild/
 [Oo]utput*/
+jupyter/
 submodules/
