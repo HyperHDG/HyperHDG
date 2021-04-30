@@ -8,5 +8,5 @@
 	branch = main
 [submodule "submodules/docker.git"]
 	path = submodules/docker.git
-	url = git@github.com:HyperHDG/docker.git
+	url = https://github.com/HyperHDG/docker.git
 	branch = main
