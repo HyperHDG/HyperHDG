@@ -24,8 +24,10 @@ jobs:
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Install Jupyter
       run: pip3 install jupyter
+    - name: Install Jupyter
+      run: pip3 install jupyter
     - name: Install Jupyter's components
-      run: pip3 install jupyter nbconvert mistune runipy pyvista
+      run: pip3 install runipy pyvista
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
