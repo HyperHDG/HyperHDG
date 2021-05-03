@@ -27,8 +27,6 @@ jobs:
         pip3 install jupyter
         pip3 install --upgrade Pygments
         pip3 install pyvista runipy nbconvert mistune
-    - name: Test notebooks first
-      run: cd jupyter; jupyter nbconvert --execute --to notebook diffusion.ipynb
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
