@@ -95,6 +95,8 @@ To build the Docker image from the Dockerfile run
 
 in HyperHDG's main directory. Here, `<compiler>` is the name of some C++ compiler that support C++20
 (see `TEST_COMPILER` in the Makefile). The compiler need not be installed on your system; it will be
-installed within the Docker container. Afterwards, you can use the `run` command illustrated in the
-README of the HyperHDG [docker page](https://github.com/HyperHDG/docker) with the `<tag>` set to
-`hyperhdg_docker`. For the usage of the Docker notebook, please also refer to the README.
+installed within the Docker container. However, you need `root` privileges to run the command.
+
+Afterwards, you can use the `run` command illustrated in the README of the HyperHDG [docker page](
+https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For the usage of the
+Docker notebook, please also refer to the README.
