@@ -1,3 +1,5 @@
+# Author: Andreas Rupp, Heidelberg University, 2021.
+
 name: CMake
 
 on: [push]
@@ -21,7 +23,7 @@ jobs:
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Install Jupyter's nbconvert
-      run: pip install mistune
+      run: pip install mistune nbconvert
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
