@@ -1,3 +1,5 @@
+# Author: Andreas Rupp, Heidelberg University, 2021.
+
 name: CMake
 
 on: [push]
@@ -20,7 +22,7 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake test
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
@@ -39,7 +41,7 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake test
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
@@ -58,7 +60,7 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake test
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
