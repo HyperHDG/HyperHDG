@@ -6,6 +6,7 @@ on: [push]
 
 env:
   PYTHON: python3-dev python3-numpy python3-scipy cython3 python3-pip
+  PIP_INSTALL: jupyter pyvista
 
 jobs:
   # Do the G++-10 test!
@@ -22,9 +23,9 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Install Jupyter and its Components
-      run: pip3 install jupyter
-    - name: Conduct CMake test
+    - name: Install Componennts Using pip3
+      run: pip3 install ${{env.PIP_INSTALL}}
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
@@ -43,7 +44,7 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake test
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
