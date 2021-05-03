@@ -23,7 +23,7 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Install Componennts Using pip3
+    - name: Install Python Libraries
       run: pip3 install ${{env.PIP_INSTALL}}
     - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
@@ -44,6 +44,8 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
+    - name: Install Python Libraries
+      run: pip3 install ${{env.PIP_INSTALL}}
     - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
@@ -63,7 +65,9 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake test
+    - name: Install Python Libraries
+      run: pip3 install ${{env.PIP_INSTALL}}
+    - name: Conduct CMake Test
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{env.CXX}}
