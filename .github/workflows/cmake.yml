@@ -28,6 +28,9 @@ jobs:
         pip3 install --upgrade Pygments
         pip3 install jupyter
         pip3 install pyvista runipy nbconvert mistune
+    - name: Test notebook
+      run: jupyter nbconvert --execute --to notebook diffusion_elliptic.ipynb
+      working-directory: ${{runner.workspace}}
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
