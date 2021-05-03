@@ -105,6 +105,5 @@ file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg "dir     = ${Python3_IN
 add_subdirectory(tests_c++)
 if(NOT NOPYTHONTESTS)
   add_subdirectory(tests_python)
-  add_subdirectory(jupyter)
 endif()
 add_subdirectory(examples)
