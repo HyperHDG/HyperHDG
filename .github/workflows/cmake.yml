@@ -3,7 +3,7 @@ name: CMake
 on: [push]
 
 env:
-  PYTHON: python3-dev python3-numpy python3-scipy cython3 pip3
+  PYTHON: python3-dev python3-numpy python3-scipy cython3 pip
 
 jobs:
   # Do the G++-10 test!
@@ -21,7 +21,7 @@ jobs:
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Install Jupyter's nbconvert
-      run: pip3 install mistune
+      run: pip install mistune
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
