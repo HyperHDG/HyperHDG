@@ -23,7 +23,7 @@ jobs:
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Install Jupyter's nbconvert
-      run: pip3 install jupyter
+      run: pip3 install jupyter nbconvert mistune runipy
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
