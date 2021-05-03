@@ -26,7 +26,7 @@ jobs:
       run: |
         pip3 install jupyter
         pip3 install jupyter
-        pip3 install pyvista runipy
+        pip3 install pyvista runipy mistune
     - name: Conduct CMake test
       uses: HyperHDG/actions@cmake
       with:
