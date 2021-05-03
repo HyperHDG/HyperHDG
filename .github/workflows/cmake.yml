@@ -23,11 +23,7 @@ jobs:
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
     - name: Install Jupyter and its Components
-      run: |
-        pip3 install jupyter
-        pip3 install --upgrade Pygments
-        pip3 install jupyter
-        pip3 install pyvista runipy nbconvert mistune
+      run: pip3 install jupyter
     - name: Test notebook
       run: jupyter nbconvert --execute --to notebook diffusion_elliptic.ipynb
       working-directory: ${{runner.workspace}}
