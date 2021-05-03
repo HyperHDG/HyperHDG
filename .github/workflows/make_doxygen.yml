@@ -1,3 +1,5 @@
+# Author: Andreas Rupp, Heidelberg University, 2021.
+
 name: Doxygen
 
 on: push
