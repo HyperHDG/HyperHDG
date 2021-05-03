@@ -54,7 +54,7 @@ clean_doxygen:
 	rm -rf doxygen/html doxygen/latex doxygen/doxy_log.txt
 
 clean_jupyter:
-	rm -rf .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints
+	rm -rf .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.*
 
 clean_output:
 	rm -rf output */output
