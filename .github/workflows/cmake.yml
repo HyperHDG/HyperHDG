@@ -22,6 +22,8 @@ jobs:
        submodules: recursive
     - name: Install Python
       run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
+    - name: Install Jupyter
+      run: pip3 install jupyter
     - name: Install Jupyter's nbconvert
       run: pip3 install jupyter nbconvert mistune runipy
     - name: Conduct CMake test
