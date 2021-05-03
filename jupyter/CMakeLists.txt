@@ -7,7 +7,7 @@ foreach(ipynbfile ${sources})
   add_test(
     NAME ${file}_ipynb
     COMMAND
-      jupyter nbconvert --execute --to script ${ipynbfile}
+      jupyter nbconvert --to script ${ipynbfile}
       Python3::Interpreter ${file}.py
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/jupyter
   )
