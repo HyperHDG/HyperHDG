@@ -16,6 +16,10 @@ PROJECT       = HyperHDG
 TEST_COMPILER = clang++-10 clang++-11 g++-10
 
 
+## Names of files that will be formatted. (Placeholders may be used.)
+FORMAT_FILE   = *.cxx *.hxx
+
+
 ####################################################################################################
 # The default target generates a build subdirectory and then configures the library there, builds
 # it, and runs the tests.
@@ -71,6 +75,7 @@ docker_build:
 		cython_files cython_log.txt examples shared_objects tests_c++ tests_python" \
 		-f submodules/docker.git/Dockerfile -t hyperhdg_docker .
 
+
 ## Generate the doxygen within the "doxygen" folder.
 doxygen:
 	cd doxygen; doxygen Doxyfile
@@ -78,8 +83,7 @@ doxygen:
 
 ## Format all .cxx and .hxx files that are parts of the library.
 format:
-	clang-format -i reproducibles_python/parameters/*.hxx examples/parameters/*.hxx examples/*.cxx \
-		tests_c++/*.cxx include/HyperHDG/*.hxx include/HyperHDG/*/*.hxx
+	for file in $(FORMAT_FILE); do find . -wholename $$file -print | xargs clang-format -i; done
 
 
 ## Download the submodules from GitHub.
