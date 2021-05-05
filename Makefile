@@ -17,7 +17,7 @@ TEST_COMPILER = clang++-10 clang++-11 g++-10
 
 
 ## Names of files that will be formatted. (Placeholders may be used.)
-FORMAT_FILE   = *.cxx *.hxx
+FORMAT_FILE   = "*.cxx" "*.hxx"
 
 
 ####################################################################################################
