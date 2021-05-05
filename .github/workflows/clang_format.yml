@@ -1,4 +1,4 @@
-# https://github.com/marketplace/actions/clang-format-check
+# Author: Andreas Rupp, Heidelberg University, 2021.
 
 name: Clang
 
@@ -6,9 +6,10 @@ on: [push]
 
 jobs:
   formatting-check:
-    name: Formatting check
+    name: Test clang-format to change nothing
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Run clang-format style check for C programs.
-      uses: jidicula/clang-format-action@main
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Conduct Clang-Format Test
+      uses: HyperHDG/actions@clang-format
