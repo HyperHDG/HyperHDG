@@ -1,30 +1,44 @@
 #!/bin/bash
 
 
-BOLD=$(tput bold)
-COL='\e[0;97;41m'
-NOR='\e[0m'
+COL='\e[0;36m'  # text format 3 -> 'text color', 6 -> 'cyan'
+NOR='\e[0m'     # text format 'standard'
+
+TEST_COMPILER=("clang++-10" "clang++-11" "g++-10")
 
 
-echo -e "${COL}${BOLD}Clean up ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; make clean |& tee output/push_test.txt)
+test_compiler()
+{
+  rm -rf build domains/*.pts.geo \
+    doxygen/html doxygen/latex doxygen/doxy_log.txt \
+    .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
+    __pycache__ */__pycache__ */*/__pycache__ &&
+  mkdir -p build && cd build &&
+  cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=$1 && cmake --build . --config Debug &&
+  ctest -C Debug && cd ..
+}
 
-echo -e "\n${COL}${BOLD}Format the cxx and hxx files ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; make format |& tee -a output/push_test.txt)
 
-echo -e "\n${COL}${BOLD}Do the GitHub run tests ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; \
-  make test_all_compilers |& tee -a output/push_test.txt)
 
-echo -e "\n${COL}${BOLD}Clean up ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; make clean |& tee -a output/push_test.txt)
+cd $(dirname $(readlink -f "$0"))/..
 
-echo -e "\n${COL}${BOLD}Make doxygen ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; \
-  make doxygen > doxygen/doxy_log.txt |& tee -a output/push_test.txt)
+rm -rf build domains/*.pts.geo \
+  doxygen/html doxygen/latex doxygen/doxy_log.txt \
+  .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
+  __pycache__ */__pycache__ */*/__pycache__ |& tee output/push_test.txt
 
-echo -e "\n${COL}${BOLD}Re-install and test all components ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0"))/..; make build |& tee -a output/push_test.txt)
+./shell_scripts/clang_format.sh |& tee -a output/push_test.txt
 
-echo -e "\n${COL}${BOLD}Check whether tests have passed ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0")); python3 check_push_test.py)
+for comp in ${TEST_COMPILER[*]}; do test_compiler ${comp} |& tee -a output/push_test.txt; done
+
+rm -rf build domains/*.pts.geo \
+  doxygen/html doxygen/latex doxygen/doxy_log.txt \
+  .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
+  __pycache__ */__pycache__ */*/__pycache__ |& tee output/push_test.txt
+
+cd doxygen && doxygen Doxyfile |& tee -a ../output/push_test.txt && cd .. &&
+
+./shell_scripts/setup.sh -Cd |& tee -a output/push_test.txt
+
+echo -e "\n${COL}Check whether tests have passed ...${NOR}"
+python3 ./shell_scripts/check_push_test.py
