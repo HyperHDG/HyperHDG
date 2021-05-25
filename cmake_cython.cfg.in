@@ -1,0 +1,19 @@
+[compiler]
+command  = ${CMAKE_CXX_COMPILER}
+includes = -I${Python3_INCLUDE_DIRS} -I${PROJECT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/include -I${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include -I${PROJECT_SOURCE_DIR}/submodules/tensor_product_polynomials.git/include 
+flags    = ${CMAKE_CXX_FLAGS} -fPIC
+standard = 20
+
+[linker]
+command = ${CMAKE_CXX_COMPILER}
+flags   = ${CMAKE_SHARED_LINKER_FLAGS} -shared
+libs    = ${LINKED_STRING} 
+
+[cython]
+command = ${CYTHON_EXECUTABLE}
+flags   = -3 --cplus --embed
+
+[python]
+ver_maj = ${Python3_VERSION_MAJOR}
+ver_min = ${Python3_VERSION_MINOR}
+dir     = ${Python3_INCLUDE_DIRS}
