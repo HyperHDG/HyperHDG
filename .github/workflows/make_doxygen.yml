@@ -9,6 +9,8 @@ jobs:
     name: Make and deploy doxygen
     runs-on: ubuntu-20.04
     steps:
+    - name: Install cmake
+      run: sudo apt-get update; sudo apt-get install -y cmake
     - name: Checkout current branch
       uses: actions/checkout@v2
       with:
