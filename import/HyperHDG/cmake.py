@@ -20,7 +20,7 @@ class options:
 def get_options():
   opt = options()
   if not os.path.isfile(main_dir() + "/build/cmake_cython.cfg") \
-    and not os.path.isfile(main_dir() + "cmake_cython.cfg"):
+    and not os.path.isfile(main_dir() + "/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
     opt.compile_com = "g++-10"
     opt.compile_inc = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
@@ -43,8 +43,8 @@ def get_options():
     config = configparser.ConfigParser()
     if os.path.isfile(main_dir() + "/build/cmake_cython.cfg"):
       config.read(main_dir() + "/build/cmake_cython.cfg")
-    else:
-      config.read(main_dir() + "cmake_cython.cfg")
+    else:  # os.path.isfile(main_dir() + "/cmake_cython.cfg")
+      config.read(main_dir() + "/cmake_cython.cfg")
     opt.compile_com = config['compiler']['command']
     opt.compile_inc = config['compiler']['includes']
     opt.compile_flg = config['compiler']['flags']
