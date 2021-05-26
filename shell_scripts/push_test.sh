@@ -36,8 +36,6 @@ rm -rf build domains/*.pts.geo \
   .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
   __pycache__ */__pycache__ */*/__pycache__ |& tee output/push_test.txt
 
-cd doxygen && doxygen Doxyfile |& tee -a ../output/push_test.txt && cd .. &&
-
 ./shell_scripts/setup.sh -Cd |& tee -a output/push_test.txt
 
 echo -e "\n${COL}Check whether tests have passed ...${NOR}"
