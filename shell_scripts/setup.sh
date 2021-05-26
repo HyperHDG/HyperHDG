@@ -25,7 +25,7 @@ setup_library()
   mkdir -p build && cd build &&
   cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd .. &&
 
-  cd build/doxygen && doxygen Doxyfile && cd ../..
+  cd build/doxygen && doxygen Doxyfile.doxygen && cd ../..
 }
 
 
@@ -54,17 +54,17 @@ while getopts "cCdD" opt; do
 done
 
 input_correct=false
+if [ -z "$ynC" ]; then
+  read -p "$(echo -e "${COL}Do you wish to install HyperHDG on your computer? [Yn] ${NOR}")" ynC
+fi
 while [ "$input_correct" = false ]; do
-  if [ -z "$ynC" ]; then
-    read -p "$(echo -e "${COL}Do you wish to install HyperHDG on your computer? [Yn] ${NOR}")" ynC
-  fi
   if [ -z "$ynC" ]; then
     input_correct=true && setup_library
   else
     case $ynC in
       [Yy] | [Yy]es ) input_correct=true && setup_library;; 
       [Nn] | [Nn]o  ) input_correct=true && echo -e "${COL}Skipping installation ...${NOR}";;
-      *             ) echo -e "${COL}Please answer yes or no.${NOR}";;
+      *             ) read -p "$(echo -e "${COL}Please answer yes or no. ${NOR}")" ynC;;
     esac
   fi
 done
@@ -72,17 +72,17 @@ done
 echo " "
 echo -e "${COL}You might need to be root to install HyperHDG within a Docker container.${NOR}"
 input_correct=false
+if [ -z "$ynD" ]; then
+  read -p "$(echo -e "${COL}Do you want to install HyperHDG in a Docker? [Yn] ${NOR}")" ynD
+fi
 while [ "$input_correct" = false ]; do
-  if [ -z "$ynD" ]; then
-    read -p "$(echo -e "${COL}Do you want to install HyperHDG in a Docker? [Yn] ${NOR}")" ynD
-  fi
   if [ -z "$ynD" ]; then
     input_correct=true && setup_docker
   else
     case $ynD in
       [Yy] | [Yy]es ) input_correct=true && setup_docker;; 
       [Nn] | [Nn]o  ) input_correct=true && echo -e "${COL}Skipping installation ...${NOR}";;
-      *             ) echo -e "${COL}Please answer yes or no.${NOR}";;
+      *             ) read -p "$(echo -e "${COL}Please answer yes or no. ${NOR}")" ynD;;
     esac
   fi
 done
