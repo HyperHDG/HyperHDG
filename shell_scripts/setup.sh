@@ -20,7 +20,7 @@ setup_library()
 
   rm -rf build domains/*.pts.geo doxygen/html doxygen/latex doxygen/doxy_log.txt \
     .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
-    output */output __pycache__ */__pycache__ */*/__pycache__ &&
+    __pycache__ */__pycache__ */*/__pycache__ &&
 
   mkdir -p build && cd build &&
   cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd .. &&
