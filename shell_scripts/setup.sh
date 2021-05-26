@@ -10,8 +10,8 @@ NOR='\e[0m'     # text format 'standard'
 #  1. Find and enter the main directory of HyperHDG.
 #  2. Initialize all submodules to be up to date with GitHub versions.
 #  3. Delete all files that are not part of the library (including results, configurations, ...).
-#  4. Build a version of the Doxygen of the version created by the aforementioned steps.
-#  5. Build the library within the 'build' directory and tests its functions.
+#  4. Build the library within the 'build' directory and tests its functions.
+#  5. Build a version of the Doxygen of the version created by the aforementioned steps.
 setup_library()
 {
   cd $(dirname $(readlink -f "$0"))/.. &&
@@ -22,10 +22,10 @@ setup_library()
     .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
     output */output __pycache__ */__pycache__ */*/__pycache__ &&
 
-  cd doxygen && doxygen Doxyfile && cd .. &&
-
   mkdir -p build && cd build &&
-  cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd ..
+  cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd .. &&
+
+  cd build/doxygen && doxygen Doxyfile && cd ../..
 }
 
 
