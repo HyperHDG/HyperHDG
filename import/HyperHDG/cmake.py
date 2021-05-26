@@ -28,7 +28,7 @@ def get_options():
     opt.compile_flg = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong \
       -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
     opt.compile_std = "20"
-    opt.link_com = "g++-55"
+    opt.link_com = "g++-10"
     opt.link_flg = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
