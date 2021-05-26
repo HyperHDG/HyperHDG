@@ -21,7 +21,7 @@ jobs:
     - name: Run build and deploy action
       uses: HyperHDG/actions@doxygen
       with:
-        deploy_doxygen: True
+        deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
         doxygen_command: |
           eval "mkdir build && cd build && CXX=${{env.CXX}} cmake .. && \
           doxygen doxygen/Doxyfile.doxygen && cd .."
