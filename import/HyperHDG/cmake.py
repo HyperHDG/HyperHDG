@@ -19,7 +19,8 @@ class options:
 ## \brief   Read out parameters for Cython compilation provided by CMAKE.
 def get_options():
   opt = options()
-  if not os.path.isfile(main_dir() + "/build/cmake_cython.cfg"):
+  if not os.path.isfile(main_dir() + "/build/cmake_cython.cfg") \
+   and not os.path.isfile("/home/runner/work/HyperHDG/build/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
     opt.compile_com = "g++-55"
     opt.compile_inc = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
@@ -40,7 +41,10 @@ def get_options():
     opt.py_dir = "/usr/include/python"+str(sys.version_info.major)+"."+str(sys.version_info.minor)
   else:
     config = configparser.ConfigParser()
-    config.read(main_dir() + "/build/cmake_cython.cfg")
+    if os.path.isfile(main_dir() + "/build/cmake_cython.cfg"):
+      config.read(main_dir() + "/build/cmake_cython.cfg")
+    else:
+      config.read("/home/runner/work/HyperHDG/build/cmake_cython.cfg")
     opt.compile_com = config['compiler']['command']
     opt.compile_inc = config['compiler']['includes']
     opt.compile_flg = config['compiler']['flags']
