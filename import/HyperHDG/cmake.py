@@ -29,7 +29,7 @@ def get_options():
     opt.compile_flg = "-pthread -g -fwrapv -O2 -Wall -pedantic -g -fstack-protector-strong \
       -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC"
     opt.compile_std = "20"
-    opt.link_com = "g++-55"
+    opt.link_com = "g++-10"
     opt.link_flg = "-pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions \
       -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat \
       -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2"
@@ -43,7 +43,7 @@ def get_options():
     config = configparser.ConfigParser()
     if os.path.isfile(main_dir() + "/build/cmake_cython.cfg"):
       config.read(main_dir() + "/build/cmake_cython.cfg")
-    else:
+    else:  # os.path.isfile("/home/runner/work/HyperHDG/build/cmake_cython.cfg")
       config.read("/home/runner/work/HyperHDG/build/cmake_cython.cfg")
     opt.compile_com = config['compiler']['command']
     opt.compile_inc = config['compiler']['includes']
