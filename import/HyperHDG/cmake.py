@@ -22,7 +22,7 @@ def get_options():
   if not os.path.isfile(main_dir() + "/build/cmake_cython.cfg") \
    and not os.path.isfile("/home/runner/work/HyperHDG/build/cmake_cython.cfg"):
     print("CMAKE files do not exist ... using default values for Cython!")
-    opt.compile_com = "g++-55"
+    opt.compile_com = "g++-10"
     opt.compile_inc = "-I. -Iinclude -Isubmodules/tensor_product_chain_complex.git/include \
       -Isubmodules/tensor_product_polynomials.git/include \
       -I/usr/include/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
