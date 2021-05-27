@@ -55,7 +55,7 @@ done
 
 input_correct=false
 if [ -z "$ynC" ]; then
-  read -p "$(echo -e "${COL}Do you wish to install HyperHDG on your computer? [Yn] ${NOR}")" ynC
+  read -p "$(echo -e "${COL}Do you wish to build HyperHDG on your computer? [Yn] ${NOR}")" ynC
 fi
 while [ "$input_correct" = false ]; do
   if [ -z "$ynC" ]; then
@@ -70,10 +70,10 @@ while [ "$input_correct" = false ]; do
 done
 
 echo " "
-echo -e "${COL}You might need to be root to install HyperHDG within a Docker container.${NOR}"
+echo -e "${COL}You might need to be root to build HyperHDG within a Docker container.${NOR}"
 input_correct=false
 if [ -z "$ynD" ]; then
-  read -p "$(echo -e "${COL}Do you want to install HyperHDG in a Docker? [Yn] ${NOR}")" ynD
+  read -p "$(echo -e "${COL}Do you want to build HyperHDG in a Docker? [Yn] ${NOR}")" ynD
 fi
 while [ "$input_correct" = false ]; do
   if [ -z "$ynD" ]; then
