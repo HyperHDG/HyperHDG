@@ -23,8 +23,7 @@ jobs:
       with:
         deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
         doxygen_command: |
-          eval "mkdir build && cd build && CXX=${{env.CXX}} cmake .. && \
-          doxygen doxygen/Doxyfile.doxygen && cd .."
+          eval "mkdir build && cd build && CXX=${{env.CXX}} cmake .. && make doxygen && cd .."
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
         ci_user_mail: HyperHDG@rupp.ink

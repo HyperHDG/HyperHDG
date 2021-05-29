@@ -25,7 +25,7 @@ setup_library()
   mkdir -p build && cd build &&
   cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd .. &&
 
-  cd build/doxygen && doxygen Doxyfile.doxygen && cd ../..
+  cd build && make doxygen && cd ..
 }
 
 
