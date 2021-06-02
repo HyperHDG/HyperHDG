@@ -4,11 +4,16 @@ name: Doxygen
 
 on: push
 
+env:
+  CXX: g++-10
+
 jobs:
   make_and_deploy_doxygen:
     name: Make and deploy doxygen
     runs-on: ubuntu-20.04
     steps:
+    - name: Install cmake
+      run: sudo apt-get update; sudo apt-get install -y cmake
     - name: Checkout current branch
       uses: actions/checkout@v2
       with:
@@ -17,10 +22,11 @@ jobs:
       uses: HyperHDG/actions@doxygen
       with:
         deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
-        doxygen_command: "make doxygen"
+        doxygen_command: |
+          eval "mkdir build && cd build && CXX=${{env.CXX}} cmake .. && make doxygen && cd .."
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
         ci_user_mail: HyperHDG@rupp.ink
         pages_repo_organization: HyperHDG
         pages_repo_name: auto_pages
-        doxygen_path: doxygen/html
+        doxygen_path: build/doxygen/html
