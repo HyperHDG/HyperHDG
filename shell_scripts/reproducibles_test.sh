@@ -1,21 +1,18 @@
 #!/bin/bash
 
 
-BOLD=$(tput bold)
-COL='\e[0;97;41m'
-NOR='\e[0m'
+COL='\e[0;36m'  # text format 3 -> 'text color', 6 -> 'cyan'
+NOR='\e[0m'     # text format 'standard'
 
 TIME=15s
 FILES=$(dirname $(readlink -f "$0"))/../reproducibles_python/*.py
 
 
-(set -x; cd $(dirname $(readlink -f "$0"))/..; rm -f output/reproducibles_test.txt)
-for file in $FILES
-do
-  echo -e "\n\n${COL}${BOLD}Try $file ...${NOR}" |& tee -a output/reproducibles_test.txt
-  (set -x; cd $(dirname $(readlink -f "$0"))/..; \
-    timeout $TIME python3 $file True |& tee -a output/reproducibles_test.txt)
+cd $(dirname $(readlink -f "$0"))/..; rm -f output/reproducibles_test.txt
+for file in $FILES; do
+  echo "\n\nTry $file ..." |& tee -a output/reproducibles_test.txt
+  timeout $TIME python3 $file True |& tee -a output/reproducibles_test.txt
 done
 
-echo -e "\n${COL}${BOLD}Check whether tests have passed ...${NOR}"
-(set -x; cd $(dirname $(readlink -f "$0")); python3 check_reproducibles_test.py)
+echo -e "\n${COL}Check whether tests have passed ...${NOR}"
+python3 ./shell_scripts/check_reproducibles_test.py
