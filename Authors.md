@@ -7,4 +7,6 @@
 
 # Contributors
 
+- Dominic Kempf, Heidelberg University, Germany
+
 - Simon Schmidt, Heidelberg University, Germany

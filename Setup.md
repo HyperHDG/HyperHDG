@@ -1,6 +1,20 @@
 There are two basic types of setting up HyperHDG at the moment: a regular installation and a Docker
-container based installation. The following three paragraphs describe how to regularly install
-HyperHDG, while the last paragraph deals with the Docker based installation.
+container based installation. For both types, please obtain HyperHDG first. We recommend to do so
+using the program `git`, which you might need to install first.
+
+
+# Obtain HyperHDG
+
+To obtain HyperHDG, enter the directory you want to clone HyperHDG into. Then, clone the repository
+and give it the name `your_name` using one of the following ways:
+
+- Clone the repository using `git` and `https`:
+
+       $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
+
+- Clone the repository using `git` and `ssh`:
+
+       $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
 
 
 # Regular installation
@@ -10,14 +24,11 @@ HyperHDG, while the last paragraph deals with the Docker based installation.
 Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
 operating system this can be done using
 
-    $ sudo apt-get install git doxygen graphviz cmake python3-dev python3-numpy python3-scipy \
-    cython3 libblas-dev liblapack-dev
+    $ sudo apt-get install doxygen graphviz cmake python3-dev python3-numpy python3-scipy cython3 \
+      libblas-dev liblapack-dev
 
 
 This command installs
-
-- `git` is the revision control system, GitHub is based on. It is the recommended tool to obtain and
-administrate HyperHDG.
 
 - `doxygen` and `graphviz` provide the documentation system for all C++ and Python code. These
 packages are used to create a Doxygen documentation on your computer. This is useful to look up 
@@ -43,23 +54,6 @@ list of compilers that are regularly check to work can be found in the `Makefile
 visualize the output of simulations, we recommend to install `ParaView`.
 
 
-## Obtain HyperHDG
-
-To obtain HyperHDG, enter the directory you want to clone HyperHDG into. Then, clone the repository
-and give it the name `your_name` using one of the following ways:
-
-- Clone the repository using `git` and `https`:
-
-       $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
-
-- Clone the repository using `git` and `ssh`:
-
-       $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
-
-- Download the `.zip` file from https://github.com/AndreasRupp/HyperHDG.git and extract it to a
-directory called `your_name`.
-
-
 ## Install HyperHDG
 
 1. Enter directory using
@@ -77,6 +71,8 @@ directory called `your_name`.
 
    instead. This configures the default compiler of HyperHDG to be `compiler_name`.
 
+3. Follow the instructions given by the script and select your choice of setup.
+
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
 
@@ -85,17 +81,14 @@ With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready 
 
 For the Docker based installation, you will need to have [Docker](https://www.docker.com/) installed
 on your computer. Afterwards, obtain HyperHDG (see the [corresponding paragraph](#obtain-hyperhdg))
-and enter its directory. If you have `git` installed, run `make submodules`. Otherwise, obtain the
-[Dockerfile](https://github.com/HyperHDG/docker), and copy it to the subdirectory
-`submodules/docker`. (You might have to create it, first.)
+and enter its directory. Run the shell script
 
-To build the Docker image from the Dockerfile run
+    $ CXX=compiler_name ./shell_scripts/setup.sh
 
-    CXX=<compiler> make docker_build
-
-in HyperHDG's main directory. Here, `<compiler>` is the name of some C++ compiler that support C++20
-(see `TEST_COMPILER` in the Makefile). The compiler need not be installed on your system; it will be
-installed within the Docker container. However, you need `root` privileges to run the command.
+and follow its instructions to setup HyperHDG within a Docker container.
+Here, `compiler_name` is the name of some C++ compiler that support C++20 .The compiler need not be
+installed on your system; it will be installed within the Docker container. However, you need `root`
+privileges to run the command.
 
 Afterwards, you can use the `run` command illustrated in the README of the HyperHDG [docker page](
 https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For the usage of the
