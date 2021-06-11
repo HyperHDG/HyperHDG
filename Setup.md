@@ -71,7 +71,7 @@ visualize the output of simulations, we recommend to install `ParaView`.
 
    instead. This configures the default compiler of HyperHDG to be `compiler_name`.
 
-3. Follow the instructions given by the script ans select your choice of setup.
+3. Follow the instructions given by the script and select your choice of setup.
 
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
