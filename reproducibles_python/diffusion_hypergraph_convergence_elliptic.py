@@ -29,7 +29,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
   const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
   const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
+    + str(6) + ",HG<" + str(dimension) + ">::TestParametersQuadEllipt,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
