@@ -10,11 +10,11 @@ and give it the name `your_name` using one of the following ways:
 
 - Clone the repository using `git` and `https`:
 
-       $ git clone https://github.com/AndreasRupp/HyperHDG.git your_name
+       $ git clone https://github.com/HyperHDG/HyperHDG.git your_name
 
 - Clone the repository using `git` and `ssh`:
 
-       $ git clone git@github.com:AndreasRupp/HyperHDG.git your_name
+       $ git clone git@github.com:HyperHDG/HyperHDG.git your_name
 
 
 # Regular installation
