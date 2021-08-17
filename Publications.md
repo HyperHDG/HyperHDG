@@ -3,7 +3,10 @@
 If you write a paper using results obtained with the help of HyperHDG, please cite one or more of
 the following references:
 
-There are currently no publications you can use for referencing HyperHDG so far.
+- ***Partial differential equations on hypergraphs and networks of surfaces: derivation and hybrid
+  discretizations***  
+  by A. Rupp, M. Gahn, and G. Kanschat.
+  arXiv: [2108.06964](https://arxiv.org/abs/2108.06964)
 
 
 # Publications on details of HyperHDG
