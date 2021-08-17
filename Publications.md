@@ -5,7 +5,7 @@ the following references:
 
 - ***Partial differential equations on hypergraphs and networks of surfaces: derivation and hybrid
   discretizations***  
-  by A. Rupp, M. Gahn, and G. Kanschat  
+  by A. Rupp, M. Gahn, and G. Kanschat.
   arXiv: [2108.06964](https://arxiv.org/abs/2108.06964)
 
 
