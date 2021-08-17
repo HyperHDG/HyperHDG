@@ -3,8 +3,8 @@
 If you write a paper using results obtained with the help of HyperHDG, please cite one or more of
 the following references:
 
-- Partial differential equations on hypergraphs and networks of surfaces: derivation and hybrid
-  discretizations  
+- ***Partial differential equations on hypergraphs and networks of surfaces: derivation and hybrid
+  discretizations***  
   by A. Rupp, M. Gahn, and G. Kanschat  
   arXiv: [2108.06964](https://arxiv.org/abs/2108.06964)
 
