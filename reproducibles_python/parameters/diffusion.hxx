@@ -111,7 +111,7 @@ struct HG
     static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                          const param_float_t = 0.)
     {
-      return 1.;
+      return 0.25 / M_PI / M_PI;
     }
     static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                  const param_float_t = 0.)

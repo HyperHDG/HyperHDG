@@ -28,7 +28,7 @@ def diffusion_test(poly_degree, dimension, iteration, refinement, debug_mode=Fal
   const.topology        = "Cubic<" + str(dimension) + ",3>"
   const.geometry        = "UnitCube<" + str(dimension) + ",3,double>"
   const.node_descriptor = "Cubic<" + str(dimension) + ",3>"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.local_solver    = "DiffusionPostprocess<" + str(dimension) + "," + str(poly_degree) + "," \
     + str(6) + ",HG<" + str(dimension) + ">::TestParametersQuadElliptHO,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
@@ -50,12 +50,12 @@ def diffusion_test(poly_degree, dimension, iteration, refinement, debug_mode=Fal
 
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Refinement: ", refinement, " Error: ", error)
-  f = open("output/diffusion_convergence_hypergraph_elliptic_high_order.txt", "a")
+  f = open("output/diffusion_convergence_hypergraph_elliptic_high_order_pp.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
           + ". Refinement = " + str(refinement) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  HDG_wrapper.plot_option( "fileName", "diff_hg_conv_ho-" + str(dimension) + "-" + str(refinement) )
+  HDG_wrapper.plot_option( "fileName", "diff_hg_conv_ho_pp-"+str(dimension)+"-"+str(refinement) )
   HDG_wrapper.plot_option( "printFileNumber", "false" )
   HDG_wrapper.plot_option( "scale", "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
