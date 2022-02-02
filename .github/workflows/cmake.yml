@@ -11,6 +11,10 @@ env:
 jobs:
   # Do the G++-10 test!
   build_gnu10:
+    strategy:
+      matrix:
+        cxx_compiler: [g++-10 clang++-10]
+
     name: Test build with g++-10
     runs-on: ubuntu-20.04
     env:
