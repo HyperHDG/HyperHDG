@@ -16,10 +16,9 @@ jobs:
 
     env:
       CXX: ${{ matrix.cxx }}
-      OS: ${{ matrix.os }}
 
-    name: Test build with g++-10
-    runs-on: ${{env.OS}}
+    name: Test build with ${{ matrix.cxx }}
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout
