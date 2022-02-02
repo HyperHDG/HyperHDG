@@ -19,7 +19,7 @@ jobs:
       OS: ${{ matrix.os }}
 
     name: Test build with g++-10
-    runs-on: ${{ env.OS }}
+    runs-on: ${{env.OS}}
 
     steps:
     - name: Checkout
