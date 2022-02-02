@@ -17,7 +17,7 @@ and give it the name `your_name` using one of the following ways:
        $ git clone git@github.com:HyperHDG/HyperHDG.git your_name
 
 
-# Regular installation
+# Regular setup
 
 ## Install required packages
 
@@ -54,13 +54,13 @@ list of compilers that are regularly check to work can be found in the `Makefile
 visualize the output of simulations, we recommend to install `ParaView`.
 
 
-## Install HyperHDG
+## Setup HyperHDG
 
 1. Enter directory using
 
        $ cd your_name
 
-2. Execute the script `setup.sh` to install HyperHDG by
+2. Execute the script `setup.sh` to setup HyperHDG by
 
        $ ./shell_scripts/setup.sh
 
@@ -77,11 +77,11 @@ visualize the output of simulations, we recommend to install `ParaView`.
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
 
 
-# Docker based installation
+# Docker based setup
 
-For the Docker based installation, you will need to have [Docker](https://www.docker.com/) installed
-on your computer. Afterwards, obtain HyperHDG (see the [corresponding paragraph](#obtain-hyperhdg))
-and enter its directory. Run the shell script
+For the Docker based setup, you will need to have [Docker](https://www.docker.com/) installed on
+your computer. Afterwards, obtain HyperHDG (see the [corresponding paragraph](#obtain-hyperhdg)) and
+enter its directory. Run the shell script
 
     $ CXX=compiler_name ./shell_scripts/setup.sh
 
