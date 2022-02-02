@@ -13,7 +13,7 @@ succeeds. This is one of two basic requirement for pull-requests to the [main](
 https://github.com/HyperHDG/HyperHDG/tree/main) branch to be merged. However, to execute the
 script you might need to install `clang-format` (which is used to format all C++ based source code)
 and the compilers  specified as `TEST_COMPILER`s in the [push_test.sh](
-https://github.com/HyperHDG/HyperHDG/blob/main/shell_script/push_test.sh). The other basic
+https://github.com/HyperHDG/HyperHDG/blob/main/shell_scripts/push_test.sh). The other basic
 requirement is that the GitHub tests specified in the [workflows](
 https://github.com/HyperHDG/HyperHDG/tree/main/.github/workflows) folder succeed. This is
 indicated by a green check mark (as opposed to a red cross) on top of the file list of your branch.
