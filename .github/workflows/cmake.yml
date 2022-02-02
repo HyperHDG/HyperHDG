@@ -12,7 +12,7 @@ jobs:
   # Do the G++-10 test!
   build_gnu10:
     name: Test build with g++-10
-    runs-on: ${{env.RUN_ON}}
+    runs-on: ubuntu-20.04
     env:
       CXX: g++-10
 
