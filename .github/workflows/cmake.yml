@@ -6,7 +6,6 @@ on: [push]
 
 env:
   PYTHON: python3-dev python3-numpy python3-scipy cython3
-  RUN_ON: ubuntu-20.04
 
 jobs:
   build_and_test:
@@ -15,49 +14,13 @@ jobs:
         os: [ubuntu-20.04]
         cxx: [g++-10, clang++-10]
 
-    name: Test build with g++-10
-    runs-on: ${{ matrix.os }}
     env:
       CXX: ${{ matrix.cxx }}
+      OS: ${{ matrix.os }}
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-       submodules: recursive
-    - name: Install Python
-      run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake Test
-      uses: HyperHDG/actions@cmake
-      with:
-        cxx_compiler: ${{env.CXX}}
+    name: Test build with g++-10
+    runs-on: ${{ env.OS }}
 
-  # Do the Clang++-10 test!
-  build_clang10:
-    name: Test build with clang++-10
-    runs-on: ubuntu-20.04
-    env:
-      CXX: clang++-10
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-       submodules: recursive
-    - name: Install Python
-      run: sudo apt-get update; sudo apt-get install -y ${{env.PYTHON}}
-    - name: Conduct CMake Test
-      uses: HyperHDG/actions@cmake
-      with:
-        cxx_compiler: ${{env.CXX}}
-
-  # Do the Clang++-11 test!
-  build_clang11:
-    name: Test build with clang++-11
-    runs-on: ubuntu-20.04
-    env:
-      CXX: clang++-11
-    
     steps:
     - name: Checkout
       uses: actions/checkout@v2
