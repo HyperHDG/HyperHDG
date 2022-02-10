@@ -10,7 +10,8 @@ and easy to handle teaching scripts/programs.
 
 For more details on HyperHDG, you may visit the [website of HyperHDG](
 https://hyperhdg.github.io/HyperHDG), the [Doxygen page](
-https://hyperhdg.github.io/auto_pages/doxygen), or its [Wiki](../../wiki).
+https://hyperhdg.github.io/auto_pages/doxygen), or its [Wiki](../../wiki). In particular, if you
+want to know how to setup HyperHDG, we recommend to visit the [Wiki's setup page](../../wiki/Setup).
 
 
 ## Status of continuous integration

@@ -4,7 +4,7 @@
 COL='\e[0;36m'  # text format 3 -> 'text color', 6 -> 'cyan'
 NOR='\e[0m'     # text format 'standard'
 
-TEST_COMPILER=("clang++-10" "clang++-11" "g++-10")
+TEST_COMPILER=("clang++-10" "clang++-11" "clang++-12" "g++-10")
 
 
 test_compiler()
@@ -34,7 +34,7 @@ for comp in ${TEST_COMPILER[*]}; do test_compiler ${comp} |& tee -a output/push_
 rm -rf build domains/*.pts.geo \
   doxygen/html doxygen/latex doxygen/doxy_log.txt \
   .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints */*.nbconvert.* jupyter/*.py \
-  __pycache__ */__pycache__ */*/__pycache__ |& tee output/push_test.txt
+  __pycache__ */__pycache__ */*/__pycache__
 
 ./shell_scripts/setup.sh -Cd |& tee -a output/push_test.txt
 
