@@ -1,6 +1,6 @@
-There are two basic types of setting up HyperHDG at the moment: a regular installation and a Docker
-container based installation. For both types, please obtain HyperHDG first. We recommend to do so
-using the program `git`, which you might need to install first.
+There are two basic types of setting up HyperHDG at the moment: a regular setup and a Docker
+container based setup. For both types, please obtain HyperHDG first. We recommend to do so using the
+program `git`, which you might need to install first.
 
 
 # Obtain HyperHDG
