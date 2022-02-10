@@ -2,7 +2,7 @@
 
 - Guido Kanschat, Heidelberg University, Germany, kanschat@uni-heidelberg.de
 
-- Andreas Rupp, Heidelberg University, Germany, HyperHDG@rupp.ink
+- Andreas Rupp, Lappeenranta-Lahti University of Technology (LUT), Finland, HyperHDG@rupp.ink
 
 
 # Contributors
