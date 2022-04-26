@@ -4,7 +4,7 @@ If you write a paper using results obtained with the help of HyperHDG, please ci
 the following references:
 
 - A. Rupp, M. Gahn, and G. Kanschat  
-  ***Partial differential equations on hypergraphs and networks of surfaces: derivation and hybrid
+  ***Partial differential equations on hypergraphs and networks of surfaces: Derivation and hybrid
   discretizations***  
   ESAIM: Mathematical Modelling and Numerical Analysis, doi: [10.1051/m2an/2022011](
   https://doi.org/10.1051/m2an/2022011)
