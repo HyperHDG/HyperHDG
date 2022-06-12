@@ -13,6 +13,11 @@ def include(conf):
   # Check that conf is appropriatelly filled.
   assert isinstance(conf, config) and consistent(conf)
 
+  # Catch potential errors with openmp.
+  if "OMP_NUM_THREADS" not in os.environ:
+    os.environ["OMP_NUM_THREADS"] = "1"
+    print("OpenMP's OMP_NUM_THREADS has not been set. Defaults to 1!")
+
   # Start program.
   options = get_options()
   print("Cythonizing ... ", end='', flush=True)

@@ -1,12 +1,12 @@
 [compiler]
 command  = ${CMAKE_CXX_COMPILER}
 includes = -I${Python3_INCLUDE_DIRS} -I${PROJECT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/include -I${PROJECT_SOURCE_DIR}/submodules/tensor_product_chain_complex.git/include -I${PROJECT_SOURCE_DIR}/submodules/tensor_product_polynomials.git/include 
-flags    = ${CMAKE_CXX_FLAGS} -fPIC
+flags    = ${CMAKE_CXX_FLAGS} -shared -pthread -fPIC -fwrapv -O3 -Wall -fno-strict-aliasing -fopenmp
 standard = 20
 
 [linker]
 command = ${CMAKE_CXX_COMPILER}
-flags   = ${CMAKE_SHARED_LINKER_FLAGS} -shared
+flags   = ${CMAKE_SHARED_LINKER_FLAGS} -shared -fopenmp
 libs    = ${LINKED_STRING} 
 
 [cython]
