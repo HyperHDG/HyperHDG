@@ -30,7 +30,7 @@ jobs:
     - name: Install Python and CXX compiler
       run: |
         sudo apt-get update;
-        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }} ${ env.omp_lib }
+        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }} ${{ env.omp_lib }}
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
       with:
@@ -56,7 +56,7 @@ jobs:
     - name: Install Python and CXX compiler
       run: |
         sudo apt-get update;
-        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }}
+        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }} ${{ env.omp_lib }}
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
       with:
