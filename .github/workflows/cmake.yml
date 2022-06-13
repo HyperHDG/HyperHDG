@@ -31,7 +31,7 @@ jobs:
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
       with:
-        cxx_compiler: ${{ matrix.cxx }}
+        cxx_compiler: ${{ matrix.comp.cxx }}
   # =============== Test code on Ubuntu 22.04 with all currently available compilers ===============
   build_and_test_ubuntu_22-04:
     strategy:
