@@ -21,7 +21,7 @@ and give it the name `your_name` using one of the following ways:
 
 ## Install required packages
 
-Before you start using HyperHDG, you need to install some packages. Having Ubuntu 20.04 LTS as
+Before you start using HyperHDG, you need to install some packages. Having Ubuntu 22.04 LTS as
 operating system this can be done using
 
     $ sudo apt-get install doxygen graphviz cmake python3-dev python3-numpy python3-scipy cython3 \
@@ -64,12 +64,14 @@ visualize the output of simulations, we recommend to install `ParaView`.
 
        $ ./shell_scripts/setup.sh
 
-   If the default compiler of your system does not support `C-++20`, please obtain a compiler that
+   If the default compiler of your system does not support `C++20`, please obtain a compiler that
    does so and run
 
        $ CXX=compiler_name ./shell_scripts/setup.sh
 
-   instead. This configures the default compiler of HyperHDG to be `compiler_name`.
+   instead. A list of supported compiler versions can be found in the [CMake test](
+   ../blob/main/.github/workflows/cmake.yml). The above command configures the default compiler of
+   HyperHDG to be `compiler_name`.
 
 3. Follow the instructions given by the script and select your choice of setup.
 
