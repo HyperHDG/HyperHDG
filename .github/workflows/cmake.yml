@@ -17,7 +17,7 @@ jobs:
         cxx: [ clang++-10, clang++-11, clang++-12, g++-10, g++-11 ]
 
     env:
-      omp_lib: libomp-10-dev libomp-11-dev libomp-12-dev
+      omp_lib: libomp5-10 libomp5-11 libomp5-12
 
     name: Test code with ${{ matrix.cxx }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -43,7 +43,7 @@ jobs:
         cxx: [ clang++-11, clang++-12, clang++-13, clang++-14, g++-10, g++-11, g++-12 ]
 
     env:
-      omp_lib: libomp-11-dev libomp-12-dev libomp-13-dev libomp-14-dev
+      omp_lib: libomp5-11 libomp5-12 libomp5-13 libomp5-14
 
     name: Test code with ${{ matrix.cxx }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
