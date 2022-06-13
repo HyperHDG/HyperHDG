@@ -18,8 +18,7 @@
  * - ... .
  **************************************************************************************************/
 #define prototype_mat_vec_multiply(fun_name, has_fun_name)                                         \
-  [&]()                                                                                            \
-  {                                                                                                \
+  [&]() {                                                                                          \
     LargeVecT vec_Ax(x_vec.size(), 0.);                                                            \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                              \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;       \
@@ -80,37 +79,32 @@
  * - ... .
  **************************************************************************************************/
 #define prototype_errors(fun_name, has_fun_name)                                                   \
-  [&]()                                                                                            \
-  {                                                                                                \
+  [&]() {                                                                                          \
     typedef typename LocalSolverT::error_def::error_t error_t;                                     \
     error_t result = LocalSolverT::error_def::initial_error();                                     \
                                                                                                    \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                              \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs;                     \
                                                                                                    \
-    std::for_each(                                                                                 \
-      hyper_graph_.begin(), hyper_graph_.end(),                                                    \
-      [&](auto hyper_edge)                                                                         \
-      {                                                                                            \
-        hyNodes = hyper_edge.topology.get_hyNode_indices();                                        \
-        for (unsigned int node = 0; node < hyNodes.size(); ++node)                                 \
-          hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);          \
+    std::for_each(hyper_graph_.begin(), hyper_graph_.end(), [&](auto hyper_edge) {                 \
+      hyNodes = hyper_edge.topology.get_hyNode_indices();                                          \
+      for (unsigned int node = 0; node < hyNodes.size(); ++node)                                   \
+        hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);            \
                                                                                                    \
-        if constexpr (has_fun_name<LocalSolverT,                                                   \
-                                   error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,    \
-                                                      2 * hyEdge_dim>&,                            \
-                                           dof_value_t)>::value)                                   \
-          result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time)); \
-        else if constexpr (has_fun_name<LocalSolverT,                                              \
-                                        error_t(                                                   \
-                                          std::array<std::array<dof_value_t, n_dofs_per_node>,     \
-                                                     2 * hyEdge_dim>&,                             \
-                                          decltype(hyper_edge)&, dof_value_t)>::value)             \
-          result = LocalSolverT::error_def::sum_error(                                             \
-            result, local_solver_.fun_name(dofs, hyper_edge, time));                               \
-        else                                                                                       \
-          hy_assert(false, "Function seems not to be ímplemented");                                \
-      });                                                                                          \
+      if constexpr (has_fun_name<LocalSolverT,                                                     \
+                                 error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,      \
+                                                    2 * hyEdge_dim>&,                              \
+                                         dof_value_t)>::value)                                     \
+        result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time));   \
+      else if constexpr (has_fun_name<LocalSolverT,                                                \
+                                      error_t(std::array<std::array<dof_value_t, n_dofs_per_node>, \
+                                                         2 * hyEdge_dim>&,                         \
+                                              decltype(hyper_edge)&, dof_value_t)>::value)         \
+        result = LocalSolverT::error_def::sum_error(                                               \
+          result, local_solver_.fun_name(dofs, hyper_edge, time));                                 \
+      else                                                                                         \
+        hy_assert(false, "Function seems not to be ímplemented");                                  \
+    });                                                                                            \
                                                                                                    \
     return LocalSolverT::error_def::postprocess_error(result);                                     \
   }()
