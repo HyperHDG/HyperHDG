@@ -94,6 +94,12 @@ install(
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
 find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
 
+## Add OpenMP compiler and linker flags.
+foreach (linker_flag ${OpenMP_CXX_FLAGS})
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS ${linker_flag} " ")
+  string(APPEND CMAKE_CXX_FLAGS ${linker_flag} " ")
+endforeach()
+
 ## Prepare nice output for linked libraries.
 foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
   string(APPEND LINKED_STRING ${linked_lib} " ")
