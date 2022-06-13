@@ -50,8 +50,11 @@ systems of equations defined by the local hybrid discontinuous Galerkin (HDG) so
 
 
 Compilation of the C++ code can be done using a compiler that can deal with the standard `C++20`. A
-list of compilers that are regularly check to work can be found in the `Makefile`. Moreover, to
-visualize the output of simulations, we recommend to install `ParaView`.
+list of compilers that are regularly checked to work can be found in the in the [CMake test](
+../blob/main/.github/workflows/cmake.yml)).  If you use `clang++`, you will also have to install
+an appropriate OpenMP library (examples for these can also be found in the [CMake test](
+../blob/main/.github/workflows/cmake.yml)). Moreover, to visualize the output of simulations, we
+recommend to install `ParaView`.
 
 
 ## Setup HyperHDG
@@ -69,11 +72,7 @@ visualize the output of simulations, we recommend to install `ParaView`.
 
        $ CXX=compiler_name ./shell_scripts/setup.sh
 
-   instead. The above command configures the default compiler of HyperHDG to be `compiler_name`. A 
-   list of supported compiler versions can be found in the [CMake test](
-   ../blob/main/.github/workflows/cmake.yml). If you use `clang++`, you will also have to install
-   an appropriate OpenMP library (examples for these can also be found in the [CMake test](
-   ../blob/main/.github/workflows/cmake.yml)).
+   instead. The above command configures the default compiler of HyperHDG to be `compiler_name`.
 
 3. Follow the instructions given by the script and select your choice of setup.
 
