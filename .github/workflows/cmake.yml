@@ -14,9 +14,7 @@ jobs:
     strategy:
       matrix:
         osys: [ ubuntu-20.04 ]
-        comp: |
-          [ {cxx: clang++-10, lib: libomp-10-dev}, {cxx: clang++-11, lib: libomp-11-dev},
-            {cxx: clang++-12, lib: libomp-12-dev}, {cxx: g++-10, comp: }, {cxx: g++-11, comp: } ]
+        comp: [ {cxx: clang++-10, lib: libomp-10-dev}, {cxx: clang++-11, lib: libomp-11-dev}, {cxx: clang++-12, lib: libomp-12-dev}, {cxx: g++-10, comp: }, {cxx: g++-11, comp: } ]
 
     name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
     runs-on: ${{ matrix.osys }}
