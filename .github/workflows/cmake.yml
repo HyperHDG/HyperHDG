@@ -13,11 +13,13 @@ jobs:
   build_and_test_ubuntu_20-04:
     strategy:
       matrix:
-        os:  [ ubuntu-20.04 ]
-        cxx: [ clang++-10, clang++-11, clang++-12, g++-10, g++-11 ]
+        osys: [ ubuntu-20.04 ]
+        comp: [ {cxx: clang++-10, lib: libomp-10-dev}, {cxx: clang++-11, lib: libomp-11-dev},
+                {cxx: clang++-12, lib: libomp-12-dev},
+                {cxx: g++-10, comp: }, {cxx: g++-11, comp: } ]
 
-    name: Test code with ${{ matrix.cxx }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
+    runs-on: ${{ matrix.osys }}
 
     steps:
     - name: Checkout
@@ -27,7 +29,7 @@ jobs:
     - name: Install Python and CXX compiler
       run: |
         sudo apt-get update;
-        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }}
+        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.comp.cxx }} ${{ matrix.comp.lib }}
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
       with:
@@ -40,7 +42,7 @@ jobs:
         cxx: [ clang++-11, clang++-12, clang++-13, clang++-14, g++-10, g++-11, g++-12 ]
 
     env:
-      omp_lib: libomp5-11 libomp5-12 libomp5-13 libomp5-14
+      omp_lib: libomp5-14
 
     name: Test code with ${{ matrix.cxx }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
