@@ -72,7 +72,7 @@ visualize the output of simulations, we recommend to install `ParaView`.
    instead. The above command configures the default compiler of HyperHDG to be `compiler_name`. A 
    list of supported compiler versions can be found in the [CMake test](
    ../blob/main/.github/workflows/cmake.yml). If you use `clang++`, you will also have to install
-   an appropriate OpenMP library (examples for these can also be found in [CMake test](
+   an appropriate OpenMP library (examples for these can also be found in the [CMake test](
    ../blob/main/.github/workflows/cmake.yml)).
 
 3. Follow the instructions given by the script and select your choice of setup.
