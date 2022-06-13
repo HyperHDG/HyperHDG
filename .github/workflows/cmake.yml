@@ -16,9 +16,6 @@ jobs:
         os:  [ ubuntu-20.04 ]
         cxx: [ clang++-10, clang++-11, clang++-12, g++-10, g++-11 ]
 
-    env:
-      omp_lib: libomp5-10 libomp5-11 libomp5-12
-
     name: Test code with ${{ matrix.cxx }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
@@ -30,7 +27,7 @@ jobs:
     - name: Install Python and CXX compiler
       run: |
         sudo apt-get update;
-        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }} ${{ env.omp_lib }}
+        sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.cxx }}
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
       with:
