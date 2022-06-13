@@ -73,11 +73,11 @@ echo " "
 echo -e "${COL}You might need to be root to build HyperHDG within a Docker container.${NOR}"
 input_correct=false
 if [ -z "$ynD" ]; then
-  read -p "$(echo -e "${COL}Do you want to build HyperHDG in a Docker? [Yn] ${NOR}")" ynD
+  read -p "$(echo -e "${COL}Do you want to build HyperHDG in a Docker? [yN] ${NOR}")" ynD
 fi
 while [ "$input_correct" = false ]; do
   if [ -z "$ynD" ]; then
-    input_correct=true && setup_docker
+    input_correct=true && echo -e "${COL}Skipping installation ...${NOR}"
   else
     case $ynD in
       [Yy] | [Yy]es ) input_correct=true && setup_docker;; 

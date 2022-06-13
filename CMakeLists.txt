@@ -26,6 +26,7 @@ endif()
 
 ## Find packages that might become necessary.
 find_package (LAPACK)
+find_package (OpenMP)
 
 # Create a target that transports all the necessary information to downstream projects
 add_library(HyperHDG INTERFACE)
