@@ -90,8 +90,9 @@ enter its directory. Run the shell script
 
 and follow its instructions to setup HyperHDG within a Docker container.
 Here, `compiler_name` is the name of some C++ compiler that support C++20 .The compiler need not be
-installed on your system; it will be installed within the Docker container. However, you need `root`
-privileges to run the command.
+installed on your system; it will be installed within the Docker container. We recommend the
+compiler to be `g++`, since it is the most convenient to handle OpenMP with.
+However, you need `root` privileges to run the command.
 
 Afterwards, you can use the `run` command illustrated in the README of the HyperHDG [docker page](
 https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For the usage of the
