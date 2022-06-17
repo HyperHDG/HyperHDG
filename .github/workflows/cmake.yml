@@ -20,7 +20,7 @@ jobs:
                 {cxx: g++-10}, {cxx: g++-11}, {cxx: g++-12} ]
 
     name: Test code with ${{ matrix.comp.cxx }} on ${{ env.os }}
-    runs-on: ${{ matrix.osys }}
+    runs-on: ${{ env.os }}
 
     steps:
     - name: Checkout
