@@ -91,8 +91,8 @@ install(
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3 REQUIRED)
+find_package (Python3 COMPONENTS Interpreter Development NumPy)
+find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
 
 ## Add OpenMP compiler and linker flags.
 foreach (linker_flag ${OpenACC_CXX_FLAGS})
