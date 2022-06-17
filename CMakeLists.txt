@@ -25,8 +25,8 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 ## Find packages that might become necessary.
-find_package (LAPACK)
-find_package (OpenMP)
+find_package (LAPACK REQUIRED)
+find_package (OpenACC)
 
 # Create a target that transports all the necessary information to downstream projects
 add_library(HyperHDG INTERFACE)
@@ -91,11 +91,11 @@ install(
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-find_package (Python3 COMPONENTS Interpreter Development NumPy)
-find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
+find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3 REQUIRED)
 
 ## Add OpenMP compiler and linker flags.
-foreach (linker_flag ${OpenMP_CXX_FLAGS})
+foreach (linker_flag ${OpenACC_CXX_FLAGS})
   string(APPEND CMAKE_SHARED_LINKER_FLAGS ${linker_flag} " ")
   string(APPEND CMAKE_CXX_FLAGS ${linker_flag} " ")
 endforeach()
