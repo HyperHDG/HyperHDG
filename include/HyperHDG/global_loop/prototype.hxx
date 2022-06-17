@@ -1,6 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <omp.h>
+// #include <omp.h>
 
 /*!*************************************************************************************************
  * \brief   Macro that allows to use an implemented a matrix--vector multpilication.
@@ -23,13 +23,8 @@
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                              \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;       \
                                                                                                    \
-    _Pragma(                                                                                       \
-      "omp parallel for private(hyNodes, dofs_old, dofs_new) shared(vec_Ax)") for (unsigned int    \
-                                                                                     index = 0;    \
-                                                                                   index <         \
-                                                                                   hyper_graph_    \
-                                                                                     .n_hyEdges(); \
-                                                                                   ++index)        \
+    _Pragma("acc parallel loop copyin(x_vec) copyout(vec_Ax) create(hyNodes, dofs_old, dofs_new))")\
+    for (unsigned int index = 0; index < hyper_graph_.n_hyEdges(); ++index)                        \
     {                                                                                              \
       auto hyper_edge = hyper_graph_[index];                                                       \
       hyNodes = hyper_edge.topology.get_hyNode_indices();                                          \
