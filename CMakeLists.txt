@@ -94,7 +94,7 @@ install(
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
 find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
 
-## Add OpenMP compiler and linker flags.
+## Add OpenACC compiler and linker flags.
 foreach (linker_flag ${OpenACC_CXX_FLAGS})
   string(APPEND CMAKE_SHARED_LINKER_FLAGS ${linker_flag} " ")
   string(APPEND CMAKE_CXX_FLAGS ${linker_flag} " ")
