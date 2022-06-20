@@ -26,6 +26,7 @@
     {                                                                                              \
       auto hyper_edge = hyper_graph_[index];                                                       \
       hyNodes = hyper_edge.topology.get_hyNode_indices();                                          \
+      _Pragma("acc loop")                                                                          \
       for (unsigned int node = 0; node < hyNodes.size(); ++node)                                   \
       {                                                                                            \
         hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs_old[node]);        \
@@ -49,6 +50,7 @@
       else                                                                                         \
         hy_assert(false, "Function seems not to be implemented!");                                 \
                                                                                                    \
+      _Pragma("acc loop")                                                                          \
       for (unsigned int node = 0; node < hyNodes.size(); ++node)                                   \
         hyper_graph_.hyNode_factory().add_to_dof_values(hyNodes[node], vec_Ax, dofs_new[node]);    \
     };                                                                                             \
