@@ -27,11 +27,13 @@ endif()
 ## Find packages that might become necessary.
 find_package (LAPACK REQUIRED)
 find_package (OpenACC)
+find_package (Python3 COMPONENTS Interpreter Development NumPy)
+find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
 
-# Create a target that transports all the necessary information to downstream projects
+## Create a target that transports all the necessary information to downstream projects
 add_library(HyperHDG INTERFACE)
 
-# Add the correct include directories
+## Add the correct include directories
 target_include_directories(
   HyperHDG
   INTERFACE
@@ -39,7 +41,7 @@ target_include_directories(
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-# Link our target against upstream dependencies
+## Link our target against upstream dependencies
 target_link_libraries(
   HyperHDG
   INTERFACE
@@ -48,32 +50,32 @@ target_link_libraries(
   lapack
 )
 
-# Add the necessary C++ standard requirement
+## Add the necessary C++ standard requirement
 target_compile_features(
   HyperHDG
   INTERFACE
   cxx_std_20
 )
 
-# Add the examples subdirectory
+## Add the examples subdirectory
 add_subdirectory(examples)
 
-# Add tests if requested through the BUILD_TESTING option (default: ON)
+## Add tests if requested through the BUILD_TESTING option (default: ON)
 include(CTest)
 if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests_c++)
 endif()
 
-# Build documentation if requested through the BUILD_DOC option (default: ON)
+## Build documentation if requested through the BUILD_DOC option (default: ON)
 if(BUILD_DOC)
   add_subdirectory(doxygen)
 endif()
 
-# Add a namespaced alias target for the export
+## Add a namespaced alias target for the export
 add_library(HyperHDG::HyperHDG ALIAS HyperHDG)
 
-# Install targets, headers and configuration
+## Install targets, headers and configuration
 include(GNUInstallDirs)
 install(
   TARGETS HyperHDG
@@ -90,9 +92,6 @@ install(
   DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-
-find_package (Python3 COMPONENTS Interpreter Development NumPy)
-find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
 
 ## Add OpenACC compiler and linker flags.
 foreach (linker_flag ${OpenACC_CXX_FLAGS})
@@ -115,6 +114,6 @@ if(NOT NOPYTHONTESTS)
   add_subdirectory(tests_python)
 endif()
 
-# Print a summary
+## Print a summary
 include(FeatureSummary)
 feature_summary(WHAT ALL)
