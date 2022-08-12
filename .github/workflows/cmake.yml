@@ -19,8 +19,8 @@ jobs:
                 {cxx: clang++-13, lib: libomp-13-dev}, {cxx: clang++-14, lib: libomp-14-dev},
                 {cxx: g++-10}, {cxx: g++-11}, {cxx: g++-12} ]
 
-    name: Test code with ${{ matrix.comp.cxx }} on $os
-    runs-on: $os
+    name: Test code with ${{ matrix.comp.cxx }} on ${os}
+    runs-on: ${os}
 
     steps:
     - name: Checkout
