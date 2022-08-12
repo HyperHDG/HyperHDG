@@ -11,15 +11,16 @@ env:
 jobs:
   # =============== Test code on Ubuntu 22.04 with all currently available compilers ===============
   build_and_test_ubuntu_22-04:
+    env:
+      os: ubuntu-22.04
     strategy:
       matrix:
-        osys: [ ubuntu-22.04 ]
         comp: [ {cxx: clang++-11, lib: libomp-11-dev}, {cxx: clang++-12, lib: libomp-12-dev},
                 {cxx: clang++-13, lib: libomp-13-dev}, {cxx: clang++-14, lib: libomp-14-dev},
                 {cxx: g++-10}, {cxx: g++-11}, {cxx: g++-12} ]
 
-    name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
-    runs-on: ${{ matrix.osys }}
+    name: Test code with ${{ matrix.comp.cxx }} on ${{ env.os }}
+    runs-on: ${{ env.os }}
 
     steps:
     - name: Checkout
