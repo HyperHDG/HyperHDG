@@ -1,6 +1,6 @@
 # Welcome to HyperHDG!
 
-[![M2AN Paper](https://img.shields.io/badge/DOI-10.1051%2Fm2an%2F2022011)](
+[![M2AN Paper](https://img.shields.io/badge/DOI-10.1051%2Fm2an%2F2022011-blue)](
 https://doi.org/10.1051/m2an/2022011)
 
 It contains a C++ based library implementing hybrid discontinuous Galerkin methods on extremely
