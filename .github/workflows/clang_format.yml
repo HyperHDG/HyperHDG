@@ -7,7 +7,7 @@ on: [push]
 jobs:
   formatting-check:
     name: Test clang-format to change nothing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2

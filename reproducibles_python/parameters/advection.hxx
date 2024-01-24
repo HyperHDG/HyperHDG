@@ -171,6 +171,68 @@ struct LeVequeHG
 };
 
 template <unsigned int space_dimT, typename param_float_t = double>
+struct HyperGraphMovie
+{
+  static constexpr std::array<unsigned int, 1U> boundary_nodes{1};
+  static constexpr std::array<unsigned int, 0U> dirichlet_nodes{};
+  static constexpr std::array<unsigned int, 0U> outflow_nodes{};
+  static SmallVec<space_dimT, param_float_t> velocity(const Point<space_dimT, param_float_t>& point,
+                                                      const param_float_t = 0.)
+  {
+    static_assert(space_dimT == 3, "Example is defined in two spatial dimensions.");
+    SmallVec<space_dimT, param_float_t> velocity;
+    velocity[0] = 1.;
+    if ((point[1] > 0 && point[0] < 0) || (point[1] < 0 && point[0] > 0))
+      velocity[0] = 2.;
+    return velocity;
+  }
+
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t = 0.)
+  {
+    static_assert(space_dimT == 3, "Example is defined in two spatial dimensions.");
+    const param_float_t x = point[0], y = point[2], r = 0.15;
+
+    Point<space_dimT, param_float_t> center;
+    center[0] = 0.5 - 2.;
+    center[2] = 0.75;
+    if (norm_infty(point - center) <= r && (x <= 0.475 - 2. || x >= 0.525 - 2. || y >= 0.85))
+      return 1.;
+    center[0] = 0.5 - 2.;
+    center[2] = 0.25;
+    if (norm_2(point - center) <= r)
+      return 1. - norm_2(point - center) / r;
+    center[0] = 0.25 - 2.;
+    center[2] = 0.5;
+    if (norm_2(point - center) <= r)
+      return 0.25 * (1. + cos(M_PI * norm_2(point - center) / r));
+    return 0.;
+  }
+
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+  }
+
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t time = 0.)
+  {
+    return analytic_result(point, time);
+  }
+  static param_float_t initial(const Point<space_dimT, param_float_t>& point,
+                               const param_float_t time = 0.)
+  {
+    return analytic_result(point, time);
+  }
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};
+
+template <unsigned int space_dimT, typename param_float_t = double>
 struct injection
 {
   static constexpr std::array<unsigned int, 0U> boundary_nodes{};
