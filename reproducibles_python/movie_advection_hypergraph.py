@@ -89,7 +89,7 @@ def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
 def main(debug_mode):
   for theta in [0.5, 1.]:
     print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(1,2):
+    for poly_degree in range(1,4):
       print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
       for refinement in range(5,6):
         try:
