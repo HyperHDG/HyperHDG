@@ -106,7 +106,8 @@ struct DomainInfo
     bool consistent = true;
 
     std::for_each(hyNodes_hyEdge.begin(), hyNodes_hyEdge.end(),
-                  [&](std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge) {
+                  [&](std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge)
+                  {
                     for (unsigned int i = 0; i < hyEdge.size(); ++i)
                     {
                       consistent = (hyEdge[i] < n_hyNodes && hyEdge[i] >= 0);
@@ -115,7 +116,8 @@ struct DomainInfo
                   });
 
     std::for_each(points_hyEdge.begin(), points_hyEdge.end(),
-                  [&](std::array<pt_index_t, 1 << hyEdge_dim> hyEdge) {
+                  [&](std::array<pt_index_t, 1 << hyEdge_dim> hyEdge)
+                  {
                     for (unsigned int i = 0; i < hyEdge.size(); ++i)
                     {
                       consistent = (hyEdge[i] < n_points && hyEdge[i] >= 0);
