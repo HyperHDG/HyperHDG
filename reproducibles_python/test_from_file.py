@@ -39,7 +39,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/square.geo")
+    "/../domains/l_level1.geo")
   HDG_wrapper.refine( 2 ** iteration )
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
