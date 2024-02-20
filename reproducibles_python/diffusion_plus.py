@@ -23,10 +23,10 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
     import HyperHDG
 
   try:
-    from L_shape_functions import get_l_domain
+    from plus_shape_functions import get_plus_domain
   except (ImportError, ModuleNotFoundError) as error:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../domains")
-    from L_shape_functions import get_l_domain
+    from plus_shape_functions import get_plus_domain
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
@@ -36,10 +36,10 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
   const.local_solver    = "Diffusion<" + "2" + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",Thickness<" + str(level) + ">::TestParametersSinEllipt, double>"
   const.cython_replacements = ["string", "string"]
-  const.include_files   = ["reproducibles_python/parameters/diffusion_L.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion_plus.hxx"]
   const.debug_mode      = debug_mode
 
-  filename = get_l_domain(level)
+  filename = get_plus_domain(level)
 
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + filename)
@@ -60,12 +60,12 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
 
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_L_level_" + str(level) + ".txt", "a")
+  f = open("output/diffusion_plus_level_" + str(level) + ".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + \
           ". Error = " + str(error) + ".\n")
   f.close()
   
-  HDG_wrapper.plot_option( "fileName" , "diff_L_level_" + str(level) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_plus_level_" + str(level) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)

@@ -46,3 +46,7 @@ prog
 
 # Ignore files that have been created from other input
 *.pts.geo
+
+# Ignore .geo files created by Python-scripts (L and + domains)
+L_domain_[0-9]*.geo
+plus_domain_[0-9]*.geo

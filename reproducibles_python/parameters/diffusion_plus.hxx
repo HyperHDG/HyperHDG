@@ -7,7 +7,7 @@
 template <unsigned int level>
 struct Thickness
 {
-  static constexpr int twoP = pow(2, level);
+  static constexpr int twoP = pow(2, level) + 1;
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinEllipt
 {
@@ -40,7 +40,7 @@ struct TestParametersSinEllipt
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    if (point[0] == 1.0 || point[1] == 0.0)
+    if (point[0] == 0.0 || point[0] == 1.0 || point[1] == 0.0 || point[1] == 1.0)
       return analytic_result(point);
     return 0.;
   }
