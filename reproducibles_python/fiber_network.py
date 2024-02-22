@@ -1,0 +1,132 @@
+from __future__ import print_function
+
+import numpy as np
+import scipy.sparse as sp
+import scipy.io as si
+import scipy.sparse.linalg as sp_lin_alg
+from scipy.sparse.linalg import LinearOperator
+
+from datetime import datetime
+
+import os, sys
+
+
+# --------------------------------------------------------------------------------------------------
+# Function bilaplacian_test.
+# --------------------------------------------------------------------------------------------------
+def diffusion_test(poly_degree, iteration, debug_mode=False):
+  start_time = datetime.now()
+  print("Starting time is", start_time)
+  os.system("mkdir -p output")
+  
+  try:
+    import HyperHDG
+  except (ImportError, ModuleNotFoundError) as error:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+    import HyperHDG
+  
+  const                 = HyperHDG.config()
+  const.global_loop     = "Elliptic"
+  const.topology        = "File<1,2,std::vector,Point<2,double> >"
+  const.geometry        = "File<1,2,std::vector,Point<2,double> >"
+  const.node_descriptor = "File<1,2,std::vector,Point<2,double> >"
+  const.local_solver    = "Diffusion<1," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
+  const.cython_replacements = ["string", "string"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
+  const.debug_mode      = debug_mode
+
+  PyDP = HyperHDG.include(const)
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
+    "/../domains/fiber_network_1000.geo" )
+  # HDG_wrapper.refine( 2 ** iteration )
+
+  vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
+
+  system_size = HDG_wrapper.size_of_system()
+  # A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
+
+  import scipy.io as si
+  moritz_mat = si.loadmat("python_solvers/moritz_matrix.mat")
+  A = moritz_mat["system_matrix"]
+  # def mat_mul(vec_x):
+  #   return moritz_mat.dot(vec_x)
+  # A = LinearOperator( (system_size,system_size), matvec= mat_mul )
+
+
+
+  import scipy.io as si
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../python_solvers")
+  from coarse_basis import precond
+  from coarse_basis import precond_data
+
+  points = np.loadtxt("python_solvers/points_nlines_1000.txt")
+  helper = precond_data(points, 2**3)
+  def precond_mult( vec_x ):
+    return precond(A, helper, vec_x)
+  B = LinearOperator( (system_size,system_size), matvec= precond_mult )
+  
+
+  # np.savetxt("moritz_rhs.txt", vectorRHS)
+  # system_matrix = []
+  # for i in range(system_size):
+  #   system_matrix.append(A.dot([ 1. if i == k else 0. for k in range(system_size)]))
+  # print(system_matrix[0][27])
+  # print(system_matrix[27][0])
+  # system_matrix = np.array(system_matrix)
+  # print(np.linalg.norm(system_matrix-system_matrix.T))
+  # system_matrix = sp.coo_matrix(system_matrix)
+  # si.savemat("moritz_matrix.mat", {'system_matrix':system_matrix})
+
+  # print("DONE")
+
+
+
+  iters = 0
+  def nonlocal_iterate(arr):
+    nonlocal iters
+    iters += 1
+
+  [vectorSolution, num_iter] = sp_lin_alg.cg(-A, -vectorRHS, tol=1e-6, callback=nonlocal_iterate, M=B)
+
+  print(iters)
+  if num_iter != 0:
+    print("CG solver failed with a total number of ", num_iter, "iterations.")
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS)
+    if num_iter != 0:
+      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+      raise RuntimeError("Linear solvers did not converge!")
+
+  error = HDG_wrapper.errors(vectorSolution)[0]
+  print("Iteration: ", iteration, " Error: ", error)
+  f = open("output/diffusion_convergence_elliptic.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
+  f.close()
+  
+  HDG_wrapper.plot_option( "fileName" , "fiber_network_1000-" + str(poly_degree) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "printFileNumber" , "false" )
+  HDG_wrapper.plot_option( "scale" , "0.95" )
+  HDG_wrapper.plot_solution(vectorSolution)
+
+  end_time = datetime.now()
+  print("Program ended at", end_time, "after", end_time-start_time)
+  
+
+# --------------------------------------------------------------------------------------------------
+# Function main.
+# --------------------------------------------------------------------------------------------------
+def main(debug_mode):
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+    for iteration in range(1):
+      try:
+        diffusion_test(poly_degree, iteration, debug_mode)
+      except RuntimeError as error:
+        print("ERROR: ", error)
+
+
+# --------------------------------------------------------------------------------------------------
+# Define main function.
+# -------------------------------------------------------------------------------------------------- 
+if __name__ == "__main__":
+  main(len(sys.argv) > 1 and sys.argv[1] == "True")
