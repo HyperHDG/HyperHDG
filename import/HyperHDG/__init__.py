@@ -11,3 +11,4 @@
 
 from .config import config
 from .include import include
+from .precond.hauck import precond, precond_data
