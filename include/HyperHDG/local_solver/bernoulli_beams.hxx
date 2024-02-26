@@ -262,20 +262,20 @@ class LengtheningBeam
                                       const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
-    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    // std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
+    //   lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
-    if constexpr (has_errors<
-                    diffusion_sol_t,
-                    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                               2 * hyEdge_dimT>&(
-                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                                 2 * hyEdge_dimT>&,
-                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-                                 2 * hyEdge_dimT>&)>::value)
-      error = diffusion.errors(lambda, time);
-    else
-      error = diffusion.errors(lambda, hyper_edge, time);
+    // if constexpr (has_errors<
+    //                 diffusion_sol_t,
+    //                 std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+    //                            2 * hyEdge_dimT>&(
+    //                   std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+    //                              2 * hyEdge_dimT>&,
+    //                   std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+    //                              2 * hyEdge_dimT>&)>::value)
+    //   error = diffusion.errors(lambda, time);
+    // else
+    //   error = diffusion.errors(lambda, hyper_edge, time);
 
     return std::array<lSol_float_t, 1U>({error});
   }
@@ -595,22 +595,22 @@ class BernoulliBendingBeam
     const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
-    std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda;
-    for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
-    {
-      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
+    // std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
+    //   lambda;
+    // for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
+    // {
+    //   lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
 
-      if constexpr (
-        has_errors<
-          bilaplacian_sol_t,
-          std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
-            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
-            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        error += bilaplacian_solver.errors(lambda, time);
-      else
-        error += bilaplacian_solver.errors(lambda, hyper_edge, time);
-    }
+    //   if constexpr (
+    //     has_errors<
+    //       bilaplacian_sol_t,
+    //       std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
+    //         std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
+    //         std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
+    //     error += bilaplacian_solver.errors(lambda, time);
+    //   else
+    //     error += bilaplacian_solver.errors(lambda, hyper_edge, time);
+    // }
 
     return std::array<lSol_float_t, 1U>({error});
   }
@@ -668,7 +668,10 @@ template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          typename lSol_float_t = double>
+          typename lSol_float_t = double,
+          typename diffusion_sol_t = DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>,
+          typename bilaplacian_sol_t =
+            BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
 class LengtheningBernoulliBendingBeam
 {
  public:
@@ -755,11 +758,11 @@ class LengtheningBernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   The lengthening beam solver that does the lengthening of the beam.
    ************************************************************************************************/
-  const LengtheningBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t> len_beam;
+  const LengtheningBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t, diffusion_sol_t> len_beam;
   /*!***********************************************************************************************
    * \brief   The bending beam solver that does the bending of the beam.
    ************************************************************************************************/
-  const BernoulliBendingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t> ben_beam;
+  const BernoulliBendingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t, bilaplacian_sol_t> ben_beam;
 
  public:
   /*!***********************************************************************************************
@@ -824,8 +827,8 @@ class LengtheningBernoulliBendingBeam
     const lSol_float_t time = 0.) const
   {
     lSol_float_t error = 0.;
-    error += len_beam.errors(lambda_values, hyper_edge, time);
-    error += ben_beam.errors(lambda_values, hyper_edge, time);
+    // error += len_beam.errors(lambda_values, hyper_edge, time);
+    // error += ben_beam.errors(lambda_values, hyper_edge, time);
     return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************

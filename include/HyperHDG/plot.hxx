@@ -605,26 +605,27 @@ void fancy_recursion(__attribute__((unused)) lv_t& local_values,
                      __attribute__((unused)) const unsigned int k,
                      __attribute__((unused)) const unsigned int bdr_index)
 {
-  if constexpr (component == LocalSolverT::node_system_dimension())
-    return;
-  else
-  {
-    std::array<
-      dof_value_t,
-      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::n_fun()>
-      helper_arr;
-    for (unsigned int k = 0; k < helper_arr.size(); ++k)
-      helper_arr[k] =
-        hyEdge_dofs[bdr_index]
-                   [first_dof<component, typename LocalSolverT::node_element::functions>() + k];
+  // CODE THROWS COMPILETIME ERRORS!
+  // if constexpr (component == LocalSolverT::node_system_dimension())
+  //   return;
+  // else
+  // {
+  //   std::array<
+  //     dof_value_t,
+  //     std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::n_fun()>
+  //     helper_arr;
+  //   for (unsigned int k = 0; k < helper_arr.size(); ++k)
+  //     helper_arr[k] =
+  //       hyEdge_dofs[bdr_index]
+  //                  [first_dof<component, typename LocalSolverT::node_element::functions>() + k];
 
-    local_values[component][k] =
-      std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
-        template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
-                                         point);
-    fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point, k,
-                                                              bdr_index);
-  }
+  //   local_values[component][k] =
+  //     std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
+  //       template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
+  //                                        point);
+  //   fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point, k,
+  //                                                             bdr_index);
+  // }
 }
 /*!*************************************************************************************************
  * \brief   Auxiliary function to plot solution values on edge boundary.
