@@ -9,6 +9,8 @@
 #  \authors   Guido Kanschat, Heidelberg University, 2021.
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
 
-from .config import config
-from .include import include
-from .precond.hauck import precond, precond_data
+# Functions thata are used to compile C++ code.
+from .import_cxx.config import config
+from .import_cxx.include import include
+
+from .precond.gortz_hellman_malqvist_22 import gortz_hellman_malqvist_22

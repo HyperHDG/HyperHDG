@@ -31,7 +31,7 @@ def _coarse_basis(points, n_elem_1d, h=None, epsilon=1e-10):
   return sp.csr_matrix((value_vec, (node_vec, index_vec)), shape=(n, m))
 
 
-class precond_data:
+class gortz_hellman_malqvist_22:
   def __init__( self, points, n_elem_1d, h=None, epsilon=1e-10 ):
     coarse_basis = _coarse_basis(points, n_elem_1d, h, epsilon)
 
@@ -50,18 +50,15 @@ class precond_data:
     self.coarse_basis_int = coarse_basis_int
 
 
-def precond(lhs_mat, precond_data, rhs_vec, epsilon=1e-8):
-  coarse_basis = precond_data.coarse_basis
-  coarse_basis_int = precond_data.coarse_basis_int
+  def precond(self, lhs_mat, rhs_vec, epsilon=1e-8):
+    result_mat = self.coarse_basis_int.dot(sp.linalg.spsolve(
+                   self.coarse_basis_int.T.dot(lhs_mat.dot(self.coarse_basis_int)),
+                   self.coarse_basis_int.T.dot(rhs_vec) ))  # coarse solve
 
-  result_mat = coarse_basis_int.dot(
-               sp.linalg.spsolve(coarse_basis_int.T.dot(lhs_mat.dot(coarse_basis_int)),
-               coarse_basis_int.T.dot(rhs_vec)) )  # coarse solve
-
-  for k in range(coarse_basis.shape[1]):
-    nj = np.nonzero(coarse_basis.getcol(k) > epsilon)[0]
-    Ij = np.zeros((coarse_basis.shape[0], len(nj)))
-    Ij[nj, np.arange(len(nj))] = 1
-    result_mat += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))  # local solve
+    for k in range(self.coarse_basis.shape[1]):
+      nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
+      Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
+      Ij[nj, np.arange(len(nj))] = 1
+      result_mat += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
   
-  return result_mat
+    return result_mat

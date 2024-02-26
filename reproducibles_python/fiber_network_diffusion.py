@@ -21,16 +21,6 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   except (ImportError, ModuleNotFoundError) as error:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
     import HyperHDG
-
-  # try:
-  #   from coarse_basis import precond
-  #   from coarse_basis import precond_data
-  # except (ImportError, ModuleNotFoundError) as error:
-  #   sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../python_solvers")
-  #   from coarse_basis import precond
-  #   from coarse_basis import precond_data
-
-
   
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
@@ -58,9 +48,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
 
   points = np.loadtxt("python_solvers/points_nlines_1000.txt")
-  helper = HyperHDG.precond_data(points, 2**3)
+  helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**3)
   def precond_mult( vec_x ):
-    return HyperHDG.precond(A, helper, vec_x)
+    return helper.precond(A, vec_x)
   B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
 
 
