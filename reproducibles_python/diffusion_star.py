@@ -11,7 +11,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, level, iteration, debug_mode=False):
+def diffusion_test(poly_degree, dimension, level, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -23,23 +23,29 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
     import HyperHDG
 
   try:
-    from plus_shape_functions import get_plus_domain
+    from star_shape_functions import get_star_domain
   except (ImportError, ModuleNotFoundError) as error:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../domains")
-    from plus_shape_functions import get_plus_domain
+    from star_shape_functions import get_star_domain
+
+  # Determine the width of the star
+  if (level == 0):
+    width = 1
+  else:
+    width = 2**level + 1
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "File<2,2,std::vector,Point<2,double> >"
-  const.geometry        = "File<2,2,std::vector,Point<2,double> >"
-  const.node_descriptor = "File<2,2,std::vector,Point<2,double> >"
-  const.local_solver    = "Diffusion<" + "2" + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",Thickness<" + str(level) + ">::TestParametersSinEllipt, double>"
+  const.topology        = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.geometry        = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.node_descriptor = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",Thickness<" + str(width) + ">::TestParametersSinEllipt, double>"
   const.cython_replacements = ["string", "string"]
-  const.include_files   = ["reproducibles_python/parameters/diffusion_plus.hxx"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion_star.hxx"]
   const.debug_mode      = debug_mode
 
-  filename = get_plus_domain(level)
+  filename = get_star_domain(dimension, level)
 
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + filename)
@@ -65,7 +71,7 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
           ". Error = " + str(error) + ".\n")
   f.close()
   
-  HDG_wrapper.plot_option( "fileName" , "diff_plus_level_" + str(level) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_star_dim_" + str(dimension) + "_level-" + str(level) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -80,13 +86,15 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1, 4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for level in range(1, 4):
-      print("\nLevel is ", level, "\n")
-      for iteration in range(3):
-        try:
-          diffusion_test(poly_degree, level, iteration, debug_mode)
-        except RuntimeError as error:
-          print("ERROR: ", error)
+    for dimension in range(1, 4):
+      print("\n Dimension is ", dimension, "\n")
+      for level in range(0, 4):
+        print("\nLevel is ", level, "\n")
+        for iteration in range(3):
+          try:
+            diffusion_test(poly_degree, dimension, level, iteration, debug_mode)
+          except RuntimeError as error:
+            print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------

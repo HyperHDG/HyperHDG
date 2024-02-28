@@ -4,10 +4,10 @@
 #include <cmath>
 
 
-template <unsigned int level>
+template <unsigned int widthIn>
 struct Thickness
 {
-  static constexpr int twoP = pow(2, level) + 1;
+  static constexpr int width = widthIn;
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParametersSinEllipt
 {
@@ -17,31 +17,33 @@ struct TestParametersSinEllipt
   static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                        const param_float_t = 0.)
   {
-    return 1 / (M_PI * twoP);
+    return 1 / (M_PI * width);
   }
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                const param_float_t = 0.)
   {
-    return twoP * M_PI;
+    return width * M_PI;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return cos(twoP * M_PI * point[0]);
+    return cos(width * M_PI * point[0]);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return twoP * M_PI * cos(twoP * M_PI * point[0]);
+    return width * M_PI * cos(width * M_PI * point[0]);
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    if (point[0] == 0. || point[0] == 1. || point[1] == 0. || point[1] == 1.)
-      return analytic_result(point);
+    for (unsigned int i = 0; i < space_dimT; i++) {
+      if (point[i] == 0. || point[i] == 1.)
+        return analytic_result(point);
+    }
     return 0.;
   }
   static param_float_t initial(const Point<space_dimT, param_float_t>& point,
