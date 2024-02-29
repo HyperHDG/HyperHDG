@@ -66,7 +66,7 @@ def diffusion_test(poly_degree, dimension, level, iteration, debug_mode=False):
 
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_plus_level_" + str(level) + ".txt", "a")
+  f = open("output/diffusion_star_level_" + str(level) + ".txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + \
           ". Error = " + str(error) + ".\n")
   f.close()

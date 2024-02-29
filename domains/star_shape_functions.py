@@ -176,8 +176,7 @@ def create_star_geo(dimension, level, filename):
   # --- Finally, construct the Types of HyperFaces matrix
 
   # Find the HyperEdges on the boundary
-  compEdgePositions = edgePositions - medVal
-  boundaryEdges = np.argwhere((compEdgePositions < 0) | (compEdgePositions > 0))
+  boundaryEdges = np.argwhere((edgePositions == np.min(edgePositions)) | (edgePositions == np.max(edgePositions)))
 
   # Build the matrix itself:
   if (level == 0):
@@ -188,7 +187,7 @@ def create_star_geo(dimension, level, filename):
     typesOfHyFaces = np.zeros(nodesOfHyEdges.shape, dtype=int)
     # Set the correct node as the boundary node for the edges on the boundary:
     for indxs in boundaryEdges:
-      if (compEdgePositions[indxs[0], indxs[1]] < 0):
+      if (edgePositions[indxs[0], indxs[1]] == np.min(edgePositions)):
         typesOfHyFaces[indxs[0], 2 * indxs[1]] = 1
       else:
         typesOfHyFaces[indxs[0], 2 * indxs[1] + 1] = 1
