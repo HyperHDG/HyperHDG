@@ -88,7 +88,7 @@ struct sparse_mat
   [&]()                                                                                       \
   {                                                                                           \
     sparse_mat<LargeVecT> result_mat(hyper_graph_.n_hyEdges() * 4 * hyEdge_dim * hyEdge_dim * \
-                                     n_dofs_per_node);                                        \
+                                     n_dofs_per_node * n_dofs_per_node);                      \
                                                                                               \
     auto value_it = result_mat.value_vec.begin();                                             \
     auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();            \

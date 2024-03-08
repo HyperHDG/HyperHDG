@@ -1,6 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
@@ -18,39 +17,57 @@ namespace LocalSolver
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
-struct DiffusionParametersDefault
+struct Bilaplacian_cont_flux_parameters_default
 {
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
-  static constexpr std::array<unsigned int, 0U> dirichlet_nodes{};
+  static constexpr std::array<unsigned int, 2U> dirichlet_nodes{1, 2};
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary of Laplacian.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 0U> dirichlet_laplacian_nodes{};
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   /*!***********************************************************************************************
-   * \brief   Inverse diffusion coefficient in PDE as analytic function.
+   * \brief   Array containing hypernode types corresponding to Neumann boundary of Laplacian.
    ************************************************************************************************/
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
-                                               const param_float_t = 0.)
+  static constexpr std::array<unsigned int, 0U> neumann_laplacian_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Inverse bilaplacian coefficient in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
+                                                       const param_float_t = 0.)
   {
     return 1.;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    return M_PI * M_PI * M_PI * M_PI * cos(M_PI * point[0]);
+    // return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    return analytic_result(point);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution's Laplacian as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
+                                               const param_float_t = 0.)
+  {
+    return M_PI * sin(M_PI * point[0]);
+    // return (2. * (point[0] < .5) - 1.) * 1.;
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -61,29 +78,25 @@ struct DiffusionParametersDefault
     return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
+   * \brief   Neumann values of solution's Laplacian as analytic function.
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
-                                       const param_float_t = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
+                                             const param_float_t = 0.)
   {
     return 0.;
   }
-};  // end of struct DiffusionParametersDefault
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t = 0.)
+  {
+    return cos(M_PI * point[0]);
+  }
+};  // end of struct Bilaplacian_parameters_default
 
 /*!*************************************************************************************************
- * \brief   Local solver diffusion equation on hypergraph.
- *
- * This class contains the local solver for an isotropic diffusion equation, i.e.,
- * \f[
- *  - \nabla \cdot ( d \nabla u ) = f \quad \text{ in } \Omega, \qquad
- *  u = u_\text D \quad \text{ on } \partial \Omega_\text D, \qquad
- *  - d \nabla u \cdot \nu = g_\text N \quad \text{ on } \partial \Omega_\text N
- * \f]
- * in a spatial domain \f$\Omega \subset \mathbb R^d\f$. Here, \f$d\f$ is the spatial dimension
- * \c space_dim, \f$\Omega\f$ is a regular graph (\c hyEdge_dimT = 1) or hypergraph whose
- * hyperedges are surfaces (\c hyEdge_dimT = 2) or volumes (\c hyEdge_dimT = 3) or hypervolumes (in
- * case of \c hyEdge_dimT > 3). \f$f\f$ and \f$d\f$ are scalars defined in the whole domain, the
- * Dirichlet and Neumann boundary data needs to be defined on their respective hypernodes.
+ * \brief   Local solver for bilaplacian equation on uniform hypergraph.
  *
  * Moreover, this class provides the functions that approximate the condensed mass matrix. By this,
  * it is possible to approximate parabolic problems (in a very bad way) and to find good starting
@@ -95,7 +108,7 @@ struct DiffusionParametersDefault
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
  *                        contains static parameter functions.
- *                        Defaults to above functions included in \c DiffusionParametersDefault.
+ *                        Defaults to above functions included in \c BilaplacianParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
@@ -104,9 +117,9 @@ struct DiffusionParametersDefault
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename> typename parametersT = DiffusionParametersDefault,
+          template <unsigned int, typename> typename parametersT = Bilaplacian_cont_flux_parameters_default,
           typename lSol_float_t = double>
-class Diffusion
+class Bilaplacian_cont_flux
 {
  public:
   /*!***********************************************************************************************
@@ -121,7 +134,7 @@ class Diffusion
   struct node_element
   {
     typedef std::tuple<TPP::ShapeFunction<
-      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
+      TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1>>>
       functions;
   };
   /*!***********************************************************************************************
@@ -178,9 +191,9 @@ class Diffusion
    *
    * \retval  n_dofs        Number of global degrees of freedom per hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int n_glob_dofs_per_node()
+  static constexpr unsigned int n_glob_dofs_per_node() 
   {
-    return Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
+    return 2 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
@@ -199,15 +212,15 @@ class Diffusion
   /*!***********************************************************************************************
    * \brief   Number of local shape functions (with respect to all spatial dimensions).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1);
+  static constexpr unsigned int n_shape_fct_ = Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
   /*!***********************************************************************************************
    * \brief   Number oflocal  shape functions (with respect to a face / hypernode).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node();
+  static constexpr unsigned int n_shape_bdr_ = Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   /*!***********************************************************************************************
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
-  static constexpr unsigned int n_loc_dofs_ = (hyEdge_dimT + 1) * n_shape_fct_;
+  static constexpr unsigned int n_loc_dofs_ = 2 * (hyEdge_dimT + 1) * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    *
@@ -229,6 +242,13 @@ class Diffusion
     return std::find(parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
                      node_type) != parameters::dirichlet_nodes.end();
   }
+  template <typename parameters>
+  static constexpr bool is_dirichlet_laplacian(const unsigned int node_type)
+  {
+    return std::find(parameters::dirichlet_laplacian_nodes.begin(),
+                     parameters::dirichlet_laplacian_nodes.end(),
+                     node_type) != parameters::dirichlet_laplacian_nodes.end();
+  }
 
   // -----------------------------------------------------------------------------------------------
   // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
@@ -243,7 +263,7 @@ class Diffusion
    ************************************************************************************************/
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
-    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT>>,
     lSol_float_t>
     integrator;
 
@@ -323,14 +343,14 @@ class Diffusion
    * global right-hand side. This function implicitly uses the parameters.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallVecT     The data type of the coefficients.
    * \param   coeffs        Local coefficients of bulk variable u.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \retval  loc_rhs       Local right hand side of the locasl solver.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallVecT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_coeffs(const SmallVecT& coeffs,
-                                                                      hyEdgeT& hyper_edge) const;
+  template <typename hyEdgeT>
+  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_coeffs(
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
+    hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
    * \brief   Solve local problem (with right-hand side from skeletal).
    *
@@ -343,10 +363,10 @@ class Diffusion
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
-                                                                 const unsigned int solution_type,
-                                                                 hyEdgeT& hyper_edge,
-                                                                 const lSol_float_t time) const
+  inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(const SmallMatT& lambda_values,
+                                                                   const unsigned int solution_type,
+                                                                   hyEdgeT& hyper_edge,
+                                                                   const lSol_float_t time) const
   {
     try
     {
@@ -358,7 +378,7 @@ class Diffusion
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      return rhs / assemble_loc_matrix(tau_, hyper_edge, time);
+      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -373,21 +393,21 @@ class Diffusion
    * \note    This function is not use for elliptic problems.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatT     The data type for the lambda_values.
-   * \param   lambda_values Global degrees of freedom associated to the hyperedge.
+   * \param   coeffs        Global degrees of freedom associated to the hyperedge.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \param   time          Point of time the local problem is solved at.
    * \retval  loc_sol       Solution of the local problem.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_mass_problem(const SmallMatT& lambda_values,
-                                                                hyEdgeT& hyper_edge,
-                                                                const lSol_float_t time) const
+  template <typename hyEdgeT>
+  inline std::array<lSol_float_t, n_loc_dofs_> solve_mass_problem(
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time) const
   {
     try
     {
-      SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(lambda_values, hyper_edge);
-      return rhs / assemble_loc_matrix(tau_, hyper_edge, time);
+      SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_coeffs(coeffs, hyper_edge);
+      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -401,21 +421,21 @@ class Diffusion
    *
    * \note   This function is not use for elliptic problems.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatT, typename SmallVecT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_loc_prob_cor(
-    const SmallMatT& lambda_values,
-    const SmallVecT& coeffs,
+  template <typename hyEdgeT>
+  inline std::array<lSol_float_t, n_loc_dofs_> solve_loc_prob_cor(
+    const std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
     hyEdgeT& hyper_edge,
-    const lSol_float_t UNUSED(delta_time),
+    const lSol_float_t delta_time,
     const lSol_float_t time) const
   {
     try
     {
       SmallVec<n_loc_dofs_, lSol_float_t> rhs;
-      rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge) +
-            assemble_rhs_from_global_rhs(hyper_edge, time) +
+      rhs = delta_time * assemble_rhs_from_lambda(lambda_values, hyper_edge) +
+            delta_time * assemble_rhs_from_global_rhs(hyper_edge, time) +
             assemble_rhs_from_coeffs(coeffs, hyper_edge);
-      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time));
+      return (rhs / (delta_time * assemble_loc_matrix(tau_, hyper_edge, time))).data();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -436,8 +456,8 @@ class Diffusion
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primal_at_boundary(
-    const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
+  inline std::array<std::array<lSol_float_t, 2*  n_shape_bdr_>, 2 * hyEdge_dimT> primal_at_boundary(
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
     hyEdgeT& hyper_edge) const;
   /*!***********************************************************************************************
    * \brief   Evaluate dual variable at boundary.
@@ -451,8 +471,8 @@ class Diffusion
    * \retval  bdr_coeffs    Coefficients of respective (dim-1) dimensional function at boundaries.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> dual_at_boundary(
-    const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
+  inline std::array<std::array<lSol_float_t, 2* n_shape_bdr_>, 2 * hyEdge_dimT> dual_at_boundary(
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
     hyEdgeT& hyper_edge) const;
 
  public:
@@ -469,7 +489,7 @@ class Diffusion
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  Diffusion(const constructor_value_type& tau = 1.) : tau_(tau) {}
+  Bilaplacian_cont_flux(const constructor_value_type& tau = 1.) : tau_(tau) {}
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
@@ -478,7 +498,7 @@ class Diffusion
    * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
    * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
    *
-   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   **\tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
    * \tparam  SmallMatInT         Data type of \c lambda_values_in.
    * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
    * \param   lambda_values_in    Local part of vector x.
@@ -487,8 +507,8 @@ class Diffusion
    * \param   time                Time.
    * \retval  vecAx               Local part of vector A * x.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& trace_to_flux(SmallMatInT lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
@@ -502,30 +522,39 @@ class Diffusion
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
+    // for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+    //   if (i % 2 == 0)
+    //     for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+    //       lambda_values_in[i][lambda_values_out[i].size() / 2 + j] *= -1.; 
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
+    std::array<lSol_float_t, n_loc_dofs_> coeffs =
       solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
 
-    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
     for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
+    {
+      for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+        lambda_values_out[i][lambda_values_out[i].size() / 2 + j] = (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];// - tau_ * duals[i][j] - 
+          // tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] * hyper_edge.geometry.face_area(i);
+      for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+        lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];// + tau_ * primals[i][j] -
+          // tau_ * lambda_values_in[i][j] *
+          //   hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] =
-            duals(i, j) + tau_ * primals(i, j) -
-            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
+    }
 
     return lambda_values_out;
   }
   /*!***********************************************************************************************
    * \brief   Fill an array with 1 if the node is Dirichlet and 0 otherwise.
    ************************************************************************************************/
-  template <typename hyEdgeT>
+  template <class hyEdgeT>
   std::array<unsigned int, 2 * hyEdge_dimT> node_types(hyEdgeT& hyper_edge) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -547,11 +576,11 @@ class Diffusion
    * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
    * \param   lambda_values_in    Local part of vector x.
    * \param   lambda_values_out   Local part that will be added to A * x.
-   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time                Time at which analytic functions are evaluated.
-   * \retval  vecAx               Local part of vector A * x - b.
+   * \param   hyper_edge    The geometry of the considered hyperedge (of typename hyEdgeT).
+   * \param   time          Time at which analytic functions are evaluated.
+   * \retval  vecAx         Local part of vector A * x - b.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
@@ -567,23 +596,25 @@ class Diffusion
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
+    std::array<lSol_float_t, n_loc_dofs_> coeffs =
       solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
 
-    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
+    std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
 
     for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
     {
+      for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+        lambda_values_out[i][lambda_values_out[i].size() / 2 + j] = (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];// - tau_ * duals[i][j] - 
+          // tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] * hyper_edge.geometry.face_area(i);
+      for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+        lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];// + tau_ * primals[i][j] -
+          // tau_ * lambda_values_in[i][j] *
+          //   hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] =
-            duals(i, j) + tau_ * primals(i, j) -
-            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
     }
 
     return lambda_values_out;
@@ -600,52 +631,164 @@ class Diffusion
    * \param   time          Initial time.
    * \retval  lambda_vakues L2 projected lambda ar initial state.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatT>
-  SmallMatT& make_initial(SmallMatT& lambda_values,
-                          hyEdgeT& hyper_edge,
-                          const lSol_float_t time = 0.) const
-  {
-    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
-                "Matrix must have appropriate size!");
+  // template <class hyEdgeT, typename SmallMatT>
+  // SmallMatT& make_initial(SmallMatT& lambda_values,
+  //                         hyEdgeT& hyper_edge,
+  //                         const lSol_float_t time = 0.) const
+  // {
+  //   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-    {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] =
-            integrator ::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
-                                                           parameters::initial>(
-              j, i, hyper_edge.geometry, time);
-    }
+  //   for (unsigned int i = 0; i < lambda_values.size(); ++i)
+  //   {
+  //     if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+  //       for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+  //         lambda_values[i][j] = 0.;
+  //     else
+  //     {
+  //       // for (unsigned int j = 0; j < lambda_values[i].size() / 2; ++j)
+  //       //   lambda_values[i][j] =
+  //       //     integrator ::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
+  //       //                                                    parameters::initial>(
+  //       //       i, j, hyper_edge.geometry, time);
+  //       // for (unsigned int j = lambda_values[i].size() / 2; j < lambda_values[i].size(); ++j)
+  //       //   lambda_values[i][j] =
+  //       //     integrator::template integrate_bdrUni_psifunc<decltype(hyEdgeT::geometry),
+  //       //                                                   parameters::initial_laplace>(
+  //       //       i, j, hyper_edge.geometry, time);
+  //     }
+  //   }
 
-    return lambda_values;
-  }
+  //   return lambda_values;
+  // }
+  /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to mass matrix--vector multiplication.
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time                Time.
+   * \retval  vecAx               Local part of vector A * x.
+   **********************************************************************************************/
+  // template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  // SmallMatOutT& trace_to_mass_flux(const SmallMatInT& lambda_values_in,
+  //                                  SmallMatOutT& lambda_values_out,
+  //                                  hyEdgeT& hyper_edge,
+  //                                  const lSol_float_t time = 0.) const
+  // {
+  //   hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+  //               lambda_values_in.size() == 2 * hyEdge_dimT,
+  //             "Both matrices must be of same size which corresponds to the number of faces!");
+  //   for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+  //     hy_assert(
+  //       lambda_values_in[i].size() == lambda_values_out[i].size() &&
+  //         lambda_values_in[i].size() == n_glob_dofs_per_node(),
+  //       "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
+  //   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+  //   std::array<lSol_float_t, n_loc_dofs_> coeffs =
+  //     solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
+  //   coeffs = solve_mass_problem(coeffs, hyper_edge, time);
+
+  //   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+  //     primal_at_boundary(coeffs, hyper_edge)),
+  //     duals(dual_at_boundary(coeffs, hyper_edge));
+
+  //   for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
+  //   {;
+  //     // for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+  //     //   lambda_values_out[i][j] = duals[i][j] + tau_ * primals[i][j];
+  //     // if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+  //     //   for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+  //     //     lambda_values_out[i][j] = 0.;
+  //     // if (is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]))
+  //     //   for (unsigned int j = lambda_values_out[i].size() / 2; j < lambda_values_out[i].size(); ++j)
+  //     //     lambda_values_out[i][j] = 0.;
+  //   }
+
+  //   return lambda_values_out;
+  // }
+  /*!*********************************************************************************************
+   * \brief   Evaluate local contribution to mass matrix--vector residual.
+   *
+   * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
+   * skeletal variable (adjacent to one hyperedge), and A is the condensed matrix arising from the
+   * HDG discretization. This function does this multiplication (locally) for one hyperedge. The
+   * hyperedge is no parameter, since all hyperedges are assumed to have the same properties.
+   *
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
+   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time                Time.
+   * \retval  vecAx               Local part of vector A * x.
+   **********************************************************************************************/
+  // template <class hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  // SmallMatOutT& total_numerical_flux_mass(const SmallMatInT& lambda_values_in,
+  //                                         SmallMatOutT& lambda_values_out,
+  //                                         hyEdgeT& hyper_edge,
+  //                                         const lSol_float_t time = 0.) const
+  // {
+  //   hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
+  //               lambda_values_in.size() == 2 * hyEdge_dimT,
+  //             "Both matrices must be of same size which corresponds to the number of faces!");
+  //   for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+  //     hy_assert(
+  //       lambda_values_in[i].size() == lambda_values_out[i].size() &&
+  //         lambda_values_in[i].size() == n_glob_dofs_per_node(),
+  //       "Both matrices must be of same size which corresponds to the number of dofs per face!");
+
+  //   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+  //   std::array<lSol_float_t, n_loc_dofs_> coeffs =
+  //     solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
+  //   coeffs = solve_mass_problem(coeffs, hyper_edge, time);
+
+  //   std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+  //     primal_at_boundary(coeffs, hyper_edge)),
+  //     duals(dual_at_boundary(coeffs, hyper_edge));
+
+  //   for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
+  //   {
+  //     for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
+  //       lambda_values_out[i][j] = duals[i][j] + tau_ * primals[i][j];
+  //     if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+  //       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
+  //         lambda_values_out[i][j] = 0.;
+  //     if (is_dirichlet_laplacian<parameters>(hyper_edge.node_descriptor[i]))
+  //       for (unsigned int j = lambda_values_out[i].size() / 2; j < lambda_values_out[i].size(); ++j)
+  //         lambda_values_out[i][j] = 0.;
+  //   }
+
+  //   return lambda_values_out;
+  // }
 
   /*template < class hyEdgeT >
-  std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > trace_to_mass_flux
+  std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > trace_to_mass_flux
   (
-    const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-    hyEdgeT                                                                   & hyper_edge,
+    const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+    hyEdgeT                                                                     & hyper_edge,
     const lSol_float_t time = 0.
   )  const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     std::array<lSol_float_t, n_loc_dofs_> coeffs
       = solve_local_problem(lambda_values, 0U, hyper_edge, time);
-    std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+    std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
 
     SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       u_coeffs[i] = coeffs[hyEdge_dimT*n_shape_fct_+i];
 
-    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
+    std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
     for (unsigned int i = 0; i < lambda_values.size(); ++i)  lambda_values_uni[i].fill(0.);
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
       if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
@@ -664,25 +807,25 @@ class Diffusion
 
     return bdr_values;
   }
+
   template < class hyEdgeT >
-  std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > total_numerical_flux_mass
+  std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > total_numerical_flux_mass
   (
-    const std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
-    hyEdgeT                                                                   & hyper_edge,
+    const std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > & lambda_values,
+    hyEdgeT                                                                     & hyper_edge,
     const lSol_float_t time = 0.
   )  const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     std::array<lSol_float_t, n_loc_dofs_> coeffs
       = solve_local_problem(lambda_values, 1U, hyper_edge, time);
-    std::array< std::array<lSol_float_t, n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
+    std::array< std::array<lSol_float_t, 2*n_shape_bdr_> , 2 * hyEdge_dimT > bdr_values;
 
     SmallVec<n_shape_fct_, lSol_float_t> u_coeffs, test_coeffs;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       u_coeffs[i] = coeffs[hyEdge_dimT*n_shape_fct_+i];
 
-    std::array< std::array<lSol_float_t, n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
+    std::array< std::array<lSol_float_t, 2*n_shape_bdr_>, 2*hyEdge_dimT > lambda_values_uni;
     for (unsigned int i = 0; i < lambda_values.size(); ++i)  lambda_values_uni[i].fill(0.);
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
       if ( is_dirichlet<parameters>(hyper_edge.node_descriptor[i]) )
@@ -703,106 +846,6 @@ class Diffusion
   }*/
 
   /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to mass matrix--vector multiplication.
-   *
-   * \note    This function is not used for elliptic problems.
-   *
-   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
-   * \tparam  SmallMatOutT        Data type of \c lambda_values_out.
-   * \param   lambda_values_in    Local part of vector x.
-   * \param   lambda_values_out   Local part that will be added to A * x-
-   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time                Time at which analytic functions are evaluated.
-   * \retval  vecAx               Local part of vector A * x.
-   ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& trace_to_mass_flux(const SmallMatInT& lambda_values_in,
-                                   SmallMatOutT& lambda_values_out,
-                                   hyEdgeT& hyper_edge,
-                                   const lSol_float_t time = 0.) const
-  {
-    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
-                lambda_values_in.size() == 2 * hyEdge_dimT,
-              "Both matrices must be of same size which corresponds to the number of faces!");
-    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
-      hy_assert(
-        lambda_values_in[i].size() == lambda_values_out[i].size() &&
-          lambda_values_in[i].size() == n_glob_dofs_per_node(),
-        "Both matrices must be of same size which corresponds to the number of dofs per face!");
-
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
-    coeffs = solve_mass_problem(coeffs, hyper_edge, time);
-
-    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
-      primal_at_boundary(coeffs, hyper_edge)),
-      duals(dual_at_boundary(coeffs, hyper_edge));
-
-    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
-    {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = duals(i, j) + tau_ * primals(i, j);
-    }
-
-    return lambda_values_out;
-  }
-  /*!***********************************************************************************************
-   * \brief   Evaluate local contribution to mass matrix--vector residual.
-   *
-   * \note    This function is not used for elliptic problems.
-   *
-   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
-   * \tparam  SmallMatInT         Data type of \c lambda_values_in.
-   * \tparam  SmallMatOutT        Data type of \¢ lambda_values_out
-   * \param   lambda_values_in    Local part of vector x.
-   * \param   lambda_values_out   Local part that will be added to A * x.
-   * \param   hyper_edge          The geometry of the considered hyperedge (of typename hyEdgeT).
-   * \param   time                Time.
-   * \retval  vecAx               Local part of mass matrix residual.
-   ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& total_numerical_flux_mass(const SmallMatInT& lambda_values_in,
-                                          SmallMatOutT& lambda_values_out,
-                                          hyEdgeT& hyper_edge,
-                                          const lSol_float_t time = 0.) const
-  {
-    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
-                lambda_values_in.size() == 2 * hyEdge_dimT,
-              "Both matrices must be of same size which corresponds to the number of faces!");
-    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
-      hy_assert(
-        lambda_values_in[i].size() == lambda_values_out[i].size() &&
-          lambda_values_in[i].size() == n_glob_dofs_per_node(),
-        "Both matrices must be of same size which corresponds to the number of dofs per face!");
-
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
-    coeffs = solve_mass_problem(coeffs, hyper_edge, time);
-
-    SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals(
-      primal_at_boundary(coeffs, hyper_edge)),
-      duals(dual_at_boundary(coeffs, hyper_edge));
-
-    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
-    {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = duals(i, j) + tau_ * primals(i, j);
-    }
-
-    return lambda_values_out;
-  }
-  /*!***********************************************************************************************
    * \brief   Calculate squared local contribution of L2 error.
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
@@ -812,27 +855,33 @@ class Diffusion
    * \param   time          Time at which anaytic functions are evaluated.
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatT>
+  template <class hyEdgeT, typename SmallMatT>
   std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const lSol_float_t time = 0.) const
   {
-    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
-                "Matrix must have appropriate size!");
-
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+        hy_assert(lambda_values[i][j] == lambda_values[i][j],
+                  "Lambda value wit index " << i << "," << j << " is NaN!");
+
+    std::array<lSol_float_t, n_loc_dofs_> coefficients =
       solve_local_problem(lambda_values, 1U, hy_edge, time);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
 
-    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      hy_assert(coeffs[i] == coeffs[i], "The " << i << "-th coeff is NaN!");
+
+    lSol_float_t result = integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
-                                                                      time)});
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t>>(coeffs, hy_edge.geometry,
+                                                                     time);
+    hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
+    return std::array<lSol_float_t, 1U>({result});
   }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
@@ -848,32 +897,23 @@ class Diffusion
    * \param   time                Time.
    * \retval  vec_b               Local part of vector b.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatT>
+  template <class hyEdgeT, typename SmallMatT>
   lSol_float_t errors_temp(const SmallMatT& lambda_values_new,
                            const SmallMatT& lambda_values_old,
                            hyEdgeT& hy_edge,
                            const lSol_float_t delta_t,
                            const lSol_float_t time) const
   {
-    hy_assert(lambda_values_new.size() == lambda_values_old.size() &&
-                lambda_values_new.size() == 2 * hyEdge_dimT,
-              "Both matrices must be of same size which corresponds to the number of faces!");
-    for (unsigned int i = 0; i < lambda_values_new.size(); ++i)
-      hy_assert(
-        lambda_values_new[i].size() == lambda_values_old[i].size() &&
-          lambda_values_new[i].size() == n_glob_dofs_per_node(),
-        "Both matrices must be of same size which corresponds to the number of dofs per face!");
-
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs_new =
+    std::array<lSol_float_t, n_loc_dofs_> coeffs_new =
       solve_local_problem(lambda_values_new, 1U, hy_edge, time);
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs_old =
+    std::array<lSol_float_t, n_loc_dofs_> coeffs_old =
       solve_local_problem(lambda_values_old, 1U, hy_edge, time - delta_t);
     for (unsigned int i = 0; i < coeffs_old.size(); ++i)
-      coeffs_old[i] = (coeffs_old[i] - coeffs_new[i]) / delta_t;
+      coeffs_old[i] = (coeffs_old[i] - coeffs_new[i]);
 
-    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
+    std::array<lSol_float_t, n_loc_dofs_> coefficients =
       solve_loc_prob_cor(lambda_values_new, coeffs_old, hy_edge, delta_t, time);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
@@ -895,16 +935,13 @@ class Diffusion
    * \param   time              Time at which analytic functions are evaluated.
    * \retval  function_values   Function values at quadrature points.
    ************************************************************************************************/
-  template <typename abscissa_float_t,
-            std::size_t abscissas_sizeT,
-            class input_array_t,
-            class hyEdgeT>
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>, system_dim>
-  bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-              const input_array_t& lambda_values,
-              hyEdgeT& hyper_edge,
-              const lSol_float_t time = 0.) const;
-};  // end of class Diffusion
+  template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dim> bulk_values(
+    const std::array<abscissa_float_t, sizeT>& abscissas,
+    const input_array_t& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const;
+};  // end of class Bilaplacian
 
 // -------------------------------------------------------------------------------------------------
 /// \cond EXCLUDE_CODE
@@ -913,7 +950,7 @@ class Diffusion
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF Diffusion
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF Bilaplacian
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -930,16 +967,18 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
   const lSol_float_t tau,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
-  lSol_float_t vol_integral, face_integral, helper;
+  lSol_float_t vol_integral, vol_func_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -947,9 +986,10 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      vol_integral = integrator::template integrate_vol_phiphifunc<
+      vol_integral = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+      vol_func_integral = integrator::template integrate_vol_phiphifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::inverse_diffusion_coeff, Point<hyEdge_dimT, lSol_float_t> >(
+        parameters::inverse_bilaplacian_coefficient, Point<hyEdge_dimT, lSol_float_t>>(
         i, j, hyper_edge.geometry, time);
       // Integral_element - nabla phi_i \vec phi_j dx
       // = Integral_element - div \vec phi_i phi_j dx in right upper and left lower blocks
@@ -965,23 +1005,44 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
         helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         face_integral += helper;
-        normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          normal_int_vec[dim] += hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
       }
 
-      local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
-        tau * face_integral;
+      local_mat(hyEdge_dimT * n_shape_fct_ + i, n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j) -=
+        vol_func_integral;
+
+      // local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
+      //   tau * face_integral;
+      local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+                hyEdge_dimT * n_shape_fct_ + j) += tau * face_integral;
+
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral;
+        local_mat(n_dofs_lap + dim * n_shape_fct_ + i, n_dofs_lap + dim * n_shape_fct_ + j) +=
+          vol_integral;
+
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= grad_int_vec[dim];
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
-        local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += normal_int_vec[dim];
+
+        // Exchange i and j here to eliminate influence of boundary integrals!
+        local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + j,
+                  n_dofs_lap + dim * n_shape_fct_ + i) += grad_int_vec[dim];
+        local_mat(n_dofs_lap + dim * n_shape_fct_ + j,
+                  n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i) += grad_int_vec[dim];
+
+        // local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += normal_int_vec[dim];
+        // local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
+        //           n_dofs_lap + dim * n_shape_fct_ + j) += normal_int_vec[dim];
       }
     }
   }
 
+  // std::cout << local_mat << std::endl;
+
   return local_mat;
-}  // end of Diffusion::assemble_loc_matrix
+}  // end of Bilaplacian::assemble_loc_matrix
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_lambda
@@ -994,18 +1055,18 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_lambda(
+inline SmallVec<
+  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_lambda(
   const SmallMatT& lambda_values,
   hyEdgeT& hyper_edge) const
 {
-  static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
-                "Lambda values should have same floating point arithmetics as local solver!");
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
             "The size of the lambda values should be twice the dimension of a hyperedge.");
   for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    hy_assert(lambda_values[i].size() == n_shape_bdr_,
+    hy_assert(lambda_values[i].size() == 2 * n_shape_bdr_,
               "The size of lambda should be the amount of ansatz functions at boundary.");
 
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -1017,15 +1078,23 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
       {
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
-        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
+        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += (2. * (face % 2) - 1.) * lambda_values[face][n_shape_bdr_ + j] * integral;
+        right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] +=
+          tau_ * lambda_values[face][j] * integral;
+
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        {
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
             integral;
+          // right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] -=
+          //   hyper_edge.geometry.local_normal(face).operator[](dim) *
+          //   lambda_values[face][n_shape_bdr_ + j] * integral;
+        }
       }
 
   return right_hand_side;
-}  // end of Diffusion::assemble_rhs_from_lambda
+}  // end of Bilaplacian::assemble_rhs_from_lambda
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_global_rhs
@@ -1038,37 +1107,49 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_global_rhs(
-  hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+inline SmallVec<
+  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] = integrator::template integrate_vol_phifunc<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, time);
+    right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] =
+      integrator::template integrate_vol_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry,
+                                                                       time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
-        continue;
-      integral = integrator::template integrate_bdr_phifunc<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
-                                                                        hyper_edge.geometry, time);
-      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
-      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-        right_hand_side[dim * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+      {
+        integral = integrator::template integrate_bdr_phifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
+        right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          right_hand_side[dim * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
+
+        integral = integrator::template integrate_bdr_phifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_laplace_value,
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
+        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= integral;
+        // for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        //   right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] -=
+        //     hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
+      }
     }
   }
-
   return right_hand_side;
-}  // end of Diffusion::assemble_rhs_from_global_rhs
+}  // end of Bilaplacian::assemble_rhs_from_global_rhs
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_coeffs
@@ -1080,19 +1161,24 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename hyEdgeT, typename SmallVecT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_coeffs(
-  const SmallVecT& coeffs,
+template <typename hyEdgeT>
+inline SmallVec<
+  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_coeffs(
+  const std::array<
+    lSol_float_t,
+    Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
-      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
+    {
+      right_hand_side[n_loc_dofs_ / 2 + hyEdge_dimT * n_shape_fct_ + i] +=
         coeffs[hyEdge_dimT * n_shape_fct_ + j] *
         integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+    }
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_coeffs
@@ -1108,25 +1194,38 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
-  const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
+inline std::array<
+  std::array<
+    lSol_float_t,
+    2 * Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
+  2 * hyEdge_dimT>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
+  const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
-  SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
+
+  for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
+    bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        bdr_values(face, j) +=
+      {
+        bdr_values[face][j] +=
           coeffs[hyEdge_dimT * n_shape_fct_ + i] *
           integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
 
+        bdr_values[face][n_shape_bdr_ + j] +=
+          coeffs[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] *
+          integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+            i, j, face, hyper_edge.geometry);
+      }
+
   return bdr_values;
-}  // end of Diffusion::primal_at_boundary
+}  // end of Bilaplacian::primal_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // dual_at_boundary
@@ -1139,15 +1238,21 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
-  const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
+inline std::array<
+  std::array<
+    lSol_float_t,
+    2* Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
+  2 * hyEdge_dimT>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
+  const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
-  SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
+  constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
+  std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> bdr_values;
   lSol_float_t integral;
+
+  for (unsigned int dim_n = 0; dim_n < 2 * hyEdge_dimT; ++dim_n)
+    bdr_values[dim_n].fill(0.);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1156,12 +1261,20 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_b
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          bdr_values(face, j) += hyper_edge.geometry.local_normal(face).operator[](dim) * integral *
-                                 coeffs[dim * n_shape_fct_ + i];
+        {
+          bdr_values[face][j] +=
+            // hyper_edge.geometry.local_normal(face).operator[](dim) * 
+            integral *
+            coeffs[dim * n_shape_fct_ + i];
+          // std::cout << hyper_edge.geometry.local_normal(face).operator[](dim) << " " << integral << " " << coeffs[dim * n_shape_fct_ + i] << std::endl;
+
+          bdr_values[face][n_shape_bdr_ + j] += hyper_edge.geometry.local_normal(face).operator[](dim) * integral *
+                                 coeffs[n_dofs_lap + dim * n_shape_fct_ + i];
+        }
       }
 
   return bdr_values;
-}  // end of Diffusion::dual_at_boundary
+}  // end of Bilaplacian::dual_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // bulk_values
@@ -1173,14 +1286,11 @@ template <unsigned int hyEdge_dimT,
           template <unsigned int, typename>
           typename parametersT,
           typename lSol_float_t>
-template <typename abscissa_float_t,
-          std::size_t abscissas_sizeT,
-          class input_array_t,
-          typename hyEdgeT>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
-  const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
+std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+           Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
+  const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -1188,24 +1298,27 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_valu
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
-  SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
+  SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
+             Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)
   {
     for (unsigned int i = 0; i < coeffs.size(); ++i)
+    {
       coeffs[i] = coefficients[d * n_shape_fct_ + i];
-    for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
+      // std::cout << coeffs[i] << std::endl;
+    }
+    for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(sizeT); ++pt){
       point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
-        coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+        coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
+    }
   }
 
   return point_vals;
-}
-// end of Diffusion::bulk_values
+}  // end of Bilaplacian::bulk_values
 
 // -------------------------------------------------------------------------------------------------
 /// \endcond

@@ -47,7 +47,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-  points = np.loadtxt("python_solvers/points_nlines_1000.txt")
+  points = np.loadtxt("domains/points_nlines_1000.txt")
   helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**3)
   def precond_mult( vec_x ):
     return helper.precond(A, vec_x)
