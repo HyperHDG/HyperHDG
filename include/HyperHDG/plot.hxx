@@ -612,8 +612,8 @@ void fancy_recursion(__attribute__((unused)) lv_t& local_values,
   // {
   //   std::array<
   //     dof_value_t,
-  //     std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::n_fun()>
-  //     helper_arr;
+  //     std::tuple_element<component, typename
+  //     LocalSolverT::node_element::functions>::type::n_fun()> helper_arr;
   //   for (unsigned int k = 0; k < helper_arr.size(); ++k)
   //     helper_arr[k] =
   //       hyEdge_dofs[bdr_index]
@@ -623,7 +623,8 @@ void fancy_recursion(__attribute__((unused)) lv_t& local_values,
   //     std::tuple_element<component, typename LocalSolverT::node_element::functions>::type::
   //       template lin_comb_fct_val<float>(SmallVec<helper_arr.size(), dof_value_t>(helper_arr),
   //                                        point);
-  //   fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point, k,
+  //   fancy_recursion<component + 1, LocalSolverT, dof_value_t>(local_values, hyEdge_dofs, point,
+  //   k,
   //                                                             bdr_index);
   // }
 }

@@ -321,7 +321,7 @@ class UnitCube
       for (unsigned int cnt = 0; cnt < index + 1; ++dim)
         if (std::find(dim_indices.begin(), dim_indices.end(), dim) == dim_indices.end())
           ++cnt;
-      outer_normal[dim-1] = 1.;
+      outer_normal[dim - 1] = 1.;
 
       return outer_normal;
     }
