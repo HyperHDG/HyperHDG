@@ -17,29 +17,21 @@ namespace LocalSolver
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
-struct Bilaplacian_cont_flux_parameters_default
+struct BeamNetworkBilaplacianParametersDefault
 {
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
-  static constexpr std::array<unsigned int, 2U> dirichlet_nodes{1, 2};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary of Laplacian.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 0U> dirichlet_laplacian_nodes{};
+  static constexpr std::array<unsigned int, 16U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary of Laplacian.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 0U> neumann_laplacian_nodes{};
-  /*!***********************************************************************************************
-   * \brief   Inverse bilaplacian coefficient in PDE as analytic function.
+   * \brief   Inverse diffusionbeam_network_bilaplacian.hxx coefficient in PDE as analytic function.
    ************************************************************************************************/
   static param_float_t inverse_bilaplacian_coefficient(const Point<space_dimT, param_float_t>&,
-                                                       const param_float_t = 0.)
+                                               const param_float_t = 0.)
   {
     return 1.;
   }
@@ -47,41 +39,48 @@ struct Bilaplacian_cont_flux_parameters_default
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return M_PI * M_PI * M_PI * M_PI * cos(M_PI * point[0]);
-    // return 0.;
+    return 24.;
+    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return analytic_result(point);
+    return analytic_result(point,normal);
   }
   /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution's Laplacian as analytic function.
+   * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
   static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const param_float_t = 0.)
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
   {
-    return M_PI * sin(M_PI * point[0]);
-    // return (2. * (point[0] < .5) - 1.) * 1.;
+    // return 0.;
+    // return -1.;
+    return -4. * point[0] * point[0] * point[0];
+    return -M_PI * cos(M_PI * point[0]);
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
+                                     const Point<space_dimT, param_float_t>& normal,
                                      const param_float_t = 0.)
   {
     return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Neumann values of solution's Laplacian as analytic function.
+   * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>&,
-                                             const param_float_t = 0.)
+  static param_float_t neumann_laplace_value(const Point<space_dimT, param_float_t>& point,
+                                     const Point<space_dimT, param_float_t>& normal,
+                                     const param_float_t = 0.)
   {
     return 0.;
   }
@@ -89,9 +88,13 @@ struct Bilaplacian_cont_flux_parameters_default
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return cos(M_PI * point[0]);
+    // return 1.;
+    // return point[0];
+    return point[0] * point[0] * point[0] * point[0];
+    return sin(M_PI * point[0]);
   }
 };  // end of struct Bilaplacian_parameters_default
 
@@ -118,9 +121,9 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT =
-            Bilaplacian_cont_flux_parameters_default,
+            BeamNetworkBilaplacianParametersDefault,
           typename lSol_float_t = double>
-class Bilaplacian_cont_flux
+class BeamNetworkBilaplacian
 {
  public:
   /*!***********************************************************************************************
@@ -490,7 +493,7 @@ class Bilaplacian_cont_flux
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  Bilaplacian_cont_flux(const constructor_value_type& tau = 1.) : tau_(tau) {}
+  BeamNetworkBilaplacian(const constructor_value_type& tau = .1) : tau_(tau) {}
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
@@ -542,14 +545,14 @@ class Bilaplacian_cont_flux
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
           (2. * (i % 2) - 1.) *
           primals[i][j + lambda_values_out[i].size() /
-                           2];  // - tau_ * duals[i][j] -
-                                // tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] *
-                                // hyper_edge.geometry.face_area(i);
+                           2]; //+  tau_ * duals[i][j] -
+                              //tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] *
+                              //hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] =
-          duals[i][j + lambda_values_out[i].size() / 2];  // + tau_ * primals[i][j] -
-                                                          // tau_ * lambda_values_in[i][j] *
-                                                          //   hyper_edge.geometry.face_area(i);
+          duals[i][j + lambda_values_out[i].size() / 2]; //  + tau_ * primals[i][j] -
+                                                        //  tau_ * lambda_values_in[i][j] *
+                                                        //    hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
@@ -615,14 +618,14 @@ class Bilaplacian_cont_flux
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
           (2. * (i % 2) - 1.) *
           primals[i][j + lambda_values_out[i].size() /
-                           2];  // - tau_ * duals[i][j] -
-                                // tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] *
-                                // hyper_edge.geometry.face_area(i);
+                           2]; //+ tau_ * duals[i][j] -
+                              //tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2] *
+                              //hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] =
-          duals[i][j + lambda_values_out[i].size() / 2];  // + tau_ * primals[i][j] -
-                                                          // tau_ * lambda_values_in[i][j] *
-                                                          //   hyper_edge.geometry.face_area(i);
+          duals[i][j + lambda_values_out[i].size() / 2]; //+ tau_ * primals[i][j] -
+                                                        //  tau_ * lambda_values_in[i][j] *
+                                                        //  hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
@@ -869,7 +872,7 @@ class Bilaplacian_cont_flux
    * \retval  vec_b         Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT, typename SmallMatT>
-  std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
+  error_def::error_t errors(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const lSol_float_t time = 0.) const
   {
@@ -889,9 +892,9 @@ class Bilaplacian_cont_flux
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       hy_assert(coeffs[i] == coeffs[i], "The " << i << "-th coeff is NaN!");
 
-    lSol_float_t result = integrator::template integrate_vol_diffsquare_discana<
+    lSol_float_t result = integrator::template integrate_vol_diffsquare_discanacomp<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t>>(coeffs, hy_edge.geometry,
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t>>(coeffs, -1, hy_edge.geometry,
                                                                      time);
     hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
     return std::array<lSol_float_t, 1U>({result});
@@ -980,9 +983,9 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -1031,7 +1034,7 @@ Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral;
-        local_mat(n_dofs_lap + dim * n_shape_fct_ + i, n_dofs_lap + dim * n_shape_fct_ + j) +=
+        local_mat(n_dofs_lap + dim * n_shape_fct_ + i, n_dofs_lap + dim * n_shape_fct_ + j) -=      // CHANGED FOR SYMMETRY
           vol_integral;
 
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= grad_int_vec[dim];
@@ -1044,8 +1047,10 @@ Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
                   n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i) += grad_int_vec[dim];
 
         // local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) += normal_int_vec[dim];
-        // local_mat(n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i,
-        //           n_dofs_lap + dim * n_shape_fct_ + j) += normal_int_vec[dim];
+        
+
+        // local_mat(n_dofs_lap + dim * n_shape_fct_ + i,
+        //           dim * n_shape_fct_ + j) += tau * face_integral;
       }
     }
   }
@@ -1067,11 +1072,12 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
+  // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
             "The size of the lambda values should be twice the dimension of a hyperedge.");
@@ -1088,19 +1094,26 @@ Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
       {
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
-        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-          (2. * (face % 2) - 1.) * lambda_values[face][n_shape_bdr_ + j] * integral;
+        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -=
+          (2. * (face % 2) - 1.) * 
+          lambda_values[face][n_shape_bdr_ + j] * integral;
         right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] +=
-          tau_ * lambda_values[face][j] * integral;
+            tau_ *
+            lambda_values[face][j] * integral;
+          // right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
+          //   tau_ *
+          //   lambda_values[face][j] * integral;
+        
 
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         {
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
             integral;
-          // right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] -=
-          //   hyper_edge.geometry.local_normal(face).operator[](dim) *
-          //   lambda_values[face][n_shape_bdr_ + j] * integral;
+
+
+          // right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] += (2. * (face % 2) - 1.) *
+          //   tau_ * lambda_values[face][n_shape_bdr_ + j] * integral;
         }
       }
 
@@ -1119,9 +1132,9 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -1130,29 +1143,33 @@ Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phifunc<
+    right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] = (-1.) *
+      integrator::template integrate_vol_phivecfunccomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry,
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
                                                                        time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
       {
-        integral = integrator::template integrate_bdr_phifunc<
+        integral = integrator::template integrate_bdr_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
         right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+        // right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
 
-        integral = integrator::template integrate_bdr_phifunc<
+        integral = integrator::template integrate_bdr_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_laplace_value,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, hyper_edge.geometry, time);
-        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= integral;
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
+        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= (2. * (face % 2) - 1.) * integral;
+
+        // right_hand_side[n_dofs_lap + n_shape_fct_ + i] += tau_ *  integral;
         // for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         //   right_hand_side[n_dofs_lap + dim * n_shape_fct_ + i] -=
         //     hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
@@ -1174,13 +1191,13 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_coeffs(
     const std::array<
       lSol_float_t,
-      Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+      BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         n_loc_dofs_>& coeffs,
     hyEdgeT& hyper_edge) const
 {
@@ -1209,10 +1226,10 @@ template <unsigned int hyEdge_dimT,
 template <typename hyEdgeT>
 inline std::array<
   std::array<lSol_float_t,
-             2 * Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+             2 * BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
                    n_shape_bdr_>,
   2 * hyEdge_dimT>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   primal_at_boundary(const std::array<lSol_float_t, n_loc_dofs_>& coeffs, hyEdgeT& hyper_edge) const
 {
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -1252,10 +1269,10 @@ template <unsigned int hyEdge_dimT,
 template <typename hyEdgeT>
 inline std::array<
   std::array<lSol_float_t,
-             2 * Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+             2 * BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
                    n_shape_bdr_>,
   2 * hyEdge_dimT>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
   const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1302,8 +1319,8 @@ template <unsigned int hyEdge_dimT,
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
 std::array<
   std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-  Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
-Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
+  BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
@@ -1316,7 +1333,7 @@ Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t
 
   std::array<
     std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,
-    Bilaplacian_cont_flux<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+    BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)
