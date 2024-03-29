@@ -25,8 +25,8 @@ POINTS:
 HYPERNODES_OF_HYPEREDGES:
 0 1
 0 2
-0 3
-0 4
+3 0
+4 0
 
 # After TYPES OF HYPERFACES the type of the hyperface is denoted. As an example, 0 might indicate
 # an interior face, 1 a Dirichlet face, and 2 a Neumann face.
@@ -36,13 +36,13 @@ HYPERNODES_OF_HYPEREDGES:
 TYPES_OF_HYPERFACES:
 0 1
 0 1
-0 1
-0 1
+1 0
+1 0
 
 # After POINTS_OF_HYPEREDGES the indices of points belonging to a hyperedge have to appear.
 
 POINTS_OF_HYPEREDGES:
 0 1
 0 2
-0 3
-0 4
+3 0
+4 0

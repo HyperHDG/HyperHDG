@@ -22,7 +22,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           typename lSol_float_t = double,
           typename diffusion_sol_t =
-            DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
+            BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkDiffusionParametersDefault, lSol_float_t >
+          >
 class LengtheningBeam
 {
   /*!***********************************************************************************************
@@ -116,7 +117,7 @@ class LengtheningBeam
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
+  static constexpr unsigned int node_system_dimension() { return space_dim; }
 
  private:
   /*!***********************************************************************************************
@@ -176,7 +177,7 @@ class LengtheningBeam
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  LengtheningBeam(const constructor_value_type& tau = 1.) : diffusion(tau) {}
+  LengtheningBeam(const constructor_value_type& tau = 0.) : diffusion(tau) {}
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
@@ -197,8 +198,7 @@ class LengtheningBeam
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge),
-      lambda_new;
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge), lambda_new;
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
@@ -212,7 +212,7 @@ class LengtheningBeam
                                  2 * hyEdge_dimT>&)>::value)
       diffusion.trace_to_flux(lambda_old, lambda_new, time);
     else
-      diffusion.trace_to_flux(lambda_old, lambda_new, hyper_edge, time);
+      diffusion.trace_to_flux(lambda_old, lambda_new, hyper_edge);
 
     return lambda_values_out = edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge);
   }
@@ -261,26 +261,26 @@ class LengtheningBeam
                                       hyEdgeT& hyper_edge,
                                       const lSol_float_t time = 0.) const
   {
-    lSol_float_t error = 0.;
-    // std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *
-    // hyEdge_dimT>
-    //   lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    std::array<lSol_float_t, 1U> error;
+    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *
+    hyEdge_dimT>
+      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
-    // if constexpr (has_errors<
-    //                 diffusion_sol_t,
-    //                 std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
-    //                            2 * hyEdge_dimT>&(
-    //                   std::array<std::array<lSol_float_t,
-    //                   diffusion_sol_t::n_glob_dofs_per_node()>,
-    //                              2 * hyEdge_dimT>&,
-    //                   std::array<std::array<lSol_float_t,
-    //                   diffusion_sol_t::n_glob_dofs_per_node()>,
-    //                              2 * hyEdge_dimT>&)>::value)
-    //   error = diffusion.errors(lambda, time);
-    // else
-    //   error = diffusion.errors(lambda, hyper_edge, time);
+    if constexpr (has_errors<
+                    diffusion_sol_t,
+                    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
+                               2 * hyEdge_dimT>&(
+                      std::array<std::array<lSol_float_t,
+                      diffusion_sol_t::n_glob_dofs_per_node()>,
+                                 2 * hyEdge_dimT>&,
+                      std::array<std::array<lSol_float_t,
+                      diffusion_sol_t::n_glob_dofs_per_node()>,
+                                 2 * hyEdge_dimT>&)>::value)
+      error = diffusion.errors(lambda, time);
+    else
+      error = diffusion.errors(lambda, hyper_edge, time);
 
-    return std::array<lSol_float_t, 1U>({error});
+    return error;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -310,7 +310,7 @@ class LengtheningBeam
       result;
 
     auto bulk =
-      diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge), time);
+      diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge),hyper_edge, time);
     Point<space_dim, lSol_float_t> normal_vector =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
@@ -334,7 +334,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           typename lSol_float_t = double,
           typename bilaplacian_sol_t =
-            BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
+            BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkBilaplacianParametersDefault, lSol_float_t > >
 class BernoulliBendingBeam
 {
   /*!***********************************************************************************************
@@ -428,7 +428,7 @@ class BernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
+  static constexpr unsigned int node_system_dimension() { return space_dim; }
 
  private:
   /*!***********************************************************************************************
@@ -597,27 +597,27 @@ class BernoulliBendingBeam
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    lSol_float_t error = 0.;
-    // std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 *
-    // hyEdge_dimT>
-    //   lambda;
-    // for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
-    // {
-    //   lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
+    SmallVec<1> error;
+    std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 *
+    hyEdge_dimT>
+      lambda;
+    for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
+    {
+      lambda = node_dof_to_edge_dof(lambda_values, hyper_edge, dim);
 
-    //   if constexpr (
-    //     has_errors<
-    //       bilaplacian_sol_t,
-    //       std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
-    //         std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
-    //         std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 *
-    //         hyEdge_dimT>&)>::value)
-    //     error += bilaplacian_solver.errors(lambda, time);
-    //   else
-    //     error += bilaplacian_solver.errors(lambda, hyper_edge, time);
-    // }
+      if constexpr (
+        has_errors<
+          bilaplacian_sol_t,
+          std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 *
+            hyEdge_dimT>&)>::value)
+        error += SmallVec<1>(bilaplacian_solver.errors(lambda, time));
+      else
+        error += SmallVec<1>(bilaplacian_solver.errors(lambda, hyper_edge, time));
+    }
 
-    return std::array<lSol_float_t, 1U>({error});
+    return error.data();
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -649,7 +649,7 @@ class BernoulliBendingBeam
     for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
     {
       auto bulk = bilaplacian_solver.bulk_values(
-        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on), time);
+        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on),hyper_edge, time);
       Point<space_dim, lSol_float_t> normal_vector =
         (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(dim_on);
 
@@ -675,8 +675,8 @@ template <
   unsigned int poly_deg,
   unsigned int quad_deg,
   typename lSol_float_t = double,
-  typename diffusion_sol_t = DiffusionUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t>,
-  typename bilaplacian_sol_t = BilaplacianUniform<hyEdge_dimT, poly_deg, quad_deg, lSol_float_t> >
+  typename diffusion_sol_t = BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkDiffusionParametersDefault, lSol_float_t >,
+  typename bilaplacian_sol_t = BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkBilaplacianParametersDefault, lSol_float_t > >
 class LengtheningBernoulliBendingBeam
 {
  public:
@@ -757,7 +757,7 @@ class LengtheningBernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return space_dim * 2; }
+  static constexpr unsigned int node_system_dimension() { return space_dim; }
 
  private:
   /*!***********************************************************************************************

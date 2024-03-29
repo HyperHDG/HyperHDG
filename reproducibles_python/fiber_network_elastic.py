@@ -55,8 +55,8 @@ PyDP = HyperHDG.include(const)
 #     "/../domains/fiber_network_1000.geo" )
 # HDG_wrapper = PyDP( [1] * 2 )
 HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/line.geo" )
-HDG_wrapper.refine(16);
+    "/../domains/cross.geo" )
+HDG_wrapper.refine(1);
 
 vectorDirichlet = HDG_wrapper.zero_vector()
 # vectorDirichlet[0] = 1.
@@ -79,38 +79,38 @@ col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
 A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-B = A.todense()
-B = B[4:,4:]
-# print(B)
+# B = A.todense()
+# B = B[4:,4:]
+# # print(B)
 
-# print(B-B.T)
+# # print(B-B.T)
 
-print(np.linalg.cond(B))
+# print(np.linalg.cond(B))
 
-c = vectorRHS[4:]
-vectorSolution, num_iter = sp_lin_alg.cg(B, c, tol=1e-9)
-if num_iter != 0:
-  raise RuntimeError("Linear solver did not converge!")
-vectorSolution = np.array([0,0,0,0] + list(vectorSolution))
+# c = vectorRHS[4:]
+# vectorSolution, num_iter = sp_lin_alg.cg(B, c, tol=1e-9)
+# if num_iter != 0:
+#   raise RuntimeError("Linear solver did not converge!")
+# vectorSolution = np.array([0,0,0,0] + list(vectorSolution))
 
 
-error = HDG_wrapper.errors(vectorSolution)[0]
-print(" Error: ", error)
+# error = HDG_wrapper.errors(vectorSolution)[0]
+# print(" Error: ", error)
 
 # col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
 # C = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 # print(np.subtract(A.dot(np.ones(system_size)),C.dot(np.ones(system_size))))
 
-# vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
-# if num_iter != 0:
-#   raise RuntimeError("Linear solver did not converge!")
+vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, tol=1e-9)
+if num_iter != 0:
+  raise RuntimeError("Linear solver did not converge!")
 
 # print("The linear solver (conjugate gradients) worked!")
 
 # print(vectorSolution)
 
-# vectorSolution = np.array([0,0,0,0,0,1])
+# vectorSolution = np.array([0,0.5,0,0,0,0,0,0,0,0])
 # print(vectorSolution)
 # print(A.dot(vectorSolution))
 # print(vectorRHS)

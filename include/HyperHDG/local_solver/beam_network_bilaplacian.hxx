@@ -42,8 +42,10 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
+    // return 0.;
     return 24.;
-    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
+    // return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
+    // return M_PI * M_PI * M_PI * M_PI * (sin(M_PI * point[0]) + sin(M_PI * point[1]));
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -62,9 +64,14 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    // return -1.;
-    return -4. * point[0] * point[0] * point[0];
-    return -M_PI * cos(M_PI * point[0]);
+    // return -1. * normal[0];
+
+    // if (point[0] < 0)
+      return -4. * point[0] * point[0] * point[0] - 4. * point[1] * point[1] * point[1] ;
+    // else
+    //   return -4. * point[0] * point[0] * point[0];
+    // return -M_PI * cos(M_PI * point[0]);
+    // return -M_PI * cos(M_PI * point[0] + point[0]) * normal[0];
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -92,9 +99,10 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 1.;
-    // return point[0];
-    return point[0] * point[0] * point[0] * point[0];
-    return sin(M_PI * point[0]);
+    // return point[0] + point[1];
+    return point[0] * point[0] * point[0] * point[0] + point[1] * point[1] * point[1] * point[1];
+    // return sin(M_PI * point[0]);
+    // return sin(M_PI * point[0]) + sin(M_PI * point[1]);
   }
 };  // end of struct Bilaplacian_parameters_default
 
