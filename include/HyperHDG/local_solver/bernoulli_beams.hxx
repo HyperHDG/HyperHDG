@@ -21,9 +21,11 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           typename lSol_float_t = double,
-          typename diffusion_sol_t =
-            BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkDiffusionParametersDefault, lSol_float_t >
-          >
+          typename diffusion_sol_t = BeamNetworkDiffusion<hyEdge_dimT,
+                                                          poly_deg,
+                                                          quad_deg,
+                                                          BeamNetworkDiffusionParametersDefault,
+                                                          lSol_float_t> >
 class LengtheningBeam
 {
   /*!***********************************************************************************************
@@ -198,7 +200,8 @@ class LengtheningBeam
   {
     static_assert(hyEdge_dimT == 1, "Elastic graphs must be graphs, not hypergraphs!");
     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
-      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge), lambda_new;
+      lambda_old = node_dof_to_edge_dof(lambda_values_in, hyper_edge),
+      lambda_new;
     for (unsigned int i = 0; i < lambda_new.size(); ++i)
       lambda_new[i].fill(0.);
 
@@ -262,19 +265,16 @@ class LengtheningBeam
                                       const lSol_float_t time = 0.) const
   {
     std::array<lSol_float_t, 1U> error;
-    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 *
-    hyEdge_dimT>
+    std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
     if constexpr (has_errors<
                     diffusion_sol_t,
                     std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                2 * hyEdge_dimT>&(
-                      std::array<std::array<lSol_float_t,
-                      diffusion_sol_t::n_glob_dofs_per_node()>,
+                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&,
-                      std::array<std::array<lSol_float_t,
-                      diffusion_sol_t::n_glob_dofs_per_node()>,
+                      std::array<std::array<lSol_float_t, diffusion_sol_t::n_glob_dofs_per_node()>,
                                  2 * hyEdge_dimT>&)>::value)
       error = diffusion.errors(lambda, time);
     else
@@ -309,8 +309,8 @@ class LengtheningBeam
       LengtheningBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t>::system_dimension()>
       result;
 
-    auto bulk =
-      diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge),hyper_edge, time);
+    auto bulk = diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge),
+                                      hyper_edge, time);
     Point<space_dim, lSol_float_t> normal_vector =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
@@ -334,7 +334,11 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           typename lSol_float_t = double,
           typename bilaplacian_sol_t =
-            BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkBilaplacianParametersDefault, lSol_float_t > >
+            BeamNetworkBilaplacian<hyEdge_dimT,
+                                   poly_deg,
+                                   quad_deg,
+                                   BeamNetworkBilaplacianParametersDefault,
+                                   lSol_float_t> >
 class BernoulliBendingBeam
 {
   /*!***********************************************************************************************
@@ -598,8 +602,7 @@ class BernoulliBendingBeam
     const lSol_float_t time = 0.) const
   {
     SmallVec<1> error;
-    std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 *
-    hyEdge_dimT>
+    std::array<std::array<lSol_float_t, bilaplacian_sol_t::n_glob_dofs_per_node()>, 2 * hyEdge_dimT>
       lambda;
     for (unsigned int dim = 0; dim < space_dim - hyEdge_dimT; ++dim)
     {
@@ -610,8 +613,7 @@ class BernoulliBendingBeam
           bilaplacian_sol_t,
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
-            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 *
-            hyEdge_dimT>&)>::value)
+            std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
         error += SmallVec<1>(bilaplacian_solver.errors(lambda, time));
       else
         error += SmallVec<1>(bilaplacian_solver.errors(lambda, hyper_edge, time));
@@ -649,7 +651,7 @@ class BernoulliBendingBeam
     for (unsigned int dim_on = 0; dim_on < space_dim - hyEdge_dimT; ++dim_on)
     {
       auto bulk = bilaplacian_solver.bulk_values(
-        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on),hyper_edge, time);
+        abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge, dim_on), hyper_edge, time);
       Point<space_dim, lSol_float_t> normal_vector =
         (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(dim_on);
 
@@ -669,14 +671,22 @@ class BernoulliBendingBeam
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
-template <
-  unsigned int hyEdge_dimT,
-  unsigned int space_dim,
-  unsigned int poly_deg,
-  unsigned int quad_deg,
-  typename lSol_float_t = double,
-  typename diffusion_sol_t = BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkDiffusionParametersDefault, lSol_float_t >,
-  typename bilaplacian_sol_t = BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, BeamNetworkBilaplacianParametersDefault, lSol_float_t > >
+template <unsigned int hyEdge_dimT,
+          unsigned int space_dim,
+          unsigned int poly_deg,
+          unsigned int quad_deg,
+          typename lSol_float_t = double,
+          typename diffusion_sol_t = BeamNetworkDiffusion<hyEdge_dimT,
+                                                          poly_deg,
+                                                          quad_deg,
+                                                          BeamNetworkDiffusionParametersDefault,
+                                                          lSol_float_t>,
+          typename bilaplacian_sol_t =
+            BeamNetworkBilaplacian<hyEdge_dimT,
+                                   poly_deg,
+                                   quad_deg,
+                                   BeamNetworkBilaplacianParametersDefault,
+                                   lSol_float_t> >
 class LengtheningBernoulliBendingBeam
 {
  public:

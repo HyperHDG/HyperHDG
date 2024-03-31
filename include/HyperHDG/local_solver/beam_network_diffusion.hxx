@@ -53,7 +53,7 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return analytic_result(point,normal);
+    return analytic_result(point, normal);
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -109,7 +109,8 @@ struct BeamNetworkDiffusionParametersDefault
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename> typename parametersT = BeamNetworkDiffusionParametersDefault,
+          template <unsigned int, typename> typename parametersT =
+            BeamNetworkDiffusionParametersDefault,
           typename lSol_float_t = double>
 class BeamNetworkDiffusion
 {
@@ -937,10 +938,8 @@ template <typename hyEdgeT>
 inline SmallSquareMat<
   BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
-  const lSol_float_t tau,
-  hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
@@ -999,11 +998,11 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
-inline SmallVec<BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_lambda(
-  const SmallMatT& lambda_values,
-  hyEdgeT& hyper_edge) const
+inline SmallVec<
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
                 "Lambda values should have same floating point arithmetics as local solver!");
@@ -1043,20 +1042,22 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallVec<BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_global_rhs(
-  hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+inline SmallVec<
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] = integrator::template integrate_vol_phivecfunccomp<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, 2, hyper_edge.geometry, time);
+    right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
+      integrator::template integrate_vol_phivecfunccomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, 2, hyper_edge.geometry,
+                                                                        time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
@@ -1086,11 +1087,11 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallVecT>
-inline SmallVec<BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_coeffs(
-  const SmallVecT& coeffs,
-  hyEdgeT& hyper_edge) const
+inline SmallVec<
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  lSol_float_t>
+BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_rhs_from_coeffs(const SmallVecT& coeffs, hyEdgeT& hyper_edge) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1113,12 +1114,12 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
-BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
-  const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
-  hyEdgeT& hyper_edge) const
+inline SmallMat<
+  2 * hyEdge_dimT,
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+  lSol_float_t>
+BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  primal_at_boundary(const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs, hyEdgeT& hyper_edge) const
 {
   SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> bdr_values;
 
@@ -1144,9 +1145,10 @@ template <unsigned int hyEdge_dimT,
           typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
+inline SmallMat<
+  2 * hyEdge_dimT,
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+  lSol_float_t>
 BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
@@ -1182,8 +1184,9 @@ template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,
           class input_array_t,
           typename hyEdgeT>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+std::array<
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+  BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
 BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
@@ -1195,8 +1198,9 @@ BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
   SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+  std::array<
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+    BeamNetworkDiffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)

@@ -218,7 +218,8 @@ class Linear
     //   other_vectors.set_column(i, outer_normal(i));
     // for (unsigned int i = 0; i < hyEdge_dimT; ++i)
     //   if (i != index)
-    //     other_vectors.set_column(i + space_dimT - hyEdge_dimT - (i > index), matrix_.get_column(i));
+    //     other_vectors.set_column(i + space_dimT - hyEdge_dimT - (i > index),
+    //     matrix_.get_column(i));
 
     // SmallVec<space_dimT, map_float_t> normal =
     //   qr_decomp_q(other_vectors).get_column(space_dimT - 1);
