@@ -43,7 +43,7 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    return 24.;
+    return 24. * normal[1];
     // return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
     // return M_PI * M_PI * M_PI * M_PI * (sin(M_PI * point[0]) + sin(M_PI * point[1]));
   }
@@ -67,7 +67,7 @@ struct BeamNetworkBilaplacianParametersDefault
     // return -1. * normal[0];
 
     // if (point[0] < 0)
-      return -4. * point[0] * point[0] * point[0] - 4. * point[1] * point[1] * point[1] ;
+      return -4. * point[0] * point[0] * point[0] * normal[1] - 4. * point[1] * point[1] * point[1] ;
     // else
     //   return -4. * point[0] * point[0] * point[0];
     // return -M_PI * cos(M_PI * point[0]);
@@ -100,7 +100,7 @@ struct BeamNetworkBilaplacianParametersDefault
   {
     // return 1.;
     // return point[0] + point[1];
-    return point[0] * point[0] * point[0] * point[0] + point[1] * point[1] * point[1] * point[1];
+    return point[0] * point[0] * point[0] * point[0] * normal[1] + point[1] * point[1] * point[1] * point[1];
     // return sin(M_PI * point[0]);
     // return sin(M_PI * point[0]) + sin(M_PI * point[1]);
   }
@@ -1149,6 +1149,10 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
+
+  lSol_float_t orientation = 2. * (lSol_float_t)(scalar_product(hyper_edge.geometry.span_vec(0), hyper_edge.geometry.inner_normal(0)) > 0) - 1.;
+  // hy_assert(false, orientation);
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] = (-1.) *
@@ -1175,7 +1179,9 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_laplace_value,
           Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
-        right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= (2. * (face % 2) - 1.) * integral;
+        // right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= (2. * (face % 2) - 1.) * integral;
+          right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= orientation * (2. * (face % 2) - 1.) * integral;
+
 
         // right_hand_side[n_dofs_lap + n_shape_fct_ + i] += tau_ *  integral;
         // for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)

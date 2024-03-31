@@ -156,7 +156,7 @@ class File
     SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index) const
     {
       hy_assert(index < hyEdge_dimT, "There are only " << hyEdge_dimT << " spanning vectors.");
-      return mapping.get_column(index);
+      return mapping.matrix_column(index);
     }
     /*!*********************************************************************************************
      * \brief   Return reduced matrix R of the QR decomposition.

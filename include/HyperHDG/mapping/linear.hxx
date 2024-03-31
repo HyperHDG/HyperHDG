@@ -208,25 +208,29 @@ class Linear
    ************************************************************************************************/
   SmallVec<space_dimT, map_float_t> inner_normal(const unsigned int index) const
   {
+    // hy_assert(index < hyEdge_dimT,
+    //           "The index of the inner normal must not be bigger than their amount.");
+    // if constexpr (space_dimT == 1)
+    //   return SmallVec<space_dimT, map_float_t>(1.);
+
+    // SmallMat<space_dimT, space_dimT - 1, map_float_t> other_vectors;
+    // for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
+    //   other_vectors.set_column(i, outer_normal(i));
+    // for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+    //   if (i != index)
+    //     other_vectors.set_column(i + space_dimT - hyEdge_dimT - (i > index), matrix_.get_column(i));
+
+    // SmallVec<space_dimT, map_float_t> normal =
+    //   qr_decomp_q(other_vectors).get_column(space_dimT - 1);
+    // map_float_t scalar_pdct = scalar_product(normal, matrix_.get_column(index));
+    // hy_assert(scalar_pdct != 0., "Scalar product must not be zero.");
+    // if (scalar_pdct > 0)
+    //   normal *= -1.;
+    // return normal;
     hy_assert(index < hyEdge_dimT,
-              "The index of the inner normal must not be bigger than their amount.");
-    if constexpr (space_dimT == 1)
-      return SmallVec<space_dimT, map_float_t>(1.);
+              "The index of the outer normal must not be bigger than their amount.");
 
-    SmallMat<space_dimT, space_dimT - 1, map_float_t> other_vectors;
-    for (unsigned int i = 0; i < space_dimT - hyEdge_dimT; ++i)
-      other_vectors.set_column(i, outer_normal(i));
-    for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-      if (i != index)
-        other_vectors.set_column(i + space_dimT - hyEdge_dimT - (i > index), matrix_.get_column(i));
-
-    SmallVec<space_dimT, map_float_t> normal =
-      qr_decomp_q(other_vectors).get_column(space_dimT - 1);
-    map_float_t scalar_pdct = scalar_product(normal, matrix_.get_column(index));
-    hy_assert(scalar_pdct != 0., "Scalar product must not be zero.");
-    if (scalar_pdct > 0)
-      normal *= -1.;
-    return normal;
+    return matrix_q_.get_column(index);
   }
   /*!***********************************************************************************************
    * \brief   Return outer normal of given index.

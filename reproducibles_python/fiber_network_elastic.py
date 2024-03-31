@@ -33,8 +33,8 @@ except (ImportError, ModuleNotFoundError) as error:
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
 # const.local_solver    = "LengtheningBeam<1,2,1,2>"
-# const.local_solver    = "LengtheningBernoulliBendingBeam<1,2,1,2>"
-const.local_solver    = "BeamNetworkBilaplacian<1,4,8>"
+const.local_solver    = "BernoulliBendingBeam<1,2,4,8>"
+# const.local_solver    = "BeamNetworkBilaplacian<1,4,8>"
 # const.local_solver    = "Bilaplacian<1,1,2>"
 const.topology        = "File<1,2>"
 const.geometry        = "File<1,2>"
@@ -46,7 +46,7 @@ const.cython_replacements = ["string", "string"]
 # const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
 const.include_files   = [ "HyperHDG/local_solver/beam_network_diffusion.hxx",
                           "HyperHDG/local_solver/beam_network_bilaplacian.hxx" ]
-const.debug_mode      = False
+const.debug_mode      = True
 
 PyDP = HyperHDG.include(const)
 # HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
@@ -55,8 +55,8 @@ PyDP = HyperHDG.include(const)
 #     "/../domains/fiber_network_1000.geo" )
 # HDG_wrapper = PyDP( [1] * 2 )
 HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/cross.geo" )
-HDG_wrapper.refine(1);
+    "/../domains/line.geo" )
+HDG_wrapper.refine(2);
 
 vectorDirichlet = HDG_wrapper.zero_vector()
 # vectorDirichlet[0] = 1.
@@ -79,11 +79,11 @@ col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
 A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-# B = A.todense()
-# B = B[4:,4:]
-# # print(B)
+B = A.todense()
+B = B[:4,:4]
+print(B)
 
-# # print(B-B.T)
+print(B-B.T)
 
 # print(np.linalg.cond(B))
 
