@@ -44,6 +44,7 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
+    return -2.;
     return M_PI * M_PI * sin(M_PI * point[0]);
   }
   /*!***********************************************************************************************
@@ -71,6 +72,7 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
+    return point[0] * point[0];
     return sin(M_PI * point[0]);
   }
 };  // end of struct DiffusionParametersDefault
