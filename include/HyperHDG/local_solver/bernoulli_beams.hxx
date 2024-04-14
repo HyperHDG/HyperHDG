@@ -336,7 +336,7 @@ template <unsigned int hyEdge_dimT,
           typename diffusion_sol_t = BeamNetworkDiffusion<hyEdge_dimT,
                                                           poly_deg,
                                                           quad_deg,
-                                                          BeamNetworkDiffusionParametersDefault,
+                                                          BeamNetworkDiffusionParametersTwist,
                                                           lSol_float_t> >
 class TwistingBeam
 {
@@ -458,7 +458,7 @@ class TwistingBeam
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        result[i][0] += normal_vector[dim] * lambda[i][space_dim + dim];
+        result[i][0] -= normal_vector[dim] * lambda[i][space_dim + dim];
 
     return result;
   }
@@ -476,7 +476,7 @@ class TwistingBeam
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for(unsigned int dim = 0; dim < space_dim; ++dim)
-        lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
+        lambda_values_out[i][dim] -= normal_vector[dim] * lambda[i][0];
     return lambda_values_out;
   }
 
@@ -775,7 +775,7 @@ class BernoulliBendingBeam
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         result[i][0] += normal_vector[dim] * lambda[i][dim];
-        result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim];
+        result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim] * (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
       }
 
     return result;
@@ -799,7 +799,7 @@ class BernoulliBendingBeam
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
-        lambda_values_out[i][space_dim + dim] += normal_vector[dim] * lambda[i][1];
+        lambda_values_out[i][space_dim + dim] += normal_vector[dim] * lambda[i][1] * (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
       }
 
     return lambda_values_out;
@@ -992,6 +992,11 @@ template <unsigned int hyEdge_dimT,
                                                           quad_deg,
                                                           BeamNetworkDiffusionParametersDefault,
                                                           lSol_float_t>,
+          typename twist_sol_t = BeamNetworkDiffusion<hyEdge_dimT,
+                                                          poly_deg,
+                                                          quad_deg,
+                                                          BeamNetworkDiffusionParametersTwist,
+                                                          lSol_float_t>,
           typename bilaplacian_sol_t =
             BeamNetworkBilaplacian<hyEdge_dimT,
                                    poly_deg,
@@ -1089,7 +1094,7 @@ class LengtheningBernoulliBendingBeam
   /*!***********************************************************************************************
    * \brief   The lengthening beam solver that does the lengthening of the beam.
    ************************************************************************************************/
-  const TwistingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t, diffusion_sol_t>
+  const TwistingBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, lSol_float_t, twist_sol_t>
     twist_beam;
   /*!***********************************************************************************************
    * \brief   The bending beam solver that does the bending of the beam.

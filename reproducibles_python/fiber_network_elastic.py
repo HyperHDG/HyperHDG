@@ -32,8 +32,8 @@ except (ImportError, ModuleNotFoundError) as error:
   
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
-# const.local_solver    = "LengtheningBeam<1,2,1,2>"
-const.local_solver    = "BernoulliBendingBeam<1,2,4,8>"
+# const.local_solver    = "LengtheningBeam<1,2,2,4>"
+const.local_solver    = "LengtheningBernoulliBendingBeam<1,2,4,8>"
 # const.local_solver    = "BeamNetworkBilaplacian<1,4,8>"
 # const.local_solver    = "Bilaplacian<1,1,2>"
 const.topology        = "File<1,2>"
@@ -55,8 +55,8 @@ PyDP = HyperHDG.include(const)
 #     "/../domains/fiber_network_1000.geo" )
 # HDG_wrapper = PyDP( [1] * 2 )
 HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/line.geo" )
-HDG_wrapper.refine(2);
+    "/../domains/cross.geo" )
+HDG_wrapper.refine(8);
 
 vectorDirichlet = HDG_wrapper.zero_vector()
 # vectorDirichlet[0] = 1.
@@ -80,10 +80,12 @@ A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
 B = A.todense()
+print(B.size)
 B = B[:4,:4]
 print(B)
 
-print(B-B.T)
+# print(np.linalg.cond(B))
+# print(np.linalg.norm(B-B.T))
 
 # print(np.linalg.cond(B))
 

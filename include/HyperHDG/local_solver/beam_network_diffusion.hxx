@@ -36,6 +36,7 @@ struct BeamNetworkDiffusionParametersDefault
                                                const param_float_t = 0.)
   {
     return 1.;
+    return 1. / M_PI / M_PI;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
@@ -44,8 +45,9 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return -2.;
-    return M_PI * M_PI * sin(M_PI * point[0]);
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -72,10 +74,79 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return point[0] * point[0];
-    return sin(M_PI * point[0]);
+    return point[0] * normal[0];
+    return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault
+
+
+/*!*************************************************************************************************
+ * \brief   Default parameters for the diffusion equation, cf. below.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int space_dimT, typename param_float_t = double>
+struct BeamNetworkDiffusionParametersTwist
+{
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Inverse diffusionbeam_network_bilaplacian.hxx coefficient in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
+  {
+    return 1.;
+    return 1. / M_PI / M_PI;
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return analytic_result(point, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Neumann values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& point,
+                                     const Point<space_dimT, param_float_t>& normal,
+                                     const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0. * normal[0];
+    return sin(M_PI * point[0]) * normal[0];
+  }
+};  // end of struct DiffusionParametersDefault
+
 
 /*!*************************************************************************************************
  * \brief   Local solver diffusion equation on hypergraph.

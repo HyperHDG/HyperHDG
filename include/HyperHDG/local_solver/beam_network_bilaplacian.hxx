@@ -44,9 +44,10 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    return 24. * normal[1];
+    return 24. * normal[0];
     // return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
     // return M_PI * M_PI * M_PI * M_PI * (sin(M_PI * point[0]) + sin(M_PI * point[1]));
+    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[1]) * normal[0];
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -61,18 +62,20 @@ struct BeamNetworkBilaplacianParametersDefault
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
   static param_float_t dirichlet_laplace_value(const Point<space_dimT, param_float_t>& point,
-                                               const Point<space_dimT, param_float_t>& normal,
+                                               const Point<space_dimT, param_float_t>& normal_out,
+                                               const Point<space_dimT, param_float_t>& normal_in,
                                                const param_float_t = 0.)
   {
     // return 0.;
-    // return -1. * normal[0];
+    // return 1. * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
 
     // if (point[0] < 0)
-    return -4. * point[0] * point[0] * point[0] * normal[1];// - 4. * point[1] * point[1] * point[1];
+    return 4. * point[1] * point[1] * point[1] * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);// - 4. * point[1] * point[1] * point[1];
     // else
     //   return -4. * point[0] * point[0] * point[0];
     // return -M_PI * cos(M_PI * point[0]);
     // return -M_PI * cos(M_PI * point[0] + point[0]) * normal[0];
+    return M_PI * cos(M_PI * point[1]) * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -99,12 +102,13 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    // return 1.;
-    // return point[0] + point[1];
-    return point[0] * point[0] * point[0] * point[0] * normal[1];
+    // return 0.;
+    // return point[1] * normal[0];
+    // // return point[0] + point[1];
+    return point[1] * point[1] * point[1] * point[1] * normal[0];
            // +  point[1] * point[1] * point[1] * point[1];
     // return sin(M_PI * point[0]);
-    // return sin(M_PI * point[0]) + sin(M_PI * point[1]);
+    return sin(M_PI * point[1]) * normal[0];
   }
 };  // end of struct Bilaplacian_parameters_default
 
@@ -622,9 +626,9 @@ class BeamNetworkBilaplacian
     {
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
-          (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2]
-          + tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
-          * hyper_edge.geometry.face_area(i);
+          (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];
+          // + tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
+          // * hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];
         // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
@@ -1169,7 +1173,7 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
 
-        integral = integrator::template integrate_bdr_phivecfunccomp<
+        integral = integrator::template integrate_bdr_phivecfunccomp_normcheck<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_laplace_value,
           Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
