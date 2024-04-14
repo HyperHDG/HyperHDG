@@ -475,7 +475,7 @@ class TwistingBeam
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for(unsigned int dim = 0; dim < space_dim; ++dim)
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
         lambda_values_out[i][dim] -= normal_vector[dim] * lambda[i][0];
     return lambda_values_out;
   }
@@ -775,7 +775,8 @@ class BernoulliBendingBeam
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         result[i][0] += normal_vector[dim] * lambda[i][dim];
-        result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim] * (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
+        result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim] *
+                        (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
       }
 
     return result;
@@ -799,7 +800,9 @@ class BernoulliBendingBeam
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
-        lambda_values_out[i][space_dim + dim] += normal_vector[dim] * lambda[i][1] * (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
+        lambda_values_out[i][space_dim + dim] +=
+          normal_vector[dim] * lambda[i][1] *
+          (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
       }
 
     return lambda_values_out;
@@ -993,10 +996,10 @@ template <unsigned int hyEdge_dimT,
                                                           BeamNetworkDiffusionParametersDefault,
                                                           lSol_float_t>,
           typename twist_sol_t = BeamNetworkDiffusion<hyEdge_dimT,
-                                                          poly_deg,
-                                                          quad_deg,
-                                                          BeamNetworkDiffusionParametersTwist,
-                                                          lSol_float_t>,
+                                                      poly_deg,
+                                                      quad_deg,
+                                                      BeamNetworkDiffusionParametersTwist,
+                                                      lSol_float_t>,
           typename bilaplacian_sol_t =
             BeamNetworkBilaplacian<hyEdge_dimT,
                                    poly_deg,

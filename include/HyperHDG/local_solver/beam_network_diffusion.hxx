@@ -79,7 +79,6 @@ struct BeamNetworkDiffusionParametersDefault
   }
 };  // end of struct DiffusionParametersDefault
 
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -146,7 +145,6 @@ struct BeamNetworkDiffusionParametersTwist
     return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault
-
 
 /*!*************************************************************************************************
  * \brief   Local solver diffusion equation on hypergraph.

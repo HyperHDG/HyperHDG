@@ -70,7 +70,8 @@ struct BeamNetworkBilaplacianParametersDefault
     // return 1. * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
 
     // if (point[0] < 0)
-    return 4. * point[1] * point[1] * point[1] * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);// - 4. * point[1] * point[1] * point[1];
+    return 4. * point[1] * point[1] * point[1] * normal_out[0] *
+           (2. * (normal_in[1] < 0.) - 1.);  // - 4. * point[1] * point[1] * point[1];
     // else
     //   return -4. * point[0] * point[0] * point[0];
     // return -M_PI * cos(M_PI * point[0]);
@@ -106,7 +107,7 @@ struct BeamNetworkBilaplacianParametersDefault
     // return point[1] * normal[0];
     // // return point[0] + point[1];
     return point[1] * point[1] * point[1] * point[1] * normal[0];
-           // +  point[1] * point[1] * point[1] * point[1];
+    // +  point[1] * point[1] * point[1] * point[1];
     // return sin(M_PI * point[0]);
     return sin(M_PI * point[1]) * normal[0];
   }
@@ -557,12 +558,12 @@ class BeamNetworkBilaplacian
     {
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
-          (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2]; 
-          // +  tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
-          // * hyper_edge.geometry.face_area(i);
+          (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];
+      // +  tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
+      // * hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];
-        // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
+      // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
@@ -627,11 +628,11 @@ class BeamNetworkBilaplacian
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
           (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];
-          // + tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
-          // * hyper_edge.geometry.face_area(i);
+      // + tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
+      // * hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];
-        // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
+      // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
