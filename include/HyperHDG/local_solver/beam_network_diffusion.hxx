@@ -36,7 +36,7 @@ struct BeamNetworkDiffusionParametersDefault
                                                const param_float_t = 0.)
   {
     return 1.;
-    return 1. / M_PI / M_PI;
+    // return 1. / M_PI / M_PI;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
@@ -45,9 +45,9 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    // return 0.;
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -74,7 +74,8 @@ struct BeamNetworkDiffusionParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return point[0] * normal[0];
+    // return 0. * normal[0];
+    // return point[0] * normal[0];
     return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault
@@ -103,7 +104,7 @@ struct BeamNetworkDiffusionParametersTwist
                                                const param_float_t = 0.)
   {
     return 1.;
-    return 1. / M_PI / M_PI;
+    // return 1. / M_PI / M_PI;
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
@@ -112,9 +113,9 @@ struct BeamNetworkDiffusionParametersTwist
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    // return 0.;
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    return - M_PI * M_PI * M_PI * cos(M_PI * point[0]) * normal[0];
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -141,7 +142,7 @@ struct BeamNetworkDiffusionParametersTwist
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0. * normal[0];
+    return - M_PI *  cos(M_PI * point[0]) * normal[0];
     return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault

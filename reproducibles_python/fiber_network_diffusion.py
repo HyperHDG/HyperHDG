@@ -55,9 +55,12 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
 
   iters = 0
-  def nonlocal_iterate(arr):
+  def nonlocal_iterate(vec_x):
     nonlocal iters
     iters += 1
+    print(iters, " ", np.linalg.norm(A.dot(vec_x) - vectorRHS), " ", datetime.now())
+
+  # print(np.linalg.norm(vectorRHS))
 
   [vectorSolution, num_iter] = sp.linalg.cg(A, vectorRHS, tol=1e-6, callback=nonlocal_iterate, M=B)
   print(iters)
@@ -89,8 +92,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in range(1,2):
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+  for poly_degree in range(1,4):
+    print("\n Polynomial degree is set to be ", poly_degree, "\n")
     for iteration in range(1):
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

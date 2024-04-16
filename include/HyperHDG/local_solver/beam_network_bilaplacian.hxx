@@ -44,7 +44,7 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    return 24. * normal[0];
+    // return 24. * normal[0];
     // return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
     // return M_PI * M_PI * M_PI * M_PI * (sin(M_PI * point[0]) + sin(M_PI * point[1]));
     return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[1]) * normal[0];
@@ -70,8 +70,8 @@ struct BeamNetworkBilaplacianParametersDefault
     // return 1. * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
 
     // if (point[0] < 0)
-    return 4. * point[1] * point[1] * point[1] * normal_out[0] *
-           (2. * (normal_in[1] < 0.) - 1.);  // - 4. * point[1] * point[1] * point[1];
+    // return 4. * point[1] * point[1] * point[1] * normal_out[0] *
+    //        (2. * (normal_in[1] < 0.) - 1.);  // - 4. * point[1] * point[1] * point[1];
     // else
     //   return -4. * point[0] * point[0] * point[0];
     // return -M_PI * cos(M_PI * point[0]);
@@ -104,9 +104,9 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    // return point[1] * normal[0];
+    // return (point[1] + 3.) * normal[0];
     // // return point[0] + point[1];
-    return point[1] * point[1] * point[1] * point[1] * normal[0];
+    // return point[1] * point[1] * point[1] * point[1] * normal[0];
     // +  point[1] * point[1] * point[1] * point[1];
     // return sin(M_PI * point[0]);
     return sin(M_PI * point[1]) * normal[0];

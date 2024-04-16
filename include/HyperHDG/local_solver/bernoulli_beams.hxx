@@ -142,7 +142,7 @@ class LengtheningBeam
     }
 
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -160,7 +160,7 @@ class LengtheningBeam
   {
     hy_assert(diffusion_sol_t::n_glob_dofs_per_node() == 1, "This should be 1!");
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -454,11 +454,11 @@ class TwistingBeam
     }
 
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        result[i][0] -= normal_vector[dim] * lambda[i][space_dim + dim];
+        result[i][0] += normal_vector[dim] * lambda[i][space_dim + dim];
 
     return result;
   }
@@ -472,11 +472,11 @@ class TwistingBeam
   {
     hy_assert(diffusion_sol_t::n_glob_dofs_per_node() == 1, "This should be 1!");
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
-        lambda_values_out[i][dim] -= normal_vector[dim] * lambda[i][0];
+        lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
     return lambda_values_out;
   }
 
@@ -768,15 +768,18 @@ class BernoulliBendingBeam
       result[i].fill(0.);
     }
 
-    Point<space_dim, lSol_float_t> normal_vector =
+    Point<space_dim, lSol_float_t> normal_vector1 =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(outer_index);
+    Point<space_dim, lSol_float_t> normal_vector2 =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal((outer_index+1)%2);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
-        result[i][0] += normal_vector[dim] * lambda[i][dim];
-        result[i][1] += normal_vector[dim] * lambda[i][space_dim + dim] *
-                        (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
+        result[i][0] += normal_vector1[dim] * lambda[i][dim];
+        result[i][1] += normal_vector2[dim] * lambda[i][space_dim + dim] *
+                        (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.) *
+                        (2. * ((outer_index+1)%2) - 1.);
       }
 
     return result;
@@ -793,16 +796,20 @@ class BernoulliBendingBeam
     const unsigned int outer_index) const
   {
     hy_assert(bilaplacian_sol_t::n_glob_dofs_per_node() == 2, "This should be 1*2!");
-    Point<space_dim, lSol_float_t> normal_vector =
+
+    Point<space_dim, lSol_float_t> normal_vector1 =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(outer_index);
+    Point<space_dim, lSol_float_t> normal_vector2 =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal((outer_index+1)%2);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
-        lambda_values_out[i][dim] += normal_vector[dim] * lambda[i][0];
-        lambda_values_out[i][space_dim + dim] +=
-          normal_vector[dim] * lambda[i][1] *
-          (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.);
+        lambda_values_out[i][dim] -= normal_vector1[dim] * lambda[i][0];
+        lambda_values_out[i][space_dim + dim] -=
+          normal_vector2[dim] * lambda[i][1] *
+          (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.) *
+          (2. * ((outer_index+1)%2) - 1.);
       }
 
     return lambda_values_out;
