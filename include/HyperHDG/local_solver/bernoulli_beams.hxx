@@ -312,7 +312,7 @@ class LengtheningBeam
     auto bulk = diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge),
                                       hyper_edge, time);
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int dim = 0; dim < result.size(); ++dim)
       for (unsigned int q = 0; q < result[dim].size(); ++q)
@@ -623,7 +623,7 @@ class TwistingBeam
     auto bulk = diffusion.bulk_values(abscissas, node_dof_to_edge_dof(lambda_values, hyper_edge),
                                       hyper_edge, time);
     Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(1);
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
 
     for (unsigned int dim = 0; dim < result.size(); ++dim)
       for (unsigned int q = 0; q < result[dim].size(); ++q)
@@ -773,12 +773,21 @@ class BernoulliBendingBeam
     Point<space_dim, lSol_float_t> normal_vector2 =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal((outer_index+1)%2);
 
+    // double orientation = 0.;
+    // for (unsigned int dim = 0; dim < space_dim; ++dim){
+    //   if (hyper_edge.geometry.inner_normal(0)[dim] == 0.)
+    //     continue;
+    //   orientation = (2. * (hyper_edge.geometry.inner_normal(0)[dim] > 0.) - 1.);
+    //   break;
+    // }
+    
+
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         result[i][0] += normal_vector1[dim] * lambda[i][dim];
         result[i][1] += normal_vector2[dim] * lambda[i][space_dim + dim] *
-                        (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.) *
+                        // orientation *
                         (2. * ((outer_index+1)%2) - 1.);
       }
 
@@ -802,13 +811,21 @@ class BernoulliBendingBeam
     Point<space_dim, lSol_float_t> normal_vector2 =
       (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal((outer_index+1)%2);
 
+    //   double orientation = 0.;
+    // for (unsigned int dim = 0; dim < space_dim; ++dim){
+    //   if (hyper_edge.geometry.inner_normal(0)[dim] == 0.)
+    //     continue;
+    //   orientation = (2. * (hyper_edge.geometry.inner_normal(0)[dim] > 0.) - 1.);
+    //   break;
+    // }
+
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         lambda_values_out[i][dim] -= normal_vector1[dim] * lambda[i][0];
         lambda_values_out[i][space_dim + dim] -=
           normal_vector2[dim] * lambda[i][1] *
-          (2. * (hyper_edge.geometry.inner_normal(0)[1] > 0.) - 1.) *
+          // orientation *
           (2. * ((outer_index+1)%2) - 1.);
       }
 
@@ -897,9 +914,9 @@ class BernoulliBendingBeam
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        bilaplacian_solver.residual_flux(lambda_old, lambda_new, time);
+        bilaplacian_solver.residual_flux(lambda_old, lambda_new, dim);
       else
-        bilaplacian_solver.residual_flux(lambda_old, lambda_new, hyper_edge, time);
+        bilaplacian_solver.residual_flux(lambda_old, lambda_new, hyper_edge, dim);
 
       edge_dof_to_node_dof(lambda_new, lambda_values_out, hyper_edge, dim);
     }
@@ -935,9 +952,9 @@ class BernoulliBendingBeam
           std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&(
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&,
             std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&)>::value)
-        error += SmallVec<1>(bilaplacian_solver.errors(lambda, time));
+        error += SmallVec<1>(bilaplacian_solver.errors(lambda, dim));
       else
-        error += SmallVec<1>(bilaplacian_solver.errors(lambda, hyper_edge, time));
+        error += SmallVec<1>(bilaplacian_solver.errors(lambda, hyper_edge, dim));
     }
 
     return error.data();

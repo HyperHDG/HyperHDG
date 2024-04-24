@@ -44,10 +44,11 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    // return 24. * normal[0];
+    // return 24. * normal[0] * (point[2]==0.);
     // return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[0]);
     // return M_PI * M_PI * M_PI * M_PI * (sin(M_PI * point[0]) + sin(M_PI * point[1]));
-    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[1]) * normal[0];
+    // hy_assert(normal[0] == 0.,normal[0]);
+    return M_PI * M_PI * M_PI * M_PI * sin(M_PI * point[1]) * (normal[0]) * (point[2]==0.);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -67,16 +68,16 @@ struct BeamNetworkBilaplacianParametersDefault
                                                const param_float_t = 0.)
   {
     // return 0.;
-    // return 1. * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
+    // return 1. * normal_out[0] * (2. * (normal_in[1] < 0.) - 1. * (normal_in[1] != 0.));
 
     // if (point[0] < 0)
-    // return 4. * point[1] * point[1] * point[1] * normal_out[0] *
+    // return 4. * point[1] * point[1] * point[1] * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.) * (normal_in[1] != 0.);// *
     //        (2. * (normal_in[1] < 0.) - 1.);  // - 4. * point[1] * point[1] * point[1];
     // else
     //   return -4. * point[0] * point[0] * point[0];
     // return -M_PI * cos(M_PI * point[0]);
     // return -M_PI * cos(M_PI * point[0] + point[0]) * normal[0];
-    return M_PI * cos(M_PI * point[1]) * normal_out[0] * (2. * (normal_in[1] < 0.) - 1.);
+    return M_PI * cos(M_PI * point[1]) * (normal_out[0]) * (2. * (normal_in[1] < 0.) - 1.) * (normal_in[1] != 0.);
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -104,12 +105,12 @@ struct BeamNetworkBilaplacianParametersDefault
                                        const param_float_t = 0.)
   {
     // return 0.;
-    // return (point[1] + 3.) * normal[0];
+    // return point[1] * normal[0];
     // // return point[0] + point[1];
     // return point[1] * point[1] * point[1] * point[1] * normal[0];
     // +  point[1] * point[1] * point[1] * point[1];
     // return sin(M_PI * point[0]);
-    return sin(M_PI * point[1]) * normal[0];
+    return sin(M_PI * point[1]) * (normal[0]);
   }
 };  // end of struct Bilaplacian_parameters_default
 
@@ -347,7 +348,7 @@ class BeamNetworkBilaplacian
   template <typename hyEdgeT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs(
     hyEdgeT& hyper_edge,
-    const lSol_float_t time) const;
+    const unsigned int dim) const;
   /*!***********************************************************************************************
    * \brief   Assemble local right-hand for the local solver (from volume function coefficients).
    *
@@ -385,7 +386,7 @@ class BeamNetworkBilaplacian
   inline std::array<lSol_float_t, n_loc_dofs_> solve_local_problem(const SmallMatT& lambda_values,
                                                                    const unsigned int solution_type,
                                                                    hyEdgeT& hyper_edge,
-                                                                   const lSol_float_t time) const
+                                                                   const unsigned int dim) const
   {
     try
     {
@@ -394,10 +395,10 @@ class BeamNetworkBilaplacian
         rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
       else if (solution_type == 1)
         rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge) +
-              assemble_rhs_from_global_rhs(hyper_edge, time);
+              assemble_rhs_from_global_rhs(hyper_edge, dim);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      return (rhs / assemble_loc_matrix(tau_, hyper_edge, time)).data();
+      return (rhs / assemble_loc_matrix(tau_, hyper_edge, 0.)).data();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -548,7 +549,7 @@ class BeamNetworkBilaplacian
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
+      solve_local_problem(lambda_values_in, 0U, hyper_edge, 0);
 
     std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
@@ -558,12 +559,13 @@ class BeamNetworkBilaplacian
     {
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][lambda_values_out[i].size() / 2 + j] =
-          (2. * (i % 2) - 1.) * primals[i][j + lambda_values_out[i].size() / 2];
+          (2. * (i % 2) - 1.) * 
+          primals[i][j + lambda_values_out[i].size() / 2];
       // +  tau_ * duals[i][j] - tau_ * lambda_values_in[i][j + lambda_values_out[i].size() / 2]
       // * hyper_edge.geometry.face_area(i);
       for (unsigned int j = 0; j < lambda_values_out[i].size() / 2; ++j)
         lambda_values_out[i][j] = duals[i][j + lambda_values_out[i].size() / 2];
-      // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
+        // + tau_ * primals[i][j] - tau_ * lambda_values_in[i][j]*hyper_edge.geometry.face_area(i);
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] = 0.;
@@ -604,7 +606,7 @@ class BeamNetworkBilaplacian
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+                              const unsigned int dim) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -617,7 +619,7 @@ class BeamNetworkBilaplacian
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
+      solve_local_problem(lambda_values_in, 1U, hyper_edge, dim);
 
     std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
@@ -881,7 +883,7 @@ class BeamNetworkBilaplacian
   template <class hyEdgeT, typename SmallMatT>
   error_def::error_t errors(const SmallMatT& lambda_values,
                             hyEdgeT& hy_edge,
-                            const lSol_float_t time = 0.) const
+                            const unsigned int dim) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
@@ -891,7 +893,7 @@ class BeamNetworkBilaplacian
                   "Lambda value wit index " << i << "," << j << " is NaN!");
 
     std::array<lSol_float_t, n_loc_dofs_> coefficients =
-      solve_local_problem(lambda_values, 1U, hy_edge, time);
+      solve_local_problem(lambda_values, 1U, hy_edge, dim);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
@@ -901,8 +903,8 @@ class BeamNetworkBilaplacian
 
     lSol_float_t result = integrator::template integrate_vol_diffsquare_discanacomp<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t>>(coeffs, -1, hy_edge.geometry,
-                                                                     time);
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t>>(coeffs, -dim-1, hy_edge.geometry,
+                                                                     0.);
     hy_assert(result >= 0., "The squared error must be non-negative, but was " << result);
     return std::array<lSol_float_t, 1U>({result});
   }
@@ -1138,7 +1140,7 @@ inline SmallVec<
   BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
 BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
-  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
+  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
@@ -1157,8 +1159,8 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
       (-1.) *
       integrator::template integrate_vol_phivecfunccomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
-                                                                       time);
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, -dim-1, hyper_edge.geometry,
+                                                                       0.);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
@@ -1166,7 +1168,7 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
         integral = integrator::template integrate_bdr_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, -dim-1, hyper_edge.geometry, 0.);
         right_hand_side[n_dofs_lap + hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
         // right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
 
@@ -1177,7 +1179,7 @@ BeamNetworkBilaplacian<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_
         integral = integrator::template integrate_bdr_phivecfunccomp_normcheck<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_laplace_value,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, time);
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, -dim-1, hyper_edge.geometry, 0.);
         // right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -= (2. * (face % 2) - 1.) * integral;
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] -=
           orientation * (2. * (face % 2) - 1.) * integral;
