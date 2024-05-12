@@ -44,7 +44,9 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    return M_PI * (M_PI - 1.) * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
+    // return -M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
+    // return M_PI * M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
   }
@@ -55,7 +57,9 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0.;
+    return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
+    // return  (M_PI * M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
+    // return  -M_PI * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
   }
@@ -84,7 +88,8 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return -1. * normal[2];
+    // return 0.;
+    return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
   }
@@ -95,7 +100,8 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return 0. * normal[0];
+    // return 0.;
+    return sin(M_PI * point[0]) * normal[1] + sin(M_PI * point[1]) * normal[2];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
   }
@@ -510,24 +516,24 @@ private:
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     
     for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + 0 * n_shape_fct_];
-    error += integrator::template integrate_vol_diffsquare_discanacomp<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t> >(coeffs, -1, hyper_edge.geometry,
-                                                                      time);
-
-    for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + 1 * n_shape_fct_];
+      coeffs[i] = coefficients[i + (2 * space_dim + 0) * n_shape_fct_];
     error += integrator::template integrate_vol_diffsquare_discanacomp<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t> >(coeffs, 1, hyper_edge.geometry,
                                                                       time);
 
     for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + 2 * n_shape_fct_];
+      coeffs[i] = coefficients[i + (2 * space_dim + 1) * n_shape_fct_];
     error += integrator::template integrate_vol_diffsquare_discanacomp<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t> >(coeffs, 2, hyper_edge.geometry,
+      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t> >(coeffs, -1, hyper_edge.geometry,
+                                                                      time);
+
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      coeffs[i] = coefficients[i + (2 * space_dim + 2) * n_shape_fct_];
+    error += integrator::template integrate_vol_diffsquare_discanacomp<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t> >(coeffs, -2, hyper_edge.geometry,
                                                                       time);
 
     // error += len_beam.errors(lambda_values, hyper_edge, time)[0];
@@ -659,10 +665,10 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       }
 
       // Consider the cross product
-      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) += vol_integral;
-      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) -= vol_integral;
-      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) += vol_integral;
-      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= vol_integral;
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += vol_integral;
     }
   }
 
