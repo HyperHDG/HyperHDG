@@ -44,7 +44,8 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return M_PI * (M_PI - 1.) * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
+    return M_PI * (M_PI - 1.) * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.)
+         + M_PI * cos(M_PI * point[1]) * (M_PI * normal[1] + normal[0]) * (point[0] == 0. && point[2] == 0.);
     // return -M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
     // return M_PI * M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
@@ -57,7 +58,8 @@ struct TimoschenkoBeamParametersDefault
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
-    return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
+    return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.)
+         + (M_PI * M_PI + 1.) * sin(M_PI * point[1]) * normal[2] * (point[0] == 0. && point[2] == 0.);
     // return  (M_PI * M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
     // return  -M_PI * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] == 0.);
     // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
