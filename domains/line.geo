@@ -15,13 +15,13 @@ N_HyperEdges  = 2;  # Number of hyperedges that are contained in the hypergraph.
 
 POINTS:
 0.0 0.0 0.0
-0.0 1.0 0.0
-0.0 -1. 0.0
+0.0 0.0 1.0 
+0.0 0.0 -1.0
 
 # After HYPERNODES_OF_HYPEREDGES the indices of hypernodes belonging to a hyperedge have to appear.
 
 HYPERNODES_OF_HYPEREDGES:
-0 1
+1 0
 2 0
 
 # After TYPES OF HYPERFACES the type of the hyperface is denoted. As an example, 0 might indicate
@@ -30,11 +30,11 @@ HYPERNODES_OF_HYPEREDGES:
 # have to be of Dirichlet type.
 
 TYPES_OF_HYPERFACES:
-0 1
+1 0
 1 0
 
 # After POINTS_OF_HYPEREDGES the indices of points belonging to a hyperedge have to appear.
 
 POINTS_OF_HYPEREDGES:
-0 1
+1 0
 2 0 

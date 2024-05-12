@@ -543,6 +543,23 @@ SmallMat<n_rows, n_cols, mat_entry_t> rep_mat(const SmallMat<n_rows, 1, mat_entr
  * \param   right         Right vector in dyadic product.
  * \retval  dyad_prod     Dyadic product of both vectors.
  **************************************************************************************************/
+template <typename mat_entry_t>
+SmallMat<3, 1, mat_entry_t> cross_product(const SmallMat<3, 1, mat_entry_t>& left,
+                                          const SmallMat<3, 1, mat_entry_t>& right)
+{
+  SmallMat<3, 1, mat_entry_t> cross_prod;
+  cross_prod[0] = left[1] * right[2] - left[2] * right[1];
+  cross_prod[1] = left[2] * right[0] - left[0] * right[2];
+  cross_prod[2] = left[0] * right[1] - left[1] * right[0];
+  return cross_prod;
+}
+/*!*************************************************************************************************
+ * \brief   Create dyadic product of two small vectors.
+ *
+ * \param   left          Left vector in dyadic product.
+ * \param   right         Right vector in dyadic product.
+ * \retval  dyad_prod     Dyadic product of both vectors.
+ **************************************************************************************************/
 template <unsigned int n_rows, unsigned int n_cols, typename mat_entry_t>
 SmallMat<n_rows, n_cols, mat_entry_t> dyadic_product(const SmallMat<n_rows, 1, mat_entry_t>& left,
                                                      const SmallMat<n_cols, 1, mat_entry_t>& right)

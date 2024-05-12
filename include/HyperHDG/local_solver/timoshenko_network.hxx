@@ -40,7 +40,62 @@ struct TimoschenkoBeamParametersDefault
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
+  static param_float_t right_hand_side_n1(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 1.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_n2(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_n3(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m1(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m2(const Point<space_dimT, param_float_t>& point,
+                                       const Point<space_dimT, param_float_t>& normal,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m3(const Point<space_dimT, param_float_t>& point,
                                        const Point<space_dimT, param_float_t>& normal,
                                        const param_float_t = 0.)
   {
@@ -396,7 +451,7 @@ private:
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
@@ -426,6 +481,10 @@ private:
 
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        lambda_values_out[i].fill(0.);
+
     return lambda_values_out;
   }
 
@@ -444,7 +503,7 @@ private:
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
@@ -456,6 +515,10 @@ private:
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
         lambda_values_loc[i][j] = result(i,j) - tau_ * lambda_values_loc[i][j];
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        lambda_values_out[i].fill(0.);
 
     return lambda_values_out;
   }
@@ -658,23 +721,37 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
+    right_hand_side[2 * space_dim * n_shape_fct_ + i] =
+      integrator::template integrate_vol_phivecfunccomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side_n1, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
+                                                                       0.);
+    right_hand_side[(2 * space_dim + 1) * n_shape_fct_ + i] =
+      integrator::template integrate_vol_phivecfunccomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side_n2, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
+                                                                       0.);
+    right_hand_side[(2 * space_dim + 2) * n_shape_fct_ + i] =
+      integrator::template integrate_vol_phivecfunccomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side_n3, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
+                                                                       0.);
+
     right_hand_side[3 * space_dim * n_shape_fct_ + i] =
       integrator::template integrate_vol_phivecfunccomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
+        parameters::right_hand_side_m1, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
                                                                        0.);
     right_hand_side[(3 * space_dim + 1) * n_shape_fct_ + i] =
       integrator::template integrate_vol_phivecfunccomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
+        parameters::right_hand_side_m2, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
                                                                        0.);
-
     right_hand_side[(3 * space_dim + 2) * n_shape_fct_ + i] =
       integrator::template integrate_vol_phivecfunccomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
+        parameters::right_hand_side_m3, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
                                                                        0.);
-
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
