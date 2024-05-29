@@ -32,10 +32,10 @@ except (ImportError, ModuleNotFoundError) as error:
   
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
-const.local_solver    = "LengtheningBernoulliBendingBeam<1,2,4,8>"
-const.topology        = "File<1,2>"
-const.geometry        = "File<1,2>"
-const.node_descriptor = "File<1,2>"
+const.local_solver    = "TimoshenkoBeam<1,3,1,2>"
+const.topology        = "File<1,3>"
+const.geometry        = "File<1,3>"
+const.node_descriptor = "File<1,3>"
 const.cython_replacements = ["string", "string"]
 const.include_files   = [ "HyperHDG/local_solver/beam_network_diffusion.hxx",
                           "HyperHDG/local_solver/beam_network_bilaplacian.hxx" ]
@@ -57,7 +57,7 @@ A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 print("A setup", datetime.now())
 
 points = np.loadtxt("domains/points_nlines_1000.txt")
-helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**4, repeat=4)
+helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**4, repeat=6)
 def precond_mult( vec_x ):
   return helper.precond(A, vec_x)
 B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
@@ -68,11 +68,12 @@ iters = 0
 def nonlocal_iterate(vec_x):
   global iters
   iters += 1
-  print(iters, " ", np.linalg.norm(A.dot(vec_x) - vectorRHS), " ", datetime.now())
+  print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
+        "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
 
 print(np.linalg.norm(vectorRHS))
 
-vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, callback=nonlocal_iterate)
+vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, rtol=1e-6, callback=nonlocal_iterate, M=B)
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 
@@ -87,7 +88,7 @@ HDG_wrapper.plot_option("printFileNumber", "false" )
 HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
 HDG_wrapper.plot_option("scale", "0.8")
 HDG_wrapper.plot_option("boundaryScale", "0.9")
-HDG_wrapper.plot_solution(vectorSolution + vectorDirichlet)
+HDG_wrapper.plot_solution(vectorSolution)
 print("Solution written to file" , HDG_wrapper.plot_option("fileName", ""), "in output directory.")
 
 end_time = datetime.now()

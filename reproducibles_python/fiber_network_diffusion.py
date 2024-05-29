@@ -58,7 +58,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   def nonlocal_iterate(vec_x):
     nonlocal iters
     iters += 1
-    print(iters, " ", np.linalg.norm(A.dot(vec_x) - vectorRHS), " ", datetime.now())
+    print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
+          "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
 
   # print(np.linalg.norm(vectorRHS))
 

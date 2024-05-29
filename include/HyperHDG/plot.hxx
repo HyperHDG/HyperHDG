@@ -150,6 +150,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     plot_options.boundary_scale = std::stof(value);
   else if (option == "scale")
     plot_options.scale = stof(value);
+  // else if (option == "n_subintervals")
+  //   plot_options.n_subintervals = stoi(value);
   else
     hy_assert(false, "This plot option has not been defined (yet).");
 
@@ -174,6 +176,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     return_value = std::to_string(plot_options.scale);
   else if (option == "boundaryScale")
     return_value = std::to_string(plot_options.boundary_scale);
+  // else if (option == "n_subintervals")
+  //   return_value = std::to_string(plot_options.n_subintervals);
   else
     hy_assert(false, "This plot option has not been defined (yet).");
 
@@ -746,8 +750,7 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "      <PointData>" << std::endl;
   if (LocalSolverT::system_dimension() != 0)
   {
-    myfile << "        <DataArray type=\"Float32\" Name=\"values"
-           << "\" NumberOfComponents=\""
+    myfile << "        <DataArray type=\"Float32\" Name=\"values" << "\" NumberOfComponents=\""
            << std::max(LocalSolverT::system_dimension(), LocalSolverT::node_system_dimension())
            << "\" format=\"ascii\">" << std::endl;
     if (plot_options.plot_edges)
