@@ -11,7 +11,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, iteration, debug_mode=False):
+def diffusion_test(poly_degree, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -36,7 +36,6 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
     "/../domains/fiber_network_1000.geo" )
-  # HDG_wrapper.refine( 2 ** iteration )
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -61,26 +60,22 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
           "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
 
-  # print(np.linalg.norm(vectorRHS))
-
-  [vectorSolution, num_iter] = sp.linalg.cg(A, vectorRHS, tol=1e-6, callback=nonlocal_iterate, M=B)
+  [vectorSolution, n_iter] = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate)
   print(iters)
-  if num_iter != 0:
-    print("CG solver failed with a total number of ", num_iter, "iterations.")
-    [vectorSolution, num_iter] = sp.linalg.gmres(A, vectorRHS)
-    if num_iter != 0:
-      print("GMRES also failed with a total number of ", num_iter, "iterations.")
+  if n_iter != 0:
+    print("CG solver failed with a total number of ", n_iter, "iterations.")
+    [vectorSolution, n_iter] = sp.linalg.gmres(A, vectorRHS)
+    if n_iter != 0:
+      print("GMRES also failed with a total number of ", n_iter, "iterations.")
       raise RuntimeError("Linear solvers did not converge!")
 
   error = HDG_wrapper.errors(vectorSolution)[0]
-  print("Iteration: ", iteration, " Error: ", error)
+  print(" Error: ", error)
   f = open("output/diffusion_convergence_elliptic.txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + \
-    ". Error = " + str(error) + ".\n")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  HDG_wrapper.plot_option( "fileName" , "fiber_network_1000-" + str(poly_degree) + "-" + \
-    str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "fiber_network_1000-" + str(poly_degree) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -93,13 +88,12 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in range(1,4):
+  for poly_degree in [1, 6]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n")
-    for iteration in range(1):
-      try:
-        diffusion_test(poly_degree, iteration, debug_mode)
-      except RuntimeError as error:
-        print("ERROR: ", error)
+    try:
+      diffusion_test(poly_degree, debug_mode)
+    except RuntimeError as error:
+      print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------

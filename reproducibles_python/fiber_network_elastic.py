@@ -14,10 +14,8 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # THIS SECTION CAN BE CHANGED:
 
-# Define aggregate specification:
-aggregate = "5"
-# aggregate = "1000_tree"
-# aggregate = "5000_tree"
+domain = "fiber_network_1000"
+domain = "fiber_network_14871"
 # --------------------------------------------------------------------------------------------------
 
 start_time = datetime.now()
@@ -32,18 +30,15 @@ except (ImportError, ModuleNotFoundError) as error:
   
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
-const.local_solver    = "TimoshenkoBeam<1,3,1,2>"
+const.local_solver    = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoschenkoBeamParametersClamped>"
 const.topology        = "File<1,3>"
 const.geometry        = "File<1,3>"
 const.node_descriptor = "File<1,3>"
 const.cython_replacements = ["string", "string"]
-const.include_files   = [ "HyperHDG/local_solver/beam_network_diffusion.hxx",
-                          "HyperHDG/local_solver/beam_network_bilaplacian.hxx" ]
 const.debug_mode      = False
 
 PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/fiber_network_1000.geo" )
+HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + domain + ".geo" )
 
 vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -56,8 +51,8 @@ A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 print("A setup", datetime.now())
 
-points = np.loadtxt("domains/points_nlines_1000.txt")
-helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**4, repeat=6)
+points = np.loadtxt("domains/" + domain + "_points.txt")
+helper = HyperHDG.gortz_hellman_malqvist_22(points, [2**3, 2**3], repeat=6)
 def precond_mult( vec_x ):
   return helper.precond(A, vec_x)
 B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
@@ -73,7 +68,7 @@ def nonlocal_iterate(vec_x):
 
 print(np.linalg.norm(vectorRHS))
 
-vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, rtol=1e-6, callback=nonlocal_iterate, M=B)
+vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 
@@ -83,7 +78,7 @@ print(" Error: ", error)
 
 # print(vectorSolution)
 
-HDG_wrapper.plot_option("fileName", "aggregate_" + aggregate)
+HDG_wrapper.plot_option("fileName", domain + "_timo")
 HDG_wrapper.plot_option("printFileNumber", "false" )
 HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
 HDG_wrapper.plot_option("scale", "0.8")

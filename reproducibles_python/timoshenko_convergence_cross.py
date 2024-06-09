@@ -14,7 +14,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
+def diffusion_test(poly_degree, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -27,7 +27,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.local_solver    = "TimoshenkoBeam<1,3,4,8>"
+  const.local_solver    = "TimoshenkoBeam<1,3," + str(poly_degree) + "," + str(2*poly_degree) +">"
   const.topology        = "File<1,3>"
   const.geometry        = "File<1,3>"
   const.node_descriptor = "File<1,3>"
@@ -46,16 +46,16 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 
   iters = 0
   def nonlocal_iterate(vec_x):
-    global iters
+    nonlocal iters
     iters += 1
 
-  vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-6, callback=nonlocal_iterate)
+  vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-12, callback=nonlocal_iterate)
   if num_iter != 0:
     raise RuntimeError("Linear solver did not converge!")
   error = HDG_wrapper.errors(vectorSolution)[0]
 
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_timoshenko_convergecne_cross.txt", "a")
+  f = open("output/timoshenko_convergence_cross.txt", "a")
   f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + 
           ". Error = " + str(error) + ".\n")
   f.close()
@@ -74,11 +74,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,7):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for iteration in range(6):
-        try:
-          diffusion_test(poly_degree, dimension, iteration, debug_mode)
-        except RuntimeError as error:
-          print("ERROR: ", error)
+    for iteration in range(6):
+      try:
+        diffusion_test(poly_degree, iteration, debug_mode)
+      except RuntimeError as error:
+        print("ERROR: ", error)
 
 
 # --------------------------------------------------------------------------------------------------

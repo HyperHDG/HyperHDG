@@ -108,6 +108,7 @@ struct DomainInfo
     std::for_each(hyNodes_hyEdge.begin(), hyNodes_hyEdge.end(),
                   [&](std::array<hyNode_index_t, 2 * hyEdge_dim> hyEdge)
                   {
+                    hy_assert(is_unique(hyEdge), "Duplicate points in hyperedge.");
                     for (unsigned int i = 0; i < hyEdge.size(); ++i)
                     {
                       consistent = (hyEdge[i] < n_hyNodes && hyEdge[i] >= 0);
@@ -118,6 +119,7 @@ struct DomainInfo
     std::for_each(points_hyEdge.begin(), points_hyEdge.end(),
                   [&](std::array<pt_index_t, 1 << hyEdge_dim> hyEdge)
                   {
+                    hy_assert(is_unique(hyEdge), "Duplicate points in hyperedge.");
                     for (unsigned int i = 0; i < hyEdge.size(); ++i)
                     {
                       consistent = (hyEdge[i] < n_points && hyEdge[i] >= 0);
@@ -142,7 +144,7 @@ struct DomainInfo
 
     return true;
   }  // end of check_consistency
-};   // end of struct DomainInfo
+};  // end of struct DomainInfo
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -167,7 +169,7 @@ struct DomainInfo
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
           template <typename...> typename vectorT = std::vector,
-          typename pointT = Point<space_dim, float>,
+          typename pointT = Point<space_dim, double>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>
@@ -356,7 +358,7 @@ read_domain_geo(const std::string& filename)
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
           template <typename...> typename vectorT = std::vector,
-          typename pointT = Point<space_dim, float>,
+          typename pointT = Point<space_dim, double>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>

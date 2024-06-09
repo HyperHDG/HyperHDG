@@ -1,0 +1,144 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas
+
+# nodes.csv contains the information about the nodes {n_i}
+# id: The node id <--- removed from the list
+# x,y,z: position in x
+nodes   = pandas.read_csv('nodes.csv')
+nodes   = nodes.to_numpy()[:,1:]
+n_nodes = nodes.shape[0]
+
+# fibers.csv contains the geometrical information about the fibers
+# id: the fiber id <--- removed from the list
+# node1: node id of node 1
+# node2: node id of node 2
+fibers   = pandas.read_csv('fibers.csv')
+fibers   = fibers.to_numpy()[:,1:]
+n_fibers = fibers.shape[0]
+
+# connections.csv contains the geometrical information about the connections
+# id: the connection id <--- removed from the list
+# fiber1: fiber id of first edge in connection
+# fiber2: fiber id of second edge in the connection
+# a1: affine constant along fiber1 where the connection is.  
+# a2: affine constant along fiber2 where the connection is.  
+#     ConnectionPos1 = (1-a1)* fiber1.FirstNode() + (a1)* fiber1.SecondNode()
+#     ConnectionPos2 = (1-a2)* fiber2.FirstNode() + (a2)* fiber2.SecondNode()
+connections   = pandas.read_csv('connections.csv')
+connections   = connections.to_numpy()[:,1:]
+n_connections = connections.shape[0]
+
+vertices, edges, act_fibers = [], [], []
+for con in connections:
+  point_a = (1.-con[2]) * nodes[fibers[int(con[0]),0]] + con[2] * nodes[fibers[int(con[0]),1]]
+  point_b = (1.-con[3]) * nodes[fibers[int(con[1]),0]] + con[3] * nodes[fibers[int(con[1]),1]]
+  
+  point_a, point_b = np.array(point_a), np.array(point_b)
+
+  index_a, index_b = -1, -1
+  for i in range(len(vertices)):
+    if np.linalg.norm(point_a - vertices[i]) < 1e-10:
+      if index_a != -1: print("Error")
+      index_a = i
+    if np.linalg.norm(point_b - vertices[i]) < 1e-10:
+      if index_b != -1: print("Error")
+      index_b = i
+
+  if index_a == -1:
+    index_a = len(vertices)
+    vertices.append(point_a)
+  if index_b == -1:
+    index_b = len(vertices)
+    vertices.append(point_b)
+
+  if index_a != index_b:
+    edges.append(np.array([index_a, index_b]))
+
+  act_fibers.append(np.array([con[0], con[2]]))
+  act_fibers.append(np.array([con[1], con[3]]))
+
+for index in range(n_fibers):
+  helper = [ x[1] for x in act_fibers if int(x[0]) == index ]
+  if helper == [] or helper is None:  continue
+
+  point_a = nodes[fibers[index,0]]
+  point_b = nodes[fibers[index,1]]
+  if not any((point_a == x).all() for x in vertices):  vertices.append(point_a)
+  if not any((point_b == x).all() for x in vertices):  vertices.append(point_b)
+
+  helper = list(set(helper))
+  helper.sort()
+  helper = [0.] + helper + [1.]
+
+  for k in range(len(helper)-1):
+    point_ab = (1.-helper[k+0]) * point_a + helper[k+0] * point_b
+    point_ba = (1.-helper[k+1]) * point_a + helper[k+1] * point_b
+
+    index_a, index_b = -1, -1
+    for i in range(len(vertices)):
+      if np.linalg.norm(point_ab - vertices[i]) < 1e-10:
+        if index_a != -1: print("Error")
+        index_a = i
+      if np.linalg.norm(point_ba - vertices[i]) < 1e-10:
+        if index_b != -1: print("Error")
+        index_b = i
+
+    if index_a == -1 or index_b == -1:
+      print("Error: One index was -1!")
+    if index_a != index_b:
+      edges.append(np.array([index_a, index_b]))
+
+min_x, min_y, min_z, max_x, max_y, max_z = 1e10, 1e10, 1e10, -1e10, -1e10, -1e10
+for vertex in vertices:
+  min_x, min_y, min_z = min(min_x, vertex[0]), min(min_y, vertex[1]), min(min_z, vertex[2])
+  max_x, max_y, max_z = max(max_x, vertex[0]), max(max_y, vertex[1]), max(max_z, vertex[2])
+
+with open('fiber_network_' + str(len(edges)) + '.geo', 'w') as file:
+  file.write("# This file was auto-generated!\n\n")
+  file.write("Space_Dim     = 3;  # Dimension of space indicating amount of coordinates of points.\n")
+  file.write("HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n")
+  file.write("N_Points      = " + str(len(vertices)) + ";  # Number of vertices.\n")
+  file.write("N_HyperNodes  = " + str(len(vertices)) + ";  # Number of hypernodes.\n")
+  file.write("N_HyperEdges  = " + str(len(edges)) + ";  # Number of hyperedges.\n")
+  file.write("\nPOINTS:\n")
+  for vertex in vertices:
+    file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
+  file.write("\nHYPERNODES_OF_HYPEREDGES:\n")
+  for edge in edges:
+    file.write(str(int(edge[0])) + "  " + str(int(edge[1])) + "\n")
+  file.write("\nTYPES_OF_HYPERFACES:\n")
+  for edge in edges:
+    left, right = 0, 0
+    vertex = vertices[edge[0]]
+    if vertex[0] - min_x < 1e-6 * (max_x - min_x) or max_x - vertex[0] < 1e-6 * (max_x - min_x) \
+      or vertex[1] - min_y < 1e-6 * (max_y - min_y) or max_y - vertex[1] < 1e-6 * (max_y - min_y):
+      left = 1
+    vertex = vertices[edge[1]]
+    if vertex[0] - min_x < 1e-6 * (max_x - min_x) or max_x - vertex[0] < 1e-6 * (max_x - min_x) \
+      or vertex[1] - min_y < 1e-6 * (max_y - min_y) or max_y - vertex[1] < 1e-6 * (max_y - min_y):
+      right = 1
+    file.write(str(left) + " " + str(right) + "\n")
+  file.write("\nPOINTS_OF_HYPEREDGES:\n")
+  for edge in edges:
+    file.write(str(int(edge[0])) + "  " + str(int(edge[1])) + "\n")
+
+with open('fiber_network_' + str(len(edges)) + '_points.txt', 'w') as file:
+  for vertex in vertices:
+    file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
+
+ax = plt.figure().add_subplot(111, projection='3d')
+
+for edge in edges[:n_connections]:
+  ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
+           [vertices[edge[0]][1], vertices[edge[1]][1]], \
+           [vertices[edge[0]][2], vertices[edge[1]][2]], \
+           'rx-' )
+for edge in edges[n_connections:]:
+  ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
+           [vertices[edge[0]][1], vertices[edge[1]][1]], \
+           [vertices[edge[0]][2], vertices[edge[1]][2]], \
+           'bx-' )
+plt.show()
+
+plt.savefig('graph.png')
