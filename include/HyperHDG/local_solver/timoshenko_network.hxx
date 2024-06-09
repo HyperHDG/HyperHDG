@@ -113,7 +113,6 @@ struct TimoschenkoBeamParametersDefault
   }
 };  // end of struct DiffusionParametersDefault
 
-
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
  *
@@ -192,7 +191,7 @@ struct TimoschenkoBeamParametersClamped
                                          const param_float_t = 0.)
   {
     // return 0.;
-    return 5e-4 * ( (point[0] > 1e-3) * normal[0] + (point[1] > .5e-3) * normal[1] + normal[2] );
+    return 5e-4 * ((point[0] > 1e-3) * normal[0] + (point[1] > .5e-3) * normal[1] + normal[2]);
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
   }
@@ -208,7 +207,6 @@ struct TimoschenkoBeamParametersClamped
     // return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault
-
 
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
