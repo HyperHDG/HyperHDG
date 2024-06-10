@@ -70,6 +70,8 @@ struct DomainInfo
    * \brief   Total amount of points.
    ************************************************************************************************/
   pt_index_t n_points;
+
+  unsigned int n_properties;
   /*!***********************************************************************************************
    * \brief   Vector containing points.
    ************************************************************************************************/
@@ -83,6 +85,10 @@ struct DomainInfo
    ************************************************************************************************/
   vectorT<std::array<pt_index_t, 1 << hyEdge_dim> > points_hyEdge;  // 2 ^ hyEdge_dim
   /*!***********************************************************************************************
+   * \brief   Vector containing vertex indices per hyperedge.
+   ************************************************************************************************/
+  vectorT<vectorT< typename pointT::value_type> > hyEdge_properties;
+  /*!***********************************************************************************************
    * \brief   Constructor of DomainInfo struct.
    ************************************************************************************************/
   DomainInfo(const pt_index_t n_points,
@@ -92,6 +98,7 @@ struct DomainInfo
   : n_hyEdges(n_hyEdge),
     n_hyNodes(n_hyNode),
     n_points(n_point),
+    n_properties(0),
     points(n_points),
     hyNodes_hyEdge(n_hyEdges),
     hyFaces_hyEdge(n_hyEdges),
@@ -327,6 +334,27 @@ read_domain_geo(const std::string& filename)
     linestream = std::istringstream(line);
     for (unsigned int i = 0; i < domain_info.points_hyEdge[hyEdge_iter].size(); ++i)
       linestream >> domain_info.points_hyEdge[hyEdge_iter][i];
+  }
+
+  hy_assert(hyEdge_iter == N_HyperEdges, "Not all hyperedges have been added to the list!");
+
+  while (keyword != "HYPEREDGE_PROPERTIES:" && std::getline(infile, line))
+  {
+    linestream = std::istringstream(line);
+    linestream >> keyword;
+  }
+
+  if (keyword == "HYPEREDGE_PROPERTIES:"){
+    domain_info.hyEdge_properties = vectorT<vectorT< typename pointT::value_type> >(N_HyperEdges);
+    linestream >> domain_info.n_properties;
+  }
+
+  for (hyEdge_iter = 0; hyEdge_iter < N_HyperEdges && std::getline(infile, line); ++hyEdge_iter)
+  {
+    linestream = std::istringstream(line);
+    domain_info.hyEdge_properties[hyEdge_iter].resize(domain_info.n_properties);
+    for (unsigned int i = 0; i < domain_info.hyEdge_properties[hyEdge_iter].size(); ++i)
+      linestream >> domain_info.hyEdge_properties[hyEdge_iter][i];
   }
 
   hy_assert(hyEdge_iter == N_HyperEdges, "Not all hyperedges have been added to the list!");

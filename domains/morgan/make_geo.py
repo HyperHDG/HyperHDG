@@ -29,6 +29,20 @@ connections   = pandas.read_csv('connections.csv')
 connections   = connections.to_numpy()[:,1:]
 n_connections = connections.shape[0]
 
+# <fiber/connections>Props.csv
+# Id: Id of the edge/connection <--- removed from the list
+# (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
+# (n_11,n_12,n_13) : normal 1
+# (n_21,n_22,n_23) : normal 2
+fibersProps   = pandas.read_csv('fibersProps.csv')
+fibersProps   = fibersProps.to_numpy()[:,1:]
+n_fibersProps = fibersProps.shape[0]
+
+connectionsProp   = pandas.read_csv('connectionsProp.csv')
+connectionsProp   = connectionsProp.to_numpy()[:,1:]
+n_connectionsProp = connectionsProp.shape[0]
+
+
 vertices, edges, act_fibers = [], [], []
 for con in connections:
   point_a = (1.-con[2]) * nodes[fibers[int(con[0]),0]] + con[2] * nodes[fibers[int(con[0]),1]]
@@ -57,6 +71,8 @@ for con in connections:
 
   act_fibers.append(np.array([con[0], con[2]]))
   act_fibers.append(np.array([con[1], con[3]]))
+
+edges_prop = []
 
 for index in range(n_fibers):
   helper = [ x[1] for x in act_fibers if int(x[0]) == index ]
@@ -88,6 +104,9 @@ for index in range(n_fibers):
       print("Error: One index was -1!")
     if index_a != index_b:
       edges.append(np.array([index_a, index_b]))
+      edges_prop.append(fibersProps[index])
+
+edges_prop = np.vstack((connectionsProp, np.array(edges_prop)))
 
 min_x, min_y, min_z, max_x, max_y, max_z = 1e10, 1e10, 1e10, -1e10, -1e10, -1e10
 for vertex in vertices:
@@ -122,6 +141,13 @@ with open('fiber_network_' + str(len(edges)) + '.geo', 'w') as file:
   file.write("\nPOINTS_OF_HYPEREDGES:\n")
   for edge in edges:
     file.write(str(int(edge[0])) + "  " + str(int(edge[1])) + "\n")
+  file.write("\nHYPEREDGE_PROPERTIES: 12\n")
+  for edge in edges_prop:
+    file.write(str(edge[0]))
+    for prop in edge[1:]:
+      file.write("  " + str(prop))
+    file.write("\n")
+
 
 with open('fiber_network_' + str(len(edges)) + '_points.txt', 'w') as file:
   for vertex in vertices:
