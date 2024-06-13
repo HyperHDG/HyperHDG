@@ -2,6 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas
 
+from datetime import datetime
+
+start_time = datetime.now()
+print("Starting time is", start_time)
+
 # nodes.csv contains the information about the nodes {n_i}
 # id: The node id <--- removed from the list
 # x,y,z: position in x
@@ -42,35 +47,35 @@ connectionsProp   = pandas.read_csv('connectionsProp.csv')
 connectionsProp   = connectionsProp.to_numpy()[:,1:]
 n_connectionsProp = connectionsProp.shape[0]
 
+end_time = datetime.now()
+print("Reading files ended at", end_time, "after", end_time-start_time)
+
 
 vertices, edges, act_fibers = [], [], []
 for con in connections:
   point_a = (1.-con[2]) * nodes[fibers[int(con[0]),0]] + con[2] * nodes[fibers[int(con[0]),1]]
   point_b = (1.-con[3]) * nodes[fibers[int(con[1]),0]] + con[3] * nodes[fibers[int(con[1]),1]]
-  
   point_a, point_b = np.array(point_a), np.array(point_b)
 
-  index_a, index_b = -1, -1
-  for i in range(len(vertices)):
-    if np.linalg.norm(point_a - vertices[i]) < 1e-10:
-      if index_a != -1: print("Error")
-      index_a = i
-    if np.linalg.norm(point_b - vertices[i]) < 1e-10:
-      if index_b != -1: print("Error")
-      index_b = i
+  if len(vertices) == 0:  vertices = np.vstack((point_a, point_b))
 
-  if index_a == -1:
+  index_a = np.argmin(np.linalg.norm(point_a - vertices, axis=1))
+  if np.linalg.norm(point_a - vertices[index_a]) > 1e-10:
     index_a = len(vertices)
-    vertices.append(point_a)
-  if index_b == -1:
+    vertices = np.vstack((vertices, point_a))
+  index_b = np.argmin(np.linalg.norm(point_b - vertices, axis=1))
+  if np.linalg.norm(point_b - vertices[index_b]) > 1e-10:
     index_b = len(vertices)
-    vertices.append(point_b)
+    vertices = np.vstack((vertices, point_b))
 
   if index_a != index_b:
     edges.append(np.array([index_a, index_b]))
 
   act_fibers.append(np.array([con[0], con[2]]))
   act_fibers.append(np.array([con[1], con[3]]))
+
+end_time = datetime.now()
+print("Preparing data ended at", end_time, "after", end_time-start_time)
 
 edges_prop = []
 
@@ -80,8 +85,8 @@ for index in range(n_fibers):
 
   point_a = nodes[fibers[index,0]]
   point_b = nodes[fibers[index,1]]
-  if not any((point_a == x).all() for x in vertices):  vertices.append(point_a)
-  if not any((point_b == x).all() for x in vertices):  vertices.append(point_b)
+  if not any((point_a == x).all() for x in vertices):  vertices = np.vstack((vertices, point_a))
+  if not any((point_b == x).all() for x in vertices):  vertices = np.vstack((vertices, point_b))
 
   helper = list(set(helper))
   helper.sort()
@@ -91,17 +96,11 @@ for index in range(n_fibers):
     point_ab = (1.-helper[k+0]) * point_a + helper[k+0] * point_b
     point_ba = (1.-helper[k+1]) * point_a + helper[k+1] * point_b
 
-    index_a, index_b = -1, -1
-    for i in range(len(vertices)):
-      if np.linalg.norm(point_ab - vertices[i]) < 1e-10:
-        if index_a != -1: print("Error")
-        index_a = i
-      if np.linalg.norm(point_ba - vertices[i]) < 1e-10:
-        if index_b != -1: print("Error")
-        index_b = i
+    index_a = np.argmin(np.linalg.norm(point_ab - vertices, axis=1))
+    if np.linalg.norm(point_ab - vertices[index_a]) > 1e-10:  print("Error")
+    index_b = np.argmin(np.linalg.norm(point_ba - vertices, axis=1))
+    if np.linalg.norm(point_ba - vertices[index_b]) > 1e-10:  print("Error")
 
-    if index_a == -1 or index_b == -1:
-      print("Error: One index was -1!")
     if index_a != index_b:
       edges.append(np.array([index_a, index_b]))
       edges_prop.append(fibersProps[index])
@@ -168,3 +167,6 @@ for edge in edges[n_connections:]:
 plt.show()
 
 plt.savefig('graph.png')
+
+end_time = datetime.now()
+print("Program ended at", end_time, "after", end_time-start_time)
