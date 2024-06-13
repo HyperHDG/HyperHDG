@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse as sp
 
+from joblib import Parallel, delayed
+
 
 def _coarse_basis_2d(points, n_elem_1d, epsilon=1e-10):
   # B contains (N+1)^2 columns and length(p) rows.
@@ -86,8 +88,9 @@ class gortz_hellman_malqvist_22:
                                       for j in range(1, n_elem_1d[1]) ])  # find interior nodes
     elif len(n_elem_1d) == 3:
       coarse_basis = _coarse_basis_3d(points, n_elem_1d, epsilon)
-      int_nodes    = np.concatenate([ (k * (n_elem_1d[1]+1)+j) * (n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0]) 
-                                      for j in range(1, n_elem_1d[1]) for k in range(1, n_elem_1d[2]) ])  # find interior nodes
+      int_nodes    = np.concatenate([
+        (k * (n_elem_1d[1]+1)+j) * (n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0])
+        for j in range(1, n_elem_1d[1]) for k in range(1, n_elem_1d[2]) ])  # find interior nodes
 
     coarse_basis_int = coarse_basis[:, int_nodes]
     bnd_nodes = np.where(np.sum(coarse_basis_int, axis=1) < epsilon)[0]  # coarse basis in V
@@ -106,14 +109,24 @@ class gortz_hellman_malqvist_22:
     self.coarse_basis_int = sp.csr_matrix(coarse_basis_int)
 
 
-  def precond(self, lhs_mat, rhs_vec, epsilon=1e-14):
+  def precond(self, lhs_mat, rhs_vec, n_jobs=4, epsilon=1e-14):
     helper_lhs = self.coarse_basis_int.T.dot(lhs_mat.dot(self.coarse_basis_int))
     helper_rhs = self.coarse_basis_int.T.dot(rhs_vec)
-    result_mat = self.coarse_basis_int.dot(sp.linalg.spsolve(helper_lhs, helper_rhs))
+    result_vec = self.coarse_basis_int.dot(sp.linalg.spsolve(helper_lhs, helper_rhs))
 
-    for k in range(self.coarse_basis.shape[1]):
+    def process(k):
       nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
       Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
       Ij[nj, np.arange(len(nj))] = 1
-      result_mat += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
-    return result_mat
+      return Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
+
+    result = Parallel(n_jobs=n_jobs)(delayed(process)(i) for i in range(self.coarse_basis.shape[1]))
+    for component in result:  result_vec += component
+
+    # for k in range(self.coarse_basis.shape[1]):
+    #   nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
+    #   Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
+    #   Ij[nj, np.arange(len(nj))] = 1
+    #   result_vec += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
+
+    return result_vec
