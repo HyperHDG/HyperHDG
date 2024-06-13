@@ -109,10 +109,18 @@ class gortz_hellman_malqvist_22:
     self.coarse_basis_int = sp.csr_matrix(coarse_basis_int)
 
 
-  def precond(self, lhs_mat, rhs_vec, n_jobs=4, epsilon=1e-14):
+  def precond(self, lhs_mat, rhs_vec, n_jobs=None, epsilon=1e-14):
     helper_lhs = self.coarse_basis_int.T.dot(lhs_mat.dot(self.coarse_basis_int))
     helper_rhs = self.coarse_basis_int.T.dot(rhs_vec)
     result_vec = self.coarse_basis_int.dot(sp.linalg.spsolve(helper_lhs, helper_rhs))
+
+    if n_jobs is None:
+      for k in range(self.coarse_basis.shape[1]):
+        nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
+        Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
+        Ij[nj, np.arange(len(nj))] = 1
+        result_vec += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
+      return result_vec
 
     def process(k):
       nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
@@ -122,11 +130,5 @@ class gortz_hellman_malqvist_22:
 
     result = Parallel(n_jobs=n_jobs)(delayed(process)(i) for i in range(self.coarse_basis.shape[1]))
     for component in result:  result_vec += component
-
-    # for k in range(self.coarse_basis.shape[1]):
-    #   nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]
-    #   Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
-    #   Ij[nj, np.arange(len(nj))] = 1
-    #   result_vec += Ij.dot(sp.linalg.spsolve(lhs_mat[nj, :][:, nj], Ij.T.dot(rhs_vec)))
 
     return result_vec
