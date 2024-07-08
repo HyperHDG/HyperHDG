@@ -4,6 +4,9 @@
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <tpp/shape_function/shape_function.hxx>
+#include <tpp/shape_function/tensorial.hxx>
+#include <tpp/shape_function/one_dimensional.hxx>
 
 #include <filesystem>
 #include <fstream>
@@ -73,7 +76,7 @@ struct PlotOptions
    *
    * Defaults to false.
    ************************************************************************************************/
-  bool plot_edge_boundaries = false;
+  bool plot_edge_boundaries = true;
   /*!***********************************************************************************************
    * \brief   Include the hyperedges with their function values into the plot.
    *
@@ -658,8 +661,7 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
     for (unsigned int bdr_index = 0; bdr_index < hyEdge_dim * 2; ++bdr_index)
     {
       myfile << "      ";
-
-      for (unsigned int lval = 0; lval < local_values.size(); ++lval)
+      for (unsigned int lval = 0; lval < local_values[0].size(); ++lval)
         fancy_recursion<0, LocalSolverT, dof_value_t>(
           local_values, hyEdge_dofs,
           Hypercube<hyEdge_dim - 1>::template tensorial_pt<Point<hyEdge_dim - 1> >(lval, abscissas),
@@ -667,12 +669,13 @@ void plot_boundary_values(HyperGraphT& hyper_graph,
       for (unsigned int corner = 0; corner < Hypercube<hyEdge_dim - 1>::n_vertices(); ++corner)
       {
         myfile << "  ";
-        for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d)
+        for (unsigned int d = 0; d < LocalSolverT::node_system_dimension(); ++d) {
+          for (unsigned int d = LocalSolverT::node_system_dimension();
+            d < LocalSolverT::system_dimension(); ++d)
+            myfile << "  " << 0.0;  // AR: I switched d and corner!?
           myfile << "  " << local_values[d][corner];  // AR: I switched d and corner!?
+        }
       }
-      for (unsigned int d = LocalSolverT::node_system_dimension();
-           d < LocalSolverT::system_dimension(); ++d)
-        myfile << "  " << 0;  // AR: I switched d and corner!?
       myfile << std::endl;
     }
   }
