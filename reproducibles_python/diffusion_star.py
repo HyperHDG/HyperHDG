@@ -28,24 +28,26 @@ def diffusion_test(poly_degree, dimension, level, iteration, debug_mode=False):
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../domains")
     from star_shape_functions import get_star_domain
 
-  # Determine the width of the star
+  # Determine the width of the star, and if level = 0 -> limiting case
   if (level == 0):
     width = 1
+    hy_dim = 1
+    filename = f"star_{dimension}_lim.geo"
   else:
     width = 2**level + 1
+    hy_dim = dimension
+    filename = get_star_domain(dimension, level)
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
-  const.geometry        = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
-  const.node_descriptor = "File<" + str(dimension) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+  const.topology        = "File<" + str(hy_dim) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.geometry        = "File<" + str(hy_dim) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.node_descriptor = "File<" + str(hy_dim) + "," + str(dimension) + ",std::vector,Point<" + str(dimension) + ",double> >"
+  const.local_solver    = "Diffusion<" + str(hy_dim) + "," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",Thickness<" + str(width) + ">::TestParametersSinEllipt, double>"
   const.cython_replacements = ["string", "string"]
   const.include_files   = ["reproducibles_python/parameters/diffusion_star.hxx"]
   const.debug_mode      = debug_mode
-
-  filename = get_star_domain(dimension, level)
 
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + filename)
@@ -56,10 +58,10 @@ def diffusion_test(poly_degree, dimension, level, iteration, debug_mode=False):
   system_size = HDG_wrapper.size_of_system()
   A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, atol=1e-13)
   if num_iter != 0:
     print("CG solver failed with a total number of ", num_iter, "iterations.")
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)
+    [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, atol=1e-13)
     if num_iter != 0:
       print("GMRES also failed with a total number of ", num_iter, "iterations.")
       raise RuntimeError("Linear solvers did not converge!")
@@ -86,9 +88,9 @@ def diffusion_test(poly_degree, dimension, level, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1, 4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1, 4):
+    for dimension in range(2, 4):
       print("\n Dimension is ", dimension, "\n")
-      for level in range(0, 4):
+      for level in range(0, 3):
         print("\nLevel is ", level, "\n")
         for iteration in range(3):
           try:

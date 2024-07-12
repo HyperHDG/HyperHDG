@@ -8,10 +8,11 @@ from datetime import datetime
 
 import os, sys
 
+
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, level, iteration, debug_mode=False):
+def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -22,33 +23,23 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
     import HyperHDG
 
-  try:
-    from L_shape_functions import get_l_domain
-  except (ImportError, ModuleNotFoundError) as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../domains")
-    from L_shape_functions import get_l_domain
-
-  if (level == 0):
-    hy_dim = 1
-    filename = "L_lim.geo"
-  else:
-    hy_dim = 2
-    filename = get_l_domain(level)
+  test_v = [0.5, 2.0, 1.0]
+  strScales = ",".join(str(i) for i in test_v)
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "File<" + str(hy_dim) + ",2,std::vector,Point<2,double> >"
-  const.geometry        = "File<" + str(hy_dim) + ",2,std::vector,Point<2,double> >"
-  const.node_descriptor = "File<" + str(hy_dim) + ",2,std::vector,Point<2,double> >"
-  const.local_solver    = "Diffusion<" + str(hy_dim) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",Thickness<" + str(level) + ">::TestParametersSinEllipt, double>"
-  const.cython_replacements = ["string", "string"]
-  const.include_files   = ["reproducibles_python/parameters/diffusion_L.hxx"]
+  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  # const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
+  const.geometry        = "Rectangle<" + str(dimension) + "," + str(dimension) + ",{" + strScales + "},double>"
+  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
+  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
+    + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
+  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
+  const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + filename)
-  HDG_wrapper.refine( 2 ** iteration )
+  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -65,12 +56,12 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
 
   error = HDG_wrapper.errors(vectorSolution)[0]
   print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_L_level_" + str(level) + ".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + \
-          ". Error = " + str(error) + ".\n")
+  f = open("output/diffusion_convergence_elliptic_rect.txt", "a")
+  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
+          + ". Iteration = " + str(iteration) + ". Scale = " + str(0) + ". Error = " + str(error) + ".\n")
   f.close()
   
-  HDG_wrapper.plot_option( "fileName" , "diff_L_level_" + str(level) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "diff_rect-" + str(dimension) + "-" + str(0) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
@@ -83,14 +74,14 @@ def diffusion_test(poly_degree, level, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  print("\n Running limiting case \n")
-  for poly_degree in range(1, 3):
+  for poly_degree in [1]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for level in range(0, 3):
-      print("\nLevel is ", level, "\n")
-      for iteration in range(3):
+    for dimension in [3]:
+      print("Dimension is ", dimension, "\n")
+      for iteration in range(0, 5):
+        # for scale in [0.1, 0.5, 1]:
         try:
-          diffusion_test(poly_degree, level, iteration, debug_mode)
+          diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:
           print("ERROR: ", error)
 

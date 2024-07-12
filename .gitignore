@@ -49,4 +49,5 @@ prog
 
 # Ignore .geo files created by Python-scripts (L and + domains)
 L_[0-9]*.geo
+L_domain_[0-9]*.geo
 star_[0-9]*_[0-9]*.geo
