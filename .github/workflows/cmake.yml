@@ -13,7 +13,7 @@ jobs:
   build_and_test_ubuntu_22-04:
     strategy:
       matrix:
-        osys: [ ubuntu-24.04 ]
+        osys: [ ubuntu-22.04 ]
         comp: [ {cxx: clang++-18}, {cxx: g++-13}, {cxx: g++-14} ]
 
     name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
