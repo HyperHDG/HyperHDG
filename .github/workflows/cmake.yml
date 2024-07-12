@@ -10,11 +10,11 @@ env:
 
 jobs:
   # =============== Test code on Ubuntu 24.04 with all currently available compilers ===============
-  build_and_test_ubuntu_22-04:
+  build_and_test_ubuntu_24-04:
     strategy:
       matrix:
-        osys: [ ubuntu-22.04 ]
-        comp: [ {cxx: clang++-14}, {cxx: g++-12} ]
+        osys: [ ubuntu-24.04 ]
+        comp: [ {cxx: clang++-18}, {cxx: g++-13} ]
 
     name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
     runs-on: ${{ matrix.osys }}
