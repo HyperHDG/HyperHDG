@@ -345,7 +345,11 @@ read_domain_geo(const std::string& filename)
   }
 
   if (keyword != "HYPEREDGE_PROPERTIES:")
+  {
+    domain_info.hyEdge_properties = vectorT<vectorT< typename pointT::value_type> >();
+    infile.close();
     return domain_info;
+  }
 
   if (keyword == "HYPEREDGE_PROPERTIES:"){
     domain_info.hyEdge_properties = vectorT<vectorT< typename pointT::value_type> >(N_HyperEdges);

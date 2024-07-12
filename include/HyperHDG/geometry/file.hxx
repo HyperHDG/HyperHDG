@@ -284,6 +284,11 @@ class File
       return mapping.map_reference_to_physical(pt);
     }
 
+    const bool has_extra_data()
+    {
+      return hyGraph_geometry_.domain_info_.hyEdge_properties.size() > 0;
+    }
+
     const auto& extra_data()
     {
       return hyGraph_geometry_.domain_info_.hyEdge_properties[index_ / hyGraph_geometry_.n_loc_ref_elem];
