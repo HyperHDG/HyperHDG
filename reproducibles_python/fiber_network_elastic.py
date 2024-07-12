@@ -52,7 +52,7 @@ A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 print("A setup", datetime.now())
 
 points = np.loadtxt("domains/" + domain + "_points.txt")
-helper = HyperHDG.gortz_hellman_malqvist_22(points, [2**3, 2**3], repeat=6)
+helper = HyperHDG.fiber_network.precond(points, [2**3, 2**3], repeat=6)
 def precond_mult( vec_x ):
   return helper.precond(A, vec_x)
 B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )

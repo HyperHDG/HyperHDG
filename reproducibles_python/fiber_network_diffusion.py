@@ -46,8 +46,8 @@ def diffusion_test(poly_degree, debug_mode=False):
   A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-  points = np.loadtxt("domains/points_nlines_1000.txt")
-  helper = HyperHDG.gortz_hellman_malqvist_22(points, 2**3)
+  points = np.loadtxt("domains/fiber_network_1000_points.txt")
+  helper = HyperHDG.fiber_network.precond(points, [2**3, 2**3])
   def precond_mult( vec_x ):
     return helper.precond(A, vec_x)
   B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
@@ -60,7 +60,7 @@ def diffusion_test(poly_degree, debug_mode=False):
     print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
           "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
 
-  [vectorSolution, n_iter] = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate)
+  [vectorSolution, n_iter] = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
   print(iters)
   if n_iter != 0:
     print("CG solver failed with a total number of ", n_iter, "iterations.")
