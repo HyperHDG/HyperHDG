@@ -68,7 +68,7 @@ class Elliptic
                 GeometryT,
                 NodeDescriptorT,
                 typename LocalSolverT::data_type>
-    hyper_graph_;
+    hyper_graph_, hyper_graph_ref_;
   /*!***********************************************************************************************
    * \brief   Vector containing the indices of Dirichlet type nodes.
    ************************************************************************************************/
@@ -96,7 +96,8 @@ class Elliptic
   Elliptic(const typename TopologyT::constructor_value_type& construct_topo,
            const typename GeometryT::constructor_value_type& construct_geom,
            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
-  : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
+  : hyper_graph_(construct_topo, construct_geom), hyper_graph_ref_(construct_topo, construct_geom),
+            local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
                   "Hyperedge dimension of topology and geometry must be equal!");
@@ -116,7 +117,7 @@ class Elliptic
    ************************************************************************************************/
   Elliptic(const typename TopologyT::constructor_value_type& construct_topo,
            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
-  : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
+  : hyper_graph_(construct_topo), hyper_graph_ref_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
                   "Hyperedge dimension of topology and geometry must be equal!");
@@ -134,7 +135,7 @@ class Elliptic
    * \param   construct_topo    Information to construct a topology.
    ************************************************************************************************/
   Elliptic(const typename TopologyT::constructor_value_type& construct_topo)
-  : hyper_graph_(construct_topo)
+  : hyper_graph_(construct_topo), hyper_graph_ref_(construct_topo)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
                   "Hyperedge dimension of topology and geometry must be equal!");
@@ -183,6 +184,128 @@ class Elliptic
    * \retval  zero            A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
   LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  /*!***********************************************************************************************
+   * \brief   VP: testing out the function to find the interior coefficients for u
+   *
+   * \param   coeffs_in     A vector containing the skeletal lambda coefficients.
+   * \param   time          Time at which the new time step will end.
+   * \retval  all_coeffs    A vector containing the interior u coefficients.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  LargeVecT refine_solution(const LargeVecT& coeffs_in, const dof_value_t time = 0.)
+  {
+    /* The function currently maps the previous values to the corresponding locations.
+    - That is: interior to new nodes, old nodes to refined nodes.
+    NOTE:
+    - The implementation should work for cases:
+        'coarse.refinement * 2 = refined.refinement' splits each edge into 2 ** hyEdge_dim edges.
+    AND
+        'coarse.refinement == 1 -> refined.refinement = K'
+    *
+    - Refining from coarse.refinement != 1 to refined.refinement != 2 * coarse.refinement, hasn't been tested.
+    But, the following has been built upon an assumption that each refined HyEdge belongs to only one coarse HyEdge.
+    */
+    const unsigned int target_refinement = 2;
+
+    unsigned int n_splits = 2;
+    // Refine the auxilary Hyper Graph
+    if (hyper_graph_.get_refinement() == 1) {
+      n_splits = target_refinement;
+      hyper_graph_ref_.set_refinement(target_refinement);
+    } else {
+      hyper_graph_ref_.set_refinement(hyper_graph_.get_refinement() * 2);
+    }
+
+    // Check the edge counts (just in case)
+    // printf("\nn_edges coarse: %d\n", hyper_graph_.n_hyEdges());
+    // printf("n_edges refined: %d\n", hyper_graph_ref_.n_hyEdges());
+
+    // Initialize the output vector for the new dof values:
+    LargeVecT coeffs_out(hyper_graph_ref_.n_global_dofs(), 0.);
+
+    // Auxilary vectors / matrices for the evaluations:
+    std::array<dof_value_t, n_dofs_per_node> hyNode_dofs_coarse;
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old;
+
+    // Number of nodes on the refined graph for each coarse node (hyNode_dim???):
+    const unsigned int n_subNodes = pow(n_splits, hyEdge_dim - 1);
+
+    // Constant values of the coarse hyper graph:
+    const unsigned int n_hyNodes_coarse = hyper_graph_.n_hyNodes();
+    const unsigned int n_hyEdges_coarse = hyper_graph_.n_hyEdges();
+
+    // Number of coefficients on the node: n_dofs_per_node
+
+    // Indexing 'unsigned int' variables: (for clarity)
+    unsigned int hyNode_ref = 0;
+
+    // Go through the Hyper Nodes of the coarse graph:
+    for (unsigned int hyNode_coarse = 0; hyNode_coarse < n_hyNodes_coarse; ++hyNode_coarse) {
+      // Take the dof-values from the input vector corresponding to the hyper node:
+      hyper_graph_.hyNode_factory().get_dof_values(hyNode_coarse, coeffs_in, hyNode_dofs_coarse);
+
+      // Add the dof-values to the output:
+      // (For each subdivision of a coarse node one after another:)
+      for (unsigned int sub_node = 0; sub_node < n_subNodes; ++sub_node) {
+        // Evaluate the index of the new node:
+        /* hyNode_ref = hyNode_coarse * n_subNodes + sub_node; */
+
+        // Perform the projection to get the nodal coefficients:
+        // Mapping : node of coarse edge -> node of refined edge
+        auto hyNode_dofs_ref = local_solver_.node_to_node(hyNode_dofs_coarse);
+
+        // Add the nodal dofs to the global dofs (old values atm)
+        hyper_graph_ref_.hyNode_factory().set_dof_values(hyNode_ref, coeffs_out, hyNode_dofs_coarse);
+
+        ++hyNode_ref;
+      }
+    }
+
+    // Go over the hyper edges of the coarse graph:
+    for (unsigned int hyEdge_coarse = 0; hyEdge_coarse < n_hyEdges_coarse; ++hyEdge_coarse) {
+      // Get the corresponding hyper edge:
+      auto hyper_edge = hyper_graph_[hyEdge_coarse];
+
+      // Get the node indices corresponding to the considered hyper edge:
+      hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+
+      // Go over the hyper nodes of the edge to get the dofs:
+      for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode) {
+        hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], coeffs_in, hyEdge_dofs_old[hyNode]);
+      }
+
+      // Evaluate the local interior coefficients:
+      auto interior_dofs = local_solver_.local_interior(hyEdge_dofs_old, hyper_edge);
+
+      // Map the interior coefficients to the new nodes:
+      for (unsigned int dim = 0; dim < hyEdge_dim; ++dim) {
+        for (unsigned int split = 0; split < n_splits - 1; ++split) {
+          // Go over the nodes which need to be added:
+          for (unsigned int sub_node = 0; sub_node < n_subNodes; ++sub_node) {
+            // Evaluate the node index:
+            /* hyNode_ref = n_hyNodes_coarse * n_subNodes
+                    + hyEdge_coarse * (hyEdge_dim * n_subNodes * (n_splits - 1))
+                    + dim * n_subNodes * (n_splits - 1)
+                    + split * (n_splits - 1)
+                    + sub_node; */
+
+            // Perform the projection to get the nodal coefficients:
+            // Mapping : interior of coarse edge -> node of refined edge
+            // auto hyNode_dofs_ref = local_solver_.interior_to_node(interior_dofs, hyper_edge_ref, 0);
+
+            // Add the nodal dofs to the global dofs: (old dofs atm)
+            hyper_graph_ref_.hyNode_factory().set_dof_values(hyNode_ref, coeffs_out, interior_dofs);
+
+            // Increment the refined hyper node
+            ++hyNode_ref;
+          }
+        }
+      }
+    }
+
+    return coeffs_out;
+  }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *

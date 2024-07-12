@@ -470,6 +470,65 @@ class Diffusion
    ************************************************************************************************/
   Diffusion(const constructor_value_type& tau = 1.) : tau_(tau) {}
   /*!***********************************************************************************************
+  * \brief Evaluate the local (interior) dofs of the given Hyperedge
+  *
+  * \param lambda_values_in The local skeletal coefficients of the given hyperedge
+  * \param hyper_edge       The considered hyperedge of the hypergraph
+  * \param time             Solution time, constant = 0?
+  *
+  * \retval u_coeffs_out    Local dofs of function u in the interior of the Hyperedge
+  *************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT>
+  SmallVec<n_shape_fct_, lSol_float_t> local_interior(const SmallMatInT& lambda_values_in,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
+  {
+    SmallVec<n_shape_fct_, lSol_float_t> u_coeffs_out;
+
+    // Solve the local problem to arrive with the interior coefficients:
+    SmallVec<n_loc_dofs_, lSol_float_t> temp =
+      solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
+
+    // Collect the coefficients of u into coeffs (exclude the q's)
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      u_coeffs_out[i] = temp[n_loc_dofs_ - n_shape_fct_ + i];
+    }
+
+    return u_coeffs_out;
+  }
+  /*!***********************************************************************************************
+  * \brief (WIP): Interior to new node mapping:
+  *
+  * \param SmallMatInT      Interior dofs produced by 'local_interior()'
+  * \param hyper_edge       The considered hyperedge of the hypergraph
+  * \param face             Face of the refined hyperedge to consider
+  *
+  * \retval hyNode_dofs     Dofs on the considered Hypernode
+  *************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT>
+  SmallVec<n_shape_bdr_, lSol_float_t> interior_to_node(const SmallMatInT& interior_dofs,
+                              hyEdgeT& hyper_edge,
+                              const unsigned int face) const
+  {
+    SmallVec<n_shape_bdr_, lSol_float_t> hyNode_dofs;
+
+    return hyNode_dofs;
+  }
+  /*!***********************************************************************************************
+  * \brief (WIP): Coarse node to refined node mapping:
+  *
+  * \param SmallMatInT      Interior dofs produced by 'local_interior()'
+  *
+  * \retval hyNode_dofs     Dofs on the refined Hypernode
+  *************************************************************************************************/
+  template <typename SmallMatInT>
+  SmallVec<n_shape_bdr_, lSol_float_t> node_to_node(const SmallMatInT& hyNode_dofs_coarse) const
+  {
+    SmallVec<n_shape_bdr_, lSol_float_t> hyNode_dofs;
+    hyNode_dofs = hyNode_dofs_coarse;
+    return hyNode_dofs;
+  }
+  /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
    * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the

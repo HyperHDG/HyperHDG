@@ -12,24 +12,24 @@ struct TestParametersSinEllipt
   static param_float_t diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                        const param_float_t = 0.)
   {
-    return 2. / M_PI;
+    return 1.0;//2. / M_PI;
   }
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                const param_float_t = 0.)
   {
-    return 0.5 * M_PI;
+    return 1.0; //0.5 * M_PI;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return sin(0.5 * M_PI * point[0]);
+    return point[0]; // sin(M_PI*point[0]) * sin(M_PI*point[1]); // point[0]; // sin(0.5 * M_PI * point[0]);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t = 0.)
   {
-    return 0.5 * M_PI * sin(0.5 * M_PI * point[0]);
+    return 0.0; //2 * M_PI * M_PI * sin(M_PI*point[0]) * sin(M_PI*point[1]);// 0; // 0.5 * M_PI * sin(0.5 * M_PI * point[0]);
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
