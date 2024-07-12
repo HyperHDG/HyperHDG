@@ -20,3 +20,5 @@ try:
 except (ImportError, ModuleNotFoundError) as error:
   sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../submodules/fiber_network.git")
   import fiber_network
+finally:
+  pass
