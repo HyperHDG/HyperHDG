@@ -87,7 +87,7 @@ struct DomainInfo
   /*!***********************************************************************************************
    * \brief   Vector containing vertex indices per hyperedge.
    ************************************************************************************************/
-  vectorT<vectorT< typename pointT::value_type> > hyEdge_properties;
+  vectorT<vectorT<typename pointT::value_type> > hyEdge_properties;
   /*!***********************************************************************************************
    * \brief   Constructor of DomainInfo struct.
    ************************************************************************************************/
@@ -346,13 +346,14 @@ read_domain_geo(const std::string& filename)
 
   if (keyword != "HYPEREDGE_PROPERTIES:")
   {
-    domain_info.hyEdge_properties = vectorT<vectorT< typename pointT::value_type> >();
+    domain_info.hyEdge_properties = vectorT<vectorT<typename pointT::value_type> >();
     infile.close();
     return domain_info;
   }
 
-  if (keyword == "HYPEREDGE_PROPERTIES:"){
-    domain_info.hyEdge_properties = vectorT<vectorT< typename pointT::value_type> >(N_HyperEdges);
+  if (keyword == "HYPEREDGE_PROPERTIES:")
+  {
+    domain_info.hyEdge_properties = vectorT<vectorT<typename pointT::value_type> >(N_HyperEdges);
     linestream >> domain_info.n_properties;
   }
 

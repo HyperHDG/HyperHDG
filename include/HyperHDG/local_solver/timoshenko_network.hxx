@@ -728,33 +728,43 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<2*space_dim, lSol_float_t> extra_coeffs(1.);
+  SmallVec<2 * space_dim, lSol_float_t> extra_coeffs(1.);
 
   if (hyper_edge.geometry.has_extra_data())
   {
     auto extra_data = hyper_edge.geometry.extra_data();
-  // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-  // (n_11,n_12,n_13) : normal 1
-  // (n_21,n_22,n_23) : normal 2
-  SmallVec<space_dim, lSol_float_t> normal1 = std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
-  SmallVec<space_dim, lSol_float_t> normal2 = std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
-  SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
-  SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
-  
-  extra_coeffs[0] = extra_data[0];
-  extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) + extra_data[2] * scalar_product(outer1, normal2);
-  extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) + extra_data[2] * scalar_product(outer2, normal2);
-  extra_coeffs[3] = extra_data[3];
-  extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) + extra_data[5] * scalar_product(outer1, normal2);
-  extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) + extra_data[5] * scalar_product(outer2, normal2);
+    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
+    // (n_11,n_12,n_13) : normal 1
+    // (n_21,n_22,n_23) : normal 2
+    SmallVec<space_dim, lSol_float_t> normal1 =
+      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
+    SmallVec<space_dim, lSol_float_t> normal2 =
+      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
+    SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
+    SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
 
-  extra_coeffs[0] *= 1e4;  extra_coeffs[1] *= 1e4;  extra_coeffs[2] *= 1e4;
-  extra_coeffs[3] *= 1e12; extra_coeffs[4] *= 1e12; extra_coeffs[5] *= 1e12;
+    extra_coeffs[0] = extra_data[0];
+    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
+                      extra_data[2] * scalar_product(outer1, normal2);
+    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
+                      extra_data[2] * scalar_product(outer2, normal2);
+    extra_coeffs[3] = extra_data[3];
+    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
+                      extra_data[5] * scalar_product(outer1, normal2);
+    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
+                      extra_data[5] * scalar_product(outer2, normal2);
+
+    extra_coeffs[0] *= 1e4;
+    extra_coeffs[1] *= 1e4;
+    extra_coeffs[2] *= 1e4;
+    extra_coeffs[3] *= 1e12;
+    extra_coeffs[4] *= 1e12;
+    extra_coeffs[5] *= 1e12;
   }
 
-  for(unsigned int i = 0; i < extra_coeffs.size(); ++i)
+  for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
     extra_coeffs[i] = std::abs(extra_coeffs[i]);
-    // extra_coeffs[i] = 1.;
+  // extra_coeffs[i] = 1.;
   // hy_assert(false, extra_coeffs);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -781,7 +791,8 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
       for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
       {
-        local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral / extra_coeffs[dim];
+        local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
+          vol_integral / extra_coeffs[dim];
         local_mat(dim * n_shape_fct_ + i, (2 * space_dim + dim) * n_shape_fct_ + j) -=
           grad_int_vec[0];
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=

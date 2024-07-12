@@ -291,7 +291,8 @@ class File
 
     const auto& extra_data()
     {
-      return hyGraph_geometry_.domain_info_.hyEdge_properties[index_ / hyGraph_geometry_.n_loc_ref_elem];
+      return hyGraph_geometry_.domain_info_
+        .hyEdge_properties[index_ / hyGraph_geometry_.n_loc_ref_elem];
     }
   };  // end of class hyEdge
 
