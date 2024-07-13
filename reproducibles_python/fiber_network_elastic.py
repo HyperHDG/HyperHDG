@@ -14,8 +14,9 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # THIS SECTION CAN BE CHANGED:
 
-domain = "fiber_network_1000"
-domain = "fiber_network_14871"
+# domain = "fiber_network_1000"
+# domain = "fiber_network_14871"
+domain = "fiber_network_615452"
 # --------------------------------------------------------------------------------------------------
 
 start_time = datetime.now()
