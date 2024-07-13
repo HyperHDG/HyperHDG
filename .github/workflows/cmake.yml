@@ -27,10 +27,9 @@ jobs:
     - name: Install Python and CXX compiler
       run: |
         sudo apt-get update;
-        sudo apt-get install -y libblas-dev liblapack-dev;
+        sudo apt-get install -y libblas-dev liblapack-dev virtualenv;
         sudo apt-get install -y ${{ env.PYTHON }} ${{ matrix.comp.cxx }};
-        virtualenv -p python3 venv
-        source venv/bin/activate
+        virtualenv -p python3 venv; source venv/bin/activate;
         pip install numpy scipy
     - name: Conduct cmake test
       uses: HyperHDG/actions@cmake
