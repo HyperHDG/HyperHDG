@@ -6,11 +6,11 @@ from scipy.sparse.linalg import LinearOperator
 
 import os, sys
 
-try:
-  import HyperHDG
-except (ImportError, ModuleNotFoundError) as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-  import HyperHDG
+# try:
+#   import HyperHDG
+# except (ImportError, ModuleNotFoundError) as error:
+#   sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
+#   import HyperHDG
 
 # const                     = HyperHDG.config()
 # const.global_loop         = "Elliptic"
