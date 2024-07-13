@@ -5,7 +5,8 @@ name: CMake
 on: [push]
 
 env:
-  PYTHON: python3-dev python3-numpy python3-scipy python3-matplotlib python3-pandas cython3
+  PYTHON: |
+    python3-dev python3-numpy python3-scipy python3-matplotlib python3-pandas python3-joblib cython3
 
 
 jobs:
