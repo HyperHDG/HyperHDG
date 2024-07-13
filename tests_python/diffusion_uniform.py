@@ -38,7 +38,7 @@ vectorRHS = [-i for i in HDG_wrapper.trace_to_flux(vectorDirichlet)]
 system_size = HDG_wrapper.size_of_system()
 A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
 
-[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, rtol=1e-9) # Parameters for CG.
+[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, maxiter=100, tol=1e-9) # Parameters for CG.
 
 reference_solution = np.array(
   [ 1.,         0.6999695,  0.55280737, 0.46359316, 0.41591649, 0.72849089,
