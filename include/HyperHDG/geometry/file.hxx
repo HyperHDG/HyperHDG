@@ -42,7 +42,7 @@ namespace Geometry
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
           template <typename...> typename vectorT = std::vector,
-          typename pointT = Point<space_dimT, float>,
+          typename pointT = Point<space_dimT, double>,
           template <unsigned int, unsigned int, typename> typename mapping_tM = Mapping::Linear,
           unsigned int hyEdge_dimTM = hyEdge_dimT,
           unsigned int space_dimTM = space_dimT,
@@ -156,7 +156,7 @@ class File
     SmallVec<space_dimT, pt_coord_t> span_vec(const unsigned int index) const
     {
       hy_assert(index < hyEdge_dimT, "There are only " << hyEdge_dimT << " spanning vectors.");
-      return mapping.get_column(index);
+      return mapping.matrix_column(index);
     }
     /*!*********************************************************************************************
      * \brief   Return reduced matrix R of the QR decomposition.
@@ -282,6 +282,17 @@ class File
           pt[d] = subpt[subd++];
       }
       return mapping.map_reference_to_physical(pt);
+    }
+
+    const bool has_extra_data()
+    {
+      return hyGraph_geometry_.domain_info_.hyEdge_properties.size() > 0;
+    }
+
+    const auto& extra_data()
+    {
+      return hyGraph_geometry_.domain_info_
+        .hyEdge_properties[index_ / hyGraph_geometry_.n_loc_ref_elem];
     }
   };  // end of class hyEdge
 

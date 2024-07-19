@@ -214,6 +214,26 @@ class Elliptic
 
     return vec_Ax;
   }
+
+  /*!***********************************************************************************************
+   * \brief   Evaluate condensed matrix-vector product.
+   *
+   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
+   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
+   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
+   * resulting vector, which has the same size as the input vector \f$x\f$.
+   *
+   * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
+   * \param   x_vec           A vector containing the input vector \f$x\f$.
+   * \param   time            Time at which given analyitic functions will be evaluated.
+   * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  {
+    return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
+  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product containing data.
    *

@@ -6,4 +6,4 @@ def this_dir():
 
 ## Return path to main directory of HyperHDG.
 def main_dir():
-  return this_dir() + "/../.."
+  return this_dir() + "/../../.."

@@ -1,5 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
