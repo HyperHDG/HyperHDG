@@ -1,3 +1,9 @@
+# --------------------------------------------------------------------------------------------------
+# The data necessary to run this file can be obtained using the HyperHDG.fiber_network.make_geo
+# function on the files of Hauck, M., & Rupp, A. (2024). Fiber network models of paper. Zenodo.
+# https://doi.org/10.5281/zenodo.12751486
+# --------------------------------------------------------------------------------------------------
+
 from __future__ import print_function
 
 import numpy as np
@@ -7,9 +13,17 @@ from datetime import datetime
 
 import os, sys
 
+# --------------------------------------------------------------------------------------------------
+# THIS SECTION CAN BE CHANGED:
+
+# domain = "fiber_network_1000"
+# domain = "fiber_network_14871"
+domain = "fiber_network_615452"
+# --------------------------------------------------------------------------------------------------
+
 
 # --------------------------------------------------------------------------------------------------
-# Function bilaplacian_test.
+# Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, debug_mode=False):
   start_time = datetime.now()
@@ -34,8 +48,7 @@ def diffusion_test(poly_degree, debug_mode=False):
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/fiber_network_1000.geo" )
+  HDG_wrapper = PyDP(os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + domain + ".geo")
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -46,7 +59,7 @@ def diffusion_test(poly_degree, debug_mode=False):
   A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-  points = np.loadtxt("domains/fiber_network_1000_points.txt")
+  points = np.loadtxt("domains/" + domain + "_points.txt")
   helper = HyperHDG.fiber_network.precond(points, [2**3, 2**3])
   def precond_mult( vec_x ):
     return helper.precond(A, vec_x)

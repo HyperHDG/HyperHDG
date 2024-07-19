@@ -1,11 +1,13 @@
+# --------------------------------------------------------------------------------------------------
+# The data necessary to run this file can be obtained using the HyperHDG.fiber_network.make_geo
+# function on the files of Hauck, M., & Rupp, A. (2024). Fiber network models of paper. Zenodo.
+# https://doi.org/10.5281/zenodo.12751486
+# --------------------------------------------------------------------------------------------------
+
 from __future__ import print_function
 
 import numpy as np
 import scipy.sparse as sp
-import scipy.sparse.linalg as sp_lin_alg
-from scipy.sparse.linalg import LinearOperator
-
-import matplotlib.pyplot as plt
 
 from datetime import datetime
 
@@ -69,7 +71,7 @@ def nonlocal_iterate(vec_x):
 
 print(np.linalg.norm(vectorRHS))
 
-vectorSolution, num_iter = sp_lin_alg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
+vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 

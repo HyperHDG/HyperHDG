@@ -2,10 +2,6 @@ from __future__ import print_function
 
 import numpy as np
 import scipy.sparse as sp
-# import scipy.sparse.linalg as sp_lin_alg
-# from scipy.sparse.linalg import LinearOperator
-
-# import matplotlib.pyplot as plt
 
 from datetime import datetime
 
