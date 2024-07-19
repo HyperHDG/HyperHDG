@@ -19,7 +19,7 @@ namespace NodeDescriptor
 template <unsigned int hyEdge_dimT,
           unsigned int space_dimT,
           template <typename...> typename vectorT = std::vector,
-          typename pointT = Point<space_dimT, float>,
+          typename pointT = Point<space_dimT, double>,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>
