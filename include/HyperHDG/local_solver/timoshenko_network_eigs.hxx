@@ -72,11 +72,29 @@ struct TimoschenkoBeamParametersDefault
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
+  static param_float_t initial_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
     return analytic_result_u(point, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t initial_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t = 0.)
+  {
+    return analytic_result_phi(point, normal);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -94,7 +112,7 @@ struct TimoschenkoBeamParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    // return 0.;
+    return 1.;
     return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
@@ -106,7 +124,7 @@ struct TimoschenkoBeamParametersDefault
                                            const Point<space_dimT, param_float_t>& normal,
                                            const param_float_t = 0.)
   {
-    // return 0.;
+    return 1.;
     return sin(M_PI * point[0]) * normal[1] + sin(M_PI * point[1]) * normal[2];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
@@ -310,6 +328,66 @@ class TimoshenkoBeamEigs
                      node_type) != parameters::dirichlet_nodes.end();
   }
 
+  template <class hyEdgeT>
+  static constexpr std::array<bool, 2 * hyEdge_dimT>& dirichlet_nodes(std::array<bool, 2 * hyEdge_dimT>& input, const hyEdgeT& hyper_edge)
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      input[i] = is_dirichlet<parameters>(hyper_edge.node_descriptor[i]);
+    return input;
+  }
+
+    template <class hyEdgeT, typename SmallMatT>
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+    {
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          lambda_values[i][j] = 0.;
+      else
+        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        {
+          lambda_values[i][(0 * space_dim + 0) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_u,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, 1, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+
+        lambda_values[i][(0 * space_dim + 1) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_u,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, -1, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+
+        lambda_values[i][(0 * space_dim + 2) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_u,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, -2, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+
+        lambda_values[i][(1 * space_dim + 0) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_phi,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, 1, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+
+        lambda_values[i][(1 * space_dim + 1) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_phi,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, -1, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+
+        lambda_values[i][(1 * space_dim + 2) * n_shape_bdr_ + j] = integrator::template integrate_bdr_psivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial_phi,
+          Point<hyEdge_dimT, lSol_float_t>>(j, i, -2, hyper_edge.geometry, 0.) / hyper_edge.geometry.face_area(i);
+        }
+    }
+
+    return lambda_values;
+  }
+
  private:
   // -----------------------------------------------------------------------------------------------
   // Private, static constexpr functions
@@ -361,7 +439,7 @@ class TimoshenkoBeamEigs
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  TimoshenkoBeam(const constructor_value_type& tau = 1.) : tau_(tau) {}
+  TimoshenkoBeamEigs(const constructor_value_type& tau = 1.) : tau_(tau) {}
 
   template <typename hyEdgeT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix(
@@ -453,11 +531,8 @@ class TimoshenkoBeamEigs
   {
     try
     {
-      try
-    {
       SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
-      return (rhs / assemble_loc_matrix(tau_, hyper_edge, eig)).data();
-    }
+      return (rhs / assemble_loc_matrix(hyper_edge, eig)).data();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -511,6 +586,10 @@ class TimoshenkoBeamEigs
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        lambda_values_loc[i].fill(0.);
+
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_loc, hyper_edge, eig);
 
@@ -547,10 +626,31 @@ class TimoshenkoBeamEigs
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    SmallMatOutT lambda_loc;
-    lambda_loc = trace_to_flux(lambda_values_in, lambda_loc, hyper_edge, eig_val);
-    lambda_values_out = trace_to_flux(lambda_vals, lambda_values_out, hyper_edge, eig);
-    lambda_values_out += lambda_loc;
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        lambda_values_out[i].fill(0.);
+
+    lambda_values_out = trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, eig_val);
+
+    auto coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
+    for (unsigned int i = 0; i < 2 * space_dim * n_shape_fct_; ++i)
+      coeffs[i] = 0.;
+    for (unsigned int i = 0; i < 2 * space_dim * n_shape_fct_; ++i)
+      coeffs[2 * space_dim * n_shape_fct_ + i] *= eig * hyper_edge.geometry.area();
+
+    coeffs = (SmallVec<coeffs.size(), lSol_float_t>(coeffs) /
+              assemble_loc_matrix(hyper_edge, eig_val))
+               .data();
+
+    auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2 * space_dim; ++j)
+        lambda_values_out[i][j] += result(i, j);
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2 * space_dim; ++j)
+        hy_assert(lambda_values_out[i][j] == lambda_values_out[i][j], "NaN");
+
     return lambda_values_out;
   }
 
@@ -633,7 +733,7 @@ class TimoshenkoBeamEigs
     // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     input_array_t lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-      solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
+      solve_local_problem(lambda_values_loc, hyper_edge, time);
     SmallVec<n_shape_fct_, lSol_float_t> coeffs;
     SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
@@ -689,10 +789,10 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_loc_matrix(hyEdgeT& hyper_edge, const lSol_float_t eig) const
 {
   // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -778,7 +878,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= vol_integral;
       local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += vol_integral;
 
-      for (unsigned int dim = space_dim; dim < 2 * space_dim; ++dim)
+      for (unsigned int dim = 2 * space_dim; dim < 4 * space_dim; ++dim)
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) -= eig * vol_integral;
     }
   }
@@ -799,10 +899,10 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
@@ -854,10 +954,10 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeamEigs<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;

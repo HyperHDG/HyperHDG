@@ -197,7 +197,7 @@ class Elliptic
    * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t param = 0.)
   {
     auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
@@ -229,7 +229,7 @@ class Elliptic
    * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t param = 0.)
   {
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
@@ -249,7 +249,7 @@ class Elliptic
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t param = 0.)
   {
     auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
 
@@ -275,7 +275,7 @@ class Elliptic
    * \retval  error           A vector containing the errors.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t param = 0.)
   {
     auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
@@ -315,9 +315,9 @@ class Elliptic
    * \param   time          Time at which analytical functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  void plot_solution(const LargeVecT& lambda, const dof_value_t time = 0.)
+  void plot_solution(const LargeVecT& lambda, const dof_value_t param = 0.)
   {
-    plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+    plot(hyper_graph_, local_solver_, lambda, plot_options, param);
   }
   /*!***********************************************************************************************
    * \brief   Return refinement level.

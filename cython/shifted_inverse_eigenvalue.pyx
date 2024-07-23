@@ -24,7 +24,7 @@ cdef class PythonClassName :
     del self.thisptr
   def dirichlet_indices(self):
     return self.thisptr.dirichlet_indices ()
-  def trace_to_flux(self, vec, time = 0.):
+  def trace_to_flux(self, vec, eig = 0.):
     return self.thisptr.trace_to_flux (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()

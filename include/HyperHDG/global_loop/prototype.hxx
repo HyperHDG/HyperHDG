@@ -39,14 +39,14 @@
                           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
                           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
                           dof_value_t)>::value)                                                   \
-          local_solver_.fun_name(dofs_old, dofs_new, time);                                       \
+          local_solver_.fun_name(dofs_old, dofs_new, param);                                      \
         else if constexpr (                                                                       \
           has_fun_name<LocalSolverT,                                                              \
                        std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(     \
                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
                          decltype(hyper_edge)&, dof_value_t)>::value)                             \
-          local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                           \
+          local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, param);                          \
         else                                                                                      \
           hy_assert(false, "Function seems not to be implemented!");                              \
                                                                                                   \
@@ -121,7 +121,7 @@ struct sparse_mat
                   std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
                   std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
                   dof_value_t)>::value)                                                       \
-              local_solver_.fun_name(dofs_old, dofs_new, time);                               \
+              local_solver_.fun_name(dofs_old, dofs_new, param);                              \
             else if constexpr (                                                               \
               has_fun_name<                                                                   \
                 LocalSolverT,                                                                 \
@@ -129,7 +129,7 @@ struct sparse_mat
                   std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
                   std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
                   decltype(hyper_edge)&, dof_value_t)>::value)                                \
-              local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                   \
+              local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, param);                  \
             else                                                                              \
               hy_assert(false, "Function seems not to be implemented!");                      \
                                                                                               \
@@ -182,14 +182,14 @@ struct sparse_mat
                                    error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,    \
                                                       2 * hyEdge_dim>&,                            \
                                            dof_value_t)>::value)                                   \
-          result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time)); \
+          result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, param));\
         else if constexpr (has_fun_name<LocalSolverT,                                              \
                                         error_t(                                                   \
                                           std::array<std::array<dof_value_t, n_dofs_per_node>,     \
                                                      2 * hyEdge_dim>&,                             \
                                           decltype(hyper_edge)&, dof_value_t)>::value)             \
           result = LocalSolverT::error_def::sum_error(                                             \
-            result, local_solver_.fun_name(dofs, hyper_edge, time));                               \
+            result, local_solver_.fun_name(dofs, hyper_edge, param));                              \
         else                                                                                       \
           hy_assert(false, "Function seems not to be ímplemented");                                \
       });                                                                                          \

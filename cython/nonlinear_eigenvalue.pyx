@@ -22,14 +22,16 @@ cdef class PythonClassName :
         self.thisptr = new CythonClassName (topo_constr, geom_constr, lsol_constr)
   def __dealloc__(self):
     del self.thisptr
-  def trace_to_flux(self, vec, time = 0.):
-    return self.thisptr.trace_to_flux (vec, time)
+  def trace_to_flux(self, vec, eig = 0.):
+    return self.thisptr.trace_to_flux (vec, eig)
   def jacobian_of_trace_to_flux(self, vec, eig, vec_val, eig_val):
     return self.thisptr.jacobian_of_trace_to_flux (vec, eig, vec_val, eig_val)
   def make_initial(self, vec, time = 0.):
     return self.thisptr.make_initial (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
+  def dirichlet_nodes(self):
+    return self.thisptr.dirichlet_nodes ()
   def plot_option(self, option, value):
     if isinstance(option,str):
       option = option.encode()
@@ -47,3 +49,9 @@ cdef class PythonClassName :
     else:
       self.thisptr.set_refinement(n_ref)
       return n_ref
+  def sparse_stiff_mat(self, eig = 0.):
+    helper = self.thisptr.trace_to_flux_mat(eig)
+    return helper.get_cols(), helper.get_rows(), helper.get_values()
+  def sparse_jacobi_mat(self, vector):
+    helper = self.thisptr.jacobian_of_trace_to_flux_mat(vector, vector[-1])
+    return helper.get_cols(), helper.get_rows(), helper.get_values()

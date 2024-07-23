@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/plot.hxx>
@@ -31,6 +32,7 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class NonlinearEigenvalue
 {
+private:
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -43,6 +45,8 @@ class NonlinearEigenvalue
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(make_initial, has_make_initial);
+
+  HAS_MEMBER_FUNCTION(dirichlet_nodes, has_dirichlet_nodes);
 
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
@@ -140,58 +144,24 @@ class NonlinearEigenvalue
    * \retval  y_vec         A vector containing the residual.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t eig = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t param = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
-    LargeVecT vec_Ax(x_vec.size(), 0.);
-    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
-      hyEdge_dofs_new;
-
-    // Do matrix--vector multiplication by iterating over all hyperedges.
-    std::for_each(
-      hyper_graph_.begin(), hyper_graph_.end(),
-      [&](auto hyper_edge)
-      {
-        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
-        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
-        for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-        {
-          hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
-                                                       hyEdge_dofs_old[hyNode]);
-          hyEdge_dofs_new[hyNode].fill(0.);
-        }
-
-        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr (
-          has_trace_to_flux<
-            LocalSolverT,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-              dof_value_t)>::value)
-          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, eig);
-        else if constexpr (
-          has_trace_to_flux<
-            LocalSolverT,
-            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
-              decltype(hyper_edge)&, dof_value_t)>::value)
-          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, eig);
-        else
-          hy_assert(false, "Function seems not to be implemented!");
-
-        // Fill hyEdge_dofs array degrees of freedom into vec_Ax.
-        for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
-          hyper_graph_.hyNode_factory().add_to_dof_values(hyEdge_hyNodes[hyNode], vec_Ax,
-                                                          hyEdge_dofs_new[hyNode]);
-      });
-
-    return vec_Ax;
+    return prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
   }
+
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t param = 0.)
+  {
+    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+    
+    return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
+  }
+
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -272,6 +242,138 @@ class NonlinearEigenvalue
 
     return vec_Ax;
   }
+
+
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> jacobian_of_trace_to_flux_mat(const LargeVecT& x_val,
+                                      const dof_value_t eig_val)
+  {
+    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+
+    sparse_mat<LargeVecT> result_mat(hyper_graph_.n_hyEdges() * 4 * hyEdge_dim * hyEdge_dim *
+                                     n_dofs_per_node * n_dofs_per_node + 
+                                     hyper_graph_.n_hyEdges() * 2 * hyEdge_dim *
+                                     n_dofs_per_node);
+
+    auto value_it = result_mat.value_vec.begin();
+    auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();
+
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;
+    std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new, vals;
+
+
+    // Do matrix--vector multiplication by iterating over all hyperedges.
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for (unsigned int node = 0; node < hyNodes.size(); ++node){
+          hyper_graph_.hyNode_factory().get_dof_indices(hyNodes[node], dof_indices[node]);
+          hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_val, vals[node]);
+        }
+        
+        dof_value_t eig = 0.;
+
+        for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      
+          for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      
+          {                                                                                   
+            for (unsigned int node = 0; node < hyNodes.size(); ++node)                        
+            {                                                                                 
+              dofs_old[node].fill(0.);                                                        
+              dofs_new[node].fill(0.);                                                        
+            }                                                                                 
+            dofs_old[node_j][dof_j] = 1.;
+
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr (
+          has_jacobian_of_trace_to_flux<
+            LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t)>::value)
+        {
+          local_solver_.jacobian_of_trace_to_flux(dofs_old, dofs_new, eig, vals, eig_val);
+        }
+        else if constexpr (
+          has_jacobian_of_trace_to_flux<
+            LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t, decltype(hyper_edge)&)>::value)
+        {
+          local_solver_.jacobian_of_trace_to_flux(dofs_old, dofs_new, eig,
+                                                  vals, eig_val, hyper_edge);
+        }
+        else
+          hy_assert(false, "Function seems not to be implemented!");
+
+        for (unsigned int node_i = 0; node_i < hyNodes.size(); ++node_i)
+              for (unsigned int dof_i = 0; dof_i < n_dofs_per_node; ++dof_i)
+              {                                                                               
+                *(row_it++) = dof_indices[node_i][dof_i];                                     
+                *(col_it++) = dof_indices[node_j][dof_j];                                     
+                *(value_it++) = dofs_new[node_i][dof_i];                                      
+              }
+        }
+
+        eig = 1.;
+
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)                       
+            {                                                                                
+              dofs_old[node].fill(0.);                                                       
+              dofs_new[node].fill(0.);                                                       
+            }                                                                               
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr (
+          has_jacobian_of_trace_to_flux<
+            LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t)>::value)
+        {
+          local_solver_.jacobian_of_trace_to_flux(dofs_old, dofs_new, eig, vals, eig_val);
+        }
+        else if constexpr (
+          has_jacobian_of_trace_to_flux<
+            LocalSolverT,
+            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              dof_value_t, decltype(hyper_edge)&)>::value)
+        {
+          local_solver_.jacobian_of_trace_to_flux(dofs_old, dofs_new, eig,
+                                                  vals, eig_val, hyper_edge);
+        }
+        else
+          hy_assert(false, "Function seems not to be implemented!");
+
+        for (unsigned int node_i = 0; node_i < hyNodes.size(); ++node_i)
+              for (unsigned int dof_i = 0; dof_i < n_dofs_per_node; ++dof_i)
+              {                                                                               
+                *(row_it++) = dof_indices[node_i][dof_i];                                     
+                *(col_it++) = hyper_graph_.hyNode_factory().n_global_dofs();                                     
+                *(value_it++) = dofs_new[node_i][dof_i];                                      
+              }                                                                      
+      });
+
+    return result_mat;
+  }
+
+
   /*!***********************************************************************************************
    * \brief   Create initial starting value for Newton's methods.
    *
@@ -343,7 +445,46 @@ class NonlinearEigenvalue
    *                        \c int.
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
-  /*!***********************************************************************************************
+ 
+
+  template <typename hyNode_index_t = dof_index_t>
+  std::vector<unsigned int> dirichlet_nodes()
+  {
+    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+
+    std::vector<unsigned int> node_list;
+
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
+    std::array<bool, 2 * hyEdge_dim> is_dirichlet;
+
+    // Do matrix--vector multiplication by iterating over all hyperedges.
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+        if constexpr (
+          has_dirichlet_nodes<
+            LocalSolverT,
+            std::array<bool, 2 * hyEdge_dim>&(
+              std::array<bool, 2 * hyEdge_dim>&,
+              decltype(hyper_edge)&)>::value)
+          local_solver_.dirichlet_nodes(is_dirichlet, hyper_edge);
+        else
+          hy_assert(false, "Function seems not to be implemented!");
+
+        for (unsigned int i = 0; i < 2 * hyEdge_dim; ++i)
+          if (is_dirichlet[i])  node_list.push_back(hyEdge_hyNodes[i]);
+      });
+
+    std::sort( node_list.begin(), node_list.end() );
+    node_list.erase( std::unique( node_list.begin(), node_list.end() ), node_list.end() );
+
+    return node_list;
+  }
+
+
+   /*!***********************************************************************************************
    * \brief   Set plot option and return old plot option.
    *
    * Function to set and / or read the current plot option.

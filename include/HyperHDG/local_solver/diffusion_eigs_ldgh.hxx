@@ -481,24 +481,10 @@ class DiffusionEigs
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values_in, hyper_edge, eig_val);  // f_mu(eta,lambda_)
 
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
-      primal_at_boundary(coeffs, hyper_edge)),
-      duals(dual_at_boundary(coeffs, hyper_edge));
+    lambda_values_out = trace_to_flux(lambda_values_in, lambda_values_out, hyper_edge, eig_val);
 
-    for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
-          lambda_values_out[i][j] =
-            duals[i][j] + tau_ * primals[i][j] -
-            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
-
-    coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
+    std::array<lSol_float_t, n_loc_dofs_> coeffs = solve_local_problem(lambda_vals, hyper_edge, eig_val);
 
     for (unsigned int i = 0; i < hyEdge_dimT * n_shape_fct_; ++i)
       coeffs[i] = 0.;
@@ -509,8 +495,8 @@ class DiffusionEigs
               assemble_loc_matrix(tau_, hyper_edge, eig_val))
                .data();
 
-    primals = primal_at_boundary(coeffs, hyper_edge);
-    duals = dual_at_boundary(coeffs, hyper_edge);
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals = primal_at_boundary(coeffs, hyper_edge);
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> duals = dual_at_boundary(coeffs, hyper_edge);
 
     for (unsigned int i = 0; i < lambda_values_out.size(); ++i)
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
