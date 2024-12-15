@@ -13,7 +13,7 @@ import os, sys
 # --------------------------------------------------------------------------------------------------
 # Function bilaplacian_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
+def diffusion_test(debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
   os.system("mkdir -p output")
@@ -26,17 +26,16 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
-  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.local_solver    = "Diffusion<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
+  const.topology        = "Cubic<2,2>"
+  const.geometry        = "UnitCubes<2,2,double>"
+  const.node_descriptor = "Cubic<2,2>"
+  const.local_solver    = "DiffusionSpaces<2,0,1,0,4,TestParametersPos,double>"
   const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]"]
   const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( [2 ** iteration] * dimension )
+  HDG_wrapper = PyDP( [1,1],[1,1], 1. )
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -54,16 +53,11 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
       print("GMRES also failed with a total number of ", num_iter, "iterations.")
       raise RuntimeError("Linear solvers did not converge!")
 
-  error = HDG_wrapper.errors(vectorSolution)[0]
-  print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/diffusion_convergence_elliptic.txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
-  f.close()
+  print(vectorSolution)
   
-  HDG_wrapper.plot_option( "fileName" , "diff_conv_ellip-" + str(dimension) + "-" + str(iteration) )
+  HDG_wrapper.plot_option( "fileName" , "positive_hdg" )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
+  # HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution)
   
   end_time = datetime.now()
@@ -74,15 +68,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in range(1,4):
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
-      print("Dimension is ", dimension, "\n")
-      for iteration in range(6):
-        try:
-          diffusion_test(poly_degree, dimension, iteration, debug_mode)
-        except RuntimeError as error:
-          print("ERROR: ", error)
+  diffusion_test(debug_mode)
 
 
 # --------------------------------------------------------------------------------------------------

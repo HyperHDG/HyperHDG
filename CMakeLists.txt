@@ -93,9 +93,18 @@ install(
 )
 
 ## Prepare nice output for linked libraries.
-foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
+# foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
+#   string(APPEND LINKED_STRING "-L" ${linked_lib} " ")
+# endforeach()
+string(APPEND LINKED_STRING "-lblas -llapack ")
+foreach (linked_lib ${Python3_LIBRARIES})
   string(APPEND LINKED_STRING ${linked_lib} " ")
 endforeach()
+
+# # string(APPEND LINKED_STRING "-L" ${Python3_LIBRARIES} " ")
+# string(APPEND LINKED_STRING "-L" ${Python3_LIBRARY_DIRS} " ")
+# string(APPEND LINKED_STRING "-L" ${Python3_LIBRARIES} " ")
+
 
 ## Write a configuration file for Cython
 configure_file(
