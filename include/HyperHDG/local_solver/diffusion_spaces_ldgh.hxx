@@ -245,7 +245,7 @@ class DiffusionSpaces
    ************************************************************************************************/
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
-    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<std::max(poly_deg_u,poly_deg_q)>, hyEdge_dimT> >,
+    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<std::max(std::max(poly_deg_u,poly_deg_q),poly_deg_m)>, hyEdge_dimT> >,
     lSol_float_t>
     integrator;
 
@@ -946,7 +946,7 @@ DiffusionSpaces<hyEdge_dimT, poly_deg_u, poly_deg_q, poly_deg_m, quad_deg, param
 
   unsigned int n_shape_q = Hypercube<hyEdge_dimT>::pow(poly_deg_q + 1);
   unsigned int n_shape_u = Hypercube<hyEdge_dimT>::pow(poly_deg_u + 1);
-
+// hy_assert(false,"A");
   for (unsigned int i = 0; i < n_shape_q; ++i)
   {
     for (unsigned int j = 0; j < n_shape_q; ++j)
@@ -980,9 +980,9 @@ DiffusionSpaces<hyEdge_dimT, poly_deg_u, poly_deg_q, poly_deg_m, quad_deg, param
       
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
-        local_mat(hyEdge_dimT * n_shape_q + j, dim * n_shape_q + i) -= grad_int_vec[dim];
+        local_mat(hyEdge_dimT * n_shape_q + j, dim * n_shape_q + i) += grad_int_vec[dim];
         local_mat(dim * n_shape_q + i, hyEdge_dimT * n_shape_q + j) -= grad_int_vec[dim];
-        local_mat(hyEdge_dimT * n_shape_q + j, dim * n_shape_q + i) += normal_int_vec[dim];
+        // local_mat(hyEdge_dimT * n_shape_q + j, dim * n_shape_q + i) += normal_int_vec[dim];
       }
     }
   }
@@ -1045,7 +1045,6 @@ unsigned int n_shape_q = Hypercube<hyEdge_dimT>::pow(poly_deg_q + 1);
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
             integral;
       }
-// hy_assert(false, "Made it");
 
   for (unsigned int i = 0; i < n_shape_u; ++i)
     for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1060,8 +1059,6 @@ unsigned int n_shape_q = Hypercube<hyEdge_dimT>::pow(poly_deg_q + 1);
         //     hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
         //     integral;
       }
-
-  // hy_assert(false, right_hand_side);
 
   return right_hand_side;
 }  // end of DiffusionSpaces::assemble_rhs_from_lambda
@@ -1104,7 +1101,7 @@ unsigned int n_shape_q = Hypercube<hyEdge_dimT>::pow(poly_deg_q + 1);
       integral = integrator::template integrate_bdr_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
-                                                                        hyper_edge.geometry, time, poly_deg_q+1);
+                                                                        hyper_edge.geometry, time, poly_deg_u+1);
       right_hand_side[hyEdge_dimT * n_shape_q + i] += tau_ * integral;
     }
   }
@@ -1122,8 +1119,6 @@ unsigned int n_shape_q = Hypercube<hyEdge_dimT>::pow(poly_deg_q + 1);
         right_hand_side[dim * n_shape_q + i] -=
           hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
     }
-
-  // hy_assert(false, right_hand_side);
 
   return right_hand_side;
 }  // end of DiffusionSpaces::assemble_rhs_from_global_rhs
