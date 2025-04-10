@@ -152,7 +152,7 @@ class File
                   hyEdge_index_t,
                   hyNode_index_t,
                   pt_index_t>& other)
-  : domain_info_(other.domain_info),
+  : domain_info_(other.domain_info()),
     n_subintervals_(1),
     tpcc_ref_elem_(
       Wrapper::create_tpcc<hyEdge_dimT, hyEdge_dimT, TPCC::boundaries::both, hyEdge_index_t>(
@@ -180,6 +180,22 @@ class File
    * \brief   Return the refinement level (equal to number of subintervals).
    ************************************************************************************************/
   unsigned int get_refinement() const { return n_subintervals_; }
+  /*!***********************************************************************************************
+   * \brief   Return the whole domain info related to a hypergraph.
+   *
+   * \retval  domain_info     Const reference to domain info.
+   ************************************************************************************************/
+  const DomainInfo<hyEdge_dimT,
+                   space_dimT,
+                   vectorT,
+                   pointT,
+                   hyEdge_index_t,
+                   hyNode_index_t,
+                   pt_index_t>&
+  domain_info() const
+  {
+    return domain_info_;
+  }
   /*!***********************************************************************************************
    * \brief   Set the refinement level (equal to number of subintervals).
    ************************************************************************************************/
