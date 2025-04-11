@@ -105,7 +105,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = DiffusionParametersDefault,
-          typename lSol_float_t = double>
+          typename lSol_float_t = double,
+          typename param_time_t = lSol_float_t>
 class Diffusion
 {
  public:
@@ -262,7 +263,7 @@ class Diffusion
    ************************************************************************************************/
   template <typename hyEdgeT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t>
-  assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const lSol_float_t time) const;
+  assemble_loc_matrix(const lSol_float_t tau, hyEdgeT& hyper_edge, const param_time_t time) const;
   /*!***********************************************************************************************
    * \brief   Assemble local right-hand for the local solver (from skeletal).
    *
@@ -308,7 +309,7 @@ class Diffusion
   template <typename hyEdgeT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs(
     hyEdgeT& hyper_edge,
-    const lSol_float_t time) const;
+    const param_time_t time) const;
   /*!***********************************************************************************************
    * \brief   Assemble local right-hand for the local solver (from volume function coefficients).
    *
@@ -346,7 +347,7 @@ class Diffusion
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
                                                                  const unsigned int solution_type,
                                                                  hyEdgeT& hyper_edge,
-                                                                 const lSol_float_t time) const
+                                                                 const param_time_t time) const
   {
     try
     {
@@ -382,7 +383,7 @@ class Diffusion
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_mass_problem(const SmallMatT& lambda_values,
                                                                 hyEdgeT& hyper_edge,
-                                                                const lSol_float_t time) const
+                                                                const param_time_t time) const
   {
     try
     {
@@ -407,7 +408,7 @@ class Diffusion
     const SmallVecT& coeffs,
     hyEdgeT& hyper_edge,
     const lSol_float_t UNUSED(delta_time),
-    const lSol_float_t time) const
+    const param_time_t time) const
   {
     try
     {
@@ -491,7 +492,7 @@ class Diffusion
   SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+                              const param_time_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -555,7 +556,7 @@ class Diffusion
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+                              const param_time_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -603,7 +604,7 @@ class Diffusion
   template <typename hyEdgeT, typename SmallMatT>
   SmallMatT& make_initial(SmallMatT& lambda_values,
                           hyEdgeT& hyper_edge,
-                          const lSol_float_t time = 0.) const
+                          const param_time_t time = 0.) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -720,7 +721,7 @@ class Diffusion
   SmallMatOutT& trace_to_mass_flux(const SmallMatInT& lambda_values_in,
                                    SmallMatOutT& lambda_values_out,
                                    hyEdgeT& hyper_edge,
-                                   const lSol_float_t time = 0.) const
+                                   const param_time_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -770,7 +771,7 @@ class Diffusion
   SmallMatOutT& total_numerical_flux_mass(const SmallMatInT& lambda_values_in,
                                           SmallMatOutT& lambda_values_out,
                                           hyEdgeT& hyper_edge,
-                                          const lSol_float_t time = 0.) const
+                                          const param_time_t time = 0.) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -815,7 +816,7 @@ class Diffusion
   template <typename hyEdgeT, typename SmallMatT>
   std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
-                                      const lSol_float_t time = 0.) const
+                                      const param_time_t time = 0.) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -853,7 +854,7 @@ class Diffusion
                            const SmallMatT& lambda_values_old,
                            hyEdgeT& hy_edge,
                            const lSol_float_t delta_t,
-                           const lSol_float_t time) const
+                           const param_time_t time) const
   {
     hy_assert(lambda_values_new.size() == lambda_values_old.size() &&
                 lambda_values_new.size() == 2 * hyEdge_dimT,
@@ -903,7 +904,7 @@ class Diffusion
   bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
-              const lSol_float_t time = 0.) const;
+              const param_time_t time = 0.) const;
 };  // end of class Diffusion
 
 // -------------------------------------------------------------------------------------------------
@@ -927,15 +928,16 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_loc_dofs_,
   lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::assemble_loc_matrix(
   const lSol_float_t tau,
   hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+  const param_time_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
@@ -992,11 +994,12 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT, typename SmallMatT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_loc_dofs_,
                 lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_lambda(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::assemble_rhs_from_lambda(
   const SmallMatT& lambda_values,
   hyEdgeT& hyper_edge) const
 {
@@ -1036,13 +1039,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_loc_dofs_,
                 lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_global_rhs(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::assemble_rhs_from_global_rhs(
   hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+  const param_time_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -1079,11 +1083,12 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT, typename SmallVecT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_loc_dofs_,
                 lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_coeffs(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::assemble_rhs_from_coeffs(
   const SmallVecT& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1106,12 +1111,13 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT>
 inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_shape_bdr_,
                 lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::primal_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1137,12 +1143,13 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename hyEdgeT>
 inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
+                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::n_shape_bdr_,
                 lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::dual_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1172,18 +1179,19 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          typename param_time_t>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,
           class input_array_t,
           typename hyEdgeT>
 std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
+           Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::system_dim>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time_t>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+  const param_time_t time) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
     solve_local_problem(lambda_values, 1U, hyper_edge, time);
