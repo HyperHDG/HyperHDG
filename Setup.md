@@ -37,7 +37,8 @@ can also be found under this [link](https://hyperhdg.github.io/auto_pages/doxyge
 
 - `cmake` is used to control the software compilation process in an compiler independent form.
 
-- `python3-dev`, `python3-numpy`, `python3-scipy`, `python3-matplotlib`, `python3-jupyterlab` and `python3-pandas` procure the necessary Python functionalities
+- `python3-dev`, `python3-numpy`, `python3-scipy`, `python3-matplotlib`, `python3-jupyterlab` and
+  `python3-pandas` procure the necessary Python functionalities
 if Python scripts are used to run HyperHDG.
 
 - `cython3` facilitates Python language extensions to run C or C++ code within Python scripts. Thus,
@@ -77,7 +78,8 @@ visualize the output of simulations, we recommend to install `ParaView`.
 
 
 With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used. 
-If the last test fails with a linker error, the linker library paths in build/cmake_cython-file may need to be adapted.
+If the last test fails with a linker error, the linker library paths in build/cmake_cython-file may
+need to be adapted.
 
 
 # Docker based setup
