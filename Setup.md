@@ -25,7 +25,7 @@ Before you start using HyperHDG, you need to install some packages. Having Ubunt
 operating system this can be done using
 
     $ sudo apt-get install doxygen graphviz cmake python3-dev \
-    python3-numpy python3-scipy python3-matplotlib python3-jupyterlab python3-pandas cython3 \
+      python3-numpy python3-scipy python3-matplotlib python3-jupyterlab python3-pandas cython3 \
       libblas-dev liblapack-dev
 
 This command installs
