@@ -245,7 +245,7 @@ class Diffusion
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
     TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT> >,
-    lSol_float_t>
+    lSol_float_t, param_time_t>
     integrator;
 
   // -----------------------------------------------------------------------------------------------
