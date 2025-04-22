@@ -38,14 +38,14 @@
                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(    \
                           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
                           std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
-                          dof_value_t)>::value)                                                   \
+                          param_time_t)>::value)                                                   \
           local_solver_.fun_name(dofs_old, dofs_new, time);                                       \
         else if constexpr (                                                                       \
           has_fun_name<LocalSolverT,                                                              \
                        std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(     \
                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
-                         decltype(hyper_edge)&, dof_value_t)>::value)                             \
+                         decltype(hyper_edge)&, param_time_t)>::value)                             \
           local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                           \
         else                                                                                      \
           hy_assert(false, "Function seems not to be implemented!");                              \
