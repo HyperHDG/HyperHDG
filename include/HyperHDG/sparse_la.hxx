@@ -202,4 +202,54 @@ vectorT conjugate_gradient(const vectorT& b,
   return x;
 }
 
+template <class ProblemT, typename vectorT, typename paramT>
+vectorT conjugate_gradient(const vectorT& b,
+                           ProblemT& problem,
+                           paramT time,
+                           unsigned int n_iterations = 0,
+                           const typename vectorT::value_type tolerance = 1e-9)
+{
+  vectorT x(b.size(), (typename vectorT::value_type)0.);
+  vectorT r = b;  // b - A * x (with x = 0)
+  vectorT d = r;
+
+  typename vectorT::value_type r_square_new = inner_product(r, r);
+  typename vectorT::value_type r_square_old = r_square_new;
+
+  if (r_square_new < tolerance * tolerance)
+  {
+    n_iterations = 0;
+    return x;
+  }
+
+  if (n_iterations == 0)
+    n_iterations = b.size();
+  hy_assert(n_iterations > 0, "Number of allowed iterations of CG solver must be positive.");
+
+  for (unsigned int k = 0; k < n_iterations; ++k)
+  {
+    vectorT z = problem.trace_to_flux(d, time);
+    r_square_old = r_square_new;
+
+    typename vectorT::value_type alpha = r_square_old / inner_product(d, z);
+    linear_combination((typename vectorT::value_type)1., x, alpha, d, x);
+    linear_combination((typename vectorT::value_type)1., r, -alpha, z, r);
+
+    r_square_new = inner_product(r, r);
+
+    typename vectorT::value_type beta = r_square_new / r_square_old;
+    linear_combination((typename vectorT::value_type)1., r, beta, d, d);
+
+    if (r_square_new < tolerance * tolerance)
+    {
+      n_iterations = k + 1;
+      return x;
+    }
+  }
+
+  throw SparseLA::SolveException();
+
+  return x;
+}
+
 }  // end of namespace SparseLA

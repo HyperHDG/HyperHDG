@@ -492,7 +492,7 @@ class Diffusion
   SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const param_time_t time = 0.) const
+                              const param_time_t time = 0) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -556,7 +556,7 @@ class Diffusion
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const param_time_t time = 0.) const
+                              const param_time_t time = 0) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -604,7 +604,7 @@ class Diffusion
   template <typename hyEdgeT, typename SmallMatT>
   SmallMatT& make_initial(SmallMatT& lambda_values,
                           hyEdgeT& hyper_edge,
-                          const param_time_t time = 0.) const
+                          const param_time_t time = 0) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -721,7 +721,7 @@ class Diffusion
   SmallMatOutT& trace_to_mass_flux(const SmallMatInT& lambda_values_in,
                                    SmallMatOutT& lambda_values_out,
                                    hyEdgeT& hyper_edge,
-                                   const param_time_t time = 0.) const
+                                   const param_time_t time = 0) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -771,7 +771,7 @@ class Diffusion
   SmallMatOutT& total_numerical_flux_mass(const SmallMatInT& lambda_values_in,
                                           SmallMatOutT& lambda_values_out,
                                           hyEdgeT& hyper_edge,
-                                          const param_time_t time = 0.) const
+                                          const param_time_t time = 0) const
   {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -816,7 +816,7 @@ class Diffusion
   template <typename hyEdgeT, typename SmallMatT>
   std::array<lSol_float_t, 1U> errors(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
-                                      const param_time_t time = 0.) const
+                                      const param_time_t time = 0) const
   {
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
@@ -904,7 +904,7 @@ class Diffusion
   bulk_values(const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
               const input_array_t& lambda_values,
               hyEdgeT& hyper_edge,
-              const param_time_t time = 0.) const;
+              const param_time_t time = 0) const;
 };  // end of class Diffusion
 
 // -------------------------------------------------------------------------------------------------
@@ -1199,7 +1199,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, param_time
   SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dimension()>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)
