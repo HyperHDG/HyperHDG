@@ -10,6 +10,9 @@ class config:
   topology            = ""
   geometry            = ""
   node_descriptor     = ""
+  large_vector        = "std::vector<double>"
+  dof_index           = "unsigned int"
+  param_t             = "double"
   cython_replacements = []
   cpp_code            = ""
   include_files       = []
@@ -29,6 +32,12 @@ def consistent(conf):
   if not (isinstance(conf.node_descriptor, str) and conf.node_descriptor != ""):
     return False
   if not isinstance(conf.cpp_code, str):
+    return False
+  if not isinstance(conf.large_vector, str):
+    return False
+  if not isinstance(conf.dof_index, str):
+    return False
+  if not isinstance(conf.param_t, str):
     return False
   if not isinstance(conf.debug_mode, bool):
     return False

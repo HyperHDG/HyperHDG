@@ -219,7 +219,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec)
   {
-    param_time_t time = 0;
+    param_time_t time;
     auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
@@ -251,11 +251,11 @@ class Elliptic
    * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const param_time_t time = 0)
+  sparse_mat<LargeVecT> trace_to_flux_mat(const param_time_t time)
   {
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
-
+ 
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product containing data.
    *
@@ -289,26 +289,6 @@ class Elliptic
     return vec_Ax;
   }
   
-  template <typename hyNode_index_t = dof_index_t>
-  LargeVecT residual_flux(const LargeVecT& x_vec)
-  {
-    param_time_t time = 0;
-    auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
-
-    // Set all Dirichlet values to zero.
-    for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
-    {
-      hy_assert(dirichlet_indices_[i] >= 0 && dirichlet_indices_[i] < hyper_graph_.n_global_dofs(),
-                "All indices of Dirichlet nodes need to be larger than or equal to zero and "
-                  << "smaller than the total amount of degrees of freedom." << std::endl
-                  << "In this case, the index is " << dirichlet_indices_[i] << " and the total "
-                  << "amount of hypernodes is " << hyper_graph_.n_global_dofs() << ".");
-      vec_Ax[dirichlet_indices_[i]] = 0.;
-    }
-
-    return vec_Ax;
-  }
-  
   /*!***********************************************************************************************
    * \brief   Calculate L2 error of approximated function.
    *
@@ -318,11 +298,13 @@ class Elliptic
    * \retval  error           A vector containing the errors.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const param_time_t time = 0)
+  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const param_time_t time)
   {
     auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
+  
+  
   /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.
    *
@@ -358,7 +340,7 @@ class Elliptic
    * \param   time          Time at which analytical functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  void plot_solution(const LargeVecT& lambda, const param_time_t time = 0)
+  void plot_solution(const LargeVecT& lambda, const param_time_t time)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
