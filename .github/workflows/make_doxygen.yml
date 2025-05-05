@@ -5,7 +5,7 @@ name: Doxygen
 on: push
 
 env:
-  CXX: g++-10
+  CXX: g++-14
 
 jobs:
   make_and_deploy_doxygen:
