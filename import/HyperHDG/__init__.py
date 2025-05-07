@@ -22,3 +22,11 @@ except (ImportError, ModuleNotFoundError) as error:
   import fiber_network
 finally:
   pass
+
+try:
+  import qmc_methods
+except (ImportError, ModuleNotFoundError) as error:
+  sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../submodules/qmc_methods.git")
+  import qmc_methods
+finally:
+  pass

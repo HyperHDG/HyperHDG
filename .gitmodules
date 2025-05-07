@@ -14,3 +14,6 @@
 	path = submodules/fiber_network.git
 	url = https://github.com/HyperHDG/fiber_network.git
 	branch = main
+[submodule "submodules/qmc_methods.git"]
+	path = submodules/qmc_methods.git
+	url = https://github.com/HyperHDG/qmc_methods.git

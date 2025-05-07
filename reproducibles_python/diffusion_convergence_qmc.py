@@ -14,13 +14,8 @@ except(ImportError, ModuleNotFoundError) as error:
 pol_g = 1
 
 n_shifts = 16
-gen_vec = np.loadtxt("reproducibles_python/parameters/lattice-32001-1024-1048576.3600", usecols=1, max_rows=100)
+gen_vec = HyperHDG.qmc_methods.generating_vector("lattice-32001-1024-1048576.3600", 100)
 
-def get_qp(gen, shift, k, n_qmc_points):
-	asg = k * gen / n_qmc_points
-	asg = asg - np.floor(asg) + shift
-	asg = asg - np.floor(asg) - 0.5
-	return asg
 
 zfgen = np.random.default_rng(27)
 
@@ -48,7 +43,7 @@ with open("output/kvgr.txt", "w") as f:
 def solve(k, gen_vec, shift, n_qmc_points, HDG_wrapper):
 	print("Punkt " + str(k+1) + " von " + str(n_qmc_points))
 	system_size = HDG_wrapper.size_of_system()
-	arr = get_qp(gen_vec, shift, k+1, n_qmc_points)
+	arr = HyperHDG.qmc_methods.get_quadrature_point(gen_vec, shift, k+1, n_qmc_points) - 0.5
 	vectorRHS = np.multiply( HDG_wrapper.residual_flux(np.zeros(system_size), arr), -1. )
 	col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(arr)
 	A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
