@@ -26,12 +26,21 @@ cdef class PythonClassName :
     self.thisptr.read_dirichlet_indices (indices)
   def zero_vector(self):
     return self.thisptr.zero_vector ()
-  def trace_to_flux(self, vec, time):
-    return self.thisptr.trace_to_flux (vec, time)
-  def residual_flux(self, vec, time):
-    return self.thisptr.residual_flux (vec, time)
-  def errors(self, vec, time):
-    return self.thisptr.errors (vec, time)
+  def trace_to_flux(self, vec, time = None):
+    if time is None:
+      return self.thisptr.trace_to_flux (vec)
+    else:
+      return self.thisptr.trace_to_flux (vec, time)
+  def residual_flux(self, vec, time = None):
+    if time is None:
+      return self.thisptr.residual_flux (vec)
+    else:
+      return self.thisptr.residual_flux (vec, time)
+  def errors(self, vec, time = None):
+    if time is None:
+      return self.thisptr.errors (vec)
+    else:
+      return self.thisptr.errors (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):
@@ -43,14 +52,20 @@ cdef class PythonClassName :
     if isinstance(return_val,bytes):
       return_val = return_val.decode()
     return return_val
-  def plot_solution(self, vec, time):
-    self.thisptr.plot_solution (vec, time)
+  def plot_solution(self, vec, time = None):
+    if time is None:
+      self.thisptr.plot_solution (vec)
+    else:
+      self.thisptr.plot_solution (vec, time)
   def refine(self, n_ref = None):
     if n_ref is None:
       return self.thisptr.get_refinement()
     else:
       self.thisptr.set_refinement(n_ref)
       return n_ref
-  def sparse_stiff_mat(self, time):
-    helper = self.thisptr.trace_to_flux_mat(time)
+  def sparse_stiff_mat(self, time = None):
+    if time is None:
+      helper = self.thisptr.trace_to_flux_mat()
+    else:
+      helper = self.thisptr.trace_to_flux_mat(time)
     return helper.get_cols(), helper.get_rows(), helper.get_values()
