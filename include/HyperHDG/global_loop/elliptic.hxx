@@ -49,6 +49,10 @@ class Elliptic
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
   /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(mean, has_mean);
+  /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
@@ -283,7 +287,20 @@ class Elliptic
     auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
-  
+
+  /*!***********************************************************************************************
+   * \brief   Calculate mean of approximated function.
+   *
+   * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
+   * \param   x_vec           A vector containing the input vector \f$x\f$.
+   * \retval  mean            A vector containing the errors.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  dof_value_t mean(const LargeVecT& x_vec, const param_time_t time = param_time_t())
+  {
+    auto result = prototype_mean(mean, has_mean);
+    return result;
+  } 
   
   /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.

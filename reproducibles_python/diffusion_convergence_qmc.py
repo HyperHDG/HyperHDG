@@ -17,7 +17,7 @@ n_shifts = 16
 gen_vec = HyperHDG.qmc_methods.generating_vector("lattice-32001-1024-1048576.3600", 100)
 
 
-zfgen = np.random.default_rng(27)
+zfgen = np.random.default_rng(13)
 
 const = HyperHDG.config()
 const.global_loop = "Elliptic"
@@ -46,19 +46,21 @@ def solve(k, gen_vec, shift, n_qmc_points, HDG_wrapper):
 	col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(arr)
 	A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 	[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-11)
-	return HDG_wrapper.errors(vectorSolution)[0]
+	return HDG_wrapper.mean(vectorSolution, arr)
 
-for i in range(2, 4):
+for i in range(2, 5):
 	n_qmc_points = 2**i
 	print("Quadrature points: " + str(n_qmc_points))
 	mean_sa = 0
+	expec = np.zeros(n_shifts)
 	for m in range(n_shifts):
-		mean = 0
 		print("Shift " + str(m+1) + " of " + str(n_shifts))
 		shift = zfgen.random(100)
-		errs = Parallel(n_jobs=-2, prefer="threads")( delayed(solve) (k, gen_vec, shift, n_qmc_points, HDG_wrapper) for k in range(n_qmc_points))
-		mean = np.mean(np.array(errs))
-		mean_sa += mean / n_shifts
+		means = Parallel(n_jobs=-2, prefer="threads")( delayed(solve) (k, gen_vec, shift, n_qmc_points, HDG_wrapper) for k in range(n_qmc_points))
+		expec[m] = np.mean(np.array(means))
+	mean_sa = np.mean(expec)
+	print(mean_sa)
+	print(expec - mean_sa)
 	with open("output/kvgr.txt", "a") as f:
-		f.write(str(n_qmc_points) + "\t" + str(np.linalg.norm(mean_sa - mean)) + "\n")
+		f.write(str(n_qmc_points) + "\t" + str(np.linalg.norm(mean_sa - expec) / np.sqrt(n_shifts - 1) / np.sqrt(n_shifts)) + "\n")
 

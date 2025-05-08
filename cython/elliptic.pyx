@@ -41,6 +41,11 @@ cdef class PythonClassName :
       return self.thisptr.errors (vec)
     else:
       return self.thisptr.errors (vec, time)
+  def mean(self, vec, time = None):
+    if time is None:
+      return self.thisptr.mean (vec)
+    else:
+      return self.thisptr.mean (vec, time)
   def size_of_system(self):
     return self.thisptr.size_of_system ()
   def plot_option(self, option, value):

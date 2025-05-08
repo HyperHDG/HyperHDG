@@ -884,6 +884,34 @@ class Diffusion
       coeffs, hy_edge.geometry, time);
   }
   /*!***********************************************************************************************
+   * \brief   Calculate local contribution to the mean of the function.
+   *
+   * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
+   * \tparam  SmallMatT     Data type of \c lambda_values.
+   * \param   lambda_values The values of the skeletal variable's coefficients.
+   * \param   hy_edge       The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vec_b         Local contribution to the mean.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatT>
+  lSol_float_t mean(const SmallMatT& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const param_time_t time = param_time_t()) const
+  {
+    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
+                "Matrix must have appropriate size!");
+
+    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
+      solve_local_problem(lambda_values, 1U, hy_edge, time);
+    std::array<lSol_float_t, n_shape_fct_> coeffs;
+    for (unsigned int i = 0; i < coeffs.size(); ++i)
+      coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
+
+    return integrator::template integrate_vol_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry), Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry);
+  }
+  /*!***********************************************************************************************
    * \brief   Evaluate local reconstruction at tensorial products of abscissas.
    *
    * \tparam  absc_float_t      Floating type for the abscissa values.
