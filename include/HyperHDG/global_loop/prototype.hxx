@@ -181,13 +181,13 @@ struct sparse_mat
         if constexpr (has_fun_name<LocalSolverT,                                                   \
                                    error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,    \
                                                       2 * hyEdge_dim>&,                            \
-                                           dof_value_t)>::value)                                   \
+                                           param_time_t)>::value)                                   \
           result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time)); \
         else if constexpr (has_fun_name<LocalSolverT,                                              \
                                         error_t(                                                   \
                                           std::array<std::array<dof_value_t, n_dofs_per_node>,     \
                                                      2 * hyEdge_dim>&,                             \
-                                          decltype(hyper_edge)&, dof_value_t)>::value)             \
+                                          decltype(hyper_edge)&, param_time_t)>::value)             \
           result = LocalSolverT::error_def::sum_error(                                             \
             result, local_solver_.fun_name(dofs, hyper_edge, time));                               \
         else                                                                                       \
