@@ -30,15 +30,16 @@ const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", "do
 const.include_files   = ["reproducibles_python/parameters/diffusion_qmc.hxx"]
 const.debug_mode      = False
 
-PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP([100, 100])
-
-system_size = HDG_wrapper.size_of_system()
 
 with open("output/kvgr.txt", "w") as f:
 	f.write("n_qmc_points\terr_u\terr_q\n")
 
-def solve(k, gen_vec, shift, n_qmc_points, HDG_wrapper):
+def solve(k, gen_vec, shift, n_qmc_points):
+	PyDP = HyperHDG.include(const)
+	HDG_wrapper = PyDP([100, 100])
+
+	system_size = HDG_wrapper.size_of_system()
+	
 	print("Quadrature point " + str(k+1) + " of " + str(n_qmc_points))
 	system_size = HDG_wrapper.size_of_system()
 	arr = HyperHDG.qmc_methods.get_quadrature_point(gen_vec, shift, k+1, n_qmc_points) - 0.5
@@ -56,7 +57,7 @@ for i in range(2, 13):
 	for m in range(n_shifts):
 		print("Shift " + str(m+1) + " of " + str(n_shifts))
 		shift = zfgen.random(100)
-		means = np.array(Parallel(n_jobs=-2, prefer="threads")( delayed(solve) (k, gen_vec, shift, n_qmc_points, HDG_wrapper) for k in range(n_qmc_points)))
+		means = np.array(Parallel(n_jobs=-2)( delayed(solve) (k, gen_vec, shift, n_qmc_points) for k in range(n_qmc_points)))
 		print(means)
 		expec[m, 0] = np.mean(means[:, -1])
 		expec[m, 1] = np.mean(np.linalg.norm(means[:, :-1]))
