@@ -60,7 +60,7 @@ for i in range(2, 13):
 		means = np.array(Parallel(n_jobs=-2)( delayed(solve) (k, gen_vec, shift, n_qmc_points) for k in range(n_qmc_points)))
 		print(means)
 		expec[m, 0] = np.mean(means[:, -1])
-		expec[m, 1] = np.mean(np.linalg.norm(means[:, :-1]))
+		expec[m, 1] = np.mean(np.linalg.norm(means[:, :-1], axis=1))
 	print(expec)
 	mean_sa = np.mean(expec, axis=0)
 	print(mean_sa)
