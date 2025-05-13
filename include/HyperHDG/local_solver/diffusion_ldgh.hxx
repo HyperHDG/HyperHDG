@@ -893,7 +893,7 @@ class Diffusion
    * \retval  vec_b         Local contribution to the mean.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  lSol_float_t mean(const SmallMatT& lambda_values,
+  std::array<lSol_float_t, hyEdge_dimT + 1> mean(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const param_time_t time = param_time_t()) const
   {
@@ -905,11 +905,15 @@ class Diffusion
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
       solve_local_problem(lambda_values, 1U, hy_edge, time);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
-    for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-
-    return integrator::template integrate_vol_discana<
+    
+    std::array<lSol_float_t, hyEdge_dimT + 1> rt;
+    for(unsigned int j = 0; j <= hyEdge_dimT; j++) {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = coefficients[i + j * n_shape_fct_];
+      rt[j] = integrator::template integrate_vol_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry), Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry);
+    }
+    return rt;
   }
   /*!***********************************************************************************************
    * \brief   Evaluate local reconstruction at tensorial products of abscissas.

@@ -296,10 +296,10 @@ class Elliptic
    * \retval  mean            A vector containing the errors.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  dof_value_t mean(const LargeVecT& x_vec, const param_time_t time = param_time_t())
+  std::vector<dof_value_t> mean(const LargeVecT& x_vec, const param_time_t time = param_time_t())
   {
     auto result = prototype_mean(mean, has_mean);
-    return result;
+    return std::vector<dof_value_t>(result.begin(), result.end());
   } 
   
   /*!***********************************************************************************************
