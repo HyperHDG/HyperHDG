@@ -215,7 +215,7 @@ struct sparse_mat
 #define prototype_mean(fun_name, has_fun_name)                                                   \
   [&]()                                                                                            \
   {                                                                                                \
-    dof_value_t result = 0.;                                                                       \
+    std::vector<dof_value_t> result(2 * hyEdge_dim + 1);                                               \
                                                                                                    \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                              \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs;                     \
@@ -229,17 +229,24 @@ struct sparse_mat
           hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);          \
                                                                                                    \
         if constexpr (has_fun_name<LocalSolverT,                                                   \
-                                   dof_value_t(                                                    \
+                                   std::array<dof_value_t, 2 * hyEdge_dim + 1>(                    \
                                         std::array<std::array<dof_value_t, n_dofs_per_node>,       \
                                                       2 * hyEdge_dim>&,                            \
-                                                      param_time_t)>::value)                       \
-          result += local_solver_.fun_name(dofs, time); \
+                                                      param_time_t)>::value) {                     \
+          std::array<dof_value_t, 2 * hyEdge_dim + 1> loc_contr = local_solver_.fun_name(dofs, time);  \
+          for(unsigned int i = 0; i < 2 * hyEdge_dim + 1; i++)                                            \
+            result[i] += loc_contr[i];                                                             \
+          }                                                                                        \
         else if constexpr (has_fun_name<LocalSolverT,                                              \
-                                        dof_value_t(                                               \
+                                        std::array<dof_value_t, 2 * hyEdge_dim + 1>(               \
                                           std::array<std::array<dof_value_t, n_dofs_per_node>,     \
                                                      2 * hyEdge_dim>&,                             \
-                                          decltype(hyper_edge)&, param_time_t)>::value)            \
-          result += local_solver_.fun_name(dofs, hyper_edge, time);                                \
+                                          decltype(hyper_edge)&, param_time_t)>::value) {          \
+          std::array<dof_value_t, 2 * hyEdge_dim + 1> loc_contr                                        \
+            = local_solver_.fun_name(dofs, hyper_edge, time);                                      \
+          for(unsigned int i = 0; i < 2 * hyEdge_dim + 1; i++)                                            \
+            result[i] += loc_contr[i];                                                             \
+          }                                                                                        \
         else                                                                                       \
           hy_assert(false, "Function seems not to be ímplemented");                                \
       });                                                                                          \
