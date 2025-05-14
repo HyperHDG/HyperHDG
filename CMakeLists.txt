@@ -93,9 +93,16 @@ install(
 )
 
 ## Prepare nice output for linked libraries.
-foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
-  string(APPEND LINKED_STRING ${linked_lib} " ")
-endforeach()
+if (APPLE)
+  set(LINKED_STRING "-llapack -lblas ")
+  foreach (linked_lib ${Python3_LIBRARIES})
+    string(APPEND LINKED_STRING ${linked_lib} " ")
+  endforeach()
+else()
+  foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
+    string(APPEND LINKED_STRING ${linked_lib} " ")
+  endforeach()
+endif()
 
 ## Write a configuration file for Cython
 configure_file(
