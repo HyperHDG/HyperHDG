@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install cmake
-      run: sudo apt-get update; sudo apt-get install -y cmake doxygen graphviz
+      run: sudo apt-get update; sudo apt-get install -y cmake libblas-dev liblapack-dev
     - name: Checkout current branch
       uses: actions/checkout@v2
       with:
