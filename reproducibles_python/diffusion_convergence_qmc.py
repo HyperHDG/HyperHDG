@@ -83,7 +83,7 @@ with open("output/kvgr_affine.txt", "w") as f:
 
 for i in range(2, 5):
 	n_qmc_points = 2**i
-	get_err(gen_vec, n_qmc_points, phi_affine)
+	err = get_err(gen_vec, n_qmc_points, phi_affine)
 	with open("output/kvgr_affine.txt", "a") as f:
 		f.write(str(n_qmc_points) + "\t" + str(err[0]) + "\t" + str(err[1]) + "\t" + str(err[2]) + "\t" + str(err[3]) + "\n")
 
@@ -97,6 +97,6 @@ with open("output/kvgr_lognormal.txt", "w") as f:
 
 for i in range(2, 5):
 	n_qmc_points = 2**i
-	get_err(gen_vec, n_qmc_points, phi_lognormal)
+	err = get_err(gen_vec, n_qmc_points, phi_lognormal)
 	with open("output/kvgr_lognormal.txt", "a") as f:
 		f.write(str(n_qmc_points) + "\t" + str(err[0]) + "\t" + str(err[1]) + "\t" + str(err[2]) + "\t" + str(err[3]) + "\n")
