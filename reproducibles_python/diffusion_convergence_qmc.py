@@ -37,7 +37,6 @@ const.debug_mode      = False
 
 
 def solve(k, gen_vec, shift, n_qmc_points, morph):
-	PyDP = HyperHDG.include(const)
 	HDG_wrapper = PyDP([100, 100])
 
 	system_size = HDG_wrapper.size_of_system()
@@ -49,7 +48,7 @@ def solve(k, gen_vec, shift, n_qmc_points, morph):
 	col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(arr)
 	A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 	[vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, rtol=1e-11)
-	return [vectorSolution, HDG_wrapper.mean(vectorSolution, arr)]
+	return [HDG_wrapper.mean(vectorSolution, arr)]
 
 def get_err(gen_vec, n_qmc_points, morph):
 	mean_sa = 0
@@ -58,17 +57,14 @@ def get_err(gen_vec, n_qmc_points, morph):
 		print("Shift " + str(m+1) + " of " + str(n_shifts))
 		shift = zfgen.random(100)
 		asg = Parallel(n_jobs=32)( delayed(solve) (k, gen_vec, shift, n_qmc_points, phi_affine) for k in range(n_qmc_points))
-		means = np.array([run[1] for run in asg])
-		print(means)
-		expec[m, 0] = np.mean(means[:, -1])
-		expec[m, 1] = np.mean(np.linalg.norm(means[:, :2], axis=1))
-		expec[m, 2] = np.mean(np.linalg.norm(means[:, 2:-1], axis=1))
-		scelet_v = np.array([run[0] for run in asg])
-		expec[m, 3] = np.mean(np.linalg.norm(scelet_v, axis=1))
-	print(expec)
+		means = np.array([run[0] for run in asg])
+		expec[m, 0] = np.mean(np.sqrt(means[:, 0]))
+		expec[m, 1] = np.mean(np.sqrt(means[:, 1]))
+		expec[m, 2] = np.mean(np.sqrt(means[:, 2]))
+		#scelet_v = np.array([run[1] for run in asg])
+		#expec[m, 3] = np.mean(np.linalg.norm(scelet_v, axis=1))
+		print(expec[m])
 	mean_sa = np.mean(expec, axis=0)
-	print(mean_sa)
-	print(expec - mean_sa)
 	err = np.linalg.norm(mean_sa - expec, axis=0) / np.sqrt(n_shifts - 1) / np.sqrt(n_shifts)
 	print(err)
 	return err
@@ -77,11 +73,12 @@ def get_err(gen_vec, n_qmc_points, morph):
 #affine case
 
 const.local_solver = "Diffusion<2, " + str(pol_g) + "," + str(2*pol_g) + ", TestParametersDiffusionAffine, double, std::vector<double> >"
+PyDP = HyperHDG.include(const)
 
 with open("output/kvgr_affine.txt", "w") as f:
 	f.write("n_qmc_points\terr_u\terr_q\terr_g\terr_s\n")
 
-for i in range(2, 5):
+for i in range(2, 12):
 	n_qmc_points = 2**i
 	err = get_err(gen_vec, n_qmc_points, phi_affine)
 	with open("output/kvgr_affine.txt", "a") as f:
@@ -91,12 +88,43 @@ for i in range(2, 5):
 #lognormal case
 
 const.local_solver = "Diffusion<2, " + str(pol_g) + "," + str(2*pol_g) + ", TestParametersDiffusionLognormal, double, std::vector<double> >"
+PyDP = HyperHDG.include(const)
 
 with open("output/kvgr_lognormal.txt", "w") as f:
 	f.write("n_qmc_points\terr_u\terr_q\terr_g\terr_s\n")
 
-for i in range(2, 5):
+for i in range(2, 12):
 	n_qmc_points = 2**i
 	err = get_err(gen_vec, n_qmc_points, phi_lognormal)
 	with open("output/kvgr_lognormal.txt", "a") as f:
+		f.write(str(n_qmc_points) + "\t" + str(err[0]) + "\t" + str(err[1]) + "\t" + str(err[2]) + "\t" + str(err[3]) + "\n")
+
+
+#Gevrey affine case
+
+const.local_solver = "Diffusion<2, " + str(pol_g) + "," + str(2*pol_g) + ", TestParametersDiffusionGevreyAffine, double, std::vector<double> >"
+PyDP = HyperHDG.include(const)
+
+with open("output/kvgr_gevrey_affine.txt", "w") as f:
+	f.write("n_qmc_points\terr_u\terr_q\terr_g\terr_s\n")
+
+for i in range(2, 12):
+	n_qmc_points = 2**i
+	err = get_err(gen_vec, n_qmc_points, phi_affine)
+	with open("output/kvgr_gevrey_affine.txt", "a") as f:
+		f.write(str(n_qmc_points) + "\t" + str(err[0]) + "\t" + str(err[1]) + "\t" + str(err[2]) + "\t" + str(err[3]) + "\n")
+
+
+#Gevrey lognormal case
+
+const.local_solver = "Diffusion<2, " + str(pol_g) + "," + str(2*pol_g) + ", TestParametersDiffusionGevreyLognormal, double, std::vector<double> >"
+PyDP = HyperHDG.include(const)
+
+with open("output/kvgr_gevrey_lognormal.txt", "w") as f:
+	f.write("n_qmc_points\terr_u\terr_q\terr_g\terr_s\n")
+
+for i in range(2, 12):
+	n_qmc_points = 2**i
+	err = get_err(gen_vec, n_qmc_points, phi_lognormal)
+	with open("output/kvgr_gevrey_lognormal.txt", "a") as f:
 		f.write(str(n_qmc_points) + "\t" + str(err[0]) + "\t" + str(err[1]) + "\t" + str(err[2]) + "\t" + str(err[3]) + "\n")
