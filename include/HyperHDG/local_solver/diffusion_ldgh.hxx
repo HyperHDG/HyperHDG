@@ -893,7 +893,7 @@ class Diffusion
    * \retval  vec_b         Local contribution to the mean.
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  std::array<lSol_float_t, 2 * hyEdge_dimT + 1> mean(const SmallMatT& lambda_values,
+  std::array<lSol_float_t, 3> mean(const SmallMatT& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const param_time_t time = param_time_t()) const
   {
@@ -906,29 +906,38 @@ class Diffusion
       solve_local_problem(lambda_values, 1U, hy_edge, time);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     
-    std::array<lSol_float_t, 2 * hyEdge_dimT + 1> rt;
+    std::array<lSol_float_t, 3> rt;
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    auto lambda = [](const Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>& p,
+                const param_time_t time) {return -parameters::inverse_diffusion_coeff(p, time) 
+                * parameters::mean_indicator(p, time);};
     
+    rt[1] = 0;
+    rt[2] = 0;
     for(unsigned int j = 0; j < hyEdge_dimT; j++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = coefficients[i + j * n_shape_fct_];
-      rt[j] = integrator::template integrate_vol_discana<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, 
-              decltype(hyEdgeT::geometry), 
-              Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry);
-      rt[j + hyEdge_dimT] = -integrator::template integrate_vol_discana_func<
+      rt[1] += integrator::template integrate_vol_square_discana_func<
               Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, 
               decltype(hyEdgeT::geometry),
-              parameters::diffusion_coeff,
+              parameters::mean_indicator,
+              Point<hyEdge_dimT, lSol_float_t> 
+              >(coeffs, hy_edge.geometry, time);
+      rt[2] += integrator::template integrate_vol_square_discana_func<
+              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, 
+              decltype(hyEdgeT::geometry),
+              lambda,
               Point<hyEdge_dimT, lSol_float_t> 
               >(coeffs, hy_edge.geometry, time);
     }
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    rt[2 * hyEdge_dimT] = integrator::template integrate_vol_discana<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, 
-        decltype(hyEdgeT::geometry), 
-        Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry);
+    rt[0] = integrator::template integrate_vol_square_discana_func<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, 
+            decltype(hyEdgeT::geometry),
+            parameters::mean_indicator,
+            Point<hyEdge_dimT, lSol_float_t> 
+            >(coeffs, hy_edge.geometry, time);
     return rt;
   }
   /*!***********************************************************************************************
