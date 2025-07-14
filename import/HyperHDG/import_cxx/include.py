@@ -46,7 +46,7 @@ def include(conf):
       with open(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
         + file_end, "r") as file:
         content = file.read()
-      content = re.sub("C\+\+ClassName", "\"" + cpp_class + "\"", content)
+      content = re.sub(r"C\+\+ClassName", "\"" + cpp_class + "\"", content)
       content = re.sub("CythonClassName", cython_class, content)
       content = re.sub("PythonClassName", python_class, content)
       content = re.sub("IncludeFiles", include_string, content)
