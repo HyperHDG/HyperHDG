@@ -1,0 +1,2 @@
+*.geo filter=lfs diff=lfs merge=lfs -text
+*_points.txt filter=lfs diff=lfs merge=lfs -text
