@@ -114,8 +114,8 @@ class JPrecond:
       coarse_basis = sp.kron(coarse_basis, np.eye(repeat))
       coarse_basis_int = sp.kron(coarse_basis_int, np.eye(repeat))
 
-    self.coarse_basis     = sp.csr_matrix(coarse_basis)
-    self.coarse_basis_int = sp.csr_matrix(coarse_basis_int)
+    self.coarse_basis     = sp.csc_matrix(coarse_basis)
+    self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
 
   def matmul(self, rhs_vec, epsilon=1e-14):
     precond_lhs = self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int
@@ -123,10 +123,11 @@ class JPrecond:
     result_vec = self.coarse_basis_int @ sp.linalg.spsolve(precond_lhs, precond_rhs)
 
     for k in range(self.coarse_basis.shape[1]):
-      nj = np.nonzero(self.coarse_basis.getcol(k) > epsilon)[0]  # FIXME: for most k -> k+1, the indicies are just +1
-      Ij = np.zeros((self.coarse_basis.shape[0], len(nj)))
-      Ij[nj, np.arange(len(nj))] = 1
-      result_vec += Ij @ sp.linalg.spsolve(self.lhs_mat[nj, :][:, nj], Ij.T @ rhs_vec)
+      col_k = self.coarse_basis.getcol(k)
+      nj = col_k.indices[col_k.data > epsilon]
+      if nj.size == 0:
+        continue
+      result_vec[nj] += sp.linalg.spsolve(self.lhs_mat[nj, :][:, nj], rhs_vec[nj])
     return result_vec
 
 
