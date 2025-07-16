@@ -99,8 +99,8 @@ def make_geo(input_folder, output_path=".", show=False):
     output_path += f"/fiber_network_{len(edges)}"
   else:
     # test if we can write to the output path
-    with open(output_path, "w") as f:
-      f.writeln("test")
+    with open(output_path + ".geo", "w") as f:
+      f.write("test")
 
   edges_prop = []
 
