@@ -46,3 +46,7 @@ prog
 
 # Ignore files that have been created from other input
 *.pts.geo
+
+# ignore profiles
+*.prof
+*.lprof
