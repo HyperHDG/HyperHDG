@@ -75,7 +75,6 @@ def make_geo(input_folder, output_path=".", show=False):
     # con[0..3] = (f1,f2,a1,a2)
     point_a = (1.-con[2]) * nodes[fibers[int(con[0]),0]] + con[2] * nodes[fibers[int(con[0]),1]]
     point_b = (1.-con[3]) * nodes[fibers[int(con[1]),0]] + con[3] * nodes[fibers[int(con[1]),1]]
-    point_a, point_b = np.array(point_a), np.array(point_b)
 
     if len(vertices) == 0:  vertices = np.vstack((point_a, point_b))
 
