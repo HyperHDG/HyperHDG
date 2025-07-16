@@ -14,8 +14,8 @@ class Logger(logging.Logger):
     self.log_dir = log_dir
 
     self.time_stamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    self.git_hash =  subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-    self.git_mod  = subprocess.run(["git", "status", "--porcelain", __file__], check=True, capture_output=True, text=True).stdout.strip()
+    self.git_hash =  subprocess.run(["git", "-C", os.path.dirname(__file__), "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    self.git_mod  = subprocess.run(["git", "-C", os.path.dirname(__file__), "status", "--porcelain", __file__], check=True, capture_output=True, text=True).stdout.strip()
     if self.git_mod:
       self.git_hash += "-dirty"
 
