@@ -111,10 +111,14 @@ def make_geo(input_folder, output_path=".", show=False):
 
     point_a = nodes[fibers[index,0]]
     point_b = nodes[fibers[index,1]]
-    # TODO: this is exceptionally slow,
-    # NOTE: we could use spatial hashing here, as we essentially only want to keep unique vertices
-    if not any((point_a == x).all() for x in vertices):  vertices = np.vstack((vertices, point_a))
-    if not any((point_b == x).all() for x in vertices):  vertices = np.vstack((vertices, point_b))
+    distances_a = np.linalg.norm(point_a - vertices, axis=1)
+    if np.min(distances_a) > 1e-15:
+      vertices = np.vstack((vertices, point_a))
+
+    distances_b = np.linalg.norm(point_b - vertices, axis=1)
+    if np.min(distances_b) > 1e-15:
+      vertices = np.vstack((vertices, point_b))
+
 
     helper = list(set(helper))
     helper.sort()
