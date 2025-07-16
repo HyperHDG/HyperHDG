@@ -91,8 +91,10 @@ def make_geo(input_folder, output_path=".", show=False):
     if index_a != index_b:
       edges.append(np.array([index_a, index_b]))
 
-    act_fibers.append(np.array([con[0], con[2]]))
-    act_fibers.append(np.array([con[1], con[3]]))
+    act_fibers.append([con[0], con[2]])
+    act_fibers.append([con[1], con[3]])
+
+  act_fibers = np.array(act_fibers)
 
   logger.info("creating network")
 
@@ -106,8 +108,9 @@ def make_geo(input_folder, output_path=".", show=False):
   edges_prop = []
 
   for index in range(n_fibers):
-    helper = [ x[1] for x in act_fibers if int(x[0]) == index ]
-    if helper == [] or helper is None:  continue
+    helper = act_fibers[act_fibers[:,0] == index, 1]
+    if helper.size == 0:
+      continue
 
     point_a = nodes[fibers[index,0]]
     point_b = nodes[fibers[index,1]]
