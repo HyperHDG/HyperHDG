@@ -150,6 +150,9 @@ class JPrecond:
 
 time_stamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 git_hash =  subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+git_mod  = subprocess.run(["git", "status", "--porcelain", __file__], check=True, capture_output=True, text=True).stdout.strip()
+if git_mod:
+  git_hash += "-dirty"
 
 logger = logging.getLogger("fiber_network_elastic")
 logger.setLevel(logging.INFO)
