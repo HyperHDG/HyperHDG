@@ -3,6 +3,11 @@
 import logging, os, subprocess, datetime, sys
 
 class Logger(logging.Logger):
+  """prin2.Logger
+  use via:
+     logging.setLoggerClass(prin2.Logger)
+  """
+
   def __init__(self, name=os.path.basename(__file__), level=logging.INFO, log_dir="logs", file_mode="w"):
     super().__init__(name, level)
 
