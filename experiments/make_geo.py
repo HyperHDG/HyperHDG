@@ -1,59 +1,75 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas
-
 from datetime import datetime
+import pandas, logging, argparse, os, sys
 
-def make_geo(foldername):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
+import prin2
 
-  # nodes.csv contains the information about the nodes {n_i}
-  # id: The node id <--- removed from the list
-  # x,y,z: position in x
-  nodes   = pandas.read_csv(foldername + '/nodes.csv')
+def show_network(n_connections, vertices, edges):
+  ax = plt.figure().add_subplot(111, projection='3d')
+
+  for edge in edges[:n_connections]:
+    ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
+             [vertices[edge[0]][1], vertices[edge[1]][1]], \
+             [vertices[edge[0]][2], vertices[edge[1]][2]], \
+            'rx-' )
+  for edge in edges[n_connections:]:
+    ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
+             [vertices[edge[0]][1], vertices[edge[1]][1]], \
+             [vertices[edge[0]][2], vertices[edge[1]][2]], \
+             'bx-' )
+  plt.show()
+
+
+
+def make_geo(input_folder, output_path=".", show=False):
+  logger = logging.getLogger("make_geo")
+
+  logger.info("reading files")
+
+  # nodes.csv is the R3 embedding of the ends of the fibers
+  #   Id,x,y,z
+  # a mapping of the node 'Id' to the position 'x,y,z'
+  nodes   = pandas.read_csv(input_folder + "/nodes.csv")
   nodes   = nodes.to_numpy()[:,1:]
   n_nodes = nodes.shape[0]
 
-  # fibers.csv contains the geometrical information about the fibers
-  # id: the fiber id <--- removed from the list
-  # node1: node id of node 1
-  # node2: node id of node 2
-  fibers   = pandas.read_csv(foldername + '/fibers.csv')
+  # fibers.csv is edge-list of the network, without connections
+  #   Id,u,v
+  # 'u,v' are the node ids of the ends of the edge 'Id'
+  fibers   = pandas.read_csv(input_folder + '/fibers.csv')
   fibers   = fibers.to_numpy()[:,1:]
   n_fibers = fibers.shape[0]
 
-  # connections.csv contains the geometrical information about the connections
-  # id: the connection id <--- removed from the list
-  # fiber1: fiber id of first edge in connection
-  # fiber2: fiber id of second edge in the connection
-  # a1: affine constant along fiber1 where the connection is.  
-  # a2: affine constant along fiber2 where the connection is.  
-  #     ConnectionPos1 = (1-a1)* fiber1.FirstNode() + (a1)* fiber1.SecondNode()
-  #     ConnectionPos2 = (1-a2)* fiber2.FirstNode() + (a2)* fiber2.SecondNode()
-  connections   = pandas.read_csv(foldername + '/connections.csv')
+  # connections.csv contains the geometrical information about the connections between fibers
+  #   Id,fiber1,fiber2,a1,a2
+  # fiber1 is connected to fiber2 with 'Id'.
+  # The connection is described by two points, one on each fiber.
+  # They can be computed by the mathematical formulae
+  #     (1-a1) fiber1.FirstNode() + a1 fiber1.SecondNode(),
+  #     (1-a2) fiber2.FirstNode() + a2 fiber2.SecondNode(),
+  # where we embed nodes in R3 via the mapping above.
+  connections   = pandas.read_csv(input_folder + '/connections.csv')
   connections   = connections.to_numpy()[:,1:]
   n_connections = connections.shape[0]
 
-  # <fiber/connections>Props.csv
-  # Id: Id of the edge/connection <--- removed from the list
-  # (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-  # (n_11,n_12,n_13) : normal 1
-  # (n_21,n_22,n_23) : normal 2
-  fibersProps   = pandas.read_csv(foldername + '/fibersProps.csv')
+  # {fiber,connections}Props.csv contain the 6 structural constants
+  # associated to each fiber or connection and the 2 normals (principle axis?)
+  #   Id, (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2), (n_11,n_12,n_13), (n_21,n_22,n_23)
+  # TODO: why do we need structural
+  fibersProps   = pandas.read_csv(input_folder + '/fibersProps.csv')
   fibersProps   = fibersProps.to_numpy()[:,1:]
   n_fibersProps = fibersProps.shape[0]
 
-  connectionsProp   = pandas.read_csv(foldername + '/connectionsProp.csv')
+  connectionsProp   = pandas.read_csv(input_folder + '/connectionsProp.csv')
   connectionsProp   = connectionsProp.to_numpy()[:,1:]
   n_connectionsProp = connectionsProp.shape[0]
 
-  end_time = datetime.now()
-  print("Reading files ended at", end_time, "after", end_time-start_time)
-
+  logger.info("preparing data")
 
   vertices, edges, act_fibers = [], [], []
   for con in connections:
+    # con[0..3] = (f1,f2,a1,a2)
     point_a = (1.-con[2]) * nodes[fibers[int(con[0]),0]] + con[2] * nodes[fibers[int(con[0]),1]]
     point_b = (1.-con[3]) * nodes[fibers[int(con[1]),0]] + con[3] * nodes[fibers[int(con[1]),1]]
     point_a, point_b = np.array(point_a), np.array(point_b)
@@ -75,8 +91,14 @@ def make_geo(foldername):
     act_fibers.append(np.array([con[0], con[2]]))
     act_fibers.append(np.array([con[1], con[3]]))
 
-  end_time = datetime.now()
-  print("Preparing data ended at", end_time, "after", end_time-start_time)
+  logger.info("creating network")
+
+  if os.path.isdir(output_path):
+    output_path += f"/fiber_network_{len(edges)}"
+  else:
+    # test if we can write to the output path
+    with open(output_path, "w") as f:
+      f.writeln("test")
 
   edges_prop = []
 
@@ -113,7 +135,7 @@ def make_geo(foldername):
     min_x, min_y, min_z = min(min_x, vertex[0]), min(min_y, vertex[1]), min(min_z, vertex[2])
     max_x, max_y, max_z = max(max_x, vertex[0]), max(max_y, vertex[1]), max(max_z, vertex[2])
 
-  with open(foldername + '/fiber_network_' + str(len(edges)) + '.geo', 'w') as file:
+  with open(output_path + '.geo', 'w') as file:
     file.write("# This file was auto-generated!\n\n")
     file.write("Space_Dim     = 3;  # Dimension of space.\n")
     file.write("HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n")
@@ -148,29 +170,25 @@ def make_geo(foldername):
         file.write("  " + str(prop))
       file.write("\n")
 
-  with open(foldername + '/fiber_network_' + str(len(edges)) + '_points.txt', 'w') as file:
+
+  with open(output_path + "_points.txt", "w") as file:
     for vertex in vertices:
       file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
 
-  ax = plt.figure().add_subplot(111, projection='3d')
-
-  for edge in edges[:n_connections]:
-    ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
-             [vertices[edge[0]][1], vertices[edge[1]][1]], \
-             [vertices[edge[0]][2], vertices[edge[1]][2]], \
-            'rx-' )
-  for edge in edges[n_connections:]:
-    ax.plot( [vertices[edge[0]][0], vertices[edge[1]][0]], \
-             [vertices[edge[0]][1], vertices[edge[1]][1]], \
-             [vertices[edge[0]][2], vertices[edge[1]][2]], \
-             'bx-' )
-  plt.show()
-
-  plt.savefig(foldername + '/graph.png')
-
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
+  if show:
+    show_network(n_connections, vertices, edges)
 
 
 if __name__ == "__main__":
-  make_geo('.')
+  logging.setLoggerClass(prin2.Logger)
+  logger = logging.getLogger("make_geo")
+
+  parser = argparse.ArgumentParser(description="make_geo by Joseph Holten")
+  parser.add_argument("folder", help="the folder containing the network data")
+  parser.add_argument("-s", "--show", action="store_true",  help="show the created network embedded R3 with plt")
+  parser.add_argument("-o", "--output", help="the path where the output is stored", default=".")
+  args = parser.parse_args()
+
+  logger.log_args(args)
+
+  make_geo(args.folder, args.output, show=args.show)
