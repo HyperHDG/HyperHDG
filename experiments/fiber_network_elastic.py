@@ -148,28 +148,6 @@ class JPrecond:
 
 ######### SETUP argument parsing & logging
 
-time_stamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-git_hash =  subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-git_mod  = subprocess.run(["git", "status", "--porcelain", __file__], check=True, capture_output=True, text=True).stdout.strip()
-if git_mod:
-  git_hash += "-dirty"
-
-logger = logging.getLogger("fiber_network_elastic")
-logger.setLevel(logging.INFO)
-log_formatter  = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-
-os.system("mkdir -p logs")
-fhandler = logging.FileHandler(f"logs/fiber_network_elastic.{time_stamp}.log", mode="w")
-fhandler.setFormatter(log_formatter)
-fhandler.setLevel(logging.INFO)
-
-shandler = logging.StreamHandler(sys.stdout)
-shandler.setFormatter(log_formatter)
-shandler.setLevel(logging.INFO)
-
-logger.addHandler(fhandler)
-logger.addHandler(shandler)
-
 parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
 parser.add_argument("network")
 parser.add_argument("-t", "--rtol",
@@ -177,17 +155,15 @@ parser.add_argument("-t", "--rtol",
   type=float, default=1e-10
 )
 
+import prin2
+logging.setLoggerClass(prin2.Logger)
+logger = logging.getLogger("fiber_network_elastic")
+
 args = parser.parse_args()
-domain = args.network
+logger.log_args(args)
+os.system("mkdir -p output")
 
 ######## MAIN code
-
-logger.info("started with")
-logger.info(f"  git_hash={git_hash}")
-logger.info(f"  network={args.network}")
-logger.info(f"  rtol={args.rtol}")
-
-os.system("mkdir -p output")
 
 try:
   import HyperHDG
@@ -205,8 +181,8 @@ const.cython_replacements = ["string", "string"]
 const.debug_mode      = False
 
 PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP( domain + ".geo" )
-domain_points = np.loadtxt(domain + "_points.txt")
+HDG_wrapper = PyDP( args.network + ".geo" )
+network_points = np.loadtxt(args.network + "_points.txt")
 
 rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -218,7 +194,7 @@ A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 logger.info("assembling  B...")
 
-precond = JPrecond(A, domain_points, [2**3, 2**3], repeat=6)
+precond = JPrecond(A, network_points, [2**3, 2**3], repeat=6)
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
   matvec=precond.matmul
@@ -246,7 +222,7 @@ if num_iter != 0:
 error = HDG_wrapper.errors(vectorSolution)[0]
 logger.info(f"HDG_wrapper error={error:>.6e}")
 
-output_name = domain + "_timo"
+output_name = args.network + "_timo"
 HDG_wrapper.plot_option("fileName", output_name)
 HDG_wrapper.plot_option("printFileNumber", "false" )
 HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
