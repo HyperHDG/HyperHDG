@@ -139,7 +139,8 @@ logger = logging.getLogger("fiber_network_elastic")
 logger.setLevel(logging.INFO)
 log_formatter  = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
 
-fhandler = logging.FileHandler(f"fiber_network_elastic.{time_stamp}.log", mode="w")
+os.system("mkdir -p logs")
+fhandler = logging.FileHandler(f"logs/fiber_network_elastic.{time_stamp}.log", mode="w")
 fhandler.setFormatter(log_formatter)
 fhandler.setLevel(logging.INFO)
 
