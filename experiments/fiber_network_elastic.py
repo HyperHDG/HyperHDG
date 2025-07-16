@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # --------------------------------------------------------------------------------------------------
 # The data necessary to run this file can be obtained using the HyperHDG.fiber_network.make_geo
 # function on the files of Hauck, M., & Rupp, A. (2024). Fiber network models of paper. Zenodo.
