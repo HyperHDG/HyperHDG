@@ -117,17 +117,28 @@ class JPrecond:
     self.coarse_basis     = sp.csc_matrix(coarse_basis)
     self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
 
+    # precompute splu of precond_lhs
+    self.splu_precond_lhs = sp.linalg.splu(self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int)
+
+    # precompute splu
+    self.splu = [None] * self.coarse_basis.shape[1]
+    for k in range(self.coarse_basis.shape[1]):
+      col_k = self.coarse_basis.getcol(k)
+      nj = col_k.indices[col_k.data > epsilon]
+      if nj.size == 0:
+        continue
+      self.splu[k] = sp.linalg.splu(self.lhs_mat[nj, :][:, nj])
+
   def matmul(self, rhs_vec, epsilon=1e-14):
-    precond_lhs = self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int
     precond_rhs = self.coarse_basis_int.T @ rhs_vec
-    result_vec = self.coarse_basis_int @ sp.linalg.spsolve(precond_lhs, precond_rhs)
+    result_vec = self.coarse_basis_int @ self.splu_precond_lhs.solve(precond_rhs)
 
     for k in range(self.coarse_basis.shape[1]):
       col_k = self.coarse_basis.getcol(k)
       nj = col_k.indices[col_k.data > epsilon]
       if nj.size == 0:
         continue
-      result_vec[nj] += sp.linalg.spsolve(self.lhs_mat[nj, :][:, nj], rhs_vec[nj])
+      result_vec[nj] += self.splu[k].solve(rhs_vec[nj])
     return result_vec
 
 
