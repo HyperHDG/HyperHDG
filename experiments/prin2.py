@@ -30,5 +30,6 @@ class Logger(logging.Logger):
 
   def log_args(self, args):
     self.info(f"{self.name} started with")
+    self.info(f"  git_hash={self.git_hash}")
     for key, val in vars(args).items():
       self.info(f"  {key}={val}")
