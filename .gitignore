@@ -50,3 +50,4 @@ prog
 # ignore profiles
 *.prof
 *.lprof
+profile_output*
