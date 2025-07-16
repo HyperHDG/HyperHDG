@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 import pandas, logging, argparse, os, sys
+import line_profiler
 
 import prin2
 
@@ -23,7 +24,7 @@ def show_network(n_connections, vertices, edges):
   plt.show()
 
 
-
+@line_profiler.profile
 def make_geo(input_folder, output_path=".", show=False):
   logger = logging.getLogger("make_geo")
 
@@ -110,6 +111,8 @@ def make_geo(input_folder, output_path=".", show=False):
 
     point_a = nodes[fibers[index,0]]
     point_b = nodes[fibers[index,1]]
+    # TODO: this is exceptionally slow,
+    # NOTE: we could use spatial hashing here, as we essentially only want to keep unique vertices
     if not any((point_a == x).all() for x in vertices):  vertices = np.vstack((vertices, point_a))
     if not any((point_b == x).all() for x in vertices):  vertices = np.vstack((vertices, point_b))
 
