@@ -117,8 +117,12 @@ class JPrecond:
     self.coarse_basis     = sp.csc_matrix(coarse_basis)
     self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
 
+    # precond lhs_mat and explicitly format in csc
+    precond_lhs = sp.csc_matrix(
+      self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int
+    )
     # precompute splu of precond_lhs
-    self.splu_precond_lhs = sp.linalg.splu(self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int)
+    self.splu_precond_lhs = sp.linalg.splu(precond_lhs)
 
     # precompute splu
     self.splu = [None] * self.coarse_basis.shape[1]
@@ -207,7 +211,7 @@ logger.info("assembling  A...")
 
 system_size = HDG_wrapper.size_of_system()
 col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
-A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
+A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 logger.info("assembling  B...")
 
