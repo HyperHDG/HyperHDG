@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(HyperHDG LANGUAGES CXX)
 
+# Include experiments
+add_subdirectory(experiments)
+
 # Include the submodule projects
 add_subdirectory(submodules)
 
