@@ -408,7 +408,7 @@ int main(int argc, char** argv) {
   for (const Point& vertex : vertices)
     std::print(gfile, "{} {} {}\n", vertex[0], vertex[1], vertex[2]);
 
-  std::print(gfile, "\nHYPERNODES_OF_HYPEREDES:\n");
+  std::print(gfile, "\nHYPERNODES_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
     std::print(gfile, "{} {}\n", edge.first, edge.second);
 
