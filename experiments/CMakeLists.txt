@@ -1,5 +1,4 @@
-#set(WARNINGS -Wall -Wextra -Werror -Wpedantic -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wfloat-equal -Wno-unused-parameter)
-set(WARNINGS )
+set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wfloat-equal -Wno-unused-parameter)
 
 add_executable(make_geo make_geo.cxx)
 target_compile_features(make_geo PUBLIC cxx_std_23)
