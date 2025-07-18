@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <print>
 #include <vector>
 #include <cstdint>
@@ -7,8 +8,9 @@
 #include <format>
 #include <cstdio>
 #include <cstring>
-#include <nanoflann.hpp>
 #include <algorithm>
+
+#include <nanoflann.hpp>
 #include <fmtlog/fmtlog.h>
 
 namespace {
@@ -161,19 +163,33 @@ struct PointCloud
 }
 
 int main(int argc, char** argv) {
+  fmtlog::startPollingThread(1);
+
+  // verify args
+  // argv[0] is executable path
   if (argc < 3) {
     std::println(stderr, "usage: {} <input_folder> <output_folder>", argv[0]);
     return 1;
   }
+  std::string input_folder = argv[1];
+  std::string output_path = argv[2];
+  namespace fs = std::filesystem;
 
-  logi("hello world from fmtlog {}", 69420);
+  if (!fs::is_directory(input_folder)) {
+    loge("invalid argument <input_folder>, got '{}'", input_folder);
+    return 1;
+  }
 
-  // argv[0] is executable path
-  const char* input_folder = argv[1];
-  const char* output_folder = argv[2];
-  (void)output_folder;
+  if (!fs::is_directory(output_path)) {
+    std::ofstream file(std::format("{}.geo", output_path));
+    if (!file) {
+      loge("invalid argument <output_path>, got '{}'", output_path);
+      loge("  neither directory, nor writable path");
+      return 1;
+    }
+  }
 
-  // read data
+  logi("reading data");
 
   std::vector<Point> nodes = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
   logi("nodes: {}", nodes.size());
@@ -195,6 +211,9 @@ int main(int argc, char** argv) {
   PointCloud<Real> pcloud;
   pcloud.pts.reserve(connections.size()*2 + nodes.size());
 
+  // mapping of fiber to nodeids of connection points
+  std::vector<std::vector<u64>> fiber_segments(fibers.size());
+
   // first all connection points
   for (const Connection& con : connections) {
     Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
@@ -209,8 +228,13 @@ int main(int argc, char** argv) {
       p2[i] = (1-con.a1) * e21[i] + con.a1*e22[i];
     }
 
+    u64 p1id = pcloud.pts.size();
     pcloud.pts.push_back(p1);
+    u64 p2id = pcloud.pts.size();
     pcloud.pts.push_back(p2);
+
+    fiber_segments[con.f1].push_back(p1id);
+    fiber_segments[con.f2].push_back(p2id);
   }
 
   // next all fiber endpoints
@@ -228,6 +252,8 @@ int main(int argc, char** argv) {
   kdtree.buildIndex();
 
   logi("merging close points");
+
+  // create mapping from node id to node id with which to merge
   // init to 0 to not skip first (and thus all) node(s)
   std::vector<u64> merge_map(pcloud.pts.size(), (u64)-1);
 
@@ -259,4 +285,124 @@ int main(int argc, char** argv) {
   logi("num neighbors: avg = {:.3f}, max = {}",
        (double)nn_avg / pcloud.pts.size(), nn_max);
 
+  // create mapping from old node ids to consecutive new ids after merging
+  u64 new_count = 0;
+  std::vector<u64> new_ids(pcloud.pts.size(), 0);
+  for (u64 old_id = 0; old_id < pcloud.pts.size(); old_id++) {
+    // node is kept
+    if (merge_map[old_id] == old_id) {
+      new_ids[old_id] = new_count;
+      new_count++;
+    } else {
+      u64 merge_partner_old = merge_map[old_id];
+      new_ids[old_id] = new_ids[merge_partner_old];
+    }
+  }
+
+  // create new node list
+  std::vector<Point> vertices(new_count);
+  for (u64 old_id = 0; old_id < pcloud.pts.size(); old_id++)
+    vertices[new_ids[old_id]] = pcloud.pts[old_id];
+
+  logi("create edge list");
+
+  std::vector<Edge> edges;
+  std::vector<Prop> edge_props;
+
+  edges.reserve(connections.size()*2+fibers.size());
+
+  // for every connection with id two nodes are created with 2*id, 2*id+1 which form the connection
+  for (u64 cid = 0; cid < connections.size(); cid++) {
+    u64 nid1 = new_ids[2*cid+0];
+    u64 nid2 = new_ids[2*cid+1];
+    // ignore self loops (TODO: multiedges?)
+    if (nid1 != nid2) {
+      edges.push_back({nid1, nid2});
+      edge_props.push_back(connection_props[cid]);
+    }
+  }
+
+  // add segmentation of fiber as edges
+  for (u64 fid = 0; fid < fibers.size(); fid++) {
+    Edge fiber = fibers[fid];
+    const std::vector<u64>& cpoints = fiber_segments[fid];
+
+    // TODO: test for multi-edges?
+    auto add_edge_if_simple = [&](u64 u, u64 v){
+      u64 nu = new_ids[u];
+      u64 nv = new_ids[v];
+      if (nu != nv) {
+        edges.push_back({nu,nv});
+        edge_props.push_back(fiber_props[fid]);
+      }
+    };
+
+    if (cpoints.empty()) {
+      add_edge_if_simple(fiber.first,fiber.second);
+    } else {
+      add_edge_if_simple(fiber.first, cpoints[0]);
+      for (u64 i = 1; i < cpoints.size(); i++)
+        add_edge_if_simple(cpoints[i-1], cpoints[i]);
+      add_edge_if_simple(cpoints.back(), fiber.second);
+    }
+  }
+
+  logi("generate output");
+
+  // Calculate the bounding box (min/max x, y, z) for all vertices
+  Real min_x = 1e10, min_y = 1e10, min_z = 1e10, max_x = 1e-10, max_y = 1e-10, max_z = 1e-10;
+  for (const Point& vertex : vertices) {
+      min_x = std::min(min_x, vertex[0]);
+      min_y = std::min(min_y, vertex[1]);
+      min_z = std::min(min_z, vertex[2]);
+      max_x = std::max(max_x, vertex[0]);
+      max_y = std::max(max_y, vertex[1]);
+      max_z = std::max(max_z, vertex[2]);
+  }
+
+  if (fs::is_directory(output_path))
+    output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
+
+  std::ofstream gfile(std::format("{}.geo", output_path));
+
+  std::print(gfile, "# This file was auto-generated!\n\n");
+  std::print(gfile, "Space_Dim     = 3;  # Dimension of space.\n");
+  std::print(gfile, "HyperEdge_Dim = 3;  # Dimension of hyperedge (must be uniform).\n");
+  std::print(gfile, "N_Points      = {}; # Number of vertices.\n", vertices.size());
+  std::print(gfile, "N_HyperNodes  = {}; # Number of hypernodes.\n", vertices.size());
+  std::print(gfile, "N_HyperEdges  = {}; # Number of hyperedges.\n", edges.size());
+
+  std::print(gfile, "\nPOINTS:\n");
+  for (const Point& vertex : vertices)
+    std::print(gfile, "{} {} {}\n", vertex[0], vertex[1], vertex[2]);
+
+  std::print(gfile, "\nHYPERNODES_OF_HYPEREDES:\n");
+  for (const Edge& edge : edges)
+    std::print(gfile, "{} {}\n", edge.first, edge.second);
+
+  std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
+  for (const Edge& edge : edges) {
+    u64 left = 0, right = 0;
+    Point& vertex = vertices[edge.first];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[0] < 1e-6 * (max_y - min_y))
+      left = 1;
+    vertex = vertices[edge.second];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[0] < 1e-6 * (max_y - min_y))
+      right = 1;
+    std::print(gfile, "{} {}", left, right);
+  }
+
+  std::println(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
+  for (const Prop& prop : edge_props) {
+    std::print(gfile, "{}", prop[0]);
+    for (u64 i = 1; i < 12; i++)
+      std::print(gfile, " {}", prop[i]);
+    std::print(gfile, "\n");
+  }
+
+  std::ofstream pfile(std::format("{}_points.txt", output_path));
+  for (const Point& vertex : vertices)
+    std::print(pfile, "{} {} {}\n", vertex[0], vertex[1], vertex[2]);
 }
