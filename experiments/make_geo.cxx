@@ -170,10 +170,9 @@ int main(int argc, char** argv) {
   const char* output_folder = argv[2];
 
   // read data
-  PointCloud<Real> nodes;
 
-  nodes.pts = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
-  logi("nodes: {}", nodes.pts.size());
+  std::vector<Point> nodes = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
+  logi("nodes: {}", nodes.size());
 
   std::vector<Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
   logi("fibers: {}", fibers.size());
@@ -187,20 +186,32 @@ int main(int argc, char** argv) {
   std::vector<Prop> connection_props = read_props(std::format("{}/connectionsProp.csv", input_folder).c_str());
   logi("connectionProps: {}", connection_props.size());
 
-  // first enter all point to be considered
 
+  // collect all points to build fast KNN lookup datastructure
+  PointCloud<Real> pcloud;
+  pcloud.pts.reserve(connections.size()*2 + nodes.size());
+
+  // first all connection points
   for (const Connection& con : connections) {
     Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
-    Point p1, p2, e11 = nodes.pts[e1.first], e12 = nodes.pts[e1.second], e21 = nodes.pts[e2.first], e22 = nodes.pts[e2.second];
+    Point p1, p2;
+    Point e11 = nodes[e1.first];
+    Point e12 = nodes[e1.second];
+    Point e21 = nodes[e2.first];
+    Point e22 = nodes[e2.second];
 
     for (u64 i = 0; i < 3; i++) {
       p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
       p2[i] = (1-con.a1) * e21[i] + con.a1*e22[i];
     }
 
-    nodes.pts.push_back(p1);
-    nodes.pts.push_back(p2);
+    pcloud.pts.push_back(p1);
+    pcloud.pts.push_back(p2);
   }
+
+  // next all fiber endpoints
+  for (const Point& p : nodes)
+    pcloud.pts.push_back(p);
 
   const u64 dim = 3, maxleaf = 10;
   using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
@@ -208,23 +219,40 @@ int main(int argc, char** argv) {
     PointCloud<Real>,
     dim
   >;
-  KDTree kdtree(dim, nodes, {maxleaf});
+  KDTree kdtree(dim, pcloud, {maxleaf});
   logi("building kdtree");
   kdtree.buildIndex();
 
-  logi("querying kdtree");
-  u64 avg = 0, max = 0;
+  logi("merging close points");
+  // init to 0 to not skip first (and thus all) node(s)
+  std::vector<u64> merge_map(pcloud.pts.size(), (u64)-1);
+
+  u64 nn_avg = 0, nn_max = 0;
   Real r = 1e-10;
-  using Neighbor = nanoflann::ResultItem<uint32_t, Real>;
+  using Neighbor = nanoflann::ResultItem<uint32_t, Real>; // Neighbor = (id,distance)
   std::vector<Neighbor> neighbors;
   neighbors.reserve(1000); // reserve more than enough
-  for (const Point& node : nodes.pts) {
-    const u64 n = kdtree.radiusSearch(&node[0], r, neighbors);
-    avg += n;
-    max = std::max(max, n);
+  for (u64 nodeid = 0; nodeid < pcloud.pts.size(); nodeid++) {
+    // else find close neighbors
+    const double* p = pcloud.pts[nodeid].data();
+    const u64 num_neighbors = kdtree.radiusSearch(p, r, neighbors);
+
+    // if there were none, continue
+    if (num_neighbors == 0)
+      continue;
+
+    // else map myself to neighbor with lowest idx
+    u64 newid = nodeid;
+    for (const Neighbor& neighbor : neighbors)
+      newid = std::min(newid, (u64)neighbor.first);
+    merge_map[nodeid] = newid;
+
+    // count avg, max number of neighbors
+    nn_avg += num_neighbors;
+    nn_max = std::max(nn_max, num_neighbors);
   }
 
   logi("num neighbors: avg = {:.3f}, max = {}",
-       (double)avg / nodes.pts.size(), max);
+       (double)nn_avg / pcloud.pts.size(), nn_max);
 
 }
