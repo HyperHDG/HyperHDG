@@ -4,3 +4,4 @@ endif()
 
 add_subdirectory(tensor_product_chain_complex.git)
 add_subdirectory(tensor_product_polynomials.git)
+add_subdirectory(nanoflann)

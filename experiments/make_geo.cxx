@@ -7,6 +7,8 @@
 #include <format>
 #include <cstdio>
 #include <cstring>
+#include <nanoflann.hpp>
+#include <algorithm>
 
 using u64 = uint64_t;
 using Real = double;
@@ -33,7 +35,7 @@ std::vector<Point> read_nodes(const char* path) {
   }
   for (std::string line; std::getline(nodes_file, line); ) {
     ID id; Real x, y, z;
-    if (sscanf(line.c_str(), "%zu,%lf,%lf,%lf", &id, &x, &y, &z) == 4) {
+    if (4 == sscanf(line.c_str(), "%zu,%lf,%lf,%lf", &id, &x, &y, &z)) {
       nodes.push_back({x,y,z});
     } else {
       if (strcmp("Id,x,y,z", line.c_str()) == 0)
@@ -57,7 +59,7 @@ std::vector<Edge> read_fibers(const char* path) {
   }
   for (std::string line; std::getline(fibers_file, line); ) {
     ID f; ID u, v;
-    if (sscanf(line.c_str(), "%zu,%zu,%zu", &f, &u, &v) == 3) {
+    if (3 == sscanf(line.c_str(), "%zu,%zu,%zu", &f, &u, &v)) {
       fibers.push_back({u,v});
     } else {
       if (strcmp("Id,node1,node2", line.c_str()) == 0)
@@ -82,7 +84,7 @@ std::vector<Connection> read_connections(const char* path) {
   }
   for (std::string line; std::getline(connections_file, line); ) {
     ID c,f1,f2; Real a1,a2;
-    if (sscanf(line.c_str(), "%zu,%zu,%zu,%lf,%lf", &c, &f1, &f2, &a1, &a2) == 5) {
+    if (5 == sscanf(line.c_str(), "%zu,%zu,%zu,%lf,%lf", &c, &f1, &f2, &a1, &a2)) {
       connections.push_back({f1,f2,a1,a2});
     } else {
       if (strcmp("Id,fiber1,fiber2,a1,a2", line.c_str()) == 0)
@@ -108,31 +110,50 @@ std::vector<Prop> read_props(const char* path) {
   for (std::string line; std::getline(fiber_props_file, line); ) {
     ID f;
     Prop prop; // 6 structural + 2*3 normal
-    int chars_read = 0;
+    int total_chars_read = 0, chars_read = 0;
     const char* cline = line.c_str();
 
-    if (strcmp(line.c_str(), "Id,EA,kG_1A,kG_2A,G_xI_x,E_1I_1,E_2I_2,n_11,n_12,n_13,n_21,n_22,n_23") == 0)
-      continue;
+    if (1 != sscanf(cline, "%zu%n,", &f, &chars_read)) {
+      if (0 == strcmp(cline, "Id,EA,kG_1A,kG_2A,G_xI_x,E_1I_1,E_2I_2,n_11,n_12,n_13,n_21,n_22,n_23"))
+        continue;
+      std::println(stderr, "error: {}: sscanf format '%zu' invalid for '{}'", path, cline);
+      return {};
+    }
 
-    if (sscanf(line.c_str(), "%zu", &f) != 1)
-      goto err;
+    total_chars_read += chars_read+1;
 
     for (u64 i = 0; i < 12; i++) {
-      if (sscanf(cline+chars_read, "%lf%n", &prop[i], &chars_read) != 1)
-        goto err;
-      chars_read++; // skip ','
+      if (1 != sscanf(cline+total_chars_read, "%lf%n", &prop[i], &chars_read)) {
+        std::println(stderr, "error: {}: sscanf format '%lf' invalid for '{}'", path, cline+total_chars_read);
+        return {};
+      }
+      total_chars_read += chars_read+1; // skip ','
     }
 
     props.push_back(prop);
-
-    continue;
-    err:
-      std::println(stderr, "error: {}: couldn't parse line: {}", path, line);
-      return {};
   }
 
   return props;
 }
+
+template <typename T>
+struct PointCloud
+{
+  using Point = std::array<T,3>;
+  using coord_t = T;
+
+  std::vector<Point> pts;
+
+  inline size_t kdtree_get_point_count() const { return pts.size(); }
+  inline T kdtree_get_pt(const size_t idx, const size_t dim) const {
+    return pts[idx][dim];
+  }
+
+  template <class BBOX>
+  bool kdtree_get_bbox(BBOX& /* bb */) const {
+      return false;
+  }
+};
 
 
 int main(int argc, char** argv) {
@@ -146,8 +167,10 @@ int main(int argc, char** argv) {
   const char* output_folder = argv[2];
 
   // read data
-  std::vector<Point> nodes = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
-  std::println("nodes: {}", nodes.size());
+  PointCloud<Real> nodes;
+
+  nodes.pts = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
+  std::println("nodes: {}", nodes.pts.size());
 
   std::vector<Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
   std::println("fibers: {}", fibers.size());
@@ -160,5 +183,46 @@ int main(int argc, char** argv) {
 
   std::vector<Prop> connection_props = read_props(std::format("{}/connectionsProp.csv", input_folder).c_str());
   std::println("connectionProps: {}", connection_props.size());
+
+  // first enter all point to be considered
+
+  for (const Connection& con : connections) {
+    Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
+    Point p1, p2, e11 = nodes.pts[e1.first], e12 = nodes.pts[e1.second], e21 = nodes.pts[e2.first], e22 = nodes.pts[e2.second];
+
+    for (u64 i = 0; i < 3; i++) {
+      p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
+      p2[i] = (1-con.a1) * e21[i] + con.a1*e22[i];
+    }
+
+    nodes.pts.push_back(p1);
+    nodes.pts.push_back(p2);
+  }
+
+  const u64 dim = 3, maxleaf = 10;
+  using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
+    nanoflann::L2_Simple_Adaptor<Real, PointCloud<Real>>,
+    PointCloud<Real>,
+    dim
+  >;
+  KDTree kdtree(dim, nodes, {maxleaf});
+  std::println("building kdtree");
+  kdtree.buildIndex();
+
+  std::println("querying kdtree");
+  u64 avg = 0, max = 0;
+  Real r = 1e-10;
+  using Neighbor = nanoflann::ResultItem<uint32_t, Real>;
+  std::vector<Neighbor> neighbors;
+  neighbors.reserve(1000); // reserve more than enough
+  for (const Point& node : nodes.pts) {
+    const u64 n = kdtree.radiusSearch(&node[0], r, neighbors);
+    avg += n;
+    max = std::max(max, n);
+  }
+
+  std::println("avg = {}, max = {}", (double)avg / nodes.pts.size(), max);
+
+
 
 }
