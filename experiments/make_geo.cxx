@@ -9,6 +9,7 @@
 #include <cstring>
 #include <nanoflann.hpp>
 #include <algorithm>
+#include <fmtlog/fmtlog.h>
 
 using u64 = uint64_t;
 using Real = double;
@@ -161,6 +162,8 @@ int main(int argc, char** argv) {
     std::println(stderr, "usage: {} <input_folder> <output_folder>", argv[0]);
     return 1;
   }
+
+  FMTLOG(fmtlog::INF, "hello world from fmtlog {}", 69420);
 
   // argv[0] is executable path
   const char* input_folder = argv[1];
