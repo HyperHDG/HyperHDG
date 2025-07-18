@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  FMTLOG(fmtlog::INF, "hello world from fmtlog {}", 69420);
+  logi("hello world from fmtlog {}", 69420);
 
   // argv[0] is executable path
   const char* input_folder = argv[1];
@@ -173,19 +173,19 @@ int main(int argc, char** argv) {
   PointCloud<Real> nodes;
 
   nodes.pts = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
-  std::println("nodes: {}", nodes.pts.size());
+  logi("nodes: {}", nodes.pts.size());
 
   std::vector<Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
-  std::println("fibers: {}", fibers.size());
+  logi("fibers: {}", fibers.size());
 
   std::vector<Connection> connections = read_connections(std::format("{}/connections.csv", input_folder).c_str());
-  std::println("connections: {}", connections.size());
+  logi("connections: {}", connections.size());
 
   std::vector<Prop> fiber_props = read_props(std::format("{}/fibersProps.csv", input_folder).c_str());
-  std::println("fibersProps: {}", fiber_props.size());
+  logi("fibersProps: {}", fiber_props.size());
 
   std::vector<Prop> connection_props = read_props(std::format("{}/connectionsProp.csv", input_folder).c_str());
-  std::println("connectionProps: {}", connection_props.size());
+  logi("connectionProps: {}", connection_props.size());
 
   // first enter all point to be considered
 
@@ -209,10 +209,10 @@ int main(int argc, char** argv) {
     dim
   >;
   KDTree kdtree(dim, nodes, {maxleaf});
-  std::println("building kdtree");
+  logi("building kdtree");
   kdtree.buildIndex();
 
-  std::println("querying kdtree");
+  logi("querying kdtree");
   u64 avg = 0, max = 0;
   Real r = 1e-10;
   using Neighbor = nanoflann::ResultItem<uint32_t, Real>;
@@ -224,8 +224,7 @@ int main(int argc, char** argv) {
     max = std::max(max, n);
   }
 
-  std::println("avg = {}, max = {}", (double)avg / nodes.pts.size(), max);
-
-
+  logi("num neighbors: avg = {:.3f}, max = {}",
+       (double)avg / nodes.pts.size(), max);
 
 }
