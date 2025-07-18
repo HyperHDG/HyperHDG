@@ -17,3 +17,6 @@
 [submodule "submodules/nanoflann"]
 	path = submodules/nanoflann
 	url = https://github.com/jlblancoc/nanoflann.git
+[submodule "submodules/fmtlog"]
+	path = submodules/fmtlog
+	url = https://github.com/ndam-hexagon/fmtlog.git
