@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <fmtlog/fmtlog.h>
 
+namespace {
+
 using u64 = uint64_t;
 using Real = double;
 using ID = u64;
@@ -156,6 +158,7 @@ struct PointCloud
   }
 };
 
+}
 
 int main(int argc, char** argv) {
   if (argc < 3) {
@@ -168,6 +171,7 @@ int main(int argc, char** argv) {
   // argv[0] is executable path
   const char* input_folder = argv[1];
   const char* output_folder = argv[2];
+  (void)output_folder;
 
   // read data
 
