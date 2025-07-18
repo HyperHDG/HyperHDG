@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
 
     for (u64 i = 0; i < 3; i++) {
       p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
-      p2[i] = (1-con.a1) * e21[i] + con.a1*e22[i];
+      p2[i] = (1-con.a2) * e21[i] + con.a2*e22[i];
     }
 
     u64 p1id = pcloud.pts.size();
