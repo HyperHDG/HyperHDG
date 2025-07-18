@@ -282,6 +282,30 @@ int main(int argc, char** argv) {
     nn_max = std::max(nn_max, num_neighbors);
   }
 
+#if 0
+  // for the node endpoints use much smaller r
+  r = 1e-15;
+  for (u64 nodeid = 2*connections.size(); nodeid < pcloud.pts.size(); nodeid++) {
+    // else find close neighbors
+    const double* p = pcloud.pts[nodeid].data();
+    const u64 num_neighbors = kdtree.radiusSearch(p, r, neighbors);
+
+    // if there were none, continue
+    if (num_neighbors == 0)
+      continue;
+
+    // else map myself to neighbor with lowest idx
+    u64 newid = nodeid;
+    for (const Neighbor& neighbor : neighbors)
+      newid = std::min(newid, (u64)neighbor.first);
+    merge_map[nodeid] = newid;
+
+    // count avg, max number of neighbors
+    nn_avg += num_neighbors;
+    nn_max = std::max(nn_max, num_neighbors);
+  }
+#endif
+
   logi("num neighbors: avg = {:.3f}, max = {}",
        (double)nn_avg / pcloud.pts.size(), nn_max);
 
@@ -367,7 +391,7 @@ int main(int argc, char** argv) {
 
   std::print(gfile, "# This file was auto-generated!\n\n");
   std::print(gfile, "Space_Dim     = 3;  # Dimension of space.\n");
-  std::print(gfile, "HyperEdge_Dim = 3;  # Dimension of hyperedge (must be uniform).\n");
+  std::print(gfile, "HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n");
   std::print(gfile, "N_Points      = {}; # Number of vertices.\n", vertices.size());
   std::print(gfile, "N_HyperNodes  = {}; # Number of hypernodes.\n", vertices.size());
   std::print(gfile, "N_HyperEdges  = {}; # Number of hyperedges.\n", edges.size());
@@ -383,16 +407,19 @@ int main(int argc, char** argv) {
   std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
   for (const Edge& edge : edges) {
     u64 left = 0, right = 0;
-    Point& vertex = vertices[edge.first];
+    Point vertex = vertices[edge.first];
     if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[0] < 1e-6 * (max_y - min_y))
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
       left = 1;
     vertex = vertices[edge.second];
     if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[0] < 1e-6 * (max_y - min_y))
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
       right = 1;
-    std::print(gfile, "{} {}", left, right);
+    std::print(gfile, "{} {}\n", left, right);
   }
+  std::print(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
+  for (const Edge& edge : edges)
+    std::print(gfile, "{} {}\n", edge.first, edge.second);
 
   std::println(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
   for (const Prop& prop : edge_props) {
