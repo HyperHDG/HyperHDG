@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 3.16)
 
 project(HyperHDG LANGUAGES CXX)
 
-# Include experiments
-add_subdirectory(experiments)
-
 # Include the submodule projects
 add_subdirectory(submodules)
+include_directories(submodules)
+
+# Include experiments
+add_subdirectory(experiments)
 
 ## Check whether appropriate compiler version is used
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
