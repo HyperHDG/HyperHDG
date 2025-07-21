@@ -175,6 +175,13 @@ std::vector<Point> read_connection_points(const char* path) {
   return points;
 }
 
+Point interpolate(const Point& u, const Point& v, Real a) {
+  Point res;
+  for (u64 i = 0; i < 3; i++)
+    res[i] = (1-a)*u[i] + a*v[i];
+  return res;
+}
+
 template <typename T>
 struct PointCloud
 {
@@ -251,7 +258,7 @@ int main(int argc, char** argv) {
   pcloud.pts.reserve(connections.size()*2 + nodes.size());
 
   // mapping of fiber to nodeids of connection points
-  std::vector<std::vector<ConnectionPoint>> fiber_segments(fibers.size());
+  std::vector<std::vector<ConnectionPoint>> fiber_connections(fibers.size());
 
   // first all connection points
   for (const Connection& con : connections) {
@@ -272,13 +279,9 @@ int main(int argc, char** argv) {
     u64 p2id = pcloud.pts.size();
     pcloud.pts.push_back(p2);
 
-    fiber_segments[con.f1].push_back({p1id, con.a1});
-    fiber_segments[con.f2].push_back({p2id, con.a2});
+    fiber_connections[con.f1].push_back({p1id, con.a1});
+    fiber_connections[con.f2].push_back({p2id, con.a2});
   }
-
-  // sort all fiber segments by their a
-  for (auto& seg : fiber_segments)
-    std::sort(seg.begin(), seg.end(), [](const ConnectionPoint& p1, const ConnectionPoint& p2){ return p1.a < p2.a; } );
 
   // next all fiber endpoints
   for (const Point& p : nodes)
@@ -304,11 +307,11 @@ int main(int argc, char** argv) {
   std::vector<Neighbor> neighbors;
   neighbors.reserve(1000); // reserve more than enough
 
-  auto merged_id = [&kdtree, &neighbors, &vertices, &is_in_vertices, &vertices_idx](u64 id, const Point& p, Real r) {
+  auto find_merged_id = [&kdtree, &is_in_vertices, &neighbors, &vertices_idx](const Point& p, Real r) {
     // NOTE: nanoflann works with squared L2 distances
     Real d = 2*r;
     const u64 num_neighbors = kdtree.radiusSearch(p.data(), r*r, neighbors); // only consider neighbors closer than r
-    u64 index = vertices.size();
+    u64 index = (u64)-1;
     assert(num_neighbors != 0); // point_a should be found
     for (u64 i = 0; i < num_neighbors; i++) {
       if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
@@ -318,7 +321,13 @@ int main(int argc, char** argv) {
         d = neighbors[i].second;
       }
     }
-    if (index == vertices.size()) {
+    return index;
+  };
+
+  auto find_merged_id_and_insert = [&kdtree, &neighbors, &vertices, &is_in_vertices, &vertices_idx, &find_merged_id](u64 id, const Point& p, Real r) {
+    u64 index = find_merged_id(p, r);
+    if (index == (u64)-1) {
+      index = vertices.size();
       vertices.push_back(p);
       is_in_vertices[id] = 1;
     } else {
@@ -350,20 +359,60 @@ int main(int argc, char** argv) {
     //   index_a = len(vertices)
     //   vertices = np.vstack((vertices, point_a))
 
-    const u64 index_a = merged_id(2*cid, point_a, r);
+    const u64 index_a = find_merged_id_and_insert(2*cid, point_a, r);
 
     // index_b = np.argmin(np.linalg.norm(point_b - vertices, axis=1))
     // if np.linalg.norm(point_b - vertices[index_b]) > 1e-10:
     //   index_b = len(vertices)
     //   vertices = np.vstack((vertices, point_b))
 
-    const u64 index_b = merged_id(2*cid+1, point_b, r);
+    const u64 index_b = find_merged_id_and_insert(2*cid+1, point_b, r);
 
     if (index_a != index_b)
       edges.push_back({index_a, index_b});
   }
 
-  std::ofstream pfile(std::format("{}_connection_points.txt", output_path));
+  for (u64 fid = 0; fid < fibers.size(); fid++) {
+    // helper = act_fibers[act_fibers[:,0] == index, 1]
+    std::vector<ConnectionPoint>& helper = fiber_connections[fid];
+    if (helper.empty())
+      continue;
+
+    const Point& point_a = nodes[fibers[fid].first];
+    const Point& point_b = nodes[fibers[fid].second];
+    const u64 off = 2*connections.size();
+
+    const u64 endpoint_idx_a = find_merged_id_and_insert(off+fibers[fid].first, point_a, 1e-15);
+    const u64 endpoint_idx_b = find_merged_id_and_insert(off+fibers[fid].second, point_b, 1e-15);
+
+    std::sort(helper.begin(), helper.end(), [](ConnectionPoint p1, ConnectionPoint p2){ return p1.a < p2.a; });
+
+    // helper = [0.] + helper + [1.]
+    helper.insert(helper.begin(), {.nodeid = endpoint_idx_a, .a = 0});
+    helper.insert(helper.end(),   {.nodeid = endpoint_idx_b, .a = 1});
+
+    for (u64 k = 0; k < helper.size()-1; k++) {
+      Point point_ab = interpolate(point_a, point_b, helper[k].a);
+      Point point_ba = interpolate(point_a, point_b, helper[k+1].a);
+
+      u64 index_a = find_merged_id(point_ab, 1e-10);
+      if (index_a == (u64)-1) {
+        std::println(stderr, "ERROR: expected connection point to be found");
+        return 1;
+      }
+      u64 index_b = find_merged_id(point_ba, 1e-10);
+      if (index_b == (u64)-1) {
+        std::println(stderr, "ERROR: expected connection point to be found");
+        return 1;
+      }
+
+      if (index_a != index_b) {
+        edges.push_back({index_a, index_b});
+      }
+    }
+  }
+
+  std::ofstream pfile(std::format("{}_points.txt", output_path));
   for (const Point& vertex : vertices)
     std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
 }
