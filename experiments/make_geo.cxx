@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 
     for (u64 i = 0; i < 3; i++) {
       p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
-      p2[i] = (1-con.a1) * e21[i] + con.a1*e22[i];
+      p2[i] = (1-con.a2) * e21[i] + con.a2*e22[i];
     }
 
     u64 p1id = pcloud.pts.size();
@@ -304,23 +304,19 @@ int main(int argc, char** argv) {
   std::vector<Neighbor> neighbors;
   neighbors.reserve(1000); // reserve more than enough
 
-  for (u64 cid = 0; cid < connections.size(); cid++) {
+
+  // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
+  vertices.push_back(pcloud.pts[0]);
+  vertices.push_back(pcloud.pts[1]);
+  vertices_idx[0] = 0;
+  vertices_idx[1] = 1;
+  is_in_vertices[0] = 1;
+  is_in_vertices[1] = 1;
+  edges.push_back({0,1});
+
+  for (u64 cid = 1; cid < connections.size(); cid++) {
     const Point& point_a = pcloud.pts[2*cid];
     const Point& point_b = pcloud.pts[2*cid+1];
-
-    // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
-    if (vertices.empty()) {
-      vertices.push_back(point_a);
-      vertices.push_back(point_b);
-
-      vertices_idx[0] = 0;
-      vertices_idx[1] = 1;
-
-      is_in_vertices[0] = 1;
-      is_in_vertices[1] = 1;
-
-      continue;
-    }
 
     Real r = 1e-10, d = 2*r;
     u64 num_neighbors;
