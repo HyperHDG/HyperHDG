@@ -158,7 +158,7 @@ def make_geo(input_folder, output_path=".", show=False):
     file.write("N_HyperEdges  = " + str(len(edges)) + ";  # Number of hyperedges.\n")
     file.write("\nPOINTS:\n")
     for vertex in vertices:
-      file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
+      file.write(f"{vertex[0]:.18e}  {vertex[1]:.18e}  {vertex[2]:.18e}\n")
     file.write("\nHYPERNODES_OF_HYPEREDGES:\n")
     for edge in edges:
       file.write(str(int(edge[0])) + "  " + str(int(edge[1])) + "\n")
@@ -179,15 +179,14 @@ def make_geo(input_folder, output_path=".", show=False):
       file.write(str(int(edge[0])) + "  " + str(int(edge[1])) + "\n")
     file.write("\nHYPEREDGE_PROPERTIES: 12\n")
     for edge in edges_prop:
-      file.write(str(edge[0]))
+      file.write(f"{edge[0]:.18e}")
       for prop in edge[1:]:
-        file.write("  " + str(prop))
+        file.write(f"  {prop:.18e}")
       file.write("\n")
 
 
   with open(output_path + "_points.txt", "w") as file:
     for vertex in vertices:
-      # file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
       file.write(f"{vertex[0]:.18e} {vertex[1]:.18e} {vertex[2]:.18e}\n")
 
   if show:
