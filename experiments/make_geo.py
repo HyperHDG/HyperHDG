@@ -187,7 +187,8 @@ def make_geo(input_folder, output_path=".", show=False):
 
   with open(output_path + "_points.txt", "w") as file:
     for vertex in vertices:
-      file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
+      # file.write(str(vertex[0]) + "  " + str(vertex[1]) + "  " + str(vertex[2]) + "\n")
+      file.write(f"{vertex[0]:.18e} {vertex[1]:.18e} {vertex[2]:.18e}\n")
 
   if show:
     show_network(n_connections, vertices, edges)
