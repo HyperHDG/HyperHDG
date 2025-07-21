@@ -318,6 +318,7 @@ int main(int argc, char** argv) {
     const Point& point_a = pcloud.pts[2*cid];
     const Point& point_b = pcloud.pts[2*cid+1];
 
+    // NOTE: nanoflann works with squared L2 distances
     Real r = 1e-10, d = 2*r;
     u64 num_neighbors;
     u64 index_a, index_b;
@@ -327,20 +328,23 @@ int main(int argc, char** argv) {
     //   index_a = len(vertices)
     //   vertices = np.vstack((vertices, point_a))
 
-    num_neighbors = kdtree.radiusSearch(point_a.data(), r, neighbors); // only consider neighbors closer than r
+    num_neighbors = kdtree.radiusSearch(point_a.data(), r*r, neighbors); // only consider neighbors closer than r
     index_a = vertices.size();
     assert(num_neighbors != 0); // point_a should be found
     for (u64 i = 0; i < num_neighbors; i++) {
       if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
         continue;
-      if (neighbors[i].second < d)                 // of those, pick the closest
+      if (neighbors[i].second < d) {               // of those, pick the closest
         index_a = vertices_idx[neighbors[i].first];
+        d = neighbors[i].second;
+      }
     }
     if (index_a == vertices.size()) {
       vertices.push_back(point_a);
       is_in_vertices[2*cid] = 1;
     } else {
       is_in_vertices[2*cid] = 0;
+      logi("{} -> {}", 2*cid, index_a);
     }
     vertices_idx[2*cid] = index_a;
 
@@ -349,22 +353,26 @@ int main(int argc, char** argv) {
     //   index_b = len(vertices)
     //   vertices = np.vstack((vertices, point_b))
 
-    num_neighbors = kdtree.radiusSearch(point_b.data(), r, neighbors); // only consider neighbors closer than r
+    d = 2*r;
+    num_neighbors = kdtree.radiusSearch(point_b.data(), r*r, neighbors); // only consider neighbors closer than r
     assert(num_neighbors != 0); // point_b should be found
     index_b = vertices.size();
     for (u64 i = 0; i < num_neighbors; i++) {
       if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
         continue;
-      if (neighbors[i].second < d)                 // of those, pick the closest
+      if (neighbors[i].second < d) {               // of those, pick the closest
         index_b = vertices_idx[neighbors[i].first];
+        d = neighbors[i].second;
+      }
     }
     if (index_b == vertices.size()) {
       vertices.push_back(point_b);
-      is_in_vertices[2*cid] = 1;
+      is_in_vertices[2*cid+1] = 1;
     } else {
-      is_in_vertices[2*cid] = 0;
+      is_in_vertices[2*cid+1] = 0;
+      logi("{} -> {}", 2*cid+1, index_b);
     }
-    vertices_idx[2*cid] = index_b;
+    vertices_idx[2*cid+1] = index_b;
 
     if (index_a != index_b)
       edges.push_back({index_a, index_b});
