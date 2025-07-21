@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
 
   for (u64 cid = 0; cid < connections.size(); cid++) {
     const Point& point_a = pcloud.pts[2*cid];
-    const Point& point_b = pcloud.pts[2*cid];
+    const Point& point_b = pcloud.pts[2*cid+1];
 
     // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
     if (vertices.empty()) {
@@ -318,6 +318,8 @@ int main(int argc, char** argv) {
 
       is_in_vertices[0] = 1;
       is_in_vertices[1] = 1;
+
+      continue;
     }
 
     Real r = 1e-10, d = 2*r;
