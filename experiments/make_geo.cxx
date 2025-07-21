@@ -372,6 +372,9 @@ int main(int argc, char** argv) {
       edges.push_back({index_a, index_b});
   }
 
+  // NOTE: the python code below does not respect the self loops filtered out above
+  //   edges_prop = np.vstack((connectionsProp, np.array(edges_prop)))
+  // but we replicate this behaviour.
   std::vector<Prop>& edge_props = connection_props;
 
   for (u64 fid = 0; fid < fibers.size(); fid++) {

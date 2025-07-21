@@ -361,6 +361,7 @@ read_domain_geo(const std::string& filename)
   {
     linestream = std::istringstream(line);
     domain_info.hyEdge_properties[hyEdge_iter].resize(domain_info.n_properties);
+    // FIXME: this might fail silently if e.g. the current line is empty
     for (unsigned int i = 0; i < domain_info.hyEdge_properties[hyEdge_iter].size(); ++i)
       linestream >> domain_info.hyEdge_properties[hyEdge_iter][i];
   }
