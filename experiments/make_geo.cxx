@@ -304,6 +304,31 @@ int main(int argc, char** argv) {
   std::vector<Neighbor> neighbors;
   neighbors.reserve(1000); // reserve more than enough
 
+  auto merged_id = [&kdtree, &neighbors, &vertices, &is_in_vertices, &vertices_idx](u64 id, const Point& p, Real r) {
+    // NOTE: nanoflann works with squared L2 distances
+    Real d = 2*r;
+    const u64 num_neighbors = kdtree.radiusSearch(p.data(), r*r, neighbors); // only consider neighbors closer than r
+    u64 index = vertices.size();
+    assert(num_neighbors != 0); // point_a should be found
+    for (u64 i = 0; i < num_neighbors; i++) {
+      if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
+        continue;
+      if (neighbors[i].second < d) {               // of those, pick the closest
+        index = vertices_idx[neighbors[i].first];
+        d = neighbors[i].second;
+      }
+    }
+    if (index == vertices.size()) {
+      vertices.push_back(p);
+      is_in_vertices[id] = 1;
+    } else {
+      is_in_vertices[id] = 0;
+      // logi("{} -> {}", id, index);
+    }
+    vertices_idx[id] = index;
+
+    return index;
+  };
 
   // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
   vertices.push_back(pcloud.pts[0]);
@@ -318,61 +343,21 @@ int main(int argc, char** argv) {
     const Point& point_a = pcloud.pts[2*cid];
     const Point& point_b = pcloud.pts[2*cid+1];
 
-    // NOTE: nanoflann works with squared L2 distances
-    Real r = 1e-10, d = 2*r;
-    u64 num_neighbors;
-    u64 index_a, index_b;
+    Real r = 1e-10;
 
     // index_a = np.argmin(np.linalg.norm(point_a - vertices, axis=1))
     // if np.linalg.norm(point_a - vertices[index_a]) > 1e-10:
     //   index_a = len(vertices)
     //   vertices = np.vstack((vertices, point_a))
 
-    num_neighbors = kdtree.radiusSearch(point_a.data(), r*r, neighbors); // only consider neighbors closer than r
-    index_a = vertices.size();
-    assert(num_neighbors != 0); // point_a should be found
-    for (u64 i = 0; i < num_neighbors; i++) {
-      if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
-        continue;
-      if (neighbors[i].second < d) {               // of those, pick the closest
-        index_a = vertices_idx[neighbors[i].first];
-        d = neighbors[i].second;
-      }
-    }
-    if (index_a == vertices.size()) {
-      vertices.push_back(point_a);
-      is_in_vertices[2*cid] = 1;
-    } else {
-      is_in_vertices[2*cid] = 0;
-      logi("{} -> {}", 2*cid, index_a);
-    }
-    vertices_idx[2*cid] = index_a;
+    const u64 index_a = merged_id(2*cid, point_a, r);
 
     // index_b = np.argmin(np.linalg.norm(point_b - vertices, axis=1))
     // if np.linalg.norm(point_b - vertices[index_b]) > 1e-10:
     //   index_b = len(vertices)
     //   vertices = np.vstack((vertices, point_b))
 
-    d = 2*r;
-    num_neighbors = kdtree.radiusSearch(point_b.data(), r*r, neighbors); // only consider neighbors closer than r
-    assert(num_neighbors != 0); // point_b should be found
-    index_b = vertices.size();
-    for (u64 i = 0; i < num_neighbors; i++) {
-      if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
-        continue;
-      if (neighbors[i].second < d) {               // of those, pick the closest
-        index_b = vertices_idx[neighbors[i].first];
-        d = neighbors[i].second;
-      }
-    }
-    if (index_b == vertices.size()) {
-      vertices.push_back(point_b);
-      is_in_vertices[2*cid+1] = 1;
-    } else {
-      is_in_vertices[2*cid+1] = 0;
-      logi("{} -> {}", 2*cid+1, index_b);
-    }
-    vertices_idx[2*cid+1] = index_b;
+    const u64 index_b = merged_id(2*cid+1, point_b, r);
 
     if (index_a != index_b)
       edges.push_back({index_a, index_b});
