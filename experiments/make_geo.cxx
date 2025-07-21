@@ -242,6 +242,37 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
     std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
 }
 
+struct GeoBinHeader {
+  char magic[8]; // should contain GEOBINxx
+  u64 space_dim;
+  u64 hyperedge_dim;
+  u64 n_points;
+  u64 n_hypernodes;
+  u64 n_hyperedges;
+};
+
+struct DataTableHeader {
+  u64 offset;     // from file start
+  u64 size;       // in bytes
+  u64 entry_size; // in bytes
+};
+
+struct GeoBin {
+  GeoBinHeader header;
+  DataTableHeader tables[5];
+};
+
+void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
+  GeoBin bin;
+
+}
+
+void deserialize_bin(const char* input_path, const GraphEdgeList& graph) {
+
+}
+
+
+
 }
 
 int main(int argc, char** argv) {
