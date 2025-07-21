@@ -263,6 +263,8 @@ int main(int argc, char** argv) {
   logi("building kdtree");
   kdtree.buildIndex();
 
+  logi("generating vertex/edge list");
+
   std::vector<Point> vertices;
   std::vector<u64> is_in_vertices(pcloud.pts.size(), 0);
   std::vector<u64> vertices_idx(pcloud.pts.size(), (u64)-1);
@@ -305,6 +307,8 @@ int main(int argc, char** argv) {
     return index;
   };
 
+  logi("  from connections");
+
   // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
   vertices.push_back(pcloud.pts[0]);
   vertices.push_back(pcloud.pts[1]);
@@ -337,6 +341,8 @@ int main(int argc, char** argv) {
     if (index_a != index_b)
       edges.push_back({index_a, index_b});
   }
+
+  logi("  from fibers");
 
   // NOTE: the python code below does not respect the self loops filtered out above
   //   edges_prop = np.vstack((connectionsProp, np.array(edges_prop)))
@@ -383,6 +389,10 @@ int main(int argc, char** argv) {
       }
     }
   }
+
+  logi("generating output files");
+  logi("  vertices.size = {}", vertices.size());
+  logi("  edges.size    = {}", edges.size());
 
   if (fs::is_directory(output_path))
     output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
