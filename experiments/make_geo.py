@@ -95,6 +95,9 @@ def make_geo(input_folder, output_path=".", show=False):
 
   act_fibers = np.array(act_fibers)
 
+  np.savetxt(output_path + "_connection_edges.txt", np.array(edges))
+  np.savetxt(output_path + "_connection_points.txt", vertices)
+
   logger.info("creating network")
 
   if os.path.isdir(output_path):
