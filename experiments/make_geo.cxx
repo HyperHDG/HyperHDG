@@ -216,9 +216,6 @@ int main(int argc, char** argv) {
   PointCloud<Real> pcloud;
   pcloud.pts.reserve(connections.size()*2 + nodes.size());
 
-  // mapping of fiber to nodeids of connection points
-  std::vector<std::vector<ConnectionPoint>> fiber_segments(fibers.size());
-
   // first all connection points
   for (const Connection& con : connections) {
     Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
@@ -233,22 +230,18 @@ int main(int argc, char** argv) {
       p2[i] = (1-con.a2) * e21[i] + con.a2*e22[i];
     }
 
-    u64 p1id = pcloud.pts.size();
     pcloud.pts.push_back(p1);
-    u64 p2id = pcloud.pts.size();
     pcloud.pts.push_back(p2);
-
-    fiber_segments[con.f1].push_back({p1id, con.a1});
-    fiber_segments[con.f2].push_back({p2id, con.a2});
   }
 
-  // sort all fiber segments by their a
-  for (auto& seg : fiber_segments)
-    std::sort(seg.begin(), seg.end(), [](const ConnectionPoint& p1, const ConnectionPoint& p2){ return p1.a < p2.a; } );
-
   // next all fiber endpoints
-  for (const Point& p : nodes)
-    pcloud.pts.push_back(p);
+  for (u64 fid = 0; fid < fibers.size(); fid++) {
+    const Point& point_a = nodes[fibers[fid].first];
+    const Point& point_b = nodes[fibers[fid].first];
+
+    pcloud.pts.push_back(point_a);
+    pcloud.pts.push_back(point_b);
+  }
 
   const u64 dim = 3, maxleaf = 10;
   using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
@@ -260,124 +253,124 @@ int main(int argc, char** argv) {
   logi("building kdtree");
   kdtree.buildIndex();
 
-  logi("merging close points");
+  auto find_closest = [&kdtree](Real* p){
+    u64 num_neighbors = 2;
+    std::vector<uint32_t> neighbors(num_neighbors);
+    std::vector<Real> distances(num_neighbors);
+    kdtree.knnSearch(p, 2, &neighbors[0], &distances[0]);
 
-  // create mapping from node id to node id with which to merge
-  // init to 0 to not skip first (and thus all) node(s)
-  std::vector<u64> merge_map(pcloud.pts.size(), (u64)-1);
+    u64 min_idx = 0;
+    u64 other_idx = 1;
+    if (distances[1] < distances[0]) {
+      min_idx = 1;
+      other_idx = 0;
+    }
 
-  // TODO: do this slightly differntly
-  //   use nearest neighbor and then add them directly to the new list...
+    // one of them should be myself
+    assert(distances[min_idx] < 1e-10);
 
-  u64 nn_avg = 0, nn_max = 0;
-  Real r = 1e-10;
+    // if the other is close, we take whomever is first in order
+    if (distances[other_idx] < 1e-10)
+      return std::min(neighbors[0], neighbors[1]);
+    else
+      return neighbors[min_idx];
+  };
+
+
+
+  std::vector<Point> vertices;
+  std::vector<Edge> edges;
+  std::vector<std::vector<Real>> act_fibers(fibers.size());
+  // for con in connections
+  for (u64 cid = 0; cid < connections.size(); cid++) {
+
+
+    Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
+    Point p1, p2;
+    Point e11 = nodes[e1.first];
+    Point e12 = nodes[e1.second];
+    Point e21 = nodes[e2.first];
+    Point e22 = nodes[e2.second];
+
+    for (u64 i = 0; i < 3; i++) {
+      p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
+      p2[i] = (1-con.a2) * e21[i] + con.a2*e22[i];
+    }
+
+    u64 pcloud_index_a = find_closest(&p1[0]);
+    u64 index_a = vertices.size();
+    vertices.push_back(pcloud.pts[pcloud_index_a]);
+    u64 pcloud_index_b = find_closest(&p2[0]);
+    u64 index_b = vertices.size();
+    vertices.push_back(pcloud.pts[pcloud_index_b]);
+
+    if (index_a != index_b)
+      edges.push_back({index_a, index_b});
+
+    // act_fibers.append(np.array([con[0], con[2]]))
+    // act_fibers.append(np.array([con[1], con[3]]))
+    act_fibers[con.f1].push_back(con.a1);
+    act_fibers[con.f2].push_back(con.a2);
+  }
+
   using Neighbor = nanoflann::ResultItem<uint32_t, Real>; // Neighbor = (id,distance)
   std::vector<Neighbor> neighbors;
   neighbors.reserve(1000); // reserve more than enough
-  for (u64 nodeid = 0; nodeid < 2*connections.size(); nodeid++) {
-    // else find close neighbors
-    const double* p = pcloud.pts[nodeid].data();
-    const u64 num_neighbors = kdtree.radiusSearch(p, r, neighbors);
 
-    // else map myself to neighbor with lowest idx
-    u64 newid = (u64)-1;
-    for (const Neighbor& neighbor : neighbors)
-      newid = std::min(newid, (u64)neighbor.first);
-    merge_map[nodeid] = std::min(nodeid,newid);
+  std::vector<Prop>& edges_prop = connection_props;
 
-    // count avg, max number of neighbors
-    nn_avg += num_neighbors;
-    nn_max = std::max(nn_max, num_neighbors);
-  }
-
-  // for the node endpoints use much smaller r
-  r = 1e-15;
-  for (u64 nodeid = 2*connections.size(); nodeid < pcloud.pts.size(); nodeid++) {
-    // else find close neighbors
-    const double* p = pcloud.pts[nodeid].data();
-    const u64 num_neighbors = kdtree.radiusSearch(p, r, neighbors);
-
-    // else map myself to neighbor with lowest idx
-    u64 newid = (u64)-1;
-    for (const Neighbor& neighbor : neighbors)
-      newid = std::min(newid, (u64)neighbor.first);
-    merge_map[nodeid] = std::min(nodeid,newid);
-
-    // count avg, max number of neighbors
-    nn_avg += num_neighbors;
-    nn_max = std::max(nn_max, num_neighbors);
-  }
-
-  for (u64 i = 0; i < pcloud.pts.size(); i++)
-    assert(merge_map[i] != (u64)-1);
-
-  logi("num neighbors: avg = {:.3f}, max = {}",
-       (double)nn_avg / pcloud.pts.size(), nn_max);
-
-  // create mapping from old node ids to consecutive new ids after merging
-  u64 new_count = 0;
-  std::vector<u64> new_ids(pcloud.pts.size(), 0);
-  std::vector<Point> vertices(new_count);
-  for (u64 old_id = 0; old_id < pcloud.pts.size(); old_id++) {
-    // node is kept
-    if (merge_map[old_id] == old_id) {
-      new_ids[old_id] = new_count;
-      vertices.push_back(pcloud.pts[old_id]);
-      new_count++;
-    } else {
-      u64 merge_partner_old = merge_map[old_id];
-      assert(merge_partner_old < old_id);
-      new_ids[old_id] = new_ids[merge_partner_old];
-    }
-  }
-
-  logi("create edge list");
-
-  std::vector<Edge> edges;
-  std::vector<Prop> edge_props;
-
-  edges.reserve(connections.size()*2+fibers.size());
-
-  u64 selfloops = 0;
-
-  // TODO: test for multi-edges?
-  auto add_edge_if_simple = [&](u64 u, u64 v, const Prop& p){
-    u64 nu = new_ids[u];
-    u64 nv = new_ids[v];
-    if (nu != nv) {
-      edges.push_back({nu,nv});
-      edge_props.push_back(p);
-    } else {
-      selfloops++;
-    }
-  };
-
-  // for every connection with id two nodes are created with 2*id, 2*id+1 which form the connection
-  for (u64 cid = 0; cid < connections.size(); cid++)
-    add_edge_if_simple(2*cid, 2*cid+1, connection_props[cid]);
-
-  // add segmentation of fiber as edges
+  // for index in range(n_fibers)
   for (u64 fid = 0; fid < fibers.size(); fid++) {
-    Edge fiber = fibers[fid];
-    // need this offset
-    u64 start = fiber.first + connections.size()*2;
-    u64 end = fiber.second + connections.size()*2;
-    const std::vector<ConnectionPoint>& cpoints = fiber_segments[fid];
-    const Prop& prop = fiber_props[fid];
+    const std::vector<Real>& helper = act_fibers[fid];
+    if (helper.empty())
+      continue;
 
-    if (cpoints.empty()) {
-      add_edge_if_simple(start,end,prop);
-    } else {
-      add_edge_if_simple(start, cpoints[0].nodeid, prop);
-      for (u64 i = 1; i < cpoints.size(); i++)
-        add_edge_if_simple(cpoints[i-1].nodeid, cpoints[i].nodeid, prop);
-      add_edge_if_simple(cpoints.back().nodeid, fiber.second, prop);
+    Point point_a = nodes[fibers[fid].first];
+    Point point_b = nodes[fibers[fid].second];
+
+    // if not any((point_a == x).all() for x in vertices):  vertices = np.vstack((vertices, point_a))
+    // if not any((point_b == x).all() for x in vertices):  vertices = np.vstack((vertices, point_b))
+    Real r = 1e-15;
+    u64 num_neighbors = kdtree.radiusSearch(&point_a[0], r, neighbors);
+    if (num_neighbors == 1)
+      vertices.push_back(point_a);
+    num_neighbors = kdtree.radiusSearch(&point_b[0], r, neighbors);
+    if (num_neighbors == 1)
+      vertices.push_back(point_b);
+
+    std::vector<Real> helper2;
+    helper2.push_back(0);
+    for (u64 i = 0; i < helper.size(); i++)
+      helper2.push_back(helper[i]);
+    helper2.push_back(1);
+
+    // helper = list(set(helper))
+    //  -> remove duplicates
+    // helper.sort()
+    //  -> and sort
+    std::sort(helper2.begin(), helper2.end());
+
+    for (u64 k = 0; k < helper2.size()-1; k++) {
+      // remove duplicates
+      if (std::abs(helper2[k] - helper2[k+1]) < 1e-15)
+        continue;
+
+      Point point_ab, point_ba;
+      for (u64 i = 0; i < 3; i++) {
+        point_ab[i] = (1-helper2[k+0]) * point_a[i] + helper[k+0] * point_b[i];
+        point_ba[i] = (1-helper2[k+1]) * point_a[i] + helper[k+1] * point_b[i];
+      }
+
+      u64 index_a = find_closest(&point_ab[0]);
+      u64 index_b = find_closest(&point_ba[0]);
+
+      if (index_a != index_b) {
+        edges.push_back({index_a, index_b});
+        edges_prop.push_back(fiber_props[fid]);
+      }
     }
   }
 
-  logi("selfloops={}", selfloops);
-
-  assert(edge_props.size() == edges.size());
 
   logi("generate output");
 
@@ -406,11 +399,11 @@ int main(int argc, char** argv) {
 
   std::print(gfile, "\nPOINTS:\n");
   for (const Point& vertex : vertices)
-    std::print(gfile, "{} {} {}\n", vertex[0], vertex[1], vertex[2]);
+    std::print(gfile, "{}  {}  {}\n", vertex[0], vertex[1], vertex[2]);
 
   std::print(gfile, "\nHYPERNODES_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
-    std::print(gfile, "{} {}\n", edge.first, edge.second);
+    std::print(gfile, "{}  {}\n", edge.first, edge.second);
 
   std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
   for (const Edge& edge : edges) {
@@ -427,13 +420,13 @@ int main(int argc, char** argv) {
   }
   std::print(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
-    std::print(gfile, "{} {}\n", edge.first, edge.second);
+    std::print(gfile, "{}  {}\n", edge.first, edge.second);
 
   std::println(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
-  for (const Prop& prop : edge_props) {
+  for (const Prop& prop : edges_prop) {
     std::print(gfile, "{}", prop[0]);
     for (u64 i = 1; i < 12; i++)
-      std::print(gfile, " {}", prop[i]);
+      std::print(gfile, "  {}", prop[i]);
     std::print(gfile, "\n");
   }
 
