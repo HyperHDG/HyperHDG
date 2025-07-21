@@ -372,6 +372,8 @@ int main(int argc, char** argv) {
       edges.push_back({index_a, index_b});
   }
 
+  std::vector<Prop>& edge_props = connection_props;
+
   for (u64 fid = 0; fid < fibers.size(); fid++) {
     // helper = act_fibers[act_fibers[:,0] == index, 1]
     std::vector<ConnectionPoint>& helper = fiber_connections[fid];
@@ -408,8 +410,65 @@ int main(int argc, char** argv) {
 
       if (index_a != index_b) {
         edges.push_back({index_a, index_b});
+        edge_props.push_back(fiber_props[fid]);
       }
     }
+  }
+
+  if (fs::is_directory(output_path))
+    output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
+
+  // Calculate the bounding box (min/max x, y, z) for all vertices
+  Real min_x = 1e10, min_y = 1e10, min_z = 1e10, max_x = 1e-10, max_y = 1e-10, max_z = 1e-10;
+  for (const Point& vertex : vertices) {
+      min_x = std::min(min_x, vertex[0]);
+      min_y = std::min(min_y, vertex[1]);
+      min_z = std::min(min_z, vertex[2]);
+      max_x = std::max(max_x, vertex[0]);
+      max_y = std::max(max_y, vertex[1]);
+      max_z = std::max(max_z, vertex[2]);
+  }
+
+  std::ofstream gfile(std::format("{}.geo", output_path));
+
+  std::print(gfile, "# This file was auto-generated!\n\n");
+  std::print(gfile, "Space_Dim     = 3;  # Dimension of space.\n");
+  std::print(gfile, "HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n");
+  std::print(gfile, "N_Points      = {};  # Number of vertices.\n", vertices.size());
+  std::print(gfile, "N_HyperNodes  = {};  # Number of hypernodes.\n", vertices.size());
+  std::print(gfile, "N_HyperEdges  = {};  # Number of hyperedges.\n", edges.size());
+
+  std::print(gfile, "\nPOINTS:\n");
+  for (const Point& vertex : vertices)
+    std::print(gfile, "{:.18e}  {:.18e}  {:.18e}\n", vertex[0], vertex[1], vertex[2]);
+
+  std::print(gfile, "\nHYPERNODES_OF_HYPEREDGES:\n");
+  for (const Edge& edge : edges)
+    std::print(gfile, "{} {}\n", edge.first, edge.second);
+
+  std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
+  for (const Edge& edge : edges) {
+    u64 left = 0, right = 0;
+    Point vertex = vertices[edge.first];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
+      left = 1;
+    vertex = vertices[edge.second];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
+      right = 1;
+    std::print(gfile, "{} {}\n", left, right);
+  }
+  std::print(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
+  for (const Edge& edge : edges)
+    std::print(gfile, "{} {}\n", edge.first, edge.second);
+
+  std::print(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
+  for (const Prop& prop : edge_props) {
+    std::print(gfile, "{:.18e}", prop[0]);
+    for (u64 i = 1; i < 12; i++)
+      std::print(gfile, "  {:.18e}", prop[i]);
+    std::print(gfile, "\n");
   }
 
   std::ofstream pfile(std::format("{}_points.txt", output_path));
