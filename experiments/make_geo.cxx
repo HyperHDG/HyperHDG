@@ -147,34 +147,6 @@ std::vector<Prop> read_props(const char* path) {
 }
 
 
-std::vector<Edge> read_connection_edges(const char* path) {
-  std::vector<Edge> edges;
-  std::ifstream file(path);
-  for (std::string line; std::getline(file, line);) {
-    double du,dv;
-    if (2 != sscanf(line.c_str(), "%lf %lf", &du, &dv)) {
-      std::println(stderr, "ERROR: couln't parse `%lf %lf` from line `{}`", line);
-      return {};
-    }
-    edges.emplace_back((u64)du,(u64)dv);
-  }
-  return edges;
-}
-
-std::vector<Point> read_connection_points(const char* path) {
-  std::vector<Point> points;
-  std::ifstream file(path);
-  for (std::string line; std::getline(file, line);) {
-    double x,y,z;
-    if (3 != sscanf(line.c_str(), "%lf %lf %lf", &x, &y, &z)) {
-      std::println(stderr, "ERROR: couln't parse `%lf %lf %lf` from line `{}`", line);
-      return {};
-    }
-    points.push_back({x,y,z});
-  }
-  return points;
-}
-
 Point interpolate(const Point& u, const Point& v, Real a) {
   Point res;
   for (u64 i = 0; i < 3; i++)
@@ -246,12 +218,6 @@ int main(int argc, char** argv) {
 
   std::vector<Prop> connection_props = read_props(std::format("{}/connectionsProp.csv", input_folder).c_str());
   logi("connectionProps: {}", connection_props.size());
-
-  std::vector<Edge> connection_edges = read_connection_edges(std::format("{}/connection_edges.txt", input_folder).c_str());
-  logi("connection edges: {}", connection_edges.size());
-
-  std::vector<Point> connection_points = read_connection_points(std::format("{}/connection_points.txt", input_folder).c_str());
-  logi("connection points: {}", connection_points.size());
 
   // collect all points to build fast KNN lookup datastructure
   PointCloud<Real> pcloud;
