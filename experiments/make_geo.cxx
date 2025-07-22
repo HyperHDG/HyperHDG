@@ -16,6 +16,7 @@
 namespace {
 
 using u64 = uint64_t;
+using u8 = uint8_t;
 using Real = double;
 using ID = u64;
 using ID = u64;
@@ -177,16 +178,15 @@ struct GraphEdgeList {
   std::vector<Edge> edges;
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
+  std::vector<std::pair<u8, u8>> types;
 };
 
-void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
-  const std::vector<Point>& vertices = graph.vertices;
-  const std::vector<Edge>& edges = graph.edges;
-  const std::vector<Prop>& edge_props = graph.edge_props;
+GraphEdgeList& compute_types(GraphEdgeList& graph) {
+  graph.types.resize(0);
 
   // Calculate the bounding box (min/max x, y, z) for all vertices
   Real min_x = 1e10, min_y = 1e10, min_z = 1e10, max_x = 1e-10, max_y = 1e-10, max_z = 1e-10;
-  for (const Point& vertex : vertices) {
+  for (const Point& vertex : graph.vertices) {
       min_x = std::min(min_x, vertex[0]);
       min_y = std::min(min_y, vertex[1]);
       min_z = std::min(min_z, vertex[2]);
@@ -194,6 +194,27 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
       max_y = std::max(max_y, vertex[1]);
       max_z = std::max(max_z, vertex[2]);
   }
+
+  for (const Edge& edge : graph.edges) {
+    u8 left = 0, right = 0;
+    Point vertex = graph.vertices[edge.first];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
+      left = 1;
+    vertex = graph.vertices[edge.second];
+    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
+        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
+      right = 1;
+    graph.types.push_back({left, right});
+  }
+
+  return graph;
+}
+
+void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
+  const std::vector<Point>& vertices = graph.vertices;
+  const std::vector<Edge>& edges = graph.edges;
+  const std::vector<Prop>& edge_props = graph.edge_props;
 
   std::ofstream gfile(std::format("{}.geo", output_path));
 
@@ -213,18 +234,9 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
     std::print(gfile, "{} {}\n", edge.first, edge.second);
 
   std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
-  for (const Edge& edge : edges) {
-    u64 left = 0, right = 0;
-    Point vertex = vertices[edge.first];
-    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
-      left = 1;
-    vertex = vertices[edge.second];
-    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
-      right = 1;
-    std::print(gfile, "{} {}\n", left, right);
-  }
+  for (const auto& type : graph.types)
+    std::print(gfile, "{} {}\n", type.first, type.second);
+
   std::print(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
     std::print(gfile, "{} {}\n", edge.first, edge.second);
@@ -242,6 +254,12 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
     std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
 }
 
+struct DataTable {
+  char name[8];
+  u64 offset;     // from file start
+  u64 size;       // in bytes
+};
+
 struct GeoBinHeader {
   char magic[8]; // should contain GEOBINxx
   u64 space_dim;
@@ -249,29 +267,116 @@ struct GeoBinHeader {
   u64 n_points;
   u64 n_hypernodes;
   u64 n_hyperedges;
-};
-
-struct DataTableHeader {
-  u64 offset;     // from file start
-  u64 size;       // in bytes
-  u64 entry_size; // in bytes
-};
-
-struct GeoBin {
-  GeoBinHeader header;
-  DataTableHeader tables[5];
+  DataTable tables[5];
 };
 
 void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
-  GeoBin bin;
+  u64 n = graph.vertices.size();
+  u64 m = graph.edges.size();
+  if (graph.edge_props.size() != m) {
+    std::println(stderr, "WARNING: unequal number of graph edges and edge props provided {}!={}", m, graph.edge_props.size());
+  }
 
+  DataTable points = {
+    .name = "POINTS\0", // extra \0
+    .offset = sizeof(GeoBinHeader),
+    .size = n * 3 * sizeof(Real),
+  };
+
+  DataTable hypernodes_of_hyperedges = {
+    .name = "HYPNODE", // extra \0
+    .offset = points.offset + points.size,
+    .size = m * 2 * sizeof(ID),
+  };
+
+  DataTable types_of_hyperfaces = {
+    .name = "TYPES\0\0", // extra \0
+    .offset = hypernodes_of_hyperedges.offset + hypernodes_of_hyperedges.size,
+    .size = m * 2 * sizeof(u8),
+  };
+
+  DataTable points_of_hyperedges = {
+    .name = "POIHYPE", // extra \0
+    .offset = types_of_hyperfaces.offset + types_of_hyperfaces.size,
+    .size = m * 2 * sizeof(ID),
+  };
+
+  DataTable hyperedge_properties = {
+    .name = "HYPPROP", // extra \0
+    .offset = points_of_hyperedges.offset + points_of_hyperedges.size,
+    .size = m * 12 * sizeof(Real),
+  };
+
+   GeoBinHeader header = {
+    .magic = "GEOBIN1", // extra \0
+    .space_dim = 3,
+    .hyperedge_dim = 1,
+    .n_points = n,
+    .n_hypernodes = n,
+    .n_hyperedges = m,
+    .tables = {
+      points,
+      hypernodes_of_hyperedges,
+      types_of_hyperfaces,
+      points_of_hyperedges,
+      hyperedge_properties
+    },
+  };
+
+  std::ofstream file(output_path, std::ios::binary);
+  file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
+  file.write((char*)&header, sizeof(header));
+  assert((u64)file.tellp() == points.offset);
+  file.write((char*)&graph.vertices[0], points.size);
+  assert((u64)file.tellp() == hypernodes_of_hyperedges.offset);
+  file.write((char*)&graph.edges[0], hypernodes_of_hyperedges.size);
+  assert((u64)file.tellp() == types_of_hyperfaces.offset);
+  file.write((char*)&graph.types[0], types_of_hyperfaces.size);
+  assert((u64)file.tellp() == points_of_hyperedges.offset);
+  file.write((char*)&graph.edges[0], points_of_hyperedges.size);
+  assert((u64)file.tellp() == hyperedge_properties.offset);
+  file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
 }
 
-void deserialize_bin(const char* input_path, const GraphEdgeList& graph) {
+GraphEdgeList deserialize_bin(const char* input_path) {
+  GraphEdgeList graph;
 
+  std::ifstream file(input_path, std::ios::binary);
+  file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
+  std::array<char, sizeof(GeoBinHeader)> header_buf;
+  file.read(header_buf.data(), sizeof(GeoBinHeader));
+  GeoBinHeader* header = (GeoBinHeader*)header_buf.data();
+  assert(0 == std::strcmp(header->magic, "GEOBIN1")); // extra trailing \0
+  assert(3 == header->space_dim);
+  assert(1 == header->hyperedge_dim);
+
+  logi("deserialize_bin");
+  logi("  n_points = {}", header->n_points);
+  logi("  n_hypernodes = {}", header->n_hypernodes);
+  logi("  n_hyperedges = {}", header->n_hyperedges);
+
+  graph.vertices.resize(header->n_points);
+  graph.edges.resize(header->n_hyperedges);
+  graph.edge_props.resize(header->n_hyperedges);
+  graph.types.resize(header->n_hyperedges);
+
+  for (u64 i = 0; i < sizeof(header->tables)/sizeof(DataTable); i++)
+    logi("  table[{}].name = {}", i, header->tables[i].name);
+
+  DataTable* tables = header->tables;
+  assert((u64)file.tellg() == tables[0].offset);
+  file.read((char*)graph.vertices.data(), tables[0].size);
+  assert((u64)file.tellg() == tables[1].offset);
+  file.read((char*)graph.edges.data(), tables[1].size);
+  assert((u64)file.tellg() == tables[2].offset);
+  file.read((char*)graph.types.data(), tables[2].size);
+  assert((u64)file.tellg() == tables[3].offset);
+  file.seekg(tables[3].size, std::ios::cur); // skip next
+  assert((u64)file.tellg() == tables[4].offset);
+  file.read((char*)graph.edge_props.data(), tables[4].size);
+
+  return graph;
 }
-
-
 
 }
 
@@ -497,5 +602,13 @@ int main(int argc, char** argv) {
   if (fs::is_directory(output_path))
     output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
 
-  serialize_txt(output_path.c_str(), { .edges = edges, .vertices = vertices,  .edge_props = edge_props});
+  GraphEdgeList graph = { .edges = edges, .vertices = vertices,  .edge_props = edge_props, .types = {}};
+  compute_types(graph);
+
+  std::string binpath = std::format("{}.geo.bin", output_path);
+  serialize_bin(binpath.c_str(), graph);
+  GraphEdgeList graph2 = deserialize_bin(binpath.c_str());
+
+  serialize_txt(output_path.c_str(), graph);
+  serialize_txt(std::format("{}.geo2", output_path).c_str(), graph2);
 }
