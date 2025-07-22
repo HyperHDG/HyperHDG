@@ -595,7 +595,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  logi("generating output files");
+  logi("output size");
   logi("  vertices.size = {}", vertices.size());
   logi("  edges.size    = {}", edges.size());
 
@@ -608,6 +608,8 @@ int main(int argc, char** argv) {
   std::string binpath = std::format("{}.geo.bin", output_path);
   serialize_bin(binpath.c_str(), graph);
   GraphEdgeList graph2 = deserialize_bin(binpath.c_str());
+
+  logi("generating txt");
 
   serialize_txt(output_path.c_str(), graph);
   serialize_txt(std::format("{}.geo2", output_path).c_str(), graph2);
