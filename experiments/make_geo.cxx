@@ -12,6 +12,7 @@
 
 #include <nanoflann.hpp>
 #include <fmtlog/fmtlog.h>
+#include <bxzstr.hpp>
 
 namespace {
 
@@ -323,18 +324,13 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
     },
   };
 
-  std::ofstream file(std::format("{}.geo.bin", output_path), std::ios::binary);
+  bxz::ofstream file(std::format("{}.geo.bin.zstd", output_path), bxz::zstd);
   file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
   file.write((char*)&header, sizeof(header));
-  assert((u64)file.tellp() == points.offset);
   file.write((char*)&graph.vertices[0], points.size);
-  assert((u64)file.tellp() == hypernodes_of_hyperedges.offset);
   file.write((char*)&graph.edges[0], hypernodes_of_hyperedges.size);
-  assert((u64)file.tellp() == types_of_hyperfaces.offset);
   file.write((char*)&graph.types[0], types_of_hyperfaces.size);
-  assert((u64)file.tellp() == points_of_hyperedges.offset);
   file.write((char*)&graph.edges[0], points_of_hyperedges.size);
-  assert((u64)file.tellp() == hyperedge_properties.offset);
   file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
 }
 
@@ -399,12 +395,14 @@ int main(int argc, char** argv) {
   }
 
   if (!fs::is_directory(output_path)) {
-    std::ofstream file(std::format("{}.geo", output_path));
+    std::string test_path = std::format("{}.test", output_path);
+    std::ofstream file(test_path);
     if (!file) {
       loge("invalid argument <output_path>, got '{}'", output_path);
       loge("  neither directory, nor writable path");
       return 1;
     }
+    fs::remove(test_path);
   }
 
   bool txt = false;

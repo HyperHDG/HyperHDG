@@ -20,3 +20,6 @@
 [submodule "submodules/fmtlog"]
 	path = submodules/fmtlog
 	url = https://github.com/ndam-hexagon/fmtlog.git
+[submodule "submodules/bxzstr"]
+	path = submodules/bxzstr
+	url = https://github.com/tmaklin/bxzstr.git
