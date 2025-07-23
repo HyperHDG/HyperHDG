@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/epsilon_neighborhood_graph.hxx>
+#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
@@ -8,6 +9,9 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <cstring>
+#include <cstdint>
+#include <format>
 
 /*!*************************************************************************************************
  * \brief   Check whether a \c std::vector does not contain duplicate entries.
@@ -152,6 +156,105 @@ struct DomainInfo
     return true;
   }  // end of check_consistency
 };  // end of struct DomainInfo
+
+struct DataTable {
+  char name[8];
+  uint64_t offset;     // from file start
+  uint64_t size;       // in bytes
+};
+
+struct GeoBinHeader {
+  char magic[8]; // should contain GEOBINxx
+  uint64_t space_dim;
+  uint64_t hyperedge_dim;
+  uint64_t n_points;
+  uint64_t n_hypernodes;
+  uint64_t n_hyperedges;
+  DataTable tables[5];
+};
+
+/*!*************************************************************************************************
+ * \brief   Function to read .geo.bin file. Note: should be run on the same machine as the geobin file was generated on.
+ *
+ * \tparam  hyEdge_dim      The local dimension of a hyperedge.
+ * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  vectorT         The typename of a large vector holding e.g. all points.
+ * \tparam  pointT          The typename of a point.
+ * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
+ * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
+ *
+ * \param   filename        Name of the .geo.bin file to be read.
+ * \retval  domain_info     Topological and geometrical information of hypergraph.
+ *
+ * \authors   Joseph Holten, Karlsruhe Institute of Technology, 2025.
+ **************************************************************************************************/
+template <unsigned int hyEdge_dim,
+          unsigned int space_dim,
+          template <typename...> typename vectorT = std::vector,
+          typename pointT = Point<space_dim, double>,
+          typename hyEdge_index_t = unsigned int,
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
+DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+read_domain_geobin(const std::string& filename)
+{
+  std::ifstream file(filename, std::ios::binary);
+  file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
+  hy_assert(file.is_open(), std::format("read_domain_geobin: couldn't open file '{}'", filename));
+
+  std::array<char, sizeof(GeoBinHeader)> header_buf;
+  file.read(header_buf.data(), sizeof(GeoBinHeader));
+  GeoBinHeader* header = (GeoBinHeader*)header_buf.data();
+  hy_assert(0 == strncmp(header->magic, "GEOBIN1", 8),
+            "read_domain_geobin: didn't find expected magic bytes `GEOBIN1` at start of file!");
+
+  // verify data type sizes
+
+  DataTable* tables = header->tables;
+  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+    domain_info(header->n_points, header->n_hyperedges, header->n_hypernodes, header->n_points);
+
+  hy_assert((uint64_t)file.tellg() == tables[0].offset,
+            "read_domain_geobin: unexpected file position");
+  hy_assert(tables[0].size == domain_info.points.size() * sizeof(domain_info.points::value_type),
+            "read_domain_geobin: unexpected tables[0].size");
+  file.read((char*)domain_info.points.data(), tables[0].size);
+
+  hy_assert((uint64_t)file.tellg() == tables[1].offset,
+            "read_domain_geobin: unexpected file position");
+  hy_assert(tables[1].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.hyNodes_hyEdge::value_type),
+            "read_domain_geobin: unexpected tables[1].size");
+  file.read((char*)domain_info.hyNodes_hyEdge.data(), tables[1].size);
+
+  hy_assert((uint64_t)file.tellg() == tables[2].offset,
+            "read_domain_geobin: unexpected file position");
+  hy_assert(tables[2].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.hyNodes_hyEdge::value_type),
+            "read_domain_geobin: unexpected tables[1].size");
+  file.read((char*)domain_info.hyFaces_hyEdge.data(), tables[2].size);
+
+  hy_assert(tables[3].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.points_hyEdge::value_type),
+            "read_domain_geobin: unexpected tables[1].size");
+  hy_assert((uint64_t)file.tellg() == tables[3].offset,
+            "read_domain_geobin: unexpected file position");
+  file.read((char*)domain_info.points_hyEdge.data(), tables[3].size);
+
+  domain_info.n_properties = tables[4].size / header->n_hyperedges / sizeof(double);
+  domain_info.hyEdge_properties.resize(header->n_hyperedges);
+  hy_assert(tables[4].size == domain_info.hyEdge_properties.size() * domain_info.n_properties * sizeof(double),
+            "read_domain_geobin: unexpected tables[1].size");
+  hy_assert((uint64_t)file.tellg() == tables[4].offset,
+            "read_domain_geobin: unexpected file position");
+  for (uint64_t i = 0; i < header->n_hyperedges; i++) {
+    domain_info.hyEdge_properties[i].resize(domain_info.n_properties);
+    file.read((char*)domain_info.hyEdge_properties[i].data(), domain_info.n_properties * sizeof(double));
+  }
+
+  hy_assert((uint64_t)file.tellg() == tables[4].offset + tables[4].size,
+            "read_domain_geobin: unexpected file position");
+
+  return domain_info;
+}
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -408,6 +511,15 @@ read_domain(std::string filename)
   {
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
+  }
+
+  if (filename.substr(filename.size() - 8, filename.size()) == ".geo.bin")
+  {
+    hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
+    auto domain_info = read_domain_geobin<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                              hyNode_index_t, pt_index_t>(filename);
+    hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");
+    return domain_info;
   }
 
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
