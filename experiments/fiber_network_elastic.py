@@ -13,6 +13,8 @@ import os, sys, argparse, logging, datetime, subprocess
 
 import prin2, jprecond
 
+SPACE_DIM = 3
+
 ######### SETUP argument parsing & logging
 
 parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
@@ -21,7 +23,7 @@ parser.add_argument("-t", "--rtol",
   help="relative tolerance when to stop the CG iterator",
   type=float, default=1e-10
 )
-parser.add_argument("-b",  "--bin", help="expect binary input", action="store_true")
+parser.add_argument("--txt", help="expect .txt instead of .bin files", action="store_true")
 parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
 
 logging.setLoggerClass(prin2.Logger)
@@ -32,7 +34,7 @@ logger.log_args(args)
 os.system("mkdir -p output")
 
 network_path = args.network + ".geo"
-if args.bin:
+if not args.txt:
   network_path += ".bin"
 logger.info(f"{network_path=}")
 
@@ -57,7 +59,11 @@ logger.info("reading files")
 
 PyDP = HyperHDG.include(const)
 HDG_wrapper = PyDP(network_path)
-network_points = np.loadtxt(args.network + "_points.txt")
+if args.txt:
+  network_points = np.loadtxt(args.network + ".pts")
+else:
+  network_points = np.fromfile(args.network + ".pts.bin", dtype=np.dtype('float64')).reshape(-1, SPACE_DIM)
+  logger.info(f"{network_points.shape=}")
 
 logger.info("computing residual")
 
