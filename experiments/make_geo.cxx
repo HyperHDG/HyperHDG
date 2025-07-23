@@ -336,10 +336,6 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
   file.write((char*)&graph.edges[0], points_of_hyperedges.size);
   assert((u64)file.tellp() == hyperedge_properties.offset);
   file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
-
-  std::ofstream points_file(std::format("{}.pts.bin", output_path), std::ios::binary);
-  points_file.write((char*)&graph.vertices[0], points.size);
-  assert((u64)points_file.tellp() == points.size);
 }
 
 GraphEdgeList deserialize_bin(const char* input_path) {

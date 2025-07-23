@@ -13,7 +13,26 @@ import os, sys, argparse, logging, datetime, subprocess
 
 import prin2, jprecond
 
-SPACE_DIM = 3
+# '<' for little-endian
+# u8 : uint64_t
+# S8 : char[8]
+
+DataTableType = np.dtype([
+  ('name', 'S8'),
+  ('offset', '<u8'),
+  ('size', '<u8'),
+])
+
+GeoBinHeaderType = np.dtype([
+    ('magic', 'S8'),
+    ('space_dim', '<u8'),
+    ('hyperedge_dim', '<u8'),
+    ('n_points', '<u8'),
+    ('n_hypernodes', '<u8'),
+    ('n_hyperedges', '<u8'),
+])
+
+FloatType = np.dtype("float64")
 
 ######### SETUP argument parsing & logging
 
@@ -62,8 +81,24 @@ HDG_wrapper = PyDP(network_path)
 if args.txt:
   network_points = np.loadtxt(args.network + ".pts")
 else:
-  network_points = np.fromfile(args.network + ".pts.bin", dtype=np.dtype('float64')).reshape(-1, SPACE_DIM)
-  logger.info(f"{network_points.shape=}")
+  header_without_tables = np.fromfile(
+    network_path,
+    dtype=GeoBinHeaderType,
+    offset=0,
+    count=1
+  )[0]
+  tables = np.fromfile(
+    network_path,
+    dtype=DataTableType,
+    offset=GeoBinHeaderType.itemsize,
+    count=5
+  )
+  network_points = np.fromfile(
+    network_path,
+    dtype=FloatType,
+    offset=tables[0]["offset"],
+    count=int(tables[0]["size"]/FloatType.itemsize),
+  ).reshape(-1, header_without_tables["space_dim"])
 
 logger.info("computing residual")
 
