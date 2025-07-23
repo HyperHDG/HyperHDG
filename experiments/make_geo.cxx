@@ -16,10 +16,10 @@
 namespace {
 
 using u64 = uint64_t;
+using u32 = uint32_t;
 using u8 = uint8_t;
 using Real = double;
-using ID = u64;
-using ID = u64;
+using ID = u32;
 
 struct Connection {
   ID f1;
@@ -46,7 +46,7 @@ std::vector<Point> read_nodes(const char* path) {
   }
   for (std::string line; std::getline(nodes_file, line); ) {
     ID id; Real x, y, z;
-    if (4 == sscanf(line.c_str(), "%zu,%lf,%lf,%lf", &id, &x, &y, &z)) {
+    if (4 == sscanf(line.c_str(), "%d,%lf,%lf,%lf", &id, &x, &y, &z)) {
       nodes.push_back({x,y,z});
     } else {
       if (strcmp("Id,x,y,z", line.c_str()) == 0)
@@ -70,7 +70,7 @@ std::vector<Edge> read_fibers(const char* path) {
   }
   for (std::string line; std::getline(fibers_file, line); ) {
     ID f; ID u, v;
-    if (3 == sscanf(line.c_str(), "%zu,%zu,%zu", &f, &u, &v)) {
+    if (3 == sscanf(line.c_str(), "%d,%d,%d", &f, &u, &v)) {
       fibers.push_back({u,v});
     } else {
       if (strcmp("Id,node1,node2", line.c_str()) == 0)
@@ -95,7 +95,7 @@ std::vector<Connection> read_connections(const char* path) {
   }
   for (std::string line; std::getline(connections_file, line); ) {
     ID c,f1,f2; Real a1,a2;
-    if (5 == sscanf(line.c_str(), "%zu,%zu,%zu,%lf,%lf", &c, &f1, &f2, &a1, &a2)) {
+    if (5 == sscanf(line.c_str(), "%d,%d,%d,%lf,%lf", &c, &f1, &f2, &a1, &a2)) {
       connections.push_back({f1,f2,a1,a2});
     } else {
       if (strcmp("Id,fiber1,fiber2,a1,a2", line.c_str()) == 0)
@@ -124,16 +124,16 @@ std::vector<Prop> read_props(const char* path) {
     int total_chars_read = 0, chars_read = 0;
     const char* cline = line.c_str();
 
-    if (1 != sscanf(cline, "%zu%n,", &f, &chars_read)) {
+    if (1 != sscanf(cline, "%d%n,", &f, &chars_read)) {
       if (0 == strcmp(cline, "Id,EA,kG_1A,kG_2A,G_xI_x,E_1I_1,E_2I_2,n_11,n_12,n_13,n_21,n_22,n_23"))
         continue;
-      std::println(stderr, "error: {}: sscanf format '%zu' invalid for '{}'", path, cline);
+      std::println(stderr, "error: {}: sscanf format '%d' invalid for '{}'", path, cline);
       return {};
     }
 
     total_chars_read += chars_read+1;
 
-    for (u64 i = 0; i < 12; i++) {
+    for (ID i = 0; i < 12; i++) {
       if (1 != sscanf(cline+total_chars_read, "%lf%n", &prop[i], &chars_read)) {
         std::println(stderr, "error: {}: sscanf format '%lf' invalid for '{}'", path, cline+total_chars_read);
         return {};
@@ -150,7 +150,7 @@ std::vector<Prop> read_props(const char* path) {
 
 Point interpolate(const Point& u, const Point& v, Real a) {
   Point res;
-  for (u64 i = 0; i < 3; i++)
+  for (ID i = 0; i < 3; i++)
     res[i] = (1-a)*u[i] + a*v[i];
   return res;
 }
@@ -178,7 +178,7 @@ struct GraphEdgeList {
   std::vector<Edge> edges;
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
-  std::vector<std::pair<u8, u8>> types;
+  std::vector<Edge> types;
 };
 
 GraphEdgeList& compute_types(GraphEdgeList& graph) {
@@ -196,7 +196,7 @@ GraphEdgeList& compute_types(GraphEdgeList& graph) {
   }
 
   for (const Edge& edge : graph.edges) {
-    u8 left = 0, right = 0;
+    u32 left = 0, right = 0;
     Point vertex = graph.vertices[edge.first];
     if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
         vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
@@ -244,7 +244,7 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
   std::print(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
   for (const Prop& prop : edge_props) {
     std::print(gfile, "{:.18e}", prop[0]);
-    for (u64 i = 1; i < 12; i++)
+    for (ID i = 1; i < 12; i++)
       std::print(gfile, "  {:.18e}", prop[i]);
     std::print(gfile, "\n");
   }
@@ -292,7 +292,7 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
   DataTable types_of_hyperfaces = {
     .name = "TYPES\0\0", // extra \0
     .offset = hypernodes_of_hyperedges.offset + hypernodes_of_hyperedges.size,
-    .size = m * 2 * sizeof(u8),
+    .size = m * 2 * sizeof(ID),
   };
 
   DataTable points_of_hyperedges = {
@@ -440,14 +440,14 @@ int main(int argc, char** argv) {
     Point e21 = nodes[e2.first];
     Point e22 = nodes[e2.second];
 
-    for (u64 i = 0; i < 3; i++) {
+    for (ID i = 0; i < 3; i++) {
       p1[i] = (1-con.a1) * e11[i] + con.a1*e12[i];
       p2[i] = (1-con.a2) * e21[i] + con.a2*e22[i];
     }
 
-    u64 p1id = pcloud.pts.size();
+    ID p1id = pcloud.pts.size();
     pcloud.pts.push_back(p1);
-    u64 p2id = pcloud.pts.size();
+    ID p2id = pcloud.pts.size();
     pcloud.pts.push_back(p2);
 
     fiber_connections[con.f1].push_back({p1id, con.a1});
@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
   for (const Point& p : nodes)
     pcloud.pts.push_back(p);
 
-  const u64 dim = 3, maxleaf = 10;
+  const ID dim = 3, maxleaf = 10;
   using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
     nanoflann::L2_Simple_Adaptor<Real, PointCloud<Real>>,
     PointCloud<Real>,
@@ -471,8 +471,8 @@ int main(int argc, char** argv) {
   logi("generating vertex/edge list");
 
   std::vector<Point> vertices;
-  std::vector<u64> is_in_vertices(pcloud.pts.size(), 0);
-  std::vector<u64> vertices_idx(pcloud.pts.size(), (u64)-1);
+  std::vector<ID> is_in_vertices(pcloud.pts.size(), 0);
+  std::vector<ID> vertices_idx(pcloud.pts.size(), (ID)-1);
 
   std::vector<Edge> edges;
 
@@ -483,10 +483,10 @@ int main(int argc, char** argv) {
   auto find_merged_id = [&kdtree, &is_in_vertices, &neighbors, &vertices_idx](const Point& p, Real r) {
     // NOTE: nanoflann works with squared L2 distances
     Real d = 2*r;
-    const u64 num_neighbors = kdtree.radiusSearch(p.data(), r*r, neighbors); // only consider neighbors closer than r
-    u64 index = (u64)-1;
+    const ID num_neighbors = kdtree.radiusSearch(p.data(), r*r, neighbors); // only consider neighbors closer than r
+    ID index = (ID)-1;
     assert(num_neighbors != 0); // point_a should be found
-    for (u64 i = 0; i < num_neighbors; i++) {
+    for (ID i = 0; i < num_neighbors; i++) {
       if (0 == is_in_vertices[neighbors[i].first]) // only consider neighbors already in vertices
         continue;
       if (neighbors[i].second < d) {               // of those, pick the closest
@@ -497,9 +497,9 @@ int main(int argc, char** argv) {
     return index;
   };
 
-  auto find_merged_id_and_insert = [&kdtree, &neighbors, &vertices, &is_in_vertices, &vertices_idx, &find_merged_id](u64 id, const Point& p, Real r) {
-    u64 index = find_merged_id(p, r);
-    if (index == (u64)-1) {
+  auto find_merged_id_and_insert = [&kdtree, &neighbors, &vertices, &is_in_vertices, &vertices_idx, &find_merged_id](ID id, const Point& p, Real r) {
+    ID index = find_merged_id(p, r);
+    if (index == (ID)-1) {
       index = vertices.size();
       vertices.push_back(p);
       is_in_vertices[id] = 1;
@@ -523,7 +523,7 @@ int main(int argc, char** argv) {
   is_in_vertices[1] = 1;
   edges.push_back({0,1});
 
-  for (u64 cid = 1; cid < connections.size(); cid++) {
+  for (ID cid = 1; cid < connections.size(); cid++) {
     const Point& point_a = pcloud.pts[2*cid];
     const Point& point_b = pcloud.pts[2*cid+1];
 
@@ -534,14 +534,14 @@ int main(int argc, char** argv) {
     //   index_a = len(vertices)
     //   vertices = np.vstack((vertices, point_a))
 
-    const u64 index_a = find_merged_id_and_insert(2*cid, point_a, r);
+    const ID index_a = find_merged_id_and_insert(2*cid, point_a, r);
 
     // index_b = np.argmin(np.linalg.norm(point_b - vertices, axis=1))
     // if np.linalg.norm(point_b - vertices[index_b]) > 1e-10:
     //   index_b = len(vertices)
     //   vertices = np.vstack((vertices, point_b))
 
-    const u64 index_b = find_merged_id_and_insert(2*cid+1, point_b, r);
+    const ID index_b = find_merged_id_and_insert(2*cid+1, point_b, r);
 
     if (index_a != index_b)
       edges.push_back({index_a, index_b});
@@ -554,7 +554,7 @@ int main(int argc, char** argv) {
   // but we replicate this behaviour.
   std::vector<Prop>& edge_props = connection_props;
 
-  for (u64 fid = 0; fid < fibers.size(); fid++) {
+  for (ID fid = 0; fid < fibers.size(); fid++) {
     // helper = act_fibers[act_fibers[:,0] == index, 1]
     std::vector<ConnectionPoint>& helper = fiber_connections[fid];
     if (helper.empty())
@@ -562,10 +562,10 @@ int main(int argc, char** argv) {
 
     const Point& point_a = nodes[fibers[fid].first];
     const Point& point_b = nodes[fibers[fid].second];
-    const u64 off = 2*connections.size();
+    const ID off = 2*connections.size();
 
-    const u64 endpoint_idx_a = find_merged_id_and_insert(off+fibers[fid].first, point_a, 1e-15);
-    const u64 endpoint_idx_b = find_merged_id_and_insert(off+fibers[fid].second, point_b, 1e-15);
+    const ID endpoint_idx_a = find_merged_id_and_insert(off+fibers[fid].first, point_a, 1e-15);
+    const ID endpoint_idx_b = find_merged_id_and_insert(off+fibers[fid].second, point_b, 1e-15);
 
     std::sort(helper.begin(), helper.end(), [](ConnectionPoint p1, ConnectionPoint p2){ return p1.a < p2.a; });
 
@@ -573,17 +573,17 @@ int main(int argc, char** argv) {
     helper.insert(helper.begin(), {.nodeid = endpoint_idx_a, .a = 0});
     helper.insert(helper.end(),   {.nodeid = endpoint_idx_b, .a = 1});
 
-    for (u64 k = 0; k < helper.size()-1; k++) {
+    for (ID k = 0; k < helper.size()-1; k++) {
       Point point_ab = interpolate(point_a, point_b, helper[k].a);
       Point point_ba = interpolate(point_a, point_b, helper[k+1].a);
 
-      u64 index_a = find_merged_id(point_ab, 1e-10);
-      if (index_a == (u64)-1) {
+      ID index_a = find_merged_id(point_ab, 1e-10);
+      if (index_a == (ID)-1) {
         std::println(stderr, "ERROR: expected connection point to be found");
         return 1;
       }
-      u64 index_b = find_merged_id(point_ba, 1e-10);
-      if (index_b == (u64)-1) {
+      ID index_b = find_merged_id(point_ba, 1e-10);
+      if (index_b == (ID)-1) {
         std::println(stderr, "ERROR: expected connection point to be found");
         return 1;
       }
