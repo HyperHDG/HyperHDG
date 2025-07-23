@@ -97,7 +97,7 @@ install(
 )
 
 ## Prepare nice output for linked libraries.
-foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
+foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES} -lzstd -lbz2 -llzma -lz)
   string(APPEND LINKED_STRING ${linked_lib} " ")
 endforeach()
 

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <cstdint>
 #include <format>
+#include <bxzstr/include/bxzstr.hpp>
 
 /*!*************************************************************************************************
  * \brief   Check whether a \c std::vector does not contain duplicate entries.
@@ -199,7 +200,7 @@ template <unsigned int hyEdge_dim,
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
 read_domain_geobin(const std::string& filename)
 {
-  std::ifstream file(filename, std::ios::binary);
+  bxz::ifstream file(filename, std::ios_base::in, bxz::zstd);
   file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
   hy_assert(file.is_open(), std::format("read_domain_geobin: couldn't open file '{}'", filename));
 
@@ -217,23 +218,23 @@ read_domain_geobin(const std::string& filename)
 
   hy_assert((uint64_t)file.tellg() == tables[0].offset,
             "read_domain_geobin: unexpected file position");
-  hy_assert(tables[0].size == domain_info.points.size() * sizeof(domain_info.points::value_type),
+  hy_assert(tables[0].size == domain_info.points.size() * sizeof(typename decltype(domain_info.points)::value_type),
             "read_domain_geobin: unexpected tables[0].size");
   file.read((char*)domain_info.points.data(), tables[0].size);
 
   hy_assert((uint64_t)file.tellg() == tables[1].offset,
             "read_domain_geobin: unexpected file position");
-  hy_assert(tables[1].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.hyNodes_hyEdge::value_type),
+  hy_assert(tables[1].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.hyNodes_hyEdge)::value_type),
             "read_domain_geobin: unexpected tables[1].size");
   file.read((char*)domain_info.hyNodes_hyEdge.data(), tables[1].size);
 
   hy_assert((uint64_t)file.tellg() == tables[2].offset,
             "read_domain_geobin: unexpected file position");
-  hy_assert(tables[2].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.hyNodes_hyEdge::value_type),
+  hy_assert(tables[2].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.hyNodes_hyEdge)::value_type),
             "read_domain_geobin: unexpected tables[1].size");
   file.read((char*)domain_info.hyFaces_hyEdge.data(), tables[2].size);
 
-  hy_assert(tables[3].size == domain_info.hyNodes_hyEdge.size() * sizeof(domain_info.points_hyEdge::value_type),
+  hy_assert(tables[3].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.points_hyEdge)::value_type),
             "read_domain_geobin: unexpected tables[1].size");
   hy_assert((uint64_t)file.tellg() == tables[3].offset,
             "read_domain_geobin: unexpected file position");
@@ -513,7 +514,7 @@ read_domain(std::string filename)
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
-  if (filename.substr(filename.size() - 8, filename.size()) == ".geo.bin")
+  if (filename.substr(filename.size() - 13, filename.size()) == ".geo.bin.zstd")
   {
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
     auto domain_info = read_domain_geobin<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,

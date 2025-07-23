@@ -10,6 +10,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse as sp
 import os, sys, argparse, logging, datetime, subprocess
+import zstandard as zstd
 
 import prin2, jprecond
 
@@ -73,24 +74,24 @@ logger.info("reading files")
 PyDP = HyperHDG.include(const)
 HDG_wrapper = PyDP(args.network)
 
-header_without_tables = np.fromfile(
-  args.network,
-  dtype=GeoBinHeaderType,
-  offset=0,
-  count=1
-)[0]
-tables = np.fromfile(
-  args.network,
-  dtype=DataTableType,
-  offset=GeoBinHeaderType.itemsize,
-  count=5
-)
-network_points = np.fromfile(
-  args.network,
-  dtype=FloatType,
-  offset=tables[0]["offset"],
-  count=int(tables[0]["size"]/FloatType.itemsize),
-).reshape(-1, header_without_tables["space_dim"])
+with zstd.open(args.network, "rb") as decom_file:
+  header_without_tables = np.frombuffer(
+    decom_file.read(GeoBinHeaderType.itemsize),
+    dtype=GeoBinHeaderType,
+    offset=0,
+    count=1
+  )[0]
+  tables = np.frombuffer(
+    decom_file.read(5*DataTableType.itemsize),
+    dtype=DataTableType,
+    count=5
+  )
+  size = tables[0]["size"]
+  network_points = np.frombuffer(
+    decom_file.read(size),
+    dtype=FloatType,
+    count=int(size/FloatType.itemsize),
+  ).reshape(-1, header_without_tables["space_dim"])
 
 logger.info("computing residual")
 
@@ -101,6 +102,7 @@ logger.info("assembling  A...")
 system_size = HDG_wrapper.size_of_system()
 col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
 A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
+logger.info(f"{A.shape=}")
 
 logger.info("assembling  B...")
 
