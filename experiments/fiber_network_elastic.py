@@ -42,7 +42,6 @@ parser.add_argument("-t", "--rtol",
   help="relative tolerance when to stop the CG iterator",
   type=float, default=1e-10
 )
-parser.add_argument("--txt", help="expect .txt instead of .bin files", action="store_true")
 parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
 
 logging.setLoggerClass(prin2.Logger)
@@ -51,11 +50,6 @@ logger = logging.getLogger("fiber_network_elastic")
 args = parser.parse_args()
 logger.log_args(args)
 os.system("mkdir -p output")
-
-network_path = args.network + ".geo"
-if not args.txt:
-  network_path += ".bin"
-logger.info(f"{network_path=}")
 
 ######## MAIN code
 
@@ -77,28 +71,26 @@ const.debug_mode      = args.debug
 logger.info("reading files")
 
 PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP(network_path)
-if args.txt:
-  network_points = np.loadtxt(args.network + ".pts")
-else:
-  header_without_tables = np.fromfile(
-    network_path,
-    dtype=GeoBinHeaderType,
-    offset=0,
-    count=1
-  )[0]
-  tables = np.fromfile(
-    network_path,
-    dtype=DataTableType,
-    offset=GeoBinHeaderType.itemsize,
-    count=5
-  )
-  network_points = np.fromfile(
-    network_path,
-    dtype=FloatType,
-    offset=tables[0]["offset"],
-    count=int(tables[0]["size"]/FloatType.itemsize),
-  ).reshape(-1, header_without_tables["space_dim"])
+HDG_wrapper = PyDP(args.network)
+
+header_without_tables = np.fromfile(
+  args.network,
+  dtype=GeoBinHeaderType,
+  offset=0,
+  count=1
+)[0]
+tables = np.fromfile(
+  args.network,
+  dtype=DataTableType,
+  offset=GeoBinHeaderType.itemsize,
+  count=5
+)
+network_points = np.fromfile(
+  args.network,
+  dtype=FloatType,
+  offset=tables[0]["offset"],
+  count=int(tables[0]["size"]/FloatType.itemsize),
+).reshape(-1, header_without_tables["space_dim"])
 
 logger.info("computing residual")
 
