@@ -21,6 +21,8 @@ parser.add_argument("-t", "--rtol",
   help="relative tolerance when to stop the CG iterator",
   type=float, default=1e-10
 )
+parser.add_argument("-b",  "--bin", help="expect binary input", action="store_true")
+parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
@@ -28,6 +30,11 @@ logger = logging.getLogger("fiber_network_elastic")
 args = parser.parse_args()
 logger.log_args(args)
 os.system("mkdir -p output")
+
+network_path = args.network + ".geo"
+if args.bin:
+  network_path += ".bin"
+logger.info(f"{network_path=}")
 
 ######## MAIN code
 
@@ -44,11 +51,15 @@ const.topology        = "File<1,3>"
 const.geometry        = "File<1,3>"
 const.node_descriptor = "File<1,3>"
 const.cython_replacements = ["string", "string"]
-const.debug_mode      = False
+const.debug_mode      = args.debug
+
+logger.info("reading files")
 
 PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP( args.network + ".geo" )
+HDG_wrapper = PyDP(network_path)
 network_points = np.loadtxt(args.network + "_points.txt")
+
+logger.info("computing residual")
 
 rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
