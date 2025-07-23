@@ -249,7 +249,7 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
     std::print(gfile, "\n");
   }
 
-  std::ofstream pfile(std::format("{}_points.txt", output_path));
+  std::ofstream pfile(std::format("{}.pts", output_path));
   for (const Point& vertex : vertices)
     std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
 }
@@ -323,7 +323,7 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
     },
   };
 
-  std::ofstream file(output_path, std::ios::binary);
+  std::ofstream file(std::format("{}.geo.bin", output_path), std::ios::binary);
   file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
   file.write((char*)&header, sizeof(header));
   assert((u64)file.tellp() == points.offset);
@@ -336,6 +336,10 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
   file.write((char*)&graph.edges[0], points_of_hyperedges.size);
   assert((u64)file.tellp() == hyperedge_properties.offset);
   file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
+
+  std::ofstream points_file(std::format("{}.pts.bin", output_path), std::ios::binary);
+  points_file.write((char*)&graph.vertices[0], points.size);
+  assert((u64)points_file.tellp() == points.size);
 }
 
 GraphEdgeList deserialize_bin(const char* input_path) {
@@ -386,7 +390,7 @@ int main(int argc, char** argv) {
   // verify args
   // argv[0] is executable path
   if (argc < 3) {
-    std::println(stderr, "usage: {} <input_folder> <output_folder>", argv[0]);
+    std::println(stderr, "usage: {} <input_folder> <output_folder> [txt]", argv[0]);
     return 1;
   }
   std::string input_folder = argv[1];
@@ -405,6 +409,16 @@ int main(int argc, char** argv) {
       loge("  neither directory, nor writable path");
       return 1;
     }
+  }
+
+  bool txt = false;
+  if (argc == 4 && 0 == strcmp(argv[3], "txt")) {
+    txt = true;
+  }
+
+  bool testbin = false;
+  if (argc == 4 && 0 == strcmp(argv[3], "testbin")) {
+    txt = true;
   }
 
   logi("reading data");
@@ -595,9 +609,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  logi("output size");
+  logi("output");
   logi("  vertices.size = {}", vertices.size());
   logi("  edges.size    = {}", edges.size());
+  logi("  txt           = {}", txt);
 
   if (fs::is_directory(output_path))
     output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
@@ -605,12 +620,14 @@ int main(int argc, char** argv) {
   GraphEdgeList graph = { .edges = edges, .vertices = vertices,  .edge_props = edge_props, .types = {}};
   compute_types(graph);
 
-  std::string binpath = std::format("{}.geo.bin", output_path);
-  serialize_bin(binpath.c_str(), graph);
-  GraphEdgeList graph2 = deserialize_bin(binpath.c_str());
+  if (txt) {
+    serialize_txt(output_path.c_str(), graph);
+  } else {
+    serialize_bin(output_path.c_str(), graph);
+    if (testbin) {
+      auto graph2 = deserialize_bin(output_path.c_str());
+      serialize_txt(std::format("{}_test", output_path).c_str(), graph2);
+    }
+  }
 
-  logi("generating txt");
-
-  serialize_txt(output_path.c_str(), graph);
-  serialize_txt(std::format("{}.geo2", output_path).c_str(), graph2);
 }
