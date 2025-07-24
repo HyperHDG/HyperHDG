@@ -41,7 +41,7 @@ default_output_dir = "output"
 now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 default_output_name = f"{os.path.basename(__file__)}.{now}"
 parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
-parser.add_argument("network")
+parser.add_argument("network", help="full path to the network file")
 parser.add_argument("-t", "--rtol",
   help="relative tolerance when to stop the CG iterator",
   type=float, default=1e-10
