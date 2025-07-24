@@ -37,6 +37,9 @@ FloatType = np.dtype("float64")
 
 ######### SETUP argument parsing & logging
 
+default_output_dir = "output"
+now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+default_output_name = f"{os.path.basename(__file__)}.{now}"
 parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
 parser.add_argument("network")
 parser.add_argument("-t", "--rtol",
@@ -44,13 +47,23 @@ parser.add_argument("-t", "--rtol",
   type=float, default=1e-10
 )
 parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
+parser.add_argument("-o", "--output", help="output name", default=default_output_name)
+parser.add_argument("--output-dir", help="output dir", default=default_output_dir)
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
 
 args = parser.parse_args()
 logger.log_args(args)
-os.system("mkdir -p output")
+
+# verify output path is writable
+output_path = f"{args.output_dir}/{args.output}"
+try:
+  with open(output_path, "w") as file:
+    file.write("test")
+except Exception as e:
+  print(f"error: cannot write to output path '{output_path}")
+  sys.exit(1)
 
 ######## MAIN code
 
@@ -133,12 +146,12 @@ if num_iter != 0:
 error = HDG_wrapper.errors(vectorSolution)[0]
 logger.info(f"HDG_wrapper error={error:>.6e}")
 
-output_name = args.network + "_timo"
-HDG_wrapper.plot_option("fileName", output_name)
+HDG_wrapper.plot_option("outputDir", args.output_dir)
+HDG_wrapper.plot_option("fileName", args.output)
 HDG_wrapper.plot_option("printFileNumber", "false" )
 HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
 HDG_wrapper.plot_option("scale", "0.8")
 HDG_wrapper.plot_option("boundaryScale", "0.9")
 HDG_wrapper.plot_solution(vectorSolution)
 
-logger.info(f"solution written to 'output/{output_name}'")
+logger.info(f"solution written to '{output_path}'")
