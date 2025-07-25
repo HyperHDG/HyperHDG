@@ -256,7 +256,7 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
 GraphEdgeList deserialize_bin(const char* input_path) {
   GraphEdgeList graph;
 
-  std::ifstream file(input_path, std::ios::binary);
+  bxz::ifstream file(input_path, std::ios::binary);
   file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
   std::array<char, sizeof(GeoBinHeader)> header_buf;
   file.read(header_buf.data(), sizeof(GeoBinHeader));
@@ -265,18 +265,10 @@ GraphEdgeList deserialize_bin(const char* input_path) {
   assert(3 == header->space_dim);
   assert(1 == header->hyperedge_dim);
 
-  logi("deserialize_bin");
-  logi("  n_points = {}", header->n_points);
-  logi("  n_hypernodes = {}", header->n_hypernodes);
-  logi("  n_hyperedges = {}", header->n_hyperedges);
-
   graph.vertices.resize(header->n_points);
   graph.edges.resize(header->n_hyperedges);
   graph.edge_props.resize(header->n_hyperedges);
   graph.types.resize(header->n_hyperedges);
-
-  for (u64 i = 0; i < sizeof(header->tables)/sizeof(DataTable); i++)
-    logi("  table[{}].name = {}", i, header->tables[i].name);
 
   DataTable* tables = header->tables;
   assert((u64)file.tellg() == tables[0].offset);
