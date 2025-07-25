@@ -2,7 +2,8 @@
 
 ## Requirements
 
-Needs zlib,zstd,bz2,lzma compression libraries (should only depend on zstd but is not configured properly).
+- git lfs
+- zlib,zstd,bz2,lzma compression libraries (should only depend on zstd but is not configured properly).
 
 ## Compilation
 
