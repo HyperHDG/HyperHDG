@@ -10,7 +10,6 @@
 #include <KaHIP/lib/tools/quality_metrics.h>
 #include <fmtlog/fmtlog.h>
 #include <CLI/CLI.hpp>
-#include <string_view>
 #include <bxzstr.hpp>
 
 namespace {
@@ -101,7 +100,6 @@ int main(int argc, char** argv) {
   CLI::App app("partitioning tool");
   argv = app.ensure_utf8(argv);
   namespace fs = std::filesystem;
-  using namespace std::literals;
 
   // ARGUMENTS
 
@@ -128,7 +126,14 @@ int main(int argc, char** argv) {
   std::string test_overlap;
   app.add_option("--test-overlap", test_overlap, "test the overlap algorithm");
 
-  // TODO: print args
+  logi("args");
+  logi("  input_path={}");
+  logi("  output_path={}");
+  logi("  vtu_output_path={}");
+  logi("  hops={}");
+  logi("  backend_str={}");
+  logi("  test_overlap={}");
+
   CLI11_PARSE(app,argc,argv);
 
   logi("reading graph");
