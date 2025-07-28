@@ -13,6 +13,10 @@ add_executable(partitioner partitioner.cxx)
 target_link_libraries(partitioner geobin KaHIP libkaffpa CLI11::CLI11 bxzstr)
 target_compile_options(partitioner PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
+add_executable(graph_gen graph_gen.cxx)
+target_link_libraries(graph_gen CLI11::CLI11 KaHIP geobin fmtlog-static)
+target_compile_options(graph_gen PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
+
 add_executable(read_domain read_domain.cxx)
 target_link_libraries(read_domain PRIVATE nanoflann::nanoflann PRIVATE fmtlog-static)
 target_compile_options(read_domain PRIVATE -std=c++23 ${WARNINGS} $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
