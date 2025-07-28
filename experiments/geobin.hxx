@@ -7,6 +7,7 @@
 #include <cstring>
 #include <print>
 #include <format>
+#include <KaHIP/lib/data_structure/graph_access.h>
 
 namespace geobin {
 
@@ -56,6 +57,8 @@ struct GraphEdgeList {
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
   std::vector<Edge> types;
+
+  void to_access(graph_access& graph_acc);
 };
 
 struct DataTable {
@@ -65,13 +68,20 @@ struct DataTable {
 };
 
 struct GeoBinHeader {
-  char magic[8]; // should contain GEOBINxx
+  char magic[8]; // 'GEOBIN1\0'
   u64 space_dim;
   u64 hyperedge_dim;
   u64 n_points;
   u64 n_hypernodes;
   u64 n_hyperedges;
   DataTable tables[5];
+};
+
+struct DomainsHeader {
+  char magic[8]; // 'DOMAIN1\0'
+  u64 idsize; // == sizeof(ID)
+  u64 n_domains;
+  DataTable domains[];
 };
 
 std::vector<Point> read_nodes(const char* path);

@@ -1,7 +1,7 @@
 set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wno-unused-parameter -Wno-shadow -Wno-unused-but-set-variable  -Wno-unused-variable)
 
 add_library(geobin geobin.cxx)
-target_link_libraries(geobin PRIVATE bxzstr PRIVATE fmtlog-static)
+target_link_libraries(geobin PRIVATE bxzstr PRIVATE fmtlog-static PUBLIC KaHIP)
 target_compile_options(geobin PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
 add_executable(make_geo make_geo.cxx)
@@ -10,7 +10,7 @@ target_compile_options(make_geo PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debu
 )
 
 add_executable(partitioner partitioner.cxx)
-target_link_libraries(partitioner geobin KaHIP libkaffpa)
+target_link_libraries(partitioner geobin KaHIP libkaffpa CLI11::CLI11 bxzstr)
 target_compile_options(partitioner PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
 add_executable(read_domain read_domain.cxx)

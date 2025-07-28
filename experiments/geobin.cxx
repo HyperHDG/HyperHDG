@@ -116,6 +116,27 @@ std::vector<Prop> read_props(const char* path) {
   return props;
 }
 
+void GraphEdgeList::to_access(graph_access& graph_acc) {
+  // is directed -> 2*edges
+  graph_acc.start_construction(vertices.size(), 2*edges.size());
+
+  std::vector<std::vector<NodeID>> adjacency(vertices.size());
+  for (const geobin::Edge& edge : edges) {
+    adjacency[edge.first].push_back(edge.second);
+    adjacency[edge.second].push_back(edge.first);
+  }
+
+  for (NodeID n = 0; n < vertices.size(); n++) {
+    NodeID nn = graph_acc.new_node();
+    graph_acc.setNodeWeight(nn, 1);
+    for (const NodeID neighbor : adjacency[n]) {
+      EdgeID e = graph_acc.new_edge(nn, neighbor);
+      graph_acc.setEdgeWeight(e, 1);
+    }
+  }
+
+  graph_acc.finish_construction();
+}
 
 GraphEdgeList& compute_types(GraphEdgeList& graph) {
   graph.types.resize(0);

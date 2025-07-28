@@ -15,3 +15,4 @@ target_include_directories(KaHIP INTERFACE
   KaHIP/lib/partition
   KaHIP/lib/tools
 )
+add_subdirectory(CLI11)

@@ -9,6 +9,9 @@
 #include <KaHIP/lib/tools/random_functions.h>
 #include <KaHIP/lib/tools/quality_metrics.h>
 #include <fmtlog/fmtlog.h>
+#include <CLI/CLI.hpp>
+#include <string_view>
+#include <bxzstr.hpp>
 
 namespace {
 
@@ -17,9 +20,9 @@ void serialize_graph_partition_vtu(
   const std::vector<PartitionID>& partition,
   const char* file_path
 ) {
-  std::ofstream file(file_path);
+  std::ofstream file(std::format("{}.vtu", file_path));
   if (!file.is_open()) {
-    loge("could not opt file {}", file_path);
+    loge("could not opt file {}.vtu", file_path);
     return;
   }
 
@@ -67,55 +70,84 @@ void serialize_graph_partition_vtu(
   std::print(file, "</VTKFile>\n");
 }
 
+void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains) {
+  bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
+
+  geobin::DomainsHeader hdr = {
+    .magic = "DOMAIN1",
+    .idsize = sizeof(NodeID),
+    .n_domains = domains.size(),
+  };
+  file.write((char*)&hdr, sizeof(hdr));
+
+  std::vector<geobin::DataTable> domain_tables(domains.size());
+  geobin::u64 offset = sizeof(hdr) + domain_tables.size() * sizeof(geobin::DataTable);
+  for (PartitionID p = 0; p < domains.size(); p++) {
+    strncpy(domain_tables[p].name, "DOMAIN", sizeof(domain_tables[p].name));
+    domain_tables[p].offset = offset;
+    domain_tables[p].size = domains[p].size() * sizeof(NodeID);
+    offset += domain_tables[p].size;
+    file.write((char*)&domain_tables[p], sizeof(geobin::DataTable));
+  }
+
+  for (geobin::u64 p = 0; p < domains.size(); p++)
+    file.write((char*)domains[p].data(), domain_tables[p].size);
+}
+
 }
 
 int main(int argc, char** argv) {
   fmtlog::startPollingThread(1);
+  CLI::App app("partitioning tool");
+  argv = app.ensure_utf8(argv);
+  namespace fs = std::filesystem;
+  using namespace std::literals;
 
-  if (argc < 4) {
-    std::println(stderr, "ERROR: usage: {} <input> <num_partitions> <output>", argv[0]);
-    return 1;
-  }
+  // ARGUMENTS
+
+  std::string input_path;
+  app.add_option("input", input_path, "input path to the network to be partitioned");
+
+  PartitionID partitions;
+  app.add_option("partitions", partitions, "number of partitions to create");
+
+  std::string output_path = std::format("{}.dom.zstd", input_path);
+  app.add_option("output", output_path, "output path to the domain to be partitioned");
+
+  // OPTIONS
+
+  std::string vtu_output_path;
+  app.add_option("--vtu", vtu_output_path, "serialize the graph to a vtu file including the partition");
+
+  geobin::u64 hops = 3;
+  app.add_option("--hops", hops, "number of hops to enlarge partitions by");
+
+  std::string backend_str = "kahip";
+  app.add_option("-b,--backend", backend_str, "the partitioner backend to use, must be one of (kahip|metis)");
+
+  std::string test_overlap;
+  app.add_option("--test-overlap", test_overlap, "test the overlap algorithm");
+
+  // TODO: print args
+  CLI11_PARSE(app,argc,argv);
 
   logi("reading graph");
 
-  geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(argv[1]);
-  PartitionID num_partitions = std::stol(argv[2]);
-  const char* output_path = argv[3];
-
-  // TODO: test if output_path is writable
-
-  logi("constructing KaHIP graph_acc");
-
-  // is directed -> 2*edges
   graph_access graph_acc;
-  graph_acc.start_construction(graph_edge_list.vertices.size(), 2*graph_edge_list.edges.size());
 
-  std::vector<std::vector<geobin::ID>> graph_adjacency(graph_edge_list.vertices.size());
-  for (const geobin::Edge& edge : graph_edge_list.edges) {
-    graph_adjacency[edge.first].push_back(edge.second);
-    graph_adjacency[edge.second].push_back(edge.first);
-  }
+  static_assert(std::is_same<NodeID, geobin::ID>());
+  geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(input_path.c_str());
+  graph_edge_list.to_access(graph_acc);
 
-  for (NodeID n = 0; n < graph_edge_list.vertices.size(); n++) {
-    NodeID nn = graph_acc.new_node();
-    graph_acc.setNodeWeight(nn, 1);
-    // graph_acc.setPartitionIndex(nn, 0);
-    for (const geobin::ID neighbor : graph_adjacency[n]) {
-      EdgeID e = graph_acc.new_edge(nn, neighbor);
-      graph_acc.setEdgeWeight(e, 1);
-    }
-  }
+  logi("partitioner backend");
 
-  graph_acc.finish_construction();
-
-  logi("KaHIP partitioner");
+  // TODO: support metis
 
   graph_partitioner partitioner;
   PartitionConfig partition_config;
   configuration cfg;
   cfg.strong(partition_config);
-  partition_config.k = num_partitions;
+  partition_config.k = partitions;
   partition_config.seed = 0;
   srand(partition_config.seed);
   random_functions::setSeed(partition_config.seed);
@@ -136,7 +168,72 @@ int main(int argc, char** argv) {
     partition[n] = graph_acc.getPartitionIndex(n);
   } endfor
 
-  logi("serializing graph partitio to vtu");
+  if (!vtu_output_path.empty()) {
+    logi("serializing graph partition to vtu");
+    serialize_graph_partition_vtu(graph_edge_list, partition, vtu_output_path.c_str());
+  }
 
-  serialize_graph_partition_vtu(graph_edge_list, partition, output_path);
+  logi("make partition overlap");
+
+  std::vector<std::vector<NodeID>> domains(partitions);
+  forall_nodes(graph_acc, n) {
+    domains[partition[n]].push_back(n);
+  } endfor
+
+  std::vector<geobin::u8> visited(graph_edge_list.vertices.size());
+  for (PartitionID p = 0; p < partitions; p++) {
+    std::fill(visited.begin(), visited.end(), 0); // slowest?
+    for (const NodeID& n : domains[p])
+      visited[n] = 1;
+
+    // frontier marker
+    domains[p].push_back((NodeID)-1);
+
+    geobin::u64 hop = 0;
+    for (geobin::u64 bfs_front = 0; bfs_front < domains[p].size() && hop < hops; bfs_front++) {
+      const NodeID n = domains[p][bfs_front];
+
+      // if we see a frontier marker, then hop is complete
+      if (n == (NodeID)-1) {
+        hop++;
+        domains[p].push_back((NodeID)-1);
+        continue;
+      }
+
+      // all non visited (hence other partition) neighbors are added to the overlapping domain
+      forall_out_edges(graph_acc, e, n) {
+        NodeID nn = graph_acc.getEdgeTarget(e);
+        if (!visited[nn]) {
+          domains[p].push_back(nn);
+          visited[nn] = 1;
+        }
+      } endfor
+    }
+
+    if (hop < hops)
+      logi("domain {}: bfs terminated early after {} hops", p, hop, hops);
+  }
+
+  // remove frontier markers
+  for (PartitionID p = 0; p < partitions; p++) {
+    geobin::u64 offset = 0;
+    for (geobin::u64 i = 0; i+offset < domains[p].size(); i++) {
+      if (domains[p][i+offset] == (NodeID)-1)
+        offset++;
+      if (i+offset < domains[p].size())
+        domains[p][i] = domains[p][i+offset];
+    }
+    domains[p].resize(domains[p].size()-offset);
+  }
+
+  logi("writing overlapping partition");
+
+  serialize_domains(output_path.c_str(), domains);
+
+  if (!test_overlap.empty()) {
+    std::vector<PartitionID> fake_partition(graph_edge_list.vertices.size(), 0);
+    for (NodeID n : domains[0])
+      fake_partition[n] = 1;
+    serialize_graph_partition_vtu(graph_edge_list, fake_partition, test_overlap.c_str());
+  }
 }
