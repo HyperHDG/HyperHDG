@@ -81,7 +81,7 @@ struct DomainsHeader {
   char magic[8]; // 'DOMAIN1\0'
   u64 idsize; // == sizeof(ID)
   u64 n_domains;
-  DataTable domains[];
+  DataTable tables[2];
 };
 
 std::vector<Point> read_nodes(const char* path);
