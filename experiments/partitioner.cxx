@@ -72,25 +72,42 @@ void serialize_graph_partition_vtu(
 void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains) {
   bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
 
+  geobin::DataTable ioffset_table = {
+    .name = "IOFFSET",
+    .offset = sizeof(geobin::DomainsHeader),
+    .size = (1+domains.size())*sizeof(NodeID),
+  };
+
+  geobin::DataTable domains_table = {
+    .name = "DOMAINS",
+    .offset = ioffset_table.offset + ioffset_table.size,
+    .size = 0,
+  };
+  for (geobin::u64 p = 0; p < domains.size(); p++)
+    domains_table.size += domains[p].size() * sizeof(NodeID);
+
   geobin::DomainsHeader hdr = {
     .magic = "DOMAIN1",
     .idsize = sizeof(NodeID),
     .n_domains = domains.size(),
+    .tables = {
+      ioffset_table,
+      domains_table,
+    }
   };
   file.write((char*)&hdr, sizeof(hdr));
 
-  std::vector<geobin::DataTable> domain_tables(domains.size());
-  geobin::u64 offset = sizeof(hdr) + domain_tables.size() * sizeof(geobin::DataTable);
-  for (PartitionID p = 0; p < domains.size(); p++) {
-    strncpy(domain_tables[p].name, "DOMAIN", sizeof(domain_tables[p].name));
-    domain_tables[p].offset = offset;
-    domain_tables[p].size = domains[p].size() * sizeof(NodeID);
-    offset += domain_tables[p].size;
-    file.write((char*)&domain_tables[p], sizeof(geobin::DataTable));
+  NodeID ioff = 0;
+  std::vector<NodeID> ioffsets(1+domains.size());
+  for (geobin::u64 p = 0; p < domains.size(); p++) {
+    ioffsets[p] = ioff;
+    ioff += domains[p].size();
   }
+  ioffsets[domains.size()] = ioff;
+  file.write((char*)&ioffsets[0], ioffsets.size()*sizeof(NodeID));
 
-  for (geobin::u64 p = 0; p < domains.size(); p++)
-    file.write((char*)domains[p].data(), domain_tables[p].size);
+  for (PartitionID p = 0; p < domains.size(); p++)
+    file.write((char*)&domains[p][0], domains[p].size()*sizeof(NodeID));
 }
 
 }
@@ -104,13 +121,16 @@ int main(int argc, char** argv) {
   // ARGUMENTS
 
   std::string input_path;
-  app.add_option("input", input_path, "input path to the network to be partitioned");
+  app.add_option("input", input_path, "input path to the network to be partitioned")
+    ->required();
 
   PartitionID partitions;
-  app.add_option("partitions", partitions, "number of partitions to create");
+  app.add_option("partitions", partitions, "number of partitions to create")
+    ->required();
 
   std::string output_path = std::format("{}.dom.zstd", input_path);
-  app.add_option("output", output_path, "output path to the domain to be partitioned");
+  app.add_option("output", output_path, "output path to the domain to be partitioned")
+    ->required();
 
   // OPTIONS
 
@@ -126,15 +146,16 @@ int main(int argc, char** argv) {
   std::string test_overlap;
   app.add_option("--test-overlap", test_overlap, "test the overlap algorithm");
 
+  CLI11_PARSE(app,argc,argv);
+
   logi("args");
   logi("  input_path={}", input_path);
+  logi("  partitions={}", partitions);
   logi("  output_path={}", output_path);
   logi("  vtu_output_path={}", vtu_output_path);
   logi("  hops={}", hops);
   logi("  backend_str={}", backend_str);
   logi("  test_overlap={}", test_overlap);
-
-  CLI11_PARSE(app,argc,argv);
 
   logi("reading graph");
 
@@ -143,6 +164,12 @@ int main(int argc, char** argv) {
   static_assert(std::is_same<NodeID, geobin::ID>());
   geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(input_path.c_str());
   graph_edge_list.to_access(graph_acc);
+
+  logi("graph stats");
+  logi("  nodes={}", graph_acc.number_of_nodes());
+  logi("  edges={}", graph_acc.number_of_edges());
+  //
+  // TODO: set default hops based on some graph stats like diameter, girth, etc
 
   logi("partitioner backend");
 
@@ -185,6 +212,10 @@ int main(int argc, char** argv) {
     domains[partition[n]].push_back(n);
   } endfor
 
+  logi("  sizes before");
+  for (geobin::u64 p = 0; p < partitions; p++)
+    logi("    [{}]={}", p, domains[p].size());
+
   std::vector<geobin::u8> visited(graph_edge_list.vertices.size());
   for (PartitionID p = 0; p < partitions; p++) {
     std::fill(visited.begin(), visited.end(), 0); // slowest?
@@ -201,6 +232,11 @@ int main(int argc, char** argv) {
       // if we see a frontier marker, then hop is complete
       if (n == (NodeID)-1) {
         hop++;
+        if (domains[p].back() == (NodeID)-1) {
+          logi("domain {}: bfs terminated early after {} hops", p, hop, hops);
+          logi("  no new nodes added in last hop");
+          break;
+        }
         domains[p].push_back((NodeID)-1);
         continue;
       }
@@ -214,22 +250,25 @@ int main(int argc, char** argv) {
         }
       } endfor
     }
-
-    if (hop < hops)
-      logi("domain {}: bfs terminated early after {} hops", p, hop, hops);
   }
 
   // remove frontier markers
   for (PartitionID p = 0; p < partitions; p++) {
     geobin::u64 offset = 0;
-    for (geobin::u64 i = 0; i+offset < domains[p].size(); i++) {
-      if (domains[p][i+offset] == (NodeID)-1)
+    for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
+      if (domains[p][i+offset] == (NodeID)-1) {
         offset++;
-      if (i+offset < domains[p].size())
+      } else {
         domains[p][i] = domains[p][i+offset];
+        i++;
+      }
     }
     domains[p].resize(domains[p].size()-offset);
   }
+
+  logi("  sizes after");
+  for (geobin::u64 p = 0; p < partitions; p++)
+    logi("    [{}]={}", p, domains[p].size());
 
   logi("writing overlapping partition");
 

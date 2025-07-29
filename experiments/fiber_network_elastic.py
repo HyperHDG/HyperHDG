@@ -33,7 +33,15 @@ GeoBinHeaderType = np.dtype([
     ('n_hyperedges', '<u8'),
 ])
 
+DomainsHeaderType = np.dtype([
+  ('magic', 'S8'),
+  ('idsize', '<u8'),
+  ('n_domains', '<u8'),
+  ('tables', DataTableType, (2,))
+])
+
 FloatType = np.dtype("float64")
+IdType = np.dtype("<u4")
 
 ######### SETUP argument parsing & logging
 
@@ -49,6 +57,8 @@ parser.add_argument("-t", "--rtol",
 parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
 parser.add_argument("-o", "--output", help="output name", default=default_output_name)
 parser.add_argument("--output-dir", help="output dir", default=default_output_dir)
+parser.add_argument("--domains", help="domains file")
+parser.add_argument("--maxiter", help="maximum number of cg iterations", type=int, default=100)
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
@@ -106,6 +116,23 @@ with zstd.open(args.network, "rb") as decom_file:
     count=int(size/FloatType.itemsize),
   ).reshape(-1, header_without_tables["space_dim"])
 
+domains = None
+if args.domains:
+  with zstd.open(args.domains, "rb") as file:
+    header = np.frombuffer(
+      file.read(DomainsHeaderType.itemsize),
+      dtype=DomainsHeaderType,
+    )[0]
+    ioffsets = np.frombuffer(
+      file.read(header["tables"][0]["size"]),
+      dtype=IdType,
+    )
+    all_domains = np.frombuffer(
+      file.read(header["tables"][1]["size"]),
+      dtype=IdType,
+    )
+    domains = jprecond.Domains(ioffsets, all_domains)
+
 logger.info("computing residual")
 
 rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
@@ -121,7 +148,8 @@ logger.info("assembling  B...")
 
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
-  matvec=jprecond.JPrecond(A, network_points, [2**3, 2**3], repeat=6).matmul
+  # repeat=6 because for every node we have 6 unknowns, namely displacement+rotation
+  matvec=jprecond.JPrecond(A, network_points, [2**3, 2**3], repeat=6, domains=domains).matmul
 )
 
 iters = 0
@@ -138,7 +166,7 @@ def log_iter(x):
 
 logger.info("starting cg")
 
-vectorSolution, num_iter = sp.linalg.cg(A, rhs, rtol=args.rtol, callback=log_iter, M=B)
+vectorSolution, num_iter = sp.linalg.cg(A, rhs, rtol=args.rtol, callback=log_iter, M=B, maxiter=args.maxiter)
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")

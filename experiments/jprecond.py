@@ -81,7 +81,7 @@ def _coarse_basis_3d(points, n_elem_1d, epsilon=1e-10):
 
 
 class JPrecond:
-  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1 ):
+  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None ):
     # save lhs_mat
     self.lhs_mat = lhs_mat
 
@@ -119,10 +119,17 @@ class JPrecond:
     self.splu_precond_lhs = sp.linalg.splu(precond_lhs)
 
     # precompute splu
+    if domains is not None:
+      self.domains = domains
+    else:
+      self.domains = []
+      for k in range(self.coarse_basis.shape[1]):
+        col_k = self.coarse_basis.getcol(k)
+        self.domains.append(col_k.indices[col_k.data > epsilon])
+
     self.splu = [None] * self.coarse_basis.shape[1]
-    for k in range(self.coarse_basis.shape[1]):
-      col_k = self.coarse_basis.getcol(k)
-      nj = col_k.indices[col_k.data > epsilon]
+    for k in range(len(self.domains)):
+      nj = self.domains[k]
       if nj.size == 0:
         continue
       self.splu[k] = sp.linalg.splu(self.lhs_mat[nj, :][:, nj])
@@ -131,10 +138,26 @@ class JPrecond:
     precond_rhs = self.coarse_basis_int.T @ rhs_vec
     result_vec = self.coarse_basis_int @ self.splu_precond_lhs.solve(precond_rhs)
 
-    for k in range(self.coarse_basis.shape[1]):
-      col_k = self.coarse_basis.getcol(k)
-      nj = col_k.indices[col_k.data > epsilon]
+    for k in range(len(self.domains)):
+      nj = self.domains[k]
       if nj.size == 0:
         continue
       result_vec[nj] += self.splu[k].solve(rhs_vec[nj])
+
     return result_vec
+
+class Domains:
+  def __init__(self, ioffsets, all_domains):
+    self.ioffsets = ioffsets
+    self.all_domains = all_domains
+
+  def __getitem__(self, dom_index):
+    if dom_index+1 >= len(self.ioffsets):
+      raise IndexError()
+
+    start = self.ioffsets[dom_index]
+    end = self.ioffsets[dom_index+1]
+    return self.all_domains[start:end]
+
+  def __len__(self):
+    return len(self.ioffsets)-1
