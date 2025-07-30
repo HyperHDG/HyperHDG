@@ -163,6 +163,16 @@ int main(int argc, char** argv) {
 
   static_assert(std::is_same<NodeID, geobin::ID>());
   geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(input_path.c_str());
+  // map types in edges to types per node
+  // NOTE: we assume that the type for each node is independent of the edge the node is in
+  std::vector<NodeID> node_types(graph_edge_list.vertices.size(), (NodeID)-1);
+  for (geobin::u64 e = 0; e < graph_edge_list.edges.size(); e++) {
+    const geobin::Edge edge = graph_edge_list.edges[e];
+    const geobin::Edge edge_types = graph_edge_list.types[e];
+    node_types[edge.first] = edge_types.first;
+    node_types[edge.second] = edge_types.second;
+  }
+
   graph_edge_list.to_access(graph_acc);
 
   logi("graph stats");
@@ -252,14 +262,15 @@ int main(int argc, char** argv) {
     }
   }
 
-  // remove frontier markers
+  // remove frontier markers AND dirichlet nodes (type 1)
   for (PartitionID p = 0; p < partitions; p++) {
     geobin::u64 offset = 0;
     for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
-      if (domains[p][i+offset] == (NodeID)-1) {
+      NodeID node = domains[p][i+offset];
+      if (node == (NodeID)-1 || node_types[node] == 1) {
         offset++;
       } else {
-        domains[p][i] = domains[p][i+offset];
+        domains[p][i] = node;
         i++;
       }
     }
