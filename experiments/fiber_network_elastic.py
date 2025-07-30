@@ -30,6 +30,8 @@ parser.add_argument("-o", "--output", help="output name", default=default_output
 parser.add_argument("--output-dir", help="output dir", default=default_output_dir)
 parser.add_argument("--domains", help="domains file")
 parser.add_argument("--maxiter", help="maximum number of cg iterations", type=int, default=100)
+parser.add_argument("-m", "--modelproblem", help="the model problem to select", default="timo")
+parser.add_argument("-n","--num-elements", help="the number of elements to use in the coarse finite element mesh", default=2**3, type=int)
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
@@ -56,12 +58,18 @@ except (ImportError, ModuleNotFoundError) as error:
   
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
-const.local_solver    = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoschenkoBeamParametersClamped>"
 const.topology        = "File<1,3>"
 const.geometry        = "File<1,3>"
 const.node_descriptor = "File<1,3>"
 const.cython_replacements = ["string", "string"]
 const.debug_mode      = args.debug
+repeat = 1
+
+if args.modelproblem == "timo":
+  const.local_solver = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoschenkoBeamParametersClamped>"
+  repeat = 6 # for every node we have 6 unknowns, namely displacement+rotation
+elif args.modelproblem == "diff":
+  const.local_solver    = "Diffusion<1,5,10,TestParametersSinEllipt,double>"
 
 logger.info("reading files")
 
@@ -83,14 +91,19 @@ logger.info("assembling  A...")
 system_size = HDG_wrapper.size_of_system()
 col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
 A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
-logger.info(f"{A.shape=}")
 
 logger.info("assembling  B...")
 
+precond = jprecond.JPrecond(
+  A,
+  network_points,
+  [args.num_elements, args.num_elements],
+  repeat=repeat,
+  domains=domains
+)
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
-  # repeat=6 because for every node we have 6 unknowns, namely displacement+rotation
-  matvec=jprecond.JPrecond(A, network_points, [2**3, 2**3], repeat=6, domains=domains).matmul
+  matvec=precond.matmul
 )
 
 iters = 0
