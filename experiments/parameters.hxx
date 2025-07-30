@@ -1,0 +1,60 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
+#include <array>
+#include <HyperHDG/dense_la.hxx>
+
+template <unsigned int space_dimT, typename param_float_t = double>
+struct ConstantDiffusionParameters
+{
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 1> dirichlet_nodes{ 1 };
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary. -> we ignore
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Inverse diffusion coefficient in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
+  {
+    return 1.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
+  {
+    return 1.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Neumann values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};
+
+#endif // PARAMETERS_H

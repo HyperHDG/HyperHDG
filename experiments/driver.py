@@ -42,7 +42,7 @@ logger.log_args(args)
 # verify output path is writable
 output_path = f"{args.output_dir}/{args.output}"
 try:
-  with open(output_path, "w") as file:
+  with open(output_path + ".vtu", "w") as file:
     file.write("test")
 except Exception as e:
   print(f"error: cannot write to output path '{output_path}")
@@ -69,7 +69,8 @@ if args.modelproblem == "timo":
   const.local_solver = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoschenkoBeamParametersClamped>"
   repeat = 6 # for every node we have 6 unknowns, namely displacement+rotation
 elif args.modelproblem == "diff":
-  const.local_solver    = "Diffusion<1,5,10,TestParametersSinEllipt,double>"
+  const.local_solver    = "Diffusion<1,5,10,ConstantDiffusionParameters>"
+  const.include_files   = ["experiments/parameters.hxx"]
 
 logger.info("reading files")
 
@@ -80,7 +81,7 @@ network_points = geobin.read_network_points(args.network)
 
 domains = None
 if args.domains:
-  domains = geobin.read_domains()
+  domains = geobin.read_domains(args.domains)
 
 logger.info("computing residual")
 
@@ -131,9 +132,6 @@ logger.info(f"HDG_wrapper error={error:>.6e}")
 HDG_wrapper.plot_option("outputDir", args.output_dir)
 HDG_wrapper.plot_option("fileName", args.output)
 HDG_wrapper.plot_option("printFileNumber", "false" )
-HDG_wrapper.plot_option("plotEdgeBoundaries", "true")
-HDG_wrapper.plot_option("scale", "0.8")
-HDG_wrapper.plot_option("boundaryScale", "0.9")
 HDG_wrapper.plot_solution(vectorSolution)
 
 logger.info(f"solution written to '{output_path}'")
