@@ -39,11 +39,10 @@ def diffusion_test(poly_degree, debug_mode=False):
   
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "File<1,3,std::vector,Point<3,double> >"
-  const.geometry        = "File<1,3,std::vector,Point<3,double> >"
-  const.node_descriptor = "File<1,3,std::vector,Point<3,double> >"
-  const.local_solver    = "Diffusion<1," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
+  const.topology        = "File<1,3>"
+  const.geometry        = "File<1,3>"
+  const.node_descriptor = "File<1,3>"
+  const.local_solver    = f"Diffusion<1,{poly_degree},{2*poly_degree},TestParametersSinEllipt,double>"
   const.cython_replacements = ["string", "string"]
   const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
   const.debug_mode      = debug_mode
