@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.sparse as sp
+import sys
 
 # TODO: optimize the coarse_basis creation / swap it out for algebraic construction
 
@@ -120,14 +121,17 @@ class JPrecond:
 
     # precompute splu
     if domains is not None:
-      self.domains = domains
+      ioffsets_r = repeat*domains.ioffsets
+      all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
+      self.domains = Domains(ioffsets_r, all_domains_r)
+
     else:
       self.domains = []
       for k in range(self.coarse_basis.shape[1]):
         col_k = self.coarse_basis.getcol(k)
         self.domains.append(col_k.indices[col_k.data > epsilon])
 
-    self.splu = [None] * self.coarse_basis.shape[1]
+    self.splu = [None] * len(self.domains)
     for k in range(len(self.domains)):
       nj = self.domains[k]
       if nj.size == 0:
