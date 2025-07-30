@@ -12,13 +12,14 @@ import scipy.sparse as sp
 from datetime import datetime
 
 import os, sys
+import geobin
 
 # --------------------------------------------------------------------------------------------------
 # THIS SECTION CAN BE CHANGED:
 
 # domain = "fiber_network_1000"
-# domain = "fiber_network_14871"
-domain = "fiber_network_615452"
+domain = "fiber_network_14871"
+#domain = "fiber_network_615452"
 # --------------------------------------------------------------------------------------------------
 
 
@@ -38,9 +39,9 @@ def diffusion_test(poly_degree, debug_mode=False):
   
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.topology        = "File<1,2,std::vector,Point<2,double> >"
-  const.geometry        = "File<1,2,std::vector,Point<2,double> >"
-  const.node_descriptor = "File<1,2,std::vector,Point<2,double> >"
+  const.topology        = "File<1,3,std::vector,Point<3,double> >"
+  const.geometry        = "File<1,3,std::vector,Point<3,double> >"
+  const.node_descriptor = "File<1,3,std::vector,Point<3,double> >"
   const.local_solver    = "Diffusion<1," + str(poly_degree) + "," \
     + str(2*poly_degree) + ",TestParametersSinEllipt,double>"
   const.cython_replacements = ["string", "string"]
@@ -48,7 +49,7 @@ def diffusion_test(poly_degree, debug_mode=False):
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP(os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + domain + ".geo")
+  HDG_wrapper = PyDP(os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + domain + ".geo.bin.zstd")
 
   vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -59,7 +60,8 @@ def diffusion_test(poly_degree, debug_mode=False):
   A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 
-  points = np.loadtxt("domains/" + domain + "_points.txt")
+  #points = np.loadtxt("domains/" + domain + "_points.txt")
+  points = geobin.read_network_points("domains/" + domain + ".geo.bin.zstd")
   helper = HyperHDG.fiber_network.precond(points, [2**3, 2**3])
   def precond_mult( vec_x ):
     return helper.precond(A, vec_x)
@@ -101,7 +103,7 @@ def diffusion_test(poly_degree, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 6]:
+  for poly_degree in [5]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n")
     try:
       diffusion_test(poly_degree, debug_mode)
