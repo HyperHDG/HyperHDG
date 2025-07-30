@@ -2,6 +2,7 @@
 
 import numpy as np
 import zstandard as zstd
+import jprecond
 
 # '<' for little-endian
 # u8 : uint64_t
@@ -55,7 +56,7 @@ def read_network_points(path):
     return network_points
 
 def read_domains(path):
-  with zstd.open(args.domains, "rb") as file:
+  with zstd.open(path, "rb") as file:
     header = np.frombuffer(
       file.read(DomainsHeaderType.itemsize),
       dtype=DomainsHeaderType,
