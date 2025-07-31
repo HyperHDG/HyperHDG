@@ -12,6 +12,7 @@
 #include <fmtlog/fmtlog.h>
 #include <CLI/CLI.hpp>
 #include <bxzstr.hpp>
+#include <metis.h>
 
 namespace {
 
@@ -234,9 +235,29 @@ int main(int argc, char** argv) {
     balance_configuration bc;
     bc.configurate_balance(partition_config, graph_acc);
     partitioner.perform_partitioning(partition_config, graph_acc);
+    forall_nodes(graph_acc, n) {
+      partition[n] = graph_acc.getPartitionIndex(n);
+    } endfor
   } else if (backend_str == "metis") {
-    loge("ERROR: metis not implemented yet");
-    return 1;
+    static_assert(sizeof(idx_t) == sizeof(NodeID));
+    idx_t num_nodes = graph_acc.number_of_nodes();
+    idx_t num_edges = graph_acc.number_of_edges();
+    std::vector<idx_t> xadj(num_nodes+1);
+    std::vector<idx_t> adjncy(num_edges);
+    forall_nodes(graph_acc, n) {
+      xadj[n] = graph_acc.get_first_edge(n);
+      forall_out_edges(graph_acc, e, n) {
+        adjncy[e] = graph_acc.getEdgeTarget(e);
+      } endfor
+    } endfor
+    xadj[num_nodes] = num_edges;
+
+    idx_t objval = 0;
+    METIS_PartGraphKway(&num_nodes, &num_edges, xadj.data(), adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, &objval, (idx_t*)partition.data());
+    forall_nodes(graph_acc, n) {
+      graph_acc.setPartitionIndex(n, partition[n]);
+    } endfor
+    logi("  metis objective = {}", objval);
   } else if (backend_str == "naive") {
     geobin::Point min_p = {std::numeric_limits<geobin::Real>::max()}, max_p = {std::numeric_limits<geobin::Real>::min()};
     for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
@@ -258,6 +279,7 @@ int main(int argc, char** argv) {
       }
       assert(pid < partitions);
       graph_acc.setPartitionIndex(n, pid);
+      partition[n] = pid;
     }
   } else {
     loge("ERROR: unsupported backend '{}'", backend_str);
@@ -269,10 +291,6 @@ int main(int argc, char** argv) {
   logi("  cut = {}", qm.edge_cut(graph_acc));
   logi("  bnd = {}", qm.boundary_nodes(graph_acc));
   logi("  bal = {}", qm.balance(graph_acc));
-
-  forall_nodes(graph_acc, n) {
-    partition[n] = graph_acc.getPartitionIndex(n);
-  } endfor
 
   if (!vtu_output_path.empty()) {
     logi("serializing graph partition to vtu");
