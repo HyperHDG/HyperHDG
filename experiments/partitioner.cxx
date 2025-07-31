@@ -1,5 +1,6 @@
 #include <print>
 #include <fstream>
+#include <limits>
 
 #include "geobin.hxx"
 #include <KaHIP/app/configuration.h>
@@ -172,10 +173,13 @@ int main(int argc, char** argv) {
   app.add_option("--hops", hops, "number of hops to enlarge partitions by");
 
   std::string backend_str = "kahip";
-  app.add_option("-b,--backend", backend_str, "the partitioner backend to use, must be one of (kahip|metis)");
+  app.add_option("-b,--backend", backend_str, "the partitioner backend to use, must be one of (kahip|metis|naive)");
 
   std::string test_overlap;
   app.add_option("--test-overlap", test_overlap, "test the overlap algorithm");
+
+  PartitionID partitions_z = 1;
+  app.add_option("--partitions-z", partitions_z, "set the number of paritions in z direction when using backend 'naive'");
 
   CLI11_PARSE(app,argc,argv);
 
@@ -211,30 +215,57 @@ int main(int argc, char** argv) {
   logi("  edges={}", graph_acc.number_of_edges()/2);
   //
   // TODO: set default hops based on some graph stats like diameter, girth, etc
+  //   maybe using 2-approximation or 3/2-approximation of diameter
 
   logi("partitioner backend");
 
   std::vector<PartitionID> partition(graph_edge_list.vertices.size());
+  graph_acc.set_partition_count(partitions);
 
+  if (backend_str == "kahip") {
+    graph_partitioner partitioner;
+    PartitionConfig partition_config;
+    configuration cfg;
+    cfg.strong(partition_config);
+    partition_config.k = partitions;
+    partition_config.seed = 0;
+    srand(partition_config.seed);
+    random_functions::setSeed(partition_config.seed);
+    balance_configuration bc;
+    bc.configurate_balance(partition_config, graph_acc);
+    partitioner.perform_partitioning(partition_config, graph_acc);
+  } else if (backend_str == "metis") {
+    loge("ERROR: metis not implemented yet");
+    return 1;
+  } else if (backend_str == "naive") {
+    geobin::Point min_p = {std::numeric_limits<geobin::Real>::max()}, max_p = {std::numeric_limits<geobin::Real>::min()};
+    for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
+      const geobin::Point& p = graph_edge_list.vertices[n];
+      for (geobin::u64 i = 0; i < 3; i++) {
+        min_p[i] = std::min(min_p[i], p[i]);
+        max_p[i] = std::max(max_p[i], p[i]);
+      }
+    }
 
-  // TODO: support metis
-
-  graph_partitioner partitioner;
-  PartitionConfig partition_config;
-  configuration cfg;
-  cfg.strong(partition_config);
-  partition_config.k = partitions;
-  partition_config.seed = 0;
-  srand(partition_config.seed);
-  random_functions::setSeed(partition_config.seed);
-  graph_acc.set_partition_count(partition_config.k);
-  balance_configuration bc;
-  bc.configurate_balance(partition_config, graph_acc);
-
-  partitioner.perform_partitioning(partition_config, graph_acc);
+    geobin::Real eps = 1e-10;
+    std::array<PartitionID, 3> partitions3d = {(PartitionID)std::sqrt(partitions/partitions_z), (PartitionID)std::sqrt(partitions/partitions_z), partitions_z};
+    for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
+      const geobin::Point& p = graph_edge_list.vertices[n];
+      PartitionID pid = 0;
+      for (geobin::u64 i = 0; i < 3; i++) {
+        pid *= partitions3d[i];
+        pid += p[i]/((1+eps)*(max_p[i]-min_p[i])) * partitions3d[i]; // truncate
+      }
+      assert(pid < partitions);
+      graph_acc.setPartitionIndex(n, pid);
+    }
+  } else {
+    loge("ERROR: unsupported backend '{}'", backend_str);
+    return 1;
+  }
 
   quality_metrics qm;
-  logi("KaHIP metrics");
+  logi("partition metrics");
   logi("  cut = {}", qm.edge_cut(graph_acc));
   logi("  bnd = {}", qm.boundary_nodes(graph_acc));
   logi("  bal = {}", qm.balance(graph_acc));

@@ -120,33 +120,17 @@ class JPrecond:
     self.splu_precond_lhs = sp.linalg.splu(precond_lhs)
 
     # precompute splu
-    if domains is not None:
-      ioffsets_r = repeat*domains.ioffsets
-      all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
-      self.domains = Domains(ioffsets_r, all_domains_r)
-
-    else:
-      self.domains = []
-      for k in range(self.coarse_basis.shape[1]):
-        col_k = self.coarse_basis.getcol(k)
-        self.domains.append(col_k.indices[col_k.data > epsilon])
-
-    self.splu = [None] * len(self.domains)
-    for k in range(len(self.domains)):
-      nj = self.domains[k]
-      if nj.size == 0:
-        continue
-      self.splu[k] = sp.linalg.splu(self.lhs_mat[nj, :][:, nj])
+    ioffsets_r = repeat*domains.ioffsets
+    all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
+    self.domains = Domains(ioffsets_r, all_domains_r)
+    self.splu = [ sp.linalg.splu(self.lhs_mat[nj, :][:, nj]) for nj in self.domains]
 
   def matmul(self, rhs_vec, epsilon=1e-14):
     precond_rhs = self.coarse_basis_int.T @ rhs_vec
     result_vec = self.coarse_basis_int @ self.splu_precond_lhs.solve(precond_rhs)
 
-    for k in range(len(self.domains)):
-      nj = self.domains[k]
-      if nj.size == 0:
-        continue
-      result_vec[nj] += self.splu[k].solve(rhs_vec[nj])
+    for nj, splu in zip(self.domains, self.splu):
+      result_vec[nj] += splu.solve(rhs_vec[nj])
 
     return result_vec
 

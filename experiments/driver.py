@@ -21,6 +21,7 @@ now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 default_output_name = f"{os.path.basename(__file__)}.{now}"
 parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
 parser.add_argument("network", help="full path to the network file")
+parser.add_argument("domains", help="domains file")
 parser.add_argument("-t", "--rtol",
   help="relative tolerance when to stop the CG iterator",
   type=float, default=1e-10
@@ -28,7 +29,6 @@ parser.add_argument("-t", "--rtol",
 parser.add_argument("-d", "--debug", help="toggle debug mode", action="store_true")
 parser.add_argument("-o", "--output", help="output name", default=default_output_name)
 parser.add_argument("--output-dir", help="output dir", default=default_output_dir)
-parser.add_argument("--domains", help="domains file")
 parser.add_argument("--maxiter", help="maximum number of cg iterations", type=int, default=100)
 parser.add_argument("-m", "--modelproblem", help="the model problem to select", default="timo")
 parser.add_argument("-n","--num-elements", help="the number of elements to use in the coarse finite element mesh", default=2**3, type=int)
