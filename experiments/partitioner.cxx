@@ -110,6 +110,37 @@ void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>&
     file.write((char*)&domains[p][0], domains[p].size()*sizeof(NodeID));
 }
 
+struct SimpleStats {
+  double min, max, sum, avg, stddev;
+};
+
+void compute_stats(double* values, size_t n, SimpleStats* stats) {
+  if (n == 0)
+    return;
+  stats->sum = stats->max = stats->avg = stats->stddev = 0;
+  stats->min = values[0];
+  for (geobin::u64 p = 0; p < n; p++) {
+    stats->sum += values[p];
+    stats->max = std::max(stats->max, values[p]);
+    stats->min = std::min(stats->min, values[p]);
+  }
+  stats->avg = stats->sum / n;
+  for (geobin::u64 p = 0; p < n; p++) {
+    double d = values[p] - stats->avg;
+    stats->stddev += d*d;
+  }
+  stats->stddev = std::sqrt(1./(n-1) * stats->stddev);
+}
+
+void print_stats(const char* msg, SimpleStats* stats) {
+  logi("{}", msg);
+  logi("  min={}", stats->min);
+  logi("  max={}", stats->max);
+  logi("  sum={}", stats->sum);
+  logi("  avg={}", stats->avg);
+  logi("  std={}", stats->stddev);
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -177,11 +208,14 @@ int main(int argc, char** argv) {
 
   logi("graph stats");
   logi("  nodes={}", graph_acc.number_of_nodes());
-  logi("  edges={}", graph_acc.number_of_edges());
+  logi("  edges={}", graph_acc.number_of_edges()/2);
   //
   // TODO: set default hops based on some graph stats like diameter, girth, etc
 
   logi("partitioner backend");
+
+  std::vector<PartitionID> partition(graph_edge_list.vertices.size());
+
 
   // TODO: support metis
 
@@ -205,7 +239,6 @@ int main(int argc, char** argv) {
   logi("  bnd = {}", qm.boundary_nodes(graph_acc));
   logi("  bal = {}", qm.balance(graph_acc));
 
-  std::vector<PartitionID> partition(graph_edge_list.vertices.size());
   forall_nodes(graph_acc, n) {
     partition[n] = graph_acc.getPartitionIndex(n);
   } endfor
@@ -215,16 +248,19 @@ int main(int argc, char** argv) {
     serialize_graph_partition_vtu(graph_edge_list, partition, vtu_output_path.c_str());
   }
 
-  logi("make partition overlap");
+  logi("make partition overlap and filter boundary nodes");
 
   std::vector<std::vector<NodeID>> domains(partitions);
   forall_nodes(graph_acc, n) {
     domains[partition[n]].push_back(n);
   } endfor
 
-  logi("  sizes before");
-  for (geobin::u64 p = 0; p < partitions; p++)
-    logi("    [{}]={}", p, domains[p].size());
+  std::vector<double> sizes_before(partitions);
+  for (PartitionID p = 0; p < partitions; p++)
+    sizes_before[p] = domains[p].size();
+  SimpleStats stats_before;
+  compute_stats(sizes_before.data(), partitions, &stats_before);
+  print_stats("sizes before", &stats_before);
 
   std::vector<geobin::u8> visited(graph_edge_list.vertices.size());
   for (PartitionID p = 0; p < partitions; p++) {
@@ -277,9 +313,22 @@ int main(int argc, char** argv) {
     domains[p].resize(domains[p].size()-offset);
   }
 
-  logi("  sizes after");
-  for (geobin::u64 p = 0; p < partitions; p++)
-    logi("    [{}]={}", p, domains[p].size());
+  // TODO: integrate Q1 partitioning here to better compare
+  // TODO: check if cython builds optimized...
+
+  std::vector<double> sizes_after(partitions);
+  for (PartitionID p = 0; p < partitions; p++)
+    sizes_after[p] = domains[p].size();
+  SimpleStats stats_after;
+  compute_stats(sizes_after.data(), partitions, &stats_after);
+  print_stats("sizes after", &stats_after);
+
+  std::vector<double> sizes_fractions(partitions);
+  for (PartitionID p = 0; p < partitions; p++)
+    sizes_fractions[p] = sizes_after[p] / sizes_before[p];
+  SimpleStats stats_frac;
+  compute_stats(sizes_fractions.data(), partitions, &stats_frac);
+  print_stats("after/before = ", &stats_frac);
 
   logi("writing overlapping partition");
 
