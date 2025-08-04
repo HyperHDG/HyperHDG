@@ -82,9 +82,13 @@ def _coarse_basis_3d(points, n_elem_1d, epsilon=1e-10):
 
 
 class JPrecond:
-  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None ):
+  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None, lhs_submatrix=None ):
     # save lhs_mat
     self.lhs_mat = lhs_mat
+
+    # default function to extract submatrix
+    if lhs_submatrix is None:
+      lhs_submatrix = lambda nj: self.lhs_mat[nj, :][:, nj]
 
     coarse_basis, int_nodes = [], []
     if   len(n_elem_1d) == 2:
@@ -119,7 +123,7 @@ class JPrecond:
     ioffsets_r = repeat*domains.ioffsets
     all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
     self.domains = Domains(ioffsets_r, all_domains_r)
-    self.splu = [ sp.linalg.splu(self.lhs_mat[nj, :][:, nj]) for nj in self.domains]
+    self.splu = [ sp.linalg.splu(lhs_submatrix(nj)) for nj in self.domains]
 
   def matmul(self, rhs_vec, epsilon=1e-14):
     precond_rhs = self.coarse_basis_int.T @ rhs_vec
