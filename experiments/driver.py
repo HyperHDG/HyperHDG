@@ -32,6 +32,7 @@ parser.add_argument("--output-dir", help="output dir", default=default_output_di
 parser.add_argument("--maxiter", help="maximum number of cg iterations", type=int, default=100)
 parser.add_argument("-m", "--modelproblem", help="the model problem to select", default="timo")
 parser.add_argument("-n","--num-elements", help="the number of elements to use in the coarse finite element mesh", default=2**3, type=int)
+parser.add_argument("--mat", help="store/load the lhs HDG matrix, depending on wether the path exists")
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
@@ -90,8 +91,14 @@ rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 logger.info("assembling  A...")
 
 system_size = HDG_wrapper.size_of_system()
-col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
-A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
+if args.mat and os.path.isfile(args.mat):
+  logger.info(f"  read matrix A from '{args.mat}'")
+  A = sp.load_npz(args.mat)
+else:
+  col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
+  A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
+  sp.save_npz(args.mat, A)
+  logger.info(f"  wrote matrix A to '{args.mat}'")
 
 logger.info("assembling  B...")
 
@@ -109,19 +116,27 @@ B = sp.linalg.LinearOperator(
 
 iters = 0
 start = datetime.datetime.now()
+avg_time = datetime.timedelta(0)
 
 def log_iter(x):
-  global iters, start
+  global iters, start, avg_time
   iters += 1
   relErr = np.linalg.norm(A @ x - rhs) / np.linalg.norm(rhs)
   bilin = .5 * x.dot(A @ x) - x.dot(rhs)
   duration = datetime.datetime.now() - start
   start = datetime.datetime.now()
+  avg_time += duration
   logger.info(f"{iters:>5} {relErr:>13.6e} {bilin:>13.6e} {duration}")
 
 logger.info("starting cg")
 
 vectorSolution, num_iter = sp.linalg.cg(A, rhs, rtol=args.rtol, callback=log_iter, M=B, maxiter=args.maxiter)
+
+logger.info(f"total it time={avg_time}")
+
+avg_time /= iters
+
+logger.info(f"avg it time={avg_time}")
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")

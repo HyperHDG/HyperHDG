@@ -98,20 +98,14 @@ class JPrecond:
         for j in range(1, n_elem_1d[1]) for k in range(1, n_elem_1d[2]) ])  # find interior nodes
 
     coarse_basis_int = coarse_basis[:, int_nodes]
-    bnd_nodes = np.where(np.sum(coarse_basis_int, axis=1) < epsilon)[0]  # coarse basis in V
-
-    # Get the row indices and data of the column to be set to zero
-    for index in bnd_nodes:
-      start_idx, end_idx = coarse_basis.indptr[index], coarse_basis.indptr[index + 1]
-      coarse_basis.data[start_idx:end_idx] = 0.
 
     if repeat > 1:
-      coarse_basis = sp.kron(coarse_basis, np.eye(repeat))
       coarse_basis_int = sp.kron(coarse_basis_int, np.eye(repeat))
 
-    self.coarse_basis     = sp.csc_matrix(coarse_basis)
     self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
 
+    # NOTE: matrix-free: self.coarse_basis_int is of size (n,m) where m << n,
+    #       hence, product is still faster than assembly of the full system
     # precond lhs_mat and explicitly format in csc
     precond_lhs = sp.csc_matrix(
       self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int
@@ -119,6 +113,8 @@ class JPrecond:
     # precompute splu of precond_lhs
     self.splu_precond_lhs = sp.linalg.splu(precond_lhs)
 
+    # NOTE: matrix-free: the submatrices essentially form an overlapping block-diagonal submatrix
+    #       hence, could optimize to only construct that
     # precompute splu
     ioffsets_r = repeat*domains.ioffsets
     all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
