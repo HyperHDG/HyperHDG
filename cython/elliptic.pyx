@@ -54,3 +54,5 @@ cdef class PythonClassName :
   def sparse_stiff_mat(self):
     helper = self.thisptr.trace_to_flux_mat()
     return helper.get_cols(), helper.get_rows(), helper.get_values()
+  def trace_to_flux_submat(self, nj):
+    self.thisptr.trace_to_flux_submat(nj)
