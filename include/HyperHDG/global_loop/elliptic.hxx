@@ -234,6 +234,11 @@ class Elliptic
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
 
+  template<typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_submat(const std::vector<unsigned int>& nj, const dof_value_t time = 0.) {
+    return {};
+  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product containing data.
    *
