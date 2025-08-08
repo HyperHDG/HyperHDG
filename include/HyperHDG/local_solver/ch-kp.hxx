@@ -220,7 +220,7 @@ class Chkp
   struct data_type
   {
     SmallVec<n_shape_fct_, lSol_float_t> u_old;
-    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> ub_old, uh_old;
+    std::array<SmallVec<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> uh_old;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -285,6 +285,8 @@ class Chkp
         q_hat[bdr][i] = lambda_values[bdr][n_shape_bdr_ + i];
       }
     }
+
+    const lSol_float_t eps = 1./ 1073741824.;
 
     //calculate frequently used coefficients
     SmallSquareMat<n_shape_fct_, lSol_float_t> mass, mdx, mdy;
@@ -356,7 +358,6 @@ class Chkp
     helper = mass * coeff[2];
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
     {
-      //TODO should n_x appear twice?
       helper -= tau_uqq_ * (bdr_sh_sk[bdr] * q_hat[bdr] - bdr_sh_sh[bdr] * coeff[1]) * loc_normal[bdr][0] * loc_normal[bdr][0];
     }
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
@@ -379,6 +380,22 @@ class Chkp
       helper -= bdr_sh_sk[bdr] * u_hat[bdr] * loc_normal[bdr][1];
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
       residual[2 * n_shape_fct_ + i] = helper[i];
+
+    //fourth equation
+    helper = mass * coeff[3] + mdx * coeff[4];
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      helper -= bdr_sh_sh[bdr] * coeff[4] * loc_normal[bdr][0];
+      if(loc_normal[bdr][1] * loc_normal[bdr][1] > eps && loc_normal[bdr][0] * loc_normal[bdr][0] < eps) //on H
+        helper -= tau_yvu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) 
+          * loc_normal[bdr][1] * loc_normal[bdr][0];
+      else if(loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0) //on V_left
+        helper -= tau_yvu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) 
+          * loc_normal[bdr][0] * loc_normal[bdr][0];
+    }
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) 
+      residual[3 * n_shape_fct_ + i] = helper[i];
+
     return residual;
   }
 };
