@@ -50,7 +50,7 @@ target_link_libraries(
   INTERFACE
   HyperHDG::tpp
   HyperHDG::tpcc
-  lapack
+  ${LAPACK_LIBRARIES}
 )
 
 ## Add the necessary C++ standard requirement
