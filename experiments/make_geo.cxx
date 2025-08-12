@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   std::vector<Point> nodes = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
   logi("nodes: {}", nodes.size());
 
-  std::vector<Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
+  std::vector<geobin::Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
   logi("fibers: {}", fibers.size());
 
   std::vector<Connection> connections = read_connections(std::format("{}/connections.csv", input_folder).c_str());
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
   // first all connection points
   for (const Connection& con : connections) {
-    Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
+    geobin::Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
     Point p1, p2;
     Point e11 = nodes[e1.first];
     Point e12 = nodes[e1.second];
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
   std::vector<ID> is_in_vertices(pcloud.pts.size(), 0);
   std::vector<ID> vertices_idx(pcloud.pts.size(), (ID)-1);
 
-  std::vector<Edge> edges;
+  std::vector<geobin::Edge> edges;
 
   using Neighbor = nanoflann::ResultItem<uint32_t, Real>; // Neighbor = (id,distance)
   std::vector<Neighbor> neighbors;
