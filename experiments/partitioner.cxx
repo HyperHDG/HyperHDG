@@ -4,12 +4,7 @@
 
 #include "geobin.hxx"
 #include "stats.hxx"
-#include <KaHIP/app/configuration.h>
-#include <KaHIP/app/balance_configuration.h>
-#include <KaHIP/lib/partition/graph_partitioner.h>
-#include <KaHIP/lib/data_structure/graph_access.h>
-#include <KaHIP/lib/tools/random_functions.h>
-#include <KaHIP/lib/tools/quality_metrics.h>
+#include <kaHIP_interface.h>
 #include <fmtlog/fmtlog.h>
 #include <CLI/CLI.hpp>
 #include <bxzstr.hpp>
@@ -19,7 +14,7 @@ namespace {
 
 void serialize_graph_partition_vtu(
   const geobin::GraphEdgeList& graph,
-  const std::vector<PartitionID>& partition,
+  const std::vector<geobin::ID>& partition,
   const char* file_path
 ) {
   std::ofstream file(std::format("{}.vtu", file_path));
@@ -62,7 +57,7 @@ void serialize_graph_partition_vtu(
   std::print(file, "      <PointData>\n");
   std::print(file, "        <DataArray type=\"Int32\" Name=\"PartitionID\" format=\"ascii\">\n");
   std::print(file, "          ");
-  for (PartitionID id : partition)
+  for (geobin::ID id : partition)
       std::print(file, "{} ", id);
   std::print(file, "\n");
   std::print(file, "        </DataArray>\n");
@@ -95,7 +90,7 @@ int main(int argc, char** argv) {
   app.add_option("input", input_path, "input path to the network to be partitioned")
     ->required();
 
-  PartitionID partitions;
+  geobin::ID partitions;
   app.add_option("partitions", partitions, "number of partitions to create")
     ->required();
 
@@ -114,11 +109,21 @@ int main(int argc, char** argv) {
   std::string backend_str = "kahip";
   app.add_option("-b,--backend", backend_str, "the partitioner backend to use, must be one of (kahip|metis|naive)");
 
+  int kahip_mode = 2;
+  app.add_option("--kahip-mode", kahip_mode, "the mode to run the kahip backend in, one of (0|1|2) representing FAST,ECO,STRONG, default=STRONG");
+  bool kahip_no_suppress_output = false;
+  app.add_option("--kahip-no-suppress-output", kahip_no_suppress_output, "do not suppress kahip backend output");
+  int kahip_seed = 0;
+  app.add_option("--kahip-seed", kahip_seed, "kahip seed, default=0");
+
   std::string test_overlap;
   app.add_option("--test-overlap", test_overlap, "test the overlap algorithm");
 
-  PartitionID partitions_z = 1;
+  geobin::ID partitions_z = 1;
   app.add_option("--partitions-z", partitions_z, "set the number of paritions in z direction when using backend 'naive'");
+
+  double imbalance = 0.03;
+  app.add_option("--imbalance", imbalance, "set the desired maximum imbalance in the algebraic partitioners");
 
   CLI11_PARSE(app,argc,argv);
 
@@ -133,70 +138,60 @@ int main(int argc, char** argv) {
 
   logi("reading graph");
 
-  graph_access graph_acc;
-
-  static_assert(std::is_same<NodeID, geobin::ID>());
   geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(input_path.c_str());
+  geobin::ID nverts = graph_edge_list.vertices.size();
+  geobin::ID nedges = graph_edge_list.edges.size();
+
+  // TODO: cleanup
   // map types in edges to types per node
   // NOTE: we assume that the type for each node is independent of the edge the node is in
-  std::vector<NodeID> node_types(graph_edge_list.vertices.size(), (NodeID)-1);
-  for (geobin::u64 e = 0; e < graph_edge_list.edges.size(); e++) {
+  std::vector<geobin::ID> node_types(nverts, (geobin::ID)-1);
+  for (geobin::u64 e = 0; e < nedges; e++) {
     const geobin::Edge edge = graph_edge_list.edges[e];
     const geobin::Edge edge_types = graph_edge_list.types[e];
     node_types[edge.first] = edge_types.first;
     node_types[edge.second] = edge_types.second;
   }
 
-  graph_edge_list.to_access(graph_acc);
-
   logi("graph stats");
-  logi("  nodes={}", graph_acc.number_of_nodes());
-  logi("  edges={}", graph_acc.number_of_edges()/2);
+  logi("  nodes={}", nverts);
+  logi("  edges={}", nedges);
   //
   // TODO: set default hops based on some graph stats like diameter, girth, etc
   //   maybe using 2-approximation or 3/2-approximation of diameter
 
   logi("partitioner backend");
 
-  std::vector<PartitionID> partition(graph_edge_list.vertices.size());
-  graph_acc.set_partition_count(partitions);
+  geobin::ID edgecut;
+  std::vector<geobin::ID> partition(nverts);
+  std::vector<std::vector<geobin::ID>> adjacency(nverts+1);
+  for (const geobin::Edge& edge : graph_edge_list.edges) {
+    adjacency[edge.first].push_back(edge.second);
+    adjacency[edge.second].push_back(edge.first);
+  }
+  std::vector<geobin::ID> xadj(nverts+1, 0);
+  std::vector<geobin::ID> adjncy(nedges*2, 0); // *2 for directed repr
+  geobin::ID edges_so_far = 0;
+  for (geobin::ID n = 0; n < nverts+1; n++) {
+    xadj[n] = edges_so_far;
+    for (geobin::ID nid = 0; nid < adjacency[n].size(); nid++) {
+      assert(nid + edges_so_far < nedges*2);
+      adjncy[nid + edges_so_far] = adjacency[n][nid];
+    }
+    edges_so_far += adjacency[n].size();
+  }
+  assert(edges_so_far == nedges*2);
 
   if (backend_str == "kahip") {
-    graph_partitioner partitioner;
-    PartitionConfig partition_config;
-    configuration cfg;
-    cfg.strong(partition_config);
-    partition_config.k = partitions;
-    partition_config.seed = 0;
-    srand(partition_config.seed);
-    random_functions::setSeed(partition_config.seed);
-    balance_configuration bc;
-    bc.configurate_balance(partition_config, graph_acc);
-    partitioner.perform_partitioning(partition_config, graph_acc);
-    forall_nodes(graph_acc, n) {
-      partition[n] = graph_acc.getPartitionIndex(n);
-    } endfor
+    static_assert(sizeof(int) == sizeof(geobin::ID));
+    kaffpa((int*)&nverts, NULL, (int*)xadj.data(), NULL, (int*)adjncy.data(), (int*)&partitions, &imbalance, !kahip_no_suppress_output, kahip_seed, kahip_mode, (int*)&edgecut, (int*)partition.data());
   } else if (backend_str == "metis") {
-    static_assert(sizeof(idx_t) == sizeof(NodeID));
-    idx_t num_nodes = graph_acc.number_of_nodes();
-    idx_t num_edges = graph_acc.number_of_edges();
-    std::vector<idx_t> xadj(num_nodes+1);
-    std::vector<idx_t> adjncy(num_edges);
-    forall_nodes(graph_acc, n) {
-      xadj[n] = graph_acc.get_first_edge(n);
-      forall_out_edges(graph_acc, e, n) {
-        adjncy[e] = graph_acc.getEdgeTarget(e);
-      } endfor
-    } endfor
-    xadj[num_nodes] = num_edges;
-
-    idx_t objval = 0;
-    METIS_PartGraphKway(&num_nodes, &num_edges, xadj.data(), adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, &objval, (idx_t*)partition.data());
-    forall_nodes(graph_acc, n) {
-      graph_acc.setPartitionIndex(n, partition[n]);
-    } endfor
-    logi("  metis objective = {}", objval);
-  } else if (backend_str == "naive") {
+    static_assert(sizeof(idx_t) == sizeof(geobin::ID));
+    METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)xadj.data(), (idx_t*)adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, (idx_t*)&edgecut, (idx_t*)partition.data());
+  } else if (backend_str == "parhip") {
+    loge("backend=parhip unsupported as of yet");
+  }else if (backend_str == "naive") {
+    // TODO: move this into header
     geobin::Point min_p = {std::numeric_limits<geobin::Real>::max()}, max_p = {std::numeric_limits<geobin::Real>::min()};
     for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
       const geobin::Point& p = graph_edge_list.vertices[n];
@@ -207,28 +202,32 @@ int main(int argc, char** argv) {
     }
 
     geobin::Real eps = 1e-10;
-    std::array<PartitionID, 3> partitions3d = {(PartitionID)std::sqrt(partitions/partitions_z), (PartitionID)std::sqrt(partitions/partitions_z), partitions_z};
+    std::array<geobin::ID, 3> partitions3d = {(geobin::ID)std::sqrt(partitions/partitions_z), (geobin::ID)std::sqrt(partitions/partitions_z), partitions_z};
     for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
       const geobin::Point& p = graph_edge_list.vertices[n];
-      PartitionID pid = 0;
+      geobin::ID pid = 0;
       for (geobin::u64 i = 0; i < 3; i++) {
         pid *= partitions3d[i];
         pid += p[i]/((1+eps)*(max_p[i]-min_p[i])) * partitions3d[i]; // truncate
       }
       assert(pid < partitions);
-      graph_acc.setPartitionIndex(n, pid);
       partition[n] = pid;
+    }
+
+    edgecut = 0;
+    for (const geobin::Edge& edge : graph_edge_list.edges) {
+      if (partition[edge.first] != partition[edge.second])
+        edgecut++;
     }
   } else {
     loge("ERROR: unsupported backend '{}'", backend_str);
     return 1;
   }
 
-  quality_metrics qm;
+  // TODO: compute balance
   logi("partition metrics");
-  logi("  cut = {}", qm.edge_cut(graph_acc));
-  logi("  bnd = {}", qm.boundary_nodes(graph_acc));
-  logi("  bal = {}", qm.balance(graph_acc));
+  logi("  cut = {}", edgecut);
+  logi("  bal = {}", -1);
 
   if (!vtu_output_path.empty()) {
     logi("serializing graph partition to vtu");
@@ -237,60 +236,59 @@ int main(int argc, char** argv) {
 
   logi("make partition overlap and filter boundary nodes");
 
-  std::vector<std::vector<NodeID>> domains(partitions);
-  forall_nodes(graph_acc, n) {
+  std::vector<std::vector<geobin::ID>> domains(partitions);
+  for (geobin::ID n = 0; n < nverts; n++)
     domains[partition[n]].push_back(n);
-  } endfor
 
   std::vector<double> sizes_before(partitions);
-  for (PartitionID p = 0; p < partitions; p++)
+  for (geobin::ID p = 0; p < partitions; p++)
     sizes_before[p] = domains[p].size();
   SimpleStats stats_before;
   compute_stats(sizes_before.data(), partitions, &stats_before);
   print_stats("sizes before", &stats_before);
 
   std::vector<geobin::u8> visited(graph_edge_list.vertices.size());
-  for (PartitionID p = 0; p < partitions; p++) {
+  for (geobin::ID p = 0; p < partitions; p++) {
     std::fill(visited.begin(), visited.end(), 0); // slowest?
-    for (const NodeID& n : domains[p])
+    for (const geobin::ID& n : domains[p])
       visited[n] = 1;
 
     // frontier marker
-    domains[p].push_back((NodeID)-1);
+    domains[p].push_back((geobin::ID)-1);
 
-    geobin::u64 hop = 0;
-    for (geobin::u64 bfs_front = 0; bfs_front < domains[p].size() && hop < hops; bfs_front++) {
-      const NodeID n = domains[p][bfs_front];
+    geobin::ID hop = 0;
+    for (geobin::ID bfs_front = 0; bfs_front < domains[p].size() && hop < hops; bfs_front++) {
+      const geobin::ID n = domains[p][bfs_front];
 
       // if we see a frontier marker, then hop is complete
-      if (n == (NodeID)-1) {
+      if (n == (geobin::ID)-1) {
         hop++;
-        if (domains[p].back() == (NodeID)-1) {
+        if (domains[p].back() == (geobin::ID)-1) {
           logi("domain {}: bfs terminated early after {} hops", p, hop, hops);
           logi("  no new nodes added in last hop");
           break;
         }
-        domains[p].push_back((NodeID)-1);
+        domains[p].push_back((geobin::ID)-1);
         continue;
       }
 
       // all non visited (hence other partition) neighbors are added to the overlapping domain
-      forall_out_edges(graph_acc, e, n) {
-        NodeID nn = graph_acc.getEdgeTarget(e);
-        if (!visited[nn]) {
+      for (geobin::ID i = xadj[n]; i < xadj[n+1]; i++) {
+        geobin::ID nn = adjncy[i]; // neighbor
+         if (!visited[nn]) {
           domains[p].push_back(nn);
           visited[nn] = 1;
         }
-      } endfor
+      }
     }
   }
 
   // remove frontier markers AND dirichlet nodes (type 1)
-  for (PartitionID p = 0; p < partitions; p++) {
+  for (geobin::ID p = 0; p < partitions; p++) {
     geobin::u64 offset = 0;
     for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
-      NodeID node = domains[p][i+offset];
-      if (node == (NodeID)-1 || node_types[node] == 1) {
+      geobin::ID node = domains[p][i+offset];
+      if (node == (geobin::ID)-1 || node_types[node] == 1) {
         offset++;
       } else {
         domains[p][i] = node;
@@ -304,14 +302,14 @@ int main(int argc, char** argv) {
   // TODO: check if cython builds optimized...
 
   std::vector<double> sizes_after(partitions);
-  for (PartitionID p = 0; p < partitions; p++)
+  for (geobin::ID p = 0; p < partitions; p++)
     sizes_after[p] = domains[p].size();
   SimpleStats stats_after;
   compute_stats(sizes_after.data(), partitions, &stats_after);
   print_stats("sizes after", &stats_after);
 
   std::vector<double> sizes_fractions(partitions);
-  for (PartitionID p = 0; p < partitions; p++)
+  for (geobin::ID p = 0; p < partitions; p++)
     sizes_fractions[p] = sizes_after[p] / sizes_before[p];
   SimpleStats stats_frac;
   compute_stats(sizes_fractions.data(), partitions, &stats_frac);
@@ -322,8 +320,8 @@ int main(int argc, char** argv) {
   geobin::serialize_domains(output_path.c_str(), domains);
 
   if (!test_overlap.empty()) {
-    std::vector<PartitionID> fake_partition(graph_edge_list.vertices.size(), 0);
-    for (NodeID n : domains[0])
+    std::vector<geobin::ID> fake_partition(graph_edge_list.vertices.size(), 0);
+    for (geobin::ID n : domains[0])
       fake_partition[n] = 1;
     serialize_graph_partition_vtu(graph_edge_list, fake_partition, test_overlap.c_str());
   }

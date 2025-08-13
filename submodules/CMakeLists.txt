@@ -8,12 +8,5 @@ add_subdirectory(nanoflann)
 add_subdirectory(fmtlog)
 add_subdirectory(bxzstr)
 add_subdirectory(KaHIP)
-add_library(KaHIP INTERFACE)
-target_include_directories(KaHIP INTERFACE
-  KaHIP/lib/
-  KaHIP/lib/io
-  KaHIP/lib/partition
-  KaHIP/lib/tools
-)
 add_subdirectory(CLI11)
 add_subdirectory(METIS)

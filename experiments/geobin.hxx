@@ -7,7 +7,6 @@
 #include <cstring>
 #include <print>
 #include <format>
-#include <KaHIP/lib/data_structure/graph_access.h>
 
 namespace geobin {
 
@@ -57,8 +56,6 @@ struct GraphEdgeList {
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
   std::vector<Edge> types;
-
-  void to_access(graph_access& graph_acc);
 };
 
 struct DataTable {
@@ -100,7 +97,7 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph);
 
 GraphEdgeList deserialize_bin(const char* input_path);
 
-void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains);
+void serialize_domains(const char* path, const std::vector<std::vector<ID>>& domains);
 
 }
 
