@@ -117,7 +117,7 @@ std::vector<Prop> read_props(const char* path) {
 }
 
 // TODO: cleanup
-GraphEdgeList& compute_types(GraphEdgeList& graph) {
+Graph& compute_types(Graph& graph) {
   graph.types.resize(0);
 
   // Calculate the bounding box (min/max x, y, z) for all vertices
@@ -147,7 +147,7 @@ GraphEdgeList& compute_types(GraphEdgeList& graph) {
   return graph;
 }
 
-void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
+void serialize_txt(const char* output_path, const Graph& graph) {
   const std::vector<Point>& vertices = graph.vertices;
   const std::vector<Edge>& edges = graph.edges;
   const std::vector<Prop>& edge_props = graph.edge_props;
@@ -190,7 +190,7 @@ void serialize_txt(const char* output_path, const GraphEdgeList& graph) {
     std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
 }
 
-void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
+void serialize_bin(const char* output_path, const Graph& graph) {
   u64 n = graph.vertices.size();
   u64 m = graph.edges.size();
   if (graph.edge_props.size() != m) {
@@ -253,8 +253,8 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph) {
   file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
 }
 
-GraphEdgeList deserialize_bin(const char* input_path) {
-  GraphEdgeList graph;
+Graph deserialize_bin(const char* input_path) {
+  Graph graph;
 
   bxz::ifstream file(input_path, std::ios::binary);
   file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
@@ -281,6 +281,26 @@ GraphEdgeList deserialize_bin(const char* input_path) {
   file.seekg(tables[3].size, std::ios::cur); // skip next
   assert((u64)file.tellg() == tables[4].offset);
   file.read((char*)graph.edge_props.data(), tables[4].size);
+
+  geobin::ID nverts = graph.vertices.size();
+  geobin::ID nedges = graph.edges.size();
+  std::vector<std::vector<geobin::ID>> adjacency(nverts+1);
+  for (const geobin::Edge& edge : graph.edges) {
+    adjacency[edge.first].push_back(edge.second);
+    adjacency[edge.second].push_back(edge.first);
+  }
+  graph.xadj.resize(nverts+1, 0);
+  graph.adjncy.resize(nedges*2, 0); // *2 for directed repr
+  geobin::ID edges_so_far = 0;
+  for (geobin::ID n = 0; n < nverts+1; n++) {
+    graph.xadj[n] = edges_so_far;
+    for (geobin::ID nid = 0; nid < adjacency[n].size(); nid++) {
+      assert(nid + edges_so_far < nedges*2);
+      graph.adjncy[nid + edges_so_far] = adjacency[n][nid];
+    }
+    edges_so_far += adjacency[n].size();
+  }
+  assert(edges_so_far == nedges*2);
 
   return graph;
 }
