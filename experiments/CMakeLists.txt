@@ -1,11 +1,11 @@
-set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wno-unused-parameter -Wno-shadow -Wno-unused-but-set-variable  -Wno-unused-variable)
+set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wno-unused-parameter -Wno-shadow -Wno-unused-but-set-variable  -Wno-unused-variable -Wno-deprecated-literal-operator)
 
 ########## LIBS ############
 
 add_library(libpartition libpartition.cxx)
 target_compile_options(libpartition PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 target_include_directories(libpartition PUBLIC .)
-target_link_libraries(libpartition PUBLIC frozen PUBLIC METIS::METIS PUBLIC kahip_static fmtlog)
+target_link_libraries(libpartition PUBLIC frozen PUBLIC METIS::METIS PUBLIC kahip_static spdlog)
 
 add_library(stats stats.cxx)
 target_compile_options(stats PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
@@ -22,7 +22,7 @@ target_compile_options(make_geo PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debu
 )
 
 add_executable(partitioner partitioner.cxx)
-target_link_libraries(partitioner geobin stats CLI11::CLI11 fmtlog libpartition)
+target_link_libraries(partitioner geobin stats CLI11::CLI11 libpartition spdlog::spdlog)
 target_compile_options(partitioner PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
 add_executable(graph_gen graph_gen.cxx)
