@@ -60,6 +60,10 @@ struct ChkpParametersDefault
     return 0.;
   }
   static constexpr param_float_t kappa=-1.;
+  static param_float_t tau_f(param_float_t arg)
+  {
+    return 1.;
+  }
 };  
 
 /*!*************************************************************************************************
@@ -117,7 +121,7 @@ class Chkp
    ************************************************************************************************/
   static constexpr unsigned int n_glob_dofs_per_node()
   {
-    return 2 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
+    return 3 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
  private:
   // -----------------------------------------------------------------------------------------------
@@ -127,11 +131,11 @@ class Chkp
   /*!***********************************************************************************************
    * \brief   Number of local shape functions (with respect to all spatial dimensions).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1) / 2;
+  static constexpr unsigned int n_shape_fct_ = n_glob_dofs_per_node() * (poly_deg + 1) / 3;
   /*!***********************************************************************************************
    * \brief   Number of local  shape functions (with respect to a face / hypernode).
    ************************************************************************************************/
-  static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node() / 2;
+  static constexpr unsigned int n_shape_bdr_ = n_glob_dofs_per_node() / 3;
   /*!***********************************************************************************************
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
@@ -182,16 +186,11 @@ class Chkp
   /*!***********************************************************************************************
    * \brief   (Globally constant) penalty parameter for HDG scheme.
    ************************************************************************************************/
-  const lSol_float_t tau_f_;
-  /*!***********************************************************************************************
-   * \brief   (Globally constant) penalty parameter for HDG scheme.
-   ************************************************************************************************/
   const lSol_float_t tau_uqq_;
   /*!***********************************************************************************************
    * \brief   (Globally constant) penalty parameter for HDG scheme.
    ************************************************************************************************/
   const lSol_float_t tau_yvu_;
-//TODO: Add support for non-constant tau_f. This requires new integration routines.
   /*!***********************************************************************************************
    * \brief   Parameter theta that defines the one-step theta scheme.
    ************************************************************************************************/
@@ -240,10 +239,10 @@ class Chkp
    *
    * \param   constru       Constructor object.
    ************************************************************************************************/
-  Chkp(const constructor_value_type& constru = std::vector(11, 1.))
+  Chkp(const constructor_value_type& constru = std::vector(10, 1.))
   : delta_t_(constru[0]), tau_ppu_(constru[1]), tau_mpu_(constru[2]), tau_mpv_(constru[3]), 
   tau_pzu_(constru[4]), tau_mzu_(constru[5]), tau_mzv_(constru[6]), tau_pvu_(constru[7]), 
-  tau_f_(constru[8]), tau_uqq_(constru[9]), tau_yvu_(constru[10])
+  tau_uqq_(constru[8]), tau_yvu_(constru[9])
   {
   }
   /*!***********************************************************************************************
@@ -251,7 +250,7 @@ class Chkp
    *
    * \tparam  hyEdgeT       The geometry type / typename of the considered hyEdge's geometry.
    * \tparam  SmallMatT     The data type of the \c lambda_values.
-   * \param   lambda_values Encodes uh, qh.
+   * \param   lambda_values Encodes uh, qh, vh.
    * \param   coeff         Coefficients of u, q, p, s, v, z, r to be tested.
    * \param   hyper_edge    The geometry of the considered hyperedge (of typename GeomT).
    * \param   time          Point of time the problem is solved.
@@ -268,7 +267,7 @@ class Chkp
     hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
         "The size ...");
     for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-      hy_assert(lambda_values[i].size() == 2 * n_shape_bdr_,
+      hy_assert(lambda_values[i].size() == 3 * n_shape_bdr_,
           "The size of ...");
 
     std::array<lSol_float_t, n_loc_dofs_> residual;
@@ -276,13 +275,14 @@ class Chkp
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
     //rearrange lambda values
-    std::array<SmallVec<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> u_hat, q_hat;
+    std::array<SmallVec<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> u_hat, q_hat, v_hat;
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
     {
       for (unsigned int i = 0; i < n_shape_bdr_; i++)
       {
         u_hat[bdr][i] = lambda_values[bdr][i];
         q_hat[bdr][i] = lambda_values[bdr][n_shape_bdr_ + i];
+        v_hat[bdr][i] = lambda_values[bdr][2 * n_shape_bdr_ + i];
       }
     }
 
@@ -296,6 +296,7 @@ class Chkp
     std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, n_shape_fct_> tv_shx_sh_sh;
     std::array<std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sh;
     std::array<std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sk;
+    std::array<std::array<SmallSquareMat<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sk_sk;
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
     {
       for (unsigned int j = 0; j < n_shape_fct_; ++j) 
@@ -325,6 +326,11 @@ class Chkp
           for (unsigned int k = 0; k < n_shape_fct_; ++k)
           {
             tb_sh_sh_sk[i][bdr].operator()(k, j) = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
+              i, k, j, bdr, hyper_edge.geometry);
+          }
+          for (unsigned int k = 0; k < n_shape_bdr_; ++k)
+          {
+            tb_sh_sk_sk[i][bdr].operator()(k, j) = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
               i, k, j, bdr, hyper_edge.geometry);
           }
         }
@@ -396,14 +402,105 @@ class Chkp
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
       residual[3 * n_shape_fct_ + i] = helper[i];
 
+    //fifth equation
+    helper = mass * coeff[5] + mdx * coeff[6];
+    for(unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      helper -= -1. * bdr_sh_sk[bdr] * ((1./ delta_t_) * (u_hat[bdr] - hyper_edge.data.uh_old[bdr])) * loc_normal[bdr][0];
+    }
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) 
+      residual[4 * n_shape_fct_ + i] = helper[i];
+
+    //sixth equation
+    helper = mass * coeff[6] + mdx * coeff[5];
+    //(f(u), phi_x) = 2 k (u, phi_x) + 1.5 (u^2, phi_x)
+    helper += 2 * parameters::kappa * mdx * coeff[0];
+    for(unsigned int j = 0; j < n_shape_fct_; ++j)
+      helper[j] += 1.5 * scalar_product(coeff[0], tv_shx_sh_sh[j] * coeff[0]);
+    helper -= mdx * coeff[2];   //(p, phi_x)
+    for(unsigned int j = 0; j < n_shape_fct_; ++j)
+      helper[j] += 0.5 * scalar_product(coeff[1], tv_shx_sh_sh[j] * coeff[1]);
+    //(z^ n_x, phi)
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      if(loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0)
+      {
+        helper -= bdr_sh_sh[bdr] * coeff[5] * loc_normal[bdr][0];
+        helper -= tau_pzu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][0] * loc_normal[bdr][0];
+      }
+      else if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0)
+      {
+        helper -= bdr_sh_sh[bdr] * coeff[5] * loc_normal[bdr][0];
+        helper -= tau_mzu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][0] * loc_normal[bdr][0];
+        helper -= tau_mzv_ * (bdr_sh_sk[bdr] * v_hat[bdr] - bdr_sh_sh[bdr] * coeff[4]) * loc_normal[bdr][0] * loc_normal[bdr][0]; 
+      }
+    }
+    //(f^(u) n_x, phi)
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      helper -= 2 * parameters::kappa * bdr_sh_sh[bdr] * coeff[0] * loc_normal[bdr][0];
+      std::array<lSol_float_t, n_shape_fct_> u;
+      for(unsigned int j = 0; j < n_shape_fct_; ++j)
+        u[j] = coeff[0][j];
+      std::array<lSol_float_t, n_shape_bdr_> uh;
+      for(unsigned int j = 0; j < n_shape_bdr_; ++j)
+        uh[j] = u_hat[bdr][j];
+      for(unsigned int j = 0; j < n_shape_fct_; ++j)
+      {
+        helper[j] -= 1.5 * scalar_product(coeff[0], tb_sh_sh_sh[j][bdr] * coeff[0]) * loc_normal[bdr][0];
+        helper[j] -= -integrate_bdr_phicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>
+            (j, uh, u, bdr, hyper_edge.geometry) * loc_normal[bdr][0] * loc_normal[bdr][0];
+      }
+    }
+    //(p^ n_x, phi)
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      if(loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0)
+      {
+        helper += bdr_sh_sh[bdr] * coeff[2] * loc_normal[bdr][0];
+        helper += tau_ppu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][0] * loc_normal[bdr][0];
+      }
+      else if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0)
+      {
+        helper += bdr_sh_sh[bdr] * coeff[2] * loc_normal[bdr][0];
+        helper += tau_mpu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][0] * loc_normal[bdr][0];
+        helper += tau_mpv_ * (bdr_sh_sk[bdr] * v_hat[bdr] - bdr_sh_sh[bdr] * coeff[4]) * loc_normal[bdr][0] * loc_normal[bdr][0]; 
+      }
+    }
+    //0.5(q^2^ n_x, phi)
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      for(unsigned int j = 0; j < n_shape_fct_; ++j)
+        helper[j] -= 0.5 * scalar_product(q_hat[bdr], tb_sh_sk_sk[j][bdr] * q_hat[bdr]) * loc_normal[bdr][0];
+    }
+    //(v, phi_y)
+    helper += mdy * coeff[4];
+    //(v^ n_y, phi)
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      helper -= bdr_sh_sh[bdr] * coeff[4] * loc_normal[bdr][1];
+      if(loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0)
+        helper -= tau_pvu_ * (bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][0] * loc_normal[bdr][1];
+      else if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps)
+        helper -= tau_yvu_ *(bdr_sh_sk[bdr] * u_hat[bdr] - bdr_sh_sh[bdr] * coeff[0]) * loc_normal[bdr][1] * loc_normal[bdr][1];
+    }
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      residual[5 * n_shape_fct_ + i] = helper[i];
+    
+    //seventh equation
+    helper = (1. / delta_t_) * mass * (coeff[0] - hyper_edge.data.u_old);
+    helper += mass * coeff[6];
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      residual[6 * n_shape_fct_ + i] = helper[i];
+
     return residual;
   }
 
 private:
   template <typename geom_t, lSol_float_t fun(const lSol_float_t)>
   static lSol_float_t integrate_bdr_phicompfun(const unsigned int i,
-                                        const std::array<lSol_float_t, n_shape_fct_>& coeff1,
                                         const std::array<lSol_float_t, n_shape_bdr_>& coeff2,
+                                        const std::array<lSol_float_t, n_shape_fct_>& coeff1,
                                         const unsigned int bdr,
                                         geom_t& geom)
   {

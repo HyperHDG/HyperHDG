@@ -12,7 +12,7 @@
 
 int main() {
   typedef LocalSolver::Chkp<2, 1, 3> lst;
-  const lst ls;
+  lst ls;
   SmallVec<2, unsigned int> top_con(1U);
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::Cubic<2, 2>,
@@ -20,7 +20,7 @@ int main() {
                 NodeDescriptor::Cubic<2, 2>,
                 lst::data_type>
     hg(top_con);
-  std::array<std::array<double, 4>, 4> lambda_n;
+  std::array<std::array<double, 6>, 4> lambda_n;
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
     xv.push_back((double) i);
