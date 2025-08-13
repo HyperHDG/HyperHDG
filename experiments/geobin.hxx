@@ -100,6 +100,8 @@ void serialize_bin(const char* output_path, const GraphEdgeList& graph);
 
 GraphEdgeList deserialize_bin(const char* input_path);
 
+void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains);
+
 }
 
 #endif // GEOBIN_HXX

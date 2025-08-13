@@ -306,4 +306,46 @@ GraphEdgeList deserialize_bin(const char* input_path) {
   return graph;
 }
 
+void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains) {
+  bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
+
+  DataTable ioffset_table = {
+    .name = "IOFFSET",
+    .offset = sizeof(DomainsHeader),
+    .size = (1+domains.size())*sizeof(NodeID),
+  };
+
+  DataTable domains_table = {
+    .name = "DOMAINS",
+    .offset = ioffset_table.offset + ioffset_table.size,
+    .size = 0,
+  };
+  for (u64 p = 0; p < domains.size(); p++)
+    domains_table.size += domains[p].size() * sizeof(NodeID);
+
+  DomainsHeader hdr = {
+    .magic = "DOMAIN1",
+    .idsize = sizeof(NodeID),
+    .n_domains = domains.size(),
+    .tables = {
+      ioffset_table,
+      domains_table,
+    }
+  };
+  file.write((char*)&hdr, sizeof(hdr));
+
+  NodeID ioff = 0;
+  std::vector<NodeID> ioffsets(1+domains.size());
+  for (u64 p = 0; p < domains.size(); p++) {
+    ioffsets[p] = ioff;
+    ioff += domains[p].size();
+  }
+  ioffsets[domains.size()] = ioff;
+  file.write((char*)&ioffsets[0], ioffsets.size()*sizeof(NodeID));
+
+  for (PartitionID p = 0; p < domains.size(); p++)
+    file.write((char*)&domains[p][0], domains[p].size()*sizeof(NodeID));
+}
+
+
 }
