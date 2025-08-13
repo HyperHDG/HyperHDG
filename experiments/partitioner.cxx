@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "geobin.hxx"
+#include "stats.hxx"
 #include <KaHIP/app/configuration.h>
 #include <KaHIP/app/balance_configuration.h>
 #include <KaHIP/lib/partition/graph_partitioner.h>
@@ -69,69 +70,6 @@ void serialize_graph_partition_vtu(
   std::print(file, "    </Piece>\n");
   std::print(file, "  </UnstructuredGrid>\n");
   std::print(file, "</VTKFile>\n");
-}
-
-void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains) {
-  bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
-
-  geobin::DataTable ioffset_table = {
-    .name = "IOFFSET",
-    .offset = sizeof(geobin::DomainsHeader),
-    .size = (1+domains.size())*sizeof(NodeID),
-  };
-
-  geobin::DataTable domains_table = {
-    .name = "DOMAINS",
-    .offset = ioffset_table.offset + ioffset_table.size,
-    .size = 0,
-  };
-  for (geobin::u64 p = 0; p < domains.size(); p++)
-    domains_table.size += domains[p].size() * sizeof(NodeID);
-
-  geobin::DomainsHeader hdr = {
-    .magic = "DOMAIN1",
-    .idsize = sizeof(NodeID),
-    .n_domains = domains.size(),
-    .tables = {
-      ioffset_table,
-      domains_table,
-    }
-  };
-  file.write((char*)&hdr, sizeof(hdr));
-
-  NodeID ioff = 0;
-  std::vector<NodeID> ioffsets(1+domains.size());
-  for (geobin::u64 p = 0; p < domains.size(); p++) {
-    ioffsets[p] = ioff;
-    ioff += domains[p].size();
-  }
-  ioffsets[domains.size()] = ioff;
-  file.write((char*)&ioffsets[0], ioffsets.size()*sizeof(NodeID));
-
-  for (PartitionID p = 0; p < domains.size(); p++)
-    file.write((char*)&domains[p][0], domains[p].size()*sizeof(NodeID));
-}
-
-struct SimpleStats {
-  double min, max, sum, avg, stddev;
-};
-
-void compute_stats(double* values, size_t n, SimpleStats* stats) {
-  if (n == 0)
-    return;
-  stats->sum = stats->max = stats->avg = stats->stddev = 0;
-  stats->min = values[0];
-  for (geobin::u64 p = 0; p < n; p++) {
-    stats->sum += values[p];
-    stats->max = std::max(stats->max, values[p]);
-    stats->min = std::min(stats->min, values[p]);
-  }
-  stats->avg = stats->sum / n;
-  for (geobin::u64 p = 0; p < n; p++) {
-    double d = values[p] - stats->avg;
-    stats->stddev += d*d;
-  }
-  stats->stddev = std::sqrt(1./(n-1) * stats->stddev);
 }
 
 void print_stats(const char* msg, SimpleStats* stats) {
@@ -381,7 +319,7 @@ int main(int argc, char** argv) {
 
   logi("writing overlapping partition");
 
-  serialize_domains(output_path.c_str(), domains);
+  geobin::serialize_domains(output_path.c_str(), domains);
 
   if (!test_overlap.empty()) {
     std::vector<PartitionID> fake_partition(graph_edge_list.vertices.size(), 0);

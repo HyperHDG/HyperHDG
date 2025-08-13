@@ -1,5 +1,8 @@
 set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wno-unused-parameter -Wno-shadow -Wno-unused-but-set-variable  -Wno-unused-variable)
 
+add_library(stats stats.cxx)
+target_compile_options(stats PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
+
 add_library(geobin geobin.cxx)
 target_link_libraries(geobin PRIVATE bxzstr PRIVATE fmtlog PUBLIC KaHIP)
 target_compile_options(geobin PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
@@ -10,7 +13,7 @@ target_compile_options(make_geo PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debu
 )
 
 add_executable(partitioner partitioner.cxx)
-target_link_libraries(partitioner geobin KaHIP libkaffpa CLI11::CLI11 bxzstr METIS::METIS fmtlog)
+target_link_libraries(partitioner geobin stats KaHIP libkaffpa CLI11::CLI11 bxzstr METIS::METIS fmtlog)
 target_compile_options(partitioner PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
 add_executable(graph_gen graph_gen.cxx)
