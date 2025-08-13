@@ -282,7 +282,7 @@ int main(int argc, char** argv) {
   if (fs::is_directory(output_path))
     output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
 
-  Graph graph = { .edges = edges, .vertices = vertices, .edge_props = edge_props, .types = {}, .xadj = {}, .adjncy = {}};
+  Graph graph = { .edges = edges, .vertices = vertices, .edge_props = edge_props, .types = {}, .node_types = {}, .xadj = {}, .adjncy = {}};
   compute_types(graph);
 
   if (txt) {

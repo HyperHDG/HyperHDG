@@ -2,13 +2,11 @@
 #include <fstream>
 #include <limits>
 
+#include "libpartition.hxx"
 #include "geobin.hxx"
 #include "stats.hxx"
-#include <kaHIP_interface.h>
 #include <fmtlog/fmtlog.h>
 #include <CLI/CLI.hpp>
-#include <bxzstr.hpp>
-#include <metis.h>
 
 namespace {
 
@@ -98,48 +96,8 @@ int main(int argc, char** argv) {
 
   geobin::ID edgecut;
   std::vector<geobin::ID> partition(nverts);
-
-  if (backend_str == "kahip") {
-    static_assert(sizeof(int) == sizeof(geobin::ID));
-    kaffpa((int*)&nverts, NULL, (int*)graph.xadj.data(), NULL, (int*)graph.adjncy.data(), (int*)&partitions, &imbalance, !kahip_no_suppress_output, kahip_seed, kahip_mode, (int*)&edgecut, (int*)partition.data());
-  } else if (backend_str == "metis") {
-    static_assert(sizeof(idx_t) == sizeof(geobin::ID));
-    METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph.xadj.data(), (idx_t*)graph.adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, (idx_t*)&edgecut, (idx_t*)partition.data());
-  } else if (backend_str == "parhip") {
-    loge("backend=parhip unsupported as of yet");
-  }else if (backend_str == "naive") {
-    // TODO: move this into header
-    geobin::Point min_p = {std::numeric_limits<geobin::Real>::max()}, max_p = {std::numeric_limits<geobin::Real>::min()};
-    for (geobin::u64 n = 0; n < graph.vertices.size(); n++) {
-      const geobin::Point& p = graph.vertices[n];
-      for (geobin::u64 i = 0; i < 3; i++) {
-        min_p[i] = std::min(min_p[i], p[i]);
-        max_p[i] = std::max(max_p[i], p[i]);
-      }
-    }
-
-    geobin::Real eps = 1e-10;
-    std::array<geobin::ID, 3> partitions3d = {(geobin::ID)std::sqrt(partitions/partitions_z), (geobin::ID)std::sqrt(partitions/partitions_z), partitions_z};
-    for (geobin::u64 n = 0; n < graph.vertices.size(); n++) {
-      const geobin::Point& p = graph.vertices[n];
-      geobin::ID pid = 0;
-      for (geobin::u64 i = 0; i < 3; i++) {
-        pid *= partitions3d[i];
-        pid += p[i]/((1+eps)*(max_p[i]-min_p[i])) * partitions3d[i]; // truncate
-      }
-      assert(pid < partitions);
-      partition[n] = pid;
-    }
-
-    edgecut = 0;
-    for (const geobin::Edge& edge : graph.edges) {
-      if (partition[edge.first] != partition[edge.second])
-        edgecut++;
-    }
-  } else {
-    loge("ERROR: unsupported backend '{}'", backend_str);
-    return 1;
-  }
+  libpartition::PartConfig config = {libpartition::str_to_backend.at(frozen::string(backend_str)), !kahip_no_suppress_output, kahip_seed, kahip_mode, partitions_z};
+  libpartition::do_partition(&graph, &partitions, &imbalance, partition.data(), &edgecut, &config);
 
   // TODO: compute balance
   logi("partition metrics");

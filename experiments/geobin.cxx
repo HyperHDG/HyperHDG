@@ -125,7 +125,8 @@ ID compute_vertex_type(const Point& vertex, const Point& max_p, const Point& min
 }
 
 Graph& compute_types(Graph& graph) {
-  graph.types.resize(0);
+  graph.node_types.resize(graph.vertices.size());
+  graph.types.resize(graph.edges.size());
 
   // Calculate the bounding box (min/max x, y, z) for all vertices
   Point min_p = {1e10};
@@ -299,6 +300,8 @@ Graph deserialize_bin(const char* input_path) {
     edges_so_far += adjacency[n].size();
   }
   assert(edges_so_far == nedges*2);
+
+  compute_types(graph);
 
   return graph;
 }
