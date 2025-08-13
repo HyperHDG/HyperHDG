@@ -26,6 +26,25 @@ Point interpolate(const Point& u, const Point& v, Real a) {
   return res;
 }
 
+template <typename T>
+struct PointCloud
+{
+  using Point = std::array<T,3>;
+  using coord_t = T;
+
+  std::vector<Point> pts;
+
+  inline size_t kdtree_get_point_count() const { return pts.size(); }
+  inline T kdtree_get_pt(const size_t idx, const size_t dim) const {
+    return pts[idx][dim];
+  }
+
+  template <class BBOX>
+  bool kdtree_get_bbox(BBOX& /* bb */) const {
+      return false;
+  }
+};
+
 }
 
 int main(int argc, char** argv) {

@@ -12,61 +12,6 @@
 
 namespace {
 
-void serialize_graph_partition_vtu(
-  const geobin::Graph& graph,
-  const std::vector<geobin::ID>& partition,
-  const char* file_path
-) {
-  std::ofstream file(std::format("{}.vtu", file_path));
-  if (!file.is_open()) {
-    loge("could not opt file {}.vtu", file_path);
-    return;
-  }
-
-  std::print(file, "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
-  std::print(file, "  <UnstructuredGrid>\n");
-  std::print(file, "    <Piece NumberOfPoints=\"{}\" NumberOfCells=\"{}\">\n", graph.vertices.size(), graph.edges.size());
-  std::print(file, "      <Points>\n");
-  std::print(file, "        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">\n");
-  for (const auto& point : graph.vertices)
-      std::print(file, "          {} {} {}\n", point[0], point[1], point[2]);
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </Points>\n");
-  std::print(file, "      <Cells>\n");
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
-  std::print(file, "          ");
-  for (const auto& edge : graph.edges)
-      std::print(file, "{} {} ", edge.first, edge.second);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  // offsets: the cumulative sum of the number of points in each cell.
-  // for VTK_LINE (2 points per cell), this will be 2, 4, 6, ...
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-  std::print(file, "          ");
-  for (size_t i = 0; i < graph.edges.size(); ++i)
-      std::print(file, "{} ", (i + 1) * 2);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-  std::print(file, "          ");
-  for (size_t i = 0; i < graph.edges.size(); ++i)
-      std::print(file, "3 "); // VTK_LINE type
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </Cells>\n");
-  std::print(file, "      <PointData>\n");
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"PartitionID\" format=\"ascii\">\n");
-  std::print(file, "          ");
-  for (geobin::ID id : partition)
-      std::print(file, "{} ", id);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </PointData>\n");
-  std::print(file, "    </Piece>\n");
-  std::print(file, "  </UnstructuredGrid>\n");
-  std::print(file, "</VTKFile>\n");
-}
-
 void print_stats(const char* msg, SimpleStats* stats) {
   logi("{}", msg);
   logi("  min={}", stats->min);
