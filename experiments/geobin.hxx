@@ -51,11 +51,13 @@ struct PointCloud
   }
 };
 
-struct GraphEdgeList {
+struct Graph {
   std::vector<Edge> edges;
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
   std::vector<Edge> types;
+  std::vector<ID> xadj;
+  std::vector<ID> adjncy;
 };
 
 struct DataTable {
@@ -89,13 +91,13 @@ std::vector<Connection> read_connections(const char* path);
 
 std::vector<Prop> read_props(const char* path);
 
-GraphEdgeList& compute_types(GraphEdgeList& graph);
+Graph& compute_types(Graph& graph);
 
-void serialize_txt(const char* output_path, const GraphEdgeList& graph);
+void serialize_txt(const char* output_path, const Graph& graph);
 
-void serialize_bin(const char* output_path, const GraphEdgeList& graph);
+void serialize_bin(const char* output_path, const Graph& graph);
 
-GraphEdgeList deserialize_bin(const char* input_path);
+Graph deserialize_bin(const char* input_path);
 
 void serialize_domains(const char* path, const std::vector<std::vector<ID>>& domains);
 

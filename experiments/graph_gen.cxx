@@ -7,8 +7,8 @@
 
 namespace {
 
-geobin::GraphEdgeList generate_grid_graph(const char* path, geobin::u64 n) {
-  geobin::GraphEdgeList graph;
+geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
+  geobin::Graph graph;
   int N = n*n;
   int M = 2 * (n-1) * n;
   double h = 1. / (n-1);
@@ -56,6 +56,6 @@ int main(int argc, char** argv) {
   logi("  output_path={}", output_path);
   logi("  n={}", n);
 
-  geobin::GraphEdgeList graph = generate_grid_graph(output_path.c_str(), n);
+  geobin::Graph graph = generate_grid_graph(output_path.c_str(), n);
   geobin::serialize_bin(output_path.c_str(), graph);
 }

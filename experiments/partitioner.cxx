@@ -13,7 +13,7 @@
 namespace {
 
 void serialize_graph_partition_vtu(
-  const geobin::GraphEdgeList& graph,
+  const geobin::Graph& graph,
   const std::vector<geobin::ID>& partition,
   const char* file_path
 ) {
@@ -138,17 +138,17 @@ int main(int argc, char** argv) {
 
   logi("reading graph");
 
-  geobin::GraphEdgeList graph_edge_list = geobin::deserialize_bin(input_path.c_str());
-  geobin::ID nverts = graph_edge_list.vertices.size();
-  geobin::ID nedges = graph_edge_list.edges.size();
+  geobin::Graph graph = geobin::deserialize_bin(input_path.c_str());
+  geobin::ID nverts = graph.vertices.size();
+  geobin::ID nedges = graph.edges.size();
 
   // TODO: cleanup
   // map types in edges to types per node
   // NOTE: we assume that the type for each node is independent of the edge the node is in
   std::vector<geobin::ID> node_types(nverts, (geobin::ID)-1);
   for (geobin::u64 e = 0; e < nedges; e++) {
-    const geobin::Edge edge = graph_edge_list.edges[e];
-    const geobin::Edge edge_types = graph_edge_list.types[e];
+    const geobin::Edge edge = graph.edges[e];
+    const geobin::Edge edge_types = graph.types[e];
     node_types[edge.first] = edge_types.first;
     node_types[edge.second] = edge_types.second;
   }
@@ -164,37 +164,20 @@ int main(int argc, char** argv) {
 
   geobin::ID edgecut;
   std::vector<geobin::ID> partition(nverts);
-  std::vector<std::vector<geobin::ID>> adjacency(nverts+1);
-  for (const geobin::Edge& edge : graph_edge_list.edges) {
-    adjacency[edge.first].push_back(edge.second);
-    adjacency[edge.second].push_back(edge.first);
-  }
-  std::vector<geobin::ID> xadj(nverts+1, 0);
-  std::vector<geobin::ID> adjncy(nedges*2, 0); // *2 for directed repr
-  geobin::ID edges_so_far = 0;
-  for (geobin::ID n = 0; n < nverts+1; n++) {
-    xadj[n] = edges_so_far;
-    for (geobin::ID nid = 0; nid < adjacency[n].size(); nid++) {
-      assert(nid + edges_so_far < nedges*2);
-      adjncy[nid + edges_so_far] = adjacency[n][nid];
-    }
-    edges_so_far += adjacency[n].size();
-  }
-  assert(edges_so_far == nedges*2);
 
   if (backend_str == "kahip") {
     static_assert(sizeof(int) == sizeof(geobin::ID));
-    kaffpa((int*)&nverts, NULL, (int*)xadj.data(), NULL, (int*)adjncy.data(), (int*)&partitions, &imbalance, !kahip_no_suppress_output, kahip_seed, kahip_mode, (int*)&edgecut, (int*)partition.data());
+    kaffpa((int*)&nverts, NULL, (int*)graph.xadj.data(), NULL, (int*)graph.adjncy.data(), (int*)&partitions, &imbalance, !kahip_no_suppress_output, kahip_seed, kahip_mode, (int*)&edgecut, (int*)partition.data());
   } else if (backend_str == "metis") {
     static_assert(sizeof(idx_t) == sizeof(geobin::ID));
-    METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)xadj.data(), (idx_t*)adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, (idx_t*)&edgecut, (idx_t*)partition.data());
+    METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph.xadj.data(), (idx_t*)graph.adjncy.data(), NULL, NULL, NULL, (idx_t*)&partitions, NULL, NULL, NULL, (idx_t*)&edgecut, (idx_t*)partition.data());
   } else if (backend_str == "parhip") {
     loge("backend=parhip unsupported as of yet");
   }else if (backend_str == "naive") {
     // TODO: move this into header
     geobin::Point min_p = {std::numeric_limits<geobin::Real>::max()}, max_p = {std::numeric_limits<geobin::Real>::min()};
-    for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
-      const geobin::Point& p = graph_edge_list.vertices[n];
+    for (geobin::u64 n = 0; n < graph.vertices.size(); n++) {
+      const geobin::Point& p = graph.vertices[n];
       for (geobin::u64 i = 0; i < 3; i++) {
         min_p[i] = std::min(min_p[i], p[i]);
         max_p[i] = std::max(max_p[i], p[i]);
@@ -203,8 +186,8 @@ int main(int argc, char** argv) {
 
     geobin::Real eps = 1e-10;
     std::array<geobin::ID, 3> partitions3d = {(geobin::ID)std::sqrt(partitions/partitions_z), (geobin::ID)std::sqrt(partitions/partitions_z), partitions_z};
-    for (geobin::u64 n = 0; n < graph_edge_list.vertices.size(); n++) {
-      const geobin::Point& p = graph_edge_list.vertices[n];
+    for (geobin::u64 n = 0; n < graph.vertices.size(); n++) {
+      const geobin::Point& p = graph.vertices[n];
       geobin::ID pid = 0;
       for (geobin::u64 i = 0; i < 3; i++) {
         pid *= partitions3d[i];
@@ -215,7 +198,7 @@ int main(int argc, char** argv) {
     }
 
     edgecut = 0;
-    for (const geobin::Edge& edge : graph_edge_list.edges) {
+    for (const geobin::Edge& edge : graph.edges) {
       if (partition[edge.first] != partition[edge.second])
         edgecut++;
     }
@@ -231,7 +214,7 @@ int main(int argc, char** argv) {
 
   if (!vtu_output_path.empty()) {
     logi("serializing graph partition to vtu");
-    serialize_graph_partition_vtu(graph_edge_list, partition, vtu_output_path.c_str());
+    serialize_graph_partition_vtu(graph, partition, vtu_output_path.c_str());
   }
 
   logi("make partition overlap and filter boundary nodes");
@@ -247,7 +230,7 @@ int main(int argc, char** argv) {
   compute_stats(sizes_before.data(), partitions, &stats_before);
   print_stats("sizes before", &stats_before);
 
-  std::vector<geobin::u8> visited(graph_edge_list.vertices.size());
+  std::vector<geobin::u8> visited(graph.vertices.size());
   for (geobin::ID p = 0; p < partitions; p++) {
     std::fill(visited.begin(), visited.end(), 0); // slowest?
     for (const geobin::ID& n : domains[p])
@@ -273,8 +256,8 @@ int main(int argc, char** argv) {
       }
 
       // all non visited (hence other partition) neighbors are added to the overlapping domain
-      for (geobin::ID i = xadj[n]; i < xadj[n+1]; i++) {
-        geobin::ID nn = adjncy[i]; // neighbor
+      for (geobin::ID i = graph.xadj[n]; i < graph.xadj[n+1]; i++) {
+        geobin::ID nn = graph.adjncy[i]; // neighbor
          if (!visited[nn]) {
           domains[p].push_back(nn);
           visited[nn] = 1;
@@ -320,9 +303,9 @@ int main(int argc, char** argv) {
   geobin::serialize_domains(output_path.c_str(), domains);
 
   if (!test_overlap.empty()) {
-    std::vector<geobin::ID> fake_partition(graph_edge_list.vertices.size(), 0);
+    std::vector<geobin::ID> fake_partition(graph.vertices.size(), 0);
     for (geobin::ID n : domains[0])
       fake_partition[n] = 1;
-    serialize_graph_partition_vtu(graph_edge_list, fake_partition, test_overlap.c_str());
+    serialize_graph_partition_vtu(graph, fake_partition, test_overlap.c_str());
   }
 }
