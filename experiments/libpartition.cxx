@@ -3,6 +3,7 @@
 #include <kaHIP_interface.h>
 #include <metis.h>
 #include <print>
+#include <fmtlog/fmtlog.h>
 
 namespace libpartition {
 
@@ -62,11 +63,62 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
       naive_geometric_partition(graph, npartition, partition, edgecut, &config->naive_partitions_z);
       break;
     default:
-      std::println("ERROR: unsupported backend '{}'", backend_to_str.at(config->backend));
+      loge("unsupported backend '{}'", backend_to_str.at(config->backend));
       break;
   }
 }
 
+void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID delta) {
+  std::vector<geobin::u8> visited(graph.vertices.size());
+  for (geobin::ID p = 0; p < domains.size(); p++) {
+    std::fill(visited.begin(), visited.end(), 0); // slowest? -> use partition id to track
+    for (const geobin::ID& n : domains[p])
+      visited[n] = 1;
 
+    // frontier marker
+    domains[p].push_back((geobin::ID)-1);
+
+    geobin::ID hop = 0;
+    for (geobin::ID bfs_front = 0; bfs_front < domains[p].size() && hop < delta; bfs_front++) {
+      const geobin::ID n = domains[p][bfs_front];
+
+      // if we see a frontier marker, then hop is complete
+      if (n == (geobin::ID)-1) {
+        hop++;
+        if (domains[p].back() == (geobin::ID)-1) {
+          logi("domain {}: bfs terminated early after {} < {}=delta rounds ", p, hop-1, delta);
+          logi("  no new nodes added in last hop");
+          break;
+        }
+        domains[p].push_back((geobin::ID)-1);
+        continue;
+      }
+
+      // all non visited (hence other partition) neighbors are added to the overlapping domain
+      for (geobin::ID i = graph.xadj[n]; i < graph.xadj[n+1]; i++) {
+        geobin::ID nn = graph.adjncy[i]; // neighbor
+         if (!visited[nn]) {
+          domains[p].push_back(nn);
+          visited[nn] = 1;
+        }
+      }
+    }
+  }
+
+  // remove frontier markers AND dirichlet nodes (type 1)
+  for (geobin::ID p = 0; p < domains.size(); p++) {
+    geobin::u64 offset = 0;
+    for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
+      geobin::ID node = domains[p][i+offset];
+      if (node == (geobin::ID)-1 || graph.node_types[node] == 1) {
+        offset++;
+      } else {
+        domains[p][i] = node;
+        i++;
+      }
+    }
+    domains[p].resize(domains[p].size()-offset);
+  }
+}
 
 }
