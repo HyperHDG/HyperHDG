@@ -142,17 +142,6 @@ int main(int argc, char** argv) {
   geobin::ID nverts = graph.vertices.size();
   geobin::ID nedges = graph.edges.size();
 
-  // TODO: cleanup
-  // map types in edges to types per node
-  // NOTE: we assume that the type for each node is independent of the edge the node is in
-  std::vector<geobin::ID> node_types(nverts, (geobin::ID)-1);
-  for (geobin::u64 e = 0; e < nedges; e++) {
-    const geobin::Edge edge = graph.edges[e];
-    const geobin::Edge edge_types = graph.types[e];
-    node_types[edge.first] = edge_types.first;
-    node_types[edge.second] = edge_types.second;
-  }
-
   logi("graph stats");
   logi("  nodes={}", nverts);
   logi("  edges={}", nedges);
@@ -271,7 +260,7 @@ int main(int argc, char** argv) {
     geobin::u64 offset = 0;
     for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
       geobin::ID node = domains[p][i+offset];
-      if (node == (geobin::ID)-1 || node_types[node] == 1) {
+      if (node == (geobin::ID)-1 || graph.node_types[node] == 1) {
         offset++;
       } else {
         domains[p][i] = node;
