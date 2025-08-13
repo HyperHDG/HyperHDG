@@ -33,6 +33,7 @@ parser.add_argument("--maxiter", help="maximum number of cg iterations", type=in
 parser.add_argument("-m", "--modelproblem", help="the model problem to select", default="timo")
 parser.add_argument("-n","--num-elements", help="the number of elements to use in the coarse finite element mesh", default=2**3, type=int)
 parser.add_argument("--mat", help="store/load the lhs HDG matrix, depending on wether the path exists")
+parser.add_argument("--no-cg-progress", help="show the cg progess", action="store_true")
 
 logging.setLoggerClass(prin2.Logger)
 logger = logging.getLogger("fiber_network_elastic")
@@ -97,8 +98,9 @@ if args.mat and os.path.isfile(args.mat):
 else:
   col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
   A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
-  sp.save_npz(args.mat, A)
-  logger.info(f"  wrote matrix A to '{args.mat}'")
+  if args.mat:
+    sp.save_npz(args.mat, A)
+    logger.info(f"  wrote matrix A to '{args.mat}'")
 
 logger.info("assembling  B...")
 
@@ -126,12 +128,14 @@ def log_iter(x):
   duration = datetime.datetime.now() - start
   start = datetime.datetime.now()
   avg_time += duration
-  logger.info(f"{iters:>5} {relErr:>13.6e} {bilin:>13.6e} {duration}")
+  if not args.no_cg_progress:
+    logger.info(f"{iters:>5} {relErr:>13.6e} {bilin:>13.6e} {duration}")
 
 logger.info("starting cg")
 
 vectorSolution, num_iter = sp.linalg.cg(A, rhs, rtol=args.rtol, callback=log_iter, M=B, maxiter=args.maxiter)
 
+logger.info(f"number of it={iters}")
 logger.info(f"total it time={avg_time}")
 
 avg_time /= iters
