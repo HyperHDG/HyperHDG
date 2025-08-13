@@ -32,25 +32,6 @@ using Point = std::array<Real, 3>;
 using Edge = std::pair<ID, ID>;
 using Prop = std::array<Real, 12>;
 
-template <typename T>
-struct PointCloud
-{
-  using Point = std::array<T,3>;
-  using coord_t = T;
-
-  std::vector<Point> pts;
-
-  inline size_t kdtree_get_point_count() const { return pts.size(); }
-  inline T kdtree_get_pt(const size_t idx, const size_t dim) const {
-    return pts[idx][dim];
-  }
-
-  template <class BBOX>
-  bool kdtree_get_bbox(BBOX& /* bb */) const {
-      return false;
-  }
-};
-
 struct Graph {
   std::vector<Edge> edges;
   std::vector<Point> vertices;
@@ -102,6 +83,12 @@ void serialize_bin(const char* output_path, const Graph& graph);
 Graph deserialize_bin(const char* input_path);
 
 void serialize_domains(const char* path, const std::vector<std::vector<ID>>& domains);
+
+void serialize_graph_partition_vtu(
+  const geobin::Graph& graph,
+  const std::vector<geobin::ID>& partition,
+  const char* file_path
+);
 
 }
 
