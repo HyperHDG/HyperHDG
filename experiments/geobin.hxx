@@ -56,6 +56,7 @@ struct Graph {
   std::vector<Point> vertices;
   std::vector<Prop> edge_props;
   std::vector<Edge> types;
+  std::vector<ID> node_types;
   std::vector<ID> xadj;
   std::vector<ID> adjncy;
 };
@@ -91,6 +92,7 @@ std::vector<Connection> read_connections(const char* path);
 
 std::vector<Prop> read_props(const char* path);
 
+ID compute_vertex_type(const Point& vertex, const Point& max_p, const Point& min_p);
 Graph& compute_types(Graph& graph);
 
 void serialize_txt(const char* output_path, const Graph& graph);

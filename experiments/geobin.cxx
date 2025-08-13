@@ -116,33 +116,31 @@ std::vector<Prop> read_props(const char* path) {
   return props;
 }
 
-// TODO: cleanup
+ID compute_vertex_type(const Point& vertex, const Point& max_p, const Point& min_p) {
+    if (vertex[0] - min_p[0] < 1e-6 * (max_p[0] - min_p[0]) || max_p[0] - vertex[0] < 1e-6 * (max_p[0] - min_p[0]) ||
+        vertex[1] - min_p[1] < 1e-6 * (max_p[1] - min_p[1]) || max_p[1] - vertex[1] < 1e-6 * (max_p[1] - min_p[1]))
+      return 1;
+    else
+      return 0;
+}
+
 Graph& compute_types(Graph& graph) {
   graph.types.resize(0);
 
   // Calculate the bounding box (min/max x, y, z) for all vertices
-  Real min_x = 1e10, min_y = 1e10, min_z = 1e10, max_x = 1e-10, max_y = 1e-10, max_z = 1e-10;
+  Point min_p = {1e10};
+  Point max_p = {1e-10};
   for (const Point& vertex : graph.vertices) {
-      min_x = std::min(min_x, vertex[0]);
-      min_y = std::min(min_y, vertex[1]);
-      min_z = std::min(min_z, vertex[2]);
-      max_x = std::max(max_x, vertex[0]);
-      max_y = std::max(max_y, vertex[1]);
-      max_z = std::max(max_z, vertex[2]);
+    for (geobin::u64 i = 0; i < 3; i++) {
+      min_p[i] = std::min(min_p[i], vertex[i]);
+      max_p[i] = std::max(max_p[i], vertex[i]);
+    }
   }
+  for (geobin::ID n = 0; n < graph.vertices.size(); n++)
+    graph.node_types[n] = compute_vertex_type(graph.vertices[n], max_p, min_p);
 
-  for (const Edge& edge : graph.edges) {
-    u32 left = 0, right = 0;
-    Point vertex = graph.vertices[edge.first];
-    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
-      left = 1;
-    vertex = graph.vertices[edge.second];
-    if (vertex[0] - min_x < 1e-6 * (max_x - min_x) || max_x - vertex[0] < 1e-6 * (max_x - min_x) ||
-        vertex[1] - min_y < 1e-6 * (max_y - min_y) || max_y - vertex[1] < 1e-6 * (max_y - min_y))
-      right = 1;
-    graph.types.push_back({left, right});
-  }
+  for (const Edge& edge : graph.edges)
+    graph.types.push_back({graph.node_types[edge.first], graph.node_types[edge.second]});
 
   return graph;
 }
