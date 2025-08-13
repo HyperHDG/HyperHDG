@@ -1,6 +1,8 @@
 #include <print>
 #include <fstream>
 #include <limits>
+#include <deque>
+#include <random>
 
 #include "libpartition.hxx"
 #include "geobin.hxx"
@@ -19,6 +21,53 @@ void print_stats(const char* msg, SimpleStats* stats) {
   lg->info(msg)({
       {"min", stats->min}, {"max", stats->max}, {"sum", stats->sum}, {"avg", stats->avg}, {"std", stats->stddev}
   });
+}
+
+geobin::ID diameter_2approx(geobin::Graph& graph) {
+  geobin::ID nverts = graph.vertices.size();
+  std::mt19937 gen(std::random_device{}());
+  std::uniform_int_distribution<> dist(0, nverts-1);
+  geobin::ID arbitrary_start = dist(gen);
+
+  std::vector<geobin::u8> visited(nverts, 0);
+  std::deque<geobin::ID> deque {arbitrary_start};
+  geobin::ID farthest = arbitrary_start;
+  while (!deque.empty()) {
+    geobin::ID n = deque.front();
+    deque.pop_front();
+    for (geobin::ID i = graph.xadj[n]; i < graph.xadj[n+1]; i++) {
+      farthest = graph.adjncy[i];
+      if (visited[farthest] != 1) {
+        deque.push_back(farthest);
+        visited[farthest] = 1;
+      }
+    }
+  }
+
+  geobin::ID distance = 0;
+  deque.push_back(farthest);
+  deque.push_back((geobin::ID)-1);
+  visited[farthest] = 2;
+  while (!deque.empty()) {
+    geobin::ID n = deque.front();
+    deque.pop_front();
+    if (n == (geobin::ID)-1) {
+      if (deque.empty())
+        break;
+      distance++;
+      deque.push_back((geobin::ID)-1);
+      continue;
+    }
+    for (geobin::ID i = graph.xadj[n]; i < graph.xadj[n+1]; i++) {
+      geobin::ID nn = graph.adjncy[i];
+      if (visited[nn] != 2) {
+        deque.push_back(nn);
+        visited[nn] = 2;
+      }
+    }
+  }
+
+  return distance;
 }
 
 }
@@ -55,8 +104,8 @@ int main(int argc, char** argv) {
 
   int kahip_mode = 2;
   app.add_option("--kahip-mode", kahip_mode, "the mode to run the kahip backend in, one of (0|1|2) representing FAST,ECO,STRONG, default=STRONG");
-  bool kahip_no_suppress_output = false;
-  app.add_option("--kahip-no-suppress-output", kahip_no_suppress_output, "do not suppress kahip backend output");
+  bool kahip_suppress_output = true;
+  app.add_option("--kahip-suppress-output", kahip_suppress_output, "suppress kahip backend output, default=true");
   int kahip_seed = 0;
   app.add_option("--kahip-seed", kahip_seed, "kahip seed, default=0");
 
@@ -75,6 +124,9 @@ int main(int argc, char** argv) {
   std::string log_level = "info";
   app.add_option("--log-level", log_level, "set log level, one of  (trace|debug|info|warn|err)");
 
+  bool extended_stats = false;
+  app.add_option("--extended-stats", extended_stats, "compute extended (expensive) stats, default=false");
+
   CLI11_PARSE(app,argc,argv);
 
   auto lg = log_file.empty() ? spdlog::stdout_logger_st("logger") : spdlog::basic_logger_st("logger", log_file);
@@ -88,7 +140,14 @@ int main(int argc, char** argv) {
       {"vtu_output_path", vtu_output_path},
       {"delta", delta},
       {"backend", backend},
-      {"test_overlap", test_overlap}
+      {"test_overlap", test_overlap},
+      {"kahip_suppress_output", kahip_suppress_output},
+      {"kahip_mode", kahip_mode},
+      {"kahip_seed", kahip_seed},
+      {"log_level", log_level},
+      {"log_file", log_file},
+      {"imbalance", imbalance},
+      {"partitions_z", partitions_z},
   });
 
   lg->info("reading graph...");
@@ -101,6 +160,17 @@ int main(int argc, char** argv) {
   lg->debug("reading graph")({{"time", sw.elapsed().count()}});
   lg->debug("graph stats")({{"nodes", nverts}, {"edges", nedges}});
 
+  if (extended_stats) {
+    std::vector<double> degrees(nverts, 0);
+    for (geobin::ID n = 0; n < nverts; n++)
+      degrees[n] = (double)(graph.xadj[n+1] - graph.xadj[n]);
+    SimpleStats stats_degrees;
+    compute_stats(degrees.data(), nverts, &stats_degrees);
+    print_stats("degree stats", &stats_degrees);
+
+    lg->info("diameter_2approx")({{"diameter_2approx", diameter_2approx(graph)}});
+  }
+
   // TODO: set default hops based on some graph stats like diameter, girth, etc
   //   maybe using 2-approximation or 3/2-approximation of diameter
   //   NOTE2: or maybe not? maybe 2 is fine?
@@ -110,7 +180,7 @@ int main(int argc, char** argv) {
   sw.reset();
   geobin::ID edgecut;
   std::vector<geobin::ID> partition(nverts);
-  libpartition::PartConfig config = {libpartition::str_to_backend.at(frozen::string(backend)), !kahip_no_suppress_output, kahip_seed, kahip_mode, partitions_z};
+  libpartition::PartConfig config = {libpartition::str_to_backend.at(frozen::string(backend)), kahip_suppress_output, kahip_seed, kahip_mode, partitions_z};
   libpartition::do_partition(&graph, &partitions, &imbalance, partition.data(), &edgecut, &config);
 
   lg->debug("partitioner_backend")({{"time", sw.elapsed().count()}});
