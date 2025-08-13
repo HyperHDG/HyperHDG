@@ -116,28 +116,7 @@ std::vector<Prop> read_props(const char* path) {
   return props;
 }
 
-void GraphEdgeList::to_access(graph_access& graph_acc) {
-  // is directed -> 2*edges
-  graph_acc.start_construction(vertices.size(), 2*edges.size());
-
-  std::vector<std::vector<NodeID>> adjacency(vertices.size());
-  for (const geobin::Edge& edge : edges) {
-    adjacency[edge.first].push_back(edge.second);
-    adjacency[edge.second].push_back(edge.first);
-  }
-
-  for (NodeID n = 0; n < vertices.size(); n++) {
-    NodeID nn = graph_acc.new_node();
-    graph_acc.setNodeWeight(nn, 1);
-    for (const NodeID neighbor : adjacency[n]) {
-      EdgeID e = graph_acc.new_edge(nn, neighbor);
-      graph_acc.setEdgeWeight(e, 1);
-    }
-  }
-
-  graph_acc.finish_construction();
-}
-
+// TODO: cleanup
 GraphEdgeList& compute_types(GraphEdgeList& graph) {
   graph.types.resize(0);
 
@@ -306,13 +285,13 @@ GraphEdgeList deserialize_bin(const char* input_path) {
   return graph;
 }
 
-void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>& domains) {
+void serialize_domains(const char* path, const std::vector<std::vector<geobin::ID>>& domains) {
   bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
 
   DataTable ioffset_table = {
     .name = "IOFFSET",
     .offset = sizeof(DomainsHeader),
-    .size = (1+domains.size())*sizeof(NodeID),
+    .size = (1+domains.size())*sizeof(geobin::ID),
   };
 
   DataTable domains_table = {
@@ -321,11 +300,11 @@ void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>&
     .size = 0,
   };
   for (u64 p = 0; p < domains.size(); p++)
-    domains_table.size += domains[p].size() * sizeof(NodeID);
+    domains_table.size += domains[p].size() * sizeof(geobin::ID);
 
   DomainsHeader hdr = {
     .magic = "DOMAIN1",
-    .idsize = sizeof(NodeID),
+    .idsize = sizeof(geobin::ID),
     .n_domains = domains.size(),
     .tables = {
       ioffset_table,
@@ -334,17 +313,17 @@ void serialize_domains(const char* path, const std::vector<std::vector<NodeID>>&
   };
   file.write((char*)&hdr, sizeof(hdr));
 
-  NodeID ioff = 0;
-  std::vector<NodeID> ioffsets(1+domains.size());
+  geobin::ID ioff = 0;
+  std::vector<geobin::ID> ioffsets(1+domains.size());
   for (u64 p = 0; p < domains.size(); p++) {
     ioffsets[p] = ioff;
     ioff += domains[p].size();
   }
   ioffsets[domains.size()] = ioff;
-  file.write((char*)&ioffsets[0], ioffsets.size()*sizeof(NodeID));
+  file.write((char*)&ioffsets[0], ioffsets.size()*sizeof(geobin::ID));
 
-  for (PartitionID p = 0; p < domains.size(); p++)
-    file.write((char*)&domains[p][0], domains[p].size()*sizeof(NodeID));
+  for (geobin::ID p = 0; p < domains.size(); p++)
+    file.write((char*)&domains[p][0], domains[p].size()*sizeof(geobin::ID));
 }
 
 
