@@ -47,6 +47,8 @@ void naive_geometric_partition(geobin::Graph* graph, geobin::ID* npartition, geo
 
 void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalance, geobin::ID* partition, geobin::ID* edgecut, PartConfig* config);
 
+void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID delta);
+
 }
 
 

@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
   std::string vtu_output_path;
   app.add_option("--vtu", vtu_output_path, "serialize the graph to a vtu file including the partition");
 
-  geobin::u64 hops = 3;
-  app.add_option("--hops", hops, "number of hops to enlarge partitions by");
+  geobin::u64 delta = 2;
+  app.add_option("--delta", delta, "overlap parameter delta = number of hops to enlarge partitions by");
 
   std::string backend_str = "kahip";
   app.add_option("-b,--backend", backend_str, "the partitioner backend to use, must be one of (kahip|metis|naive)");
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
   logi("  partitions={}", partitions);
   logi("  output_path={}", output_path);
   logi("  vtu_output_path={}", vtu_output_path);
-  logi("  hops={}", hops);
+  logi("  delta={}", delta);
   logi("  backend_str={}", backend_str);
   logi("  test_overlap={}", test_overlap);
 
@@ -122,59 +122,7 @@ int main(int argc, char** argv) {
   compute_stats(sizes_before.data(), partitions, &stats_before);
   print_stats("sizes before", &stats_before);
 
-  std::vector<geobin::u8> visited(graph.vertices.size());
-  for (geobin::ID p = 0; p < partitions; p++) {
-    std::fill(visited.begin(), visited.end(), 0); // slowest?
-    for (const geobin::ID& n : domains[p])
-      visited[n] = 1;
-
-    // frontier marker
-    domains[p].push_back((geobin::ID)-1);
-
-    geobin::ID hop = 0;
-    for (geobin::ID bfs_front = 0; bfs_front < domains[p].size() && hop < hops; bfs_front++) {
-      const geobin::ID n = domains[p][bfs_front];
-
-      // if we see a frontier marker, then hop is complete
-      if (n == (geobin::ID)-1) {
-        hop++;
-        if (domains[p].back() == (geobin::ID)-1) {
-          logi("domain {}: bfs terminated early after {} hops", p, hop, hops);
-          logi("  no new nodes added in last hop");
-          break;
-        }
-        domains[p].push_back((geobin::ID)-1);
-        continue;
-      }
-
-      // all non visited (hence other partition) neighbors are added to the overlapping domain
-      for (geobin::ID i = graph.xadj[n]; i < graph.xadj[n+1]; i++) {
-        geobin::ID nn = graph.adjncy[i]; // neighbor
-         if (!visited[nn]) {
-          domains[p].push_back(nn);
-          visited[nn] = 1;
-        }
-      }
-    }
-  }
-
-  // remove frontier markers AND dirichlet nodes (type 1)
-  for (geobin::ID p = 0; p < partitions; p++) {
-    geobin::u64 offset = 0;
-    for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
-      geobin::ID node = domains[p][i+offset];
-      if (node == (geobin::ID)-1 || graph.node_types[node] == 1) {
-        offset++;
-      } else {
-        domains[p][i] = node;
-        i++;
-      }
-    }
-    domains[p].resize(domains[p].size()-offset);
-  }
-
-  // TODO: integrate Q1 partitioning here to better compare
-  // TODO: check if cython builds optimized...
+  libpartition::make_domains_overlap(graph, domains, delta);
 
   std::vector<double> sizes_after(partitions);
   for (geobin::ID p = 0; p < partitions; p++)
