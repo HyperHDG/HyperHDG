@@ -3,7 +3,7 @@
 #include <kaHIP_interface.h>
 #include <metis.h>
 #include <print>
-#include <fmtlog/fmtlog.h>
+#include <spdlog/spdlog.h>
 
 namespace libpartition {
 
@@ -63,7 +63,7 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
       naive_geometric_partition(graph, npartition, partition, edgecut, &config->naive_partitions_z);
       break;
     default:
-      loge("unsupported backend '{}'", backend_to_str.at(config->backend));
+      spdlog::get("logger")->info("unsupported backend");
       break;
   }
 }
@@ -71,6 +71,8 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
 void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID delta) {
   std::vector<geobin::u8> visited(graph.vertices.size());
   for (geobin::ID p = 0; p < domains.size(); p++) {
+    if (domains[p].size() == 0)
+      continue;
     std::fill(visited.begin(), visited.end(), 0); // slowest? -> use partition id to track
     for (const geobin::ID& n : domains[p])
       visited[n] = 1;
@@ -86,8 +88,7 @@ void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::
       if (n == (geobin::ID)-1) {
         hop++;
         if (domains[p].back() == (geobin::ID)-1) {
-          logi("domain {}: bfs terminated early after {} < {}=delta rounds ", p, hop-1, delta);
-          logi("  no new nodes added in last hop");
+          spdlog::get("logger")->warn("bfs terminated early")({{"rounds_completed", hop-1}, {"domain_idx", p}, {"rounds_requested", delta}});
           break;
         }
         domains[p].push_back((geobin::ID)-1);
