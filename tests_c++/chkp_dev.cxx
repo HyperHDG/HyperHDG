@@ -12,7 +12,6 @@
 
 int main() {
   typedef LocalSolver::Chkp<2, 1, 3> lst;
-  lst ls;
   SmallVec<2, unsigned int> top_con(1U);
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::Cubic<2, 2>,
@@ -20,15 +19,16 @@ int main() {
                 NodeDescriptor::Cubic<2, 2>,
                 lst::data_type>
     hg(top_con);
-  std::array<std::array<double, 6>, 4> lambda_n;
+  lst ls(*(hg.begin()));
+  std::array< std::array< double, 6 >, 4> lambda_n;
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
-    xv.push_back((double) i);
-  std::array<SmallVec<4>, 7> coeff;
-  coeff.fill(SmallVec<4>(0.));
+    xv.push_back( (double) i);
+  SmallVec<28> coeff(0.);
   SmallVec<4, unsigned int> hyEdge_hyNodes;
   std::for_each(hg.begin(), hg.end(), [&](auto he)
       {
+        ls.make_initial(he);
         hyEdge_hyNodes = he.topology.get_hyNode_indices();
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -36,9 +36,15 @@ int main() {
           std::for_each(lambda_n[n].begin(), lambda_n[n].end(), [](auto i){std::cout << i <<"\t";});
           std::cout << "\n";
         }
-        std::cout << hyEdge_hyNodes << "\n";
-        std::array<double, 28> res = ls.get_residual(lambda_n, coeff, he, 0.);
-        std::cout << res[0] << " " << res[1] << " " << res[2] << " " << res[3] << std::endl;
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
+        int i = 0;
+        std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+        std::cout << ls.jacobi(lambda_n, coeff, he, 0.);
+        std::cout << ls.newton(lambda_n, coeff, he, 0.);
+        res = ls.get_residual(lambda_n, coeff, he, 0.);
+        i = 0; 
+        std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+        std::cout << coeff;
       });
   return 0;
 }
