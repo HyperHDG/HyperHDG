@@ -41,7 +41,7 @@ std::string uuid_to_str(const UUID& uuid) {
   char buf[32+1];
   uint32_t* u = (uint32_t*) uuid.data();
   for (size_t i = 0; i < 32; i += 8) {
-    snprintf(buf+i, 32+1, "%X", *u);
+    snprintf(buf+i, 32+1, "%08X", *u);
     u++;
   }
   return std::string(buf);
