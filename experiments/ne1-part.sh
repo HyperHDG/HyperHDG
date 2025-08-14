@@ -7,7 +7,7 @@ fi
 OUTPUT=$1
 PART="build-release/experiments/partitioner"
 GRAPH="experiments/ne1-graph.py"
-DOM="domains/fiber_network_14871.geo.bin.zstd"
+DOM="domains/fiber_network_615452.geo.bin.zstd"
 P="100"
 D="2"
 PS="40"
@@ -30,20 +30,18 @@ fi
 
 parallel $PFLAGS "$PART $DOM {1} $OUTPUT-{1}-d{2}-{3} --delta={2} --backend={3} --log-level=${LOGLEVEL} --log-file=$OUTPUT-ps-{1}-d{2}-{3}.log --square=true" \
   ::: $(seq 2 2 $PS) ::: $D ::: ${BACKENDS}
-parallel $PFLAGS "$PART $DOM {1} $OUTPUT-{1}-d{2}-{3} --delta={2} --backend={3} --log-level=${LOGLEVEL} --log-file=$OUTPUT-ds-{1}-d{2}-{3}.log --square=true" \
-  ::: $(seq 2 2 $PS) ::: $D ::: ${BACKENDS}
 
 #### time/p
 
-A=$OUTPUT-kahip-runid-partitions.json
-B=$OUTPUT-kahip-runid-time.json
-C=$OUTPUT-kahip-time-partitions.json
+A=$OUTPUT-runid-partitions.json
+B=$OUTPUT-runid-time.json
+C=$OUTPUT-time-partitions.json
 
-cat $OUTPUT-ps-*-kahip.log | jq -c 'select(.message == "args") | {runid, partitions}' \
+cat $OUTPUT-ps-*.log | jq -c 'select(.message == "args") | {runid, p: .partitions, backend}' \
     > $A
-cat $OUTPUT-ps-*-kahip.log | jq -c 'select(.message == "partitioner_backend") | {runid, time}' \
+cat $OUTPUT-ps-*.log | jq -c 'select(.message == "partitioner_backend") | {runid, t: .time}' \
     > $B
 jq -c -s 'reduce .[] as $item ({}; .[$item.runid] += $item) | .[]' \
     $A $B | tee $C
 
-$GRAPH -x partitions -y time --save $OUTPUT-time-partitions.png --title "partitioner backend runtime (t) over number of subdomains (p)" < $C
+$GRAPH -x p -y t --group-by=backend --save $OUTPUT-time-partitions.png --title "partitioner backend runtime (in s) over number of subdomains" < $C
