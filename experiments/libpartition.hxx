@@ -11,30 +11,8 @@
 
 namespace libpartition {
 
-#define PART_BACKEND_LIST(X) \
-    X(KaFFPa) \
-    X(METIS) \
-    X(NAIVE)
-
-enum class Backend {
-#define X(elem) elem,
-    PART_BACKEND_LIST(X)
-#undef X
-    COUNT
-};
-constexpr auto backend_to_str = frozen::make_unordered_map<Backend, const char*>({
-#define X(elem) {Backend::elem, #elem},
-  PART_BACKEND_LIST(X)
-#undef X
-});
-constexpr auto str_to_backend = frozen::make_unordered_map<frozen::string, Backend> ({
-#define X(elem) {#elem, Backend::elem},
-  PART_BACKEND_LIST(X)
-#undef X
-});
-
 struct PartConfig {
-  Backend backend;
+  const char* backend;
   bool kahip_suppress_output;
   int  kahip_seed;
   int  kahip_mode;

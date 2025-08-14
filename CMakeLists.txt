@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.16)
 
 project(HyperHDG LANGUAGES CXX)
 
+option(HYPERHDG_BUILD_EXPERIMENTS "build numerical experiments" ON)
+
 # Include the submodule projects
 add_subdirectory(submodules)
 include_directories(submodules)
 
-# Include experiments
-add_subdirectory(experiments)
+if(HYPERHDG_BUILD_EXPERIMENTS)
+  add_subdirectory(experiments)
+endif()
 
 ## Check whether appropriate compiler version is used
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -63,7 +66,7 @@ target_compile_features(
 ## Add the examples subdirectory
 add_subdirectory(examples)
 
-## Add tests if requested through the BUILD_TESTING option (default: ON)
+## Add tests if requested through the BUILD_TESTING option (default: ON - set by CTest)
 include(CTest)
 if(BUILD_TESTING)
   enable_testing()

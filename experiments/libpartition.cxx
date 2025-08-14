@@ -1,7 +1,17 @@
 #include "libpartition.hxx"
 
+#ifdef HYPERDG_USE_KaHIP
 #include <kaHIP_interface.h>
+#endif
+#ifdef HYPERHDG_USE_METIS
 #include <metis.h>
+#endif
+#ifdef HYPERHDG_USE_PARHIP
+#include <parhip_interface.h>
+#endif
+
+
+
 #include <print>
 #include <spdlog/spdlog.h>
 
@@ -51,20 +61,40 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
   geobin::ID nedges = graph->vertices.size();
   using kidx_t = int;
   static_assert(sizeof(kidx_t) == sizeof(geobin::ID));
+  const char* backend = config->backend;
 
-  switch (config->backend) {
-    case Backend::KaFFPa:
-      kaffpa((kidx_t*)&nverts, NULL, (kidx_t*)graph->xadj.data(), NULL, (kidx_t*)graph->adjncy.data(), (kidx_t*)npartition, imbalance, config->kahip_suppress_output, config->kahip_seed, config->kahip_mode, (kidx_t*)edgecut, (idx_t*)partition);
-      break;
-    case Backend::METIS:
-      METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph->xadj.data(), (idx_t*)graph->adjncy.data(), NULL, NULL, NULL, (idx_t*)npartition, NULL, NULL, NULL, (idx_t*)edgecut, (idx_t*)partition);
-      break;
-    case Backend::NAIVE:
-      naive_geometric_partition(graph, npartition, partition, edgecut, &config->naive_partitions_z);
-      break;
-    default:
-      spdlog::get("logger")->info("unsupported backend");
-      break;
+  if (strcmp(backend, "naive")) {
+    naive_geometric_partition(graph, npartition, partition, edgecut, &config->naive_partitions_z);
+  }
+  #ifdef HYPERHDG_USE_KaHIP
+  else if (strcmp(backend, "kahip") == 0) {
+    kaffpa((kidx_t*)&nverts, NULL, (kidx_t*)graph->xadj.data(), NULL, (kidx_t*)graph->adjncy.data(),
+           (kidx_t*)npartition, imbalance,
+           config->kahip_suppress_output, config->kahip_seed, config->kahip_mode,
+           (kidx_t*)edgecut, (idx_t*)partition);
+  }
+  #endif
+  #ifdef HYPERHDG_USE_METIS
+  else if (strcmp(backend, "metis")) {
+    METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph->xadj.data(), (idx_t*)graph->adjncy.data(), NULL, NULL, NULL, (idx_t*)npartition, NULL, NULL, NULL, (idx_t*)edgecut, (idx_t*)partition);
+  }
+  #endif
+  #ifdef HYPERHDG_USE_PARHIP
+  else if (strcmp(backend, "parhip")) {
+    /*
+     * Use a parallel naive partition to distribute the vertices between the processes,
+     * then reorder graph such that partitions are consecutive (this must be sequential?)
+     */
+    MPI_Init(NULL, NULL);
+    MPI_Comm* comm = &MPI_COMM_WORLD;
+    ParHIPPartitionKWay(idxtype *vtxdist, idxtype *xadj, idxtype *adjncy, idxtype *vwgt, idxtype *adjwgt,
+      int *nparts, double* imbalance,
+      bool suppress_output, int seed, int mode,
+      int *edgecut, idxtype *part, comm);
+  }
+  #endif
+  else {
+    spdlog::get("logger")->info("unsupported backend");
   }
 }
 

@@ -6,4 +6,4 @@
 - stabilitätsbeweis mit delta-overlap durchrechnen
 
 - take bxzstr outof partitioner
-- add parhip support
+- add parhip support/ and mt-KaHIP
