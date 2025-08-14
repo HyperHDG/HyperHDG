@@ -16,11 +16,35 @@
 
 namespace {
 
-void print_stats(const char* msg, SimpleStats* stats) {
+void print_stats(const char* msg, SimpleStats* stats, const nlohmann::json& data) {
   auto lg = spdlog::get("logger");
   lg->info(msg)({
-      {"min", stats->min}, {"max", stats->max}, {"sum", stats->sum}, {"avg", stats->avg}, {"std", stats->stddev}
+      {"min", stats->min}, {"max", stats->max}, {"sum", stats->sum}, {"avg", stats->avg}, {"std", stats->stddev}, data
   });
+}
+
+using UUID = std::array<geobin::u8,16>;
+UUID generate_uuid() {
+  UUID uuid = {0};
+  uint32_t* u = (uint32_t*) uuid.data();
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  // A 128-bit UUID is 16 bytes. We'll generate it as four 32-bit integers.
+  std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
+  for (size_t i = 0; i < 4; i++)
+    u[i] = dis(gen);
+  return uuid;
+}
+
+std::string uuid_to_str(const UUID& uuid) {
+  char buf[32+1];
+  uint32_t* u = (uint32_t*) uuid.data();
+  for (size_t i = 0; i < 32; i += 8) {
+    snprintf(buf+i, 32+1, "%X", *u);
+    u++;
+  }
+  return std::string(buf);
 }
 
 geobin::ID diameter_2approx(geobin::Graph& graph) {
@@ -127,11 +151,26 @@ int main(int argc, char** argv) {
   bool extended_stats = false;
   app.add_option("--extended-stats", extended_stats, "compute extended (expensive) stats, default=false");
 
+  bool square = true;
+  app.add_option("--square", square, "square the number of requested partitions, default=true");
+
+  std::string srunid;
+  app.add_option("--runid", srunid, "set runid, default=random");
+
   CLI11_PARSE(app,argc,argv);
 
   auto lg = log_file.empty() ? spdlog::stdout_logger_st("logger") : spdlog::basic_logger_st("logger", log_file);
   spdlog::stopwatch sw;
   spdlog::cfg::helpers::load_levels(log_level);
+
+  if (square)
+    partitions = partitions*partitions;
+
+  if (srunid.empty()) {
+    UUID uuid = generate_uuid();
+    srunid = uuid_to_str(uuid);
+  }
+  const nlohmann::json runid = {"runid", srunid};
 
   lg->info("args")({
       {"input_path", input_path},
@@ -148,6 +187,8 @@ int main(int argc, char** argv) {
       {"log_file", log_file},
       {"imbalance", imbalance},
       {"partitions_z", partitions_z},
+      {"square", square},
+      runid,
   });
 
   lg->info("reading graph...");
@@ -157,8 +198,8 @@ int main(int argc, char** argv) {
   geobin::ID nverts = graph.vertices.size();
   geobin::ID nedges = graph.edges.size();
 
-  lg->debug("reading graph")({{"time", sw.elapsed().count()}});
-  lg->debug("graph stats")({{"nodes", nverts}, {"edges", nedges}});
+  lg->debug("reading graph")({{"time", sw.elapsed().count()}, runid});
+  lg->debug("graph stats")({{"nodes", nverts}, {"edges", nedges}, runid});
 
   if (extended_stats) {
     std::vector<double> degrees(nverts, 0);
@@ -166,9 +207,9 @@ int main(int argc, char** argv) {
       degrees[n] = (double)(graph.xadj[n+1] - graph.xadj[n]);
     SimpleStats stats_degrees;
     compute_stats(degrees.data(), nverts, &stats_degrees);
-    print_stats("degree stats", &stats_degrees);
+    print_stats("degree stats", &stats_degrees, runid);
 
-    lg->info("diameter_2approx")({{"diameter_2approx", diameter_2approx(graph)}});
+    lg->info("diameter_2approx")({{"diameter_2approx", diameter_2approx(graph)}, runid});
   }
 
   // TODO: set default hops based on some graph stats like diameter, girth, etc
@@ -180,10 +221,10 @@ int main(int argc, char** argv) {
   sw.reset();
   geobin::ID edgecut;
   std::vector<geobin::ID> partition(nverts);
-  libpartition::PartConfig config = {libpartition::str_to_backend.at(frozen::string(backend)), kahip_suppress_output, kahip_seed, kahip_mode, partitions_z};
+  libpartition::PartConfig config = {backend.c_str(), kahip_suppress_output, kahip_seed, kahip_mode, partitions_z};
   libpartition::do_partition(&graph, &partitions, &imbalance, partition.data(), &edgecut, &config);
 
-  lg->debug("partitioner_backend")({{"time", sw.elapsed().count()}});
+  lg->debug("partitioner_backend")({{"time", sw.elapsed().count()}, runid});
 
   std::vector<std::vector<geobin::ID>> domains(partitions);
   for (geobin::ID n = 0; n < nverts; n++)
@@ -195,7 +236,7 @@ int main(int argc, char** argv) {
   SimpleStats stats_before;
   compute_stats(sizes_before.data(), partitions, &stats_before);
 
-  lg->debug("partition metrics")({{"cut", edgecut}, {"bal", stats_before.max / ((double)nverts/partitions)}});
+  lg->debug("partition metrics")({runid, {"cut", edgecut}, {"bal", stats_before.max / ((double)nverts/partitions)}});
 
   if (!vtu_output_path.empty()) {
     lg->info("serializing graph partition to vtu");
@@ -204,26 +245,26 @@ int main(int argc, char** argv) {
 
   lg->info("make partition overlap and filter boundary nodes...");
 
-  print_stats("sizes before", &stats_before);
+  print_stats("sizes before", &stats_before, runid);
 
   sw.reset();
   libpartition::make_domains_overlap(graph, domains, delta);
-  lg->debug("make_domains_overlap")({{"time", sw.elapsed().count()}});
+  lg->debug("make_domains_overlap")({runid, {"time", sw.elapsed().count()}});
 
   std::vector<double> sizes_after(partitions);
   for (geobin::ID p = 0; p < partitions; p++)
     sizes_after[p] = domains[p].size();
   SimpleStats stats_after;
   compute_stats(sizes_after.data(), partitions, &stats_after);
-  print_stats("sizes after", &stats_after);
-  lg->debug("bal after")({{"bal", stats_after.max / ((double)nverts/partitions)}});
+  print_stats("sizes after", &stats_after, runid);
+  lg->debug("bal after")({runid, {"bal", stats_after.max / ((double)nverts/partitions)}});
 
   std::vector<double> sizes_fractions(partitions);
   for (geobin::ID p = 0; p < partitions; p++)
     sizes_fractions[p] = sizes_after[p] / sizes_before[p];
   SimpleStats stats_frac;
   compute_stats(sizes_fractions.data(), partitions, &stats_frac);
-  print_stats("sizes after/before", &stats_frac);
+  print_stats("sizes after/before", &stats_frac, runid);
 
   std::vector<double> part_overlap(nverts, 0);
   for (geobin::ID p = 0; p < partitions; p++)
@@ -231,8 +272,8 @@ int main(int argc, char** argv) {
       part_overlap[n] += 1;
   SimpleStats stats_overlap;
   compute_stats(part_overlap.data(), nverts, &stats_overlap);
-  print_stats("overlap stats pointwise", &stats_overlap);
-  lg->debug("overlap total")({{"overlap_total", stats_after.sum / nverts}});
+  print_stats("overlap stats pointwise", &stats_overlap, runid);
+  lg->debug("overlap total")({runid, {"overlap_total", stats_after.sum / nverts}});
 
   lg->info("writing overlapping partition");
 

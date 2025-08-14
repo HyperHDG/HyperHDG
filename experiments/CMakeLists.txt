@@ -1,11 +1,12 @@
 set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wuninitialized -Wmissing-declarations -Wno-unused-parameter -Wno-shadow -Wno-unused-but-set-variable  -Wno-unused-variable -Wno-deprecated-literal-operator)
+# TODO: use add_compile_options?
 
 ########## LIBS ############
 
 add_library(libpartition libpartition.cxx)
-target_compile_options(libpartition PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
+target_compile_options(libpartition PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt> ${HYPERHDG_USE_DEFINITIONS})
 target_include_directories(libpartition PUBLIC .)
-target_link_libraries(libpartition PUBLIC frozen PUBLIC METIS::METIS PUBLIC kahip_static spdlog)
+target_link_libraries(libpartition PUBLIC frozen PUBLIC spdlog ${HYPERHDG_USE_LIBS})
 
 add_library(stats stats.cxx)
 target_compile_options(stats PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
