@@ -14,7 +14,7 @@ PS="40"
 DS="15"
 BACKENDS="kahip naive"
 LOGLEVEL="debug"
-PFLAGS="--progress"
+PFLAGS="--progress --eta"
 
 #### remove old data (be careful)
 echo "$(ls $OUTPUT*)"
@@ -28,7 +28,8 @@ fi
 
 #### generate partitions
 
-parallel $PFLAGS "$PART $DOM {1} $OUTPUT-{1}-d{2}-{3} --delta={2} --backend={3} --log-level=${LOGLEVEL} --log-file=$OUTPUT-ps-{1}-d{2}-{3}.log --square=true" \
+# for timing it is important to NOT run in parallel
+parallel $PFLAGS --jobs 1 "$PART $DOM {1} $OUTPUT-{1}-d{2}-{3} --delta={2} --backend={3} --log-level=${LOGLEVEL} --log-file=$OUTPUT-ps-{1}-d{2}-{3}.log --square=true" \
   ::: $(seq 2 2 $PS) ::: $D ::: ${BACKENDS}
 
 #### time/p
