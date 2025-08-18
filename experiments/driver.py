@@ -12,6 +12,7 @@ import scipy.sparse as sp
 import os, sys, argparse, logging, datetime, subprocess
 import zstandard as zstd
 import json
+import datetime
 
 import prin2, jprecond, geobin
 
@@ -138,7 +139,8 @@ precond = jprecond.JPrecond(
   repeat=repeat,
   domains=domains
 )
-log_data["precond_time"] = (datetime.datetime.now() - start).total_seconds()
+log_data["precond_init_time"] = (datetime.datetime.now() - start).total_seconds()
+log_data["precond_init_lu_time"] = precond.init_lu_time
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
   matvec=precond.matmul
@@ -171,6 +173,8 @@ log_data["cg_iters"] = iters
 log_data["cg_total_time"] = avg_time.total_seconds()
 avg_time /= iters
 log_data["cg_avg_time"] = avg_time.total_seconds()
+log_data["precond_total_solve_time"] = precond.total_solve_time
+log_data["precond_avg_solve_time"] = precond.total_solve_time/iters
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
