@@ -11,6 +11,7 @@ import numpy as np
 import scipy.sparse as sp
 import os, sys, argparse, logging, datetime, subprocess
 import zstandard as zstd
+import json
 
 import prin2, jprecond, geobin
 
@@ -33,12 +34,23 @@ parser.add_argument("--maxiter", help="maximum number of cg iterations", type=in
 parser.add_argument("-m", "--modelproblem", help="the model problem to select", default="timo")
 parser.add_argument("-n","--num-elements", help="the number of elements to use in the coarse finite element mesh", default=2**3, type=int)
 parser.add_argument("--mat", help="store/load the lhs HDG matrix, depending on wether the path exists")
+parser.add_argument("--mat-only", help="just assemble the matrix", action="store_true")
 parser.add_argument("--no-cg-progress", help="show the cg progess", action="store_true")
+parser.add_argument("--log-level", help="set the log level")
+parser.add_argument("--log-file", help="set the log file", default=default_output_name + ".data.log")
+parser.add_argument("--log-data", help="set extra log data")
+args = parser.parse_args()
 
 logging.setLoggerClass(prin2.Logger)
+log_levels = {
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL
+}
 logger = logging.getLogger("fiber_network_elastic")
-
-args = parser.parse_args()
+logger.setLevel(level=log_levels.get(args.log_level, logging.INFO))
 logger.log_args(args)
 
 # verify output path is writable
@@ -51,6 +63,18 @@ except Exception as e:
   sys.exit(1)
 
 ######## MAIN code
+
+log_data = {}
+if args.log_data:
+  t1 = args.log_data.split(",")
+  for t in t1:
+    key, val = t.split(":")
+    try:
+      log_data[key] = float(val)
+    except:
+      log_data[key] = val
+
+log_data["p"] = args.num_elements * args.num_elements
 
 try:
   import HyperHDG
@@ -74,20 +98,13 @@ elif args.modelproblem == "diff":
   const.local_solver    = "Diffusion<1,5,10,ConstantDiffusionParameters>"
   const.include_files   = ["experiments/parameters.hxx"]
 
-logger.info("reading files")
+logger.info("compiling")
 
 PyDP = HyperHDG.include(const)
+
+logger.info("reading network into HyperHDG")
+
 HDG_wrapper = PyDP(args.network)
-
-network_points = geobin.read_network_points(args.network)
-
-domains = None
-if args.domains:
-  domains = geobin.read_domains(args.domains)
-
-logger.info("computing residual")
-
-rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
 logger.info("assembling  A...")
 
@@ -102,8 +119,18 @@ else:
     sp.save_npz(args.mat, A)
     logger.info(f"  wrote matrix A to '{args.mat}'")
 
+if args.mat_only:
+  sys.exit(0)
+
 logger.info("assembling  B...")
 
+network_points = geobin.read_network_points(args.network)
+
+domains = None
+if args.domains:
+  domains = geobin.read_domains(args.domains)
+
+start = datetime.datetime.now()
 precond = jprecond.JPrecond(
   A,
   network_points,
@@ -111,10 +138,15 @@ precond = jprecond.JPrecond(
   repeat=repeat,
   domains=domains
 )
+log_data["precond_time"] = (datetime.datetime.now() - start).total_seconds()
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
   matvec=precond.matmul
 )
+
+logger.info("computing residual")
+
+rhs = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
 iters = 0
 start = datetime.datetime.now()
@@ -135,18 +167,21 @@ logger.info("starting cg")
 
 vectorSolution, num_iter = sp.linalg.cg(A, rhs, rtol=args.rtol, callback=log_iter, M=B, maxiter=args.maxiter)
 
-logger.info(f"number of it={iters}")
-logger.info(f"total it time={avg_time}")
-
+log_data["cg_iters"] = iters
+log_data["cg_total_time"] = avg_time.total_seconds()
 avg_time /= iters
-
-logger.info(f"avg it time={avg_time}")
+log_data["cg_avg_time"] = avg_time.total_seconds()
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 
 error = HDG_wrapper.errors(vectorSolution)[0]
-logger.info(f"HDG_wrapper error={error:>.6e}")
+log_data["hdg_error"] = error
+
+logger.info(f"{log_data=}")
+if args.log_file:
+  with open(args.log_file, "w") as file:
+    json.dump(log_data, file)
 
 HDG_wrapper.plot_option("outputDir", args.output_dir)
 HDG_wrapper.plot_option("fileName", args.output)

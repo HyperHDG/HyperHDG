@@ -4,9 +4,9 @@ set(WARNINGS -Wall -Wextra -Werror -Wshadow -Wformat=2 -Wnull-dereference -Wunin
 ########## LIBS ############
 
 add_library(libpartition libpartition.cxx)
-target_compile_options(libpartition PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt> ${HYPERHDG_USE_DEFINITIONS})
+target_compile_options(libpartition PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 target_include_directories(libpartition PUBLIC .)
-target_link_libraries(libpartition PUBLIC frozen PUBLIC spdlog ${HYPERHDG_USE_LIBS})
+target_link_libraries(libpartition PUBLIC spdlog PUBLIC kahip PUBLIC METIS_METIS)
 
 add_library(stats stats.cxx)
 target_compile_options(stats PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
