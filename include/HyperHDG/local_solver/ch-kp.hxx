@@ -466,11 +466,14 @@ class Chkp
           }
         }
 
+        //(v, phi_y)
         ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) = mdy(i, j);
+
+        //<v^ n_y, phi>
         for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
         {
           ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= bdr_sh_sh[bdr](i, j) * loc_normal[bdr][1];
-          ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= -tau_yvu_ * bdr_sh_sh[bdr](i, j) * loc_normal[bdr][1] * loc_normal[bdr][1];
+          ret(5 * n_shape_fct_ + i, j) -= -tau_yvu_ * bdr_sh_sh[bdr](i, j) * loc_normal[bdr][1] * loc_normal[bdr][1];
         }
       }
     }
@@ -486,6 +489,25 @@ class Chkp
     }
    
     return ret;
+  }
+
+  template <typename hyEdgeT, typename SmallMatT>
+  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> finite(const SmallMatT& lambda_values,
+                                                          const SmallVec<n_loc_dofs_, lSol_float_t> ca,
+                                                           hyEdgeT& hyper_edge,
+                                                          const lSol_float_t h) const
+  {
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> res;
+    SmallVec<n_loc_dofs_, lSol_float_t> cph, helper;
+    for (int j = 0; j < n_loc_dofs_; j++) {
+      cph = ca;
+      cph(j, 0) += h;
+      helper = (1. / h) * (get_residual(lambda_values, cph, hyper_edge, 0.) 
+          - get_residual(lambda_values, ca, hyper_edge, 0.));
+      for (int i = 0; i <n_loc_dofs_; i++)
+        res(i, j) = helper(i, 0);
+    }
+    return res;
   }
 
   /*!***********************************************************************************************

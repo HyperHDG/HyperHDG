@@ -24,7 +24,7 @@ int main() {
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
     xv.push_back( (double) i);
-  SmallVec<28> coeff(0.);
+  SmallVec<28> coeff(1.);
   SmallVec<4, unsigned int> hyEdge_hyNodes;
   std::for_each(hg.begin(), hg.end(), [&](auto he)
       {
@@ -39,12 +39,9 @@ int main() {
         SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
         int i = 0;
         std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
-        std::cout << ls.jacobi(lambda_n, coeff, he, 0.);
+        //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
+        //std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .01);
         std::cout << ls.newton(lambda_n, coeff, he, 0.);
-        res = ls.get_residual(lambda_n, coeff, he, 0.);
-        i = 0; 
-        std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
-        std::cout << coeff;
       });
   return 0;
 }
