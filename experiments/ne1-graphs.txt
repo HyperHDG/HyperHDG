@@ -50,3 +50,8 @@ graph as scatter plot the (stats) iteration time over sizes after for both backe
 graph number of iterations over number of partitions with both backends
 together with iteration time (look into accurately measuring this)
   -> tie into graph for sizes
+
+1.7
+higher imbalance, lower edgecut (obv.)
+show how edgecut (i.e. naive/kahip-fast/kahip-eco/kahip-strong and variations on imbalance)
+affects number of iterations (with variable number of partitions?)

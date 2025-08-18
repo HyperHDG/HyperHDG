@@ -6,8 +6,6 @@
 #include <cassert>
 #include <limits>
 #include <cmath>
-#include <frozen/unordered_map.h>
-#include <frozen/string.h>
 
 namespace libpartition {
 

@@ -231,8 +231,10 @@ int main(int argc, char** argv) {
     domains[partition[n]].push_back(n);
 
   std::vector<double> sizes_before(partitions);
-  for (geobin::ID p = 0; p < partitions; p++)
+  for (geobin::ID p = 0; p < partitions; p++) {
     sizes_before[p] = domains[p].size();
+    lg->trace("partition size")({{"id",p},{"size", sizes_before[p]}});
+  }
   SimpleStats stats_before;
   compute_stats(sizes_before.data(), partitions, &stats_before);
 
@@ -246,6 +248,7 @@ int main(int argc, char** argv) {
   lg->info("make partition overlap and filter boundary nodes...");
 
   print_stats("sizes before", &stats_before, runid);
+  lg->debug("bal before")({runid, {"bal", stats_before.max / ((double)nverts/partitions)}});
 
   sw.reset();
   libpartition::make_domains_overlap(graph, domains, delta);
