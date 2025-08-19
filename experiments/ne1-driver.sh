@@ -8,7 +8,7 @@ OUTPUT=$1
 DRIVER="experiments/driver.py"
 DOM="domains/fiber_network_14871.geo.bin.zstd"
 BACKENDS="kahip naive"
-LOGLEVEL="debug"
+LOGLEVEL="warning"
 PFLAGS="--progress --eta --jobs 1"
 
 echo "pre-assembling lhs matrix"

@@ -7,7 +7,7 @@ fi
 
 OUTPUT=$1
 
-cat output/test-ds-*-driver.log | \
+cat $OUTPUT-ds-*-driver.log | \
     jq -c | tee $OUTPUT-ne1-g6.json | \
     experiments/ne1-graph.py \
       -x delta -y cg_iters \
