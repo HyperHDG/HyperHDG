@@ -36,7 +36,7 @@ void naive_geometric_partition(geobin::Graph* graph, geobin::ID* npartition, geo
   for (geobin::u64 n = 0; n < graph->vertices.size(); n++) {
     const geobin::Point& p = graph->vertices[n];
     geobin::ID pid = 0;
-    for (geobin::u64 i = 0; i < 3; i++) {
+    for (int i = 2; i >= 0; i--) {
       pid *= partitions3d[i];
       pid += p[i]/((1+eps)*(max_p[i]-min_p[i])) * partitions3d[i]; // truncate
     }
@@ -54,7 +54,7 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
   static_assert(sizeof(kidx_t) == sizeof(geobin::ID));
   const char* backend = config->backend;
 
-  if (strcmp(backend, "naive") == 0) {
+  if (strncmp(backend, "naive", strlen("naive")) == 0) {
     naive_geometric_partition(graph, npartition, partition, edgecut, &config->naive_partitions_z);
   }
   else if (strcmp(backend, "kahip") == 0) {

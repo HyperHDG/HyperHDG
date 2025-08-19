@@ -94,6 +94,42 @@ geobin::ID diameter_2approx(geobin::Graph& graph) {
   return distance;
 }
 
+void make_generous_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID n) {
+  std::vector<std::vector<geobin::ID>> ndoms((n-1)*(n-1));
+
+  auto extend = [&](geobin::ID ix, geobin::ID iy, std::vector<geobin::ID>& dst) {
+    auto& src = domains[ix+iy*n];
+    std::copy(src.begin(), src.end(), std::back_inserter(dst));
+  };
+
+  for (geobin::ID iy = 0; iy < n-1; iy++) {
+    for (geobin::ID ix = 0; ix < n-1; ix++) {
+      auto& ndom = ndoms[ix+iy*(n-1)];
+      extend(ix+0, iy, ndom);
+      extend(ix+1, iy, ndom);
+      extend(ix+0, iy+1, ndom);
+      extend(ix+1, iy+1, ndom);
+    }
+  }
+
+  domains = ndoms;
+
+  // remove dirichlet nodes (type 1)
+  for (geobin::ID p = 0; p < domains.size(); p++) {
+    geobin::u64 offset = 0;
+    for (geobin::u64 i = 0; i+offset < domains[p].size(); ) {
+      geobin::ID node = domains[p][i+offset];
+      if (graph.node_types[node] == 1) {
+        offset++;
+      } else {
+        domains[p][i] = node;
+        i++;
+      }
+    }
+    domains[p].resize(domains[p].size()-offset);
+  }
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -124,7 +160,7 @@ int main(int argc, char** argv) {
   app.add_option("--delta", delta, "overlap parameter delta = number of hops to enlarge partitions by");
 
   std::string backend = "kahip";
-  app.add_option("-b,--backend", backend, "the partitioner backend to use, must be one of (kahip|metis|naive)");
+  app.add_option("-b,--backend", backend, "the partitioner backend to use, must be one of (kahip|metis|naive|naiveH)");
 
   int kahip_mode = 2;
   app.add_option("--kahip-mode", kahip_mode, "the mode to run the kahip backend in, one of (0|1|2) representing FAST,ECO,STRONG, default=STRONG");
@@ -251,26 +287,31 @@ int main(int argc, char** argv) {
   lg->debug("bal before")({runid, {"bal", stats_before.max / ((double)nverts/partitions)}});
 
   sw.reset();
-  libpartition::make_domains_overlap(graph, domains, delta);
+  if (backend.ends_with("H")) {
+    make_generous_overlap(graph, domains, std::sqrt(partitions/partitions_z));
+  } else {
+    libpartition::make_domains_overlap(graph, domains, delta);
+  }
   lg->debug("make_domains_overlap")({runid, {"time", sw.elapsed().count()}});
 
-  std::vector<double> sizes_after(partitions);
-  for (geobin::ID p = 0; p < partitions; p++)
+  std::vector<double> sizes_after(domains.size());
+  for (geobin::ID p = 0; p < domains.size(); p++)
     sizes_after[p] = domains[p].size();
   SimpleStats stats_after;
-  compute_stats(sizes_after.data(), partitions, &stats_after);
+  compute_stats(sizes_after.data(), domains.size(), &stats_after);
   print_stats("sizes after", &stats_after, runid);
-  lg->debug("bal after")({runid, {"bal", stats_after.max / ((double)nverts/partitions)}});
+  lg->debug("bal after")({runid, {"bal", stats_after.max / stats_after.avg}});
+  lg->debug("total overlap after")({runid, {"overlap", stats_after.sum / stats_before.sum}});
 
-  std::vector<double> sizes_fractions(partitions);
-  for (geobin::ID p = 0; p < partitions; p++)
+  std::vector<double> sizes_fractions(domains.size());
+  for (geobin::ID p = 0; p < domains.size(); p++)
     sizes_fractions[p] = sizes_after[p] / sizes_before[p];
   SimpleStats stats_frac;
-  compute_stats(sizes_fractions.data(), partitions, &stats_frac);
+  compute_stats(sizes_fractions.data(), domains.size(), &stats_frac);
   print_stats("sizes after/before", &stats_frac, runid);
 
   std::vector<double> part_overlap(nverts, 0);
-  for (geobin::ID p = 0; p < partitions; p++)
+  for (geobin::ID p = 0; p < domains.size(); p++)
     for (geobin::ID n : domains[p])
       part_overlap[n] += 1;
   SimpleStats stats_overlap;
