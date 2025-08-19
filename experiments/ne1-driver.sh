@@ -7,7 +7,7 @@ fi
 OUTPUT=$1
 DRIVER="experiments/driver.py"
 DOM="domains/fiber_network_14871.geo.bin.zstd"
-BACKENDS="kahip naive"
+BACKENDS="kahip naive naiveH"
 LOGLEVEL="warning"
 PFLAGS="--progress --eta --jobs 1"
 

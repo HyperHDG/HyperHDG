@@ -7,7 +7,7 @@ fi
 OUTPUT=$1
 PART="build-release/experiments/partitioner"
 DOM="domains/fiber_network_14871.geo.bin.zstd"
-BACKENDS="kahip naive"
+BACKENDS="kahip naive naiveH"
 LOGLEVEL="debug"
 PFLAGS="--progress --eta --jobs 1"
 
