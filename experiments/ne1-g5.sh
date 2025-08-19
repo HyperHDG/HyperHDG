@@ -7,7 +7,7 @@ fi
 
 OUTPUT=$1
 
-cat output/test-ps-*-driver.log | \
+cat $OUTPUT-ps-*-driver.log | \
     jq -c | tee $OUTPUT-ne1-g5.json | \
     experiments/ne1-graph.py \
       -x p -y cg_avg_time \

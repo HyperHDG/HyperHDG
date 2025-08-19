@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   geobin::u64 delta = 2;
   app.add_option("--delta", delta, "overlap parameter delta = number of hops to enlarge partitions by");
 
-  std::string backend = "KaFFPa";
+  std::string backend = "kahip";
   app.add_option("-b,--backend", backend, "the partitioner backend to use, must be one of (kahip|metis|naive)");
 
   int kahip_mode = 2;
