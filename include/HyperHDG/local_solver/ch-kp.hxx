@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <tuple>
 #include <iostream>
+#include <cmath>
 
 namespace LocalSolver
 {
@@ -344,7 +345,7 @@ class Chkp
       }
     }
 
-    const lSol_float_t eps = 1./ 1073741824.;
+    const lSol_float_t eps = ldexp(1., -40);
 
     SmallVec<n_shape_fct_, lSol_float_t> helper;
     //first equation
@@ -563,7 +564,7 @@ class Chkp
       }
     }
 
-    const lSol_float_t eps = 1./ 1073741824.;
+    const lSol_float_t eps = ldexp(1., -40);
 
     //calculate frequently used coefficients
     SmallVec<n_shape_fct_, lSol_float_t> helper;
@@ -960,31 +961,27 @@ class Chkp
   lSol_float_t newton(const SmallMatT& lambda_values, SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
                       hyEdgeT& hyper_edge, const lSol_float_t time) const
   {
-    lSol_float_t ra, rn;
-    lSol_float_t stepsize = 1.;
-    SmallVec<n_loc_dofs_, lSol_float_t> cn = coeff;
+    const lSol_float_t eps = ldexp(1., -40);
     SmallVec<n_loc_dofs_, lSol_float_t> res = get_residual(lambda_values, coeff, hyper_edge, time);
-    ra = norm_2(res);
-    int i = 0;
-    while (ra > ldexp(1., -40) && (++i) < 20)
+    lSol_float_t ra = norm_2(res);
+    for (unsigned int i = 0; ra > eps && i < 100; ++i)
     {
-      std::cout << "aktuelles residuum: " << ra << "\n";
-      cn = coeff - stepsize * (res / jacobi(lambda_values, coeff, hyper_edge, time));
-      res = get_residual(lambda_values, cn, hyper_edge, time);
-      rn = norm_2(res);
-      std::cout << "neues residuum: " << rn << "\n";
-      if(ra < rn)
+      lSol_float_t rn;
+      lSol_float_t stepsize = 1.;
+      SmallVec<n_loc_dofs_, lSol_float_t> cn = coeff;
+      SmallVec<n_loc_dofs_, lSol_float_t> step = res / jacobi(lambda_values, coeff, hyper_edge, time);
+      ra = norm_2(res);
+      do
       {
-        std::cout << "keine Verbesserung!\n";
-        stepsize /= 2.;
-        res = get_residual(lambda_values, coeff, hyper_edge, time);
-        std::cout << "Schrittweite nun " << stepsize << "\n";
-      } else {
-        ra = rn;
-        coeff = cn;
-        std::cout << "ra ist nun " << ra << "\n";
-        stepsize = 1.;
-      }
+        std::cout << "aktuelles residuum: " << ra << "\n";
+        cn = coeff - stepsize * (step);
+        res = get_residual(lambda_values, cn, hyper_edge, time);
+        rn = norm_2(res);
+        std::cout << "neues residuum: " << rn << "\n";
+        stepsize *= .5;
+      } while (ra < rn);
+      coeff = cn;
+      ra = rn;
     }
     return ra;
   }
