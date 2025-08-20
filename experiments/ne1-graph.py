@@ -17,8 +17,11 @@ parser.add_argument("--ylabel", help="label of y-axis, default=name of y variabl
 parser.add_argument("--save", help="save plot instead of showing it")
 parser.add_argument("--title", help="title of plot")
 parser.add_argument("--log", help="axis to apply log scale")
+parser.add_argument("--scatter", help="show as scatter plot", action="store_true")
 
 args = parser.parse_args()
+
+plot_func = plt.plot if not args.scatter else plt.scatter
 
 objs = []
 
@@ -39,9 +42,11 @@ if args.group_by:
 else:
     groups = {"default_group": objs}
 
-for group_name, group in groups.items():
+sorted_groups = sorted(groups.items(), key=lambda kv: kv[0])
+
+for group_name, group in sorted_groups:
     xys = np.array([(o[args.x],o[args.y]) for o in group])
-    plt.plot(xys[:, 0], xys[:, 1], label=group_name, marker="+")
+    plot_func(xys[:, 0], xys[:, 1], label=group_name, marker="+")
 
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))

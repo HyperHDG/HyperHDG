@@ -112,7 +112,9 @@ class JPrecond:
       self.coarse_basis_int.T @ self.lhs_mat @ self.coarse_basis_int
     )
     # precompute splu of precond_lhs
+    start = datetime.datetime.now()
     self.splu_precond_lhs = sp.linalg.splu(precond_lhs)
+    self.init_clu_time = (datetime.datetime.now() - start).total_seconds()
 
     # NOTE: matrix-free: the submatrices essentially form an overlapping block-diagonal submatrix
     #       hence, could optimize to only construct that
@@ -126,10 +128,13 @@ class JPrecond:
     self.init_lu_time = (datetime.datetime.now() - start).total_seconds()
 
     self.total_solve_time = 0
+    self.total_csolve_time = 0
 
   def matmul(self, rhs_vec, epsilon=1e-14):
+    start = datetime.datetime.now()
     precond_rhs = self.coarse_basis_int.T @ rhs_vec
     result_vec = self.coarse_basis_int @ self.splu_precond_lhs.solve(precond_rhs)
+    self.total_csolve_time += (datetime.datetime.now() - start).total_seconds()
 
     start = datetime.datetime.now()
     for nj, splu in zip(self.domains, self.splu):

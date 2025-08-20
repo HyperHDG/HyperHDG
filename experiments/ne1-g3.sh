@@ -20,4 +20,4 @@ cat $OUTPUT-ds-*.log | jq -c 'select(.message == "bal after") | {runid, bal}' \
 jq -c -s 'reduce .[] as $item ({}; .[$item.runid] += $item) | .[]' \
     $A $B | tee $C
 
-$GRAPH -x delta --xlabel '$\delta$' -y bal --log=y --group-by=backend --save $OUTPUT-ne1-g3.png --title "balance of partition over overlap parameter $\delta$" < $C
+$GRAPH -x delta --xlabel '$\delta$' -y bal --group-by=backend --save $OUTPUT-ne1-g3.png --title "balance of partition over overlap parameter $\delta$" < $C
