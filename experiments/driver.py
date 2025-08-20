@@ -141,6 +141,7 @@ precond = jprecond.JPrecond(
 )
 log_data["precond_init_time"] = (datetime.datetime.now() - start).total_seconds()
 log_data["precond_init_lu_time"] = precond.init_lu_time
+log_data["precond_init_clu_time"] = precond.init_clu_time
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
   matvec=precond.matmul
@@ -175,6 +176,8 @@ avg_time /= iters
 log_data["cg_avg_time"] = avg_time.total_seconds()
 log_data["precond_total_solve_time"] = precond.total_solve_time
 log_data["precond_avg_solve_time"] = precond.total_solve_time/iters
+log_data["precond_total_csolve_time"] = precond.total_csolve_time
+log_data["precond_avg_csolve_time"] = precond.total_csolve_time/iters
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")

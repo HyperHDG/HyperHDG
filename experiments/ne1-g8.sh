@@ -13,6 +13,7 @@ cat $OUTPUT-ds-*-driver.log | \
       -x delta -y cg_total_time \
       --xlabel '$\delta$' \
       --ylabel '$t_\text{tot}$' \
+      --log=y \
       --group-by backend \
       --title 'total cg time over overlap parameter $\delta$' \
       --save $OUTPUT-ne1-g8.png

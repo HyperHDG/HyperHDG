@@ -13,6 +13,7 @@ cat $OUTPUT-ds-*-driver.log | \
       -x delta -y cg_avg_time \
       --xlabel '$\delta$' \
       --ylabel '$t_\text{avg}$' \
+      --log=y \
       --group-by backend \
       --title 'average cg iteration time over overlap parameter $\delta$' \
       --save $OUTPUT-ne1-g7.png
