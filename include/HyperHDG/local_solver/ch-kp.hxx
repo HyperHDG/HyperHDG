@@ -801,6 +801,34 @@ class Chkp
           lambda_values_out[bdr][i] -= integrate_bdr_phicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
 			  i, uh_arr, u_arr, bdr, hyper_edge.gemetry) * loc_normal[bdr][0];
 	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
+	  //uq^
+	  //0.5 u q
+	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+	  {
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+            {
+              lSol_float_t c = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
+			      j, k, i, bdr, hyper_edge.geometry);
+	      lambda_values_out[bdr][n_shape_fct_ + i] += 0.5 * c * coeff[j] * coeff[n_shape_fct_ + k];
+	    }
+	  }
+	  //0.5 u q^
+	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+	  {
+            for (unsigned int k = 0; k < n_shape_bdr_; ++k)
+            {
+              lSol_float_t c = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
+			      j, k, i, bdr, hyper_edge.geometry);
+	      lambda_values_out[bdr][n_shape_fct_ + i] += 0.5 * c * coeff[j] * lambda_values_out[bdr][n_shape_bdr_ + k];
+	    }
+	  }
+	  lambda_values_out[bdr][n_shape_fct_ + i] += tau_uqq_ * (qh_int - q_int) * loc_normal[bdr][0];
+	  lambda_values_out[bdr][n_shape_fct_ + i] *= loc_normal[bdr][0];
+	  //v^
+	  //TODO allow for v_R
+	  lambda_values_out[bdr][2 * n_shape_fct_ + i] += v_int;
+	  lambda_values_out[bdr][2 * n_shape_fct_ + i] += tau_pvu_ * (uh_int - u_int) * loc_normal[bdr][0];
+	  lambda_values_out[bdr][2 * n_shape_fct_ + i] *= loc_normal[bdr][0];
 	}
       }
     }
