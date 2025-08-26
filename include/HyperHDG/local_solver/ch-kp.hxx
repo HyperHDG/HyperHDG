@@ -35,6 +35,11 @@ struct ChkpParametersDefault
   {
     return 1.;
   }
+  static param_float_t initial(const Point<space_dimT, param_float_t>&,
+                               const param_float_t = 0.)
+  {
+    return 0.;
+  }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
@@ -747,7 +752,8 @@ class Chkp
     const lSol_float_t eps = ldexp(1., -30);
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
-      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0)
+      using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
 	      {
@@ -781,7 +787,6 @@ class Chkp
       	  lambda_values_out[bdr][i] += tau_pzu_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] -= tau_ppu_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  //f_hat
-          using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
       	  lambda_values_out[bdr][i] += 2 * parameters::kappa * u_int;
       	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
       	  {
@@ -831,7 +836,7 @@ class Chkp
       	  lambda_values_out[bdr][2 * n_shape_fct_ + i] *= loc_normal[bdr][0];
       	}
       }
-      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0)
+      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
 	      {
@@ -867,7 +872,6 @@ class Chkp
       	  lambda_values_out[bdr][i] += tau_mzv_ * (vh_int - v_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] -= tau_mpv_ * (vh_int - v_int) * loc_normal[bdr][0];
       	  //f_hat
-          using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
       	  lambda_values_out[bdr][i] += 2 * parameters::kappa * u_int;
       	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
       	  {
@@ -914,7 +918,7 @@ class Chkp
       	  lambda_values_out[bdr][2 * n_shape_fct_ + i] = lambda_values_in[bdr][2 * n_shape_fct_ + i];
       	}
       }
-      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps)
+      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       	{
@@ -939,6 +943,15 @@ class Chkp
       	  lambda_values_out[bdr][n_shape_fct_ + i] = lambda_values_in[bdr][n_shape_fct_ + i];
       	  lambda_values_out[bdr][2 * n_shape_fct_ + i] = lambda_values_in[bdr][2 * n_shape_fct_ + i];
       	}
+      }
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        {
+  	      lambda_values_out[bdr][i] = 0;
+  	      lambda_values_out[bdr][n_shape_bdr_ + i] = 0;
+  	      lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0;
+        }
       }
     }
   }
@@ -970,18 +983,90 @@ class Chkp
         ra = rn;
         coeff = cn;
         std::cout << "ra ist nun " << ra << "\n";
-	stepsize = 1.;
+        stepsize = 1.;
       }
     }
     return ra;
   }
 
-  template <typename hyEdgeT>
-  inline void make_initial(hyEdgeT& hyEdge)
+  /*********************************************************************************
+   * Fills projection of intitial u into data.u_old
+   * Computes local contribution to data.uh_old from initial and dirichlet
+  *********************************************************************************/
+  template <typename hyEdgeT, typename SmallMatOutT>
+  inline void make_initial_skeleton(SmallMatOutT& lambda_values_out,
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0.)
   {
-    hyEdge.data.u_old = SmallVec<n_shape_fct_, lSol_float_t>(0.);
-    hyEdge.data.uh_old.fill(SmallVec<n_shape_bdr_, lSol_float_t>(0.));
+    using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+    //project initial to u
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      hyper_edge.data.u_old[i] = integrator::template integrate_vol_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, 0.);
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+      {
+        if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+        {
+          lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+
+        } else 
+        {
+          lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+        }
+        hyper_edge.data.uh_old[bdr][i] = lambda_values_out[bdr][i];
+        lambda_values_out[bdr][n_shape_bdr_ + i] = 0.;
+        lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0.;
+      }
+    }
   }
+
+  template <typename hyEdgeT, typename SmallMatT>
+  inline void set_skeleton_data(const SmallMatT& lambda_values,
+      hyEdgeT& hyper_edge)
+  {
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        hyper_edge.data.uh_old[bdr][i] = lambda_values[bdr][i];
+    }
+  }
+
+  template <typename hyEdgeT, typename SmallMatT>
+  void set_bulk_data(const SmallMatT& lambda_values, 
+      hyEdgeT& hyper_edge, const lSol_float_t time) const
+  {
+    SmallVec<n_loc_dofs_, lSol_float_t> coeff;
+    newton(lambda_values, coeff, hyper_edge, time);
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      hyper_edge.data.u_old[i] = coeff[i];
+  }
+
+  /*********************************************************************************
+   * Updates uh at the boundary to new dirichlet. Leaves other skeleton values as is.
+  *********************************************************************************/
+  template <typename hyEdgeT, typename SmallMatOutT>
+  inline void make_skeleton(SmallMatOutT& lambda_values_out,
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0.)
+  {
+    using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+      }
+    }
+  }
+
 private:
   template <typename geom_t, lSol_float_t fun(const lSol_float_t)>
   static lSol_float_t integrate_bdr_phicompfun(const unsigned int i,
