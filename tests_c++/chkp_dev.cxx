@@ -28,11 +28,11 @@ int main() {
   SmallVec<4, unsigned int> hyEdge_hyNodes;
   std::for_each(hg.begin(), hg.end(), [&](auto he)
       {
-        ls.make_initial(he);
         hyEdge_hyNodes = he.topology.get_hyNode_indices();
         for (unsigned int n = 0; n < 4; ++n)
         {
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
+          ls.make_initial_skeleton(lambda_n, he);
           std::for_each(lambda_n[n].begin(), lambda_n[n].end(), [](auto i){std::cout << i <<"\t";});
           std::cout << "\n";
         }
