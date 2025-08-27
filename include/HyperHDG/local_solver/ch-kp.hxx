@@ -31,11 +31,6 @@ struct ChkpParametersDefault
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
-  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
-                                               const param_float_t = 0.)
-  {
-    return 1.;
-  }
   static param_float_t initial(const Point<space_dimT, param_float_t>&,
                                const param_float_t = 0.)
   {
@@ -997,7 +992,7 @@ class Chkp
     using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
     //project initial to u
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      hyper_edge.data.u_old[i] = integrator::template integrate_vol_phifunc<
+      hyper_edge.data.u_old[i] = integrator::template integrate_volUni_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, 0.);
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
