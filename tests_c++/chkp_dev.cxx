@@ -68,7 +68,7 @@ struct ChkpParameters
 
 int main() {
   typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
-  SmallVec<2, unsigned int> top_con(3U);
+  SmallVec<2, unsigned int> top_con(2U);
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::Cubic<2, 2>,
                 Geometry::UnitCube<2, 2>,
@@ -76,7 +76,7 @@ int main() {
                 lst::data_type>
     hg(top_con);
   lst ls(*(hg.begin()));
-  std::array< std::array< double, 6 >, 4> lambda_n;
+  std::array< std::array< double, 6 >, 4> lambda_n, res_flux;
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
     xv.push_back( (double) i);
@@ -87,7 +87,7 @@ int main() {
         hyEdge_hyNodes = he.topology.get_hyNode_indices();
         for (unsigned int n = 0; n < 4; ++n)
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
-        ls.make_initial_skeleton(lambda_n, he);
+        ls.make_initial(lambda_n, he);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -96,12 +96,20 @@ int main() {
         }
         std::cout << "u_old:\n";
         std::cout << he.data.u_old;
-        //SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
+        std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
+        //std::cout << "Residuen:\n" << res;
+        std::cout << "Koeffizienten:\n" << coeff;
+        ls.residual_flux(lambda_n, res_flux, he, 0.);
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          std::for_each(res_flux[n].begin(), res_flux[n].end(), [](auto i){std::cout << i <<"\t";});
+          std::cout << "\n";
+        }
         //int i = 0;
         //std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
         //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
         //std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .01);
-        //std::cout << ls.newton(lambda_n, coeff, he, 0.);
       });
   return 0;
 }
