@@ -142,6 +142,7 @@ precond = jprecond.JPrecond(
 log_data["precond_init_time"] = (datetime.datetime.now() - start).total_seconds()
 log_data["precond_init_lu_time"] = precond.init_lu_time
 log_data["precond_init_clu_time"] = precond.init_clu_time
+log_data["precond_init_submat_time"] = precond.init_submat_time
 B = sp.linalg.LinearOperator(
   (system_size,system_size),
   matvec=precond.matmul
