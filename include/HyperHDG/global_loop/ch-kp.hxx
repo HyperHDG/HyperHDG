@@ -31,7 +31,7 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class Parabolic
+class Nonlinear
 {
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
@@ -97,7 +97,7 @@ class Parabolic
    * \param   construct_geom    Information to construct a geometry.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  Parabolic(const typename TopologyT::constructor_value_type& construct_topo,
+  Nonlinear(const typename TopologyT::constructor_value_type& construct_topo,
             const typename GeometryT::constructor_value_type& construct_geom,
             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
@@ -118,7 +118,7 @@ class Parabolic
    * \param   construct_topo    Information to construct a topology.
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
-  Parabolic(const typename TopologyT::constructor_value_type& construct_topo,
+  Nonlinear(const typename TopologyT::constructor_value_type& construct_topo,
             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
@@ -137,7 +137,7 @@ class Parabolic
    *
    * \param   construct_topo    Information to construct a topology.
    ************************************************************************************************/
-  Parabolic(const typename TopologyT::constructor_value_type& construct_topo)
+  Nonlinear(const typename TopologyT::constructor_value_type& construct_topo)
   : hyper_graph_(construct_topo)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -432,7 +432,8 @@ class Parabolic
    ************************************************************************************************/
   std::string plot_option(const std::string& option, std::string value = "")
   {
-    return set_plot_option(plot_options, option, value);
+    //return set_plot_option(plot_options, option, value);
+    return "";
   }
   /*!***********************************************************************************************
    * \brief   Plot solution in vtu format.
@@ -445,7 +446,7 @@ class Parabolic
    ************************************************************************************************/
   void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
   {
-    plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+    //plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
   /*!***********************************************************************************************
    * \brief   Return refinement level.

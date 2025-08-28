@@ -1,5 +1,3 @@
-#include <vector>
-#include <HyperHDG/global_loop/ch-kp.hxx>
 #include <HyperHDG/local_solver/ch-kp.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
@@ -28,17 +26,17 @@ struct ChkpParameters
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
   static param_float_t initial(const Point<space_dimT, param_float_t>& p,
-                               const param_float_t t = 0.)
+                               const param_float_t = 0.)
   {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
+    return p[0] * p[0] + p[1];
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
+                                       const param_float_t = 0.)
   {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
+    return p[0] * p[0] + p[1];
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -51,17 +49,15 @@ struct ChkpParameters
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>&,
+                                       const param_float_t = 0.)
   {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
+    return 0.;
   }
-  
   static constexpr param_float_t kappa=-1.;
-  
   static param_float_t tau_f(param_float_t arg)
   {
-    return 4.;
+    return 1.;
   }
   static param_float_t tau_df(param_float_t arg)
   {
@@ -70,21 +66,50 @@ struct ChkpParameters
 
 };  
 
-
-int main()
-{
-  SmallVec<2, unsigned int> top_con;
-  top_con[0] = 2;
-  top_con[1] = 2;
-  std::vector<double> def_con={1., 3., 4., 1., 1., 1., 1., 1.,-3., -2.} ;
-  GlobalLoop::Nonlinear<Topology::Cubic<2, 2>,
-                       Geometry::UnitCube<2, 2, double>,
-                       NodeDescriptor::Cubic<2, 2>,
-                       LocalSolver::Chkp<2, 1, 3, ChkpParameters> >
-    problem(top_con, def_con);
-  std::vector<double> v = problem.make_initial(problem.zero_vector(), 0.);
-  std::vector<double> w = problem.make_initial(v, 0.);
-  std::cout << v[4];
-                       
+int main() {
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
+  SmallVec<2, unsigned int> top_con(2U);
+  HDGHyperGraph<lst::n_glob_dofs_per_node(),
+                Topology::Cubic<2, 2>,
+                Geometry::UnitCube<2, 2>,
+                NodeDescriptor::Cubic<2, 2>,
+                lst::data_type>
+    hg(top_con);
+  lst ls(*(hg.begin()));
+  std::array< std::array< double, 6 >, 4> lambda_n, res_flux;
+  std::vector<double> xv;
+  for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
+    xv.push_back( (double) i);
+  SmallVec<28> coeff(1.);
+  SmallVec<4, unsigned int> hyEdge_hyNodes;
+  std::for_each(hg.begin(), hg.end(), [&](auto he)
+      {
+        hyEdge_hyNodes = he.topology.get_hyNode_indices();
+        for (unsigned int n = 0; n < 4; ++n)
+          hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
+        ls.make_initial(lambda_n, he);
+        std::cout << "local lambda\n";
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          std::for_each(lambda_n[n].begin(), lambda_n[n].end(), [](auto i){std::cout << i <<"\t";});
+          std::cout << "\n";
+        }
+        std::cout << "u_old:\n";
+        std::cout << he.data.u_old;
+        std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
+        //std::cout << "Residuen:\n" << res;
+        std::cout << "Koeffizienten:\n" << coeff;
+        ls.residual_flux(lambda_n, res_flux, he, 0.);
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          std::for_each(res_flux[n].begin(), res_flux[n].end(), [](auto i){std::cout << i <<"\t";});
+          std::cout << "\n";
+        }
+        //int i = 0;
+        //std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+        //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
+        //std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .01);
+      });
   return 0;
 }

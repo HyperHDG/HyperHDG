@@ -63,7 +63,7 @@ struct ChkpParametersDefault
   static constexpr param_float_t kappa=-1.;
   static param_float_t tau_f(param_float_t arg)
   {
-    return 1.;
+    return 4.;
   }
   static param_float_t tau_df(param_float_t arg)
   {
@@ -214,15 +214,7 @@ class Chkp
     lSol_float_t>
     integrator;
 
-  SmallSquareMat<n_shape_fct_, lSol_float_t> mass, mdx, mdy;
-  std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sk;
-  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sh;
-  std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
-  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, n_shape_fct_> tv_shx_sh_sh;
-  std::array<std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sh;
-  std::array<std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sk;
-  std::array<std::array<SmallSquareMat<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sk_sk;
-    
+   
   public:
   // -----------------------------------------------------------------------------------------------
   // Public functions (and one typedef) to be utilized by external functions.
@@ -245,6 +237,43 @@ class Chkp
       TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT - 1> > >
       functions;
   };
+  /*!***********************************************************************************************
+   *  \brief  Define how errors are evaluated.
+   ************************************************************************************************/
+  struct error_def
+  {
+    /*!*********************************************************************************************
+     *  \brief  Define the typename returned by function errors.
+     **********************************************************************************************/
+    typedef std::array<lSol_float_t, 1U> error_t;
+    /*!*********************************************************************************************
+     *  \brief  Define how initial error is generated.
+     **********************************************************************************************/
+    static error_t initial_error()
+    {
+      std::array<lSol_float_t, 1U> summed_error;
+      summed_error.fill(0.);
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how local errors should be accumulated.
+     **********************************************************************************************/
+    static error_t sum_error(error_t& summed_error, const error_t& new_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] += new_error[k];
+      return summed_error;
+    }
+    /*!*********************************************************************************************
+     *  \brief  Define how global errors should be postprocessed.
+     **********************************************************************************************/
+    static error_t postprocess_error(error_t& summed_error)
+    {
+      for (unsigned int k = 0; k < summed_error.size(); ++k)
+        summed_error[k] = std::sqrt(summed_error[k]);
+      return summed_error;
+    }
+  };
    /*!***********************************************************************************************
    * \brief   Class is constructed using a single double indicating the penalty parameter.
    ************************************************************************************************/
@@ -254,13 +283,28 @@ class Chkp
    *
    * \param   constru       Constructor object.
    ************************************************************************************************/
-  template<typename hyEdgeT>
-  Chkp(const hyEdgeT& he, const constructor_value_type& constru = std::vector{1., 3., 4., 1., 1., 1., 1., 1., -3., -2.})
+  Chkp(const constructor_value_type& constru = std::vector(10, 1.))
   : delta_t_(constru[0]), tau_ppu_(constru[1]), tau_mpu_(constru[2]), tau_mpv_(constru[3]), 
   tau_pzu_(constru[4]), tau_mzu_(constru[5]), tau_mzv_(constru[6]), tau_pvu_(constru[7]), 
   tau_uqq_(constru[8]), tau_yvu_(constru[9])
   {
-   hyEdgeT hyper_edge = he;
+  }
+
+  template <typename hyEdgeT, typename SmallMatT>
+  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> jacobi(const SmallMatT& lambda_values,
+                                                          const SmallVec<n_loc_dofs_, lSol_float_t> ca,
+                                                           hyEdgeT& hyper_edge,
+                                                          const lSol_float_t time) const
+  {
+  SmallSquareMat<n_shape_fct_, lSol_float_t> mass, mdx, mdy;
+  std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sk;
+  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sh;
+  std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
+  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, n_shape_fct_> tv_shx_sh_sh;
+  std::array<std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sh;
+  std::array<std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sk;
+  std::array<std::array<SmallSquareMat<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sk_sk;
+ {
    for (unsigned int i = 0; i < n_shape_fct_; ++i) 
     {
       for (unsigned int j = 0; j < n_shape_fct_; ++j) 
@@ -312,13 +356,6 @@ class Chkp
     }
 
   }
-
-  template <typename hyEdgeT, typename SmallMatT>
-  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> jacobi(const SmallMatT& lambda_values,
-                                                          const SmallVec<n_loc_dofs_, lSol_float_t> ca,
-                                                           hyEdgeT& hyper_edge,
-                                                          const lSol_float_t time) const
-  {
     //rearrange coefficients
     std::array<SmallVec<n_shape_fct_, lSol_float_t>, 7> coeff;
     for (unsigned int i = 0; i < 7; ++i)
@@ -528,6 +565,66 @@ class Chkp
                                                             hyEdgeT& hyper_edge,
                                                             const lSol_float_t time) const
   {
+   SmallSquareMat<n_shape_fct_, lSol_float_t> mass, mdx, mdy;
+  std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sk;
+  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()> bdr_sh_sh;
+  std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
+  std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, n_shape_fct_> tv_shx_sh_sh;
+  std::array<std::array<SmallSquareMat<n_shape_fct_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sh;
+  std::array<std::array<SmallMat<n_shape_fct_, n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sh_sk;
+  std::array<std::array<SmallSquareMat<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()>, n_shape_fct_> tb_sh_sk_sk;
+{
+   for (unsigned int i = 0; i < n_shape_fct_; ++i) 
+    {
+      for (unsigned int j = 0; j < n_shape_fct_; ++j) 
+      {
+        mass(i, j) = integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(
+            i, j, hyper_edge.geometry);
+        mdx(i, j) = integrator::template integrate_vol_phiDphi<decltype(hyEdgeT::geometry)>(
+            j, i, 0, hyper_edge.geometry);
+        mdy(i, j) = integrator::template integrate_vol_phiDphi<decltype(hyEdgeT::geometry)>(
+            j, i, 1, hyper_edge.geometry);
+        for (unsigned int k = 0; k < n_shape_fct_; ++k)
+        {
+          tv_shx_sh_sh[i].operator()(j, k) = integrator::template integrate_vol_phiphiDphi<decltype(hyEdgeT::geometry)>(
+            j, k, i, 0, hyper_edge.geometry);
+        }
+      }
+    }
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
+    {
+      loc_normal[bdr] = hyper_edge.geometry.local_normal(bdr);
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      {
+        for (unsigned int j = 0; j < n_shape_bdr_; j++) 
+        {
+          bdr_sh_sk[bdr].operator()(i, j) = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+            i, j, bdr, hyper_edge.geometry);
+          for (unsigned int k = 0; k < n_shape_fct_; ++k)
+          {
+            tb_sh_sh_sk[i][bdr].operator()(k, j) = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
+              i, k, j, bdr, hyper_edge.geometry);
+          }
+          for (unsigned int k = 0; k < n_shape_bdr_; ++k)
+          {
+            tb_sh_sk_sk[i][bdr].operator()(k, j) = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
+              i, k, j, bdr, hyper_edge.geometry);
+          }
+        }
+        for (unsigned int j = 0; j < n_shape_fct_; j++) 
+        {
+          bdr_sh_sh[bdr].operator()(i, j) = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+            i, j, bdr, hyper_edge.geometry);
+          for (unsigned int k = 0; k < n_shape_fct_; ++k)
+          {
+            tb_sh_sh_sh[i][bdr].operator()(k, j) = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
+              i, k, j, bdr, hyper_edge.geometry);
+          }
+        }
+      }
+    }
+
+  }
     //rearrange coefficients
     std::array<SmallVec<n_shape_fct_, lSol_float_t>, 7> coeff;
     for (unsigned int i = 0; i < 7; ++i)
@@ -738,11 +835,20 @@ class Chkp
    * \retval  residual      Residual (should be zero).
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  inline void residual_flux(const SmallMatInT& lambda_values_in,
+  SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in_uc,
                                                            SmallMatOutT& lambda_values_out,
                                                            hyEdgeT& hyper_edge,
                                                            const lSol_float_t time) const
   {
+    //ensure dirichlet conditions are met
+    SmallMatInT lambda_values_in = lambda_values_in_uc;
+    make_skeleton(lambda_values_in, hyper_edge, time);
+    //calculate integral coefficients
+    //set_coeff(hyper_edge);
+
+    std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
+      loc_normal[bdr] = hyper_edge.geometry.local_normal(bdr);
     SmallVec<n_loc_dofs_, lSol_float_t> coeff(0.);
     newton(lambda_values_in, coeff, hyper_edge, time);
     const lSol_float_t eps = ldexp(1., -30);
@@ -952,6 +1058,7 @@ class Chkp
         }
       }
     }
+    return lambda_values_out;
   }
 
   template <typename hyEdgeT, typename SmallMatT>
@@ -987,9 +1094,9 @@ class Chkp
    * Fills projection of intitial u into data.u_old
    * Computes local contribution to data.uh_old from initial and dirichlet
   *********************************************************************************/
-  template <typename hyEdgeT, typename SmallMatOutT>
-  inline void make_initial(SmallMatOutT& lambda_values_out,
-      hyEdgeT& hyper_edge, const lSol_float_t time = 0.)
+  template <typename hyEdgeT, typename SmallMatT>
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+      hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
     //project initial to u
@@ -1003,26 +1110,27 @@ class Chkp
       {
         if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
         {
-          lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
+          lambda_values[bdr][i] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
 
         } else 
         {
-          lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
+          lambda_values[bdr][i] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
         }
-        hyper_edge.data.uh_old[bdr][i] = lambda_values_out[bdr][i];
-        lambda_values_out[bdr][n_shape_bdr_ + i] = 0.;
-        lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0.;
+        hyper_edge.data.uh_old[bdr][i] = lambda_values[bdr][i];
+        lambda_values[bdr][n_shape_bdr_ + i] = 0.;
+        lambda_values[bdr][2 * n_shape_bdr_ + i] = 0.;
       }
     }
-    set_skeleton_data(lambda_values_out, hyper_edge);
+    set_skeleton_data(lambda_values, hyper_edge);
+    return lambda_values;
   }
 
   template <typename hyEdgeT, typename SmallMatT>
-  inline void set_skeleton_data(const SmallMatT& lambda_values,
+  static inline void set_skeleton_data(const SmallMatT& lambda_values,
       hyEdgeT& hyper_edge)
   {
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
@@ -1033,7 +1141,7 @@ class Chkp
   }
 
   template <typename hyEdgeT, typename SmallMatT>
-  void set_bulk_data(const SmallMatT& lambda_values, 
+  inline void set_bulk_data(const SmallMatT& lambda_values, 
       hyEdgeT& hyper_edge, const lSol_float_t time) const
   {
     SmallVec<n_loc_dofs_, lSol_float_t> coeff;
@@ -1042,11 +1150,19 @@ class Chkp
       hyper_edge.data.u_old[i] = coeff[i];
   }
 
+  template <typename hyEdgeT, typename SmallMatT>
+  inline void set_data(const SmallMatT& lambda_values, 
+      hyEdgeT& hyper_edge, const lSol_float_t time) const
+  {
+    set_bulk_data(lambda_values, hyper_edge, time);
+    set_skeleton_data(lambda_values, hyper_edge);
+  }
+
   /*********************************************************************************
    * Updates uh at the boundary to new dirichlet. Leaves other skeleton values as is.
   *********************************************************************************/
   template <typename hyEdgeT, typename SmallMatOutT>
-  inline void make_skeleton(SmallMatOutT& lambda_values_out,
+  static inline void make_skeleton(SmallMatOutT& lambda_values_out,
       hyEdgeT& hyper_edge, const lSol_float_t time = 0.)
   {
     using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
@@ -1060,6 +1176,28 @@ class Chkp
             parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
       }
     }
+  }
+  /*!***********************************************************************************************
+   * \brief   Evaluate squared local L2 error.
+   *
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which error is evaluated.
+   * \retval  err               Local squared L2 error.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  std::array<lSol_float_t, 1U> errors(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                       2 * hyEdge_dimT>& lambda_values,
+                                      hyEdgeT& hy_edge,
+                                      const lSol_float_t time = 0.) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data.u_old.data(),
+                                                                      hy_edge.geometry, time)});
   }
 
 private:
@@ -1252,4 +1390,5 @@ private:
   }
 
 };
+
 }
