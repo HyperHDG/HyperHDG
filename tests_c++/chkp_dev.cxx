@@ -74,8 +74,8 @@ struct ChkpParameters
 int main()
 {
   SmallVec<2, unsigned int> top_con;
-  top_con[0] = 2;
-  top_con[1] = 2;
+  top_con[0] = 1;
+  top_con[1] = 1;
   std::vector<double> def_con={1., 3., 4., 1., 1., 1., 1., 1.,-3., -2.} ;
   GlobalLoop::Nonlinear<Topology::Cubic<2, 2>,
                        Geometry::UnitCube<2, 2, double>,
@@ -83,8 +83,10 @@ int main()
                        LocalSolver::Chkp<2, 1, 3, ChkpParameters> >
     problem(top_con, def_con);
   std::vector<double> v = problem.make_initial(problem.zero_vector(), 0.);
-  std::vector<double> w = problem.make_initial(v, 0.);
-  std::cout << v[4];
+  std::vector<double> w = problem.residual_flux(v, 0.);
+  std::for_each(w.begin(), w.end(), [](double u) {std::cout << u << "\n";});
+  std::cout << "\n";
                        
+  std::for_each(v.begin(), v.end(), [](double u) {std::cout << u << "\n";});
   return 0;
 }

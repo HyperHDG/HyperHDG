@@ -62,7 +62,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     print(time, np.linalg.norm(vectorSolution))
     
   error = HDG_wrapper.errors(vectorSolution, time)[0]
-  print( "Iteration: ", iteration, " Error: ", error * 10**9)
+  print( "Iteration: ", iteration, " Error: ", error )
   
   #HDG_wrapper.plot_option( "fileName" , "diff_conv_parab" + str(dimension) + "-" + str(iteration) )
   #HDG_wrapper.plot_option( "printFileNumber" , "false" )
@@ -81,7 +81,7 @@ def main(debug_mode):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for iteration in range(1,4):
       try:
-        diffusion_test(poly_degree, iteration, True)
+        diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:
         print("ERROR: ", error)
 

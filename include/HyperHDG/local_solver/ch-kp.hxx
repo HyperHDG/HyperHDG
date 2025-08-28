@@ -1187,7 +1187,7 @@ class Chkp
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  std::array<lSol_float_t, 1U> errors(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+  std::array<lSol_float_t, 1U> errors(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
                                                        2 * hyEdge_dimT>& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const lSol_float_t time = 0.) const
