@@ -97,8 +97,6 @@ int main() {
         }
         std::cout << "u_old:\n";
         std::cout << he.data.u_old;
-        //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
-        //std::cout << "Jacobi numerisch \n" << ls.finite(lambda_n, coeff, he, .0001);
         //std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
         ls.newton(lambda_n, coeff, he, 0.);
         SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
