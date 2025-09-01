@@ -7,6 +7,7 @@
 #include <HyperHDG/dense_la.hxx>
 #include <algorithm>
 #include <array>
+#include <vector>
 #include <cmath>
 #include <iostream>
 
@@ -75,7 +76,7 @@ int main() {
                 NodeDescriptor::Cubic<2, 2>,
                 lst::data_type>
     hg(top_con);
-  lst ls(*(hg.begin()));
+  lst ls ;
   std::array< std::array< double, 6 >, 4> lambda_n, res_flux;
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
@@ -96,7 +97,10 @@ int main() {
         }
         std::cout << "u_old:\n";
         std::cout << he.data.u_old;
-        std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
+        //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
+        //std::cout << "Jacobi numerisch \n" << ls.finite(lambda_n, coeff, he, .0001);
+        //std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
+        ls.newton(lambda_n, coeff, he, 0.);
         SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 0.);
         //std::cout << "Residuen:\n" << res;
         std::cout << "Koeffizienten:\n" << coeff;
@@ -109,7 +113,7 @@ int main() {
         //int i = 0;
         //std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
         //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
-        //std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .01);
+        //std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .0001);
       });
   return 0;
 }
