@@ -19,7 +19,7 @@ struct ChkpParameters
   static param_float_t initial(const Point<space_dimT, param_float_t>& p,
                                const param_float_t t = 0.)
   {
-    return p[0] / 3. + p[1] * p[1] / 6. + exp(-t);
+    return sin(p[0]) * sin(p[1]) * exp(-t);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -27,7 +27,7 @@ struct ChkpParameters
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
                                        const param_float_t t = 0.)
   {
-    return p[0] / 3. + p[1] * p[1] / 6. + exp(-t);
+    return sin(p[0]) * sin(p[1]) * exp(-t);
   }
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
@@ -43,7 +43,7 @@ struct ChkpParameters
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
                                        const param_float_t t = 0.)
   {
-    return p[0] / 3. + p[1] * p[1] / 6. + exp(-t);
+    return sin(p[0]) * sin(p[1]) * exp(-t);
   }
   
   static constexpr param_float_t kappa=-1.;

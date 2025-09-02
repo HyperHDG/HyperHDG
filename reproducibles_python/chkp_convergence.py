@@ -30,19 +30,20 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   const                 = HyperHDG.config()
   const.global_loop     = "Nonlinear"
-  const.topology        = "Cubic<" + str(2) + "," + str(2) + ">"
-  const.geometry        = "UnitCube<" + str(2) + "," + str(2) + ",double>"
-  const.node_descriptor = "Cubic<" + str(2) + "," + str(2) + ">"
+  const.topology        = "File<2,2>"
+  const.geometry        = "File<2,2>"
+  const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
     + str(3*poly_degree) + ",ChkpParameters,double>"
-  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
+  const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(delta_time)
-  HDG_wrapper = PyDP( [ iteration] * 2, lsol_constr = get_loc_constr(0.1 / iteration) )
+  HDG_wrapper = PyDP( [os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(1.) )
+  HDG_wrapper.refine(iteration)
 
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
   
