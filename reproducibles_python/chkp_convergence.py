@@ -19,8 +19,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  time_steps  = 1
-  delta_time  = 1. / time_steps
+  goal_time = .5
+  time_steps  = iteration
+  delta_time  = goal_time / time_steps
   
   try:
     import HyperHDG
@@ -42,18 +43,18 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(delta_time)
-  HDG_wrapper = PyDP( [os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(1.) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(delta_time) )
   HDG_wrapper.refine(iteration)
 
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
   
   time = 0
-  fun=lambda x: HDG_wrapper.residual_flux(x, time + delta_time)
-  print(HDG_wrapper.residual_flux(vectorSolution, time))
+  fun=lambda x: HDG_wrapper.residual_flux(x, time)
 
   for time_step in range(time_steps):
     time += delta_time    
-    opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-9)
+    #opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-9, method='hybr', options ={"xtol": 1e-3})
+    opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-4, method='krylov')
     if not opt_obj.success:
       print(opt_obj.message)
       raise RuntimeError("All linear solvers did not converge!")
@@ -80,7 +81,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,2):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in range(1,4):
+    for iteration in range(1,10):
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

@@ -157,6 +157,14 @@ class Chkp
                      node_type) != parameters::dirichlet_nodes.end();
   }
 
+  template <typename parameters>
+  static constexpr bool is_neumann(const unsigned int node_type)
+  {
+    return std::find(parameters::neumann_nodes.begin(), parameters::neumann_nodes.end(),
+                     node_type) != parameters::neumann_nodes.end();
+  }
+
+
   // -----------------------------------------------------------------------------------------------
   // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
   // -----------------------------------------------------------------------------------------------
@@ -950,8 +958,6 @@ class Chkp
     SmallMatInT lambda_values_in = lambda_values_in_uc;
     make_skeleton(lambda_values_in, hyper_edge, time);
     //calculate integral coefficients
-    //set_coeff(hyper_edge);
-
     std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
       loc_normal[bdr] = hyper_edge.geometry.local_normal(bdr);
@@ -1228,7 +1234,15 @@ class Chkp
             parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
         }
         hyper_edge.data.uh_old[bdr][i] = lambda_values[bdr][i];
-        lambda_values[bdr][n_shape_bdr_ + i] = 0.;
+        if (is_neumann<parameters>(hyper_edge.node_descriptor[bdr]))
+        {
+          lambda_values[bdr][n_shape_bdr_ + i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::neumann_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+
+        } else {
+          lambda_values[bdr][n_shape_bdr_ + i] = 0.;
+        }
         lambda_values[bdr][2 * n_shape_bdr_ + i] = 0.;
       }
     }
@@ -1281,6 +1295,13 @@ class Chkp
           lambda_values_out[bdr][i] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+      }
+      if (is_neumann<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          lambda_values_out[bdr][n_shape_bdr_ + i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::neumann_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
       }
     }
   }

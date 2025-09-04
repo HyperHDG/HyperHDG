@@ -12,7 +12,7 @@ struct ChkpParameters
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
@@ -32,10 +32,10 @@ struct ChkpParameters
   /*!***********************************************************************************************
    * \brief   Neumann values of solution as analytic function.
    ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
-                                     const param_float_t = 0.)
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
   {
-    return 0.;
+    return cos(p[0]) * sin(p[1]) * exp(-t);
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).

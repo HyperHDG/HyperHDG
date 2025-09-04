@@ -15,9 +15,9 @@ N_HyperEdges  = 1;  # Number of hyperedges that are contained in the hypergraph.
 
 POINTS:
 0.0 0.0
-1.0 0.0
-0.0 1.0
-1.0 1.0
+6.28318530718 0.0
+0.0 6.28318530718
+6.28318530718 6.28318530718
 
 # After HYPERNODES_OF_HYPEREDGES the indices of hypernodes belonging to a hyperedge have to appear.
 
