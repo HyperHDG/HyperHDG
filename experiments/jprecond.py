@@ -82,23 +82,50 @@ def _coarse_basis_3d(points, n_elem_1d, epsilon=1e-10):
   return sp.csr_matrix((value_vec, (node_vec, index_vec)), shape=(n, m))
 
 
+def coarse_basis_pu(points, domains):
+  # nodal values of all the basis functions combined
+  nodal = np.zeros(len(points))
+  for domain in domains:
+    nodal[domain] += 1.
+  mask = nodal != 0
+  nodal[mask] = 1/nodal[mask]
+
+  # now split the nodal values to each of the basis functions
+  # in the overlap, the nodal values are shared
+  nnzs = np.zeros(len(domains.all_domains))
+  for k in range(len(domains)):
+    start = domains.ioffsets[k]
+    end = domains.ioffsets[k+1]
+    nnzs[start:end] = nodal[domains.all_domains[start:end]]
+
+  return sp.csc_matrix((nnzs, domains.all_domains, domains.ioffsets))
+
+
 class JPrecond:
-  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None):
+  def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None, coarse_space=None):
     # save lhs_mat
     self.lhs_mat = lhs_mat
+    self.coarse_space = coarse_space
 
     coarse_basis, int_nodes = [], []
-    if   len(n_elem_1d) == 2:
-      coarse_basis = _coarse_basis_2d(points, n_elem_1d,  epsilon)
-      int_nodes    = np.concatenate([ j*(n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0])
-                                      for j in range(1, n_elem_1d[1]) ])  # find interior nodes
-    elif len(n_elem_1d) == 3:
-      coarse_basis = _coarse_basis_3d(points, n_elem_1d, epsilon)
-      int_nodes    = np.concatenate([
-        (k * (n_elem_1d[1]+1)+j) * (n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0])
-        for j in range(1, n_elem_1d[1]) for k in range(1, n_elem_1d[2]) ])  # find interior nodes
-
-    coarse_basis_int = coarse_basis[:, int_nodes]
+    if coarse_space.lower() == "pu":
+      coarse_basis_int = coarse_basis_pu(points, domains)
+    elif coarse_space.lower() == "q1":
+      if   len(n_elem_1d) == 2:
+        coarse_basis = _coarse_basis_2d(points, n_elem_1d,  epsilon)
+        int_nodes    = np.concatenate([ j*(n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0])
+                                        for j in range(1, n_elem_1d[1]) ])  # find interior nodes
+        coarse_basis_int = coarse_basis[:, int_nodes]
+      elif len(n_elem_1d) == 3:
+        coarse_basis = _coarse_basis_3d(points, n_elem_1d, epsilon)
+        int_nodes    = np.concatenate([
+            (k * (n_elem_1d[1]+1)+j) * (n_elem_1d[0]+1) + np.arange(1, n_elem_1d[0])
+            for j in range(1, n_elem_1d[1]) for k in range(1, n_elem_1d[2]) ])  # find interior nodes
+        coarse_basis_int = coarse_basis[:, int_nodes]
+      else:
+          raise RuntimeError(f"expected len(n_elem_1d)=2,3 got {len(n_elem_1d)}")
+    else:
+      raise RuntimeError(f"unexpected coarse space '{coarse_space}'")
 
     if repeat > 1:
       coarse_basis_int = sp.kron(coarse_basis_int, np.eye(repeat))

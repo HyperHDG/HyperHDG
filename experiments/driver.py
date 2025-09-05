@@ -40,6 +40,7 @@ parser.add_argument("--no-cg-progress", help="show the cg progess", action="stor
 parser.add_argument("--log-level", help="set the log level")
 parser.add_argument("--log-file", help="set the log file", default=default_output_name + ".data.log")
 parser.add_argument("--log-data", help="set extra log data")
+parser.add_argument("-c", "--coarse-space", help="select the coarse space, must be one of (PU|Q1), default: Q1", default="Q1")
 args = parser.parse_args()
 
 logging.setLoggerClass(prin2.Logger)
@@ -137,7 +138,8 @@ precond = jprecond.JPrecond(
   network_points,
   [args.num_elements, args.num_elements],
   repeat=repeat,
-  domains=domains
+  domains=domains,
+  coarse_space=args.coarse_space,
 )
 log_data["precond_init_time"] = (datetime.datetime.now() - start).total_seconds()
 log_data["precond_init_lu_time"] = precond.init_lu_time
@@ -179,6 +181,7 @@ log_data["precond_total_solve_time"] = precond.total_solve_time
 log_data["precond_avg_solve_time"] = precond.total_solve_time/iters
 log_data["precond_total_csolve_time"] = precond.total_csolve_time
 log_data["precond_avg_csolve_time"] = precond.total_csolve_time/iters
+log_data["precond_coarse_space"] = precond.coarse_space
 
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
