@@ -101,6 +101,40 @@ def coarse_basis_pu(points, domains):
   return sp.csc_matrix((nnzs, domains.all_domains, domains.ioffsets))
 
 
+def coarse_basis_pux(points, domains):
+  # nodal values of all the basis functions combined
+  nodal = np.zeros(len(points))
+  for domain in domains:
+    nodal[domain] += 1.
+  mask = nodal != 0
+  nodal[mask] = 1/nodal[mask]
+  nodal = np.hstack((points, nodal.reshape(-1,1)))
+
+  # now split the nodal values to each of the basis functions
+  # in the overlap, the nodal values are shared
+  nnzs = np.zeros(len(domains.all_domains)*4)
+  indices = np.zeros(len(domains.all_domains)*4)
+  ioffsets = []
+
+  for k in range(len(domains)):
+    ss = domains.ioffsets[k]
+    se = domains.ioffsets[k+1]
+    nodes = domains.all_domains[ss:se]
+
+    s = 4*domains.ioffsets[k]
+    l = domains.ioffsets[k+1]-domains.ioffsets[k]
+
+    for i in range(4):
+      nnzs[s+i*l:s+(i+1)*l] = nodal[nodes, i]
+      indices[s+i*l:s+(i+1)*l] = nodes
+      ioffsets.append(s+i*l)
+
+  ioffsets.append(len(domains.all_domains)*4)
+
+  return sp.csc_matrix((nnzs, indices, ioffsets))
+
+
+
 class JPrecond:
   def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None, coarse_space=None):
     # save lhs_mat
@@ -110,6 +144,8 @@ class JPrecond:
     coarse_basis, int_nodes = [], []
     if coarse_space.lower() == "pu":
       coarse_basis_int = coarse_basis_pu(points, domains)
+    elif coarse_space.lower() == "pux":
+      coarse_basis_int = coarse_basis_pux(points, domains)
     elif coarse_space.lower() == "q1":
       if   len(n_elem_1d) == 2:
         coarse_basis = _coarse_basis_2d(points, n_elem_1d,  epsilon)
