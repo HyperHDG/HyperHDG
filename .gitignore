@@ -54,3 +54,4 @@ profile_output*
 
 # ignore clangd lsp
 .cache
+*.eld
