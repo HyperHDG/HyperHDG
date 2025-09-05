@@ -298,7 +298,6 @@ int main(int argc, char** argv) {
   compute_stats(sizes_after.data(), domains.size(), &stats_after);
   print_stats("sizes after", &stats_after, runid);
   lg->debug("bal after")({runid, {"bal", stats_after.max / stats_after.avg}});
-  lg->debug("total overlap after")({runid, {"overlap", stats_after.sum / stats_before.sum}});
 
   std::vector<double> sizes_fractions(domains.size());
   for (geobin::ID p = 0; p < domains.size(); p++)
@@ -314,7 +313,7 @@ int main(int argc, char** argv) {
   SimpleStats stats_overlap;
   compute_stats(part_overlap.data(), nverts, &stats_overlap);
   print_stats("overlap stats pointwise", &stats_overlap, runid);
-  lg->debug("overlap total")({runid, {"overlap_total", stats_after.sum / nverts}});
+  lg->debug("total overlap after")({runid, {"overlap", stats_after.sum / stats_before.sum}});
 
   lg->info("writing overlapping partition");
 
