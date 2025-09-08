@@ -108,7 +108,7 @@ def coarse_basis_pux(points, domains):
     nodal[domain] += 1.
   mask = nodal != 0
   nodal[mask] = 1/nodal[mask]
-  nodal = np.hstack((points, nodal.reshape(-1,1)))
+  nodal = np.hstack((nodal.reshape(-1,1), points))
 
   # now split the nodal values to each of the basis functions
   # in the overlap, the nodal values are shared
@@ -119,13 +119,16 @@ def coarse_basis_pux(points, domains):
   for k in range(len(domains)):
     ss = domains.ioffsets[k]
     se = domains.ioffsets[k+1]
+    l = se-ss
+    s = 4*ss
+
     nodes = domains.all_domains[ss:se]
 
-    s = 4*domains.ioffsets[k]
-    l = domains.ioffsets[k+1]-domains.ioffsets[k]
-
     for i in range(4):
-      nnzs[s+i*l:s+(i+1)*l] = nodal[nodes, i]
+      if i == 0:
+        nnzs[s+i*l:s+(i+1)*l] = nodal[nodes, i]
+      else:
+        nnzs[s+i*l:s+(i+1)*l] = nodal[nodes, i] * nodal[nodes, 0]
       indices[s+i*l:s+(i+1)*l] = nodes
       ioffsets.append(s+i*l)
 
