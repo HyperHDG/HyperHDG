@@ -190,7 +190,7 @@ class JPrecond:
     self.domains = Domains(ioffsets_r, all_domains_r)
 
     start = datetime.datetime.now()
-    submats = [self.lhs_mat[nj, :][:, nj] for nj in self.domains]
+    submats = [self.lhs_mat[np.ix_(nj, nj)] for nj in self.domains]
     self.init_submat_time = (datetime.datetime.now() - start).total_seconds()
 
     start = datetime.datetime.now()
