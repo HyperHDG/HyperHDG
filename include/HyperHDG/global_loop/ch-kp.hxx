@@ -432,8 +432,7 @@ class Nonlinear
    ************************************************************************************************/
   std::string plot_option(const std::string& option, std::string value = "")
   {
-    //return set_plot_option(plot_options, option, value);
-    return "";
+    return set_plot_option(plot_options, option, value);
   }
   /*!***********************************************************************************************
    * \brief   Plot solution in vtu format.
@@ -446,7 +445,7 @@ class Nonlinear
    ************************************************************************************************/
   void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
   {
-    //plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+    plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
   /*!***********************************************************************************************
    * \brief   Return refinement level.

@@ -130,6 +130,15 @@ class Chkp
   {
     return 3 * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
+   ************************************************************************************************/
+  static constexpr unsigned int system_dimension() { return hyEdge_dimT + 1; }
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   ************************************************************************************************/
+  static constexpr unsigned int node_system_dimension() { return 1; }
+  
  private:
   // -----------------------------------------------------------------------------------------------
   // Private, static constexpr functions
@@ -147,6 +156,18 @@ class Chkp
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = 7 * n_shape_fct_;
+    /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   *
+   * This allows to the use of this quantity as template parameter in member functions.
+   ************************************************************************************************/
+  static constexpr unsigned int system_dim = system_dimension();
+  /*!***********************************************************************************************
+   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   *
+   * This allows to the use of this quantity as template parameter in member functions.
+   ************************************************************************************************/
+  static constexpr unsigned int node_system_dim = node_system_dimension();
   /*!***********************************************************************************************
    * \brief   Find out whether a node is of Dirichlet type.
    ************************************************************************************************/
@@ -712,7 +733,8 @@ class Chkp
   inline SmallVec<n_loc_dofs_, lSol_float_t> get_residual(const SmallMatT& lambda_values,
                                                             const SmallVec<n_loc_dofs_, lSol_float_t> ca,
                                                             hyEdgeT& hyper_edge,
-                                                            const lSol_float_t time) const
+                                                            const lSol_float_t time,
+                                                            const bool print=false) const
   {
     static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
         "Lambda values ...");
@@ -771,6 +793,8 @@ class Chkp
           trace_r[bdr][i] = 0;
         }
       }
+      if (print)
+        std::cout << bdr << ": " << flux_q[bdr][0] << "\n";
     }
 
     //first eq.
@@ -794,12 +818,16 @@ class Chkp
               j, k, i, 0, hyper_edge.geometry) * ca[j] * ca[n_shape_fct_ + k];
         }
       }
+    if (print)
+      std::cout << i << ": " << residual[n_shape_fct_ + i] << "\n";
     }
+    lSol_float_t zw;
     
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
     {
       for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
       {
+        lSol_float_t zw = residual[n_shape_fct_ + i];
         for (unsigned int j = 0; j < n_shape_fct_; ++j)
         { 
           for (unsigned int k = 0; k < n_shape_fct_; ++k)
@@ -813,9 +841,13 @@ class Chkp
               i, j, k, bdr, hyper_edge.geometry) * ca[j] * lambda_values[bdr][n_shape_bdr_ + k] * loc_normal[bdr][0];
           }
         }
+        if (print)
+          std::cout << i << ": " << residual[n_shape_fct_ + i] - zw << "\n";
         residual[n_shape_fct_ + i] -= tau_uqq_ * flux_q[bdr][i];
       }
     }
+    if (print)
+      std::cout << "\n";
 
     //third eq
     for (unsigned int i = 0; i < n_shape_fct_; ++i) 
@@ -1327,6 +1359,52 @@ class Chkp
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data.u_old.data(),
                                                                       hy_edge.geometry, time)});
   }
+  
+  /*!***********************************************************************************************
+   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   *
+   * \tparam  abscissa_float_t  Floating type for the abscissa values.
+   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
+   * \tparam  input_array_t     Input array type.
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   abscissas         Abscissas of the supporting points.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which function is plotted.
+   * \retval  func_vals         Array of function values.
+   ************************************************************************************************/
+  template <typename abscissa_float_t,
+            std::size_t abscissas_sizeT,
+            class input_array_t,
+            class hyEdgeT>
+  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>, system_dim>
+  bulk_values(
+    const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
+    const input_array_t& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time) const
+  {
+    SmallVec<n_loc_dofs_, lSol_float_t> coefficients(0.);
+    newton(lambda_values, coefficients, hyper_edge, time);
+    SmallVec<n_shape_fct_, lSol_float_t> coeffs;
+    SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
+
+    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+             Chkp<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+      point_vals;
+
+    for (unsigned int d = 0; d < system_dim; ++d)
+    {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = coefficients[i];
+      for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
+        point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
+          coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+    }
+
+    return point_vals;
+  }
+
 
 private:
   template <typename geom_t, lSol_float_t fun(const lSol_float_t)>
