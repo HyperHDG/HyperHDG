@@ -137,6 +137,63 @@ def coarse_basis_pux(points, domains):
   return sp.csc_matrix((nnzs, indices, ioffsets))
 
 
+def coarse_basis_pur(points, domains):
+  # nodal values of all the basis functions combined
+  nodal = np.zeros(len(points))
+  for domain in domains:
+    nodal[domain] += 1.
+  mask = nodal != 0
+  nodal[mask] = 1/nodal[mask]
+
+  centroids = np.array([np.mean(points[domain], axis=0) for domain in domains])
+
+  # now split the nodal values to each of the basis functions
+  # in the overlap, the nodal values are shared
+  nnzs = np.zeros(len(domains.all_domains)*12)
+  inds = np.zeros(len(domains.all_domains)*12)
+  ioff = []
+
+  for k in range(len(domains)):
+    ss = domains.ioffsets[k]
+    se = domains.ioffsets[k+1]
+    l = se-ss
+    s = 12*ss
+
+    nodes = domains.all_domains[ss:se]
+
+    # translation
+    for i in range(3):
+      nnzs[s+i*l:s+(i+1)*l] = nodal[nodes]
+      inds[s+i*l:s+(i+1)*l] = 6*nodes + i
+      ioff.append(s+i*l)
+
+    # rotation x
+    nnzs[s+3*l+0:s+6*l+0:3] = -(points[nodes, 2]-centroids[k,2]) * nodal[nodes]
+    nnzs[s+3*l+1:s+6*l+1:3] =  (points[nodes, 1]-centroids[k,1]) * nodal[nodes]
+    nnzs[s+3*l+2:s+6*l+2:3] =  nodal[nodes]
+    inds[s+3*l:s+6*l] = 6 * np.repeat(nodes,3) + np.tile(np.array([1,2,3]),l)
+    ioff.append(s+3*l)
+
+    # rotation y
+    nnzs[s+6*l+0:s+9*l+0:3] =  (points[nodes, 2]-centroids[k,2]) * nodal[nodes]
+    nnzs[s+6*l+1:s+9*l+1:3] = -(points[nodes, 0]-centroids[k,0]) * nodal[nodes]
+    nnzs[s+6*l+2:s+9*l+2:3] =  nodal[nodes]
+    inds[s+6*l:s+9*l] = 6 * np.repeat(nodes,3) + np.tile(np.array([0,2,4]),l)
+    ioff.append(s+6*l)
+
+    # rotation z
+    nnzs[s+9*l+0:s+12*l+0:3] = -(points[nodes, 1]-centroids[k,1]) * nodal[nodes]
+    nnzs[s+9*l+1:s+12*l+1:3] =  (points[nodes, 0]-centroids[k,0]) * nodal[nodes]
+    nnzs[s+9*l+2:s+12*l+2:3] = nodal[nodes]
+    inds[s+9*l:s+12*l] = 6 * np.repeat(nodes,3) + np.tile(np.array([0,1,5]),l)
+    ioff.append(s+9*l)
+
+  ioff.append(len(domains.all_domains)*12)
+
+  return sp.csc_matrix((nnzs, inds, ioff), shape=(6*len(points), 6*len(domains)))
+
+
+
 
 class JPrecond:
   def __init__( self, lhs_mat, points, n_elem_1d, epsilon=1e-10, repeat=1, domains=None, coarse_space=None):
@@ -147,8 +204,10 @@ class JPrecond:
     coarse_basis, int_nodes = [], []
     if coarse_space.lower() == "pu":
       coarse_basis_int = coarse_basis_pu(points, domains)
-    elif coarse_space.lower() == "pux":
+    elif coarse_space.lower() in "pux":
       coarse_basis_int = coarse_basis_pux(points, domains)
+    elif coarse_space.lower() in "pur":
+      coarse_basis_int = coarse_basis_pur(points, domains)
     elif coarse_space.lower() == "q1":
       if   len(n_elem_1d) == 2:
         coarse_basis = _coarse_basis_2d(points, n_elem_1d,  epsilon)
@@ -166,7 +225,7 @@ class JPrecond:
     else:
       raise RuntimeError(f"unexpected coarse space '{coarse_space}'")
 
-    if repeat > 1:
+    if repeat > 1 and coarse_space.lower() != "pur":
       coarse_basis_int = sp.kron(coarse_basis_int, np.eye(repeat))
 
     self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
