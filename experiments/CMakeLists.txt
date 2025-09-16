@@ -17,6 +17,11 @@ target_compile_options(geobin PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>
 
 ########## EXE #############
 
+add_executable(driver driver.cxx)
+target_link_libraries(driver PRIVATE geobin PRIVATE fmtlog)
+target_compile_options(driver PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>
+)
+
 add_executable(make_geo make_geo.cxx)
 target_link_libraries(make_geo PRIVATE geobin PRIVATE nanoflann::nanoflann PRIVATE fmtlog)
 target_compile_options(make_geo PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>
