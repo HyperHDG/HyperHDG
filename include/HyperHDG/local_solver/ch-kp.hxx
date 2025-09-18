@@ -1163,7 +1163,7 @@ class Chkp
       	  lambda_values_out[bdr][n_shape_bdr_ + i] += tau_uqq_ * (qh_int - q_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][n_shape_bdr_ + i] *= loc_normal[bdr][0];
       	  //v^
-      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = lambda_values_in[bdr][2 * n_shape_bdr_ + i];
+      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = lambda_values_in[bdr][2 * n_shape_bdr_ + i] * loc_normal[bdr][0];
       	}
       }
       if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
@@ -1248,7 +1248,7 @@ class Chkp
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       hyper_edge.data.u_old[i] = integrator::template integrate_volUni_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, 0.);
+        parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, time);
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
       for (unsigned int i = 0; i < n_shape_bdr_; ++i)
@@ -1265,7 +1265,7 @@ class Chkp
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::initial, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
         }
-        hyper_edge.data.uh_old[bdr][i] = lambda_values[bdr][i];
+        //hyper_edge.data.uh_old[bdr][i] = lambda_values[bdr][i];	-> unecessary bc. of set_skeleton_data
         if (is_neumann<parameters>(hyper_edge.node_descriptor[bdr]))
         {
           lambda_values[bdr][n_shape_bdr_ + i] = integrator::template integrate_bdrUni_psifunc<
