@@ -57,6 +57,7 @@ struct ChkpParameters
     return 0.;
   }
 
+  static constexpr param_float_t tau_fr = 4.;
 };  
 
 template <unsigned int space_dimT, typename param_float_t = double>
@@ -114,5 +115,6 @@ struct ChkpParametersZero
   {
     return 0.;
   }
+  static constexpr param_float_t tau_fr = 4.;
 
 };  

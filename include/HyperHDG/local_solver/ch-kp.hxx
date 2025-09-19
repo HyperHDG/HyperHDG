@@ -70,6 +70,7 @@ struct ChkpParametersDefault
   {
     return 0.;
   }
+  static constexpr param_float_t tau_fr = 1.;
 
 };  
 
@@ -517,6 +518,7 @@ class Chkp
             ret(5 * n_shape_fct_ + i, j) -= 2 * parameters::kappa * bdr_sh_sh[bdr](i, j) * loc_normal[bdr][0];
             ret(5 * n_shape_fct_ + i, j) -= 3 * (tb_sh_sh_sh[i][bdr] * coeff[0])(j, 0) * loc_normal[bdr][0];
             //tau_f      
+/* 
             std::array<lSol_float_t, n_shape_fct_> u;
             for(unsigned int j = 0; j < n_shape_fct_; ++j)
               u[j] = coeff[0][j];
@@ -525,6 +527,8 @@ class Chkp
               uh[j] = u_hat[bdr][j];
             ret(5 * n_shape_fct_ + i, j) -= integrate_bdr_phiphicompfun<decltype(hyEdgeT::geometry), parameters::tau_df>
               (i, j, uh, u, bdr, hyper_edge.geometry) * loc_normal[bdr][0] * loc_normal[bdr][0];
+*/
+            ret(5 * n_shape_fct_ + i, j) -= parameters::tau_fr * bdr_sh_sh[bdr](i, j) * loc_normal[bdr][0] * loc_normal[bdr][0];
           }
         }
 
@@ -676,6 +680,7 @@ class Chkp
             ret(5 * n_shape_fct_ + i, j) -= 2 * parameters::kappa * bdr_sh_sh[bdr](i, j) * loc_normal[bdr][0];
             ret(5 * n_shape_fct_ + i, j) -= 3 * (tb_sh_sh_sh[i][bdr] * u)(j, 0) * loc_normal[bdr][0];
             //tau_f      
+/* 
             std::array<lSol_float_t, n_shape_fct_> ua;
             for(unsigned int j = 0; j < n_shape_fct_; ++j)
               ua[j] = u[j];
@@ -684,6 +689,8 @@ class Chkp
               uh[j] = u_hat[bdr][j];
             ret(5 * n_shape_fct_ + i, j) -= integrate_bdr_phiphicompfun<decltype(hyEdgeT::geometry), parameters::tau_df>
               (i, j, uh, ua, bdr, hyper_edge.geometry) * loc_normal[bdr][0] * loc_normal[bdr][0];
+*/
+            ret(5 * n_shape_fct_ + i, j) -= parameters::tau_fr * bdr_sh_sh[bdr](i, j);
           }
         }
 
@@ -932,8 +939,9 @@ class Chkp
         std::array<lSol_float_t, n_shape_bdr_> uh;
         for(unsigned int j = 0; j < n_shape_bdr_; ++j)
           uh[j] = lambda_values[bdr][j];
-        f_intb -= integrate_bdr_phicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
-            i, uh, u, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
+//        f_intb -= integrate_bdr_phicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
+//            i, uh, u, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
+        f_intb -= parameters::tau_fr * flux_ux[bdr][i] * loc_normal[bdr][0];            
         
         residual[5 * n_shape_fct_ + i] -= (f_intb + 0.5 * q2_intb) * loc_normal[bdr][0];
         //p^ and z^
@@ -1045,6 +1053,7 @@ class Chkp
       	      lambda_values_out[bdr][i] += 1.5 * c * coeff[j] * coeff[k];
 	          }
 	        }
+          /* 
       	  std::array<lSol_float_t, n_shape_bdr_> uh_arr;
       	  std::array<lSol_float_t, n_shape_fct_> u_arr;
       	  for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1053,6 +1062,8 @@ class Chkp
             u_arr[j] = lambda_values_in[bdr][j];
           lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
 		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
+            */
+          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
     	    //uq^
 	        //0.5 u q
@@ -1130,6 +1141,7 @@ class Chkp
       	      lambda_values_out[bdr][i] += 1.5 * c * coeff[j] * coeff[k];
 	          }
 	        }
+          /* 
       	  std::array<lSol_float_t, n_shape_bdr_> uh_arr;
       	  std::array<lSol_float_t, n_shape_fct_> u_arr;
       	  for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1138,6 +1150,8 @@ class Chkp
             u_arr[j] = lambda_values_in[bdr][j];
           lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
 		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
+            */
+          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
     	    //uq^
 	        //0.5 u q
