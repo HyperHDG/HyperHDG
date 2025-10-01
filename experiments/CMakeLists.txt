@@ -18,8 +18,8 @@ target_compile_options(geobin PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>
 ########## EXE #############
 
 add_executable(driver driver.cxx)
-target_link_libraries(driver PRIVATE geobin PRIVATE fmtlog)
-target_compile_options(driver PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>
+target_link_libraries(driver PRIVATE geobin PRIVATE fmtlog PRIVATE HyperHDG)
+target_compile_options(driver PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>
 )
 
 add_executable(make_geo make_geo.cxx)
