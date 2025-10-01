@@ -7,14 +7,16 @@ from scipy.sparse.linalg import LinearOperator
 from datetime import datetime
 
 import os, sys
-
+import argparse
+import prin2
+import logging
 
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
+  logger = logging.getLogger("diffusion_parabolic")
+
   os.system("mkdir -p output")
   
   theta       = 1.
@@ -67,19 +69,12 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
     
   error = HDG_wrapper.errors(vectorSolution, 1.)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/diffusion_convergence_parabolic_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
-  f.close()
+  logger.info(f"{iteration=}, {error=}")
   
   HDG_wrapper.plot_option( "fileName" , "diff_conv_parab" + str(dimension) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
   HDG_wrapper.plot_option( "scale" , "0.95" )
   HDG_wrapper.plot_solution(vectorSolution, 1.)
-  
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
   
 
 # --------------------------------------------------------------------------------------------------
@@ -101,4 +96,24 @@ def main(debug_mode):
 # Define main function.
 # -------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  parser = argparse.ArgumentParser(description="fiber_network_elastic by Joseph Holten")
+  parser.add_argument("-d", "--dimension", help="dimension of the problem", default=1, type=int)
+  parser.add_argument("-p", "--degree",    help="polynomial degree of approximation", default=1, type=int)
+  parser.add_argument("-i", "--iteration", help="iteration", default=1, type=int)
+  parser.add_argument("--debug", help="toggle debug mode", action="store_true")
+  parser.add_argument("--log-level", help="set the log level")
+  args = parser.parse_args()
+
+  logging.setLoggerClass(prin2.Logger)
+  log_levels = {
+      'debug': logging.DEBUG,
+      'info': logging.INFO,
+      'warning': logging.WARNING,
+      'error': logging.ERROR,
+      'critical': logging.CRITICAL
+  }
+  logger = logging.getLogger("diffusion_parabolic")
+  logger.setLevel(level=log_levels.get(args.log_level, logging.INFO))
+  logger.log_args(args)
+
+  diffusion_test(args.degree, args.dimension, args.iteration, args.debug)
