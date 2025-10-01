@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
-import scipy.sparse.linalg as sp_lin_alg
+import scipy.sparse as sp
 from scipy.sparse.linalg import LinearOperator
 
 from datetime import datetime
@@ -47,26 +47,21 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
   
   system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
+  logger.info(f"{system_size=}")
+  col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
+  #A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
+  A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
   for time_step in range(time_steps):
     
     vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
-    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, rtol=1e-13)
+    [vectorSolution, num_iter] = sp.linalg.cg(A, vectorRHS, rtol=1e-13)
     if num_iter != 0:
-      print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
-            ". Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
-      if num_iter != 0:
-        print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
-        if num_iter != 0:
-          print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
-          raise RuntimeError("All linear solvers did not converge!")
+      logger.error(f"no convergence in {num_iter} iterations")
 
-    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
+    HDG_wrapper.set_data(vectorSolution, (time_step+1)*delta_time)
     
   error = HDG_wrapper.errors(vectorSolution, 1.)[0]
   logger.info(f"{iteration=}, {error=}")

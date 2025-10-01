@@ -221,6 +221,16 @@ class Parabolic
 
     return vec_Ax;
   }
+
+
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  {
+    return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
+  }
+ 
+
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
