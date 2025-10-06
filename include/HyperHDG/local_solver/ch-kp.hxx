@@ -622,73 +622,7 @@ class Chkp
         residual[5 * n_shape_fct_ + i] -= (trace_z + trace_f - trace_p + 0.5 * trace_q2) * normal[0];
         residual[5 * n_shape_fct_ + i] -= trace_vh * normal[1];
       }
-    //first eq.
-    //second eq
-    /*
-      for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
-      {
-        //lSol_float_t zw = residual[n_shape_fct_ + i];
-        for (unsigned int j = 0; j < n_shape_fct_; ++j)
-        { 
-          for (unsigned int k = 0; k < n_shape_fct_; ++k)
-          {
-            residual[n_shape_fct_ + i] -= 0.5 * integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
-              i, j, k, bdr, hyper_edge.geometry) * ca[j] * ca[n_shape_fct_ + k] * loc_normal[bdr][0];
-          }
-          for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-          {
-            residual[n_shape_fct_ + i] -= 0.5 * integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
-              i, j, k, bdr, hyper_edge.geometry) * ca[j] * lambda_values[bdr][n_shape_bdr_ + k] * loc_normal[bdr][0];
-          }
-        }
-      
-        residual[n_shape_fct_ + i] -= tau_uqq_ * flux_q[bdr][i];
-      }
-    */
-   /* if (print)
-      std::cout << "\n";*/
-
-    //third eq
-    
-    //fourth equation
-    
-    //fifth equation
-
-    //sixth equation
-    /*
-      for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
-      {
-        //calculate f^ and (q^)^2
-        lSol_float_t f_intb, q2_intb;
-        f_intb = 2 * parameters::kappa * integrate_bdr_phifunv(i, bdr, ca.begin(), hyper_edge.geometry);
-        q2_intb = 0;
-        for (unsigned int j = 0; j < n_shape_fct_; ++j)
-        {
-          for (unsigned int k = 0; k < n_shape_fct_; ++k)
-          {
-            f_intb += 1.5 * integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
-                j, k, i, bdr, hyper_edge.geometry) * ca[j] * ca[k];
-          }
-        }
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-          {
-            q2_intb += integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
-                i, j, k, bdr, hyper_edge.geometry) * lambda_values[bdr][n_shape_bdr_ + j] 
-                * lambda_values[bdr][n_shape_bdr_ + k];
-          }
-        }
-        f_intb -= parameters::tau_fr * flux_ux[bdr][i];            
-        
-        residual[5 * n_shape_fct_ + i] -= (f_intb + 0.5 * q2_intb) * loc_normal[bdr][0];
-      
-      }
-     */ 
-      
-    //seventh equation
     }
-
     return residual;
   }
 
