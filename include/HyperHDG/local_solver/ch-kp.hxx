@@ -686,6 +686,53 @@ class Chkp
     return residual;
   }
 
+  template <typename hyEdgeT, typename SmallMatT>
+  inline SmallMatT coupling_lambda_directional_derivative(const SmallMatT& lambda_values,
+                                                          const SmallVec<n_loc_dofs_, lSol_float_t> coeff,
+                                                          const SmallMatT& lambda_dir,
+                                                          SmallMatT& out,
+                                                          hyEdgeT& hyper_edge,
+                                                          const lSol_float_t time) const
+  {
+    lSol_float_t eps = ldexp(1., -40);
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
+    {
+      SmallVec<2, lSol_float_t> normal = hyper_edge.geometry.local_normal(bdr);
+      using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+      if (normal[1] * normal[1] < eps && normal[0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        {
+          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          {
+            lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
+                j, i, bdr, hyper_edge.geometry);
+            out[bdr][i] += normal[0] * normal[0] * (tau_mzu_ - parameters::tau_fr - tau_mpu_ ) * b_int * lambda_dir[bdr][j];
+            out[bdr][i] += normal[0] * normal[0] * (tau_mzv_ - tau_mpv_) * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
+            out[bdr][n_shape_bdr_ + j] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
+
+          }
+        }
+      }
+
+    }
+    return out;
+  }
+
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in_uc,
+                              const SmallMatInT& lambda_values_dir,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time) const
+  {
+    //ensure dirichlet conditions are met
+    SmallMatInT lambda_values_in = lambda_values_in_uc;
+    make_skeleton(lambda_values_in, hyper_edge, time);
+    
+    return lambda_values_out;
+  }
+
   /*!***********************************************************************************************
    * \brief   Solve local problem (with right-hand side from skeletal).
    *
@@ -716,7 +763,93 @@ class Chkp
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
       using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+	      {
+      	  lambda_values_out[bdr][i] = 0;
+  	      lambda_values_out[bdr][n_shape_bdr_ + i] = 0;
+      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0;
+  	      lSol_float_t uh_int = 0, u_int = 0, qh_int = 0, q_int = 0, vh_int = 0, v_int = 0;
+    	    for (unsigned int j = 0; j < n_shape_bdr_; ++j) 
+          {
+            lSol_float_t c = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
+                           j, i, bdr, hyper_edge.geometry);
+	          uh_int += c * lambda_values_in[bdr][j];
+      	    qh_int += c * lambda_values_in[bdr][n_shape_bdr_ + j];
+      	    vh_int += c * lambda_values_in[bdr][2 * n_shape_bdr_ + j];
+      	  }
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j) 
+          {
+            lSol_float_t c = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                           j, i, bdr, hyper_edge.geometry);
+      	    u_int += c * coeff[j];
+	          q_int += c * coeff[n_shape_fct_ + j];
+      	    v_int += c * coeff[4 * n_shape_fct_ + j];
+      	  }
+      	  //z_hat - p_hat
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j) 
+	        {
+            lSol_float_t c = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                           j, i, bdr, hyper_edge.geometry);
+      	    lambda_values_out[bdr][i] += c * (coeff[5 * n_shape_fct_ + j] - coeff[2 * n_shape_fct_ + j]);
+      	  }
+      	  lambda_values_out[bdr][i] += tau_mzu_ * (uh_int - u_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] -= tau_mpu_ * (uh_int - u_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] += tau_mzv_ * (vh_int - v_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] -= tau_mpv_ * (vh_int - v_int) * loc_normal[bdr][0];
+      	  //f_hat
+      	  lambda_values_out[bdr][i] += 2 * parameters::kappa * u_int;
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+      	  {
+            for (unsigned int k = 0; k < n_shape_fct_; ++k) 
+	          {
+              lSol_float_t c = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
+			      j, k, i, bdr, hyper_edge.geometry);
+      	      lambda_values_out[bdr][i] += 1.5 * c * coeff[j] * coeff[k];
+	          }
+	        }
+          /* 
+      	  std::array<lSol_float_t, n_shape_bdr_> uh_arr;
+      	  std::array<lSol_float_t, n_shape_fct_> u_arr;
+      	  for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+            uh_arr[j] = lambda_values_in[bdr][j];
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+            u_arr[j] = lambda_values_in[bdr][j];
+          lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
+		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
+            */
+          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
+    	    //uq^
+	        //0.5 u q
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+	        {
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+            {
+              lSol_float_t c = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
+			      j, k, i, bdr, hyper_edge.geometry);
+	            lambda_values_out[bdr][n_shape_bdr_ + i] += 0.5 * c * coeff[j] * coeff[n_shape_fct_ + k];
+	          }
+      	  }
+      	  //0.5 u q^
+      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
+      	  {
+            for (unsigned int k = 0; k < n_shape_bdr_; ++k)
+            {
+              lSol_float_t c = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
+			      j, k, i, bdr, hyper_edge.geometry);
+	            lambda_values_out[bdr][n_shape_bdr_ + i] += 0.5 * c * coeff[j] * lambda_values_in[bdr][n_shape_bdr_ + k];
+      	    }
+      	  }
+      	  lambda_values_out[bdr][n_shape_bdr_ + i] += tau_uqq_ * (qh_int - q_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][n_shape_bdr_ + i] *= loc_normal[bdr][0];
+      	  //v^
+      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] += vh_int * loc_normal[bdr][0];
+      	}
+      }
       if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+        //V^+ on the left
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
 	      {
@@ -802,91 +935,6 @@ class Chkp
       	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] += v_int;
       	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] += tau_pvu_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] *= loc_normal[bdr][0];
-      	}
-      }
-      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
-      {
-        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-	      {
-      	  lambda_values_out[bdr][i] = 0;
-  	      lambda_values_out[bdr][n_shape_bdr_ + i] = 0;
-      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0;
-  	      lSol_float_t uh_int = 0, u_int = 0, qh_int = 0, q_int = 0, vh_int = 0, v_int = 0;
-    	    for (unsigned int j = 0; j < n_shape_bdr_; ++j) 
-          {
-            lSol_float_t c = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
-                           j, i, bdr, hyper_edge.geometry);
-	          uh_int += c * lambda_values_in[bdr][j];
-      	    qh_int += c * lambda_values_in[bdr][n_shape_bdr_ + j];
-      	    vh_int += c * lambda_values_in[bdr][2 * n_shape_bdr_ + j];
-      	  }
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j) 
-          {
-            lSol_float_t c = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                           j, i, bdr, hyper_edge.geometry);
-      	    u_int += c * coeff[j];
-	          q_int += c * coeff[n_shape_fct_ + j];
-      	    v_int += c * coeff[4 * n_shape_fct_ + j];
-      	  }
-      	  //z_hat - p_hat
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j) 
-	        {
-            lSol_float_t c = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-                           j, i, bdr, hyper_edge.geometry);
-      	    lambda_values_out[bdr][i] += c * (coeff[5 * n_shape_fct_ + j] - coeff[2 * n_shape_fct_ + j]);
-      	  }
-      	  lambda_values_out[bdr][i] += tau_mzu_ * (uh_int - u_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] -= tau_mpu_ * (uh_int - u_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] += tau_mzv_ * (vh_int - v_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] -= tau_mpv_ * (vh_int - v_int) * loc_normal[bdr][0];
-      	  //f_hat
-      	  lambda_values_out[bdr][i] += 2 * parameters::kappa * u_int;
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
-      	  {
-            for (unsigned int k = 0; k < n_shape_fct_; ++k) 
-	          {
-              lSol_float_t c = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-			      j, k, i, bdr, hyper_edge.geometry);
-      	      lambda_values_out[bdr][i] += 1.5 * c * coeff[j] * coeff[k];
-	          }
-	        }
-          /* 
-      	  std::array<lSol_float_t, n_shape_bdr_> uh_arr;
-      	  std::array<lSol_float_t, n_shape_fct_> u_arr;
-      	  for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-            uh_arr[j] = lambda_values_in[bdr][j];
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
-            u_arr[j] = lambda_values_in[bdr][j];
-          lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
-		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
-            */
-          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
-    	    //uq^
-	        //0.5 u q
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
-	        {
-            for (unsigned int k = 0; k < n_shape_fct_; ++k)
-            {
-              lSol_float_t c = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-			      j, k, i, bdr, hyper_edge.geometry);
-	            lambda_values_out[bdr][n_shape_bdr_ + i] += 0.5 * c * coeff[j] * coeff[n_shape_fct_ + k];
-	          }
-      	  }
-      	  //0.5 u q^
-      	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
-      	  {
-            for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-            {
-              lSol_float_t c = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
-			      j, k, i, bdr, hyper_edge.geometry);
-	            lambda_values_out[bdr][n_shape_bdr_ + i] += 0.5 * c * coeff[j] * lambda_values_in[bdr][n_shape_bdr_ + k];
-      	    }
-      	  }
-      	  lambda_values_out[bdr][n_shape_bdr_ + i] += tau_uqq_ * (qh_int - q_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][n_shape_bdr_ + i] *= loc_normal[bdr][0];
-      	  //v^
-      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = lambda_values_in[bdr][2 * n_shape_bdr_ + i] * loc_normal[bdr][0];
       	}
       }
       if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
