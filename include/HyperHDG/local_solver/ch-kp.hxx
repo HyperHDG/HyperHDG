@@ -650,12 +650,51 @@ class Chkp
                 j, i, bdr, hyper_edge.geometry);
             out[bdr][i] += normal[0] * normal[0] * (tau_mzu_ - parameters::tau_fr - tau_mpu_ ) * b_int * lambda_dir[bdr][j];
             out[bdr][i] += normal[0] * normal[0] * (tau_mzv_ - tau_mpv_) * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
-            out[bdr][n_shape_bdr_ + j] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
-
+            out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
+            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_int * lambda_dir[2 * n_shape_bdr_ + j];
+            lSol_float_t h = 0;
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+            {
+              lSol_float_t t_int = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
+                  k, j, i, bdr, hyper_edge.geometry);
+              h += t_int * coeff[k];
+            }
+            out[bdr][n_shape_bdr + i] = .5 * h * lambda_dir[n_shape_bdr + j] * normal[0];
           }
         }
       }
-
+      else if (normal[1] * normal[1] < eps && normal[0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        {
+          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          {
+            lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
+                j, i, bdr, hyper_edge.geometry);
+            out[bdr][i] += normal[0] * normal[0] * (tau_pzu_ - parameters::tau_fr - tau_ppu_ ) * b_int * lambda_dir[bdr][j];
+            out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
+            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * normal[0] * tau_pvu_ * b_int * lambda_dir[j];
+            lSol_float_t h = 0;
+            for (unsigned int k = 0; k < n_shape_fct_; ++k)
+            {
+              lSol_float_t t_int = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
+                  k, j, i, bdr, hyper_edge.geometry);
+              h += t_int * coeff[k];
+            }
+            out[bdr][n_shape_bdr + i] = .5 * h * lambda_dir[n_shape_bdr + j] * normal[0];
+          }
+        }
+      }
+      else if (normal[0] * normal[0] < eps && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+        {
+          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          {
+            lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
+                j, i, bdr, hyper_edge.geometry);
+            out[bdr][i] += normal[1] * normal[1] * tau_yvu_ * b_int * lambda_dir[bdr][j];
+      }
     }
     return out;
   }
