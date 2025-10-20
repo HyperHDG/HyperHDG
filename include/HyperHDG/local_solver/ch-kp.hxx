@@ -606,6 +606,7 @@ class Chkp
         {
           trace_p = p_int + tau_mpu_ * flux_ux + tau_mpv_ * flux_v;
           trace_z = z_int + tau_mzu_ * flux_ux + tau_mzv_ * flux_v;
+          trace_vv = vh_int;
           trace_r = -1. / delta_t_ * (uh_int - uho_int);
 
         }

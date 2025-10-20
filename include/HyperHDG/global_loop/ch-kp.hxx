@@ -170,7 +170,7 @@ class Nonlinear
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec, const LargeVecT& dir_vec, const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -178,7 +178,7 @@ class Nonlinear
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
-      hyEdge_dofs_new;
+      hyEdge_dofs_dir, hyEdge_dofs_new;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(
@@ -191,6 +191,8 @@ class Nonlinear
         {
           hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], x_vec,
                                                        hyEdge_dofs_old[hyNode]);
+          hyper_graph_.hyNode_factory().get_dof_values(hyEdge_hyNodes[hyNode], dir_vec,
+                                                       hyEdge_dofs_dir[hyNode]);
           hyEdge_dofs_new[hyNode].fill(0.);
         }
 
@@ -201,16 +203,18 @@ class Nonlinear
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               dof_value_t)>::value)
-          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
+          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_dir, hyEdge_dofs_new, time);
         else if constexpr (
           has_trace_to_flux<
             LocalSolverT,
             std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&(
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
+              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               decltype(hyper_edge)&, dof_value_t)>::value)
-          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
+          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_dir, hyEdge_dofs_new, hyper_edge, time);
         else
           hy_assert(false, "Function seems not to be implemented!");
 

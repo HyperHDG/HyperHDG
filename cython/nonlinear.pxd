@@ -9,7 +9,7 @@ cdef extern from "<HyperHDG/global_loop/ch-kp.hxx>" :
     CythonClassName ( CyReplace01 , CyReplace04 ) except +
     CythonClassName ( CyReplace01 ) except +
     vector[ CyReplace03 ] zero_vector ()
-    vector[ CyReplace03 ] trace_to_flux (vector[ CyReplace03 ], CyReplace03 )
+    vector[ CyReplace03 ] trace_to_flux (vector[ CyReplace03 ], vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] residual_flux (vector[ CyReplace03 ], CyReplace03 )
     void set_data (vector[ CyReplace03 ], CyReplace03 )
     vector[ CyReplace03 ] make_initial (vector[ CyReplace03 ], CyReplace03 )

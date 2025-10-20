@@ -24,10 +24,10 @@ cdef class PythonClassName :
     del self.thisptr
   def zero_vector(self):
     return self.thisptr.zero_vector ()
-  def trace_to_flux(self, vec, time = 0.):
-    return self.thisptr.trace_to_flux (vec, time)
   def residual_flux(self, vec, time = 0.):
     return self.thisptr.residual_flux (vec, time)
+  def trace_to_flux(self, vec_p, vec_dir, time = 0.):
+    return self.thisptr.trace_to_flux (vec_p, vec_dir, time)
   def set_data(self, vec, time = 0.):
     self.thisptr.set_data (vec, time)
   def make_initial(self, vec, time = 0.):
