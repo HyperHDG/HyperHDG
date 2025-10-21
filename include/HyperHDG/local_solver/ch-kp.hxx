@@ -415,8 +415,8 @@ class Chkp
           {
             lSol_float_t tb_sh_sh_sh_ijk = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
               i, k, j, bdr, hyper_edge.geometry);
-            hq = tb_sh_sh_sh_ijk * ca[n_shape_fct_ + k] * normal[0];
-            hu = tb_sh_sh_sh_ijk * ca[k] * normal[0];
+            hq += tb_sh_sh_sh_ijk * ca[n_shape_fct_ + k] * normal[0];
+            hu += tb_sh_sh_sh_ijk * ca[k] * normal[0];
           }
           ret(n_shape_fct_ + i, j) -= 0.5 * hq;
           ret(n_shape_fct_ + i, n_shape_fct_ + j) -= 0.5 * hu;
@@ -640,18 +640,21 @@ class Chkp
     {
       SmallVec<2, lSol_float_t> normal = hyper_edge.geometry.local_normal(bdr);
       using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+      //delete
+      out[bdr].fill(0.);
+
       if (normal[1] * normal[1] < eps && normal[0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
-          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
           {
             lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
                 j, i, bdr, hyper_edge.geometry);
             out[bdr][i] += normal[0] * normal[0] * (tau_mzu_ - parameters::tau_fr - tau_mpu_ ) * b_int * lambda_dir[bdr][j];
             out[bdr][i] += normal[0] * normal[0] * (tau_mzv_ - tau_mpv_) * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
             out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
-            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_int * lambda_dir[2 * n_shape_bdr_ + j];
+            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
             lSol_float_t h = 0;
             for (unsigned int k = 0; k < n_shape_fct_; ++k)
             {
@@ -659,7 +662,7 @@ class Chkp
                   k, j, i, bdr, hyper_edge.geometry);
               h += t_int * coeff[k];
             }
-            out[bdr][n_shape_bdr + i] = .5 * h * lambda_dir[n_shape_bdr + j] * normal[0];
+            out[bdr][n_shape_bdr_ + i] = .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
           }
         }
       }
@@ -667,13 +670,13 @@ class Chkp
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
-          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
           {
             lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
                 j, i, bdr, hyper_edge.geometry);
             out[bdr][i] += normal[0] * normal[0] * (tau_pzu_ - parameters::tau_fr - tau_ppu_ ) * b_int * lambda_dir[bdr][j];
             out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
-            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * normal[0] * tau_pvu_ * b_int * lambda_dir[j];
+            out[bdr][2 * n_shape_bdr_ + i] += normal[0] * normal[0] * tau_pvu_ * b_int * lambda_dir[bdr][j];
             lSol_float_t h = 0;
             for (unsigned int k = 0; k < n_shape_fct_; ++k)
             {
@@ -681,7 +684,7 @@ class Chkp
                   k, j, i, bdr, hyper_edge.geometry);
               h += t_int * coeff[k];
             }
-            out[bdr][n_shape_bdr + i] = .5 * h * lambda_dir[n_shape_bdr + j] * normal[0];
+            out[bdr][n_shape_bdr_ + i] = .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
           }
         }
       }
@@ -689,11 +692,13 @@ class Chkp
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
-          for (unsigned int j = 0; i < n_shape_bdr_; ++j)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
           {
             lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
                 j, i, bdr, hyper_edge.geometry);
             out[bdr][i] += normal[1] * normal[1] * tau_yvu_ * b_int * lambda_dir[bdr][j];
+          }
+        }
       }
     }
     return out;
