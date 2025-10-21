@@ -35,6 +35,7 @@ struct ChkpParameters
   {
     return sin(p[0]) * sin(p[1]) * exp(-t);
   }
+  static constexpr param_float_t tau_fr = 4.;
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
@@ -128,6 +129,7 @@ struct ChkpParametersZero
   {
     return 0.;
   }
+  static constexpr param_float_t tau_fr = 4.;
 
 };  
 
@@ -282,7 +284,7 @@ void print_coeff(const VecT& coeff)
 
 int main() 
 {
-  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersOne> lst;
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::File<2, 2>,
                 Geometry::File<2, 2>,
@@ -303,7 +305,7 @@ int main()
         for (unsigned int n = 0; n < 4; ++n)
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
         ls.make_initial(lambda_n, he);
-        ls.make_skeleton(lambda_n, he, 1.);
+        ls.make_skeleton(lambda_n, he, 001.);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -313,16 +315,15 @@ int main()
         }
         std::cout << "u_old:\t";
         std::cout << he.data.u_old;
-        std::cout << ls.newton(lambda_n, coeff, he, 0.) << std::endl;
-/*          
-        ls.newton(lambda_n, coeff, he, 1.);
+        std::cout << ls.newton(lambda_n, coeff, he, .001) << std::endl;
+          
         coeff[0] = 1.;
-        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 1.);
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, .001);
         std::cout << "Residuen:\n" << res;
         print_coeff(coeff);
         for (unsigned int n = 0; n < 4; ++n)
           print_bdr_values(lambda_n[n], coeff, get_bdr(he, n));
-        ls.residual_flux(lambda_n, res_flux, he, 1.);
+        ls.residual_flux(lambda_n, res_flux, he, .001);
         std::cout << "Kopplungsbeitrag:\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -331,7 +332,7 @@ int main()
         }
         //int i = 0;
         //std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
-  */      
+        
           
 
          
@@ -342,6 +343,7 @@ int main()
             dir.fill({0., 0., 0., 0., 0., 0.});
             dir[bdr][i] = 1.;
             ls.coupling_lambda_directional_derivative(lambda_n, coeff, dir, out, he, 0.);
+            std::cout << bdr << " " << i << "\n";
             std::cout << "test\n";
             for (unsigned int n = 0; n < 4; ++n)
             {
@@ -349,9 +351,9 @@ int main()
               std::cout << "\n";
             }
             std::cout << "\n";
-            ls.residual_flux(lambda_n, res_flux, he, 0.);
+            ls.residual_function(lambda_n, coeff, res_flux, he, 0.);
             lambda_n[bdr][i] += 0.01;
-            ls.residual_flux(lambda_n, out, he, 0.);
+            ls.residual_function(lambda_n, coeff, out, he, 0.);
             lambda_n[bdr][i] -= 0.01;
             std::cout << "finit\n";
             for (unsigned int n = 0; n < 4; ++n)
@@ -360,6 +362,7 @@ int main()
                 std::cout << (out[n][k] - res_flux[n][k]) / 0.01 << "\t";
               std::cout << "\n";
             }
+            std::cout << "\n";
           }
         }
         

@@ -61,7 +61,7 @@ struct ChkpParameters
   }
   
   static constexpr param_float_t kappa=-1.;
-  static constexpr param_float_t tau_fr=-.5;
+  static constexpr param_float_t tau_fr=4;
   
   static param_float_t tau_f(param_float_t arg)
   {
@@ -193,20 +193,19 @@ struct ChkpParametersOne
 
 int main() 
 {
-  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersOne> lst;
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::File<2, 2>,
                 Geometry::File<2, 2>,
                 NodeDescriptor::File<2, 2>,
                 lst::data_type>
     hg("domains/square.geo");
-  hg.set_refinement(2);
+  hg.set_refinement(1);
   lst ls ;
   std::array< std::array< double, 6 >, 4> lambda_n, res_flux, dir, out;
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
-//    xv.push_back( (double) i);
-    xv.push_back( (double) 0);
+    xv.push_back( (double) i);
   SmallVec<28> coeff(1.);
 /*  for (unsigned int i = 0; i < 4; ++i)
     coeff(4 + i, 0) = 0.;*/
@@ -215,13 +214,14 @@ int main()
       {
         hyEdge_hyNodes = he.topology.get_hyNode_indices();
         for (unsigned int n = 0; n < 4; ++n)
+        {
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
-        ls.make_initial(lambda_n, he);
-        ls.make_skeleton(lambda_n, he, 1.);
+          he.data.uh_old[n]=SmallVec<2, double>(0.);
+        }
+        he.data.u_old = SmallVec<4, double>(0.);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
-          lambda_n[n][2] = 1.;
           std::for_each(lambda_n[n].begin(), lambda_n[n].end(), [](auto i){std::cout << i <<"\t";});
           std::cout << "\n";
           std::cout << he.data.uh_old[n];
@@ -229,8 +229,17 @@ int main()
         std::cout << "u_old:\t";
         std::cout << he.data.u_old;
           
-        std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
-        std::cout << "Jacobi numerisch \n" << ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .0000001);
+        //std::cout << "Jacobi analytisch \n" << ls.jacobi(lambda_n, coeff, he, 0.);
+        //std::cout << "Jacobi numerisch \n" << (ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, .0000001));
+        std::cout << "Jacobi numerischer Fehler \n" << norm_1(ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, 1e-3));
+
+
+        std::cout << "\n";
+        ls.make_initial(lambda_n, he, 0.);
+        ls.make_skeleton(lambda_n, he, 0.);
+        std::cout << "Jacobi numerischer Fehler \n" << norm_1(ls.jacobi(lambda_n, coeff, he, 0.) - ls.finite(lambda_n, coeff, he, 1e-3));
+        ls.newton(lambda_n, coeff, he, 0.001);
+
 
         std::cout << "\n";
       });

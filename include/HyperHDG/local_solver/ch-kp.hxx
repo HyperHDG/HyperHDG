@@ -662,7 +662,7 @@ class Chkp
                   k, j, i, bdr, hyper_edge.geometry);
               h += t_int * coeff[k];
             }
-            out[bdr][n_shape_bdr_ + i] = .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
+            out[bdr][n_shape_bdr_ + i] += .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
           }
         }
       }
@@ -684,7 +684,7 @@ class Chkp
                   k, j, i, bdr, hyper_edge.geometry);
               h += t_int * coeff[k];
             }
-            out[bdr][n_shape_bdr_ + i] = .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
+            out[bdr][n_shape_bdr_ + i] += .5 * h * lambda_dir[bdr][n_shape_bdr_ + j] * normal[0];
           }
         }
       }
@@ -738,12 +738,23 @@ class Chkp
     //ensure dirichlet conditions are met
     SmallMatInT lambda_values_in = lambda_values_in_uc;
     make_skeleton(lambda_values_in, hyper_edge, time);
-    //calculate integral coefficients
+    //calculate coefficients
+    SmallVec<n_loc_dofs_, lSol_float_t> coeff(0.);
+    newton(lambda_values_in, coeff, hyper_edge, time);
+    //call residual function
+    return residual_function(lambda_values_in, coeff, lambda_values_out, hyper_edge, time);
+  }
+
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& residual_function(const SmallMatInT& lambda_values_in,
+                                  const SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
+                                  SmallMatOutT& lambda_values_out,
+                                  hyEdgeT& hyper_edge,
+                                  const lSol_float_t time) const
+  {
     std::array<SmallVec<hyEdge_dim(), lSol_float_t>, 2 * hyEdge_dim()> loc_normal;
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr) 
       loc_normal[bdr] = hyper_edge.geometry.local_normal(bdr);
-    SmallVec<n_loc_dofs_, lSol_float_t> coeff(0.);
-    newton(lambda_values_in, coeff, hyper_edge, time);
     const lSol_float_t eps = ldexp(1., -30);
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
@@ -848,7 +859,6 @@ class Chkp
                            j, i, bdr, hyper_edge.geometry);
 	          uh_int += c * lambda_values_in[bdr][j];
       	    qh_int += c * lambda_values_in[bdr][n_shape_bdr_ + j];
-      	    vh_int += c * lambda_values_in[bdr][2 * n_shape_bdr_ + j];
       	  }
       	  for (unsigned int j = 0; j < n_shape_fct_; ++j) 
           {
@@ -865,10 +875,8 @@ class Chkp
                            j, i, bdr, hyper_edge.geometry);
       	    lambda_values_out[bdr][i] += c * (coeff[5 * n_shape_fct_ + j] - coeff[2 * n_shape_fct_ + j]);
       	  }
-      	  lambda_values_out[bdr][i] += tau_mzu_ * (uh_int - u_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] -= tau_mpu_ * (uh_int - u_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] += tau_mzv_ * (vh_int - v_int) * loc_normal[bdr][0];
-      	  lambda_values_out[bdr][i] -= tau_mpv_ * (vh_int - v_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] += tau_pzu_ * (uh_int - u_int) * loc_normal[bdr][0];
+      	  lambda_values_out[bdr][i] -= tau_ppu_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  //f_hat
       	  lambda_values_out[bdr][i] += 2 * parameters::kappa * u_int;
       	  for (unsigned int j = 0; j < n_shape_fct_; ++j)
@@ -944,8 +952,8 @@ class Chkp
       	  lambda_values_out[bdr][i] += v_int;
       	  lambda_values_out[bdr][i] += tau_yvu_ * (uh_int - u_int) * loc_normal[bdr][1];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][1];
-      	  lambda_values_out[bdr][n_shape_bdr_ + i] = lambda_values_in[bdr][n_shape_bdr_ + i];
-      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = lambda_values_in[bdr][2 * n_shape_bdr_ + i];
+      	  lambda_values_out[bdr][n_shape_bdr_ + i] = 0.;
+      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0.;
       	}
       }
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
@@ -961,6 +969,8 @@ class Chkp
     return lambda_values_out;
   }
 
+
+  
   template <typename hyEdgeT, typename SmallMatT>
   lSol_float_t newton(const SmallMatT& lambda_values, SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
                       hyEdgeT& hyper_edge, const lSol_float_t time) const
@@ -977,16 +987,15 @@ class Chkp
       SmallVec<n_loc_dofs_, lSol_float_t> step = res / jac;
       do
       {
-        //std::cout << "aktuelles residuum: " << ra << "\n";
         cn = coeff - stepsize * step;
         res = get_residual(lambda_values, cn, hyper_edge, time);
         rn = norm_2(res);
-        //std::cout << "neues residuum: " << rn << "\n";
         stepsize *= .5;
-      } while (ra < rn);
+        ++i;
+      } while (ra < rn && i < 100);
       coeff = cn;
       ra = rn;
-      jacobi(lambda_values, coeff, hyper_edge, time);
+      jac = jacobi(lambda_values, coeff, hyper_edge, time);
     }
     return ra;
   }
