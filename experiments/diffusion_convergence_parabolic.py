@@ -21,6 +21,7 @@ parser.add_argument("--rtol", help="rtol", type=float, default=1e-10)
 parser.add_argument("--direct", help="direct", action="store_true")
 parser.add_argument("--mat", help="mat", action="store_true")
 parser.add_argument("-o", "--output", help="output file")
+parser.add_argument("-n", "--time-steps", help="output file", type=int, default=10**2)
 args = parser.parse_args()
 
 logging.setLoggerClass(prin2.Logger)
@@ -43,7 +44,7 @@ debug_mode = args.debug
 logger = logging.getLogger("diffusion_parabolic")
 
 theta       = 1.
-time_steps  = 10 ** 4
+time_steps  = args.time_steps
 delta_time  = 1 / time_steps
 
 try:
@@ -58,7 +59,7 @@ const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
 const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
 const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
 const.local_solver    = "DiffusionParab<" + str(dimension) + "," + str(poly_degree) + "," \
-  + str(2*poly_degree) + ",TestParametersSinParab,double>"
+  + str(2*poly_degree) + ",TestHeat,double>"
 const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
   "double", "vector[double]"]
 const.include_files   = ["reproducibles_python/parameters/diffusion.hxx", "experiments/parameters.hxx"]
@@ -75,6 +76,7 @@ if args.direct or args.mat:
   logger.info("assembling matrix...")
   col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
   A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
+  A.eliminate_zeros()
   print(A)
   if args.direct:
     splu = sp.linalg.splu(A)
@@ -89,11 +91,12 @@ def count_iter(x):
 
 logger.info("timestepping...")
 
-vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-HDG_wrapper.plot_option( "fileName" , args.output)
-HDG_wrapper.plot_option( "printFileNumber" , "false" )
-HDG_wrapper.plot_option( "scale" , "0.95" )
-HDG_wrapper.plot_solution(vectorSolution, 0.)
+initial = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
+if args.output:
+    HDG_wrapper.plot_option( "fileName" , args.output)
+    HDG_wrapper.plot_option( "printFileNumber" , "true" )
+    HDG_wrapper.plot_option( "scale" , "0.95" )
+    HDG_wrapper.plot_solution(initial, 0.)
 
 for time_step in range(time_steps):
   rhs = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
@@ -105,13 +108,12 @@ for time_step in range(time_steps):
     logger.error(f"no convergence in {num_iter} iterations")
     break
 
-  HDG_wrapper.set_data(vectorSolution, (time_step+1)*delta_time)
+  if args.output:
+    HDG_wrapper.set_data(vectorSolution, (time_step+1)*delta_time)
+    HDG_wrapper.plot_option( "fileName" , args.output)
+    HDG_wrapper.plot_option( "printFileNumber" , "true" )
+    HDG_wrapper.plot_option( "scale" , "0.95" )
+    HDG_wrapper.plot_solution(vectorSolution, (time_step+1)*delta_time)
   
 error = HDG_wrapper.errors(vectorSolution, 1.)[0]
 logger.info(f"{iteration=}, {error=}, avg num iters={iters/time_steps}")
-
-HDG_wrapper.plot_option( "fileName" , args.output)
-HDG_wrapper.plot_option( "printFileNumber" , "false" )
-HDG_wrapper.plot_option( "scale" , "0.95" )
-HDG_wrapper.plot_solution(vectorSolution, 1.)
-
