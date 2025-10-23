@@ -66,13 +66,17 @@ struct TestHeat
   static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
                                                const param_float_t = 0.)
   {
-    return 1;
+    return 3;
   }
 
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return sin(M_PI*point[0]) * exp(-M_PI*M_PI*time);
+    param_float_t p = 1;
+    for (unsigned int i = 0; i < space_dimT; i++)
+      p *= sin(M_PI*point[i]);
+    param_float_t alpha = inverse_diffusion_coeff(time);
+    return p * exp(-alpha*M_PI*M_PI*time);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
