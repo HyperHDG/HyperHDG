@@ -3,6 +3,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import LinearOperator
+from tqdm import tqdm
 
 from datetime import datetime, timedelta
 
@@ -98,7 +99,7 @@ if args.output:
     HDG_wrapper.plot_option( "scale" , "0.95" )
     HDG_wrapper.plot_solution(initial, 0.)
 
-for time_step in range(time_steps):
+for time_step in tqdm(range(time_steps)):
   rhs = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                (time_step+1) * delta_time), -1.)
   
