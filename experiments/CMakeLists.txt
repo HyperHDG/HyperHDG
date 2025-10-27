@@ -42,3 +42,12 @@ target_include_directories(read_domain PRIVATE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+pkg_get_variable(CXX_COMPILER PETSc cxxcompiler)
+set(CMAKE_CXX_COMPILER ${CXX_COMPILER})
+
+add_executable(heat heat.cxx)
+target_link_libraries(heat PRIVATE HyperHDG PRIVATE geobin PRIVATE PkgConfig::PETSC)
+target_compile_options(heat PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
