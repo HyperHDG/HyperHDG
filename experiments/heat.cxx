@@ -6,7 +6,6 @@
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/local_solver/diffusion_parab_ldgh.hxx>
 #include <HyperHDG/global_loop/parabolic.hxx>
-#include <HyperHDG/global_loop/prototype.hxx>
 #include "parameters.hxx"
 
 static const char help[] = "experiments regarding the heat equation\n";
