@@ -22,7 +22,8 @@ parser.add_argument("--rtol", help="rtol", type=float, default=1e-10)
 parser.add_argument("--direct", help="direct", action="store_true")
 parser.add_argument("--mat", help="mat", action="store_true")
 parser.add_argument("-o", "--output", help="output file")
-parser.add_argument("-n", "--time-steps", help="output file", type=int, default=10**2)
+parser.add_argument("-n", "--time-steps", help="number of timesteps", type=int, default=10**2)
+parser.add_argument("-T", "--end-time", help="end time", type=float, default=1)
 args = parser.parse_args()
 
 logging.setLoggerClass(prin2.Logger)
@@ -44,9 +45,9 @@ debug_mode = args.debug
 
 logger = logging.getLogger("diffusion_parabolic")
 
-theta       = 1.
+theta       = .5
 time_steps  = args.time_steps
-delta_time  = 1 / time_steps
+delta_time  = args.end_time / time_steps
 
 try:
   import HyperHDG
@@ -109,12 +110,12 @@ for time_step in tqdm(range(time_steps)):
     logger.error(f"no convergence in {num_iter} iterations")
     break
 
+  HDG_wrapper.set_data(vectorSolution, (time_step+1)*delta_time)
   if args.output:
-    HDG_wrapper.set_data(vectorSolution, (time_step+1)*delta_time)
     HDG_wrapper.plot_option( "fileName" , args.output)
     HDG_wrapper.plot_option( "printFileNumber" , "true" )
     HDG_wrapper.plot_option( "scale" , "0.95" )
     HDG_wrapper.plot_solution(vectorSolution, (time_step+1)*delta_time)
   
-error = HDG_wrapper.errors(vectorSolution, 1.)[0]
+error = HDG_wrapper.errors(vectorSolution, args.end_time)[0]
 logger.info(f"{iteration=}, {error=}, avg num iters={iters/time_steps}")

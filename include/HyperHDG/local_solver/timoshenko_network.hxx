@@ -5,6 +5,7 @@
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
+#include <iostream>
 
 #include <tuple>
 
