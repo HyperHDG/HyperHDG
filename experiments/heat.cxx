@@ -37,7 +37,7 @@ PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscIn
 int main(int argc, char **argv) {
     int errcode = 0;
 
-    constexpr int space_dim = 1;
+    constexpr int space_dim = 2;
     constexpr int poly_deg = 3;
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
