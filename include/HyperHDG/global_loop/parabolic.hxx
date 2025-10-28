@@ -48,7 +48,11 @@ class Parabolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
-  /*!***********************************************************************************************
+   /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(norms, has_norms);
+ /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(set_data, has_set_data);
@@ -415,6 +419,19 @@ class Parabolic
   std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
     auto result = prototype_errors(errors, has_errors);
+    return std::vector<dof_value_t>(result.begin(), result.end());
+  }
+  /*!***********************************************************************************************
+   * \brief   Calculate L2 norm.
+   *
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time at which norm is evaluated.
+   * \retval  error         L2 error.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> norms(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  {
+    auto result = prototype_errors(norms, has_norms);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************

@@ -47,12 +47,13 @@ int main(int argc, char **argv) {
 
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .5; // one-step theta method
-    PetscInt iteration = 0;
-    PetscInt timesteps = 100;
+    PetscInt iteration = 5;
+    PetscInt timesteps = 5000;
     PetscReal end_time = 1;
     PetscReal dt;
 
-    char output_filename[PATH_MAX];
+    char output_directory[PATH_MAX] = "output";
+    char output_filename[PATH_MAX] = "heat";
 
     PetscLogStage stage_assembly, stage_timestep;
 
@@ -62,7 +63,7 @@ int main(int argc, char **argv) {
     PetscInt iterations = 0, its = 0;
     PetscReal avg_it = 0;
 
-    std::vector<PetscReal> temp;
+    std::vector<PetscReal> temp, temp2, temp3;
     std::vector<PetscInt> itemp;
     Vec rhs, sol;
     Mat mat;
@@ -76,6 +77,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-ts", &timesteps, &is_set));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
     PetscCall(PetscLogStageRegister("Assembly", &stage_assembly));
     PetscCall(PetscLogStageRegister("Timestepping", &stage_timestep));
 
@@ -87,6 +89,7 @@ int main(int argc, char **argv) {
 
     HDG hdg((1 << iteration) * space_dim, {tau, theta, dt});
     hdg.plot_option("fileName", output_filename);
+    hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "true");
     hdg.plot_option("scale", "0.95");
 
@@ -134,22 +137,21 @@ int main(int argc, char **argv) {
     }
     PetscLogStagePop();
 
-    PetscReal* sol_arr;
-    PetscCall(VecGetArray(sol, &sol_arr));
-    std::copy(sol_arr, sol_arr+N, temp.begin());
-    PetscCall(VecRestoreArray(sol, &sol_arr));
-
-    temp = hdg.errors(temp, end_time);
+    temp2 = hdg.errors(temp, end_time);
+    temp3 = hdg.norms(temp, end_time);
+    for (size_t i = 0; i < temp3.size(); i++)
+      temp3[i] = temp2[i] / temp3[i];
     avg_it = ((PetscReal)iterations) / timesteps;
 
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final error", temp.data(), temp.size()));
+    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final abs error", temp2.data(), temp2.size()));
+    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final rel error", temp3.data(), temp3.size()));
     PetscCall(PetscPrin2i(PETSC_COMM_SELF, "tot iterations", &iterations, 1)); 
     PetscCall(PetscPrin2f(PETSC_COMM_SELF, "avg iterations", &avg_it, 1)); 
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
 
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&sol));
-    PetscCall(VecDestroy(&rhs));
 
     PetscCall(PetscFinalize());
     return 0;
