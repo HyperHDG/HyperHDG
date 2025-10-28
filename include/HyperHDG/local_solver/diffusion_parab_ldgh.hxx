@@ -765,6 +765,32 @@ class DiffusionParab
                                                                       hy_edge.geometry, time)});
   }
   /*!***********************************************************************************************
+   * \brief   Evaluate squared local L2 norm.
+   *
+   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
+   * \param   lambda_values     The values of the skeletal variable's coefficients.
+   * \param   hy_edge           The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time              Time at which error is evaluated.
+   * \retval  err               Local squared L2 error.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  std::array<lSol_float_t, 1U> norms(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+    2 * hyEdge_dimT>& UNUSED(lambda_values),
+    hyEdgeT& hy_edge,
+    const lSol_float_t time = 0.
+  ) const {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
+      decltype(hyEdgeT::geometry), hy_edge.data.u_old.size(), lSol_float_t>(
+        hy_edge.data.u_old.data(), hy_edge.data.u_old.data(), hy_edge.geometry
+    )});
+  }
+
+
+
+  /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
    *
    * \tparam  abscissa_float_t  Floating type for the abscissa values.
