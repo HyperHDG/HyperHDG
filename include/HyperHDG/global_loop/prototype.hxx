@@ -15,6 +15,62 @@
  * - local_solver_ is a LocalSolverT,
  * - ... .
  **************************************************************************************************/
+#define prototype_mat_vec_multiply_span(fun_name, has_fun_name)                                   \
+  [&]()                                                                                           \
+  {                                                                                               \
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                             \
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;      \
+                                                                                                  \
+    std::fill(vec_Ax.begin(), vec_Ax.end(), 0.);                                                  \
+    std::for_each(                                                                                \
+      hyper_graph_.begin(), hyper_graph_.end(),                                                   \
+      [&](auto hyper_edge)                                                                        \
+      {                                                                                           \
+        hyNodes = hyper_edge.topology.get_hyNode_indices();                                       \
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)                                \
+        {                                                                                         \
+          hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs_old[node]);     \
+          dofs_new[node].fill(0.);                                                                \
+        }                                                                                         \
+                                                                                                  \
+        if constexpr (has_fun_name<                                                               \
+                        LocalSolverT,                                                             \
+                        std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(    \
+                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
+                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
+                          dof_value_t)>::value)                                                   \
+          local_solver_.fun_name(dofs_old, dofs_new, time);                                       \
+        else if constexpr (                                                                       \
+          has_fun_name<LocalSolverT,                                                              \
+                       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(     \
+                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
+                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
+                         decltype(hyper_edge)&, dof_value_t)>::value)                             \
+          local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                           \
+        else                                                                                      \
+          hy_assert(false, "Function seems not to be implemented!");                              \
+                                                                                                  \
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)                                \
+          hyper_graph_.hyNode_factory().add_to_dof_values(hyNodes[node], vec_Ax, dofs_new[node]); \
+      });                                                                                         \
+  }()
+
+
+/*!*************************************************************************************************
+ * \brief   Macro that allows to use an implemented a matrix--vector multpilication.
+ *
+ * This macro implements a condensed matrix--vector multiplication commonly used in HyperHDG.
+ * However, several requirements have to be meet for the macro to be used. That is:
+ * - LargeVecT has to define the typename of the large vector,
+ * - dof_value_t is the typename of a dof value,
+ * - SmallVec of file dense_la has to be available,
+ * - hyEdge_dim and n_dofs_per_node need to be constexpr variables,
+ * - the algortihm library needs to be included,
+ * - hyper_graph_ is an instance of HDGHyperGraph,
+ * - has_fun_name is constructed via the macro HAS_MEMBER_FUNCTION,
+ * - local_solver_ is a LocalSolverT,
+ * - ... .
+ **************************************************************************************************/
 #define prototype_mat_vec_multiply(fun_name, has_fun_name)                                        \
   [&]()                                                                                           \
   {                                                                                               \

@@ -233,6 +233,11 @@ class Parabolic
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
  
+  template <typename hyNode_index_t = dof_index_t, typename SpanT>
+  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.) {
+    hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
+    prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
+  }
 
 
   /*!***********************************************************************************************
@@ -312,8 +317,8 @@ class Parabolic
    * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
    * \param   time          Time at which the old time step ended.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  void set_data(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void set_data(const SpanT& x_vec, const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -469,7 +474,8 @@ class Parabolic
    * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
+  template<typename SpanT>
+  void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
