@@ -47,8 +47,8 @@ int main(int argc, char **argv) {
 
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .5; // one-step theta method
-    PetscInt iteration = 5;
-    PetscInt timesteps = 5000;
+    PetscInt iteration = 2;
+    PetscInt timesteps = 100;
     PetscReal end_time = 1;
     PetscReal dt;
 
