@@ -22,7 +22,7 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscI
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
-  PetscReturn(0);
+  PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscInt len) {
@@ -36,7 +36,7 @@ PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscIn
     PetscCall(PetscPrintf(com, "  % 12d", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
-  PetscReturn(0);
+  PetscFunctionReturn(0);
 }
 
 // must call VecRestoreSpan(x, span) after
@@ -48,7 +48,7 @@ PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span) {
   PetscCall(VecGetArray(x, &p));
   PetscCall(VecGetLocalSize(x, &n));
   span = {p, (size_t)n};
-  PetscReturn(0);
+  PetscFunctionReturn(0);
 }
 
 // must be called after each VecGetSpan(x, span)
@@ -58,7 +58,7 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   PetscFunctionBeginUser;
   PetscCall(VecRestoreArray(x, &p));
   span = std::span<PetscScalar>();
-  PetscReturn(0);
+  PetscFunctionReturn(0);
 }
 
 int main(int argc, char **argv) {
