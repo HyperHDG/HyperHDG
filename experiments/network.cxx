@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     PetscLogStage s_as, s_it, s_rf;
 
     PetscBool is_set;
-    PetscInt N;
+    PetscInt N, ncoo;
     PetscReal err, sol_norm;
     PetscInt iterations;
 
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "initialization...\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "initialization...\n"));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", domain_filepath, PATH_MAX, &is_set));
@@ -108,25 +108,32 @@ int main(int argc, char **argv) {
 
     zero_v = hdg.zero_vector();
     N = zero_v.size();
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
+    PetscCall(VecCreate(PETSC_COMM_WORLD, &sol));
+    PetscCall(VecCreate(PETSC_COMM_WORLD, &rhs));
+    PetscCall(VecSetType(sol, VECMPI));
+    PetscCall(VecSetType(rhs, VECMPI));
+    PetscCall(VecSetSizes(sol, PETSC_DECIDE, N));
+    PetscCall(VecSetSizes(rhs, PETSC_DECIDE, N));
 
     PetscLogStagePush(s_as);
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "assembly...\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "assembly...\n"));
     mat_coo = hdg.trace_to_flux_mat();
-    PetscCall(MatCreateSeqAIJFromTriple(PETSC_COMM_SELF, N, N,
-      (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data(),
-      mat_coo.value_vec.data(), &mat, mat_coo.value_vec.size(), PETSC_FALSE /* 0-based */));
+    ncoo = mat_coo.value_vec.size();
+    PetscCall(MatCreate(PETSC_COMM_WORLD, &mat));
+    PetscCall(MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, N, N));
+    PetscCall(MatSetType(mat, MATMPIAIJ));
+    PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+    PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
     PetscLogStagePop();
 
-    PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
+    PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
     PetscCall(KSPSetFromOptions(ksp));
 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "iteration...\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iteration...\n"));
     std::span<PetscReal> rhs_span;
     std::span<PetscReal> sol_span;
     PetscCall(VecGetSpan(rhs, rhs_span));
@@ -148,8 +155,8 @@ int main(int argc, char **argv) {
     PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
 
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "iterations", &iterations, 1)); 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
+    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "iterations", &iterations, 1));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
 
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
