@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     PetscCall(VecGetSpan(sol, sol_span));
 
     PetscLogStagePush(s_rf);
-    hdg.residual_flux2(std::span{zero_v}, rhs_span);
+    hdg.residual_flux2(zero_v, rhs_span, 0.);
     PetscLogStagePop();
     PetscCall(VecScale(rhs, -1.));
 

@@ -271,6 +271,24 @@ class Elliptic
 
     return vec_Ax;
   }
+
+  template <typename SpanT, typename SpanT_, typename hyNode_index_t = dof_index_t>
+  void residual_flux2(const SpanT& x_vec, SpanT_& vec_Ax, const dof_value_t time = 0.)
+  {
+    prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
+
+    // Set all Dirichlet values to zero.
+    for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
+    {
+      hy_assert(dirichlet_indices_[i] >= 0 && dirichlet_indices_[i] < hyper_graph_.n_global_dofs(),
+                "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                  << "smaller than the total amount of degrees of freedom." << std::endl
+                  << "In this case, the index is " << dirichlet_indices_[i] << " and the total "
+                  << "amount of hypernodes is " << hyper_graph_.n_global_dofs() << ".");
+      vec_Ax[dirichlet_indices_[i]] = 0.;
+    }
+  }
+
   /*!***********************************************************************************************
    * \brief   Calculate L2 error of approximated function.
    *
@@ -321,6 +339,12 @@ class Elliptic
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
   void plot_solution(const LargeVecT& lambda, const dof_value_t time = 0.)
+  {
+    plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+  }
+
+  template<typename SpanT>
+  void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
