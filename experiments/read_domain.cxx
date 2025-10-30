@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  auto info = read_domain_geobin<1, 3,  std::vector, Point<3, double>, uint64_t, uint64_t, uint64_t>(argv[1]);
+  auto info = read_domain_geobin<1, 3,  std::vector, Point<3, double>, uint32_t, uint32_t, uint32_t>(argv[1]);
 
   std::println("{} {} {}", info.points.size(), info.hyNodes_hyEdge.size(), info.hyEdge_properties.size());
 }

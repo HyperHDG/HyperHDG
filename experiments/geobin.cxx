@@ -129,8 +129,8 @@ Graph& compute_types(Graph& graph) {
   graph.types.resize(graph.edges.size());
 
   // Calculate the bounding box (min/max x, y, z) for all vertices
-  Point min_p = {1e10};
-  Point max_p = {1e-10};
+  Point min_p = {1e10, 1e10, 1e10};
+  Point max_p = {1e-10, 1e-10, 1e-10};
   for (const Point& vertex : graph.vertices) {
     for (geobin::u64 i = 0; i < 3; i++) {
       min_p[i] = std::min(min_p[i], vertex[i]);
@@ -140,8 +140,10 @@ Graph& compute_types(Graph& graph) {
   for (geobin::ID n = 0; n < graph.vertices.size(); n++)
     graph.node_types[n] = compute_vertex_type(graph.vertices[n], max_p, min_p);
 
-  for (const Edge& edge : graph.edges)
-    graph.types.push_back({graph.node_types[edge.first], graph.node_types[edge.second]});
+  for (geobin::ID m = 0; m < graph.edges.size(); m++) {
+    geobin::Edge edge = graph.edges[m];
+    graph.types[m] = {graph.node_types[edge.first], graph.node_types[edge.second]};
+  }
 
   return graph;
 }
