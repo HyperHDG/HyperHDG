@@ -12,45 +12,53 @@
 static const char help[] = "experiments regarding timoshenko networks\n";
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
-  PetscCall(PetscPrintf(com, msg));
   const PetscInt row_len = 10;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(com, msg));
   for (PetscInt i = 0; i < len; i++) {
     if (i % 2 == 0)
        PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
-  return 0;
+  PetscReturn(0);
 }
 
 PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscInt len) {
-  PetscCall(PetscPrintf(com, msg));
   const PetscInt row_len = 10;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(com, msg));
   for (PetscInt i = 0; i < len; i++) {
     if (i % row_len == 0)
       PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % 12d", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
-  return 0;
+  PetscReturn(0);
 }
 
 // must call VecRestoreSpan(x, span) after
 PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span) {
   PetscScalar* p;
   PetscInt n;
+
+  PetscFunctionBeginUser;
   PetscCall(VecGetArray(x, &p));
   PetscCall(VecGetLocalSize(x, &n));
   span = {p, (size_t)n};
-  return 0;
+  PetscReturn(0);
 }
 
 // must be called after each VecGetSpan(x, span)
 PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   PetscScalar* p = span.data();
+
+  PetscFunctionBeginUser;
   PetscCall(VecRestoreArray(x, &p));
   span = std::span<PetscScalar>();
-  return 0;
+  PetscReturn(0);
 }
 
 int main(int argc, char **argv) {
