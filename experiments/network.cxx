@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";
-    char domain_filepath[PATH_MAX] = "domains/grid_2.geo.bin.zstd";
+    char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin.zstd";
 
     PetscLogStage s_as, s_it, s_rf;
 
