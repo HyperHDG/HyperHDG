@@ -52,6 +52,10 @@ add_executable(heat heat.cxx)
 target_link_libraries(heat PRIVATE HyperHDG PRIVATE geobin PRIVATE PkgConfig::PETSC)
 target_compile_options(heat PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
+add_executable(wave wave.cxx)
+target_link_libraries(wave PRIVATE HyperHDG PRIVATE geobin PRIVATE PkgConfig::PETSC)
+target_compile_options(wave PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
+
 add_executable(network network.cxx)
 target_link_libraries(network PRIVATE HyperHDG PRIVATE geobin PRIVATE PkgConfig::PETSC)
 target_compile_options(network PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
