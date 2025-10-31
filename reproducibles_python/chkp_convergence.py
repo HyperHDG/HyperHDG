@@ -19,8 +19,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  goal_time = 1./1000.
-  time_steps  = 1
+  goal_time = 1e-2
+  time_steps  = 10
   delta_time  = goal_time / time_steps
   
   try:
@@ -45,54 +45,44 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   lsol_constr = get_loc_constr(delta_time)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(delta_time) )
   HDG_wrapper.refine(iteration)
-
-
   
+  def jacobi(x, time):
+    def partial(x, i, time):
+      dv = np.array(HDG_wrapper.zero_vector())
+      dv[i] = 1.
+      return HDG_wrapper.trace_to_flux(x, dv, time)
+    return np.array([partial(x, i, time) for i in range(len(x))]).transpose()
 
-  vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector())) 
-  #print(vectorSolution)
-  #print(sol)
-  #vectorSolution += 0. * np.random.uniform(-1., 1., vectorSolution.shape)
-  #print(HDG_wrapper.residual_flux(vectorSolution, goal_time))
+  def newton(x, time, tol=1e-10):
+    ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
+    stepsize = 1.
+    i = 0
+    while ra > tol and i < 100:
+      step = np.linalg.lstsq(jacobi(x, time), HDG_wrapper.residual_flux(x, time))[0]
+      x -= stepsize * step
+      ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
+      i += 1
+      print(i, ra)
+    return x
 
+  vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
   time = 0.
-#  fun=lambda x: HDG_wrapper.residual_flux(x, time)
-#  def fun(x): 
-#    helper = (np.linalg.norm(HDG_wrapper.residual_flux(x, time)))**2/ len(vectorSolution)
-#    return helper
-  def fun(x):
-    helper = HDG_wrapper.residual_flux(x, time)
-    print(np.linalg.norm(helper))
-    return helper
 
   for time_step in range(time_steps):
-    time += delta_time    
-    #opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-9, method='hybr', options ={"xtol": 1e-3})
-    opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-6, method='krylov')
-    #opt_obj = sp_opt.minimize(fun, vectorSolution, method='BFGS', options={'xrtol': 1e-8, 'gtol': 1e-5})
-    print(opt_obj.message, opt_obj.nit, np.linalg.norm(opt_obj.x))
-    if not opt_obj.success:
-      print(opt_obj.message)
-      #raise RuntimeError("All linear solvers did not converge!")
-
-    vectorSolution = opt_obj.x
+    time += delta_time
+    newton(vectorSolution, time)
+    
+    res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
+    HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
+    HDG_wrapper.plot_option( "printFileNumber" , "false" )
+    HDG_wrapper.plot_option( "scale" , "0.95" )
+    HDG_wrapper.plot_solution(vectorSolution, time + delta_time)
+  
     HDG_wrapper.set_data(vectorSolution, time)
     error = HDG_wrapper.errors(vectorSolution, time)[0]
-    print( "Time: ", time, "\tError: ", error, "\t")
+    print( "Time: ", time, "\tError: ", error, "\t", " Residual: ", res)
+
     
-  error = HDG_wrapper.errors(vectorSolution, time)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
-  
-  opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-6, method='krylov')
-  #opt_obj = sp_opt.minimize(fun, vectorSolution)
-  print(opt_obj.message)
-  vectorSolution = opt_obj.x
-  
-  HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) )
-  HDG_wrapper.plot_option( "printFileNumber" , "false" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time + delta_time)
-  
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
   
@@ -101,9 +91,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [0,1]:
+  for poly_degree in [1]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in [2]:
+    for iteration in [1, 2, 4, 8]:
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

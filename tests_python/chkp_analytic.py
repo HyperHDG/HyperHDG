@@ -14,7 +14,7 @@ def get_loc_constr(t):
 # --------------------------------------------------------------------------------------------------
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
-def diffusion_test():
+def analytic_test():
   poly_degree = 1
   iteration = 2
   debug_mode = False
@@ -45,28 +45,6 @@ def diffusion_test():
   lsol_constr = get_loc_constr(1.)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/unitsquare.geo", lsol_constr = get_loc_constr(1.) )
   HDG_wrapper.refine(iteration)
-
-
-  
-
-  def jacobi(x, time):
-    def partial(x, i, time):
-      dv = np.array(HDG_wrapper.zero_vector())
-      dv[i] = 1.
-      return HDG_wrapper.trace_to_flux(x, dv, time)
-    return np.array([partial(x, i, time) for i in range(len(x))]).transpose()
-
-  def newton(x, time, tol=1e-8):
-    ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
-    stepsize = 1.
-    i = 0
-    while ra > tol and i < 100:
-      step = np.linalg.lstsq(jacobi(x, time), HDG_wrapper.residual_flux(x, time))[0]
-      x -= stepsize * step
-      ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
-      i += 1
-      print(i, ra)
-    return x
       
 
   vsr = [-1.,         0.,         1.,         0.,         0.,         0.,\
@@ -82,47 +60,11 @@ def diffusion_test():
  -0.75,      0.14433757, 0.,        0.,        0.,        0.,\
  -0.25,      0.14433757, 0.,        0.,        0.,        0.        ]  
   vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector())) 
-  print(vectorSolution)
-  #print(sol)
-  #vectorSolution += 0. * np.random.uniform(-1., 1., vectorSolution.shape)
-  #print(HDG_wrapper.residual_flux(vectorSolution, goal_time))
+  vectorSolution = vsr
 
   time = 1
-#  fun=lambda x: HDG_wrapper.residual_flux(x, time)
-#  def fun(x): 
-#    helper = (np.linalg.norm(HDG_wrapper.residual_flux(x, time)))**2/ len(vectorSolution)
-#    return helper
-  def fun(x):
-    helper = HDG_wrapper.residual_flux(x, time)
-#    print(np.linalg.norm(helper))
-    return helper
-
-  newton(vectorSolution, time)
 
   res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-  print(HDG_wrapper.residual_flux(vectorSolution, time))
-    #opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-9, method='hybr', options ={"xtol": 1e-3})
-    #opt_obj = sp_opt.root(fun, vectorSolution, tol=1e-9, method='krylov')
-    #opt_obj = sp_opt.minimize(fun, vectorSolution, method='BFGS', options={'xrtol': 1e-8, 'gtol': 1e-5})
-    #print(opt_obj.message, opt_obj.nit, np.linalg.norm(opt_obj.x))
-    #if not opt_obj.success:
-    #  print(opt_obj.message)
-    #  #raise RuntimeError("All linear solvers did not converge!")
-
-    #vectorSolution = opt_obj.x
-
-  deriv_err = 0.
-  for i in []:
-    vec_dir = np.array(HDG_wrapper.zero_vector())
-    vec_dir[i] = 1.
-    deriv_diff = HDG_wrapper.trace_to_flux(vectorSolution, vec_dir, 1.)
-    #print(deriv_diff)
-    finite_diff = (np.array(HDG_wrapper.residual_flux(vectorSolution + 1e-4 * vec_dir, 1.)) - np.array(HDG_wrapper.residual_flux(vectorSolution, 1.))) / 1e-4
-    #print(finite_diff)
-    deriv_diff -= finite_diff
-    #print(deriv_diff)
-    deriv_err = max(np.max(np.abs(deriv_diff)), deriv_err)
-    #print(i, deriv_err)
 
   HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) )
   HDG_wrapper.plot_option( "printFileNumber" , "false" )
@@ -132,7 +74,6 @@ def diffusion_test():
   HDG_wrapper.set_data(vectorSolution, time)
   error = HDG_wrapper.errors(vectorSolution, time)[0]
   print( "Time: ", time, "\tError: ", error, "\t", " Residual: ", res)
-  print(vectorSolution - vsr)
 
     
   end_time = datetime.now()
@@ -144,7 +85,7 @@ def diffusion_test():
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
   try:
-    diffusion_test()
+    analytic_test()
   except RuntimeError as error:
     print("ERROR: ", error)
 

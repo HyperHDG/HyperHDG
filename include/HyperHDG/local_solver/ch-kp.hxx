@@ -186,6 +186,12 @@ class Chkp
                      node_type) != parameters::neumann_nodes.end();
   }
 
+  template <typename parameters>
+  static constexpr bool is_right(const unsigned int node_type)
+  {
+    return std::find(parameters::right_nodes.begin(), parameters::right_nodes.end(),
+                     node_type) != parameters::right_nodes.end();
+  }
 
   // -----------------------------------------------------------------------------------------------
   // Private, const members: Parameters and auxiliaries that help assembling matrices, etc.
@@ -855,7 +861,7 @@ class Chkp
             {
               lSol_float_t b_sk_sh_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              fc += 3 * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
+              fc += 2 * onepointfive * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
               uqc += 0.5 * b_sk_sh_sh_ikj * (coeff[n_shape_fct_ + k] * coeff_dir[j] + coeff[k] * coeff_dir[n_shape_fct_ + j]);
             }
             for (unsigned int k = 0; k < n_shape_bdr_; ++k)
@@ -891,7 +897,7 @@ class Chkp
             {
               lSol_float_t b_sk_sh_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              fc += 3 * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
+              fc += 2 * onepointfive * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
               uqc += 0.5 * b_sk_sh_sh_ikj * (coeff[n_shape_fct_ + k] * coeff_dir[j] + coeff[k] * coeff_dir[n_shape_fct_ + j]);
             }
             for (unsigned int k = 0; k < n_shape_bdr_; ++k)
@@ -946,8 +952,7 @@ class Chkp
     //compute derivative
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
-      for(unsigned int i = 0; i < n_glob_dofs_per_node(); ++i)
-        lambda_values_out[bdr][i] = 0.;
+      lambda_values_out[bdr].fill(0.);
     }
     coupling_coeff_directional_derivative(lambda_values_in, coeff, implicit_derivative, lambda_values_out, hyper_edge, time);
     coupling_lambda_directional_derivative(lambda_values_in, coeff, lambda_values_dir, lambda_values_out, hyper_edge, time);
@@ -1172,6 +1177,8 @@ class Chkp
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       	{
   	      lambda_values_out[bdr][i] = 0;
+      	  lambda_values_out[bdr][n_shape_bdr_ + i] = 0.;
+      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0.;
       	  lSol_float_t uh_int = 0, u_int = 0, v_int = 0;
       	  for (unsigned int j = 0; j < n_shape_bdr_; ++j) 
           {
@@ -1189,8 +1196,6 @@ class Chkp
       	  lambda_values_out[bdr][i] += v_int;
       	  lambda_values_out[bdr][i] += tau_yvu_ * (uh_int - u_int) * loc_normal[bdr][1];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][1];
-      	  lambda_values_out[bdr][n_shape_bdr_ + i] = 0.;
-      	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] = 0.;
       	}
       }
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
@@ -1308,9 +1313,13 @@ class Chkp
   }
 
   template <typename hyEdgeT, typename SmallMatT>
-  inline void set_data(const SmallMatT& lambda_values, 
+  inline void set_data(const SmallMatT& lambda_values_uc, 
       hyEdgeT& hyper_edge, const lSol_float_t time) const
   {
+    //ensure dirichlet conditions
+    SmallMatT lambda_values = lambda_values_uc;
+    make_skeleton(lambda_values, hyper_edge, time);
+    
     set_bulk_data(lambda_values, hyper_edge, time);
     set_skeleton_data(lambda_values, hyper_edge);
   }
@@ -1340,6 +1349,11 @@ class Chkp
           lambda_values_out[bdr][n_shape_bdr_ + i] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::neumann_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+      }
+      if (is_right<parameters>(hyper_edge.node_descriptor[bdr]))
+      {
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          lambda_values_out[bdr][2 * n_shape_bdr_ + i]  = 0;
       }
     }
   }
@@ -1386,10 +1400,14 @@ class Chkp
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>, system_dim>
   bulk_values(
     const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
-    const input_array_t& lambda_values,
+    const input_array_t& lambda_values_uc,
     hyEdgeT& hyper_edge,
     const lSol_float_t time) const
   {
+    //ensure dirichlet conditions
+    input_array_t lambda_values = lambda_values_uc;
+    make_skeleton(lambda_values, hyper_edge, time);
+    
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients(0.);
     newton(lambda_values, coefficients, hyper_edge, time);
     SmallVec<n_shape_fct_, lSol_float_t> coeffs;
