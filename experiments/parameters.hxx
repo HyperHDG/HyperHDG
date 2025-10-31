@@ -101,4 +101,48 @@ struct TestHeat
   }
 };
 
+template <unsigned int space_dimT, typename param_float_t = double>
+struct TestWave
+{
+  static constexpr std::array<unsigned int, 26U> dirichlet_nodes{
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
+                                               const param_float_t = 0.)
+  {
+    return space_dimT;
+  }
+
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t time = 0.)
+  {
+    param_float_t p = 1;
+    for (unsigned int i = 0; i < space_dimT; i++)
+      p *= sin(2*M_PI*point[i]);
+    return p * cos(2*M_PI*time);
+  }
+
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t time = 0.)
+  {
+    return 0;
+  }
+
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
+                                       const param_float_t time = 0.)
+  {
+    return 0;
+  }
+  static param_float_t initial(const Point<space_dimT, param_float_t>& point,
+                               const param_float_t time = 0.)
+  {
+    return analytic_result(point, 0);
+  }
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
+                                     const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};
+
 #endif // PARAMETERS_H
