@@ -38,6 +38,12 @@ struct ChkpParameters
   {
     return cos(p[0]) * sin(p[1]) * exp(-t);
   }
+
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0.;
+  }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
    ************************************************************************************************/
@@ -215,6 +221,12 @@ struct ChkpParametersLinear
                                      const param_float_t t = 0.)
   {
     return 1;
+  }
+
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).

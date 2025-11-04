@@ -3,6 +3,8 @@ from __future__ import print_function
 import numpy as np
 import scipy.optimize as sp_opt
 
+import scipy.sparse as sp
+
 from datetime import datetime
 
 import os, sys
@@ -46,22 +48,14 @@ def diffusion_test():
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/unitsquare.geo", lsol_constr = get_loc_constr(1.) )
   HDG_wrapper.refine(iteration)
 
-
-  
-
-  def jacobi(x, time):
-    def partial(x, i, time):
-      dv = np.array(HDG_wrapper.zero_vector())
-      dv[i] = 1.
-      return HDG_wrapper.trace_to_flux(x, dv, time)
-    return np.array([partial(x, i, time) for i in range(len(x))]).transpose()
-
   def newton(x, time, tol=1e-8):
     ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
-      step = np.linalg.lstsq(jacobi(x, time), HDG_wrapper.residual_flux(x, time))[0]
+      col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
+      A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
+      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time))[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
       i += 1

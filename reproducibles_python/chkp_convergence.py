@@ -3,6 +3,8 @@ from __future__ import print_function
 import numpy as np
 import scipy.optimize as sp_opt
 
+import scipy.sparse as sp
+
 from datetime import datetime
 
 import os, sys
@@ -19,8 +21,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  goal_time = 1e-2
-  time_steps  = 10
+  goal_time = .2 
+  time_steps  = 2
   delta_time  = goal_time / time_steps
   
   try:
@@ -35,7 +37,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParameters,double>"
+    + str(3*poly_degree) + ",ChkpParametersLinear,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -43,22 +45,17 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/unitsquare.geo", lsol_constr = get_loc_constr(delta_time) )
   HDG_wrapper.refine(iteration)
   
-  def jacobi(x, time):
-    def partial(x, i, time):
-      dv = np.array(HDG_wrapper.zero_vector())
-      dv[i] = 1.
-      return HDG_wrapper.trace_to_flux(x, dv, time)
-    return np.array([partial(x, i, time) for i in range(len(x))]).transpose()
-
-  def newton(x, time, tol=1e-10):
+  def newton(x, time, tol=1e-8):
     ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
-      step = np.linalg.lstsq(jacobi(x, time), HDG_wrapper.residual_flux(x, time))[0]
+      col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
+      A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
+      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time))[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
       i += 1
@@ -93,7 +90,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in [1]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in [1, 2, 4, 8]:
+    for iteration in [2, 4, 8, 16, 32]:
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

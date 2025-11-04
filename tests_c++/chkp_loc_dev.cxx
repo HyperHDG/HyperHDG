@@ -10,187 +10,11 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include "../reproducibles_python/parameters/chkp.hxx"
 
 #include <array>
 #include <HyperHDG/dense_la.hxx>
 
-
-template <unsigned int space_dimT, typename param_float_t = double>
-struct ChkpParameters
-{
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 8U> dirichlet_nodes{
-  1, 2, 3, 4, 5, 6, 7, 8};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
-  /*!***********************************************************************************************
-   * \brief   Inverse diffusion coefficient in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t initial(const Point<space_dimT, param_float_t>& p,
-                               const param_float_t t = 0.)
-  {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
-  }
-  static constexpr param_float_t tau_fr = 4.;
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
-  }
-  /*!***********************************************************************************************
-   * \brief   Neumann values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
-                                     const param_float_t t = 0.)
-  {
-    return cos(p[0]) * sin(p[1]) * exp(-t);
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return sin(p[0]) * sin(p[1]) * exp(-t);
-  }
-  
-  static constexpr param_float_t kappa=-1.;
-  
-  static param_float_t tau_f(param_float_t arg)
-  {
-    return 4.;
-  }
-  static param_float_t tau_df(param_float_t arg)
-  {
-    return 0.;
-  }
-
-};  
-
-template <unsigned int space_dimT, typename param_float_t = double>
-struct ChkpParametersZero
-{
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 8U> dirichlet_nodes{
-  1, 2, 3, 4, 5, 6, 7, 8};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
-  /*!***********************************************************************************************
-   * \brief   Inverse diffusion coefficient in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t initial(const Point<space_dimT, param_float_t>& p,
-                               const param_float_t t = 0.)
-  {
-    return 0;
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return 0;
-  }
-  /*!***********************************************************************************************
-   * \brief   Neumann values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
-                                     const param_float_t t = 0.)
-  {
-    return 0;
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return 0;
-  }
-  
-  static constexpr param_float_t kappa=-.5;
-  
-  static param_float_t tau_f(param_float_t arg)
-  {
-    return 4.;
-  }
-  static param_float_t tau_df(param_float_t arg)
-  {
-    return 0.;
-  }
-  static constexpr param_float_t tau_fr = 4.;
-
-};  
-
-template <unsigned int space_dimT, typename param_float_t = double>
-struct ChkpParametersOne
-{
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 8U> dirichlet_nodes{
-  1, 2, 3, 4, 5, 6, 7, 8};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
-  /*!***********************************************************************************************
-   * \brief   Inverse diffusion coefficient in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t initial(const Point<space_dimT, param_float_t>& p,
-                               const param_float_t t = 0.)
-  {
-    return 1;
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return 1;
-  }
-  /*!***********************************************************************************************
-   * \brief   Neumann values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
-                                     const param_float_t t = 0.)
-  {
-    return 0;
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
-                                       const param_float_t t = 0.)
-  {
-    return 1;
-  }
-  
-  static constexpr param_float_t kappa=-.5;
-  
-  static param_float_t tau_f(param_float_t arg)
-  {
-    return 4.;
-  }
-  static param_float_t tau_df(param_float_t arg)
-  {
-    return 0.;
-  }
-  static constexpr param_float_t tau_fr = 4.;
-
-};  
 
 enum Bdr_type {UP, DOWN, LEFT, RIGHT, UNDEFINED};
 
@@ -284,13 +108,13 @@ void print_coeff(const VecT& coeff)
 
 int main() 
 {
-  typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersLinear> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::File<2, 2>,
                 Geometry::File<2, 2>,
                 NodeDescriptor::File<2, 2>,
                 lst::data_type>
-    hg("domains/square.geo");
+    hg("domains/unitsquare.geo");
   hg.set_refinement(2);
   lst ls ;
   std::array< std::array< double, 6 >, 4> lambda_n, res_flux, dir, out;
@@ -305,7 +129,6 @@ int main()
         for (unsigned int n = 0; n < 4; ++n)
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
         ls.make_initial(lambda_n, he);
-        ls.make_skeleton(lambda_n, he, 001.);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -315,15 +138,14 @@ int main()
         }
         std::cout << "u_old:\t";
         std::cout << he.data.u_old;
-        std::cout << ls.newton(lambda_n, coeff, he, .001) << std::endl;
+        std::cout << ls.newton(lambda_n, coeff, he, 1.) << std::endl;
           
-        coeff[0] = 1.;
-        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, .001);
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 1.);
         std::cout << "Residuen:\n" << res;
         print_coeff(coeff);
         for (unsigned int n = 0; n < 4; ++n)
           print_bdr_values(lambda_n[n], coeff, get_bdr(he, n));
-        ls.residual_flux(lambda_n, res_flux, he, .001);
+        ls.residual_flux(lambda_n, res_flux, he, 1.);
         std::cout << "Kopplungsbeitrag:\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -336,35 +158,6 @@ int main()
           
 
          
-        for (unsigned int bdr = 0; bdr < 4; ++bdr)
-        {
-          for (unsigned int i = 0; i < 6; ++i)
-          {
-            dir.fill({0., 0., 0., 0., 0., 0.});
-            dir[bdr][i] = 1.;
-            ls.coupling_lambda_directional_derivative(lambda_n, coeff, dir, out, he, 0.);
-            std::cout << bdr << " " << i << "\n";
-            std::cout << "test\n";
-            for (unsigned int n = 0; n < 4; ++n)
-            {
-              std::for_each(out[n].begin(), out[n].end(), [](auto i){std::cout << i << "\t";});
-              std::cout << "\n";
-            }
-            std::cout << "\n";
-            ls.residual_function(lambda_n, coeff, res_flux, he, 0.);
-            lambda_n[bdr][i] += 0.01;
-            ls.residual_function(lambda_n, coeff, out, he, 0.);
-            lambda_n[bdr][i] -= 0.01;
-            std::cout << "finit\n";
-            for (unsigned int n = 0; n < 4; ++n)
-            {
-              for(unsigned int k = 0; k < 6; ++k)
-                std::cout << (out[n][k] - res_flux[n][k]) / 0.01 << "\t";
-              std::cout << "\n";
-            }
-            std::cout << "\n";
-          }
-        }
         
         std::cout << "\n";
       });

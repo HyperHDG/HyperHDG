@@ -251,7 +251,7 @@ class Chkp
     lSol_float_t>
     integrator;
 
-  const lSol_float_t onepointfive = 1.5; 
+  const lSol_float_t onepointfive = 0.; 
    
   public:
   // -----------------------------------------------------------------------------------------------
@@ -745,6 +745,10 @@ class Chkp
         residual[5 * n_shape_fct_ + i] -= (trace_z + trace_f - trace_p + 0.5 * trace_q2) * normal[0];
         residual[5 * n_shape_fct_ + i] -= trace_vh * normal[1];
       }
+      lSol_float_t rhs = integrator::template integrate_volUni_phifunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, time);
+      residual[6 * n_shape_fct_ + i] -= rhs;
     }
     return residual;
   }
