@@ -301,11 +301,11 @@ class DiffusionWave
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  struct data_type
-  {
-    SmallVec<n_shape_fct_, lSol_float_t> u_old, flux_old;
-    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> boundary_flux_old;
+  struct ufb_type {
+    SmallVec<n_shape_fct_, lSol_float_t> u, flux;
+    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> boundary_flux;
   };
+  using data_type = std::array<ufb_type, 2>;
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
    ************************************************************************************************/
@@ -472,7 +472,7 @@ class DiffusionWave
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
           lambda_values_out[i][j] *= theta_;
-          lambda_values_out[i][j] += (1. - theta_) * hyper_edge.data.boundary_flux_old(j, i);
+          lambda_values_out[i][j] += (1. - theta_) * hyper_edge.data[0].boundary_flux(j, i);
         }
     }
 
@@ -498,7 +498,7 @@ class DiffusionWave
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      hyper_edge.data.u_old[i] = coeffs[hyEdge_dimT * n_shape_fct_ + i];
+      hyper_edge.data[0].u[i] = coeffs[hyEdge_dimT * n_shape_fct_ + i];
 
     std::array<SmallVec<n_shape_fct_, lSol_float_t>, hyEdge_dimT> q_components;
     for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
@@ -510,7 +510,7 @@ class DiffusionWave
     SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
     {
-      hyper_edge.data.flux_old[i] = integrator::template integrate_vol_phifunc<
+      hyper_edge.data[0].flux[i] = integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side>(i, hyper_edge.geometry, time);
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
@@ -520,21 +520,21 @@ class DiffusionWave
                                                          decltype(hyEdgeT::geometry)>(
             i, j, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          hyper_edge.data.flux_old[i] += q_components[dim][j] * grad_int_vec[dim];
+          hyper_edge.data[0].flux[i] += q_components[dim][j] * grad_int_vec[dim];
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
           helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-            hyper_edge.data.flux_old[i] -= q_components[dim][j] *
+            hyper_edge.data[0].flux[i] -= q_components[dim][j] *
                                            hyper_edge.geometry.local_normal(face).operator[](dim) *
                                            helper;
-          hyper_edge.data.flux_old[i] -= tau_ * hyper_edge.data.u_old[j] * helper;
+          hyper_edge.data[0].flux[i] -= tau_ * hyper_edge.data[0].u[j] * helper;
         }
       }
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          hyper_edge.data.flux_old[i] +=
+          hyper_edge.data[0].flux[i] +=
             tau_ * lambda_values[face][j] *
             integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               i, j, face, hyper_edge.geometry);
@@ -548,10 +548,10 @@ class DiffusionWave
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          hyper_edge.data.boundary_flux_old(j, i) = 0.;
+          hyper_edge.data[0].boundary_flux(j, i) = 0.;
       else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          hyper_edge.data.boundary_flux_old(j, i) =
+          hyper_edge.data[0].boundary_flux(j, i) =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
     }
@@ -586,9 +586,10 @@ class DiffusionWave
             decltype(hyEdgeT::geometry), parameters::initial>(j, i, hyper_edge.geometry, time);
     }
 
+    auto fill_data = [&](ufb_type& ufb, lSol_float_t t) {
     // Define primary as L^2 projection!
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      hyper_edge.data.u_old[i] = integrator::template integrate_volUni_phifunc<
+      ufb.u[i] = integrator::template integrate_volUni_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::initial>(i, hyper_edge.geometry, time);
 
@@ -629,7 +630,7 @@ class DiffusionWave
     SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
     {
-      hyper_edge.data.flux_old[i] = integrator::template integrate_vol_phifunc<
+      ufb.flux[i] = integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
                                                                         time);
@@ -640,21 +641,21 @@ class DiffusionWave
                                                          decltype(hyEdgeT::geometry)>(
             i, j, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          hyper_edge.data.flux_old[i] += q_components[dim][j] * grad_int_vec[dim];
+          ufb.flux[i] += q_components[dim][j] * grad_int_vec[dim];
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
           helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-            hyper_edge.data.flux_old[i] -= q_components[dim][j] *
+            ufb.flux[i] -= q_components[dim][j] *
                                            hyper_edge.geometry.local_normal(face).operator[](dim) *
                                            helper;
-          hyper_edge.data.flux_old[i] -= tau_ * hyper_edge.data.u_old[j] * helper;
+          ufb.flux[i] -= tau_ * ufb.u[j] * helper;
         }
       }
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          hyper_edge.data.flux_old[i] +=
+          ufb.flux[i] +=
             tau_ * lambda_values[face][j] *
             integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               i, j, face, hyper_edge.geometry);
@@ -665,7 +666,7 @@ class DiffusionWave
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
         coeffs[dim * n_shape_fct_ + i] = q_components[dim][i];
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      coeffs[hyEdge_dimT * n_shape_fct_ + i] = hyper_edge.data.u_old[i];
+      coeffs[hyEdge_dimT * n_shape_fct_ + i] = ufb.u[i];
     std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
       duals(dual_at_boundary(coeffs, hyper_edge));
@@ -674,13 +675,18 @@ class DiffusionWave
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          hyper_edge.data.boundary_flux_old(j, i) = 0.;
+          ufb.boundary_flux(j, i) = 0.;
       else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          hyper_edge.data.boundary_flux_old(j, i) =
+          ufb.boundary_flux(j, i) =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
     }
+     
+    };
+
+    fill_data(hyper_edge.data[0], time);
+    // fill_data(data[1], time-delta_t_);
 
     return lambda_values;
   }
@@ -703,7 +709,7 @@ class DiffusionWave
 
     return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data.u_old.data(),
+      parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data[0].u.data(),
                                                                       hy_edge.geometry, time)});
   }
   /*!***********************************************************************************************
@@ -725,8 +731,8 @@ class DiffusionWave
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
     return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
-      decltype(hyEdgeT::geometry), hy_edge.data.u_old.size(), lSol_float_t>(
-        hy_edge.data.u_old.data(), hy_edge.data.u_old.data(), hy_edge.geometry
+      decltype(hyEdgeT::geometry), n_shape_fct_, lSol_float_t>(
+        hy_edge.data[0].u.data(), hy_edge.data[0].u.data(), hy_edge.geometry
     )});
   }
 
@@ -936,8 +942,8 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-      hyper_edge.data.u_old[i] * hyper_edge.geometry.area() +
-      delta_t_ * (1. - theta_) * hyper_edge.data.flux_old[i];
+      hyper_edge.data[0].u[i] * hyper_edge.geometry.area() +
+      delta_t_ * (1. - theta_) * hyper_edge.data[0].flux[i];
 
   return right_hand_side;
 }  // end of DiffusionWave::assemble_rhs_from_global_rhs
