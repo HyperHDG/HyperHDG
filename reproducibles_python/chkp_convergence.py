@@ -21,7 +21,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  goal_time = .2 
+  goal_time = .02 
   time_steps  = 2
   delta_time  = goal_time / time_steps
   
@@ -37,7 +37,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParametersLinear,double>"
+    + str(3*poly_degree) + ",ChkpParametersTime,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -55,7 +55,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     while ra > tol and i < 100:
       col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
       A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
-      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time))[0]
+      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=tol, btol=tol)[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
       i += 1
@@ -70,10 +70,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     newton(vectorSolution, time)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
+    #print(vectorSolution)
     HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
     HDG_wrapper.plot_option( "printFileNumber" , "false" )
-    HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time + delta_time)
+    #HDG_wrapper.plot_option( "scale" , "0.95" )
+    HDG_wrapper.plot_solution(vectorSolution, time)
   
     HDG_wrapper.set_data(vectorSolution, time)
     error = HDG_wrapper.errors(vectorSolution, time)[0]
@@ -88,9 +89,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1]:
+  for poly_degree in [2]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in [2, 4, 8, 16, 32]:
+    for iteration in [2, 4, 8, 16]:
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

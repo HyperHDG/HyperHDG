@@ -108,7 +108,7 @@ void print_coeff(const VecT& coeff)
 
 int main() 
 {
-  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersLinear> lst;
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersTime> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::File<2, 2>,
                 Geometry::File<2, 2>,
@@ -129,6 +129,11 @@ int main()
         for (unsigned int n = 0; n < 4; ++n)
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
         ls.make_initial(lambda_n, he);
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          lambda_n[n][0] = 1.;
+        }
+        ls.make_skeleton(lambda_n, he, 1.);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -138,6 +143,7 @@ int main()
         }
         std::cout << "u_old:\t";
         std::cout << he.data.u_old;
+        //coeff[0] = 1.;
         std::cout << ls.newton(lambda_n, coeff, he, 1.) << std::endl;
           
         SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 1.);
