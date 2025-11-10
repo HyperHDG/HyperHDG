@@ -169,6 +169,9 @@ int main(int argc, char **argv) {
         PetscCall(VecGetSpan(sol, sol_span));
 
         PetscLogStagePush(s_rf);
+        // temp[0] = 0;
+        // temp[1] = 1;
+        // temp[2] = 0;
         hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*dt);
 
         PetscLogStagePop();
@@ -191,8 +194,9 @@ int main(int argc, char **argv) {
     }
     PetscLogStagePop();
 
-    temp2 = hdg.errors(temp, end_time);
-    temp3 = hdg.norms(temp, end_time);
+    // zero_v is unused
+    temp2 = hdg.errors(zero_v, end_time);
+    temp3 = hdg.norms(zero_v, end_time);
     for (size_t i = 0; i < temp3.size(); i++)
       temp3[i] = temp2[i] / temp3[i];
     avg_it = ((PetscReal)iterations) / timesteps;
