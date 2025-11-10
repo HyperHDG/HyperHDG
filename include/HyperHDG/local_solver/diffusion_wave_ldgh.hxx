@@ -517,10 +517,10 @@ class DiffusionWave
     //   std::cout << lambda_values[i][0] << " ";
     // std::cout << std::endl;
 
-    std::swap(hyper_edge.data[0], hyper_edge.data[1]);
-
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
+
+    std::swap(hyper_edge.data[0], hyper_edge.data[1]);
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       hyper_edge.data[0].u[i] = coeffs[hyEdge_dimT * n_shape_fct_ + i];
@@ -745,7 +745,6 @@ class DiffusionWave
             decltype(hyEdgeT::geometry), parameters::initial>(j, i, hyper_edge.geometry, time);
     }
 
-    #if 0
     std::cout << "make_init" << std::endl;
     std::cout << "t=" << time << std::endl;
     std::cout << "u=" << hyper_edge.data[0].u << std::endl;
@@ -761,7 +760,6 @@ class DiffusionWave
         std::cout << lambda_values[i][j] << " ";
       std::cout << std::endl;
     }
-    #endif
 
     return lambda_values;
   }

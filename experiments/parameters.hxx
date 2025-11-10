@@ -157,7 +157,7 @@ struct TestWave2
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return 1;
+    return time;
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
