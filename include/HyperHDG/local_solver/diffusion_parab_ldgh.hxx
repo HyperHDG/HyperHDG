@@ -568,28 +568,34 @@ class DiffusionParab
     SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
     {
+      // f v
       hyper_edge.data.flux_old[i] = integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side>(i, hyper_edge.geometry, time);
+
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
       {
         grad_int_vec =
           integrator::template integrate_vol_nablaphiphi<Point<hyEdge_dimT, lSol_float_t>,
                                                          decltype(hyEdgeT::geometry)>(
             i, j, hyper_edge.geometry);
+        // + q \nabla v
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           hyper_edge.data.flux_old[i] += q_components[dim][j] * grad_int_vec[dim];
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
           helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
+          // q \cdot \normal
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
             hyper_edge.data.flux_old[i] -= q_components[dim][j] *
                                            hyper_edge.geometry.local_normal(face).operator[](dim) *
                                            helper;
+          // \tau u v
           hyper_edge.data.flux_old[i] -= tau_ * hyper_edge.data.u_old[j] * helper;
         }
       }
+      // \tau \lambda v
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
           hyper_edge.data.flux_old[i] +=
@@ -971,6 +977,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
                                                                         time);
 
+    std::cout << "time=" << time << std::endl;
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
@@ -992,6 +999,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     }
   }
 
+  // u_old comes from u^{n-1} v ??? yes as coef = (u,v)
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
       hyper_edge.data.u_old[i] * hyper_edge.geometry.area() +

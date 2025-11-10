@@ -7,6 +7,7 @@
 #include <HyperHDG/local_solver/diffusion_wave_ldgh.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 #include "parameters.hxx"
+#include <map>
 
 static const char help[] = "experiments regarding the wave equation\n";
 
@@ -57,20 +58,20 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 int main(int argc, char **argv) {
     int errcode = 0;
 
-    constexpr int space_dim = 2;
-    constexpr int poly_deg = 3;
+    constexpr int space_dim = 1;
+    constexpr int poly_deg = 2;
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscReal tau = 1; // HDG penalty
-    PetscReal theta = .5; // one-step theta method
+    PetscReal theta = .25; // one-step theta method
     PetscInt iteration = 2;
-    PetscInt timesteps = 100;
-    PetscReal end_time = 1;
-    PetscReal dt;
+    PetscInt timesteps = 5;
+    PetscReal end_time = .05;
+    PetscReal dt = 0;
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "wave";
@@ -94,6 +95,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscInitialize(&argc, &argv, NULL, help));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "initialization...\n"));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-tau", &tau, &is_set));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &iteration, &is_set));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-ts", &timesteps, &is_set));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
@@ -117,6 +119,7 @@ int main(int argc, char **argv) {
 
     zero_v = hdg.zero_vector();
     temp = hdg.make_initial(zero_v);
+    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "make_initial=\n", temp.data(), temp.size()));
     N = temp.size();
     hdg.plot_solution(temp, 0.); // needs petsc
 
@@ -126,7 +129,28 @@ int main(int argc, char **argv) {
     PetscLogStagePush(s_as);
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "assembly...\n"));
     mat_coo = hdg.trace_to_flux_mat(0.);
-    PetscCall(MatCreateSeqAIJFromTriple(PETSC_COMM_SELF, N, N, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data(), mat_coo.value_vec.data(), &mat, mat_coo.value_vec.size(), PETSC_FALSE /* 0-based */));
+    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "row_vec=\n", (PetscInt*)mat_coo.row_vec.data(), mat_coo.row_vec.size()));
+    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "col_vec=\n", (PetscInt*)mat_coo.col_vec.data(), mat_coo.col_vec.size()));
+    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "value_vec=\n", mat_coo.value_vec.data(), mat_coo.value_vec.size()));
+
+    std::map<std::pair<PetscInt,PetscInt>, double> unique_entries;
+    for (int i = 0; i < mat_coo.value_vec.size(); i++) {
+        auto key = std::make_pair(mat_coo.row_vec[i], mat_coo.col_vec[i]);
+        unique_entries[key] += mat_coo.value_vec[i];
+    }
+
+    std::vector<PetscInt> row, col; std::vector<double> val;
+    for (std::pair<std::pair<PetscInt,PetscInt>,double> pair : unique_entries) {
+      row.push_back(pair.first.first);
+      col.push_back(pair.first.second);
+      val.push_back(pair.second);
+    }
+    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "row_vec=\n", row.data(), row.size()));
+    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "col_vec=\n", col.data(), col.size()));
+    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "value_vec=\n", val.data(), val.size()));
+
+
+    PetscCall(MatCreateSeqAIJFromTriple(PETSC_COMM_SELF, N, N, row.data(), col.data(), val.data(), &mat, val.size(), PETSC_FALSE /* 0-based */));
     PetscLogStagePop();
 
     PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
@@ -146,12 +170,18 @@ int main(int argc, char **argv) {
 
         PetscLogStagePush(s_rf);
         hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*dt);
+
         PetscLogStagePop();
         PetscCall(VecScale(rhs, -1.));
         PetscCall(KSPSolve(ksp, rhs, sol));
 
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
+
+        PetscReal t = (i+1)*dt;
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "t=", &t, 1));
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
 
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
