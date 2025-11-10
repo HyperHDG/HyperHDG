@@ -22,7 +22,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   goal_time = .02 
-  time_steps  = 2
+  time_steps  = 4
   delta_time  = goal_time / time_steps
   
   try:
@@ -37,7 +37,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParametersTime,double>"
+    + str(3*poly_degree) + ",ChkpParametersAcc1,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -48,16 +48,16 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/unitsquare.geo", lsol_constr = get_loc_constr(delta_time) )
   HDG_wrapper.refine(iteration)
   
-  def newton(x, time, tol=1e-8):
-    ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
+  def newton(x, time, tol=1e-10):
+    ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
       col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
       A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
-      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=tol, btol=tol)[0]
+      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=1e-15, btol=1e-15)[0]
       x -= stepsize * step
-      ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time)) / len(x)
+      ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
       i += 1
       print(i, ra)
     return x
@@ -89,9 +89,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [2]:
+  for poly_degree in [1, 2, 3]:
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
     for iteration in [2, 4, 8, 16]:
+      print("\nGrid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

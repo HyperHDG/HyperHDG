@@ -251,7 +251,7 @@ class Chkp
     lSol_float_t>
     integrator;
 
-  const lSol_float_t onepointfive = 0.; 
+  const lSol_float_t onepointfive = 1.5; 
    
   public:
   // -----------------------------------------------------------------------------------------------
@@ -1286,7 +1286,15 @@ class Chkp
         } else {
           lambda_values[bdr][n_shape_bdr_ + i] = 0.;
         }
-        lambda_values[bdr][2 * n_shape_bdr_ + i] = 0.;
+        if (is_right<parameters>(hyper_edge.node_descriptor[bdr]))
+        {
+          lambda_values[bdr][2 * n_shape_bdr_ + i] = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::reference_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
+
+        } else {
+          lambda_values[bdr][2 * n_shape_bdr_ + i] = 0.;
+        }
       }
     }
     set_skeleton_data(lambda_values, hyper_edge);
@@ -1355,7 +1363,9 @@ class Chkp
       if (is_right<parameters>(hyper_edge.node_descriptor[bdr]))
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-          lambda_values_out[bdr][2 * n_shape_bdr_ + i]  = 0;
+          lambda_values_out[bdr][2 * n_shape_bdr_ + i]  = integrator::template integrate_bdrUni_psifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+            parameters::reference_value, Point<hyEdge_dimT, lSol_float_t> > (i, bdr, hyper_edge.geometry, time);
       }
     }
   }
