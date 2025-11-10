@@ -236,6 +236,7 @@ class Hyperbolic
   template <typename hyNode_index_t = dof_index_t, typename SpanT>
   void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.) {
     hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
+    std::cout << "TESTTTTT time="  << time << std::endl;
     prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
   }
 
