@@ -463,14 +463,14 @@ class DiffusionWave
       solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
 
 
-    std::cout << "residual_flux time=" << time << std::endl;
-    std::cout << "res_flux coeffs=" << SmallVec<n_loc_dofs_, lSol_float_t>(coeffs) << std::endl;
-    std::cout << "res_flux lambda values in =" << std::endl;
-    for (size_t i = 0; i < lambda_values_in.size(); i++) {
-      for (size_t j = 0; j < lambda_values_in[0].size(); j++)
-        std::cout << lambda_values_in[i][j] << " ";
-      std::cout << std::endl;
-    }
+    // std::cout << "residual_flux time=" << time << std::endl;
+    // std::cout << "res_flux coeffs=" << SmallVec<n_loc_dofs_, lSol_float_t>(coeffs) << std::endl;
+    // std::cout << "res_flux lambda values in =" << std::endl;
+    // for (size_t i = 0; i < lambda_values_in.size(); i++) {
+    //   for (size_t j = 0; j < lambda_values_in[0].size(); j++)
+    //     std::cout << lambda_values_in[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
 
 
     std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
@@ -586,11 +586,11 @@ class DiffusionWave
             tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
     }
 
-    std::cout << "set_data" << std::endl;
-    std::cout << "u[0] = " << hyper_edge.data[0].u << std::endl;
-    std::cout << "u[1] = " << hyper_edge.data[1].u << std::endl;
-    std::cout << "flux[0] = " << hyper_edge.data[0].flux << std::endl;
-    std::cout << "flux[1] = " << hyper_edge.data[1].flux << std::endl;
+    // std::cout << "set_data" << std::endl;
+    // std::cout << "u[0] = " << hyper_edge.data[0].u << std::endl;
+    // std::cout << "u[1] = " << hyper_edge.data[1].u << std::endl;
+    // std::cout << "flux[0] = " << hyper_edge.data[0].flux << std::endl;
+    // std::cout << "flux[1] = " << hyper_edge.data[1].flux << std::endl;
 
   }
   /*!***********************************************************************************************
@@ -745,21 +745,21 @@ class DiffusionWave
             decltype(hyEdgeT::geometry), parameters::initial>(j, i, hyper_edge.geometry, time);
     }
 
-    std::cout << "make_init" << std::endl;
-    std::cout << "t=" << time << std::endl;
-    std::cout << "u=" << hyper_edge.data[0].u << std::endl;
-    std::cout << "f=" << hyper_edge.data[0].flux << std::endl;
-    std::cout << "b=" << hyper_edge.data[0].boundary_flux << std::endl;
-    std::cout << "t=" << time-delta_t_ << std::endl;
-    std::cout << "u=" << hyper_edge.data[1].u << std::endl;
-    std::cout << "f=" << hyper_edge.data[1].flux << std::endl;
-    std::cout << "b=" << hyper_edge.data[1].boundary_flux << std::endl;
-    std::cout << "lambda=" << std::endl;
-    for (size_t i = 0; i < lambda_values.size(); i++) {
-      for (size_t j = 0; j < lambda_values[0].size(); j++)
-        std::cout << lambda_values[i][j] << " ";
-      std::cout << std::endl;
-    }
+    // std::cout << "make_init" << std::endl;
+    // std::cout << "t=" << time << std::endl;
+    // std::cout << "u=" << hyper_edge.data[0].u << std::endl;
+    // std::cout << "f=" << hyper_edge.data[0].flux << std::endl;
+    // std::cout << "b=" << hyper_edge.data[0].boundary_flux << std::endl;
+    // std::cout << "t=" << time-delta_t_ << std::endl;
+    // std::cout << "u=" << hyper_edge.data[1].u << std::endl;
+    // std::cout << "f=" << hyper_edge.data[1].flux << std::endl;
+    // std::cout << "b=" << hyper_edge.data[1].boundary_flux << std::endl;
+    // std::cout << "lambda=" << std::endl;
+    // for (size_t i = 0; i < lambda_values.size(); i++) {
+    //   for (size_t j = 0; j < lambda_values[0].size(); j++)
+    //     std::cout << lambda_values[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
 
     return lambda_values;
   }
@@ -925,7 +925,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
     }
   }
 
-  std::cout << "local_mat=" << std::endl << local_mat << std::endl;
+  // std::cout << "local_mat=" << std::endl << local_mat << std::endl;
 
   return local_mat;
 }  // end of DiffusionWave::assemble_loc_matrix
@@ -990,7 +990,7 @@ inline SmallVec<
 DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
-  std::cout << "global_rhs time=" << time << std::endl;
+  // std::cout << "global_rhs time=" << time << std::endl;
 
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -1041,7 +1041,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
       + delta_t_*delta_t_ * (1. - 2*theta_) * hyper_edge.data[0].flux[i] // letzte
       + delta_t_*delta_t_ * theta_ * hyper_edge.data[1].flux[i]; // vorletztes
 
-  std::cout << "global_rhs= " << right_hand_side << std::endl;
+  // std::cout << "global_rhs= " << right_hand_side << std::endl;
 
   return right_hand_side;
 }  // end of DiffusionWave::assemble_rhs_from_global_rhs
