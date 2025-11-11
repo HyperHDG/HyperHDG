@@ -37,7 +37,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParametersAcc1,double>"
+    + str(3*poly_degree) + ",ChkpParameters,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -45,16 +45,23 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/unitsquare.geo", lsol_constr = get_loc_constr(delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(delta_time) )
   HDG_wrapper.refine(iteration)
   
+  def ttf_mat(x, time):
+    col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
+    A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
+    return A
+
+  def rf(x):
+    return np.array(HDG_wrapper.residual_flux(x, time))
+
   def newton(x, time, tol=1e-10):
     ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
-      col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
-      A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
+      A = ttf_mat(x, time)
       step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=1e-15, btol=1e-15)[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
@@ -67,7 +74,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    newton(vectorSolution, time)
+    #newton(vectorSolution, time)
+    opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
+    vectorSolution = opt_obj.x
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
     #print(vectorSolution)

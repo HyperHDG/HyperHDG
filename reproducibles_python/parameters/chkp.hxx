@@ -39,10 +39,20 @@ struct ChkpParameters
     return cos(p[0]) * sin(p[1]) * exp(-t);
   }
 
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
   {
-    return 0.;
+    param_float_t r = 0, x = p[0], y = p[1];
+    r -= 2* exp(-t) * sin(x) * sin(y);
+    r += 6 * exp(-2*t)  *sin(x) * cos(x) * sin(y) * sin(y);
+    r -= exp(-t) * sin(y);
+    return r;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
