@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
     zero_v = hdg.zero_vector();
     temp = hdg.make_initial(zero_v);
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "make_initial=\n", temp.data(), temp.size()));
+    // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "make_initial=\n", temp.data(), temp.size()));
     N = temp.size();
     hdg.plot_solution(temp, 0.); // needs petsc
 
@@ -163,10 +163,10 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        PetscReal t = (i+1)*dt;
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "t=", &t, 1));
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
+        // PetscReal t = (i+1)*dt;
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "t=", &t, 1));
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
 
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
