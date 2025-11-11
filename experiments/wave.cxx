@@ -15,7 +15,7 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscI
   PetscCall(PetscPrintf(com, msg));
   const PetscInt row_len = 10;
   for (PetscInt i = 0; i < len; i++) {
-    if (i % 2 == 0)
+    if (i % row_len == 0)
        PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
@@ -129,28 +129,10 @@ int main(int argc, char **argv) {
     PetscLogStagePush(s_as);
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "assembly...\n"));
     mat_coo = hdg.trace_to_flux_mat(0.);
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "row_vec=\n", (PetscInt*)mat_coo.row_vec.data(), mat_coo.row_vec.size()));
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "col_vec=\n", (PetscInt*)mat_coo.col_vec.data(), mat_coo.col_vec.size()));
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "value_vec=\n", mat_coo.value_vec.data(), mat_coo.value_vec.size()));
-
-    std::map<std::pair<PetscInt,PetscInt>, double> unique_entries;
-    for (int i = 0; i < mat_coo.value_vec.size(); i++) {
-        auto key = std::make_pair(mat_coo.row_vec[i], mat_coo.col_vec[i]);
-        unique_entries[key] += mat_coo.value_vec[i];
-    }
-
-    std::vector<PetscInt> row, col; std::vector<double> val;
-    for (std::pair<std::pair<PetscInt,PetscInt>,double> pair : unique_entries) {
-      row.push_back(pair.first.first);
-      col.push_back(pair.first.second);
-      val.push_back(pair.second);
-    }
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "row_vec=\n", row.data(), row.size()));
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "col_vec=\n", col.data(), col.size()));
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "value_vec=\n", val.data(), val.size()));
-
-
-    PetscCall(MatCreateSeqAIJFromTriple(PETSC_COMM_SELF, N, N, row.data(), col.data(), val.data(), &mat, val.size(), PETSC_FALSE /* 0-based */));
+    PetscCall(MatCreateFromOptions(PETSC_COMM_SELF, NULL, 1, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+    PetscCall(MatSetPreallocationCOO(mat, mat_coo.value_vec.size(), (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+    PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
+    PetscCall(MatEliminateZeros(mat, PETSC_TRUE));
     PetscLogStagePop();
 
     PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
