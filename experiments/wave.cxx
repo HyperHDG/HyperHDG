@@ -5,7 +5,9 @@
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/local_solver/diffusion_wave_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
+#include <HyperHDG/global_loop/elliptic.hxx>
 #include "parameters.hxx"
 #include <map>
 
@@ -59,18 +61,19 @@ int main(int argc, char **argv) {
     int errcode = 0;
 
     constexpr int space_dim = 1;
-    constexpr int poly_deg = 2;
+    constexpr int poly_deg = 1;
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
-    using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
+    // using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
+    using LSol = LocalSolver::Diffusion<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
+    using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
 
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .25; // one-step theta method
-    PetscInt iteration = 2;
-    PetscInt timesteps = 5;
-    PetscReal end_time = .05;
+    PetscInt iteration = 1;
+    PetscInt timesteps = 1;
+    PetscReal end_time = 1;
     PetscReal dt = 0;
 
     char output_directory[PATH_MAX] = "output";
@@ -113,17 +116,18 @@ int main(int argc, char **argv) {
     PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "dt", &dt, 1));
     PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "end time", &end_time, 1));
 
-    HDG hdg((1 << iteration) * space_dim, {tau, theta, dt});
+    // HDG hdg((1 << iteration) * space_dim, {tau, theta, dt});
+    HDG hdg((1 << iteration) * space_dim, {tau});
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "true");
     hdg.plot_option("scale", plot_scale);
 
     zero_v = hdg.zero_vector();
-    temp = hdg.make_initial(zero_v);
+    N = zero_v.size();
+    // temp = hdg.make_initial(zero_v);
     // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "make_initial=\n", temp.data(), temp.size()));
-    N = temp.size();
-    hdg.plot_solution(temp, 0.); // needs petsc
+    // hdg.plot_solution(temp, 0.); // needs petsc
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
@@ -146,16 +150,12 @@ int main(int argc, char **argv) {
 
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "timestepping...\n"));
     PetscLogStagePush(s_ts);
+    std::span<PetscReal> rhs_span;
+    std::span<PetscReal> sol_span;
+    PetscCall(VecGetSpan(rhs, rhs_span));
+    PetscCall(VecGetSpan(sol, sol_span));
     for (PetscInt i = 0; i < timesteps; i++) {
-        std::span<PetscReal> rhs_span;
-        std::span<PetscReal> sol_span;
-        PetscCall(VecGetSpan(rhs, rhs_span));
-        PetscCall(VecGetSpan(sol, sol_span));
-
         PetscLogStagePush(s_rf);
-        // temp[0] = 0;
-        // temp[1] = 1;
-        // temp[2] = 0;
         hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*dt);
 
         PetscLogStagePop();
@@ -171,17 +171,14 @@ int main(int argc, char **argv) {
         PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
         PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
 
-        hdg.set_data(sol_span, (i+1)*dt);
+        // hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
 
-        PetscCall(VecRestoreSpan(rhs, rhs_span));
-        PetscCall(VecRestoreSpan(sol, sol_span));
     }
     PetscLogStagePop();
 
-    // zero_v is unused
-    temp2 = hdg.errors(zero_v, end_time);
-    temp3 = hdg.norms(zero_v, end_time);
+    temp2 = hdg.errors(sol_span, end_time);
+    temp3 = hdg.norms(sol_span, end_time);
     for (size_t i = 0; i < temp3.size(); i++)
       temp3[i] = temp2[i] / temp3[i];
     avg_it = ((PetscReal)iterations) / timesteps;
@@ -192,6 +189,8 @@ int main(int argc, char **argv) {
     PetscCall(PetscPrin2f(PETSC_COMM_SELF, "avg iterations", &avg_it, 1)); 
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
 
+    PetscCall(VecRestoreSpan(rhs, rhs_span));
+    PetscCall(VecRestoreSpan(sol, sol_span));
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&sol));

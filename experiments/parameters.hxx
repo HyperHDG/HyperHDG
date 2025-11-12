@@ -157,7 +157,7 @@ struct TestWave2
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return point[0]*point[0] + time*time;
+    return point[0];
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
@@ -175,11 +175,6 @@ struct TestWave2
                                const param_float_t time = 0.)
   {
     return analytic_result(point, time);
-  }
-  static param_float_t initial_q(const Point<space_dimT, param_float_t>& point,
-                                 const param_float_t time = 0.)
-  {
-    return 2*point[0];
   }
   static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
                                      const param_float_t = 0.)
