@@ -834,6 +834,29 @@ class Diffusion
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
                                                                       time)});
   }
+
+  template <class hyEdgeT>
+  std::array<lSol_float_t, 1U> norms(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+    2 * hyEdge_dimT>& lambda_values,
+    hyEdgeT& hy_edge,
+    const lSol_float_t time = 0.
+  ) const {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+
+    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
+      solve_local_problem(lambda_values, 1U, hy_edge, time);
+
+    SmallVec<n_shape_fct_, lSol_float_t> u;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      u[i] = coeffs[hyEdge_dimT * n_shape_fct_ + i];
+
+    auto res = integrator::template integrate_vol_phiphi<
+      decltype(hyEdgeT::geometry), u.size(), lSol_float_t>(
+        u.data(), u.data(), hy_edge.geometry
+    );
+    return std::array<lSol_float_t, 1U>({res});
+  }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
    *

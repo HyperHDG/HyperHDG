@@ -47,6 +47,7 @@ class Elliptic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
+  HAS_MEMBER_FUNCTION(norms, has_norms);
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
    ************************************************************************************************/
@@ -297,10 +298,17 @@ class Elliptic
    * \param   time            Time at which analytical functions will be evaluated.
    * \retval  error           A vector containing the errors.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> errors(const SpanT& x_vec, const dof_value_t time = 0.)
   {
     auto result = prototype_errors(errors, has_errors);
+    return std::vector<dof_value_t>(result.begin(), result.end());
+  }
+
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> norms(const SpanT& x_vec, const dof_value_t time = 0.)
+  {
+    auto result = prototype_errors(norms, has_norms);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
