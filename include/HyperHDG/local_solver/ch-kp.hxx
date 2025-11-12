@@ -870,7 +870,7 @@ class Chkp
             {
               lSol_float_t b_sk_sk_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_fct_ + k] * coeff_dir[j];
+              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_bdr_ + k] * coeff_dir[j];
             }
             out[bdr][i] += normal[0] * fc;
             out[bdr][n_shape_bdr_ + i] += normal[0] * uqc;
@@ -906,7 +906,7 @@ class Chkp
             {
               lSol_float_t b_sk_sk_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_fct_ + k] * coeff_dir[j];
+              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_bdr_ + k] * coeff_dir[j];
             }
             out[bdr][i] += normal[0] * fc;
             out[bdr][n_shape_bdr_ + i] += normal[0] * uqc;
@@ -1255,6 +1255,7 @@ class Chkp
       hyEdgeT& hyper_edge, const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
+    //hy_assert(false, "Test");
     //project initial to u
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       hyper_edge.data.u_old[i] = integrator::template integrate_volUni_phifunc<
