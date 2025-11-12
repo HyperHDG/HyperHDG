@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "wave";
+    char plot_scale[PATH_MAX] = "0.95";
 
     PetscLogStage s_as, s_ts, s_rf;
 
@@ -101,6 +102,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-plot_scale", plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscLogStageRegister("Assembly", &s_as));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
@@ -115,7 +117,7 @@ int main(int argc, char **argv) {
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "true");
-    hdg.plot_option("scale", "0.95");
+    hdg.plot_option("scale", plot_scale);
 
     zero_v = hdg.zero_vector();
     temp = hdg.make_initial(zero_v);
@@ -163,10 +165,11 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        // PetscReal t = (i+1)*dt;
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "t=", &t, 1));
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
+        PetscReal t = (i+1)*dt;
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "------------------ wave\n"));
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "---- t=", &t, 1));
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
+        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
 
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
