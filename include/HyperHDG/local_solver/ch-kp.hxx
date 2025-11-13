@@ -330,8 +330,8 @@ class Chkp
 
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t> jacobi(const SmallMatT& lambda_values,
-                                                          const SmallVec<n_loc_dofs_, lSol_float_t> ca,
-                                                           hyEdgeT& hyper_edge,
+                                                          const SmallVec<n_loc_dofs_, lSol_float_t>& ca,
+                                                          hyEdgeT& hyper_edge,
                                                           const lSol_float_t time) const
   {
     SmallSquareMat<n_loc_dofs_, lSol_float_t> ret(0.);
@@ -558,24 +558,6 @@ class Chkp
     }
     return grad;
   }
-  template <typename hyEdgeT, typename SmallMatT>
-  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> finite(const SmallMatT& lambda_values,
-                                                          const SmallVec<n_loc_dofs_, lSol_float_t> ca,
-                                                           hyEdgeT& hyper_edge,
-                                                          const lSol_float_t h) const
-  {
-    SmallSquareMat<n_loc_dofs_, lSol_float_t> res;
-    SmallVec<n_loc_dofs_, lSol_float_t> cph, helper;
-    for (int j = 0; j < n_loc_dofs_; j++) {
-      cph = ca;
-      cph(j, 0) += h;
-      helper = (1. / h) * (get_residual(lambda_values, cph, hyper_edge, 0.) 
-          - get_residual(lambda_values, ca, hyper_edge, 0.));
-      for (int i = 0; i <n_loc_dofs_; i++)
-        res(i, j) = helper(i, 0);
-    }
-    return res;
-  }
 
   /*!***********************************************************************************************
    * \brief   Solve local problem (with right-hand side from skeletal).
@@ -589,8 +571,9 @@ class Chkp
    * \retval  residual      Residual (should be zero).
    ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> get_residual(const SmallMatT& lambda_values,
-                                                            const SmallVec<n_loc_dofs_, lSol_float_t> ca,
+  inline SmallVec<n_loc_dofs_, lSol_float_t>& get_residual(const SmallMatT& lambda_values,
+                                                            const SmallVec<n_loc_dofs_, lSol_float_t>& ca,
+                                                            SmallVec<n_loc_dofs_, lSol_float_t>& residual,
                                                             hyEdgeT& hyper_edge,
                                                             const lSol_float_t time,
                                                             const bool print=false) const
@@ -603,8 +586,7 @@ class Chkp
       hy_assert(lambda_values[i].size() == 3 * n_shape_bdr_,
           "The size of ...");
 
-    std::array<lSol_float_t, n_loc_dofs_> residual;
-    residual.fill(0.);
+    residual *= 0.;
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<hyEdge_dim(), lSol_float_t> grad;
 
@@ -1216,11 +1198,12 @@ class Chkp
 
   
   template <typename hyEdgeT, typename SmallMatT>
-  lSol_float_t newton(const SmallMatT& lambda_values, SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
+  unsigned int newton(const SmallMatT& lambda_values, SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
                       hyEdgeT& hyper_edge, const lSol_float_t time) const
   {
     const lSol_float_t eps = ldexp(1., -40);
-    SmallVec<n_loc_dofs_, lSol_float_t> res = get_residual(lambda_values, coeff, hyper_edge, time);
+    SmallVec<n_loc_dofs_, lSol_float_t> res(0.);
+    res = get_residual(lambda_values, coeff, res, hyper_edge, time);
     lSol_float_t ra = norm_2(res);
     SmallSquareMat<n_loc_dofs_, lSol_float_t> jac = jacobi(lambda_values, coeff, hyper_edge, time);
     unsigned int i = 0;
@@ -1233,7 +1216,7 @@ class Chkp
       do
       {
         cn = coeff - stepsize * step;
-        res = get_residual(lambda_values, cn, hyper_edge, time);
+        res = get_residual(lambda_values, cn, res, hyper_edge, time);
         rn = norm_2(res);
         stepsize *= .5;
         ++i;
@@ -1243,7 +1226,7 @@ class Chkp
       jac = jacobi(lambda_values, coeff, hyper_edge, time);
     }
     //std::cout << i << "\n";
-    return ra;
+    return i;
   }
 
   /*********************************************************************************
