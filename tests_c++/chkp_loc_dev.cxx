@@ -121,7 +121,7 @@ int main()
   std::vector<double> xv;
   for(unsigned int i = 0; i < hg.n_global_dofs(); i++)
     xv.push_back( (double) i);
-  SmallVec<28> coeff(0.);
+  SmallVec<28> coeff(0.), res(0.);
   SmallVec<4, unsigned int> hyEdge_hyNodes;
   std::for_each(hg.begin(), hg.end(), [&](auto he)
       {
@@ -143,7 +143,12 @@ int main()
         }
         std::cout << "u_old:\t";
         std::cout << he.data.u_old;
-        //coeff[0] = 1.;
+        coeff[0] = 1.;
+        coeff[1] = 2.;
+        coeff[2] = 3.;
+        coeff[3] = 4.;
+        std::cout << ls.get_residual(lambda_n, coeff, res, he, 1.);
+        /*
         std::cout << ls.newton(lambda_n, coeff, he, 1.) << std::endl;
           
         SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 1.);
@@ -163,7 +168,7 @@ int main()
         
           
 
-         
+       */  
         
         std::cout << "\n";
       });

@@ -19,7 +19,7 @@
 
 int main() 
 {
-  const unsigned int poly_deg = 1;
+  const unsigned int poly_deg = 4;
   const unsigned int n_sf = (poly_deg + 1) * (poly_deg + 1);
   typedef LocalSolver::Chkp<2, poly_deg, 3 * poly_deg, ChkpParameters> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
@@ -51,7 +51,7 @@ int main()
           res = ls.get_residual(lambda_n, coeff, res, he, 1.);
         const auto end_lr = std::chrono::high_resolution_clock::now();
         std::cout << "Local residual took " << std::chrono::duration_cast<std::chrono::milliseconds>(end_lr - start_lr).count() / 100. << "ms\n";
-        
+/*        
         const auto start_j = std::chrono::high_resolution_clock::now();
         for (unsigned int i = 0; i < 100; ++i)
           auto jac = ls.jacobi(lambda_n, coeff, he, 1.);
@@ -85,7 +85,7 @@ int main()
           ls.trace_to_flux(lambda_n, out, res_flux, he, 1.);
         const auto end_t = std::chrono::high_resolution_clock::now();
         std::cout << "Trace to flux took " << std::chrono::duration_cast<std::chrono::milliseconds>(end_t - start_t).count() / 100. << "ms\n";
-
+*/
 
         std::cout << "\n";
       }
