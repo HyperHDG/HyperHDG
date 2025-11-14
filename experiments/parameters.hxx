@@ -157,13 +157,13 @@ struct TestWave2
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return point[0]*point[0];
+    return point[0]*point[0]+time*time;
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return -2;
+    return 0;
   }
 
   static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& point,
