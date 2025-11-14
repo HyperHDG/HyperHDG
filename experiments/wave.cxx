@@ -9,7 +9,7 @@
 #include "parameters.hxx"
 #include <map>
 
-static const char help[] = "experiments regarding the wave equation\n";
+static const char help_msg[] = "experiments regarding the wave equation\n";
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
   PetscCall(PetscPrintf(com, msg));
@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
     using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
+    PetscBool help = false;
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .25; // one-step theta method
     PetscInt iteration = 1;
@@ -93,8 +94,15 @@ int main(int argc, char **argv) {
     KSP ksp;
     PC pc;
 
-    PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+    PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "initialization...\n"));
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
+    if (help) {
+      PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
+      PetscFinalize();
+      return 0;
+    }
+
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-tau", &tau, &is_set));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &iteration, &is_set));
