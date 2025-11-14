@@ -421,7 +421,7 @@ class DiffusionWave
           lambda_values_out[i][j] =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
-          // lambda_values_out[i][j] *= theta_;
+          lambda_values_out[i][j] *= theta_;
         }
 
     return lambda_values_out;
@@ -488,9 +488,9 @@ class DiffusionWave
           lambda_values_out[i][j] =
             duals[i][j] + tau_ * primals[i][j] -
             tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
-          // lambda_values_out[i][j] *= theta_;
-          // lambda_values_out[i][j] += (1. - 2*theta_) * hyper_edge.data[0].boundary_flux(j, i);
-          // lambda_values_out[i][j] += theta_ * hyper_edge.data[1].boundary_flux(j, i);
+          lambda_values_out[i][j] *= theta_;
+          lambda_values_out[i][j] += (1. - 2*theta_) * hyper_edge.data[0].boundary_flux(j, i);
+          lambda_values_out[i][j] += theta_ * hyper_edge.data[1].boundary_flux(j, i);
         }
     }
 
@@ -635,7 +635,6 @@ class DiffusionWave
     for (size_t i = 0; i < hyEdge_dimT; i++)
       q_components[i] = SmallVec<n_shape_fct_, lSol_float_t>(0.);
 
-    #if 0
     // Define dual as H^{1/2} projection!
     SmallSquareMat<n_shape_fct_, lSol_float_t> mass_flux;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -666,8 +665,6 @@ class DiffusionWave
       }
       q_components[dim] = local_rhs / mass_mat;
     }
-
-    #endif
 
 
     // Fill flux_old!
@@ -903,7 +900,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
 
       // u v over boundary
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
-        tau * face_integral;
+        tau * theta_ * delta_t_*delta_t_ * face_integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         // q cdot p
@@ -912,10 +909,10 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
         // q nabla v
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -=
-          /*theta_ * delta_t_*delta_t_ **/ grad_int_vec[dim];
+          theta_ * delta_t_*delta_t_ * grad_int_vec[dim];
         // q normal
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
-          /*theta_ * delta_t_*delta_t_ * */normal_int_vec[dim];
+          theta_ * delta_t_*delta_t_ * normal_int_vec[dim];
       }
 
       // u v over volume
@@ -963,7 +960,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-          tau_ * lambda_values[face][j] * integral;
+          tau_ * theta_ * delta_t_*delta_t_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
@@ -998,7 +995,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
-      // theta_ * delta_t_*delta_t_ *
+      theta_ * delta_t_*delta_t_ *
       integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
