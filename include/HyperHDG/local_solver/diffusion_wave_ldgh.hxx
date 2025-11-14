@@ -615,10 +615,10 @@ class DiffusionWave
     // Set skeltal variable!
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
-      // if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-      //   for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-      //     lambda_values[i][j] = 0.;
-      // else
+      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+          lambda_values[i][j] = 0.;
+      else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
