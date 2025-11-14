@@ -912,16 +912,18 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
         // q nabla v
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -=
-          theta_ * delta_t_*delta_t_ * grad_int_vec[dim];
+          /*theta_ * delta_t_*delta_t_ **/ grad_int_vec[dim];
         // q normal
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
-          theta_ * delta_t_*delta_t_ * normal_int_vec[dim];
+          /*theta_ * delta_t_*delta_t_ * */normal_int_vec[dim];
       }
 
+      /*
       // u v over volume
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
         integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(i, j,
                                                                                hyper_edge.geometry);
+      */
     }
   }
 
@@ -998,7 +1000,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
-      theta_ * delta_t_*delta_t_ *
+      // theta_ * delta_t_*delta_t_ *
       integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
@@ -1034,12 +1036,14 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     }
   }
 
+  /*
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
       + 2 * hyper_edge.data[0].u[i] * hyper_edge.geometry.area()
       - hyper_edge.data[1].u[i] * hyper_edge.geometry.area()
       + delta_t_*delta_t_ * (1. - 2*theta_) * hyper_edge.data[0].flux[i] // letzte
       + delta_t_*delta_t_ * theta_ * hyper_edge.data[1].flux[i]; // vorletztes
+  */
 
   // std::cout << "global_rhs= " << right_hand_side << std::endl;
 
