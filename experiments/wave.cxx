@@ -169,11 +169,11 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        PetscReal t = (i+1)*dt;
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "------------------ wave\n"));
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "---- t=", &t, 1));
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
-        PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
+        // PetscReal t = (i+1)*dt;
+        // PetscCall(PetscPrintf(PETSC_COMM_SELF, "------------------ wave\n"));
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "---- t=", &t, 1));
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
+        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
 
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
