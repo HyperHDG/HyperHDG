@@ -9,7 +9,7 @@
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include "parameters.hxx"
 
-static const char help[] = "experiments regarding timoshenko networks\n";
+static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
   const PetscInt row_len = 10;
@@ -76,12 +76,13 @@ int main(int argc, char **argv) {
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";
     char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin.zstd";
+    char plot_scale[PATH_MAX] = "1";
 
     PetscLogStage s_as, s_it, s_rf;
 
-    PetscBool is_set;
+    PetscBool is_set, help;
     PetscInt N, ncoo;
-    PetscReal err, sol_norm;
+    PetscReal tau = 1;
     PetscInt iterations;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
@@ -91,11 +92,22 @@ int main(int argc, char **argv) {
     KSP ksp;
     PC pc;
 
-    PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "initialization...\n"));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", domain_filepath, PATH_MAX, &is_set));
+    PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
+    PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
+    PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
+    PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscOptionsEnd();
+
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
+    if (help) {
+      PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
+      PetscFinalize();
+      return 0;
+    }
+
     PetscCall(PetscLogStageRegister("Assembly", &s_as));
     PetscCall(PetscLogStageRegister("Iteration", &s_it));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
@@ -104,7 +116,7 @@ int main(int argc, char **argv) {
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "false");
-    hdg.plot_option("scale", "1");
+    hdg.plot_option("scale", plot_scale);
 
     zero_v = hdg.zero_vector();
     N = zero_v.size();
@@ -165,6 +177,3 @@ int main(int argc, char **argv) {
     PetscCall(PetscFinalize());
     return 0;
 }
-
-    // char network_path[PATH_MAX];
-    // PetscOptionsGetString(NULL, ns_pre, "network", network_path, PATH_MAX, &is_set);
