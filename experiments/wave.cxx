@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
     PetscReal end_time = 1;
     PetscReal dt = 0;
 
+    PetscBool plot = true;
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "wave";
     char plot_scale[PATH_MAX] = "0.95";
@@ -103,6 +104,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsReal("-T", "end time", NULL, end_time, &end_time, &is_set));
     PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscOptionsEnd();
 
@@ -128,7 +130,8 @@ int main(int argc, char **argv) {
     zero_v = hdg.zero_vector();
     N = zero_v.size();
     temp = hdg.make_initial(zero_v);
-    hdg.plot_solution(temp, 0.);
+    if (plot)
+      hdg.plot_solution(temp, 0.);
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
@@ -167,7 +170,8 @@ int main(int argc, char **argv) {
         iterations += its;
 
         hdg.set_data(sol_span, (i+1)*dt);
-        hdg.plot_solution(sol_span, (i+1)*dt);
+        if (plot)
+          hdg.plot_solution(sol_span, (i+1)*dt);
     }
     PetscLogStagePop();
 
