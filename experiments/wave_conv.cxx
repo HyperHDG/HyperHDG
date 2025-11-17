@@ -59,7 +59,6 @@ struct TestConfig {
   PetscInt iteration;
   PetscInt time_steps;
   PetscReal end_time;
-  PetscReal dt;
 };
 
 template<int space_dim, int poly_deg>
@@ -71,6 +70,7 @@ PetscErrorCode test(TestConfig* cfg, PetscReal* err) {
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscInt N;
+    PetscReal dt = cfg->end_time / cfg->time_steps;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     sparse_mat<std::vector<PetscReal>> mat_coo;
@@ -80,7 +80,7 @@ PetscErrorCode test(TestConfig* cfg, PetscReal* err) {
     PC pc;
 
     PetscFunctionBeginUser;
-    HDG hdg((1 << cfg->iteration) * space_dim, {cfg->tau, cfg->theta, cfg->dt});
+    HDG hdg((1 << cfg->iteration) * space_dim, {cfg->tau, cfg->theta, dt});
 
     zero_v = hdg.zero_vector();
     N = zero_v.size();
@@ -108,10 +108,10 @@ PetscErrorCode test(TestConfig* cfg, PetscReal* err) {
     PetscCall(VecGetSpan(sol, sol_span));
 
     for (PetscInt i = 0; i < cfg->time_steps; i++) {
-        hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*cfg->dt);
+        hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*dt);
         PetscCall(VecScale(rhs, -1.));
         PetscCall(KSPSolve(ksp, rhs, sol));
-        hdg.set_data(sol_span, (i+1)*cfg->dt);
+        hdg.set_data(sol_span, (i+1)*dt);
     }
 
     // zero_v unused
@@ -139,12 +139,19 @@ int main(int argc, char **argv) {
 
     PetscInt n_iters = MAXLEN;
     PetscInt iterations[MAXLEN] = {0};
-    PetscInt time_steps = 100;
+    PetscInt i_ts = 100;
+    PetscInt n_ts = MAXLEN;
+    PetscInt time_steps[MAXLEN] = {0};
+    PetscInt ts_i = 8;
+    PetscReal theta = .25;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
     PetscCall(PetscOptionsIntArray("-i", "range of subdivisions of the domain, >= 1", NULL, iterations, &n_iters, &is_set));
-    PetscCall(PetscOptionsInt("-ts", "timesteps", NULL, time_steps, &time_steps, &is_set));
+    PetscCall(PetscOptionsInt("-i_ts", "timesteps for subdivision test", NULL, i_ts, &i_ts, &is_set));
+    PetscCall(PetscOptionsIntArray("-ts", "timestep exponents", NULL, time_steps, &n_ts, &is_set));
+    PetscCall(PetscOptionsInt("-ts_i", "subdivisions for timestep test", NULL, ts_i, &ts_i, &is_set));
+    PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -155,26 +162,36 @@ int main(int argc, char **argv) {
     }
 
     cfg.tau = 1;
-    cfg.theta = .25;
-    cfg.iteration = 3;
+    cfg.theta = theta;
     cfg.end_time = 1;
-    cfg.time_steps = time_steps;
-    cfg.dt = cfg.end_time / cfg.time_steps;
+    cfg.time_steps = i_ts;
 
     printf("#tau=%.5e\n", cfg.tau);
     printf("#theta=%.5e\n", cfg.theta);
     printf("#space_dim=%d\n", space_dim);
     printf("#poly_deg=%d\n", poly_deg);
-    printf("#time_steps=%d\n", cfg.time_steps);
-    printf("i,err,alpha\n");
+    printf("i,ts,err,alpha\n");
     for (PetscInt i = 0; i < n_iters; i++) {
       cfg.iteration = iterations[i];
 
       std::swap(errs[0],errs[1]);
       test<space_dim,poly_deg>(&cfg, &errs[0]);
       alpha = std::log(errs[0]/errs[1]) / std::log(.5);
-      printf("%02d,%.5e,%+.5e\n", cfg.iteration, errs[0], alpha);
+      printf("%04d,%04d,%.5e,%+.5e\n", 1<<cfg.iteration, cfg.time_steps, errs[0], alpha);
     }
+
+    cfg.iteration = ts_i;
+    errs[0] = 0;
+
+    for (PetscInt i = 0; i < n_ts; i++) {
+      cfg.time_steps = 1<<time_steps[i];
+
+      std::swap(errs[0],errs[1]);
+      test<space_dim,poly_deg>(&cfg, &errs[0]);
+      alpha = std::log(errs[0]/errs[1]) / std::log(.5);
+      printf("%04d,%04d,%.5e,%+.5e\n", 1<<cfg.iteration, cfg.time_steps, errs[0], alpha);
+    }
+
 
     PetscCall(PetscFinalize());
     return 0;
