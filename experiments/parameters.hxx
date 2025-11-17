@@ -116,7 +116,10 @@ struct TestWave
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return sin(2*M_PI*point[0]) * cos(2*M_PI*time);
+    param_float_t p = 1;
+    for (int d = 0; d < space_dimT; d++)
+      p *= sin(2*M_PI*point[d]);
+    return p * cos(2*M_PI*time);
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
