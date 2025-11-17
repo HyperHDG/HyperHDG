@@ -95,7 +95,17 @@ int main(int argc, char **argv) {
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "initialization...\n"));
+    PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
+    PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
+    PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
+    PetscCall(PetscOptionsInt("-i", "number of subdivisions of the domain, i >= 1", NULL, iteration, &iteration, &is_set));
+    PetscCall(PetscOptionsInt("-ts", "number of timesteps", NULL, timesteps, &timesteps, &is_set));
+    PetscCall(PetscOptionsReal("-T", "end time", NULL, end_time, &end_time, &is_set));
+    PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscOptionsEnd();
+
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
     if (help) {
       PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
@@ -103,23 +113,11 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-tau", &tau, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &iteration, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-ts", &timesteps, &is_set));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-plot_scale", plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscLogStageRegister("Assembly", &s_as));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
 
     dt = end_time / timesteps;
-
-    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "timesteps", &timesteps, 1));
-    PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "dt", &dt, 1));
-    PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "end time", &end_time, 1));
 
     HDG hdg((1 << iteration) * space_dim, {tau, theta, dt});
     hdg.plot_option("fileName", output_filename);
@@ -130,8 +128,7 @@ int main(int argc, char **argv) {
     zero_v = hdg.zero_vector();
     N = zero_v.size();
     temp = hdg.make_initial(zero_v);
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "make_initial=\n", temp.data(), temp.size()));
-    hdg.plot_solution(temp, 0.); // needs petsc
+    hdg.plot_solution(temp, 0.);
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
@@ -169,15 +166,8 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        // PetscReal t = (i+1)*dt;
-        // PetscCall(PetscPrintf(PETSC_COMM_SELF, "------------------ wave\n"));
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "---- t=", &t, 1));
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "rhs=", rhs_span.data(), rhs_span.size()));
-        // PetscCall(PetscPrin2f(PETSC_COMM_SELF, "lambda=", sol_span.data(), sol_span.size()));
-
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
-
     }
     PetscLogStagePop();
 
@@ -203,6 +193,3 @@ int main(int argc, char **argv) {
     PetscCall(PetscFinalize());
     return 0;
 }
-
-    // char network_path[PATH_MAX];
-    // PetscOptionsGetString(NULL, ns_pre, "network", network_path, PATH_MAX, &is_set);
