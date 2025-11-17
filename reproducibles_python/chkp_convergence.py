@@ -9,8 +9,8 @@ from datetime import datetime
 
 import os, sys
 
-def get_loc_constr(t):
-  return [t, 3., 4., 1., 1., 1., 1., 1., -3., -2]
+def get_loc_constr(h, t):
+  return [t, 3. + 1. / h, 3. + 1. / h, 1., 1., 1., 1., 1., -3., -2]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -21,8 +21,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  goal_time = .02 
-  time_steps  = 4
+  h = 1. / iteration
+  goal_time = .1 
+  time_steps  = iteration
   delta_time  = goal_time / time_steps
   
   try:
@@ -44,8 +45,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
-  lsol_constr = get_loc_constr(delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(delta_time) )
+  lsol_constr = get_loc_constr(h, delta_time)
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(h, delta_time) )
   HDG_wrapper.refine(iteration)
   
   def ttf_mat(x, time):
@@ -74,6 +75,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
+    time = round(time, 8)
     #newton(vectorSolution, time)
     opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
     vectorSolution = opt_obj.x
@@ -98,10 +100,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 2, 3]:
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in [2, 4, 8, 16]:
-      print("\nGrid size is set to be ", iteration)
+  for iteration in [4, 8, 16, 32]:
+    print("\nGrid size is set to be ", iteration)
+    for poly_degree in [2, 3]:
+      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

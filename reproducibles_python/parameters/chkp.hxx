@@ -122,6 +122,12 @@ struct ChkpParametersZero
     return 0;
   }
   
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static constexpr param_float_t kappa=-.5;
   
   static param_float_t tau_f(param_float_t arg)
@@ -188,6 +194,12 @@ struct ChkpParametersOne
     return 1.;
   }
   
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static constexpr param_float_t kappa=-.5;
   
   static param_float_t tau_f(param_float_t arg)
@@ -254,6 +266,12 @@ struct ChkpParametersPeakon
     return exp(-abs(p[0] + p[1] - t));
   }
   
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static constexpr param_float_t kappa=-.5;
   
   static param_float_t tau_f(param_float_t arg)
@@ -541,6 +559,12 @@ struct ChkpParametersLinear
     return p[0] - t;
   }
   
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static constexpr param_float_t kappa = 0.5;
   
   static param_float_t tau_f(param_float_t arg)
@@ -607,6 +631,12 @@ struct ChkpParametersLinearRHS
     return t;
   }
   
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0;
+  }
+
   static constexpr param_float_t kappa = 0.5;
   
   static param_float_t tau_f(param_float_t arg)
