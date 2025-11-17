@@ -63,7 +63,7 @@ struct TestConfig {
 };
 
 template<int space_dim, int poly_deg>
-PetscErrorCode test(TestConfig* cfg) {
+PetscErrorCode test(TestConfig* cfg, PetscReal* err) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
@@ -97,6 +97,7 @@ PetscErrorCode test(TestConfig* cfg) {
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
+    PetscCall(KSPSetTolerances(ksp, 1e-16, 1e-16, PETSC_UNLIMITED, PETSC_UNLIMITED));
     PetscCall(KSPSetFromOptions(ksp));
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
@@ -116,11 +117,7 @@ PetscErrorCode test(TestConfig* cfg) {
     // zero_v unused
     temp2 = hdg.errors(zero_v, cfg->end_time);
     temp3 = hdg.norms(zero_v, cfg->end_time);
-    for (size_t i = 0; i < temp3.size(); i++)
-      temp3[i] = temp2[i] / temp3[i];
-
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final abs error", temp2.data(), temp2.size()));
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final rel error", temp3.data(), temp3.size()));
+    *err = temp2[0] / temp3[0];
 
     PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
@@ -137,11 +134,17 @@ int main(int argc, char **argv) {
     constexpr int space_dim = 1;
     constexpr int poly_deg = 3;
     PetscBool help = false, is_set;
-    PetscReal err;
+    PetscReal errs[2], alpha;
     TestConfig cfg;
+
+    PetscInt n_iters = MAXLEN;
+    PetscInt iterations[MAXLEN] = {0};
+    PetscInt time_steps = 100;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
+    PetscCall(PetscOptionsIntArray("-i", "range of subdivisions of the domain, >= 1", NULL, iterations, &n_iters, &is_set));
+    PetscCall(PetscOptionsInt("-ts", "timesteps", NULL, time_steps, &time_steps, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -155,10 +158,23 @@ int main(int argc, char **argv) {
     cfg.theta = .25;
     cfg.iteration = 3;
     cfg.end_time = 1;
-    cfg.time_steps = 100;
+    cfg.time_steps = time_steps;
     cfg.dt = cfg.end_time / cfg.time_steps;
 
-    test<space_dim,poly_deg>(&cfg);
+    printf("#tau=%.5e\n", cfg.tau);
+    printf("#theta=%.5e\n", cfg.theta);
+    printf("#space_dim=%d\n", space_dim);
+    printf("#poly_deg=%d\n", poly_deg);
+    printf("#time_steps=%d\n", cfg.time_steps);
+    printf("i,err,alpha\n");
+    for (PetscInt i = 0; i < n_iters; i++) {
+      cfg.iteration = iterations[i];
+
+      std::swap(errs[0],errs[1]);
+      test<space_dim,poly_deg>(&cfg, &errs[0]);
+      alpha = std::log(errs[0]/errs[1]) / std::log(.5);
+      printf("%02d,%.5e,%+.5e\n", cfg.iteration, errs[0], alpha);
+    }
 
     PetscCall(PetscFinalize());
     return 0;
