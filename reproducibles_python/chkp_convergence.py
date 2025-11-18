@@ -22,8 +22,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  goal_time = .1 
-  time_steps  = iteration
+  goal_time = .5 
+  time_steps  = 16 * iteration
   delta_time  = goal_time / time_steps
   
   try:
@@ -57,13 +57,13 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   def rf(x):
     return np.array(HDG_wrapper.residual_flux(x, time))
 
-  def newton(x, time, tol=1e-10):
+  def newton(x, time, tol=1e-8):
     ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
       A = ttf_mat(x, time)
-      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=1e-15, btol=1e-15)[0]
+      step = sp.linalg.gmres(A, HDG_wrapper.residual_flux(x, time), atol=1e-10, rtol=1e-10)[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
       i += 1
@@ -75,10 +75,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    time = round(time, 8)
-    #newton(vectorSolution, time)
-    opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
-    vectorSolution = opt_obj.x
+    #time = round(time, 8)
+    newton(vectorSolution, time)
+    #opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
+    #vectorSolution = opt_obj.x
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
     #print(vectorSolution)
@@ -88,8 +88,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     HDG_wrapper.plot_solution(vectorSolution, time)
   
     HDG_wrapper.set_data(vectorSolution, time)
-    error = HDG_wrapper.errors(vectorSolution, time)[0]
-    print( "Time: ", time, "\tError: ", error, "\t", " Residual: ", res)
+    u_error = HDG_wrapper.errors(vectorSolution, time)[0]
+    q_error = HDG_wrapper.errors(vectorSolution, time)[1]
+    print(f'{f'Time: {time:.6f}':20}Errors: {u_error:.2e} in u, {q_error:.2e} in q\tResidual: {res}')
 
     
   end_time = datetime.now()
@@ -101,9 +102,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
   for iteration in [4, 8, 16, 32]:
-    print("\nGrid size is set to be ", iteration)
+    print("\n\n Grid size is set to be ", iteration)
     for poly_degree in [2, 3]:
-      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
+      print("\nPolynomial degree is set to be ", poly_degree, "\n")
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:

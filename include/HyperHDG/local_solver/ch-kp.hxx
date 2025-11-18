@@ -264,6 +264,7 @@ class Chkp
   struct data_type
   {
     SmallVec<n_shape_fct_, lSol_float_t> u_old = SmallVec<n_shape_fct_, lSol_float_t>(0.);
+    SmallVec<n_shape_fct_, lSol_float_t> q_old = SmallVec<n_shape_fct_, lSol_float_t>(0.);
     std::array<SmallVec<n_shape_bdr_, lSol_float_t>, 2 * hyEdge_dim()> uh_old;
   };
   /*!***********************************************************************************************
@@ -283,13 +284,13 @@ class Chkp
     /*!*********************************************************************************************
      *  \brief  Define the typename returned by function errors.
      **********************************************************************************************/
-    typedef std::array<lSol_float_t, 1U> error_t;
+    typedef std::array<lSol_float_t, 2U> error_t;
     /*!*********************************************************************************************
      *  \brief  Define how initial error is generated.
      **********************************************************************************************/
     static error_t initial_error()
     {
-      std::array<lSol_float_t, 1U> summed_error;
+      std::array<lSol_float_t, 2U> summed_error;
       summed_error.fill(0.);
       return summed_error;
     }
@@ -1435,7 +1436,10 @@ class Chkp
     SmallVec<n_loc_dofs_, lSol_float_t> coeff;
     newton(lambda_values, coeff, hyper_edge, time);
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
+    {
       hyper_edge.data.u_old[i] = coeff[i];
+      hyper_edge.data.q_old[i] = coeff[n_shape_fct_ + i];
+    }
   }
 
   template <typename hyEdgeT, typename SmallMatT>
@@ -1495,16 +1499,20 @@ class Chkp
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  std::array<lSol_float_t, 1U> errors(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
+  std::array<lSol_float_t, 2U> errors(const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>,
                                                        2 * hyEdge_dimT>& lambda_values,
                                       hyEdgeT& hy_edge,
                                       const lSol_float_t time = 0.) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
-    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
+    return std::array<lSol_float_t, 2U>({integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data.u_old.data(),
+                                                                      hy_edge.geometry, time),
+      integrator::template integrate_vol_diffsquare_discana<
+      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+      parameters::neumann_value, Point<hyEdge_dimT, lSol_float_t> >(hy_edge.data.q_old.data(),
                                                                       hy_edge.geometry, time)});
   }
   
