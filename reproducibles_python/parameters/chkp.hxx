@@ -227,6 +227,7 @@ struct ChkpParametersPeakon
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
   static constexpr std::array<unsigned int, 1U> right_nodes{2};
+  static constexpr param_float_t c = 3.;
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
@@ -255,7 +256,7 @@ struct ChkpParametersPeakon
   static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
   {
-    return 0;
+    return -exp(-abs(p[0] + p[1] - c * t)) * copysign(1.0, p[0] + p[1] - c * t);
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
@@ -263,7 +264,7 @@ struct ChkpParametersPeakon
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
                                        const param_float_t t = 0.)
   {
-    return exp(-abs(p[0] + p[1] - t));
+    return exp(-abs(p[0] + p[1] - c * t));
   }
   
   static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
