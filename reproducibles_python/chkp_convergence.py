@@ -21,8 +21,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   print("Starting time is", start_time)
   os.system("mkdir -p output")
   
-  goal_time = .02 
-  time_steps  = 4
+  goal_time   = 1.0 
+  time_steps  = 100
   delta_time  = goal_time / time_steps
   
   try:
@@ -56,13 +56,13 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   def rf(x):
     return np.array(HDG_wrapper.residual_flux(x, time))
 
-  def newton(x, time, tol=1e-10):
+  def newton(x, time, tol=1e-8):
     ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
       A = ttf_mat(x, time)
-      step = sp.linalg.lsqr(A, HDG_wrapper.residual_flux(x, time), atol=1e-15, btol=1e-15)[0]
+      step = sp.linalg.gmres(A, HDG_wrapper.residual_flux(x, time), atol=1e-10, rtol=1e-10)[0]
       x -= stepsize * step
       ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
       i += 1
@@ -75,8 +75,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   for time_step in range(time_steps):
     time += delta_time
     #newton(vectorSolution, time)
-    opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
-    vectorSolution = opt_obj.x
+    # opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
+    # vectorSolution = opt_obj.x
+    x = newton(vectorSolution, time)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
     #print(vectorSolution)
@@ -88,6 +89,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     HDG_wrapper.set_data(vectorSolution, time)
     error = HDG_wrapper.errors(vectorSolution, time)[0]
     print( "Time: ", time, "\tError: ", error, "\t", " Residual: ", res)
+    sys.stdout.flush()
 
     
   end_time = datetime.now()
