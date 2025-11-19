@@ -565,6 +565,13 @@ class DiffusionWave
                 tau_ * lambda_values[face][j] *
                 integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                 i, j, face, hyper_edge.geometry);
+          } else {
+            hyper_edge.data[0].flux[i] += tau_ *
+              integrator::template integrate_bdr_phifunc<
+                Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+                Point<hyEdge_dimT, lSol_float_t>
+              >(i, face, hyper_edge.geometry, time);
           }
     }
 
@@ -1009,18 +1016,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
                                                                         hyper_edge.geometry, time);
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        tau_ * theta_ * delta_t_*delta_t_ * integral +
-        // u_D^{n-1} v
-        tau_ * (1. - 2*theta_) * delta_t_*delta_t_ *
-          integrator::template integrate_bdr_phifunc<
-            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-            decltype(hyEdgeT::geometry), parameters::dirichlet_value,
-            Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time - delta_t_)
-        + tau_ * theta_ * delta_t_*delta_t_ *
-          integrator::template integrate_bdr_phifunc<
-            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-            decltype(hyEdgeT::geometry), parameters::dirichlet_value,
-            Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time - 2*delta_t_);
+        tau_ * theta_ * delta_t_*delta_t_ * integral;
 
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
