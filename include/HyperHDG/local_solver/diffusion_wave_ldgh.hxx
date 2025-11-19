@@ -549,7 +549,6 @@ class DiffusionWave
           hyper_edge.data[0].flux[i] += q_components[dim][j] * grad_int_vec[dim];
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
-          //if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face])) {
             helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
               i, j, face, hyper_edge.geometry);
             for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
@@ -557,17 +556,16 @@ class DiffusionWave
                 hyper_edge.geometry.local_normal(face).operator[](dim) *
                 helper;
             hyper_edge.data[0].flux[i] -= tau_ * hyper_edge.data[0].u[j] * helper;
-            //}
         }
       }
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          //if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face])) {
+          if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face])) {
             hyper_edge.data[0].flux[i] +=
                 tau_ * lambda_values[face][j] *
                 integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                 i, j, face, hyper_edge.geometry);
-      // }
+          }
     }
 
     std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
