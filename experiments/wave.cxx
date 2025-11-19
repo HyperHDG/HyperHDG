@@ -5,6 +5,7 @@
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/local_solver/diffusion_wave_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_wave_first_ldgh.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 #include "parameters.hxx"
 #include <map>
@@ -61,7 +62,7 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
+    using LSol = LocalSolver::DiffusionWaveFirst<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false;
