@@ -5,6 +5,7 @@
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/local_solver/diffusion_wave_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_wave_first_ldgh.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 #include "parameters.hxx"
 #include <map>
