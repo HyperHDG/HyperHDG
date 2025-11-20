@@ -24,6 +24,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   h = 1. / iteration
   goal_time = .5 
   time_steps  = 16 * iteration
+
   delta_time  = goal_time / time_steps
   
   try:
@@ -75,6 +76,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
+    #newton(vectorSolution, time)
+    # opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
+    # vectorSolution = opt_obj.x
+    x = newton(vectorSolution, time)
     #time = round(time, 8)
     newton(vectorSolution, time)
     #opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
@@ -88,10 +93,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     HDG_wrapper.plot_solution(vectorSolution, time)
   
     HDG_wrapper.set_data(vectorSolution, time)
+
     u_error = HDG_wrapper.errors(vectorSolution, time)[0]
     q_error = HDG_wrapper.errors(vectorSolution, time)[1]
     print(f'{f'Time: {time:.6f}':20}Errors: {u_error:.2e} in u, {q_error:.2e} in q\tResidual: {res}')
-
+    sys.stdout.flush()
     
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
