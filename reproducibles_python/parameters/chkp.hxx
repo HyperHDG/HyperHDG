@@ -227,7 +227,7 @@ struct ChkpParametersPeakon
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
   static constexpr std::array<unsigned int, 1U> right_nodes{2};
-  static constexpr param_float_t c = 3.;
+  static constexpr param_float_t c = 1.;
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
