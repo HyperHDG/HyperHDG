@@ -22,8 +22,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  goal_time = .5 
-  time_steps  = 16 * iteration
+  goal_time = 1.
+  time_steps  = 10000
 
   delta_time  = goal_time / time_steps
   
@@ -54,21 +54,38 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
     A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
     return A
+  
+  def reduce_shape(M):
+    M.eliminate_zeros()
+    M = M[M.getnnz(1) > 0]
+    mask = M.getnnz(0) > 0
+    M = M[:, mask]
+    return M, mask
+
+  def prolong(x, mask):
+    r = np.zeros(mask.shape)
+    r[mask] = x
+    return r
 
   def rf(x):
     return np.array(HDG_wrapper.residual_flux(x, time))
 
   def newton(x, time, tol=1e-8):
-    ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
+    rhs = np.array(HDG_wrapper.residual_flux(x, time))
+    ra = np.linalg.norm(rhs)
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
       A = ttf_mat(x, time)
-      step = sp.linalg.gmres(A, HDG_wrapper.residual_flux(x, time), atol=1e-10, rtol=1e-10)[0]
+      #print("Matrix assembliert")
+      A, mask = reduce_shape(A)
+      step = sp.linalg.gmres(A, rhs[mask], atol=1e-10, rtol=1e-2 * ra, M=sp.diags_array(1./A.diagonal()))[0]
+      step = prolong(step, mask)
       x -= stepsize * step
-      ra = np.linalg.norm(HDG_wrapper.residual_flux(x, time))
+      rhs = np.array(HDG_wrapper.residual_flux(x, time))
+      ra = np.linalg.norm(rhs)
       i += 1
-      print(i, ra)
+      #print(i, ra)
     return x
 
   vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
@@ -76,17 +93,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    #newton(vectorSolution, time)
-    # opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
-    # vectorSolution = opt_obj.x
     x = newton(vectorSolution, time)
-    #time = round(time, 8)
-    newton(vectorSolution, time)
-    #opt_obj = sp_opt.root(rf, vectorSolution, jac=lambda x:ttf_mat(x, time).todense(), method='hybr')
-    #vectorSolution = opt_obj.x
+    time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    #print(vectorSolution)
     HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
     HDG_wrapper.plot_option( "printFileNumber" , "false" )
     #HDG_wrapper.plot_option( "scale" , "0.95" )
@@ -94,9 +104,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
     HDG_wrapper.set_data(vectorSolution, time)
 
-    u_error = HDG_wrapper.errors(vectorSolution, time)[0]
-    q_error = HDG_wrapper.errors(vectorSolution, time)[1]
-    print(f'{f'Time: {time:.6f}':20}Errors: {u_error:.2e} in u, {q_error:.2e} in q\tResidual: {res}')
+    errors = HDG_wrapper.errors(vectorSolution, time)
+    u_error = errors[0]
+    q_error = errors[1]
+    if round(time_steps * time) % 100 == 0:
+      print(f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
     sys.stdout.flush()
     
   end_time = datetime.now()
@@ -107,10 +119,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for iteration in [4, 8, 16, 32]:
-    print("\n\n Grid size is set to be ", iteration)
-    for poly_degree in [2, 3]:
-      print("\nPolynomial degree is set to be ", poly_degree, "\n")
+  for poly_degree in [2, 3]:
+    print("\nPolynomial degree is set to be ", poly_degree, "\n")
+    for iteration in [4, 8, 16, 32, 64]:
+      print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
       except RuntimeError as error:
