@@ -23,7 +23,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   h = 1. / iteration
   goal_time = 1.
-  time_steps  = 10000
+  time_steps  = 100
 
   delta_time  = goal_time / time_steps
   
@@ -107,7 +107,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if round(time_steps * time) % 100 == 0:
+    if round(time_steps * time) % 10 == 0:
       print(f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
     sys.stdout.flush()
     
@@ -119,9 +119,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [2, 3]:
+  for poly_degree in [1, 2, 3]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [4, 8, 16, 32, 64]:
+    for iteration in [4, 8, 16, 32]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
