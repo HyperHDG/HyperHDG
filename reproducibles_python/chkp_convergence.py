@@ -70,22 +70,29 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   def rf(x):
     return np.array(HDG_wrapper.residual_flux(x, time))
 
-  def newton(x, time, tol=1e-8):
+  def newton(x, A, M, mask, time, tol=1e-8):
     rhs = np.array(HDG_wrapper.residual_flux(x, time))
     ra = np.linalg.norm(rhs)
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
-      A = ttf_mat(x, time)
       #print("Matrix assembliert")
-      A, mask = reduce_shape(A)
-      step = sp.linalg.gmres(A, rhs[mask], atol=1e-10, rtol=1e-2 * ra, M=sp.diags_array(1./A.diagonal()))[0]
+      # A, mask = reduce_shape(A)
+      # step = sp.linalg.gmres(A, rhs[mask], atol=1e-10, rtol=1e-2 * ra, M=sp.diags_array(1./A.diagonal()))[0]
+      # step = prolong(step, mask)
+      # print(datetime.now(), "Start solve")
+      # sys.stdout.flush()
+      step = sp.linalg.gmres(A, rhs[mask], atol=1e-10, rtol=1e-2 * ra, M=M)[0]
       step = prolong(step, mask)
-      x -= stepsize * step
-      rhs = np.array(HDG_wrapper.residual_flux(x, time))
-      ra = np.linalg.norm(rhs)
-      i += 1
-      #print(i, ra)
+      # print(datetime.now(), "End solve")
+      # sys.stdout.flush()
+
+      x   -= stepsize * step
+      rhs  = np.array(HDG_wrapper.residual_flux(x, time))
+      ra   = np.linalg.norm(rhs)
+      i   += 1
+      # print(datetime.now(),  i, ra)
+      # sys.stdout.flush()
     return x
 
   vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
@@ -93,7 +100,17 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    x = newton(vectorSolution, time)
+    if time_step % 10 == 0:
+      # print(datetime.now(), "Start matrix")
+      # sys.stdout.flush()
+      A = ttf_mat(vectorSolution, time)
+      A, mask = reduce_shape(A)
+      # print(datetime.now(), "End matrix")
+      # sys.stdout.flush()
+      A_iLU = sp.linalg.spilu(A)
+      M = sp.linalg.LinearOperator((np.sum(mask),np.sum(mask)), A_iLU.solve)
+      # print(datetime.now(), "End preconditioner")
+    x = newton(vectorSolution, A, M, mask, time)
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
@@ -108,8 +125,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     u_error = errors[0]
     q_error = errors[1]
     if round(time_steps * time) % 10 == 0:
-      print(f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
-    sys.stdout.flush()
+      print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
+      sys.stdout.flush()
     
   end_time = datetime.now()
   print("Program ended at", end_time, "after", end_time-start_time)
@@ -121,7 +138,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in [1, 2, 3]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [4, 8, 16, 32]:
+    for iteration in [2, 4, 8, 16, 32, 64]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
