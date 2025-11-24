@@ -52,7 +52,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   def ttf_mat(x, time):
     col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
-    A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
+    A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
     return A
   
   def reduce_shape(M):
@@ -136,9 +136,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 2, 3]:
+  for poly_degree in [2]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [2, 4, 8, 16, 32, 64]:
+    for iteration in [32]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

@@ -14,10 +14,10 @@ N_HyperEdges  = 1;  # Number of hyperedges that are contained in the hypergraph.
 # point and therefore "Space_Dimension" numbers.
 
 POINTS:
--10.0 -10.0
-10.0 -10.0
--10.0 10.0
-10.0 10.0
+-5.0 -5.0
+5.0 -5.0
+-5.0 5.0
+5.0 5.0
 
 # After HYPERNODES_OF_HYPEREDGES the indices of hypernodes belonging to a hyperedge have to appear.
 
