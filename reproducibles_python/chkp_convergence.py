@@ -10,7 +10,7 @@ from datetime import datetime
 import os, sys
 
 def get_loc_constr(h, t):
-  return [t, 3. + 1. / h, 3. + 1. / h, 1., 1., 1., 1., 1., -3., -2]
+  return [t, 3. + 1. / h, 3. + 1. / h, 1., 1., 1., 1., 1., -3./h, -2.]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in [2]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [32]:
+    for iteration in [2, 4,8, 16, 32, 64]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
