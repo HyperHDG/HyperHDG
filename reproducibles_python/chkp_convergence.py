@@ -10,7 +10,8 @@ from datetime import datetime
 import os, sys
 
 def get_loc_constr(h, t):
-  return [t, 3. + 1. / h, 3. + 1. / h, 1., 1., 1., 1., 1., -3./h, -2.]
+  return [t, 3., 3., 1., 1., 1., 1., 1., -3./h, -1., 3. + 1./h]
+  #Order: delta_t, tau+pu, tau-pu, tau-pv, tau+zu, tau-zu, tau-zv, tau+vu, tau_uqq, tau_yvu, tau_f
 
 
 # --------------------------------------------------------------------------------------------------
@@ -114,17 +115,17 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
-    HDG_wrapper.plot_option( "printFileNumber" , "false" )
+    #HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
+    #HDG_wrapper.plot_option( "printFileNumber" , "false" )
     #HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time)
+    #HDG_wrapper.plot_solution(vectorSolution, time)
   
     HDG_wrapper.set_data(vectorSolution, time)
 
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if round(time_steps * time) % 10 == 0:
+    if round(time_steps * time / goal_time) % 10 == 0 or time == delta_time:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
