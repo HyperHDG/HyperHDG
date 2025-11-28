@@ -136,7 +136,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 2, 3]:
+  for poly_degree in [4]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
     for iteration in [2, 4, 8, 16, 32, 64]:
       print("\n\n Grid size is set to be ", iteration)
