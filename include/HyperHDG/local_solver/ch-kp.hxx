@@ -238,6 +238,10 @@ class Chkp
    * \brief   (Globally constant) penalty parameter for HDG scheme.
    ************************************************************************************************/
   const lSol_float_t tau_yvu_;
+    /*!***********************************************************************************************
+   * \brief   (Globally constant) penalty parameter for HDG scheme.
+   ************************************************************************************************/
+  const lSol_float_t tau_f_;
   /*!***********************************************************************************************
    * \brief   Parameter theta that defines the one-step theta scheme.
    ************************************************************************************************/
@@ -325,7 +329,7 @@ class Chkp
   Chkp(const constructor_value_type& constru = std::vector<double>({1., 3., 4., 1., 1., 1., 1., 1., -3., -2.}))
   : delta_t_(constru[0]), tau_ppu_(constru[1]), tau_mpu_(constru[2]), tau_mpv_(constru[3]), 
   tau_pzu_(constru[4]), tau_mzu_(constru[5]), tau_mzv_(constru[6]), tau_pvu_(constru[7]), 
-  tau_uqq_(constru[8]), tau_yvu_(constru[9])
+  tau_uqq_(constru[8]), tau_yvu_(constru[9]), tau_f_(constru[10])
   {
   }
 
@@ -409,7 +413,7 @@ class Chkp
           ret(5 * n_shape_fct_ + i, 5 * n_shape_fct_ + j) -= b_sh_sh_ij * normal[0];
           ret(5 * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= -b_sh_sh_ij * normal[0];
           ret(5 * n_shape_fct_ + i, j) -= 2 * parameters::kappa * b_sh_sh_ij * normal[0];
-          ret(5 * n_shape_fct_ + i, j) -= parameters::tau_fr * b_sh_sh_ij * normal[0] * normal[0];
+          ret(5 * n_shape_fct_ + i, j) -= tau_f_ * b_sh_sh_ij * normal[0] * normal[0];
           ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= b_sh_sh_ij * normal[1];
           ret(5 * n_shape_fct_ + i, j) -= -tau_yvu_ * b_sh_sh_ij * normal[1] * normal[1];
 
@@ -556,7 +560,7 @@ class Chkp
             //fifth eq
             grad[4 * n_shape_fct_ + i] += normal[0] * (1. / delta_t_) * b_shsk_ij * lambda_dir[bdr][j];
             //z^, f^ and p^ of sixth eq
-            grad[5 * n_shape_fct_ + i] -= normal[0] * normal[0] * (tau_mzu_ - parameters::tau_fr - tau_mpu_) * b_shsk_ij * lambda_dir[bdr][j];
+            grad[5 * n_shape_fct_ + i] -= normal[0] * normal[0] * (tau_mzu_ - tau_f_ - tau_mpu_) * b_shsk_ij * lambda_dir[bdr][j];
             grad[5 * n_shape_fct_ + i] -= normal[0] * normal[0] * (tau_mzv_ - tau_mpv_) * b_shsk_ij * lambda_dir[bdr][2 * n_shape_bdr_ + j];
             //seventh eq is independent of lambda
             //contribution of uq^
@@ -597,7 +601,7 @@ class Chkp
             //fifth eq
             grad[4 * n_shape_fct_ + i] += normal[0] * (1. / delta_t_) * b_shsk_ij * lambda_dir[bdr][j];
             //z^, f^ and p^ of sixth eq
-            grad[5 * n_shape_fct_ + i] -= normal[0] * normal[0] * (tau_pzu_ - parameters::tau_fr - tau_ppu_) * b_shsk_ij * lambda_dir[bdr][j];
+            grad[5 * n_shape_fct_ + i] -= normal[0] * normal[0] * (tau_pzu_ - tau_f_ - tau_ppu_) * b_shsk_ij * lambda_dir[bdr][j];
             //seventh eq is independent of lambda
             //contribution of uq^
             lSol_float_t uqc = normal[0] * normal[0] * tau_uqq_ * b_shsk_ij * lambda_dir[bdr][n_shape_bdr_ + j];
@@ -756,7 +760,7 @@ class Chkp
         lSol_float_t flux_v = (vh_int - v_int) * normal[0];
         lSol_float_t trace_f = 0, trace_q2 = 0, trace_uq = 0;
         
-        trace_f += 2 * parameters::kappa * u_int - parameters::tau_fr * flux_ux;
+        trace_f += 2 * parameters::kappa * u_int - tau_f_ * flux_ux;
         trace_uq += tau_uqq_ * flux_q;
         lSol_float_t trace_p = 0, trace_vv = 0, trace_vh = 0, trace_z = 0, trace_r = 0;
         if (normal[1] * normal[1] < eps && normal[0] < 0)
@@ -890,7 +894,7 @@ class Chkp
           {
             lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
                 j, i, bdr, hyper_edge.geometry);
-            out[bdr][i] += normal[0] * normal[0] * (tau_mzu_ - parameters::tau_fr - tau_mpu_ ) * b_int * lambda_dir[bdr][j];
+            out[bdr][i] += normal[0] * normal[0] * (tau_mzu_ - tau_f_ - tau_mpu_ ) * b_int * lambda_dir[bdr][j];
             out[bdr][i] += normal[0] * normal[0] * (tau_mzv_ - tau_mpv_) * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
             out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
             out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_int * lambda_dir[bdr][2 * n_shape_bdr_ + j];
@@ -913,7 +917,7 @@ class Chkp
           {
             lSol_float_t b_int = integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
                 j, i, bdr, hyper_edge.geometry);
-            out[bdr][i] += normal[0] * normal[0] * (tau_pzu_ - parameters::tau_fr - tau_ppu_ ) * b_int * lambda_dir[bdr][j];
+            out[bdr][i] += normal[0] * normal[0] * (tau_pzu_ - tau_f_ - tau_ppu_ ) * b_int * lambda_dir[bdr][j];
             out[bdr][n_shape_bdr_ + i] += normal[0] * normal[0] * tau_uqq_ * b_int * lambda_dir[bdr][n_shape_bdr_ + j];
             out[bdr][2 * n_shape_bdr_ + i] += normal[0] * normal[0] * tau_pvu_ * b_int * lambda_dir[bdr][j];
             lSol_float_t h = 0;
@@ -969,7 +973,7 @@ class Chkp
             //contributions of p and z
             out[bdr][i] += normal[0] * b_sk_sh_ij * (coeff_dir[5 * n_shape_fct_ + j] - coeff_dir[2 * n_shape_fct_ + j]);
             //contributions of the fluxes
-            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mzu_ - parameters::tau_fr - tau_mpu_) * coeff_dir[j];
+            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mzu_ - tau_f_ - tau_mpu_) * coeff_dir[j];
             out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mzv_ - tau_mpv_) * coeff_dir[4 * n_shape_fct_ + j];
             out[bdr][n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_uqq_ * coeff_dir[n_shape_fct_ + j];
             //contribution of f and uq
@@ -1005,7 +1009,7 @@ class Chkp
             //contribution of v
             out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_sk_sh_ij * coeff_dir[4 * n_shape_fct_ + j];
             //contributions of the fluxes
-            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_pzu_ - parameters::tau_fr - tau_ppu_) * coeff_dir[j];
+            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_pzu_ - tau_f_ - tau_ppu_) * coeff_dir[j];
             out[bdr][n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_uqq_ * coeff_dir[n_shape_fct_ + j];
             out[bdr][2 * n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_pvu_ * coeff_dir[j];
             //contribution of f and uq
@@ -1174,7 +1178,7 @@ class Chkp
           lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
 		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
             */
-          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
+          lambda_values_out[bdr][i] -= tau_f_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
     	    //uq^
 	        //0.5 u q
@@ -1257,7 +1261,7 @@ class Chkp
           lambda_values_out[bdr][i] -= integrate_bdr_psicompfun<decltype(hyEdgeT::geometry), parameters::tau_f>(
 		    	  i, uh_arr, u_arr, bdr, hyper_edge.geometry) * loc_normal[bdr][0];
             */
-          lambda_values_out[bdr][i] -= parameters::tau_fr * (uh_int - u_int) * loc_normal[bdr][0];
+          lambda_values_out[bdr][i] -= tau_f_ * (uh_int - u_int) * loc_normal[bdr][0];
       	  lambda_values_out[bdr][i] *= loc_normal[bdr][0];
     	    //uq^
 	        //0.5 u q
