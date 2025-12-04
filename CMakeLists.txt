@@ -1,8 +1,20 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(HyperHDG LANGUAGES CXX)
-
 option(HYPERHDG_BUILD_EXPERIMENTS "build numerical experiments" ON)
+option(HYPERHDG_PETSC "build optionally with PETSc" ON)
+
+if (HYPERHDG_PETSC)
+  set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
+  message("USING PETSC_PREFIX=${HYPERHDG_PETSC_PREFIX}")
+  set(ENV{PKG_CONFIG_PATH} ${HYPERHDG_PETSC_PREFIX}/lib/pkgconfig)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+  pkg_get_variable(CXX_COMPILER PETSc cxxcompiler)
+  set(CMAKE_CXX_COMPILER ${CXX_COMPILER})
+endif()
+
+project(HyperHDG LANGUAGES CXX)
 
 # Include the submodule projects
 add_subdirectory(submodules)
