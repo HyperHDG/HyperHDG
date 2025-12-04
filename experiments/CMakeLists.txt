@@ -30,15 +30,6 @@ add_executable(graph_gen graph_gen.cxx)
 target_link_libraries(graph_gen CLI11::CLI11 geobin fmtlog)
 target_compile_options(graph_gen PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
-set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
-message("USING PETSC_PREFIX=${HYPERHDG_PETSC_PREFIX}")
-set(ENV{PKG_CONFIG_PATH} ${HYPERHDG_PETSC_PREFIX}/lib/pkgconfig)
-
-find_package(PkgConfig REQUIRED)
-pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
-pkg_get_variable(CXX_COMPILER PETSc cxxcompiler)
-set(CMAKE_CXX_COMPILER ${CXX_COMPILER})
-
 add_executable(heat heat.cxx)
 target_link_libraries(heat PRIVATE HyperHDG PRIVATE geobin PRIVATE PkgConfig::PETSC)
 target_compile_options(heat PRIVATE -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
