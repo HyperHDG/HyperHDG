@@ -284,7 +284,7 @@ class File
       return mapping.map_reference_to_physical(pt);
     }
 
-    const bool has_extra_data()
+    bool has_extra_data() const
     {
       return hyGraph_geometry_.domain_info_.hyEdge_properties.size() > 0;
     }

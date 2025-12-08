@@ -9,8 +9,6 @@ namespace {
 
 geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
   geobin::Graph graph;
-  int N = n*n;
-  int M = 2 * (n-1) * n;
   double h = 1. / (n-1);
   geobin::Point p = {0, 0, 0};
   geobin::Prop cprop;

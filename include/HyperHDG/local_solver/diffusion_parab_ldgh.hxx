@@ -786,8 +786,6 @@ class DiffusionParab
     hyEdgeT& hy_edge,
     const lSol_float_t time = 0.
   ) const {
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
       decltype(hyEdgeT::geometry), hy_edge.data.u_old.size(), lSol_float_t>(
         hy_edge.data.u_old.data(), hy_edge.data.u_old.data(), hy_edge.geometry

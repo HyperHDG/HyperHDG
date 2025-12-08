@@ -56,3 +56,5 @@ profile_output*
 .cache
 *.eld
 *~
+
+CMakeUserPresets.json
