@@ -17,7 +17,7 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscI
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(com, msg));
   for (PetscInt i = 0; i < len; i++) {
-    if (i % 2 == 0)
+    if (i % row_len == 0)
        PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
@@ -62,16 +62,14 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 int main(int argc, char **argv) {
-    int errcode = 0;
-
-    constexpr unsigned int poly_deg = 5;
+    // constexpr unsigned int poly_deg = 5;
     using Top = Topology::File<1,3>;
     using Geo = Geometry::File<1,3>;
     using NDes = NodeDescriptor::File<1,3>;
     // using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
     using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
-    constexpr unsigned int n_dofs_per_node = 6;
+    // constexpr unsigned int n_dofs_per_node = 6;
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";

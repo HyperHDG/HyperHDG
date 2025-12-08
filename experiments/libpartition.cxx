@@ -4,7 +4,6 @@
 #include <metis.h>
 
 #include <print>
-#include <spdlog/spdlog.h>
 
 namespace libpartition {
 
@@ -65,8 +64,11 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
   }
   else if (strcmp(backend, "metis") == 0) {
     METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph->xadj.data(), (idx_t*)graph->adjncy.data(), NULL, NULL, NULL, (idx_t*)npartition, NULL, NULL, NULL, (idx_t*)edgecut, (idx_t*)partition);
+  } else {
+    std::string err = std::format("ERROR: unsupported backend {}", backend);
+    throw std::runtime_error(err);
   }
-  else if (strcmp(backend, "parhip") == 0) {
+
     /*
      * Use a parallel naive partition to distribute the vertices between the processes,
      * then reorder graph such that partitions are consecutive (this must be sequential?)
@@ -77,11 +79,6 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
     //   int *nparts, double* imbalance,
     //   bool suppress_output, int seed, int mode,
     //   int *edgecut, idxtype *part, comm);
-    spdlog::get("logger")->info("parhip unsuported as of yet");
-  }
-  else {
-    spdlog::get("logger")->info("unsupported backend");
-  }
 }
 
 void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID delta) {
@@ -104,7 +101,7 @@ void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::
       if (n == (geobin::ID)-1) {
         hop++;
         if (domains[p].back() == (geobin::ID)-1) {
-          spdlog::get("logger")->warn("bfs terminated early")({{"rounds_completed", hop-1}, {"domain_idx", p}, {"rounds_requested", delta}});
+          // TODO: warn on bfs terminate early
           break;
         }
         domains[p].push_back((geobin::ID)-1);

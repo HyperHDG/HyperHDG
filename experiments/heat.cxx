@@ -14,7 +14,7 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscI
   PetscCall(PetscPrintf(com, msg));
   const PetscInt row_len = 10;
   for (PetscInt i = 0; i < len; i++) {
-    if (i % 2 == 0)
+    if (i % row_len == 0)
        PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
@@ -53,8 +53,6 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 int main(int argc, char **argv) {
-    int errcode = 0;
-
     constexpr int space_dim = 2;
     constexpr int poly_deg = 3;
     using Top = Topology::Cubic<space_dim,space_dim>;
@@ -77,7 +75,6 @@ int main(int argc, char **argv) {
 
     PetscBool is_set;
     PetscInt N;
-    PetscReal err, sol_norm;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_it = 0;
 

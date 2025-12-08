@@ -56,8 +56,6 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 
 
 int main(int argc, char **argv) {
-    int errcode = 0;
-
     constexpr int space_dim = 1;
     constexpr int poly_deg = 3;
     using Top = Topology::Cubic<space_dim,space_dim>;
@@ -83,7 +81,6 @@ int main(int argc, char **argv) {
 
     PetscBool is_set;
     PetscInt N;
-    PetscReal err, sol_norm;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_it = 0;
 

@@ -117,7 +117,7 @@ struct TestWave
                                        const param_float_t time = 0.)
   {
     param_float_t p = 1;
-    for (int d = 0; d < space_dimT; d++)
+    for (unsigned int d = 0; d < space_dimT; d++)
       p *= sin(2*M_PI*point[d]);
     return p * cos(2*M_PI*time);
   }
