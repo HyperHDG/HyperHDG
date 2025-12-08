@@ -2,7 +2,6 @@
 
 #include <bxzstr.hpp>
 #include <fstream>
-#include <fmtlog/fmtlog.h>
 
 namespace geobin {
 
@@ -356,7 +355,7 @@ void serialize_graph_partition_vtu(
 ) {
   std::ofstream file(std::format("{}.vtu", file_path));
   if (!file.is_open()) {
-    loge("could not opt file {}.vtu", file_path);
+    std::println("error: could not opt file {}.vtu", file_path);
     return;
   }
 
