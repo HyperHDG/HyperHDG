@@ -12,8 +12,9 @@ add_library(stats stats.cxx)
 target_compile_options(stats PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
 
 add_library(geobin geobin.cxx)
-target_link_libraries(geobin PRIVATE bxzstr PRIVATE fmtlog PUBLIC)
+target_link_libraries(geobin PUBLIC bxzstr)
 target_compile_options(geobin PRIVATE ${WARNINGS} -std=gnu++2b $<$<CONFIG:Debug>:-g -O0> $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -fno-plt>)
+target_compile_definitions(geobin PUBLIC HAVE_GEOBIN)
 
 ########## EXE #############
 
