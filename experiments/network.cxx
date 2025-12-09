@@ -9,6 +9,7 @@
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include "parameters.hxx"
+#include "geobin.hxx"
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
@@ -63,9 +64,12 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 struct PC_Net2AS {
+  Vec vertices;
   Mat coarse;
   PetscInt p;
   KSP* ksp;
+
+  PetscReal min[3], max[3];
 };
 
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
@@ -91,9 +95,46 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
 
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  Vec v = data->vertices;
+  PetscInt vstart, vend, size;
+  PetscInt *cooi, *cooj;
+  PetscReal *coov;
+  std::span<PetscReal> vspan;
+  const char* prefix;
+  PC subpc;
 
   PetscFunctionBegin;
-  (void)data;
+  PetscCall(PCDestroy_Net2AS(pc));
+  PetscCall(PCGetOptionsPrefix(pc, &prefix));
+
+  PetscCall(VecGetSpan(v, vspan));
+  PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
+  size = vend-vstart;
+  PetscCall(PetscMalloc3(4*size, &cooi, 4*size, &cooj, 4*size, &coov));
+  for (PetscInt i = 0; i < 3; i++) {
+    PetscCall(VecStrideMin(v, i, NULL, data->min+i));
+    PetscCall(VecStrideMax(v, i, NULL, data->max+i));
+  }
+  PetscCall(VecRestoreSpan(data->vertices, vspan));
+
+  PetscCall(PetscMalloc1(data->p+1, &data->ksp));
+  for (PetscInt i = 0; i < data->p+1; i++) {
+    PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), data->ksp+i));
+
+    PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
+    PetscCall(KSPAppendOptionsPrefix(data->ksp[i], "net2as_"));
+
+    PetscCall(KSPSetType(data->ksp[i], KSPPREONLY));
+    PetscCall(KSPGetPC(data->ksp[i], &subpc));
+
+    PetscCall(PCSetType(subpc, PCCHOLESKY));
+    PetscCall(PCSetOptionsPrefix(subpc, prefix));
+    PetscCall(PCAppendOptionsPrefix(subpc, "net2as_"));
+    PetscCall(PCSetFromOptions(subpc));
+
+    PetscCall(KSPSetFromOptions(data->ksp[i]));
+    // PetscCall(KSPSetUp(data->ksp[i]));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -114,9 +155,32 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
 
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  p=%d\n", data->p));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d\n", data->p));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
 
+  for (PetscInt i = 0; i < data->p+1; i++) {
+   PetscCall(PetscViewerASCIIPrintf(viewer, "sub KSP %d\n", i));
+   PetscCall(KSPView(data->ksp[i], viewer));
+  }
 end:
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCNet2ASReadGraph(PC pc, const char *path) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  std::span<PetscReal> vspan;
+  PetscInt start, end;
+  PetscReal *verts;
+
+  PetscFunctionBeginUser;
+  geobin::Graph graph = geobin::deserialize_bin(path);
+  verts = (PetscReal*)graph.vertices.data();
+  PetscCall(VecCreateFromOptions(PetscObjectComm((PetscObject)pc), NULL, 3, PETSC_DECIDE, graph.vertices.size()*3, &data->vertices));
+  PetscCall(VecGetSpan(data->vertices, vspan));
+  PetscCall(VecGetOwnershipRange(data->vertices, &start, &end));
+  std::copy(verts+start, verts+end, vspan.data());
+  PetscCall(VecRestoreSpan(data->vertices, vspan));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -221,7 +285,8 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
+    PetscCall(PCSetType(pc, "net2as"));
+    PetscCall(PCNet2ASReadGraph(pc, domain_filepath));
     PetscCall(KSPSetFromOptions(ksp));
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iteration...\n"));
