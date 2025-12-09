@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <petsc.h>
+#include <petsc/private/pcimpl.h>
 
 #include <HyperHDG/topology/file.hxx>
 #include <HyperHDG/geometry/file.hxx>
@@ -11,7 +12,7 @@
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
-PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
+PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, PetscInt len) {
   const PetscInt row_len = 10;
 
   PetscFunctionBeginUser;
@@ -25,7 +26,7 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscI
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscInt len) {
+PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, const PetscInt* dat, PetscInt len) {
   const PetscInt row_len = 10;
 
   PetscFunctionBeginUser;
@@ -61,6 +62,82 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   PetscFunctionReturn(0);
 }
 
+struct PC_Net2AS {
+  Mat coarse;
+  PetscInt p;
+  KSP* ksp;
+};
+
+PetscErrorCode PCDestroy_Net2AS(PC pc) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(&data->coarse));
+  for (PetscInt i = 0; data->ksp && i < data->p; i++)
+    PetscCall(KSPDestroy(data->ksp+i));
+  PetscFree(data->ksp);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObject) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  PetscBool set;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
+  PetscCall(PetscOptionsBoundedInt("-pc_net2as_p", "number of subdomains", NULL, data->p, &data->p, &set, data->p));
+  PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCSetup_Net2AS(PC pc) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+
+  PetscFunctionBegin;
+  (void)data;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+
+  PetscFunctionBegin;
+  if (!data->ksp) PetscCall(PCSetup_Net2AS(pc));
+  PetscCall(VecCopy(x, y));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  PetscBool isascii;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (!isascii) goto end;
+
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  p=%d\n", data->p));
+
+end:
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCCreate_Net2AS(PC pc) {
+  PC_Net2AS *data;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscNew(&data));
+  pc->data = (void*)data;
+
+  data->p = 2; // minimal for Q1
+
+  pc->ops->apply = PCApply_Net2AS;
+  pc->ops->setup = PCSetup_Net2AS;
+  pc->ops->destroy = PCDestroy_Net2AS;
+  pc->ops->setfromoptions = PCSetFromOptions_Net2AS;
+  pc->ops->view = PCView_Net2AS;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv) {
     // constexpr unsigned int poly_deg = 5;
     using Top = Topology::File<1,3>;
@@ -69,11 +146,11 @@ int main(int argc, char **argv) {
     // using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
     using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
-    // constexpr unsigned int n_dofs_per_node = 6;
+    constexpr PetscInt n_dofs_per_node = LSol::n_glob_dofs_per_node();
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";
-    char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin.zstd";
+    char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin";
     char plot_scale[PATH_MAX] = "1";
 
     PetscLogStage s_as, s_it, s_rf;
@@ -106,6 +183,8 @@ int main(int argc, char **argv) {
       return 0;
     }
 
+    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "n_dofs_per_node", &n_dofs_per_node, 1));
+
     PetscCall(PetscLogStageRegister("Assembly", &s_as));
     PetscCall(PetscLogStageRegister("Iteration", &s_it));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
@@ -135,6 +214,8 @@ int main(int argc, char **argv) {
     PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
     PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
     PetscLogStagePop();
+
+    PetscCall(PCRegister("net2as", PCCreate_Net2AS));
 
     PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
