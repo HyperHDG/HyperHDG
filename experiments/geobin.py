@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import numpy as np
-import zstandard as zstd
 import jprecond
 
 # '<' for little-endian
@@ -35,7 +34,7 @@ IdType = np.dtype("<u4")
 
 
 def read_network_points(path):
-  with zstd.open(path, "rb") as decom_file:
+  with open(path, "rb") as decom_file:
     header_without_tables = np.frombuffer(
         decom_file.read(GeoBinHeaderType.itemsize),
         dtype=GeoBinHeaderType,
@@ -56,7 +55,7 @@ def read_network_points(path):
     return network_points
 
 def read_domains(path):
-  with zstd.open(path, "rb") as file:
+  with open(path, "rb") as file:
     header = np.frombuffer(
       file.read(DomainsHeaderType.itemsize),
       dtype=DomainsHeaderType,
