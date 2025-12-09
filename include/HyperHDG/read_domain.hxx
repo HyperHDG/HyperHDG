@@ -12,9 +12,6 @@
 #include <cstring>
 #include <cstdint>
 #include <format>
-#ifdef HAVE_GEOBIN
-#include <bxzstr/include/bxzstr.hpp>
-#endif
 
 /*!*************************************************************************************************
  * \brief   Check whether a \c std::vector does not contain duplicate entries.
@@ -160,7 +157,6 @@ struct DomainInfo
   }  // end of check_consistency
 };  // end of struct DomainInfo
 
-#ifdef HAVE_GEOBIN
 struct DataTable {
   char name[8];
   uint64_t offset;     // from file start
@@ -203,7 +199,7 @@ template <unsigned int hyEdge_dim,
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
 read_domain_geobin(const std::string& filename)
 {
-  bxz::ifstream file(filename, std::ios_base::in, bxz::zstd);
+  std::ifstream file(filename);
   file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
   hy_assert(file.is_open(), std::format("read_domain_geobin: couldn't open file '{}'", filename));
 
@@ -259,7 +255,6 @@ read_domain_geobin(const std::string& filename)
 
   return domain_info;
 }
-#endif
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -518,17 +513,13 @@ read_domain(std::string filename)
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
-  if (filename.substr(filename.size() - 13, filename.size()) == ".geo.bin.zstd")
+  if (filename.substr(filename.size() - 8, filename.size()) == ".geo.bin")
   {
-#ifdef HAVE_GEOBIN
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
     auto domain_info = read_domain_geobin<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
                               hyNode_index_t, pt_index_t>(filename);
     hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");
     return domain_info;
-#else
-    hy_assert(false, "no support for '.geo.bin' files - link with geobin lib");
-#endif
   }
 
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",

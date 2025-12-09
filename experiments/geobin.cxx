@@ -1,7 +1,7 @@
 #include "geobin.hxx"
 
-#include <bxzstr.hpp>
 #include <fstream>
+#include <cassert>
 
 namespace geobin {
 
@@ -243,7 +243,7 @@ void serialize_bin(const char* output_path, const Graph& graph) {
     },
   };
 
-  bxz::ofstream file(std::format("{}.geo.bin.zstd", output_path), bxz::zstd);
+  std::ofstream file(std::format("{}.geo.bin", output_path));
   file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
   file.write((char*)&header, sizeof(header));
   file.write((char*)&graph.vertices[0], points.size);
@@ -256,7 +256,7 @@ void serialize_bin(const char* output_path, const Graph& graph) {
 Graph deserialize_bin(const char* input_path) {
   Graph graph;
 
-  bxz::ifstream file(input_path, std::ios::binary);
+  std::ifstream file(input_path, std::ios::binary);
   file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
   std::array<char, sizeof(GeoBinHeader)> header_buf;
   file.read(header_buf.data(), sizeof(GeoBinHeader));
@@ -308,7 +308,7 @@ Graph deserialize_bin(const char* input_path) {
 }
 
 void serialize_domains(const char* path, const std::vector<std::vector<geobin::ID>>& domains) {
-  bxz::ofstream file(std::format("{}.dom.zstd", path), bxz::zstd);
+  std::ofstream file(std::format("{}.dom", path));
 
   DataTable ioffset_table = {
     .name = "IOFFSET",

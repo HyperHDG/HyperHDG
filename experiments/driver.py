@@ -10,7 +10,6 @@ from __future__ import print_function
 import numpy as np
 import scipy.sparse as sp
 import os, sys, argparse, logging, datetime, subprocess
-import zstandard as zstd
 import json
 import datetime
 
