@@ -326,7 +326,7 @@ class Chkp
    *
    * \param   constru       Constructor object.
    ************************************************************************************************/
-  Chkp(const constructor_value_type& constru = std::vector<double>({1., 3., 4., 1., 1., 1., 1., 1., -3., -2.}))
+  Chkp(const constructor_value_type& constru = std::vector<double>({1., 3., 4., 1., 1., 1., 1., 1., -3., -2., 4.}))
   : delta_t_(constru[0]), tau_ppu_(constru[1]), tau_mpu_(constru[2]), tau_mpv_(constru[3]), 
   tau_pzu_(constru[4]), tau_mzu_(constru[5]), tau_mzv_(constru[6]), tau_pvu_(constru[7]), 
   tau_uqq_(constru[8]), tau_yvu_(constru[9]), tau_f_(constru[10])
@@ -414,24 +414,25 @@ class Chkp
           ret(5 * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= -b_sh_sh_ij * normal[0];
           ret(5 * n_shape_fct_ + i, j) -= 2 * parameters::kappa * b_sh_sh_ij * normal[0];
           ret(5 * n_shape_fct_ + i, j) -= tau_f_ * b_sh_sh_ij * normal[0] * normal[0];
-          ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= b_sh_sh_ij * normal[1];
-          ret(5 * n_shape_fct_ + i, j) -= -tau_yvu_ * b_sh_sh_ij * normal[1] * normal[1];
 
           if (normal[1] * normal[1] < eps && normal[0] < 0) //V+
           {
             ret(3 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= b_sh_sh_ij * normal[0];
-            ret(3 * n_shape_fct_ + i, j) = tau_pvu_ * b_sh_sh_ij * normal[0] * normal[0];
-            ret(5 * n_shape_fct_ + i, j) -= -tau_pzu_ * b_sh_sh_ij * normal[0] * normal[0];
-            ret(5 * n_shape_fct_ + i, j) -= tau_ppu_ * b_sh_sh_ij * normal[0] * normal[0];
+            ret(5 * n_shape_fct_ + i, j) -= -(tau_pzu_ - tau_ppu_) * b_sh_sh_ij * normal[0] * normal[0];
           }
           else if (normal[1] * normal[1] < eps && normal[0] > 0) //V+
           {
-            ret(5 * n_shape_fct_ + i, j) -= -tau_mzu_ * b_sh_sh_ij * normal[0] * normal[0];
-            ret(5 * n_shape_fct_ + i, j) -= tau_mpu_ * b_sh_sh_ij * normal[0] * normal[0];
-            ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= -tau_mzv_ * b_sh_sh_ij 
+            ret(5 * n_shape_fct_ + i, j) -= -(tau_mzu_ - tau_mpu_) * b_sh_sh_ij * normal[0] * normal[0];
+            ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= -(tau_mzv_ - tau_mpv_) * b_sh_sh_ij 
               * normal[0] * normal[0];
-            ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= tau_mpv_ * b_sh_sh_ij 
-              * normal[0] * normal[0];
+          }
+          else if (normal[0] * normal[0] < eps && normal[1] < 0) //H+
+          {
+            ret(5 * n_shape_fct_ + i, 4 * n_shape_fct_ + j) -= b_sh_sh_ij * normal[1];
+          }
+          else if (normal[0] * normal[0] < eps && normal[1] > 0) //H-
+          {
+            ret(2 * n_shape_fct_ + i, j) -= b_sh_sh_ij * normal[1];
           }
         }
       }
@@ -763,31 +764,36 @@ class Chkp
         trace_f += 2 * parameters::kappa * u_int - tau_f_ * flux_ux;
         trace_uq += tau_uqq_ * flux_q;
         lSol_float_t trace_p = 0, trace_vv = 0, trace_vh = 0, trace_z = 0, trace_r = 0;
-        if (normal[1] * normal[1] < eps && normal[0] < 0)
+        lSol_float_t trace_zp = 0., trace_uh = 0.;
+        if (normal[1] * normal[1] < eps && normal[0] < 0) //V+
         {
-          trace_p = p_int + tau_ppu_ * flux_ux;
-          trace_vv = v_int + tau_pvu_ * flux_ux;
-          trace_z = z_int + tau_pzu_ * flux_ux;
+          trace_zp = z_int - p_int + (tau_pzu_ - tau_ppu_) * flux_ux;
+          trace_vv = v_int;
           trace_r = -1. / delta_t_ * (uh_int - uho_int);
         }
-        else if (normal[1] * normal[1] < eps && normal[0] > 0)
+        else if (normal[1] * normal[1] < eps && normal[0] > 0) //V-
         {
-          trace_p = p_int + tau_mpu_ * flux_ux + tau_mpv_ * flux_v;
-          trace_z = z_int + tau_mzu_ * flux_ux + tau_mzv_ * flux_v;
+          trace_zp = z_int - p_int + (tau_mzu_ - tau_mpu_) * flux_ux + (tau_mzv_ - tau_mpv_) * flux_v;
           trace_vv = vh_int;
           trace_r = -1. / delta_t_ * (uh_int - uho_int);
         }
-        else if (normal[0] * normal[0] < eps)
+        else if (normal[0] * normal[0] < eps && normal[1] < 0) //H+
         {
-          trace_vh = v_int + tau_yvu_ * flux_uy;
+          trace_vh = v_int;
+          trace_uh = uh_int;
+        }
+        else if (normal[0] * normal[0] < eps && normal[1] > 0) //H-
+        {
+          trace_vh = vh_int;
+          trace_uh = u_int;
         }
 
         residual[i] -= uh_int * normal[0];
         residual[n_shape_fct_ + i] -= trace_uq * normal[0];
-        residual[2 * n_shape_fct_ + i] -= uh_int * normal[1];
+        residual[2 * n_shape_fct_ + i] -= trace_uh * normal[1];
         residual[3 * n_shape_fct_ + i] -= trace_vv * normal[0];
         residual[4 * n_shape_fct_ + i] -= trace_r * normal[0];
-        residual[5 * n_shape_fct_ + i] -= (trace_z + trace_f - trace_p + 0.5 * trace_q2) * normal[0];
+        residual[5 * n_shape_fct_ + i] -= (trace_zp + trace_f + 0.5 * trace_q2) * normal[0];
         residual[5 * n_shape_fct_ + i] -= trace_vh * normal[1];
       }
 
