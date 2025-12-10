@@ -12,14 +12,13 @@
 #include "geobin.hxx"
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
+static PetscInt PETSC_PRIN2_ROW_LEN = 10;
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, PetscInt len) {
-  const PetscInt row_len = 10;
-
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(com, msg));
   for (PetscInt i = 0; i < len; i++) {
-    if (i % row_len == 0)
+    if (i % PETSC_PRIN2_ROW_LEN == 0)
        PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
   }
@@ -28,16 +27,24 @@ PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, 
 }
 
 PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, const PetscInt* dat, PetscInt len) {
-  const PetscInt row_len = 10;
-
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(com, msg));
   for (PetscInt i = 0; i < len; i++) {
-    if (i % row_len == 0)
+    if (i % PETSC_PRIN2_ROW_LEN == 0)
       PetscCall(PetscPrintf(com, "\n"));
     PetscCall(PetscPrintf(com, "  % 12d", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2Options() {
+  PetscBool set;
+
+  PetscFunctionBeginUser;
+  PetscOptionsBegin(PETSC_COMM_WORLD, "prin2_", "Prin2", NULL);
+  PetscCall(PetscOptionsInt("-row_len", "length of displayed rows", NULL, PETSC_PRIN2_ROW_LEN, &PETSC_PRIN2_ROW_LEN, &set));
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -239,6 +246,8 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscOptionsEnd();
+
+    PetscCall(PetscPrin2Options());
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
     if (help) {
