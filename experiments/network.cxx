@@ -115,6 +115,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   std::span<PetscReal> vspan;
   const char* prefix;
   PC subpc;
+  Mat coarse_basis, A;
+  MatType type;
 
   PetscFunctionBegin;
   PetscCall(PCDestroy_Net2AS(pc));
@@ -180,13 +182,18 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "vals", vals, nnz));
 
   PetscCall(VecRestoreSpan(v, vspan));
-  PetscCall(MatCreate(comm, &data->coarse));
-  PetscCall(MatSetSizes(data->coarse, size, data->p[0]*data->p[1], PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCall(MatSetFromOptions(data->coarse));
-  PetscCall(MatSetPreallocationCOO(data->coarse, nnz, rows, cols));
-  PetscCall(MatSetValuesCOO(data->coarse, vals, INSERT_VALUES));
-  PetscCall(MatEliminateZeros(data->coarse, PETSC_TRUE));
+  PetscCall(PCGetOperators(pc, &A, NULL));
+  PetscCall(MatGetType(A, &type));
+  PetscCall(MatCreate(comm, &coarse_basis));
+  PetscCall(MatSetType(coarse_basis, type));
+  PetscCall(MatSetSizes(coarse_basis, size, data->p[0]*data->p[1], PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
+  PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
+  PetscCall(MatEliminateZeros(coarse_basis, PETSC_TRUE));
   PetscCall(PetscFree3(rows, cols, vals));
+
+  PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->coarse));
+  PetscCall(MatDestroy(&coarse_basis));
 
   data->ksp_sz = data->p[0]*data->p[1]+1;
   PetscCall(PetscMalloc1(data->ksp_sz, &data->ksp));
@@ -230,10 +237,12 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
 
+  PetscCall(MatView(data->coarse, viewer));
   for (PetscInt i = 0; i < data->ksp_sz; i++) {
    PetscCall(PetscViewerASCIIPrintf(viewer, "sub KSP %d\n", i));
    PetscCall(KSPView(data->ksp[i], viewer));
   }
+
 end:
   PetscFunctionReturn(PETSC_SUCCESS);
 }
