@@ -11,16 +11,14 @@ geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
 
   for (geobin::u64 i = 0; i < n; i++) {
     for (geobin::u64 j = 0; j < n; j++) {
+      p[0] = j*h;
+      p[1] = i*h;
       graph.vertices.push_back(p);
       if (i+1 < n)
         graph.edges.push_back({i*n+j, (i+1)*n+j});
       if (j+1 < n)
         graph.edges.push_back({i*n+j, i*n+j+1});
-
-      p[0] += h;
     }
-    p[0] = 0.;
-    p[1] += h;
   }
 
   for (geobin::u64 e = 0; e < graph.edges.size(); e++)
