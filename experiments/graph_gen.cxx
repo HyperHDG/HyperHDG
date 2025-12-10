@@ -17,10 +17,10 @@ geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
       if (j+1 < n)
         graph.edges.push_back({i*n+j, i*n+j+1});
 
-      p[1] += h;
+      p[0] += h;
     }
-    p[1] = 0.;
-    p[0] += h;
+    p[0] = 0.;
+    p[1] += h;
   }
 
   for (geobin::u64 e = 0; e < graph.edges.size(); e++)
