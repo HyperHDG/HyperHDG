@@ -73,7 +73,7 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 struct PC_Net2AS {
   Vec vertices;
   Mat coarse;
-  PetscInt p;
+  PetscInt p[2], ksp_sz;
   KSP* ksp;
 
   PetscReal min[3], max[3];
@@ -83,7 +83,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscFunctionBegin;
   PetscCall(MatDestroy(&data->coarse));
-  for (PetscInt i = 0; data->ksp && i < data->p; i++)
+  for (PetscInt i = 0; data->ksp && i < data->ksp_sz; i++)
     PetscCall(KSPDestroy(data->ksp+i));
   PetscFree(data->ksp);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -92,10 +92,15 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
 PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObject) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscBool set;
+  PetscInt p = data->p[0], p_lb = data->p[0];
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
-  PetscCall(PetscOptionsBoundedInt("-pc_net2as_p", "number of subdomains", NULL, data->p, &data->p, &set, data->p));
+
+  PetscCall(PetscOptionsBoundedInt("-pc_net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
+  if (set) data->p[0] = data->p[1] = p;
+  PetscCall(PetscOptionsBoundedInt("-pc_net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
+  PetscCall(PetscOptionsBoundedInt("-pc_net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -103,9 +108,10 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices;
-  PetscInt vstart, vend, size;
-  PetscInt *cooi, *cooj;
-  PetscReal *coov;
+  MPI_Comm comm = PetscObjectComm((PetscObject)pc);
+  PetscInt vstart, vend, size, nnz = 0;
+  PetscInt *rows, *cols;
+  PetscReal *vals, h[2];
   std::span<PetscReal> vspan;
   const char* prefix;
   PC subpc;
@@ -114,19 +120,78 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
 
-  PetscCall(VecGetSpan(v, vspan));
-  PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
-  size = vend-vstart;
-  PetscCall(PetscMalloc3(4*size, &cooi, 4*size, &cooj, 4*size, &coov));
   for (PetscInt i = 0; i < 3; i++) {
     PetscCall(VecStrideMin(v, i, NULL, data->min+i));
     PetscCall(VecStrideMax(v, i, NULL, data->max+i));
+    if (i < 2) h[i] = (data->max[i]-data->min[i])/(data->p[i]+1);
   }
-  PetscCall(VecRestoreSpan(data->vertices, vspan));
 
-  PetscCall(PetscMalloc1(data->p+1, &data->ksp));
-  for (PetscInt i = 0; i < data->p+1; i++) {
-    PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), data->ksp+i));
+  PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
+  size = (vend-vstart)/3;
+  PetscCall(PetscMalloc3(4*size, &rows, 4*size, &cols, 4*size, &vals));
+  PetscCall(VecGetSpan(v, vspan));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n -> x,y -> xx,yy -> i,j -> (type,col)\n"));
+  for (PetscInt n = 0; n < size; n++) {
+    PetscReal x = vspan[3*n],            y = vspan[3*n+1];
+    PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
+    // map to reference element
+    PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3d -> %.3e,%.3e -> % .3e,% .3e -> % 3d,% 3d", n, x, y, xx, yy, i, j));
+
+    if (i>data->p[0] || j>data->p[1]) goto next;
+
+    if (i>0 && j>0) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = (j-1)*data->p[0]+(i-1);
+      vals[nnz] = (1-xx)*(1-yy);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 0,%3d", cols[nnz]));
+      nnz++;
+    }
+
+    if (i<data->p[0] && j>0) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = (j-1)*data->p[0]+i;
+      vals[nnz] = xx*(1-yy);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 1,%3d", cols[nnz]));
+      nnz++;
+    }
+
+    if (i>0 && j+1<data->p[1]) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = j*data->p[0]+i-1;
+      vals[nnz] = (1-xx)*yy;
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 2,%3d", cols[nnz]));
+      nnz++;
+    }
+
+    if (i+1<data->p[0] && j+1<data->p[1]) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = j*data->p[0]+i;
+      vals[nnz] = xx*yy;
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 3,%3d", cols[nnz]));
+      nnz++;
+    }
+  next:
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
+  }
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rows", rows, nnz));
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "cols", cols, nnz));
+  PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "vals", vals, nnz));
+
+  PetscCall(VecRestoreSpan(v, vspan));
+  PetscCall(MatCreate(comm, &data->coarse));
+  PetscCall(MatSetSizes(data->coarse, size, data->p[0]*data->p[1], PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetFromOptions(data->coarse));
+  PetscCall(MatSetPreallocationCOO(data->coarse, nnz, rows, cols));
+  PetscCall(MatSetValuesCOO(data->coarse, vals, INSERT_VALUES));
+  PetscCall(MatEliminateZeros(data->coarse, PETSC_TRUE));
+  PetscCall(PetscFree3(rows, cols, vals));
+
+  data->ksp_sz = data->p[0]*data->p[1]+1;
+  PetscCall(PetscMalloc1(data->ksp_sz, &data->ksp));
+  for (PetscInt i = 0; i < data->ksp_sz; i++) {
+    PetscCall(KSPCreate(comm, data->ksp+i));
 
     PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
     PetscCall(KSPAppendOptionsPrefix(data->ksp[i], "net2as_"));
@@ -140,7 +205,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(PCSetFromOptions(subpc));
 
     PetscCall(KSPSetFromOptions(data->ksp[i]));
-    // PetscCall(KSPSetUp(data->ksp[i]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -162,11 +226,11 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
 
-  PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d\n", data->p));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d,%d\n", data->p[0], data->p[1]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
 
-  for (PetscInt i = 0; i < data->p+1; i++) {
+  for (PetscInt i = 0; i < data->ksp_sz; i++) {
    PetscCall(PetscViewerASCIIPrintf(viewer, "sub KSP %d\n", i));
    PetscCall(KSPView(data->ksp[i], viewer));
   }
@@ -198,7 +262,8 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   PetscCall(PetscNew(&data));
   pc->data = (void*)data;
 
-  data->p = 2; // minimal for Q1
+  // minimal for Q1
+  data->p[0] = data->p[1] = 2;
 
   pc->ops->apply = PCApply_Net2AS;
   pc->ops->setup = PCSetup_Net2AS;
