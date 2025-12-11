@@ -72,9 +72,9 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 
 struct PC_Net2AS {
   Vec vertices;
-  Mat coarse;
-  PetscInt p[2], ksp_sz;
+  PetscInt p[2], sz;
   KSP* ksp;
+  Mat* mat;
 
   PetscReal min[3], max[3];
 };
@@ -82,10 +82,12 @@ struct PC_Net2AS {
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscFunctionBegin;
-  PetscCall(MatDestroy(&data->coarse));
-  for (PetscInt i = 0; data->ksp && i < data->ksp_sz; i++)
+  for (PetscInt i = 0; data->ksp && i < data->sz; i++) {
     PetscCall(KSPDestroy(data->ksp+i));
+    PetscCall(MatDestroy(data->mat+i));
+  }
   PetscFree(data->ksp);
+  PetscFree(data->mat);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -109,9 +111,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt vstart, vend, size, nnz = 0;
+  PetscInt vstart, vend, size, nnz = 0, n_cols = data->p[0]*data->p[1], *ioff, *inds;
   PetscInt *rows, *cols;
-  PetscReal *vals, h[2];
+  PetscReal *vals, h[2], eps = 1e-14;
   std::span<PetscReal> vspan;
   const char* prefix;
   PC subpc;
@@ -130,7 +132,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
   size = (vend-vstart)/3;
-  PetscCall(PetscMalloc3(4*size, &rows, 4*size, &cols, 4*size, &vals));
+  PetscCall(PetscMalloc3(4zu*size, &rows, 4zu*size, &cols, 4zu*size, &vals));
   PetscCall(VecGetSpan(v, vspan));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n -> x,y -> xx,yy -> i,j -> (type,col)\n"));
   for (PetscInt n = 0; n < size; n++) {
@@ -186,18 +188,34 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, size, data->p[0]*data->p[1], PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetSizes(coarse_basis, size, n_cols, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
   PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
   PetscCall(MatEliminateZeros(coarse_basis, PETSC_TRUE));
-  PetscCall(PetscFree3(rows, cols, vals));
 
-  PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->coarse));
-  PetscCall(MatDestroy(&coarse_basis));
+  PetscCall(PetscCalloc3(n_cols+1zu, &ioff, n_cols, &fill, nnz, &inds));
+  for (PetscInt i = 0; i < nnz; i++)
+    if (vals[i] > eps) ioff[cols[i]]++;
+  for (PetscInt i = 0, off = 0, temp; i <= n_cols; i++) {
+    temp = ioff[i];
+    ioff[i] = off;
+    off += temp;
+  }
+  for (PetscInt i = 0; i < nnz; i++) {
+    if (vals[i] <= eps) continue;
+    PetscInt c = cols[i];
+    inds[ioff[c] + fill[c]] = rows[i];
+    fill[c]++;
+  }
 
-  data->ksp_sz = data->p[0]*data->p[1]+1;
-  PetscCall(PetscMalloc1(data->ksp_sz, &data->ksp));
-  for (PetscInt i = 0; i < data->ksp_sz; i++) {
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_cols));
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "fill", fill, n_cols));
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, nnz));
+
+  data->sz = n_cols+1;
+  PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
+
+  for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(KSPCreate(comm, data->ksp+i));
 
     PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
@@ -212,7 +230,19 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(PCSetFromOptions(subpc));
 
     PetscCall(KSPSetFromOptions(data->ksp[i]));
+
+    if (i == 0) {
+      PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
+      PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
+    } else {
+      PetscInt col = i-1;
+      IS is;
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[col+1]-ioff[col], inds+ioff[col], PETSC_USE_POINTER, &is));
+      PetscCall(MatCreateSubMatrix(A, is, is, MAT_INITIAL_MATRIX, data->mat+i));
+    }
   }
+  PetscCall(PetscFree3(rows, cols, vals));
+  PetscCall(MatDestroy(&coarse_basis));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -237,9 +267,9 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
 
-  PetscCall(MatView(data->coarse, viewer));
-  for (PetscInt i = 0; i < data->ksp_sz; i++) {
-   PetscCall(PetscViewerASCIIPrintf(viewer, "sub KSP %d\n", i));
+  for (PetscInt i = 0; i < data->sz; i++) {
+   PetscCall(PetscViewerASCIIPrintf(viewer, "--- SUB %d ---\n", i));
+   PetscCall(MatView(data->mat[i], viewer));
    PetscCall(KSPView(data->ksp[i], viewer));
   }
 
