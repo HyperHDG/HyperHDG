@@ -85,6 +85,8 @@ struct PC_Net2AS {
   Mat* mat;
   // corresponding solvers
   KSP* ksp;
+
+  Vec sub_left;
 };
 
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
@@ -95,6 +97,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
     PetscCall(MatDestroy(data->mat+i));
   }
   PetscCall(MatDestroy(&data->sub));
+  PetscCall(VecDestroy(&data->sub_left));
   PetscCall(PetscFree(data->ksp));
   PetscCall(PetscFree(data->mat));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -211,6 +214,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatFilter(data->sub, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
   PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(MatCreateVecs(data->sub, NULL, &data->sub_left));
 
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
@@ -237,8 +241,15 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     if (i > 0) {
       PetscInt s = i-1; // subdomain
       IS is;
+      Mat *mat;
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
-      PetscCall(MatCreateSubMatrix(A, is, is, MAT_INITIAL_MATRIX, data->mat+i));
+      // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
+      //       while MatCreateSubmatrices always creates sequential matrices,
+      //       tough it also allocates the output parameter
+      PetscCall(MatCreateSubMatrices(A, 1, &is, &is, MAT_INITIAL_MATRIX, &mat));
+      data->mat[i] = *mat;
+      PetscCall(PetscFree(mat));
+      PetscCall(ISDestroy(&is));
     }
     PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
     PetscCall(KSPSetUp(data->ksp[i]));
@@ -255,7 +266,12 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
 
   PetscFunctionBegin;
   if (!data->ksp) PetscCall(PCSetup_Net2AS(pc));
-  PetscCall(VecCopy(x, y));
+
+  // coarse
+  PetscCall(MatMult(data->sub, x, data->sub_left)); // sub = coarse_basis^T
+  PetscCall(KSPSolve(data->ksp[0], data->sub_left, data->sub_left)); // override left
+  PetscCall(MatMultTranspose(data->sub, data->sub_left, y));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
