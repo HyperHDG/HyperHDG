@@ -111,19 +111,22 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt vstart, vend, size, nnz = 0, n_cols = data->p[0]*data->p[1], *ioff, *inds;
+  PetscInt vstart, vend, size, nnz = 0, n_cols = data->p[0]*data->p[1], n_rows;
   PetscInt *rows, *cols;
   PetscReal *vals, h[2], eps = 1e-14;
+  PetscBool done;
+  const PetscInt *ioff, *inds;
   std::span<PetscReal> vspan;
   const char* prefix;
   PC subpc;
-  Mat coarse_basis, A;
+  Mat coarse_basis, A, coarse_transpose;
   MatType type;
 
   PetscFunctionBegin;
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
 
+  data->sz = n_cols+1;
   for (PetscInt i = 0; i < 3; i++) {
     PetscCall(VecStrideMin(v, i, NULL, data->min+i));
     PetscCall(VecStrideMax(v, i, NULL, data->max+i));
@@ -193,27 +196,17 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
   PetscCall(MatEliminateZeros(coarse_basis, PETSC_TRUE));
 
-  PetscCall(PetscCalloc3(n_cols+1zu, &ioff, n_cols, &fill, nnz, &inds));
-  for (PetscInt i = 0; i < nnz; i++)
-    if (vals[i] > eps) ioff[cols[i]]++;
-  for (PetscInt i = 0, off = 0, temp; i <= n_cols; i++) {
-    temp = ioff[i];
-    ioff[i] = off;
-    off += temp;
-  }
-  for (PetscInt i = 0; i < nnz; i++) {
-    if (vals[i] <= eps) continue;
-    PetscInt c = cols[i];
-    inds[ioff[c] + fill[c]] = rows[i];
-    fill[c]++;
-  }
-
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_cols));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "fill", fill, n_cols));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, nnz));
-
-  data->sz = n_cols+1;
   PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
+  PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
+  PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &coarse_transpose)); // INITIAL -> redistributes
+  PetscCall(MatFilter(coarse_transpose, eps, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(MatView(coarse_transpose, PETSC_VIEWER_STDOUT_WORLD));
+
+  PetscCall(MatGetRowIJ(coarse_transpose, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_LIB, "MatGetRowIJ not done");
+
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_rows+1));
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, ioff[n_rows]));
 
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(KSPCreate(comm, data->ksp+i));
@@ -232,7 +225,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(KSPSetFromOptions(data->ksp[i]));
 
     if (i == 0) {
-      PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
       PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
     } else {
       PetscInt col = i-1;
@@ -243,6 +235,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   }
   PetscCall(PetscFree3(rows, cols, vals));
   PetscCall(MatDestroy(&coarse_basis));
+  PetscCall(MatDestroy(&coarse_transpose));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
