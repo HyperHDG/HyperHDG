@@ -71,12 +71,19 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 struct PC_Net2AS {
+  // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec vertices;
-  PetscInt p[2], sz;
-  KSP* ksp;
-  Mat* mat;
-
+  // bounding box of vertices
   PetscReal min[3], max[3];
+  // number of subdomains in xy, total number of systems
+  PetscInt p[2], sz;
+  // CSR representation of the overlapping subdomains, numerical values > 0 irrelevant
+  Mat  sub;
+  // mat[0] coarse system,
+  // mat[i] for i >= 1 local matrices corresponding to subdomains
+  Mat* mat;
+  // corresponding solvers
+  KSP* ksp;
 };
 
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
@@ -86,8 +93,9 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
     PetscCall(KSPDestroy(data->ksp+i));
     PetscCall(MatDestroy(data->mat+i));
   }
-  PetscFree(data->ksp);
-  PetscFree(data->mat);
+  PetscCall(MatDestroy(&data->sub));
+  PetscCall(PetscFree(data->ksp));
+  PetscCall(PetscFree(data->mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -119,7 +127,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   std::span<PetscReal> vspan;
   const char* prefix;
   PC subpc;
-  Mat coarse_basis, A, coarse_transpose;
+  Mat coarse_basis, A;
   MatType type;
 
   PetscFunctionBegin;
@@ -198,12 +206,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
   PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
-  PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &coarse_transpose)); // INITIAL -> redistributes
-  PetscCall(MatFilter(coarse_transpose, eps, PETSC_TRUE, PETSC_FALSE));
-  PetscCall(MatView(coarse_transpose, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &data->sub)); // INITIAL -> redistributes
+  PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(MatFilter(data->sub, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
+  PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
 
-  PetscCall(MatGetRowIJ(coarse_transpose, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
-  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_LIB, "MatGetRowIJ not done");
+  PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
 
   PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_rows+1));
   PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, ioff[n_rows]));
@@ -227,15 +236,17 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     if (i == 0) {
       PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
     } else {
-      PetscInt col = i-1;
+      PetscInt s = i-1; // subdomain
       IS is;
-      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[col+1]-ioff[col], inds+ioff[col], PETSC_USE_POINTER, &is));
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
       PetscCall(MatCreateSubMatrix(A, is, is, MAT_INITIAL_MATRIX, data->mat+i));
     }
+    PetscCall(KSPSetUp(data->ksp[i]));
   }
+  PetscCall(MatRestoreRowIJ(data->sub, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
   PetscCall(PetscFree3(rows, cols, vals));
   PetscCall(MatDestroy(&coarse_basis));
-  PetscCall(MatDestroy(&coarse_transpose));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
