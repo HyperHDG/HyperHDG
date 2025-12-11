@@ -98,6 +98,9 @@ if args.modelproblem == "timo":
 elif args.modelproblem == "diff":
   const.local_solver    = "Diffusion<1,5,10,ConstantDiffusionParameters>"
   const.include_files   = ["experiments/parameters.hxx"]
+else:
+  print("unrecognized model problem:", args.modelproblem)
+  sys.exit(1)
 
 logger.info("compiling")
 
