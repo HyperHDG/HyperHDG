@@ -222,6 +222,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_rows+1));
   PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, ioff[n_rows]));
 
+  // TODO: iterate only over the owned rows in sub, do coarse system separately
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(KSPCreate(comm, data->ksp+i));
 
@@ -263,6 +264,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
 PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  const PetscInt *ioff, *inds;
+  PetscInt n_rows;
+  PetscBool done;
 
   PetscFunctionBegin;
   if (!data->ksp) PetscCall(PCSetup_Net2AS(pc));
@@ -271,6 +275,34 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PetscCall(MatMult(data->sub, x, data->sub_left)); // sub = coarse_basis^T
   PetscCall(KSPSolve(data->ksp[0], data->sub_left, data->sub_left)); // override left
   PetscCall(MatMultTranspose(data->sub, data->sub_left, y));
+
+  PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
+
+  // fine
+  // TODO: iterate only over the owned rows in sub, do coarse system separately
+  for (PetscInt i = 1; i < data->sz; i++) {
+    PetscInt s = i-1; // subdomain
+    const PetscReal *vals;
+    IS is;
+    Vec z, res;
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
+    PetscCall(VecGetSubVector(x, is, &z));
+    PetscCall(VecDuplicate(z, &res));
+    PetscCall(KSPSolve(data->ksp[i], z, res));
+    PetscCall(VecGetArrayRead(res, &vals));
+    PetscCall(VecSetValues(y, ioff[s+1]-ioff[s], inds+ioff[s], vals, ADD_VALUES));
+    PetscCall(VecRestoreArrayRead(res, &vals));
+    PetscCall(VecDestroy(&res));
+    PetscCall(VecRestoreSubVector(x, is, &z));
+    PetscCall(ISDestroy(&is));
+  }
+
+  PetscCall(MatRestoreRowIJ(data->sub, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatRestoreRowIJ not done");
+
+  PetscCall(VecAssemblyBegin(y));
+  PetscCall(VecAssemblyEnd(y));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
