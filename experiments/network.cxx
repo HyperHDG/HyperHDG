@@ -14,6 +14,14 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
 
+#define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
+#define PRIN2S(STAGE) do { const char* name; PetscCall(PetscLogStagePush(STAGE)); PetscCall(PetscLogStageGetName(STAGE, &name)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#%s...\n", } while(0);
+
+//  #define PCALL(CALL) do { PetscCall(CALL); } while(0)
+// #define PRIN2SP()     do { PetscCall(PetscLogStagePop()); } while()
+//  #define PRIN2Y(VAR)  do { PetscCall(} while()
+// #define PRIN2IYA(VAR, NUM) do { PetscCall(PetscPrin2iya(#VAR, VAR, NUM)); } while()
+
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, PetscInt len) {
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(com, msg));
@@ -35,6 +43,21 @@ PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, const PetscInt* dat, P
     PetscCall(PetscPrintf(com, "  % 12d", dat[i]));
   }
   PetscCall(PetscPrintf(com, "\n"));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2iy(MPI_Comm comm, const char *name, PetscInt val) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: %d\n", name, val));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2iya(MPI_Comm comm, const char *name, PetscInt val, PetscInt num) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: [", name));
+  for (PetscInt i = 0; i < num; i++)
+    PetscCall(PetscPrintf(comm, "%d, ", val));
+  PetscCall(PetscPrintf(comm, "]\n"));
   PetscFunctionReturn(0);
 }
 
@@ -148,22 +171,18 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   size = (vend-vstart)/3;
   PetscCall(PetscMalloc3(4zu*size, &rows, 4zu*size, &cols, 4zu*size, &vals));
   PetscCall(VecGetSpan(v, vspan));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n -> x,y -> xx,yy -> i,j -> (type,col)\n"));
   for (PetscInt n = 0; n < size; n++) {
     PetscReal x = vspan[3*n],            y = vspan[3*n+1];
     PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
     // map to reference element
     PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3d -> %.3e,%.3e -> % .3e,% .3e -> % 3d,% 3d |", n, x, y, xx, yy, i, j));
-
-    if (i>data->p[0] || j>data->p[1]) goto next;
+    if (i>data->p[0] || j>data->p[1]) continue;
 
     if (i>0 && j>0) {
       rows[nnz] = vstart+n;
       cols[nnz] = (j-1)*data->p[0]+(i-1);
       vals[nnz] = (1-xx)*(1-yy);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> SW,%3d", cols[nnz]));
       nnz++;
     }
 
@@ -171,7 +190,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rows[nnz] = vstart+n;
       cols[nnz] = (j-1)*data->p[0]+i;
       vals[nnz] = xx*(1-yy);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> SE,%3d", cols[nnz]));
       nnz++;
     }
 
@@ -179,7 +197,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rows[nnz] = vstart+n;
       cols[nnz] = j*data->p[0]+i-1;
       vals[nnz] = (1-xx)*yy;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> NW,%3d", cols[nnz]));
       nnz++;
     }
 
@@ -187,15 +204,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rows[nnz] = vstart+n;
       cols[nnz] = j*data->p[0]+i;
       vals[nnz] = xx*yy;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> NE,%3d", cols[nnz]));
       nnz++;
     }
-  next:
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   }
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rows", rows, nnz));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "cols", cols, nnz));
-  PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "vals", vals, nnz));
 
   PetscCall(VecRestoreSpan(v, vspan));
   PetscCall(PCGetOperators(pc, &A, NULL));
@@ -210,16 +221,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
   PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
   PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &data->sub)); // INITIAL -> redistributes
-  PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatFilter(data->sub, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
-  PetscCall(MatView(data->sub, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatCreateVecs(data->sub, NULL, &data->sub_left));
 
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
-
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "ioff", ioff, n_rows+1));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "inds", inds, ioff[n_rows]));
 
   // TODO: iterate only over the owned rows in sub, do coarse system separately
   for (PetscInt i = 0; i < data->sz; i++) {
@@ -405,6 +411,8 @@ int main(int argc, char **argv) {
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
     constexpr PetscInt n_dofs_per_node = LSol::n_glob_dofs_per_node();
 
+    PetscReal rtol = 1e-10;
+
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";
     char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin";
@@ -424,6 +432,7 @@ int main(int argc, char **argv) {
     Mat mat;
     KSP ksp;
     PC pc;
+    KSPConvergedReason reason;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
@@ -439,16 +448,24 @@ int main(int argc, char **argv) {
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
     if (help) {
+      Vec v; Mat m; KSP k;
+      VecCreateFromOptions(PETSC_COMM_WORLD, NULL, 1, 1, 1, &v);
+      MatCreateFromOptions(PETSC_COMM_WORLD, NULL, 1, 1, 1, 1, 1, &m);
+      KSPCreate(PETSC_COMM_WORLD, &k);
+      KSPSetFromOptions(k);
+      VecDestroy(&v);
+      MatDestroy(&m);
+      KSPDestroy(&k);
       PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
       PetscFinalize();
       return 0;
     }
 
-    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "n_dofs_per_node", &n_dofs_per_node, 1));
+    PRIN2IY(n_dofs_per_node);
 
-    PetscCall(PetscLogStageRegister("Assembly", &s_as));
-    PetscCall(PetscLogStageRegister("Iteration", &s_it));
-    PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
+    PetscCall(PetscLogStageRegister("assembly", &s_as));
+    PetscCall(PetscLogStageRegister("iteration", &s_it));
+    PetscCall(PetscLogStageRegister("residual", &s_rf));
 
     HDG hdg(domain_filepath);
     zero_v = hdg.zero_vector();
@@ -479,6 +496,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
     PetscCall(PCNet2ASReadGraph(pc, domain_filepath));
+    PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
     PetscCall(KSPSetUp(ksp));
 
@@ -500,18 +518,19 @@ int main(int argc, char **argv) {
     PetscLogStagePop();
 
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
+    PetscCall(KSPGetConvergedReason(ksp, &reason));
+    PetscCall(KSPSetErrorIfNotConverged(ksp, PETSC_TRUE));
 
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "false");
     hdg.plot_option("scale", plot_scale);
-
     hdg.plot_solution(sol_span);
 
     PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
 
-    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "iterations", &iterations, 1));
+    PRIN2IY(iterations);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
 
     PetscCall(KSPDestroy(&ksp));
