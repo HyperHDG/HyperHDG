@@ -15,12 +15,9 @@ static const char help_msg[] = "experiments regarding timoshenko networks\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
 
 #define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
-#define PRIN2S(STAGE) do { const char* name; PetscCall(PetscLogStagePush(STAGE)); PetscCall(PetscLogStageGetName(STAGE, &name)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#%s...\n", } while(0);
-
-//  #define PCALL(CALL) do { PetscCall(CALL); } while(0)
-// #define PRIN2SP()     do { PetscCall(PetscLogStagePop()); } while()
-//  #define PRIN2Y(VAR)  do { PetscCall(} while()
-// #define PRIN2IYA(VAR, NUM) do { PetscCall(PetscPrin2iya(#VAR, VAR, NUM)); } while()
+#define PRIN2FY(VAR)  PetscCall(PetscPrin2fy(PETSC_COMM_WORLD, #VAR, VAR))
+#define PRIN2S(STAGE) do { const char* name; PetscCall(PetscLogStagePush(STAGE)); PetscCall(PetscLogStageGetName(STAGE, &name)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", name)); } while(0);
+#define PRIN2SP()     do { PetscCall(PetscLogStagePop()); } while()
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, PetscInt len) {
   PetscFunctionBeginUser;
@@ -49,6 +46,12 @@ PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, const PetscInt* dat, P
 PetscErrorCode PetscPrin2iy(MPI_Comm comm, const char *name, PetscInt val) {
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(comm, "%s: %d\n", name, val));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2fy(MPI_Comm comm, const char *name, PetscReal val) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: %.5e\n", name, val));
   PetscFunctionReturn(0);
 }
 
@@ -433,6 +436,7 @@ int main(int argc, char **argv) {
     KSP ksp;
     PC pc;
     KSPConvergedReason reason;
+    PetscReal rnorm;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
@@ -477,8 +481,7 @@ int main(int argc, char **argv) {
     PetscCall(VecSetSizes(sol, PETSC_DECIDE, N));
     PetscCall(VecSetSizes(rhs, PETSC_DECIDE, N));
 
-    PetscLogStagePush(s_as);
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "assembly...\n"));
+    PRIN2S(s_as);
     mat_coo = hdg.trace_to_flux_mat();
     ncoo = mat_coo.value_vec.size();
     PetscCall(MatCreate(PETSC_COMM_WORLD, &mat));
@@ -486,7 +489,7 @@ int main(int argc, char **argv) {
     PetscCall(MatSetType(mat, MATMPIAIJ));
     PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
     PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
-    PetscLogStagePop();
+    PetscCall(PetscLogStagePop());
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
 
@@ -502,36 +505,36 @@ int main(int argc, char **argv) {
 
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iteration...\n"));
     std::span<PetscReal> rhs_span;
     std::span<PetscReal> sol_span;
     PetscCall(VecGetSpan(rhs, rhs_span));
     PetscCall(VecGetSpan(sol, sol_span));
 
-    PetscLogStagePush(s_rf);
+    PRIN2S(s_rf);
     hdg.residual_flux2(zero_v, rhs_span, 0.);
-    PetscLogStagePop();
+    PetscCall(PetscLogStagePop());
     PetscCall(VecScale(rhs, -1.));
 
-    PetscLogStagePush(s_it);
+    PRIN2S(s_it);
     PetscCall(KSPSolve(ksp, rhs, sol));
-    PetscLogStagePop();
+    PetscCall(PetscLogStagePop());
 
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
     PetscCall(KSPGetConvergedReason(ksp, &reason));
     PetscCall(KSPSetErrorIfNotConverged(ksp, PETSC_TRUE));
+    PetscCall(KSPGetResidualNorm(ksp, &rnorm));
+    PRIN2IY(iterations);
+    PRIN2FY(rnorm);
 
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "false");
     hdg.plot_option("scale", plot_scale);
     hdg.plot_solution(sol_span);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.*.vtu\n", output_directory, output_filename));
 
     PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
-
-    PRIN2IY(iterations);
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
 
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
