@@ -156,7 +156,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     // map to reference element
     PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3d -> %.3e,%.3e -> % .3e,% .3e -> % 3d,% 3d", n, x, y, xx, yy, i, j));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3d -> %.3e,%.3e -> % .3e,% .3e -> % 3d,% 3d |", n, x, y, xx, yy, i, j));
 
     if (i>data->p[0] || j>data->p[1]) goto next;
 
@@ -164,7 +164,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rows[nnz] = vstart+n;
       cols[nnz] = (j-1)*data->p[0]+(i-1);
       vals[nnz] = (1-xx)*(1-yy);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 0,%3d", cols[nnz]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> SW,%3d", cols[nnz]));
       nnz++;
     }
 
@@ -172,23 +172,23 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rows[nnz] = vstart+n;
       cols[nnz] = (j-1)*data->p[0]+i;
       vals[nnz] = xx*(1-yy);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 1,%3d", cols[nnz]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> SE,%3d", cols[nnz]));
       nnz++;
     }
 
-    if (i>0 && j+1<data->p[1]) {
+    if (i>0 && j<data->p[1]) {
       rows[nnz] = vstart+n;
       cols[nnz] = j*data->p[0]+i-1;
       vals[nnz] = (1-xx)*yy;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 2,%3d", cols[nnz]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> NW,%3d", cols[nnz]));
       nnz++;
     }
 
-    if (i+1<data->p[0] && j+1<data->p[1]) {
+    if (i<data->p[0] && j<data->p[1]) {
       rows[nnz] = vstart+n;
       cols[nnz] = j*data->p[0]+i;
       vals[nnz] = xx*yy;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> 3,%3d", cols[nnz]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -> NE,%3d", cols[nnz]));
       nnz++;
     }
   next:
@@ -334,8 +334,12 @@ PetscErrorCode PCNet2ASReadGraph(PC pc, const char *path) {
   std::span<PetscReal> vspan;
   PetscInt start, end;
   PetscReal *verts;
+  PCType type;
 
   PetscFunctionBeginUser;
+  PCGetType(pc, &type);
+  if (strcmp(type, "net2as") != 0) PetscFunctionReturn(0);
+
   geobin::Graph graph = geobin::deserialize_bin(path);
   verts = (PetscReal*)graph.vertices.data();
   PetscCall(VecCreateFromOptions(PetscObjectComm((PetscObject)pc), NULL, 3, PETSC_DECIDE, graph.vertices.size()*3, &data->vertices));
@@ -365,6 +369,33 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template<typename HDG>
+PetscErrorCode PCNet2ASVisCoarse(PC pc, HDG& hdg, const char* name) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  Vec left, right;
+  PetscInt start, end;
+  std::span<PetscReal> span;
+  PCType type;
+
+  PetscFunctionBeginUser;
+  PCGetType(pc, &type);
+  if (strcmp(type, "net2as") != 0) PetscFunctionReturn(0);
+
+  hdg.plot_option("fileName", name);
+  hdg.plot_option("printFileNumber", "true");
+  PetscCall(MatCreateVecs(data->sub, &right, &left));
+  PetscCall(VecGetOwnershipRange(left, &start, &end));
+  for (PetscInt i = 0; i < end-start; i++) {
+    PetscCall(VecSetValue(left, i+start, 1., INSERT_VALUES));
+    PetscCall(MatMultTranspose(data->sub, left, right));
+    PetscCall(VecGetSpan(right, span));
+    hdg.plot_solution(span, i);
+    PetscCall(VecRestoreSpan(right, span));
+    PetscCall(VecZeroEntries(left));
+  }
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv) {
     // constexpr unsigned int poly_deg = 5;
     using Top = Topology::File<1,3>;
@@ -379,6 +410,7 @@ int main(int argc, char **argv) {
     char output_filename[PATH_MAX] = "network";
     char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin";
     char plot_scale[PATH_MAX] = "1";
+    char viscoarse[PATH_MAX] = {0};
 
     PetscLogStage s_as, s_it, s_rf;
 
@@ -401,6 +433,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -419,11 +452,6 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
 
     HDG hdg(domain_filepath);
-    hdg.plot_option("fileName", output_filename);
-    hdg.plot_option("outputDir", output_directory);
-    hdg.plot_option("printFileNumber", "false");
-    hdg.plot_option("scale", plot_scale);
-
     zero_v = hdg.zero_vector();
     N = zero_v.size();
     PetscCall(VecCreate(PETSC_COMM_WORLD, &sol));
@@ -453,6 +481,9 @@ int main(int argc, char **argv) {
     PetscCall(PCSetType(pc, "net2as"));
     PetscCall(PCNet2ASReadGraph(pc, domain_filepath));
     PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(KSPSetUp(ksp));
+
+    if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iteration...\n"));
     std::span<PetscReal> rhs_span;
@@ -470,6 +501,11 @@ int main(int argc, char **argv) {
     PetscLogStagePop();
 
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
+
+    hdg.plot_option("fileName", output_filename);
+    hdg.plot_option("outputDir", output_directory);
+    hdg.plot_option("printFileNumber", "false");
+    hdg.plot_option("scale", plot_scale);
 
     hdg.plot_solution(sol_span);
 
