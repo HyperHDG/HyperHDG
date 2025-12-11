@@ -77,7 +77,8 @@ struct PC_Net2AS {
   PetscReal min[3], max[3];
   // number of subdomains in xy, total number of systems
   PetscInt p[2], sz;
-  // CSR representation of the overlapping subdomains, numerical values > 0 irrelevant
+  // coarse basis representation of the overlapping subdomains
+  // rows correspond to subdomains
   Mat  sub;
   // mat[0] coarse system,
   // mat[i] for i >= 1 local matrices corresponding to subdomains
@@ -233,14 +234,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
     PetscCall(KSPSetFromOptions(data->ksp[i]));
 
-    if (i == 0) {
-      PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
-    } else {
+    if (i > 0) {
       PetscInt s = i-1; // subdomain
       IS is;
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
       PetscCall(MatCreateSubMatrix(A, is, is, MAT_INITIAL_MATRIX, data->mat+i));
     }
+    PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
     PetscCall(KSPSetUp(data->ksp[i]));
   }
   PetscCall(MatRestoreRowIJ(data->sub, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
