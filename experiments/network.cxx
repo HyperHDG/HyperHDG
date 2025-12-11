@@ -98,8 +98,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   }
   PetscCall(MatDestroy(&data->sub));
   PetscCall(VecDestroy(&data->sub_left));
-  PetscCall(PetscFree(data->ksp));
-  PetscCall(PetscFree(data->mat));
+  PetscCall(PetscFree2(data->ksp, data->mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
