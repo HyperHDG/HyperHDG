@@ -13,11 +13,14 @@
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
+static PetscLogDouble PETSC_PRIN2_TIMER = 0;
+static PetscInt PETSC_PRIN2_STAGE = 0;
+static const char* PETSC_PRIN2_STAGE_NAME = "";
 
 #define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
 #define PRIN2FY(VAR)  PetscCall(PetscPrin2fy(PETSC_COMM_WORLD, #VAR, VAR))
-#define PRIN2S(STAGE) do { const char* name; PetscCall(PetscLogStagePush(STAGE)); PetscCall(PetscLogStageGetName(STAGE, &name)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", name)); } while(0);
-#define PRIN2SP()     do { PetscCall(PetscLogStagePop()); } while()
+#define PRIN2S(STAGE) do { PETSC_PRIN2_STAGE = STAGE; PetscCall(PetscLogStageGetName(STAGE, &PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscTime(&PETSC_PRIN2_TIMER)); PetscCall(PetscLogStagePush(STAGE)); } while(0)
+#define PRIN2SP()     do { PetscLogDouble time; PetscCall(PetscLogStagePop()); PetscCall(PetscTime(&time)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_%s: %.5e\n", PETSC_PRIN2_STAGE_NAME, (time-PETSC_PRIN2_TIMER))); } while(0)
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, const PetscReal* dat, PetscInt len) {
   PetscFunctionBeginUser;
@@ -437,6 +440,9 @@ int main(int argc, char **argv) {
     PC pc;
     KSPConvergedReason reason;
     PetscReal rnorm;
+    PetscBool mat_only = PETSC_FALSE;
+    std::span<PetscReal> rhs_span;
+    std::span<PetscReal> sol_span;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
@@ -446,6 +452,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix", NULL, mat_only, &mat_only, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -489,7 +496,9 @@ int main(int argc, char **argv) {
     PetscCall(MatSetType(mat, MATMPIAIJ));
     PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
     PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
-    PetscCall(PetscLogStagePop());
+    PRIN2SP();
+
+    if (mat_only) goto end;
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
 
@@ -505,19 +514,18 @@ int main(int argc, char **argv) {
 
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
-    std::span<PetscReal> rhs_span;
-    std::span<PetscReal> sol_span;
     PetscCall(VecGetSpan(rhs, rhs_span));
     PetscCall(VecGetSpan(sol, sol_span));
 
     PRIN2S(s_rf);
     hdg.residual_flux2(zero_v, rhs_span, 0.);
-    PetscCall(PetscLogStagePop());
+    PRIN2SP();
+
     PetscCall(VecScale(rhs, -1.));
 
     PRIN2S(s_it);
     PetscCall(KSPSolve(ksp, rhs, sol));
-    PetscCall(PetscLogStagePop());
+    PRIN2SP();
 
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
     PetscCall(KSPGetConvergedReason(ksp, &reason));
@@ -540,6 +548,7 @@ int main(int argc, char **argv) {
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&sol));
 
+end:
     PetscCall(PetscFinalize());
     return 0;
 }
