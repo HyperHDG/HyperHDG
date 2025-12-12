@@ -563,7 +563,7 @@ int main(int argc, char **argv) {
     hdg.plot_option("printFileNumber", "false");
     hdg.plot_option("scale", plot_scale);
     hdg.plot_solution(sol_span);
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.*.vtu\n", output_directory, output_filename));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
     PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
