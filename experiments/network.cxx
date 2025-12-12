@@ -513,9 +513,7 @@ int main(int argc, char **argv) {
     PRIN2S(s_as);
     mat_coo = hdg.trace_to_flux_mat();
     ncoo = mat_coo.value_vec.size();
-    PetscCall(MatCreate(PETSC_COMM_WORLD, &mat));
-    PetscCall(MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, N, N));
-    PetscCall(MatSetType(mat, MATMPIAIJ));
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", n_dofs_per_node, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
     PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
     PRIN2SP();
