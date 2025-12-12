@@ -127,7 +127,7 @@ struct PC_Net2AS {
   // bounding box of vertices
   PetscReal min[3], max[3];
   // number of subdomains in xy, total number of systems
-  PetscInt p[2], sz;
+  PetscInt p[2], sz, n_dofs_per_node;
   // coarse basis representation of the overlapping subdomains
   // rows correspond to subdomains
   Mat  sub;
@@ -174,6 +174,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Vec v = data->vertices;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, nnz = 0, n_cols = data->p[0]*data->p[1], n_rows;
+  size_t max_cols;
   PetscInt *rows, *cols;
   PetscReal *vals, h[2], eps = 1e-14;
   PetscBool done;
@@ -187,7 +188,10 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscFunctionBegin;
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
-
+  PetscCall(PCGetOperators(pc, &A, NULL));
+  PetscCall(VecGetSize(v, &size));
+  PetscCall(MatGetSize(A, &data->n_dofs_per_node, NULL));
+  data->n_dofs_per_node /= size/3;
   data->sz = n_cols+1;
   for (PetscInt i = 0; i < 3; i++) {
     PetscCall(VecStrideMin(v, i, NULL, data->min+i));
@@ -197,7 +201,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
   size = (vend-vstart)/3;
-  PetscCall(PetscMalloc3(4zu*size, &rows, 4zu*size, &cols, 4zu*size, &vals));
+  max_cols = data->n_dofs_per_node * 4zu * size;
+  PetscCall(PetscMalloc3(max_cols, &rows, max_cols, &cols, max_cols, &vals));
   PetscCall(VecGetSpan(v, vspan));
   for (PetscInt n = 0; n < size; n++) {
     PetscReal x = vspan[3*n],            y = vspan[3*n+1];
@@ -205,52 +210,52 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     // map to reference element
     PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
 
+    struct {
+      PetscInt row;
+      PetscInt col;
+      PetscReal val;
+    } rcv[4];
+    PetscInt n_rcv = 0;
+
     if (i>data->p[0] || j>data->p[1]) continue;
 
-    if (i>0 && j>0) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = (j-1)*data->p[0]+(i-1);
-      vals[nnz] = (1-xx)*(1-yy);
-      nnz++;
-    }
+    if (i>0 && j>0)
+      rcv[n_rcv++] = {vstart+n, (j-1)*data->p[0]+(i-1), (1-xx)*(1-yy)};
 
-    if (i<data->p[0] && j>0) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = (j-1)*data->p[0]+i;
-      vals[nnz] = xx*(1-yy);
-      nnz++;
-    }
+    if (i<data->p[0] && j>0)
+      rcv[n_rcv++] = {vstart+n, (j-1)*data->p[0]+i, xx*(1-yy)};
 
-    if (i>0 && j<data->p[1]) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = j*data->p[0]+i-1;
-      vals[nnz] = (1-xx)*yy;
-      nnz++;
-    }
+    if (i>0 && j<data->p[1])
+      rcv[n_rcv++] = {vstart+n, j*data->p[0]+i-1, (1-xx)*yy};
 
-    if (i<data->p[0] && j<data->p[1]) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = j*data->p[0]+i;
-      vals[nnz] = xx*yy;
-      nnz++;
+    if (i<data->p[0] && j<data->p[1])
+      rcv[n_rcv++] = {vstart+n, j*data->p[0]+i, xx*yy};
+
+    for (PetscInt i_rcv = 0; i_rcv < n_rcv; i_rcv++) {
+      for (PetscInt i_dofs = 0; i_dofs < data->n_dofs_per_node; i_dofs++) {
+        rows[nnz] = data->n_dofs_per_node * rcv[i_rcv].row + i_dofs;
+        cols[nnz] = data->n_dofs_per_node * rcv[i_rcv].col + i_dofs;
+        vals[nnz] = rcv[i_rcv].val;
+        nnz++;
+      }
     }
   }
 
   PetscCall(VecRestoreSpan(v, vspan));
-  PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, size, n_cols, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetSizes(coarse_basis, size*data->n_dofs_per_node, n_cols*data->n_dofs_per_node, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
   PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
-  PetscCall(MatEliminateZeros(coarse_basis, PETSC_TRUE));
+  PetscCall(MatFilter(coarse_basis, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
 
   PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
   PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
   PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &data->sub)); // INITIAL -> redistributes
-  PetscCall(MatFilter(data->sub, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
   PetscCall(MatCreateVecs(data->sub, NULL, &data->sub_left));
+  PetscCall(MatViewFromOptions(data->sub, NULL, "-sub_view"));
 
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
@@ -348,6 +353,7 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
 
+  PetscCall(PetscViewerASCIIPrintf(viewer, "n_dofs_per_node=%d\n", data->n_dofs_per_node));
   PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d,%d\n", data->p[0], data->p[1]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
@@ -430,12 +436,12 @@ PetscErrorCode PCNet2ASVisCoarse(PC pc, HDG& hdg, const char* name) {
 }
 
 int main(int argc, char **argv) {
-    // constexpr unsigned int poly_deg = 5;
+    constexpr unsigned int poly_deg = 5;
     using Top = Topology::File<1,3>;
     using Geo = Geometry::File<1,3>;
     using NDes = NodeDescriptor::File<1,3>;
-    // using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
-    using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
+    using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
+    // using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
     constexpr PetscInt n_dofs_per_node = LSol::n_glob_dofs_per_node();
 
@@ -446,8 +452,9 @@ int main(int argc, char **argv) {
     char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin";
     char plot_scale[PATH_MAX] = "1";
     char viscoarse[PATH_MAX] = {0};
+    char t2f_mat_load_path[PATH_MAX] = {0};
 
-    PetscLogStage s_as, s_it, s_rf;
+    PetscLogStage s_as, s_it, s_rf, s_ksp;
 
     PetscBool is_set, help;
     PetscInt N, ncoo;
@@ -494,11 +501,10 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    PRIN2IY(n_dofs_per_node);
-
     PetscCall(PetscLogStageRegister("assembly", &s_as));
     PetscCall(PetscLogStageRegister("iteration", &s_it));
     PetscCall(PetscLogStageRegister("residual", &s_rf));
+    PetscCall(PetscLogStageRegister("ksp", &s_ksp));
 
     HDG hdg(domain_filepath);
     zero_v = hdg.zero_vector();
@@ -510,21 +516,10 @@ int main(int argc, char **argv) {
     PetscCall(VecSetSizes(sol, PETSC_DECIDE, N));
     PetscCall(VecSetSizes(rhs, PETSC_DECIDE, N));
 
-    PRIN2S(s_as);
-    mat_coo = hdg.trace_to_flux_mat();
-    ncoo = mat_coo.value_vec.size();
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", n_dofs_per_node, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
-    PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
-    PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
-    PRIN2SP();
-
-    if (mat_only) goto end;
-
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("csv", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorCSV, NULL, NULL));
 
     PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
-    PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
@@ -532,7 +527,30 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_csv", "csv", NULL));
     PetscCall(KSPSetFromOptions(ksp));
+
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", n_dofs_per_node, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-t2f_mat_load", t2f_mat_load_path, PATH_MAX, &is_set));
+    PetscCall(KSPSetOperators(ksp, mat, mat));
+
+    PRIN2S(s_as);
+    if (*t2f_mat_load_path) {
+      PetscViewer v;
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, t2f_mat_load_path, FILE_MODE_READ, &v));
+      PetscCall(MatLoad(mat, v));
+    } else {
+      mat_coo = hdg.trace_to_flux_mat();
+      ncoo = mat_coo.value_vec.size();
+      PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
+      PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
+    }
+    PRIN2SP();
+
+    if (mat_only) goto end;
+
+    PRIN2S(s_ksp);
     PetscCall(KSPSetUp(ksp));
+    PRIN2SP();
 
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
