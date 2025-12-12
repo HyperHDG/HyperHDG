@@ -99,6 +99,28 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode KSPMonitorCSVCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf) {
+    PetscFunctionBegin;
+    PetscCall(PetscViewerAndFormatCreate(viewer, format, vf));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "iteration,residual_norm\n"));
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode KSPMonitorCSVDestroy(PetscViewerAndFormat **vf) {
+    PetscFunctionBegin;
+    PetscCall(PetscViewerAndFormatDestroy(vf));
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
+PetscErrorCode KSPMonitorCSV(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf) {
+  PetscViewer viewer = vf->viewer;
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%03" PetscInt_FMT ",%.16e\n", it, (double)rnorm));
+  PetscFunctionReturn(0);
+}
+
 struct PC_Net2AS {
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec vertices;
@@ -501,6 +523,7 @@ int main(int argc, char **argv) {
     if (mat_only) goto end;
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
+    PetscCall(KSPMonitorRegister("csv", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorCSV, NULL, NULL));
 
     PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
@@ -509,6 +532,7 @@ int main(int argc, char **argv) {
     PetscCall(PCSetType(pc, "net2as"));
     PetscCall(PCNet2ASReadGraph(pc, domain_filepath));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+    PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_csv", "csv", NULL));
     PetscCall(KSPSetFromOptions(ksp));
     PetscCall(KSPSetUp(ksp));
 
