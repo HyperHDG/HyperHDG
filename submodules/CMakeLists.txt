@@ -5,8 +5,6 @@ endif()
 add_subdirectory(tensor_product_chain_complex.git)
 add_subdirectory(tensor_product_polynomials.git)
 add_subdirectory(nanoflann)
-add_subdirectory(fmtlog)
-add_subdirectory(bxzstr)
 add_subdirectory(KaHIP)
 get_directory_property(KAHIP_TARGETS DIRECTORY KaHIP BUILDSYSTEM_TARGETS)
 # HACK: ignore -Wunused in KaHIP

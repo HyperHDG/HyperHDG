@@ -11,13 +11,13 @@
 #include <algorithm>
 
 #include <nanoflann.hpp>
-#include <fmtlog/fmtlog.h>
 
 #include "geobin.hxx"
 
 using namespace geobin;
 
-namespace {
+#define logi(...) std::println(stdout, __VA_ARGS__)
+#define loge(...) std::println(stderr, __VA_ARGS__)
 
 Point interpolate(const Point& u, const Point& v, Real a) {
   Point res;
@@ -45,24 +45,21 @@ struct PointCloud
   }
 };
 
+int usage(int argc, char** argv) {
+  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_folder> [txt]", argv[0]);
+  return 1;
 }
 
 int main(int argc, char** argv) {
-  fmtlog::startPollingThread(1);
+  if (argc < 3) return usage(argc, argv);
 
-  // verify args
-  // argv[0] is executable path
-  if (argc < 3) {
-    std::println(stderr, "usage: {} <input_folder> <output_folder> [txt]", argv[0]);
-    return 1;
-  }
   std::string input_folder = argv[1];
   std::string output_path = argv[2];
   namespace fs = std::filesystem;
 
   if (!fs::is_directory(input_folder)) {
     loge("invalid argument <input_folder>, got '{}'", input_folder);
-    return 1;
+    return usage(argc, argv);
   }
 
   if (!fs::is_directory(output_path)) {
@@ -71,7 +68,7 @@ int main(int argc, char** argv) {
     if (!file) {
       loge("invalid argument <output_path>, got '{}'", output_path);
       loge("  neither directory, nor writable path");
-      return 1;
+      return usage(argc, argv);
     }
     fs::remove(test_path);
   }

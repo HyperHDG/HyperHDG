@@ -1,11 +1,6 @@
-#include <CLI/CLI.hpp>
-#include <print>
+#include <cstdio>
 #include <string>
-#include <fstream>
 #include "geobin.hxx"
-#include <fmtlog/fmtlog.h>
-
-namespace {
 
 geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
   geobin::Graph graph;
@@ -36,24 +31,23 @@ geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
   return graph;
 }
 
+int usage(int argc, char** argv) {
+  fprintf(stderr, "ERROR: usage: %s <n> <path>\n", argv[0]);
+  return 1;
 }
 
 int main(int argc, char** argv) {
-  CLI::App app("synthetic graph generation");
-  fmtlog::startPollingThread(1);
+  const char* out;
+  geobin::u64 n;
 
-  std::string output_path = "graph";
-  app.add_option("output", output_path, "the output path of the graph")->required();
+  if (argc < 3) return usage(argc, argv);
+  if (1 != sscanf(argv[1], "%lu", &n)) return usage(argc, argv);
+  out = argv[2];
 
-  geobin::u64 n = 10;
-  app.add_option("n", n, "related to number of vertices")->required();
+  printf("args\n");
+  printf("  out=%s\n", out);
+  printf("  n=%lu\n", n);
 
-  CLI11_PARSE(app, argc, argv);
-
-  logi("args");
-  logi("  output_path={}", output_path);
-  logi("  n={}", n);
-
-  geobin::Graph graph = generate_grid_graph(output_path.c_str(), n);
-  geobin::serialize_bin(output_path.c_str(), graph);
+  geobin::Graph graph = generate_grid_graph(out, n);
+  geobin::serialize_bin(out, graph);
 }
