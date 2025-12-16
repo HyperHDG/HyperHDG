@@ -29,9 +29,6 @@
 [submodule "submodules/METIS"]
 	path = submodules/METIS
 	url = https://github.com/LecrisUT/METIS.git
-[submodule "submodules/frozen"]
-	path = submodules/frozen
-	url = https://github.com/serge-sans-paille/frozen.git
 [submodule "submodules/structlog"]
 	path = submodules/structlog
 	url = https://github.com/takeshibaconsuzuki/structlog.git
