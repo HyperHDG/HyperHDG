@@ -126,8 +126,8 @@ struct PC_Net2AS {
   Vec vertices;
   // bounding box of vertices
   PetscReal min[3], max[3];
-  // number of subdomains in xy, total number of systems
-  PetscInt p[2], sz, n_dofs_per_node;
+  // number of subdomains in xy, total number of systems, block size (number of dofs per node)
+  PetscInt p[2], sz, bs;
   // coarse basis representation of the overlapping subdomains
   // rows correspond to subdomains
   Mat  sub;
@@ -191,8 +191,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(v, &size));
-  PetscCall(MatGetSize(A, &data->n_dofs_per_node, NULL));
-  data->n_dofs_per_node /= size/3;
+  PetscCall(MatGetSize(A, &data->bs, NULL));
+  data->bs /= size/3;
   data->sz = n_cols+1;
   for (PetscInt i = 0; i < 3; i++) {
     PetscCall(VecStrideMin(v, i, NULL, data->min+i));
@@ -204,7 +204,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   vend /= 3;
   vstart /= 3;
   size = vend-vstart;
-  max_cols = data->n_dofs_per_node * 4zu * size;
+  max_cols = data->bs * 4zu * size;
   PetscCall(PetscMalloc3(max_cols, &rows, max_cols, &cols, max_cols, &vals));
   PetscCall(VecGetSpan(v, vspan));
   for (PetscInt n = 0; n < size; n++) {
@@ -235,9 +235,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       rcv[n_rcv++] = {vstart+n, j*data->p[0]+i, xx*yy};
 
     for (PetscInt i_rcv = 0; i_rcv < n_rcv; i_rcv++) {
-      for (PetscInt i_dofs = 0; i_dofs < data->n_dofs_per_node; i_dofs++) {
-        rows[nnz] = data->n_dofs_per_node * rcv[i_rcv].row + i_dofs;
-        cols[nnz] = data->n_dofs_per_node * rcv[i_rcv].col + i_dofs;
+      for (PetscInt i_dofs = 0; i_dofs < data->bs; i_dofs++) {
+        rows[nnz] = data->bs * rcv[i_rcv].row + i_dofs;
+        cols[nnz] = data->bs * rcv[i_rcv].col + i_dofs;
         vals[nnz] = rcv[i_rcv].val;
         nnz++;
       }
@@ -248,7 +248,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, size*data->n_dofs_per_node, n_cols*data->n_dofs_per_node, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetSizes(coarse_basis, size*data->bs, n_cols*data->bs, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
   PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
@@ -361,7 +361,7 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
 
-  PetscCall(PetscViewerASCIIPrintf(viewer, "n_dofs_per_node=%d\n", data->n_dofs_per_node));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "bs=%d\n", data->bs));
   PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d,%d\n", data->p[0], data->p[1]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
@@ -451,7 +451,7 @@ int main(int argc, char **argv) {
     // using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
     using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
-    constexpr PetscInt n_dofs_per_node = LSol::n_glob_dofs_per_node();
+    constexpr PetscInt bs = LSol::n_glob_dofs_per_node();
 
     PetscReal rtol = 1e-10;
 
@@ -536,7 +536,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_csv", "csv", NULL));
     PetscCall(KSPSetFromOptions(ksp));
 
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", n_dofs_per_node, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-t2f_mat_load", t2f_mat_load_path, PATH_MAX, &is_set));
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
