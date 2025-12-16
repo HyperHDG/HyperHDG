@@ -137,7 +137,7 @@ struct PC_Net2AS {
   // corresponding solvers
   KSP* ksp;
 
-  Vec sub_left;
+  Vec sub_left, coarse_sol;
 };
 
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
@@ -149,6 +149,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   }
   PetscCall(MatDestroy(&data->sub));
   PetscCall(VecDestroy(&data->sub_left));
+  PetscCall(VecDestroy(&data->coarse_sol));
   PetscCall(PetscFree2(data->ksp, data->mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -200,7 +201,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   }
 
   PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
-  size = (vend-vstart)/3;
+  vend /= 3;
+  vstart /= 3;
+  size = vend-vstart;
   max_cols = data->n_dofs_per_node * 4zu * size;
   PetscCall(PetscMalloc3(max_cols, &rows, max_cols, &cols, max_cols, &vals));
   PetscCall(VecGetSpan(v, vspan));
@@ -255,10 +258,12 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
   PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &data->sub)); // INITIAL -> redistributes
   PetscCall(MatCreateVecs(data->sub, NULL, &data->sub_left));
+  PetscCall(MatCreateVecs(data->sub, NULL, &data->coarse_sol));
   PetscCall(MatViewFromOptions(data->sub, NULL, "-sub_view"));
 
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
+  PetscCall(MatGetOwnershipRange(data->sub, &vstart, &vend));
 
   // TODO: iterate only over the owned rows in sub, do coarse system separately
   for (PetscInt i = 0; i < data->sz; i++) {
@@ -281,6 +286,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       PetscInt s = i-1; // subdomain
       IS is;
       Mat *mat;
+      if (s < vstart || s >= vend) continue;
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
       // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
       //       while MatCreateSubmatrices always creates sequential matrices,
@@ -303,7 +309,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   const PetscInt *ioff, *inds;
-  PetscInt n_rows;
+  PetscInt n_rows, start, end;
   PetscBool done;
 
   PetscFunctionBegin;
@@ -311,11 +317,12 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
 
   // coarse
   PetscCall(MatMult(data->sub, x, data->sub_left)); // sub = coarse_basis^T
-  PetscCall(KSPSolve(data->ksp[0], data->sub_left, data->sub_left)); // override left
-  PetscCall(MatMultTranspose(data->sub, data->sub_left, y));
+  PetscCall(KSPSolve(data->ksp[0], data->sub_left, data->coarse_sol)); // override left // BUG
+  PetscCall(MatMultTranspose(data->sub, data->coarse_sol, y));
 
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
+  PetscCall(MatGetOwnershipRange(data->sub, &start, &end));
 
   // fine
   // TODO: iterate only over the owned rows in sub, do coarse system separately
@@ -324,6 +331,7 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
     const PetscReal *vals;
     IS is;
     Vec z, res;
+    if (s < start || s >= end) continue;
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
     PetscCall(VecGetSubVector(x, is, &z));
     PetscCall(VecDuplicate(z, &res));
@@ -436,12 +444,12 @@ PetscErrorCode PCNet2ASVisCoarse(PC pc, HDG& hdg, const char* name) {
 }
 
 int main(int argc, char **argv) {
-    constexpr unsigned int poly_deg = 5;
+  // constexpr unsigned int poly_deg = 5;
     using Top = Topology::File<1,3>;
     using Geo = Geometry::File<1,3>;
     using NDes = NodeDescriptor::File<1,3>;
-    using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
-    // using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
+    // using LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
+    using LSol = LocalSolver::Diffusion<1,5,10,ConstantDiffusionParameters>;
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
     constexpr PetscInt n_dofs_per_node = LSol::n_glob_dofs_per_node();
 
