@@ -12,29 +12,27 @@ target_link_libraries(libpartition PUBLIC kahip PUBLIC METIS_METIS)
 add_library(stats stats.cxx)
 
 add_library(geobin geobin.cxx)
-target_link_libraries(geobin PUBLIC bxzstr)
-target_compile_definitions(geobin PUBLIC HAVE_GEOBIN)
 
 ########## EXE #############
 
 add_executable(make_geo make_geo.cxx)
-target_link_libraries(make_geo geobin nanoflann::nanoflann fmtlog)
+target_link_libraries(make_geo geobin nanoflann::nanoflann)
 
 add_executable(partitioner partitioner.cxx)
 target_link_libraries(partitioner geobin stats CLI11::CLI11 libpartition spdlog::spdlog)
 target_compile_options(partitioner PRIVATE -Wno-deprecated-literal-operator)
 
 add_executable(graph_gen graph_gen.cxx)
-target_link_libraries(graph_gen CLI11::CLI11 geobin fmtlog)
+target_link_libraries(graph_gen geobin)
 
 add_executable(heat heat.cxx)
-target_link_libraries(heat HyperHDG geobin PkgConfig::PETSC)
+target_link_libraries(heat HyperHDG PkgConfig::PETSC)
 
 add_executable(wave wave.cxx)
-target_link_libraries(wave HyperHDG geobin PkgConfig::PETSC)
+target_link_libraries(wave HyperHDG PkgConfig::PETSC)
 
 add_executable(wave_conv wave_conv.cxx)
-target_link_libraries(wave_conv HyperHDG geobin PkgConfig::PETSC)
+target_link_libraries(wave_conv HyperHDG PkgConfig::PETSC)
 
 add_executable(network network.cxx)
 target_link_libraries(network HyperHDG geobin PkgConfig::PETSC)

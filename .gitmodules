@@ -20,9 +20,6 @@
 [submodule "submodules/fmtlog"]
 	path = submodules/fmtlog
 	url = github.com:josephholten/fmtlog
-[submodule "submodules/bxzstr"]
-	path = submodules/bxzstr
-	url = https://github.com/tmaklin/bxzstr.git
 [submodule "submodules/KaHIP"]
 	path = submodules/KaHIP
 	url = https://github.com/KaHIP/KaHIP
