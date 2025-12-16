@@ -405,7 +405,7 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   pc->data = (void*)data;
 
   // minimal for Q1
-  data->p[0] = data->p[1] = 2;
+  data->p[0] = data->p[1] = 1;
 
   pc->ops->apply = PCApply_Net2AS;
   pc->ops->setup = PCSetup_Net2AS;
