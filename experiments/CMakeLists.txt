@@ -25,14 +25,9 @@ target_compile_options(partitioner PRIVATE -Wno-deprecated-literal-operator)
 add_executable(graph_gen graph_gen.cxx)
 target_link_libraries(graph_gen geobin)
 
+link_libraries(HyperHDG PkgConfig::PETSC)
 add_executable(heat heat.cxx)
-target_link_libraries(heat HyperHDG PkgConfig::PETSC)
-
 add_executable(wave wave.cxx)
-target_link_libraries(wave HyperHDG PkgConfig::PETSC)
-
 add_executable(wave_conv wave_conv.cxx)
-target_link_libraries(wave_conv HyperHDG PkgConfig::PETSC)
-
 add_executable(network network.cxx)
-target_link_libraries(network HyperHDG geobin PkgConfig::PETSC)
+target_link_libraries(network geobin)
