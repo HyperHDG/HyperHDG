@@ -137,20 +137,16 @@ int main(int argc, char **argv) {
     PetscReal errs[2] = {0}, alpha;
     TestConfig cfg;
 
-    PetscInt n_iters = MAXLEN;
-    PetscInt iterations[MAXLEN] = {0};
-    PetscInt i_ts = 100;
+    PetscInt n_it = MAXLEN;
     PetscInt n_ts = MAXLEN;
-    PetscInt time_steps[MAXLEN] = {0};
-    PetscInt ts_i = 8;
+    PetscInt it[MAXLEN] = {0};
+    PetscInt ts[MAXLEN] = {0};
     PetscReal theta = .25;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
-    PetscCall(PetscOptionsIntArray("-i", "range of subdivisions of the domain, >= 1", NULL, iterations, &n_iters, &is_set));
-    PetscCall(PetscOptionsInt("-i_ts", "timesteps for subdivision test", NULL, i_ts, &i_ts, &is_set));
-    PetscCall(PetscOptionsIntArray("-ts", "timestep exponents", NULL, time_steps, &n_ts, &is_set));
-    PetscCall(PetscOptionsInt("-ts_i", "subdivisions for timestep test", NULL, ts_i, &ts_i, &is_set));
+    PetscCall(PetscOptionsIntArray("-i", "range of subdivisions of the domain, >= 1", NULL, it, &n_it, &is_set));
+    PetscCall(PetscOptionsIntArray("-ts", "timestep exponents", NULL, ts, &n_ts, &is_set));
     PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscOptionsEnd();
 
@@ -164,34 +160,24 @@ int main(int argc, char **argv) {
     cfg.tau = 1;
     cfg.theta = theta;
     cfg.end_time = 1;
-    cfg.time_steps = i_ts;
 
-    printf("#tau=%.5e\n", cfg.tau);
-    printf("#theta=%.5e\n", cfg.theta);
-    printf("#space_dim=%d\n", space_dim);
-    printf("#poly_deg=%d\n", poly_deg);
+    printf("# tau=%.5e\n", cfg.tau);
+    printf("# theta=%.5e\n", cfg.theta);
+    printf("# space_dim=%d\n", space_dim);
+    printf("# poly_deg=%d\n", poly_deg);
     printf("i,ts,err,alpha\n");
-    for (PetscInt i = 0; i < n_iters; i++) {
-      cfg.iteration = iterations[i];
 
-      std::swap(errs[0],errs[1]);
-      test<space_dim,poly_deg>(&cfg, &errs[0]);
-      alpha = std::log(errs[0]/errs[1]) / std::log(.5);
-      printf("%04d,%04d,%.5e,%+.5e\n", 1<<cfg.iteration, cfg.time_steps, errs[0], alpha);
+    for (PetscInt i = 0; i < n_it; i++) {
+      for (PetscInt j = 0; j < n_ts; j++) {
+        cfg.iteration = it[i];
+        cfg.time_steps = 1<<ts[j];
+
+        std::swap(errs[0],errs[1]);
+        test<space_dim,poly_deg>(&cfg, &errs[0]);
+        alpha = std::log(errs[0]/errs[1]) / std::log(.5);
+        printf("%04d,%04d,%.5e,%+.5e\n", 1<<cfg.iteration, cfg.time_steps, errs[0], alpha);
+      }
     }
-
-    cfg.iteration = ts_i;
-    errs[0] = 0;
-
-    for (PetscInt i = 0; i < n_ts; i++) {
-      cfg.time_steps = 1<<time_steps[i];
-
-      std::swap(errs[0],errs[1]);
-      test<space_dim,poly_deg>(&cfg, &errs[0]);
-      alpha = std::log(errs[0]/errs[1]) / std::log(.5);
-      printf("%04d,%04d,%.5e,%+.5e\n", 1<<cfg.iteration, cfg.time_steps, errs[0], alpha);
-    }
-
 
     PetscCall(PetscFinalize());
     return 0;
