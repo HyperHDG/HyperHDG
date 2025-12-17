@@ -19,6 +19,7 @@ static const char* PETSC_PRIN2_STAGE_NAME = "";
 
 #define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
 #define PRIN2FY(VAR)  PetscCall(PetscPrin2fy(PETSC_COMM_WORLD, #VAR, VAR))
+#define PRIN2SY(VAR)  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s: %s\n", #VAR, VAR))
 #define PRIN2S(STAGE) do { PETSC_PRIN2_STAGE = STAGE; PetscCall(PetscLogStageGetName(STAGE, &PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscTime(&PETSC_PRIN2_TIMER)); PetscCall(PetscLogStagePush(STAGE)); } while(0)
 #define PRIN2SP()     do { PetscLogDouble time; PetscCall(PetscLogStagePop()); PetscCall(PetscTime(&time)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_%s: %.5e\n", PETSC_PRIN2_STAGE_NAME, (time-PETSC_PRIN2_TIMER))); } while(0)
 
@@ -100,9 +101,11 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 PetscErrorCode KSPMonitorCSVCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf) {
+    const char* path;
     PetscFunctionBegin;
     PetscCall(PetscViewerAndFormatCreate(viewer, format, vf));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "iteration,residual_norm\n"));
+    PetscCall(PetscViewerFileGetName(viewer, &path));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "ksp_monitor_csv: %s\n", path));
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -117,6 +120,7 @@ PetscErrorCode KSPMonitorCSV(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerA
   PetscViewer viewer = vf->viewer;
 
   PetscFunctionBegin;
+  if (it == 0) PetscCall(PetscViewerASCIIPrintf(viewer, "it,rnorm\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "%03" PetscInt_FMT ",%.16e\n", it, (double)rnorm));
   PetscFunctionReturn(0);
 }
@@ -481,7 +485,7 @@ int main(int argc, char **argv) {
     Mat mat;
     KSP ksp;
     PC pc;
-    KSPConvergedReason reason;
+    const char* creason;
     PetscReal rnorm;
     PetscBool mat_only = PETSC_FALSE;
     std::span<PetscReal> span;
@@ -531,7 +535,7 @@ int main(int argc, char **argv) {
     PetscCall(VecSetSizes(rhs, PETSC_DECIDE, N));
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
-    PetscCall(KSPMonitorRegister("csv", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorCSV, NULL, NULL));
+    PetscCall(KSPMonitorRegister("csv", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorCSV, KSPMonitorCSVCreate, KSPMonitorCSVDestroy));
 
     PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
     PetscCall(KSPSetType(ksp, KSPCG));
@@ -581,11 +585,11 @@ int main(int argc, char **argv) {
     PRIN2SP();
 
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
-    PetscCall(KSPGetConvergedReason(ksp, &reason));
-    PetscCall(KSPSetErrorIfNotConverged(ksp, PETSC_TRUE));
+    PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
+    PRIN2SY(creason);
 
     PetscCall(VecScatterCreateToZero(sol, &scatter, &sol0));
     PetscCall(VecScatterBegin(scatter, sol, sol0, INSERT_VALUES, SCATTER_FORWARD));
