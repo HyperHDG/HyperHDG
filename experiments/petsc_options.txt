@@ -1,0 +1,30 @@
+# petsc options
+
+## debugger
+
+- `-start_in_debugger`
+- `-on_error_attach_debugger`
+
+## residual monitoring
+
+- `-ksp_monitor`
+- `-ksp_monitor_csv :res.csv`
+
+## performance monitoring
+
+Manual:
+- https://petsc.org/release/manual/profiling/#sec-profileuser
+- https://petsc.org/release/manualpages/Log/PetscLogView/
+
+Main Options:
+- `-log_view [:log.txt]`
+- `-log_view :log.csv:ascii_csv`
+- `-log_view :filename.txt:ascii_flamegraph`
+  -> visualize with [speedscope](https://github.com/jlfwong/speedscope)
+- `-log_view_memory`
+
+other:
+- `valgrind --tool=callgrind`
+- `totalview`
+- [mpe](https://www.mcs.anl.gov/research/projects/perfvis/software/MPE/)
+
