@@ -484,8 +484,7 @@ int main(int argc, char **argv) {
     KSPConvergedReason reason;
     PetscReal rnorm;
     PetscBool mat_only = PETSC_FALSE;
-    std::span<PetscReal> rhs_span;
-    std::span<PetscReal> sol_span;
+    std::span<PetscReal> span;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -570,9 +569,9 @@ int main(int argc, char **argv) {
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
     PRIN2S(s_rf);
-    PetscCall(VecGetSpan(rhs, rhs_span));
-    hdg.residual_flux2(zero_v, rhs_span, 0.);
-    PetscCall(VecRestoreSpan(rhs, rhs_span));
+    PetscCall(VecGetSpan(rhs, span));
+    hdg.residual_flux2(zero_v, span, 0.);
+    PetscCall(VecRestoreSpan(rhs, span));
     PRIN2SP();
 
     PetscCall(VecScale(rhs, -1.));
@@ -591,16 +590,16 @@ int main(int argc, char **argv) {
     PetscCall(VecScatterCreateToZero(sol, &scatter, &sol0));
     PetscCall(VecScatterBegin(scatter, sol, sol0, INSERT_VALUES, SCATTER_FORWARD));
     PetscCall(VecScatterEnd(scatter, sol, sol0, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecGetSpan(sol0, sol_span));
+    PetscCall(VecGetSpan(sol0, span));
 
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "false");
     hdg.plot_option("scale", plot_scale);
-    if (rank == 0) hdg.plot_solution(sol_span);
+    if (rank == 0) hdg.plot_solution(span);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
-    PetscCall(VecRestoreSpan(sol, sol_span));
+    PetscCall(VecRestoreSpan(sol, span));
 
 end:
     PetscCall(KSPDestroy(&ksp));
