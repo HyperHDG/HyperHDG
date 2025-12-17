@@ -170,6 +170,30 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  PC subpc;
+  const char* prefix;
+
+  PetscFunctionBegin;
+  PetscCall(KSPCreate(comm, data->ksp+i));
+  PetscCall(KSPSetType(data->ksp[i], KSPPREONLY));
+  PetscCall(KSPGetPC(data->ksp[i], &subpc));
+  PetscCall(PCSetType(subpc, PCCHOLESKY));
+
+  PetscCall(PCGetOptionsPrefix(pc, &prefix));
+  PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
+  PetscCall(KSPAppendOptionsPrefix(data->ksp[i], "net2as_"));
+  PetscCall(PCSetOptionsPrefix(subpc, prefix));
+  PetscCall(PCAppendOptionsPrefix(subpc, "net2as_"));
+  PetscCall(PCSetFromOptions(subpc));
+  PetscCall(KSPSetFromOptions(data->ksp[i]));
+
+  PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
+  PetscCall(KSPSetUp(data->ksp[i]));
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices;
@@ -181,14 +205,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscBool done;
   const PetscInt *ioff, *inds;
   std::span<PetscReal> vspan;
-  const char* prefix;
-  PC subpc;
   Mat coarse_basis, A;
   MatType type;
 
   PetscFunctionBegin;
   PetscCall(PCDestroy_Net2AS(pc));
-  PetscCall(PCGetOptionsPrefix(pc, &prefix));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(v, &size));
   PetscCall(MatGetSize(A, &data->bs, NULL));
@@ -243,66 +264,50 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       }
     }
   }
-
   PetscCall(VecRestoreSpan(v, vspan));
+
+  // setup coarse basis
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, size*data->bs, n_cols*data->bs, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetSizes(coarse_basis, size*data->bs, PETSC_DECIDE, PETSC_DETERMINE, n_cols*data->bs));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
   PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
   PetscCall(MatFilter(coarse_basis, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
+  PetscCall(PetscFree3(rows, cols, vals));
 
-  PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
-  PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
+  // setup sub domains
   PetscCall(MatTranspose(coarse_basis, MAT_INITIAL_MATRIX, &data->sub)); // INITIAL -> redistributes
   PetscCall(MatCreateVecs(data->sub, NULL, &data->sub_left));
   PetscCall(MatCreateVecs(data->sub, NULL, &data->coarse_sol));
-  PetscCall(MatViewFromOptions(data->sub, NULL, "-sub_view"));
-
+  PetscCall(MatViewFromOptions(data->sub, NULL, "-pc_net2as_sub_view"));
   PetscCall(MatGetRowIJ(data->sub, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
   PetscCall(MatGetOwnershipRange(data->sub, &vstart, &vend));
 
-  // TODO: iterate only over the owned rows in sub, do coarse system separately
-  for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(KSPCreate(comm, data->ksp+i));
+  // setup coarse mat
+  PetscCall(PetscMalloc2(data->sz, &data->ksp, data->sz, &data->mat));
+  PetscCall(MatPtAP(A, coarse_basis, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
+  PetscCall(MatDestroy(&coarse_basis));
+  PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_WORLD, 0));
 
-    PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
-    PetscCall(KSPAppendOptionsPrefix(data->ksp[i], "net2as_"));
-
-    PetscCall(KSPSetType(data->ksp[i], KSPPREONLY));
-    PetscCall(KSPGetPC(data->ksp[i], &subpc));
-
-    PetscCall(PCSetType(subpc, PCCHOLESKY));
-    PetscCall(PCSetOptionsPrefix(subpc, prefix));
-    PetscCall(PCAppendOptionsPrefix(subpc, "net2as_"));
-    PetscCall(PCSetFromOptions(subpc));
-
-    PetscCall(KSPSetFromOptions(data->ksp[i]));
-
-    if (i > 0) {
-      PetscInt s = i-1; // subdomain
-      IS is;
-      Mat *mat;
-      if (s < vstart || s >= vend) continue;
-      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
-      // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
-      //       while MatCreateSubmatrices always creates sequential matrices,
-      //       tough it also allocates the output parameter
-      PetscCall(MatCreateSubMatrices(A, 1, &is, &is, MAT_INITIAL_MATRIX, &mat));
-      data->mat[i] = *mat;
-      PetscCall(PetscFree(mat));
-      PetscCall(ISDestroy(&is));
-    }
-    PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
-    PetscCall(KSPSetUp(data->ksp[i]));
+  // setup fine mat
+  for (PetscInt s = 0; s < vend-vstart; s++) {
+    IS is;
+    Mat *mat;
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
+    // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
+    //       while MatCreateSubmatrices always creates sequential matrices,
+    //       tough it also allocates the output parameter
+    PetscCall(MatCreateSubMatrices(A, 1, &is, &is, MAT_INITIAL_MATRIX, &mat));
+    data->mat[vstart+s+1] = *mat; // coarse and fine in same array
+    PetscCall(PetscFree(mat));
+    PetscCall(ISDestroy(&is));
+    PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_SELF, vstart+s+1));
   }
   PetscCall(MatRestoreRowIJ(data->sub, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
-  PetscCall(PetscFree3(rows, cols, vals));
-  PetscCall(MatDestroy(&coarse_basis));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -326,12 +331,11 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
 
   // fine
   // TODO: iterate only over the owned rows in sub, do coarse system separately
-  for (PetscInt i = 1; i < data->sz; i++) {
-    PetscInt s = i-1; // subdomain
+  for (PetscInt s = start; s < end; s++) {
+    PetscInt i = s+1; // subdomain
     const PetscReal *vals;
     IS is;
     Vec z, res;
-    if (s < start || s >= end) continue;
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_USE_POINTER, &is));
     PetscCall(VecGetSubVector(x, is, &z));
     PetscCall(VecDuplicate(z, &res));
@@ -453,6 +457,7 @@ int main(int argc, char **argv) {
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
     constexpr PetscInt bs = LSol::n_glob_dofs_per_node();
 
+    int rank;
     PetscReal rtol = 1e-10;
 
     char output_directory[PATH_MAX] = "output";
@@ -471,7 +476,8 @@ int main(int argc, char **argv) {
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, sol;
+    VecScatter scatter;
+    Vec rhs, sol, sol0;
     Mat mat;
     KSP ksp;
     PC pc;
@@ -482,6 +488,7 @@ int main(int argc, char **argv) {
     std::span<PetscReal> sol_span;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
+    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
@@ -562,11 +569,10 @@ int main(int argc, char **argv) {
 
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
-    PetscCall(VecGetSpan(rhs, rhs_span));
-    PetscCall(VecGetSpan(sol, sol_span));
-
     PRIN2S(s_rf);
+    PetscCall(VecGetSpan(rhs, rhs_span));
     hdg.residual_flux2(zero_v, rhs_span, 0.);
+    PetscCall(VecRestoreSpan(rhs, rhs_span));
     PRIN2SP();
 
     PetscCall(VecScale(rhs, -1.));
@@ -582,21 +588,28 @@ int main(int argc, char **argv) {
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
 
+    PetscCall(VecScatterCreateToZero(sol, &scatter, &sol0));
+    PetscCall(VecScatterBegin(scatter, sol, sol0, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(scatter, sol, sol0, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetSpan(sol0, sol_span));
+
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "false");
     hdg.plot_option("scale", plot_scale);
-    hdg.plot_solution(sol_span);
+    if (rank == 0) hdg.plot_solution(sol_span);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
-    PetscCall(VecRestoreSpan(rhs, rhs_span));
     PetscCall(VecRestoreSpan(sol, sol_span));
 
+end:
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
+    PetscCall(VecDestroy(&rhs));
     PetscCall(VecDestroy(&sol));
+    PetscCall(VecDestroy(&sol0));
+    PetscCall(VecScatterDestroy(&scatter));
 
-end:
     PetscCall(PetscFinalize());
     return 0;
 }

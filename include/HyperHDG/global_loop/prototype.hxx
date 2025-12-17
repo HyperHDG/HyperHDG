@@ -1,5 +1,21 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+// HACK: the mpi communicator should be an argument to the function,
+//       but don't want to change all the global_loops
+// HACK: when compiling without mpi, simply provide trivial rank function;
+//       it is up to the call site to gather on the return
+#ifdef HYPERHDG_MPI
+#include <mpi.h>
+#define HYPERHDG_COMM MPI_COMM_WORLD
+#define HYPERHDG_Comm_rank MPI_Comm_rank
+#define HYPERHDG_Comm_size MPI_Comm_size
+#else
+typedef int HYPERHDG_Comm;
+#define HYPERHDG_COMM 0
+int HYPERHGD_Comm_rank(HYPERHDG_Comm comm, int *rank) { *rank = 0; }
+int HYPERHDG_Comm_size(HYPERHDG_Comm comm, int *size) { *size = 1; }
+#endif
+
 /*!*************************************************************************************************
  * \brief   Macro that allows to use an implemented a matrix--vector multpilication.
  *
@@ -152,11 +168,17 @@ struct sparse_mat
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                         \
     std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;        \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
+    auto nedges = hyper_graph_.n_hyEdges();                                                  \
+    using iedge_t = decltype(nedges); \
+    int crank, csize;                                                          \
+    HYPERHDG_Comm_rank(HYPERHDG_COMM, &crank); \
+    HYPERHDG_Comm_size(HYPERHDG_COMM, &csize); \
+    iedge_t estart = crank*nedges/csize; \
+    iedge_t eend = std::min((crank+1)*nedges/csize, nedges); \
                                                                                               \
-    std::for_each(                                                                            \
-      hyper_graph_.begin(), hyper_graph_.end(),                                               \
-      [&](auto hyper_edge)                                                                    \
+    for (decltype(nedges) iedge = estart; iedge < eend; iedge++)                              \
       {                                                                                       \
+        auto hyper_edge = hyper_graph_[iedge];                                                \
         hyNodes = hyper_edge.topology.get_hyNode_indices();                                   \
         for (unsigned int node = 0; node < hyNodes.size(); ++node)                            \
           hyper_graph_.hyNode_factory().get_dof_indices(hyNodes[node], dof_indices[node]);    \
@@ -197,7 +219,7 @@ struct sparse_mat
                 *(value_it++) = dofs_new[node_i][dof_i];                                      \
               }                                                                               \
           }                                                                                   \
-      });                                                                                     \
+      }                                                                                       \
                                                                                               \
     return result_mat;                                                                        \
   }()

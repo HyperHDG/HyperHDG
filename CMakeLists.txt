@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 option(HYPERHDG_PETSC "build with PETSc" OFF)
+option(HYPERHDG_MPI "build with MPI" OFF)
 
 if (HYPERHDG_PETSC)
+  set(HYPERHDG_MPI ON)
   set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
   message("USING PETSC_PREFIX=${HYPERHDG_PETSC_PREFIX}")
   set(ENV{PKG_CONFIG_PATH} ${HYPERHDG_PETSC_PREFIX}/lib/pkgconfig)
@@ -74,6 +76,12 @@ target_compile_features(
   HyperHDG
   INTERFACE
   cxx_std_20
+)
+
+target_compile_definitions(
+  HyperHDG
+  INTERFACE
+  HYPERHDG_MPI
 )
 
 ## Add the examples subdirectory
