@@ -544,7 +544,7 @@ class Chkp
     for (unsigned int bdr = 0; bdr < 4; ++bdr)
     {
       SmallVec<hyEdge_dim(), lSol_float_t> normal = hyper_edge.geometry.local_normal(bdr);
-      if (normal[1] * normal[1] < eps && normal[0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //V^-
+      if (normal[1] * normal[1] < eps && normal[0] > 0 && hyper_edge.node_descriptor[bdr] == 0) //V^-
       {
         for (unsigned int i = 0; i < n_shape_fct_; ++i)
         {
@@ -585,7 +585,7 @@ class Chkp
           }
         }
       }
-      else if (normal[1] * normal[1] < eps && normal[0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //V^+
+      else if (normal[1] * normal[1] < eps && normal[0] < 0 && hyper_edge.node_descriptor[bdr] == 0) //V^+
       {
         for (unsigned int i = 0; i < n_shape_fct_; ++i)
         {
@@ -624,7 +624,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H+
+      else if (normal[0] * normal[0] < eps && normal[1] < 0 && hyper_edge.node_descriptor[bdr] == 0) //H+
       {
         for (unsigned int i = 0; i < n_shape_fct_; ++i)
         {
@@ -641,7 +641,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H-
+      else if (normal[0] * normal[0] < eps && normal[1] > 0 && hyper_edge.node_descriptor[bdr] == 0) //H-
       {
         for (unsigned int i = 0; i < n_shape_fct_; ++i)
         {
@@ -907,7 +907,7 @@ class Chkp
       //delete
       //out[bdr].fill(0.);
 
-      if (normal[1] * normal[1] < eps && normal[0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (normal[1] * normal[1] < eps && normal[0] > 0 && hyper_edge.node_descriptor[bdr] == 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -930,7 +930,7 @@ class Chkp
           }
         }
       }
-      else if (normal[1] * normal[1] < eps && normal[0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      else if (normal[1] * normal[1] < eps && normal[0] < 0 && hyper_edge.node_descriptor[bdr] == 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -951,7 +951,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H+
+      else if (normal[0] * normal[0] < eps && normal[1] < 0 && hyper_edge.node_descriptor[bdr] == 0) //H+
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -963,7 +963,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H-
+      else if (normal[0] * normal[0] < eps && normal[1] > 0 && hyper_edge.node_descriptor[bdr] == 0) //H-
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -995,7 +995,7 @@ class Chkp
       using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
       //delete
       //out[bdr].fill(0.);
-      if (normal[1] * normal[1] < eps && normal[0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //V-
+      if (normal[1] * normal[1] < eps && normal[0] > 0 && hyper_edge.node_descriptor[bdr] == 0) //V-
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -1029,7 +1029,7 @@ class Chkp
           }
         }
       }
-      else if (normal[1] * normal[1] < eps && normal[0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //V+
+      else if (normal[1] * normal[1] < eps && normal[0] < 0 && hyper_edge.node_descriptor[bdr] == 0) //V+
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -1064,7 +1064,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H+
+      else if (normal[0] * normal[0] < eps && normal[1] < 0 && hyper_edge.node_descriptor[bdr] == 0) //H+
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -1077,7 +1077,7 @@ class Chkp
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr])) //H-
+      else if (normal[0] * normal[0] < eps && normal[1] > 0 && hyper_edge.node_descriptor[bdr] == 0) //H-
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -1165,7 +1165,7 @@ class Chkp
     for (unsigned int bdr = 0; bdr < 2 * hyEdge_dim(); ++bdr)
     {
       using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
-      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] > 0 && hyper_edge.node_descriptor[bdr] == 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
 	      {
@@ -1248,7 +1248,7 @@ class Chkp
       	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] += vh_int * loc_normal[bdr][0];
       	}
       }
-      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (loc_normal[bdr][1] * loc_normal[bdr][1] < eps && loc_normal[bdr][0] < 0 && hyper_edge.node_descriptor[bdr] == 0)
         //V^+ on the left
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
@@ -1332,7 +1332,7 @@ class Chkp
       	  lambda_values_out[bdr][2 * n_shape_bdr_ + i] *= loc_normal[bdr][0];
       	}
       }
-      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && loc_normal[bdr][1] < 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && loc_normal[bdr][1] < 0 && hyper_edge.node_descriptor[bdr] == 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       	{
@@ -1358,7 +1358,7 @@ class Chkp
       	  lambda_values_out[bdr][n_shape_bdr_ + i] *= loc_normal[bdr][1];
       	}
       }
-      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && loc_normal[bdr][1] > 0 && !is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (loc_normal[bdr][0] * loc_normal[bdr][0] < eps && loc_normal[bdr][1] > 0 && hyper_edge.node_descriptor[bdr] == 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
       	{
