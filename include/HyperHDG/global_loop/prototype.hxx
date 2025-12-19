@@ -12,8 +12,8 @@
 #else
 typedef int HYPERHDG_Comm;
 #define HYPERHDG_COMM 0
-int HYPERHGD_Comm_rank(HYPERHDG_Comm comm, int *rank) { *rank = 0; }
-int HYPERHDG_Comm_size(HYPERHDG_Comm comm, int *size) { *size = 1; }
+int HYPERHDG_Comm_rank(HYPERHDG_Comm comm, int *rank) { *rank = 0; return 0; }
+int HYPERHDG_Comm_size(HYPERHDG_Comm comm, int *size) { *size = 1; return 0; }
 #endif
 
 /*!*************************************************************************************************
