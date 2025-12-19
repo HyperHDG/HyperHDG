@@ -239,6 +239,8 @@ read_domain_geobin(const std::string& filename)
             "read_domain_geobin: unexpected file position");
   file.read((char*)domain_info.points_hyEdge.data(), tables[3].size);
 
+  if (tables[4].size == 0) return domain_info;
+
   domain_info.n_properties = tables[4].size / header->n_hyperedges / sizeof(double);
   domain_info.hyEdge_properties.resize(header->n_hyperedges);
   hy_assert(tables[4].size == domain_info.hyEdge_properties.size() * domain_info.n_properties * sizeof(double),

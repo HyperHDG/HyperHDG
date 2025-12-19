@@ -6,8 +6,6 @@ geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
   geobin::Graph graph;
   double h = 1. / (n-1);
   geobin::Point p = {0, 0, 0};
-  geobin::Prop cprop;
-  std::fill(cprop.begin(), cprop.end(), 1);
 
   for (geobin::u64 i = 0; i < n; i++) {
     for (geobin::u64 j = 0; j < n; j++) {
@@ -20,9 +18,6 @@ geobin::Graph generate_grid_graph(const char* path, geobin::u64 n) {
         graph.edges.push_back({i*n+j, i*n+j+1});
     }
   }
-
-  for (geobin::u64 e = 0; e < graph.edges.size(); e++)
-    graph.edge_props.push_back(cprop);
 
   geobin::compute_types(graph);
 
