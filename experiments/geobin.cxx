@@ -193,7 +193,7 @@ void serialize_txt(const char* output_path, const Graph& graph) {
 void serialize_bin(const char* output_path, const Graph& graph) {
   u64 n = graph.vertices.size();
   u64 m = graph.edges.size();
-  if (graph.edge_props.size() != m) {
+  if (graph.edge_props.size() != 0 && graph.edge_props.size() != m) {
     std::println(stderr, "WARNING: unequal number of graph edges and edge props provided {}!={}", m, graph.edge_props.size());
   }
 
@@ -224,7 +224,7 @@ void serialize_bin(const char* output_path, const Graph& graph) {
   DataTable hyperedge_properties = {
     .name = "HYPPROP", // extra \0
     .offset = points_of_hyperedges.offset + points_of_hyperedges.size,
-    .size = m * 12 * sizeof(Real),
+    .size = graph.edge_props.size() * sizeof(Prop),
   };
 
    GeoBinHeader header = {
@@ -250,7 +250,7 @@ void serialize_bin(const char* output_path, const Graph& graph) {
   file.write((char*)&graph.edges[0], hypernodes_of_hyperedges.size);
   file.write((char*)&graph.types[0], types_of_hyperfaces.size);
   file.write((char*)&graph.edges[0], points_of_hyperedges.size);
-  file.write((char*)&graph.edge_props[0], hyperedge_properties.size);
+  file.write((char*)graph.edge_props.data(), hyperedge_properties.size);
 }
 
 Graph deserialize_bin(const char* input_path) {
