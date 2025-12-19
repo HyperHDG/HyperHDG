@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
-import json
 import argparse
 import matplotlib.pyplot as plt
-import numpy as np
-from collections import defaultdict
+import pandas as pd
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-x", help="name of x variable")
@@ -18,26 +16,21 @@ parser.add_argument("--title", help="title of plot")
 parser.add_argument("--log", help="axis to apply log scale")
 parser.add_argument("--scatter", help="show as scatter plot", action="store_true")
 parser.add_argument("--nshow", help="don't show the plot", action="store_true")
+parser.add_argument("--format", help="format of input, csv|json")
 
 args = parser.parse_args()
 
 plot_func = plt.plot if not args.scatter else plt.scatter
 
-objs = (json.loads(line) for line in sys.stdin)
+match args.format:
+    case "csv": df = pd.read_csv(sys.stdin, comment="#")
+    case "json": df = pd.read_json(sys.stdin)
+    case _:
+        print("ERROR: unrecognized format", args.format, file=stderr)
+        sys.exit(1)
 
-if args.group_by:
-    group_variable = args.group_by
-    groups = defaultdict(list)
-    for o in objs:
-        groups[o[group_variable]].append(o)
-else:
-    groups = {"default_group": objs}
-
-sorted_groups = sorted(groups.items(), key=lambda kv: kv[0])
-
-for group_name, group in sorted_groups:
-    xys = np.array([(o[args.x],o[args.y]) for o in group])
-    plot_func(xys[:, 0], xys[:, 1], label=f"{args.group_by}={group_name}", marker="+")
+for name, group in df.groupby(args.group_by) if args.group_by else [(None,df)]:
+    plot_func(group[args.x], group[args.y], label=f"{args.group_by}={name}", marker="+")
 
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
