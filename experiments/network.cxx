@@ -288,7 +288,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", data->sz));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols+1));
   (void)m; (void)n;
   // PetscCall(MatGetSize(A, &m, &n));
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
@@ -477,13 +477,13 @@ int main(int argc, char **argv) {
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     sparse_mat<std::vector<PetscReal>> mat_coo;
     VecScatter scatter;
-    Vec rhs, sol, sol0;
+    Vec rhs, rhs0, sol, sol0;
     Mat mat;
     KSP ksp;
     PC pc;
     const char* creason;
     PetscReal rnorm;
-    PetscBool mat_only = PETSC_FALSE;
+    PetscBool mat_only = PETSC_FALSE, set_mem_max = PETSC_FALSE;
     std::span<PetscReal> span;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
@@ -496,6 +496,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix", NULL, mat_only, &mat_only, &is_set));
+    PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -514,6 +515,8 @@ int main(int argc, char **argv) {
       PetscFinalize();
       return 0;
     }
+
+    if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
     PetscCall(PetscLogStageRegister("assembly", &s_as));
     PetscCall(PetscLogStageRegister("iteration", &s_it));
@@ -568,11 +571,17 @@ int main(int argc, char **argv) {
 
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
-    PRIN2S(s_rf);
-    PetscCall(VecGetSpan(rhs, span));
-    hdg.residual_flux2(zero_v, span, 0.);
-    PetscCall(VecRestoreSpan(rhs, span));
-    PRIN2SP();
+    PetscCall(VecScatterCreateToZero(rhs, &scatter, &rhs0));
+    if (rank == 0) {
+      PRIN2S(s_rf);
+      PetscCall(VecGetSpan(rhs, span));
+      hdg.residual_flux2(zero_v, span, 0.);
+      PetscCall(VecRestoreSpan(rhs, span));
+      PRIN2SP();
+    }
+    PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterDestroy(&scatter));
 
     PetscCall(VecScale(rhs, -1.));
 
@@ -602,10 +611,17 @@ int main(int argc, char **argv) {
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
+    if (set_mem_max) {
+      PetscLogDouble mem_max;
+      PetscCall(PetscMemoryGetMaximumUsage(&mem_max));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mem_max: %.5e\n", mem_max));
+    }
+
 end:
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&rhs));
+    PetscCall(VecDestroy(&rhs0));
     PetscCall(VecDestroy(&sol));
     PetscCall(VecDestroy(&sol0));
     PetscCall(VecScatterDestroy(&scatter));
