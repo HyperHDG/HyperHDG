@@ -81,6 +81,8 @@ void print_bdr_values(const LVecT& lambda, const CVecT& coeff, const Bdr_type bd
   }
   std::cout << "u:\t" << coeff[0] + f * r3 * coeff[si] << "\t" << coeff[sa] + f * r3 * coeff[sa + si] << "\n";
   std::cout << "u^:\t" << lambda[0] << "\t" << lambda[1] << "\n";
+  if (bdr == UP)
+    std::cout << "v^:\t" << lambda[4] << "\t" << lambda[5] << "\n";
   if (bdr == UP or bdr == DOWN)
     return;
   std::cout << "q^:\t" << lambda[2] << "\t" << lambda[3] << "\n";
@@ -108,14 +110,14 @@ void print_coeff(const VecT& coeff)
 
 int main() 
 {
-  typedef LocalSolver::Chkp<2, 1, 3, ChkpParametersTime> lst;
+  typedef LocalSolver::Chkp<2, 1, 3, ChkpParameters> lst;
   HDGHyperGraph<lst::n_glob_dofs_per_node(),
                 Topology::File<2, 2>,
                 Geometry::File<2, 2>,
                 NodeDescriptor::File<2, 2>,
                 lst::data_type>
-    hg("domains/unitsquare.geo");
-  hg.set_refinement(2);
+    hg("domains/square.geo");
+  hg.set_refinement(3);
   lst ls ;
   std::array< std::array< double, 6 >, 4> lambda_n, res_flux, dir, out;
   std::vector<double> xv;
@@ -129,11 +131,13 @@ int main()
         for (unsigned int n = 0; n < 4; ++n)
           hg.hyNode_factory().get_dof_values(hyEdge_hyNodes[n], xv, lambda_n[n]);
         ls.make_initial(lambda_n, he);
+        /*
         for (unsigned int n = 0; n < 4; ++n)
         {
           lambda_n[n][0] = 1.;
         }
-        ls.make_skeleton(lambda_n, he, 1.);
+        */
+        //ls.make_skeleton(lambda_n, he, 1.);
         std::cout << "local lambda\n";
         for (unsigned int n = 0; n < 4; ++n)
         {
@@ -148,14 +152,17 @@ int main()
         coeff[2] = 3.;
         coeff[3] = 4.;
         std::cout << ls.get_residual(lambda_n, coeff, res, he, 1.);
-        /*
+        
         std::cout << ls.newton(lambda_n, coeff, he, 1.) << std::endl;
           
-        SmallVec<28> res = ls.get_residual(lambda_n, coeff, he, 1.);
+        SmallVec<28> res = ls.get_residual(lambda_n, coeff, res, he, 1.);
         std::cout << "Residuen:\n" << res;
         print_coeff(coeff);
         for (unsigned int n = 0; n < 4; ++n)
+        {
+          std::cout << he.node_descriptor[n] << "\n";
           print_bdr_values(lambda_n[n], coeff, get_bdr(he, n));
+        }
         ls.residual_flux(lambda_n, res_flux, he, 1.);
         std::cout << "Kopplungsbeitrag:\n";
         for (unsigned int n = 0; n < 4; ++n)
@@ -163,13 +170,86 @@ int main()
           std::for_each(res_flux[n].begin(), res_flux[n].end(), [](auto i){std::cout << i <<"\t";});
           std::cout << "\n";
         }
-        //int i = 0;
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          for (unsigned int i = 0; i < 6; ++i)
+          {
+            dir[n][i] = 1.;
+            res_flux[n][i] = lambda_n[n][i] + 0.001;
+          }
+        }
+        
+        SmallVec<28> f0, f1;
+        res = ls.residual_lambda_directional_derivative(lambda_n, coeff, dir, he, 1.);
+        int i = 0;
         //std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+        f0 = ls.get_residual(lambda_n, coeff, f0, he, 1.);
+        f1 = ls.get_residual(res_flux, coeff, f1, he, 1.);
+        f0 = f1 - f0;
+        f0 = 1000. * f0;
+        i = 0;
+        //std::for_each(f0.begin(), f0.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+
+        res = res - f0;
+        i = 0;
+        std::for_each(res.begin(), res.end(), [&i](double e) {std::cout << i++ << "\t" << e << "\n";});
+       
+        
+        
+        for (unsigned int n = 0; n < 4; ++n)
+        {
+          for (unsigned int i = 0; i < 6; ++i)
+          {
+            dir[n][i] = 0.;
+            out[n][i] = 0.;
+            res_flux[n][i] = lambda_n[n][i] + 0.001;
+          }
+        }
+
+        out = ls.residual_flux(lambda_n, out, he, 1.);
+        dir = ls.residual_flux(res_flux, dir, he, 1.);
+        for(int n = 0; n < 4; ++n)
+        {
+          for(int i = 0; i < 6; ++i)
+          {
+            out[n][i] = 1000. * (dir[n][i] - out[n][i]);
+            dir[n][i] = 1.;
+            res_flux[n][i] = 0.;
+          }
+        }
+        res_flux = ls.trace_to_flux(lambda_n, dir, res_flux, he, 1.);
+        for(int n = 0; n < 4; ++n)
+          for(int i = 0; i < 6; ++i)
+            std::cout << n << " " << i << " " << res_flux[n][i] - out[n][i] << "\n";
+        
+
+        
+        for(int n = 0; n < 4; ++n)
+        {
+          for(int i = 0; i < 6; ++i)
+          {
+            out[n][i] = 0.;
+            dir[n][i] = 0.;
+            res_flux[n][i] = 0.;
+          }
+        }
+        out = ls.coupling_function(lambda_n, coeff, out, he, 1.);
+        dir = ls.coupling_function(lambda_n, coeff + 0.0001, dir, he, 1.);
+        for(int n = 0; n < 4; ++n)
+        {
+          for(int i = 0; i < 6; ++i)
+          {
+            out[n][i] = 10000. * (dir[n][i] - out[n][i]);
+            res_flux[n][i] = 0.;
+          }
+        }
+        SmallVec<28> coeff_dir(1.);
+        res_flux = ls.coupling_coeff_directional_derivative(lambda_n, coeff, coeff_dir, res_flux, he, 1.);
+        for(int n = 0; n < 4; ++n)
+          for(int i = 0; i < 6; ++i)
+            std::cout << n << " " << i << " " << res_flux[n][i] - out[n][i] << "\n";
         
           
-
-       */  
-        
         std::cout << "\n";
       });
   return 0;

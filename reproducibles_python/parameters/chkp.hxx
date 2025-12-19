@@ -90,13 +90,13 @@ struct ChkpParameters
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
-  static constexpr std::array<unsigned int, 8U> dirichlet_nodes{
-  1, 2, 3, 4, 5, 6, 7, 8};
+  static constexpr std::array<unsigned int, 3U> dirichlet_nodes{
+  1, 2, 3};
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
-  static constexpr std::array<unsigned int, 1U> right_nodes{2};
+  static constexpr std::array<unsigned int, 2U> right_nodes{2, 6};
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
    ************************************************************************************************/
@@ -126,7 +126,7 @@ struct ChkpParameters
   static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
                                       param_float_t t = 0.)
   {
-    return 0;
+    return exp(-t) * cos(p[1]) * (1. - cos(p[0]));
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
