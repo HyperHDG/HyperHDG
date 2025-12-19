@@ -16,7 +16,7 @@ parser.add_argument("--title", help="title of plot")
 parser.add_argument("--log", help="axis to apply log scale")
 parser.add_argument("--scatter", help="show as scatter plot", action="store_true")
 parser.add_argument("--nshow", help="don't show the plot", action="store_true")
-parser.add_argument("--format", help="format of input, csv|json, default=json", default="json")
+parser.add_argument("-f", "--format", help="format of input, csv|json")
 parser.add_argument("--lines", help="new line delimited json", default=True, action="store_true")
 
 args = parser.parse_args()
