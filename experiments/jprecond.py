@@ -225,10 +225,13 @@ class JPrecond:
     else:
       raise RuntimeError(f"unexpected coarse space '{coarse_space}'")
 
+    print("coarse.shape=", coarse_basis_int.shape)
+
     if repeat > 1 and coarse_space.lower() != "pur":
       coarse_basis_int = sp.kron(coarse_basis_int, np.eye(repeat))
 
     self.coarse_basis_int = sp.csc_matrix(coarse_basis_int)
+    print("coarse.shape=", self.coarse_basis_int.shape)
 
     # NOTE: matrix-free: self.coarse_basis_int is of size (n,m) where m << n,
     #       hence, product is still faster than assembly of the full system
@@ -247,6 +250,10 @@ class JPrecond:
     ioffsets_r = repeat*domains.ioffsets
     all_domains_r = repeat*np.repeat(domains.all_domains, repeat) + np.tile(np.arange(repeat), len(domains.all_domains))
     self.domains = Domains(ioffsets_r, all_domains_r)
+
+    print("len(doms)=", len(self.domains))
+    for dom in self.domains:
+      print("dom.shape=", dom.shape)
 
     start = datetime.datetime.now()
     submats = [self.lhs_mat[np.ix_(nj, nj)] for nj in self.domains]
