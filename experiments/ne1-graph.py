@@ -16,7 +16,8 @@ parser.add_argument("--title", help="title of plot")
 parser.add_argument("--log", help="axis to apply log scale")
 parser.add_argument("--scatter", help="show as scatter plot", action="store_true")
 parser.add_argument("--nshow", help="don't show the plot", action="store_true")
-parser.add_argument("--format", help="format of input, csv|json")
+parser.add_argument("--format", help="format of input, csv|json, default=json", default="json")
+parser.add_argument("--lines", help="new line delimited json", default=True, action="store_true")
 
 args = parser.parse_args()
 
@@ -24,7 +25,7 @@ plot_func = plt.plot if not args.scatter else plt.scatter
 
 match args.format:
     case "csv": df = pd.read_csv(sys.stdin, comment="#")
-    case "json": df = pd.read_json(sys.stdin)
+    case "json": df = pd.read_json(sys.stdin, lines=args.lines)
     case _:
         print("ERROR: unrecognized format", args.format, file=stderr)
         sys.exit(1)
