@@ -194,7 +194,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt vstart, vend, size, nnz = 0, n_cols, n_rows;
+  PetscInt vstart, vend, size, nnz = 0, n_cols, n_rows, n, m;
   size_t max_cols;
   PetscInt *rows, *cols;
   PetscReal *vals, h[2], eps = 1e-14;
@@ -285,12 +285,16 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // setup coarse mat
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
   PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_WORLD, 0));
-  PetscInt m, n;
-  PetscCall(MatGetSize(coarse_basis, &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "coarse.shape= (%d, %d)\n", m, n));
-  PetscCall(MatGetSize(data->cb, &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "coarse.shape= (%d, %d)\n", m, n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "len(doms)=%d\n", vend-vstart));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", data->sz));
+  (void)m; (void)n;
+  // PetscCall(MatGetSize(A, &m, &n));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
+  // PetscCall(MatGetSize(data->mat[0], &m, &n));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse_size: %" PetscInt_FMT "\n", m));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  fine_size:\n"));
 
   PetscCall(MatGetRowIJ(subdomains, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_TRUE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
@@ -298,8 +302,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   for (PetscInt s = 0; s < vend-vstart; s++) {
     Mat *mat;
     PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_COPY_VALUES, &data->is[s+1]));
-    PetscCall(ISGetSize(data->is[s+1], &n));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "len(dom[%d])=%d\n", s, n));
+    // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    - %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
     //       tough it also allocates the output parameter
@@ -311,10 +314,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatRestoreRowIJ(subdomains, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", data->sz));
   PetscCall(MatDestroy(&coarse_basis));
   PetscCall(MatDestroy(&subdomains));
   PetscFunctionReturn(PETSC_SUCCESS);
