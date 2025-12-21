@@ -27,7 +27,7 @@ match args.format:
     case "csv": df = pd.read_csv(sys.stdin, comment="#")
     case "json": df = pd.read_json(sys.stdin, lines=args.lines)
     case _:
-        print("ERROR: unrecognized format", args.format, file=stderr)
+        print("ERROR: unrecognized format", args.format, file=sys.stderr)
         sys.exit(1)
 
 for name, group in df.groupby(args.group_by) if args.group_by else [(None,df)]:
