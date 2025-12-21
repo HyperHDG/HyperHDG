@@ -5,8 +5,6 @@
 #include <vector>
 #include <array>
 #include <cstring>
-#include <print>
-#include <format>
 
 namespace geobin {
 

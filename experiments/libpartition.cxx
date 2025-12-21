@@ -2,8 +2,7 @@
 
 #include <kaHIP_interface.h>
 #include <metis.h>
-
-#include <print>
+#include <cstdio>
 
 namespace libpartition {
 
@@ -46,7 +45,7 @@ void naive_geometric_partition(geobin::Graph* graph, geobin::ID* npartition, geo
   *edgecut = compute_edgecut(graph, partition);
 }
 
-void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalance, geobin::ID* partition, geobin::ID* edgecut, PartConfig* config) {
+int do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalance, geobin::ID* partition, geobin::ID* edgecut, PartConfig* config) {
   geobin::ID nverts = graph->vertices.size();
   geobin::ID nedges = graph->vertices.size();
   using kidx_t = int;
@@ -65,9 +64,11 @@ void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalanc
   else if (strcmp(backend, "metis") == 0) {
     METIS_PartGraphKway((idx_t*)&nverts, (idx_t*)&nedges, (idx_t*)graph->xadj.data(), (idx_t*)graph->adjncy.data(), NULL, NULL, NULL, (idx_t*)npartition, NULL, NULL, NULL, (idx_t*)edgecut, (idx_t*)partition);
   } else {
-    std::string err = std::format("ERROR: unsupported backend {}", backend);
-    throw std::runtime_error(err);
+    fprintf(stderr, "ERROR: unsupported backend %s\n", backend);
+    return 1;
   }
+
+  return 0;
 
     /*
      * Use a parallel naive partition to distribute the vertices between the processes,
