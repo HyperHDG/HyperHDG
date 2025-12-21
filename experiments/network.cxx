@@ -291,13 +291,15 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols+1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   (void)m; (void)n;
   // PetscCall(MatGetSize(A, &m, &n));
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
   // PetscCall(MatGetSize(data->mat[0], &m, &n));
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse_size: %" PetscInt_FMT "\n", m));
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local_size:\n"));
+  // PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "  local_sz: %d\n", vend-vstart));
+  // PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
 
   PetscCall(MatGetRowIJ(subdomains, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_TRUE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
@@ -451,9 +453,10 @@ int main(int argc, char **argv) {
     using HDG = GlobalLoop::Elliptic<Top,Geo,NDes,LSol>;
     constexpr PetscInt bs = LSol::n_glob_dofs_per_node();
 
-    int rank;
+    int rank, comm_size, proc_name_len;
     PetscReal rtol = 1e-10;
 
+    char proc_name[MPI_MAX_PROCESSOR_NAME];
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "network";
     char domain_filepath[PATH_MAX] = "domains/grid_8.geo.bin";
@@ -480,7 +483,10 @@ int main(int argc, char **argv) {
     std::span<PetscReal> span;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# ------- " __FILE__ " -------\n"));
     PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+    PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
+    PetscCallMPI(MPI_Get_processor_name(proc_name, &proc_name_len));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
@@ -508,6 +514,10 @@ int main(int argc, char **argv) {
       PetscFinalize();
       return 0;
     }
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mpi:\n  sz: %" PetscInt_FMT "\n", comm_size));
+    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "  names:\n"));
+    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - %s\n", proc_name));
 
     if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
