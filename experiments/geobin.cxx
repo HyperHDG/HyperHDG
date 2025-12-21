@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <cassert>
+#include <cstdio>
 
 namespace geobin {
 
@@ -9,7 +10,7 @@ std::vector<Point> read_nodes(const char* path) {
   std::vector<Point> nodes;
   std::fstream nodes_file(path);
   if (!nodes_file) {
-    std::println("error: couldn't open {}", path);
+    printf("error: couldn't open %s\n", path);
     return {};
   }
   for (std::string line; std::getline(nodes_file, line); ) {
@@ -20,7 +21,7 @@ std::vector<Point> read_nodes(const char* path) {
       if (strcmp("Id,x,y,z", line.c_str()) == 0)
         continue;
       else {
-        std::println(stderr, "error: {}: couldn't parse line '{}'", path, line);
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
         return {};
       }
       continue;
@@ -33,7 +34,7 @@ std::vector<Edge> read_fibers(const char* path) {
   std::vector<Edge> fibers;
   std::fstream fibers_file(path);
   if (!fibers_file) {
-    std::println(stderr, "error: couldn't open {}", path);
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
     return {};
   }
   for (std::string line; std::getline(fibers_file, line); ) {
@@ -44,7 +45,7 @@ std::vector<Edge> read_fibers(const char* path) {
       if (strcmp("Id,node1,node2", line.c_str()) == 0)
         continue;
       else {
-        std::println(stderr, "error: {}: couldn't parse line '{}'", path, line);
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
         return {};
       }
       continue;
@@ -58,7 +59,7 @@ std::vector<Connection> read_connections(const char* path) {
   std::vector<Connection> connections;
   std::fstream connections_file(path);
   if (!connections_file) {
-    std::println(stderr, "error: couldn't open {}", path);
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
     return {};
   }
   for (std::string line; std::getline(connections_file, line); ) {
@@ -69,7 +70,7 @@ std::vector<Connection> read_connections(const char* path) {
       if (strcmp("Id,fiber1,fiber2,a1,a2", line.c_str()) == 0)
         continue;
       else {
-        std::println(stderr, "error: {}: couldn't parse line '{}'", path, line);
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
         return {};
       }
       continue;
@@ -83,7 +84,7 @@ std::vector<Prop> read_props(const char* path) {
   std::vector<Prop> props;
   std::fstream fiber_props_file(path);
   if (!fiber_props_file) {
-    std::println(stderr, "error: couldn't open {}", path);
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
     return {};
   }
   for (std::string line; std::getline(fiber_props_file, line); ) {
@@ -95,7 +96,7 @@ std::vector<Prop> read_props(const char* path) {
     if (1 != sscanf(cline, "%d%n,", &f, &chars_read)) {
       if (0 == strcmp(cline, "Id,EA,kG_1A,kG_2A,G_xI_x,E_1I_1,E_2I_2,n_11,n_12,n_13,n_21,n_22,n_23"))
         continue;
-      std::println(stderr, "error: {}: sscanf format '%d' invalid for '{}'", path, cline);
+      fprintf(stderr, "error: %s: sscanf format '%%d' invalid for '%s'\n", path, cline);
       return {};
     }
 
@@ -103,7 +104,7 @@ std::vector<Prop> read_props(const char* path) {
 
     for (ID i = 0; i < 12; i++) {
       if (1 != sscanf(cline+total_chars_read, "%lf%n", &prop[i], &chars_read)) {
-        std::println(stderr, "error: {}: sscanf format '%lf' invalid for '{}'", path, cline+total_chars_read);
+        fprintf(stderr, "error: %s: sscanf format '%%lf' invalid for '%s'\n", path, cline+total_chars_read);
         return {};
       }
       total_chars_read += chars_read+1; // skip ','
@@ -151,50 +152,58 @@ void serialize_txt(const char* output_path, const Graph& graph) {
   const std::vector<Point>& vertices = graph.vertices;
   const std::vector<Edge>& edges = graph.edges;
   const std::vector<Prop>& edge_props = graph.edge_props;
+  char buf[1024];
+  FILE *gfile, *pfile;
 
-  std::ofstream gfile(std::format("{}.geo", output_path));
+  snprintf(buf, sizeof(buf), "%s.geo", output_path);
+  gfile = fopen(buf, "w");
 
-  std::print(gfile, "# This file was auto-generated!\n\n");
-  std::print(gfile, "Space_Dim     = 3;  # Dimension of space.\n");
-  std::print(gfile, "HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n");
-  std::print(gfile, "N_Points      = {};  # Number of vertices.\n", vertices.size());
-  std::print(gfile, "N_HyperNodes  = {};  # Number of hypernodes.\n", vertices.size());
-  std::print(gfile, "N_HyperEdges  = {};  # Number of hyperedges.\n", edges.size());
+  fprintf(gfile, "# This file was auto-generated!\n\n");
+  fprintf(gfile, "Space_Dim     = 3;  # Dimension of space.\n");
+  fprintf(gfile, "HyperEdge_Dim = 1;  # Dimension of hyperedge (must be uniform).\n");
+  fprintf(gfile, "N_Points      = %zu;  # Number of vertices.\n", vertices.size());
+  fprintf(gfile, "N_HyperNodes  = %zu;  # Number of hypernodes.\n", vertices.size());
+  fprintf(gfile, "N_HyperEdges  = %zu;  # Number of hyperedges.\n", edges.size());
 
-  std::print(gfile, "\nPOINTS:\n");
+  fprintf(gfile, "\nPOINTS:\n");
   for (const Point& vertex : vertices)
-    std::print(gfile, "{:.18e}  {:.18e}  {:.18e}\n", vertex[0], vertex[1], vertex[2]);
+    fprintf(gfile, "%.18e  %.18e  %.18e\n", vertex[0], vertex[1], vertex[2]);
 
-  std::print(gfile, "\nHYPERNODES_OF_HYPEREDGES:\n");
+  fprintf(gfile, "\nHYPERNODES_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
-    std::print(gfile, "{} {}\n", edge.first, edge.second);
+    fprintf(gfile, "%u %u\n", edge.first, edge.second);
 
-  std::print(gfile, "\nTYPES_OF_HYPERFACES:\n");
+  fprintf(gfile, "\nTYPES_OF_HYPERFACES:\n");
   for (const auto& type : graph.types)
-    std::print(gfile, "{} {}\n", type.first, type.second);
+    fprintf(gfile, "%u %u\n", type.first, type.second);
 
-  std::print(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
+  fprintf(gfile, "\nPOINTS_OF_HYPEREDGES:\n");
   for (const Edge& edge : edges)
-    std::print(gfile, "{} {}\n", edge.first, edge.second);
+    fprintf(gfile, "%u %u\n", edge.first, edge.second);
 
-  std::print(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
+  fprintf(gfile, "\nHYPEREDGE_PROPERTIES: 12\n");
   for (const Prop& prop : edge_props) {
-    std::print(gfile, "{:.18e}", prop[0]);
+    fprintf(gfile, "%.18e", prop[0]);
     for (ID i = 1; i < 12; i++)
-      std::print(gfile, "  {:.18e}", prop[i]);
-    std::print(gfile, "\n");
+      fprintf(gfile, "  %.18e", prop[i]);
+    fprintf(gfile, "\n");
   }
 
-  std::ofstream pfile(std::format("{}.pts", output_path));
+  // std::ofstream pfile(std::format("{}.pts", output_path));
+  snprintf(buf, sizeof(buf), "%s.pts", output_path);
+  pfile = fopen(buf, "w");
   for (const Point& vertex : vertices)
-    std::print(pfile, "{:.18e} {:.18e} {:.18e}\n", vertex[0], vertex[1], vertex[2]);
+    fprintf(pfile, "%.18e %.18e %.18e\n", vertex[0], vertex[1], vertex[2]);
+
+  fclose(pfile);
+  fclose(gfile);
 }
 
 void serialize_bin(const char* output_path, const Graph& graph) {
   u64 n = graph.vertices.size();
   u64 m = graph.edges.size();
   if (graph.edge_props.size() != 0 && graph.edge_props.size() != m) {
-    std::println(stderr, "WARNING: unequal number of graph edges and edge props provided {}!={}", m, graph.edge_props.size());
+    fprintf(stderr, "WARNING: unequal number of graph edges and edge props provided %zu!=%zu\n", m, graph.edge_props.size());
   }
 
   DataTable points = {
@@ -353,54 +362,54 @@ void serialize_graph_partition_vtu(
   const std::vector<geobin::ID>& partition,
   const char* file_path
 ) {
-  std::ofstream file(std::format("{}.vtu", file_path));
-  if (!file.is_open()) {
-    std::println("error: could not opt file {}.vtu", file_path);
-    return;
-  }
+  char buf[1024];
+  snprintf(buf, sizeof(buf), "%s.vtu", file_path);
+  FILE* file = fopen(buf, "w");
+  if (!file) perror("serialize_graph_partition_vtu fopen");
 
-  std::print(file, "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
-  std::print(file, "  <UnstructuredGrid>\n");
-  std::print(file, "    <Piece NumberOfPoints=\"{}\" NumberOfCells=\"{}\">\n", graph.vertices.size(), graph.edges.size());
-  std::print(file, "      <Points>\n");
-  std::print(file, "        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">\n");
+  fprintf(file, "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+  fprintf(file, "  <UnstructuredGrid>\n");
+  fprintf(file, "    <Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n", graph.vertices.size(), graph.edges.size());
+  fprintf(file, "      <Points>\n");
+  fprintf(file, "        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">\n");
   for (const auto& point : graph.vertices)
-      std::print(file, "          {} {} {}\n", point[0], point[1], point[2]);
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </Points>\n");
-  std::print(file, "      <Cells>\n");
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
-  std::print(file, "          ");
+      fprintf(file, "          %.6e %.6e %.6e\n", point[0], point[1], point[2]);
+  fprintf(file, "        </DataArray>\n");
+  fprintf(file, "      </Points>\n");
+  fprintf(file, "      <Cells>\n");
+  fprintf(file, "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
+  fprintf(file, "          ");
   for (const auto& edge : graph.edges)
-      std::print(file, "{} {} ", edge.first, edge.second);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
+      fprintf(file, "%u %u ", edge.first, edge.second);
+  fprintf(file, "\n");
+  fprintf(file, "        </DataArray>\n");
   // offsets: the cumulative sum of the number of points in each cell.
   // for VTK_LINE (2 points per cell), this will be 2, 4, 6, ...
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-  std::print(file, "          ");
+  fprintf(file, "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+  fprintf(file, "          ");
   for (size_t i = 0; i < graph.edges.size(); ++i)
-      std::print(file, "{} ", (i + 1) * 2);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-  std::print(file, "          ");
+      fprintf(file, "%zu ", (i + 1) * 2);
+  fprintf(file, "\n");
+  fprintf(file, "        </DataArray>\n");
+  fprintf(file, "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+  fprintf(file, "          ");
   for (size_t i = 0; i < graph.edges.size(); ++i)
-      std::print(file, "3 "); // VTK_LINE type
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </Cells>\n");
-  std::print(file, "      <PointData>\n");
-  std::print(file, "        <DataArray type=\"Int32\" Name=\"PartitionID\" format=\"ascii\">\n");
-  std::print(file, "          ");
+      fprintf(file, "3 "); // VTK_LINE type
+  fprintf(file, "\n");
+  fprintf(file, "        </DataArray>\n");
+  fprintf(file, "      </Cells>\n");
+  fprintf(file, "      <PointData>\n");
+  fprintf(file, "        <DataArray type=\"Int32\" Name=\"PartitionID\" format=\"ascii\">\n");
+  fprintf(file, "          ");
   for (geobin::ID id : partition)
-      std::print(file, "{} ", id);
-  std::print(file, "\n");
-  std::print(file, "        </DataArray>\n");
-  std::print(file, "      </PointData>\n");
-  std::print(file, "    </Piece>\n");
-  std::print(file, "  </UnstructuredGrid>\n");
-  std::print(file, "</VTKFile>\n");
+      fprintf(file, "%u ", id);
+  fprintf(file, "\n");
+  fprintf(file, "        </DataArray>\n");
+  fprintf(file, "      </PointData>\n");
+  fprintf(file, "    </Piece>\n");
+  fprintf(file, "  </UnstructuredGrid>\n");
+  fprintf(file, "</VTKFile>\n");
+  fclose(file);
 }
 
 }

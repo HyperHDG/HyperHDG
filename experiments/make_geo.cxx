@@ -1,11 +1,7 @@
-#include <filesystem>
-#include <print>
 #include <vector>
 #include <cstdint>
 #include <utility> // for pair
-#include <string>
 #include <fstream>
-#include <format>
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
@@ -15,9 +11,6 @@
 #include "geobin.hxx"
 
 using namespace geobin;
-
-#define logi(...) std::println(stdout, __VA_ARGS__)
-#define loge(...) std::println(stderr, __VA_ARGS__)
 
 Point interpolate(const Point& u, const Point& v, Real a) {
   Point res;
@@ -46,59 +39,44 @@ struct PointCloud
 };
 
 int usage(int argc, char** argv) {
-  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_folder> [txt]", argv[0]);
+  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_path> [txt]", argv[0]);
   return 1;
 }
 
 int main(int argc, char** argv) {
   if (argc < 3) return usage(argc, argv);
 
-  std::string input_folder = argv[1];
-  std::string output_path = argv[2];
-  namespace fs = std::filesystem;
-
-  if (!fs::is_directory(input_folder)) {
-    loge("invalid argument <input_folder>, got '{}'", input_folder);
-    return usage(argc, argv);
-  }
-
-  if (!fs::is_directory(output_path)) {
-    std::string test_path = std::format("{}.test", output_path);
-    std::ofstream file(test_path);
-    if (!file) {
-      loge("invalid argument <output_path>, got '{}'", output_path);
-      loge("  neither directory, nor writable path");
-      return usage(argc, argv);
-    }
-    fs::remove(test_path);
-  }
+  const char* input_folder = argv[1];
+  const char* output_path = argv[2];
+  char buf[1024];
+  const size_t bufsz = sizeof(buf);
 
   bool txt = false;
   if (argc == 4 && 0 == strcmp(argv[3], "txt")) {
     txt = true;
   }
 
-  bool testbin = false;
-  if (argc == 4 && 0 == strcmp(argv[3], "testbin")) {
-    txt = true;
-  }
+  printf("reading data\n");
 
-  logi("reading data");
+  snprintf(buf, bufsz, "%s/nodes.csv", input_folder);
+  std::vector<Point> nodes = read_nodes(buf);
+  printf("nodes: %zu\n", nodes.size());
 
-  std::vector<Point> nodes = read_nodes(std::format("{}/nodes.csv", input_folder).c_str());
-  logi("nodes: {}", nodes.size());
+  snprintf(buf, bufsz, "%s/fibers.csv", input_folder);
+  std::vector<geobin::Edge> fibers = read_fibers(buf);
+  printf("fibers: %zu\n", fibers.size());
 
-  std::vector<geobin::Edge> fibers = read_fibers(std::format("{}/fibers.csv", input_folder).c_str());
-  logi("fibers: {}", fibers.size());
+  snprintf(buf, bufsz, "%s/connections.csv", input_folder);
+  std::vector<Connection> connections = read_connections(buf);
+  printf("connections: %zu\n", connections.size());
 
-  std::vector<Connection> connections = read_connections(std::format("{}/connections.csv", input_folder).c_str());
-  logi("connections: {}", connections.size());
+  snprintf(buf, bufsz, "%s/fibersProps.csv", input_folder);
+  std::vector<Prop> fiber_props = read_props(buf);
+  printf("fibersProps: %zu\n", fiber_props.size());
 
-  std::vector<Prop> fiber_props = read_props(std::format("{}/fibersProps.csv", input_folder).c_str());
-  logi("fibersProps: {}", fiber_props.size());
-
-  std::vector<Prop> connection_props = read_props(std::format("{}/connectionsProp.csv", input_folder).c_str());
-  logi("connectionProps: {}", connection_props.size());
+  snprintf(buf, bufsz, "%s/connectionsProp.csv", input_folder);
+  std::vector<Prop> connection_props = read_props(buf);
+  printf("connectionProps: %zu\n", connection_props.size());
 
   // collect all points to build fast KNN lookup datastructure
   PointCloud<Real> pcloud;
@@ -141,10 +119,10 @@ int main(int argc, char** argv) {
     dim
   >;
   KDTree kdtree(dim, pcloud, {maxleaf});
-  logi("building kdtree");
+  printf("building kdtree\n");
   kdtree.buildIndex();
 
-  logi("generating vertex/edge list");
+  printf("generating vertex/edge list\n");
 
   std::vector<Point> vertices;
   std::vector<ID> is_in_vertices(pcloud.pts.size(), 0);
@@ -188,7 +166,7 @@ int main(int argc, char** argv) {
     return index;
   };
 
-  logi("  from connections");
+  printf("  from connections\n");
 
   // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
   vertices.push_back(pcloud.pts[0]);
@@ -223,7 +201,7 @@ int main(int argc, char** argv) {
       edges.push_back({index_a, index_b});
   }
 
-  logi("  from fibers");
+  printf("  from fibers\n");
 
   // NOTE: the python code below does not respect the self loops filtered out above
   //   edges_prop = np.vstack((connectionsProp, np.array(edges_prop)))
@@ -255,12 +233,12 @@ int main(int argc, char** argv) {
 
       ID index_a = find_merged_id(point_ab, 1e-10);
       if (index_a == (ID)-1) {
-        std::println(stderr, "ERROR: expected connection point to be found");
+        fprintf(stderr, "ERROR: expected connection point to be found");
         return 1;
       }
       ID index_b = find_merged_id(point_ba, 1e-10);
       if (index_b == (ID)-1) {
-        std::println(stderr, "ERROR: expected connection point to be found");
+        fprintf(stderr, "ERROR: expected connection point to be found");
         return 1;
       }
 
@@ -271,25 +249,18 @@ int main(int argc, char** argv) {
     }
   }
 
-  logi("output");
-  logi("  vertices.size = {}", vertices.size());
-  logi("  edges.size    = {}", edges.size());
-  logi("  txt           = {}", txt);
-
-  if (fs::is_directory(output_path))
-    output_path = std::format("{}/fiber_network_{}", output_path, edges.size());
+  printf("output\n");
+  printf("  vertices.size = %zu\n", vertices.size());
+  printf("  edges.size    = %zu\n", edges.size());
+  printf("  txt           = %d\n",  txt);
 
   Graph graph = { .edges = edges, .vertices = vertices, .edge_props = edge_props, .types = {}, .node_types = {}, .xadj = {}, .adjncy = {}};
   compute_types(graph);
 
   if (txt) {
-    serialize_txt(output_path.c_str(), graph);
+    serialize_txt(output_path, graph);
   } else {
-    serialize_bin(output_path.c_str(), graph);
-    if (testbin) {
-      auto graph2 = deserialize_bin(output_path.c_str());
-      serialize_txt(std::format("{}_test", output_path).c_str(), graph2);
-    }
+    serialize_bin(output_path, graph);
   }
 
 }

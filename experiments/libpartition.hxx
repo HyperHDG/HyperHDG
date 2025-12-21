@@ -21,7 +21,7 @@ geobin::ID compute_edgecut(geobin::Graph* graph, geobin::ID* partition);
 
 void naive_geometric_partition(geobin::Graph* graph, geobin::ID* npartition, geobin::ID* partition, geobin::ID* edgecut, geobin::ID* npartitions_z);
 
-void do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalance, geobin::ID* partition, geobin::ID* edgecut, PartConfig* config);
+int do_partition(geobin::Graph* graph, geobin::ID* npartition, double* imbalance, geobin::ID* partition, geobin::ID* edgecut, PartConfig* config);
 
 void make_domains_overlap(geobin::Graph& graph, std::vector<std::vector<geobin::ID>>& domains, geobin::ID delta);
 
