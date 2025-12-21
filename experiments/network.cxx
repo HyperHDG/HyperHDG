@@ -197,7 +197,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec v = data->vertices, gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt vstart, vend, size, nnz = 0, n_cols, n_rows, n, m;
+  PetscInt vstart, vend, size, msize, nnz = 0, n_cols = data->p[0] * data->p[1], n_rows, n, m;
   size_t max_cols;
   PetscInt *rows, *cols;
   PetscReal *vals, h[2], eps = 1e-14;
@@ -206,15 +206,26 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   std::span<PetscReal> vspan;
   Mat coarse_basis, A, subdomains;
   MatType type;
+  int comm_size;
 
   PetscFunctionBegin;
+
+  PetscCallMPI(MPI_Comm_size(comm, &comm_size));
+  PetscCheck(n_cols % comm_size == 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "n_cols = %" PetscInt_FMT" must be divisible by MPI_Comm_size = %d", n_cols, comm_size);
+
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(v, &size));
-  PetscCall(MatGetSize(A, &data->bs, NULL));
+  PetscCall(MatGetSize(A, &msize, NULL));
   PetscCall(MatCreateVecs(A, &gtemp, NULL));
-  data->bs /= size/3; // TODO: MatGetBlockSize
-  n_cols = data->p[0] * data->p[1];
+  PetscCall(MatGetBlockSize(A, &data->bs));
+  PetscCheck(size % 3 == 0, comm, PETSC_ERR_ARG_SIZ,
+    "size of vertices = %" PetscInt_FMT " must be divisible by 3 (x0,y0,z0,x1,y1,z1,...)", size);
+  PetscCheck(msize == data->bs * size / 3, comm, PETSC_ERR_ARG_SIZ,
+    "A_sz != v_sz / 3 * A_bs where"
+    "block size A_bs == %" PetscInt_FMT ", size A_sz == %" PetscInt_FMT ","
+    "flat size v_sz == %" PetscInt_FMT, data->bs, msize, size);
+  // TODO: take this from hdf5 format
   for (PetscInt i = 0; i < 3; i++) {
     PetscCall(VecStrideMin(v, i, NULL, data->min+i));
     PetscCall(VecStrideMax(v, i, NULL, data->max+i));
