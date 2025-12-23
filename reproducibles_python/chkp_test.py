@@ -24,7 +24,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   h = 1. / iteration
   goal_time = .02
-  time_steps  = 2
+  time_steps  = 20
 
   delta_time  = goal_time / time_steps
   
@@ -54,48 +54,63 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   def ttf_mat(x, time):
     col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
     A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
-    return A
+    At = sp.csc_matrix((vals, (col_ind, row_ind)), shape=(len(x),len(x)))
+    return At @ A, At
   
   def reduce_shape(M):
     M.eliminate_zeros()
-    M = M[M.getnnz(1) > 0]
-    mask = M.getnnz(0) > 0
-    M = M[:, mask]
-    return M, mask
+    mask_r = M.getnnz(1) > 0
+    M = M[mask_r]
+    mask_c = M.getnnz(0) > 0
+    M = M[:, mask_c]
+    return M, mask_r, mask_c
 
-  def prolong(x, mask):
-    r = np.zeros(mask.shape)
-    r[mask] = x
+  def prolong(x, mask_c):
+    r = np.zeros(mask_c.shape)
+    r[mask_c] = x
     return r
 
   def rf(x):
     return np.array(HDG_wrapper.residual_flux(x, time))
 
-  def newton(x, time, tol=1e-8):
-    rhs = np.array(HDG_wrapper.residual_flux(x, time))
+  def newton(An, At, mask_c, x, time, tol=1e-8):
+    rhs = np.array(HDG_wrapper.residual_flux(x, time))[mask_c]
     ra = np.linalg.norm(rhs)
     stepsize = 1.
     i = 0
     while ra > tol and i < 100:
-      A = ttf_mat(x, time)
-      step = sp.linalg.lsqr(A, rhs, atol=1e-10, btol=1e-10)[0]
+      step = sp.linalg.gmres(An, At @ rhs, atol=1e-10, rtol=1e-10)[0]
+      step = prolong(step, mask_c)
       # print(datetime.now(), "End solve")
       # sys.stdout.flush()
 
       x   -= stepsize * step
       rhs  = np.array(HDG_wrapper.residual_flux(x, time))
       ra   = np.linalg.norm(rhs)
+      rhs = rhs[mask_c]
       i   += 1
       print(datetime.now(),  i, ra)
       # sys.stdout.flush()
     return x
 
   vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
+  An, At = ttf_mat(vectorSolution, delta_time)
+  #An, mask_r, mask_c = reduce_shape(An)
+  #At = At[mask_r]
+  #At = At[:, mask_c]
+  #M = sp.linalg.LinearOperator(An.shape, sp.linalg.spilu(An).solve)
+  mask_c = np.ones(An.shape[0], dtype='bool')
   time = 0.
 
   for time_step in range(time_steps):
     time += delta_time
-    x = newton(vectorSolution, time)
+    if time_step % 10 == 1:
+      An, At = ttf_mat(vectorSolution, time)
+      #An, mask_r, mask_c = reduce_shape(An)
+      #At = At[mask_r]
+      #At = At[:, mask_c]
+      #M = sp.linalg.LinearOperator(An.shape, sp.linalg.spilu(An).solve)
+    vectorSolution = newton(An, At, mask_c, vectorSolution, time)
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
