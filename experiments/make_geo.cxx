@@ -33,7 +33,7 @@ std::vector<Point> read_nodes(const char* path) {
   std::vector<Point> nodes;
   std::fstream nodes_file(path);
   if (!nodes_file) {
-    printf("error: couldn't open %s\n", path);
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
     return {};
   }
   for (std::string line; std::getline(nodes_file, line); ) {
@@ -195,45 +195,49 @@ struct PointCloud
   }
 };
 
-int usage(int argc, char** argv) {
-  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_path>\n", argv[0]);
-  return 1;
-}
-
 int main(int argc, char** argv) {
-  if (argc < 3) return usage(argc, argv);
+  PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
 
-  const char* input_folder = argv[1];
-  const char* output_path = argv[2];
-  char buf[1024];
+  PetscBool is_set, help;
+  char input_folder[PATH_MAX] = ".";
+  char output_path[PATH_MAX] = "network.h5";
+  char buf[PATH_MAX];
   const size_t bufsz = sizeof(buf);
 
-  bool txt = false;
-  if (argc == 4 && 0 == strcmp(argv[3], "txt")) {
-    txt = true;
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "make_geo options", NULL);
+  PetscCall(PetscOptionsString("-i", "input folder", NULL, input_folder, input_folder, PATH_MAX, &is_set));
+  PetscCall(PetscOptionsString("-o", "output path", NULL, output_path, output_path, PATH_MAX, &is_set));
+  PetscOptionsEnd();
+
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
+  if (help) {
+    PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
+    PetscFinalize();
+    return 0;
   }
 
-  printf("reading data\n");
+  printf("input:\n");
+  printf("  folder: %s\n", input_folder);
 
   snprintf(buf, bufsz, "%s/nodes.csv", input_folder);
   std::vector<Point> nodes = read_nodes(buf);
-  printf("nodes: %zu\n", nodes.size());
+  printf("  nodes: %zu\n", nodes.size());
 
   snprintf(buf, bufsz, "%s/fibers.csv", input_folder);
   std::vector<Edge> fibers = read_fibers(buf);
-  printf("fibers: %zu\n", fibers.size());
+  printf("  fibers: %zu\n", fibers.size());
 
   snprintf(buf, bufsz, "%s/connections.csv", input_folder);
   std::vector<Connection> connections = read_connections(buf);
-  printf("connections: %zu\n", connections.size());
+  printf("  connections: %zu\n", connections.size());
 
   snprintf(buf, bufsz, "%s/fibersProps.csv", input_folder);
   std::vector<Prop> fiber_props = read_props(buf);
-  printf("fibersProps: %zu\n", fiber_props.size());
+  printf("  fibersProps: %zu\n", fiber_props.size());
 
   snprintf(buf, bufsz, "%s/connectionsProp.csv", input_folder);
   std::vector<Prop> connection_props = read_props(buf);
-  printf("connectionProps: %zu\n", connection_props.size());
+  printf("  connectionProps: %zu\n", connection_props.size());
 
   // collect all points to build fast KNN lookup datastructure
   PointCloud<Real> pcloud;
@@ -276,10 +280,10 @@ int main(int argc, char** argv) {
     dim
   >;
   KDTree kdtree(dim, pcloud, {maxleaf});
-  printf("building kdtree\n");
+  printf("# building kdtree\n");
   kdtree.buildIndex();
 
-  printf("generating vertex/edge list\n");
+  printf("# generating vertex/edge list\n");
 
   std::vector<Point> vertices;
   std::vector<ID> is_in_vertices(pcloud.pts.size(), 0);
@@ -323,16 +327,18 @@ int main(int argc, char** argv) {
     return index;
   };
 
-  printf("  from connections\n");
+  printf("#   from connections\n");
 
   // if len(vertices) == 0: vertices = np.vstack((point_a, point_b))
-  vertices.push_back(pcloud.pts[0]);
-  vertices.push_back(pcloud.pts[1]);
-  vertices_idx[0] = 0;
-  vertices_idx[1] = 1;
-  is_in_vertices[0] = 1;
-  is_in_vertices[1] = 1;
-  edges.push_back({0,1});
+  if (pcloud.pts.size() >= 2) {
+    vertices.push_back(pcloud.pts[0]);
+    vertices.push_back(pcloud.pts[1]);
+    vertices_idx[0] = 0;
+    vertices_idx[1] = 1;
+    is_in_vertices[0] = 1;
+    is_in_vertices[1] = 1;
+    edges.push_back({0,1});
+  }
 
   for (ID cid = 1; cid < connections.size(); cid++) {
     const Point& point_a = pcloud.pts[2*cid];
@@ -358,7 +364,7 @@ int main(int argc, char** argv) {
       edges.push_back({index_a, index_b});
   }
 
-  printf("  from fibers\n");
+  printf("#   from fibers\n");
 
   // NOTE: the python code below does not respect the self loops filtered out above
   //   edges_prop = np.vstack((connectionsProp, np.array(edges_prop)))
@@ -406,16 +412,15 @@ int main(int argc, char** argv) {
     }
   }
 
-  printf("output\n");
-  printf("  vertices.size = %zu\n", vertices.size());
-  printf("  edges.size    = %zu\n", edges.size());
-  printf("  txt           = %d\n",  txt);
+  printf("output:\n");
+  printf("  vertices_size: %zu\n", vertices.size());
+  printf("  edges_size: %zu\n", edges.size());
+  printf("  path: %s\n", output_path);
 
   std::vector<ID> node_types;
   std::vector<Edge> types;
   compute_types(vertices, edges, node_types, types);
 
-  PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
   IS is_edges, types_faces, types_points;
   Vec points, properties;
   PetscViewer viewer;
