@@ -1,7 +1,7 @@
 set(CMAKE_CXX_STANDARD 23)
 
 # apply options privately to all following libs/exe
-add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter)
+add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-security)
 
 ########## LIBS ############
 

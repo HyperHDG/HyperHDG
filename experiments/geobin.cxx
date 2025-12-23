@@ -200,6 +200,7 @@ void serialize_txt(const char* output_path, const Graph& graph) {
 }
 
 void serialize_bin(const char* output_path, const Graph& graph) {
+  char buf[1024];
   u64 n = graph.vertices.size();
   u64 m = graph.edges.size();
   if (graph.edge_props.size() != 0 && graph.edge_props.size() != m) {
@@ -252,7 +253,8 @@ void serialize_bin(const char* output_path, const Graph& graph) {
     },
   };
 
-  std::ofstream file(std::format("{}.geo.bin", output_path));
+  snprintf(buf, sizeof(buf), "%s.geo.bin", output_path);
+  std::ofstream file(buf);
   file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
   file.write((char*)&header, sizeof(header));
   file.write((char*)&graph.vertices[0], points.size);
@@ -317,7 +319,9 @@ Graph deserialize_bin(const char* input_path) {
 }
 
 void serialize_domains(const char* path, const std::vector<std::vector<geobin::ID>>& domains) {
-  std::ofstream file(std::format("{}.dom", path));
+  char buf[1024];
+  snprintf(buf, sizeof(buf), "%s.dom", path);
+  std::ofstream file(buf);
 
   DataTable ioffset_table = {
     .name = "IOFFSET",

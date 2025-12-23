@@ -1,4 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
+#include <span>
 
 // HACK: the mpi communicator should be an argument to the function,
 //       but don't want to change all the global_loops
