@@ -7,10 +7,167 @@
 #include <algorithm>
 
 #include <nanoflann.hpp>
+#include <petsc.h>
+#include <petscviewerhdf5.h>
 
-#include "geobin.hxx"
+using Real = double;
+using ID = unsigned int;
 
-using namespace geobin;
+struct Connection {
+  ID f1;
+  ID f2;
+  Real a1;
+  Real a2;
+};
+
+struct ConnectionPoint {
+  ID nodeid;
+  Real a;
+};
+
+using Point = std::array<Real, 3>;
+using Edge = std::pair<ID, ID>;
+using Prop = std::array<Real, 12>;
+
+std::vector<Point> read_nodes(const char* path) {
+  std::vector<Point> nodes;
+  std::fstream nodes_file(path);
+  if (!nodes_file) {
+    printf("error: couldn't open %s\n", path);
+    return {};
+  }
+  for (std::string line; std::getline(nodes_file, line); ) {
+    ID id; Real x, y, z;
+    if (4 == sscanf(line.c_str(), "%d,%lf,%lf,%lf", &id, &x, &y, &z)) {
+      nodes.push_back({x,y,z});
+    } else {
+      if (strcmp("Id,x,y,z", line.c_str()) == 0)
+        continue;
+      else {
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
+        return {};
+      }
+      continue;
+    }
+  }
+  return nodes;
+}
+
+std::vector<Edge> read_fibers(const char* path) {
+  std::vector<Edge> fibers;
+  std::fstream fibers_file(path);
+  if (!fibers_file) {
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
+    return {};
+  }
+  for (std::string line; std::getline(fibers_file, line); ) {
+    ID f; ID u, v;
+    if (3 == sscanf(line.c_str(), "%d,%d,%d", &f, &u, &v)) {
+      fibers.push_back({u,v});
+    } else {
+      if (strcmp("Id,node1,node2", line.c_str()) == 0)
+        continue;
+      else {
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
+        return {};
+      }
+      continue;
+    }
+  }
+
+  return fibers;
+}
+
+std::vector<Connection> read_connections(const char* path) {
+  std::vector<Connection> connections;
+  std::fstream connections_file(path);
+  if (!connections_file) {
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
+    return {};
+  }
+  for (std::string line; std::getline(connections_file, line); ) {
+    ID c,f1,f2; Real a1,a2;
+    if (5 == sscanf(line.c_str(), "%d,%d,%d,%lf,%lf", &c, &f1, &f2, &a1, &a2)) {
+      connections.push_back({f1,f2,a1,a2});
+    } else {
+      if (strcmp("Id,fiber1,fiber2,a1,a2", line.c_str()) == 0)
+        continue;
+      else {
+        fprintf(stderr, "error: %s: couldn't parse line '%s'\n", path, line.c_str());
+        return {};
+      }
+      continue;
+    }
+  }
+
+  return connections;
+}
+
+std::vector<Prop> read_props(const char* path) {
+  std::vector<Prop> props;
+  std::fstream fiber_props_file(path);
+  if (!fiber_props_file) {
+    fprintf(stderr, "error: couldn't open '%s'\n", path);
+    return {};
+  }
+  for (std::string line; std::getline(fiber_props_file, line); ) {
+    ID f;
+    Prop prop; // 6 structural + 2*3 normal
+    int total_chars_read = 0, chars_read = 0;
+    const char* cline = line.c_str();
+
+    if (1 != sscanf(cline, "%d%n,", &f, &chars_read)) {
+      if (0 == strcmp(cline, "Id,EA,kG_1A,kG_2A,G_xI_x,E_1I_1,E_2I_2,n_11,n_12,n_13,n_21,n_22,n_23"))
+        continue;
+      fprintf(stderr, "error: %s: sscanf format '%%d' invalid for '%s'\n", path, cline);
+      return {};
+    }
+
+    total_chars_read += chars_read+1;
+
+    for (ID i = 0; i < 12; i++) {
+      if (1 != sscanf(cline+total_chars_read, "%lf%n", &prop[i], &chars_read)) {
+        fprintf(stderr, "error: %s: sscanf format '%%lf' invalid for '%s'\n", path, cline+total_chars_read);
+        return {};
+      }
+      total_chars_read += chars_read+1; // skip ','
+    }
+
+    props.push_back(prop);
+  }
+
+  return props;
+}
+
+ID compute_vertex_type(const Point& vertex, const Point& max_p, const Point& min_p) {
+    if (vertex[0] - min_p[0] < 1e-6 * (max_p[0] - min_p[0]) || max_p[0] - vertex[0] < 1e-6 * (max_p[0] - min_p[0]) ||
+        vertex[1] - min_p[1] < 1e-6 * (max_p[1] - min_p[1]) || max_p[1] - vertex[1] < 1e-6 * (max_p[1] - min_p[1]))
+      return 1;
+    else
+      return 0;
+}
+
+void compute_types(const std::vector<Point>& vertices, const std::vector<Edge>& edges, std::vector<ID>& node_types, std::vector<Edge>& types) {
+  node_types.resize(vertices.size());
+  types.resize(edges.size()*2);
+
+  // Calculate the bounding box (min/max x, y, z) for all vertices
+  Point min_p = {1e10, 1e10, 1e10};
+  Point max_p = {1e-10, 1e-10, 1e-10};
+  for (const Point& vertex : vertices) {
+    for (size_t i = 0; i < 3; i++) {
+      min_p[i] = std::min(min_p[i], vertex[i]);
+      max_p[i] = std::max(max_p[i], vertex[i]);
+    }
+  }
+  for (size_t n = 0; n < vertices.size(); n++)
+    node_types[n] = compute_vertex_type(vertices[n], max_p, min_p);
+
+  for (size_t m = 0; m < edges.size(); m++) {
+    auto edge = edges[m];
+    types[m] = {node_types[edge.first], node_types[edge.second]};
+  }
+}
 
 Point interpolate(const Point& u, const Point& v, Real a) {
   Point res;
@@ -39,7 +196,7 @@ struct PointCloud
 };
 
 int usage(int argc, char** argv) {
-  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_path> [txt]", argv[0]);
+  fprintf(stderr, "ERROR: usage: %s <input_folder> <output_path>\n", argv[0]);
   return 1;
 }
 
@@ -63,7 +220,7 @@ int main(int argc, char** argv) {
   printf("nodes: %zu\n", nodes.size());
 
   snprintf(buf, bufsz, "%s/fibers.csv", input_folder);
-  std::vector<geobin::Edge> fibers = read_fibers(buf);
+  std::vector<Edge> fibers = read_fibers(buf);
   printf("fibers: %zu\n", fibers.size());
 
   snprintf(buf, bufsz, "%s/connections.csv", input_folder);
@@ -87,7 +244,7 @@ int main(int argc, char** argv) {
 
   // first all connection points
   for (const Connection& con : connections) {
-    geobin::Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
+    Edge  e1 = fibers[con.f1], e2 = fibers[con.f2];
     Point p1, p2;
     Point e11 = nodes[e1.first];
     Point e12 = nodes[e1.second];
@@ -128,7 +285,7 @@ int main(int argc, char** argv) {
   std::vector<ID> is_in_vertices(pcloud.pts.size(), 0);
   std::vector<ID> vertices_idx(pcloud.pts.size(), (ID)-1);
 
-  std::vector<geobin::Edge> edges;
+  std::vector<Edge> edges;
 
   using Neighbor = nanoflann::ResultItem<uint32_t, Real>; // Neighbor = (id,distance)
   std::vector<Neighbor> neighbors;
@@ -254,13 +411,45 @@ int main(int argc, char** argv) {
   printf("  edges.size    = %zu\n", edges.size());
   printf("  txt           = %d\n",  txt);
 
-  Graph graph = { .edges = edges, .vertices = vertices, .edge_props = edge_props, .types = {}, .node_types = {}, .xadj = {}, .adjncy = {}};
-  compute_types(graph);
+  std::vector<ID> node_types;
+  std::vector<Edge> types;
+  compute_types(vertices, edges, node_types, types);
 
-  if (txt) {
-    serialize_txt(output_path, graph);
-  } else {
-    serialize_bin(output_path, graph);
-  }
+  PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
+  IS is_edges, types_faces, types_points;
+  Vec points, properties;
+  PetscViewer viewer;
 
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, edges.size()*2, (PetscInt*)edges.data(), PETSC_USE_POINTER, &is_edges));
+  PetscCall(ISSetBlockSize(is_edges, 2));
+  PetscCall(PetscObjectSetName((PetscObject)is_edges, "edges"));
+
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, node_types.size(), (PetscInt*)node_types.data(), PETSC_USE_POINTER, &types_points));
+  PetscCall(PetscObjectSetName((PetscObject)types_points, "types_points"));
+
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, types.size(), (PetscInt*)types.data(), PETSC_USE_POINTER, &types_faces));
+  PetscCall(ISSetBlockSize(types_faces, 2));
+  PetscCall(PetscObjectSetName((PetscObject)types_faces, "types_faces"));
+
+  PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 3, vertices.size()*3, (PetscReal*)vertices.data(), &points));
+  PetscCall(PetscObjectSetName((PetscObject)points, "points"));
+  PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 12, edge_props.size()*12, (PetscReal*)edge_props.data(), &properties));
+  PetscCall(PetscObjectSetName((PetscObject)properties, "properties"));
+
+  PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, output_path, FILE_MODE_WRITE, &viewer));
+
+  PetscCall(PetscViewerHDF5PushGroup(viewer, "/graph"));
+  PetscCall(ISView(is_edges, viewer));
+  PetscCall(ISView(types_points, viewer));
+  PetscCall(ISView(types_faces, viewer));
+  PetscCall(VecView(points, viewer));
+  PetscCall(VecView(properties, viewer));
+
+  PetscCall(VecDestroy(&points));
+  PetscCall(VecDestroy(&properties));
+  PetscCall(ISDestroy(&is_edges));
+  PetscCall(ISDestroy(&types_points));
+  PetscCall(ISDestroy(&types_faces));
+
+  PetscCall(PetscFinalize());
 }
