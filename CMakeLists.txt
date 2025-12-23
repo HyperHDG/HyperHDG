@@ -4,15 +4,14 @@ option(HYPERHDG_PETSC "build with PETSc" OFF)
 option(HYPERHDG_MPI "build with MPI" OFF)
 
 if (HYPERHDG_PETSC)
-  set(HYPERHDG_MPI ON)
   set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
   message("USING PETSC_PREFIX=${HYPERHDG_PETSC_PREFIX}")
   set(ENV{PKG_CONFIG_PATH} ${HYPERHDG_PETSC_PREFIX}/lib/pkgconfig)
 
   find_package(PkgConfig REQUIRED)
   pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
-  pkg_get_variable(CXX_COMPILER PETSc cxxcompiler)
-  set(CMAKE_CXX_COMPILER ${CXX_COMPILER})
+  pkg_get_variable(CMAKE_C_COMPILER PETSc ccompiler)
+  pkg_get_variable(CMAKE_CXX_COMPILER PETSc cxxcompiler)
 endif()
 
 project(HyperHDG LANGUAGES CXX)
@@ -81,7 +80,7 @@ target_compile_features(
 target_compile_definitions(
   HyperHDG
   INTERFACE
-  HYPERHDG_MPI
+  $<$<BOOL:${HYPERHDG_MPI}>:HYPERHDG_MPI>
 )
 
 ## Add the examples subdirectory

@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     constexpr int space_dim = 1;
     constexpr int poly_deg = 3;
     PetscBool help = false, is_set;
-    PetscReal errs[2], alpha;
+    PetscReal errs[2] = {0}, alpha;
     TestConfig cfg;
 
     PetscInt n_iters = MAXLEN;
