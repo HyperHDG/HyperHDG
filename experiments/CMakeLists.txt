@@ -16,7 +16,7 @@ add_library(geobin geobin.cxx)
 ########## EXE #############
 
 add_executable(make_geo make_geo.cxx)
-target_link_libraries(make_geo geobin nanoflann::nanoflann)
+target_link_libraries(make_geo nanoflann::nanoflann PkgConfig::PETSC)
 
 add_executable(partitioner partitioner.cxx)
 target_link_libraries(partitioner geobin stats CLI11::CLI11 libpartition spdlog::spdlog)
