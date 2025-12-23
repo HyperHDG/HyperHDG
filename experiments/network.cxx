@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <petsc.h>
+#include <petscviewerhdf5.h>
 #include <petsc/private/pcimpl.h>
 
 #include <HyperHDG/topology/file.hxx>
@@ -9,7 +10,6 @@
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include "parameters.hxx"
-#include "geobin.hxx"
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
@@ -110,9 +110,11 @@ PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewer
 }
 
 struct PC_Net2AS {
+  // path to domain file
+  char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
-  Vec vertices;
-  // bounding box of vertices
+  Vec points;
+  // bounding box of points
   PetscReal min[3], max[3];
   // number of subdomains in [x,y]
   PetscInt p[2];
@@ -158,6 +160,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscInt p = data->p[0], p_lb = data->p[0];
 
   PetscFunctionBegin;
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", data->domain, PATH_MAX, &set));
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
 
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
@@ -165,6 +168,25 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
   PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  PetscViewer viewer;
+  PetscInt n;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscViewerHDF5Open(comm, data->domain, FILE_MODE_READ, &viewer));
+  PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
+  PetscCall(VecCreate(comm, &data->points));
+  PetscCall(PetscObjectSetName((PetscObject)data->points, "points"));
+  PetscCall(VecLoad(data->points, viewer));
+  PetscCall(VecGetSize(data->points, &n));
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " points: %" PetscInt_FMT "\n", n));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, " edges: %zu\n", edges.size()));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -195,7 +217,7 @@ PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
 
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
-  Vec v = data->vertices, gtemp;
+  Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, msize, nnz = 0, n_cols = data->p[0] * data->p[1], n_rows, n, m;
   size_t max_cols;
@@ -214,31 +236,32 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCheck(n_cols % comm_size == 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "n_cols = %" PetscInt_FMT" must be divisible by MPI_Comm_size = %d", n_cols, comm_size);
 
   PetscCall(PCDestroy_Net2AS(pc));
+  PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
   PetscCall(PCGetOperators(pc, &A, NULL));
-  PetscCall(VecGetSize(v, &size));
+  PetscCall(VecGetSize(data->points, &size));
   PetscCall(MatGetSize(A, &msize, NULL));
   PetscCall(MatCreateVecs(A, &gtemp, NULL));
   PetscCall(MatGetBlockSize(A, &data->bs));
   PetscCheck(size % 3 == 0, comm, PETSC_ERR_ARG_SIZ,
-    "size of vertices = %" PetscInt_FMT " must be divisible by 3 (x0,y0,z0,x1,y1,z1,...)", size);
+    "size of points = %" PetscInt_FMT " must be divisible by 3 (x0,y0,z0,x1,y1,z1,...)", size);
   PetscCheck(msize == data->bs * size / 3, comm, PETSC_ERR_ARG_SIZ,
     "A_sz != v_sz / 3 * A_bs where"
     "block size A_bs == %" PetscInt_FMT ", size A_sz == %" PetscInt_FMT ","
     "flat size v_sz == %" PetscInt_FMT, data->bs, msize, size);
   // TODO: take this from hdf5 format
   for (PetscInt i = 0; i < 3; i++) {
-    PetscCall(VecStrideMin(v, i, NULL, data->min+i));
-    PetscCall(VecStrideMax(v, i, NULL, data->max+i));
+    PetscCall(VecStrideMin(data->points, i, NULL, data->min+i));
+    PetscCall(VecStrideMax(data->points, i, NULL, data->max+i));
     if (i < 2) h[i] = (data->max[i]-data->min[i])/(data->p[i]+1);
   }
 
-  PetscCall(VecGetOwnershipRange(v, &vstart, &vend));
+  PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vend /= 3;
   vstart /= 3;
   size = vend-vstart;
   max_cols = 4zu * size;
   PetscCall(PetscMalloc3(max_cols, &rows, max_cols, &cols, max_cols, &vals));
-  PetscCall(VecGetSpan(v, vspan));
+  PetscCall(VecGetSpan(data->points, vspan));
   for (PetscInt n = 0; n < size; n++) {
     PetscReal x = vspan[3*n],            y = vspan[3*n+1];
     PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
@@ -273,7 +296,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       nnz++;
     }
   }
-  PetscCall(VecRestoreSpan(v, vspan));
+  PetscCall(VecRestoreSpan(data->points, vspan));
 
   // setup coarse basis
   PetscCall(MatGetType(A, &type));
@@ -379,31 +402,6 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   }
 
 end:
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PCNet2ASReadGraph(PC pc, const char *path) {
-  PC_Net2AS *data = (PC_Net2AS*)pc->data;
-  std::span<PetscReal> vspan;
-  PetscInt start, end;
-  PetscReal *verts;
-  PCType type;
-
-  PetscFunctionBeginUser;
-  PCGetType(pc, &type);
-  if (strcmp(type, "net2as") != 0) PetscFunctionReturn(0);
-
-  geobin::Graph graph = geobin::deserialize_bin(path);
-  verts = (PetscReal*)graph.vertices.data();
-  PetscCall(VecCreateFromOptions(PetscObjectComm((PetscObject)pc), NULL, 3, PETSC_DECIDE, graph.vertices.size()*3, &data->vertices));
-  PetscCall(VecGetSpan(data->vertices, vspan));
-  PetscCall(VecGetOwnershipRange(data->vertices, &start, &end));
-  std::copy(verts+start, verts+end, vspan.data());
-  PetscCall(VecRestoreSpan(data->vertices, vspan));
-
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_graph:\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " vertices: %zu\n", graph.vertices.size()));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " edges: %zu\n", graph.edges.size()));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -545,7 +543,6 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
-    PetscCall(PCNet2ASReadGraph(pc, domain_filepath));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", NULL));
     PetscCall(KSPSetFromOptions(ksp));

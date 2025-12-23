@@ -412,10 +412,12 @@ int main(int argc, char** argv) {
     }
   }
 
+  snprintf(buf, bufsz, "%s.geo.h5", output_path);
+
   printf("output:\n");
   printf("  vertices_size: %zu\n", vertices.size());
   printf("  edges_size: %zu\n", edges.size());
-  printf("  path: %s\n", output_path);
+  printf("  path: %s\n", buf);
 
   std::vector<ID> node_types;
   std::vector<Edge> types;
@@ -441,9 +443,9 @@ int main(int argc, char** argv) {
   PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 12, edge_props.size()*12, (PetscReal*)edge_props.data(), &properties));
   PetscCall(PetscObjectSetName((PetscObject)properties, "properties"));
 
-  PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, output_path, FILE_MODE_WRITE, &viewer));
+  PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, buf, FILE_MODE_WRITE, &viewer));
 
-  PetscCall(PetscViewerHDF5PushGroup(viewer, "/graph"));
+  PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
   PetscCall(ISView(is_edges, viewer));
   PetscCall(ISView(types_points, viewer));
   PetscCall(ISView(types_faces, viewer));
@@ -455,6 +457,7 @@ int main(int argc, char** argv) {
   PetscCall(ISDestroy(&is_edges));
   PetscCall(ISDestroy(&types_points));
   PetscCall(ISDestroy(&types_faces));
+  PetscCall(PetscViewerDestroy(&viewer));
 
   PetscCall(PetscFinalize());
 }
