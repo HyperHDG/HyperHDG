@@ -81,6 +81,7 @@ target_compile_definitions(
   HyperHDG
   INTERFACE
   $<$<BOOL:${HYPERHDG_MPI}>:HYPERHDG_MPI>
+  $<$<BOOL:${HYPERHDG_PETSC}>:HYPERHDG_PETSC>
 )
 
 ## Add the examples subdirectory

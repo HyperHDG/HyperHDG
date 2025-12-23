@@ -157,24 +157,12 @@ struct DomainInfo
   }  // end of check_consistency
 };  // end of struct DomainInfo
 
-struct DataTable {
-  char name[8];
-  uint64_t offset;     // from file start
-  uint64_t size;       // in bytes
-};
+#ifdef HYPERHDG_PETSC
 
-struct GeoBinHeader {
-  char magic[8]; // should contain GEOBINxx
-  uint64_t space_dim;
-  uint64_t hyperedge_dim;
-  uint64_t n_points;
-  uint64_t n_hypernodes;
-  uint64_t n_hyperedges;
-  DataTable tables[5];
-};
-
+#include <petsc.h>
+#include <petscviewerhdf5.h>
 /*!*************************************************************************************************
- * \brief   Function to read .geo.bin file. Note: should be run on the same machine as the geobin file was generated on.
+ * \brief   Function to read hdf5 file.
  *
  * \tparam  hyEdge_dim      The local dimension of a hyperedge.
  * \tparam  space_dim       The dimension of the surrounding space.
@@ -184,7 +172,7 @@ struct GeoBinHeader {
  * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
  * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
  *
- * \param   filename        Name of the .geo.bin file to be read.
+ * \param   filename        Name of the hdf5 file to be read.
  * \retval  domain_info     Topological and geometrical information of hypergraph.
  *
  * \authors   Joseph Holten, Karlsruhe Institute of Technology, 2025.
@@ -197,66 +185,90 @@ template <unsigned int hyEdge_dim,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-read_domain_geobin(const std::string& filename)
+read_domain_hdf5(const std::string& filename)
 {
-  std::ifstream file(filename);
-  file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
-  hy_assert(file.is_open(), std::format("read_domain_geobin: couldn't open file '{}'", filename));
+  PetscViewer viewer;
+  Vec points, props;
+  IS edges, types_faces;
+  PetscInt n_points, n_edges, n_props, sdim, hydim, propdim;
+  const PetscReal *ra;
+  const PetscInt *ia;
+  PetscBool has_props;
+  MPI_Comm comm = PETSC_COMM_SELF;
 
-  std::array<char, sizeof(GeoBinHeader)> header_buf;
-  file.read(header_buf.data(), sizeof(GeoBinHeader));
-  GeoBinHeader* header = (GeoBinHeader*)header_buf.data();
-  hy_assert(0 == strncmp(header->magic, "GEOBIN1", 8),
-            "read_domain_geobin: didn't find expected magic bytes `GEOBIN1` at start of file!");
+  // TODO: assert PetscInt == HDG index type
 
-  // verify data type sizes
+  PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
+  PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
 
-  DataTable* tables = header->tables;
+  PetscCallAbort(comm, VecCreate(comm, &points));
+  PetscCallAbort(comm, VecCreate(comm, &props));
+  PetscCallAbort(comm, ISCreate(comm, &edges));
+  PetscCallAbort(comm, ISCreate(comm, &types_faces));
+
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)points, "points"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)props, "properties"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)edges, "edges"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)types_faces, "types_faces"));
+
+  PetscCallAbort(comm, VecLoad(points, viewer));
+  PetscCallAbort(comm, ISLoad(edges, viewer));
+  PetscCallAbort(comm, ISLoad(types_faces, viewer));
+
+  PetscCallAbort(comm, ISGetSize(edges, &n_edges));
+  PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
+  n_edges /= hydim;
+  PetscCallAbort(comm, VecGetSize(points, &n_points));
+  PetscCallAbort(comm, VecGetBlockSize(points, &sdim));
+  n_points /= sdim;
+  // TODO: assert bs == point_t::size()
+
   DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-    domain_info(header->n_points, header->n_hyperedges, header->n_hypernodes, header->n_points);
+    domain_info(n_points, n_edges, n_points, n_points);
 
-  hy_assert((uint64_t)file.tellg() == tables[0].offset,
-            "read_domain_geobin: unexpected file position");
-  hy_assert(tables[0].size == domain_info.points.size() * sizeof(typename decltype(domain_info.points)::value_type),
-            "read_domain_geobin: unexpected tables[0].size");
-  file.read((char*)domain_info.points.data(), tables[0].size);
+  PetscCallAbort(comm, VecGetArrayRead(points, &ra));
+  memcpy((void*)domain_info.points.data(), ra, n_points*sdim*sizeof(PetscReal));
+  PetscCallAbort(comm, VecRestoreArrayRead(points, &ra));
 
-  hy_assert((uint64_t)file.tellg() == tables[1].offset,
-            "read_domain_geobin: unexpected file position");
-  hy_assert(tables[1].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.hyNodes_hyEdge)::value_type),
-            "read_domain_geobin: unexpected tables[1].size");
-  file.read((char*)domain_info.hyNodes_hyEdge.data(), tables[1].size);
+  PetscCallAbort(comm, ISGetIndices(edges, &ia));
+  memcpy((void*)domain_info.hyNodes_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
+  memcpy((void*)domain_info.points_hyEdge.data(),  ia, n_edges*hydim*sizeof(PetscInt));
+  PetscCallAbort(comm, ISRestoreIndices(edges, &ia));
 
-  hy_assert((uint64_t)file.tellg() == tables[2].offset,
-            "read_domain_geobin: unexpected file position");
-  hy_assert(tables[2].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.hyNodes_hyEdge)::value_type),
-            "read_domain_geobin: unexpected tables[1].size");
-  file.read((char*)domain_info.hyFaces_hyEdge.data(), tables[2].size);
+  PetscCallAbort(comm, ISGetIndices(types_faces, &ia));
+  memcpy((void*)domain_info.hyFaces_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
+  PetscCallAbort(comm, ISRestoreIndices(types_faces, &ia));
 
-  hy_assert(tables[3].size == domain_info.hyNodes_hyEdge.size() * sizeof(typename decltype(domain_info.points_hyEdge)::value_type),
-            "read_domain_geobin: unexpected tables[1].size");
-  hy_assert((uint64_t)file.tellg() == tables[3].offset,
-            "read_domain_geobin: unexpected file position");
-  file.read((char*)domain_info.points_hyEdge.data(), tables[3].size);
+  // props
+  PetscCallAbort(comm, PetscViewerHDF5HasDataset(viewer, "properties", &has_props));
+  if (!has_props) goto end;
 
-  if (tables[4].size == 0) return domain_info;
+  PetscCallAbort(comm, VecLoad(props, viewer));
+  PetscCallAbort(comm, VecGetSize(props, &n_props));
+  PetscCallAbort(comm, VecGetBlockSize(props, &propdim));
+  n_props /= propdim;
+  // TOOD: assert n_props == n_edges
 
-  domain_info.n_properties = tables[4].size / header->n_hyperedges / sizeof(double);
-  domain_info.hyEdge_properties.resize(header->n_hyperedges);
-  hy_assert(tables[4].size == domain_info.hyEdge_properties.size() * domain_info.n_properties * sizeof(double),
-            "read_domain_geobin: unexpected tables[1].size");
-  hy_assert((uint64_t)file.tellg() == tables[4].offset,
-            "read_domain_geobin: unexpected file position");
-  for (uint64_t i = 0; i < header->n_hyperedges; i++) {
-    domain_info.hyEdge_properties[i].resize(domain_info.n_properties);
-    file.read((char*)domain_info.hyEdge_properties[i].data(), domain_info.n_properties * sizeof(double));
+  domain_info.hyEdge_properties.resize(n_props);
+  domain_info.n_properties = propdim;
+  PetscCallAbort(comm, VecGetArrayRead(props, &ra));
+  for (PetscInt i = 0; i < n_props; i++) {
+    domain_info.hyEdge_properties[i].resize(propdim);
+    memcpy(domain_info.hyEdge_properties[i].data(),
+              ra + i*propdim,
+              propdim*sizeof(PetscReal));
   }
+  PetscCallAbort(comm, VecRestoreArrayRead(props, &ra));
 
-  hy_assert((uint64_t)file.tellg() == tables[4].offset + tables[4].size,
-            "read_domain_geobin: unexpected file position");
-
+end:
+  VecDestroy(&points);
+  VecDestroy(&props);
+  ISDestroy(&edges);
+  ISDestroy(&types_faces);
   return domain_info;
 }
+#endif
+
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -515,14 +527,15 @@ read_domain(std::string filename)
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
-  if (filename.substr(filename.size() - 8, filename.size()) == ".geo.bin")
+#ifdef HYPERHDG_PETSC
+  if (filename.ends_with(".geo.h5"))
   {
-    hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
-    auto domain_info = read_domain_geobin<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+    auto domain_info = read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
                               hyNode_index_t, pt_index_t>(filename);
     hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");
     return domain_info;
   }
+#endif
 
   hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
             "The given file needs to be a .geo file, since no other input file types are currently"
