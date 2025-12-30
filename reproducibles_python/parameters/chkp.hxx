@@ -7,13 +7,12 @@ struct ChkpParametersPeakon
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
-  static constexpr std::array<unsigned int, 8U> dirichlet_nodes{
-  1, 2, 3, 4, 5, 6, 7, 8};
+  static constexpr std::array<unsigned int, 3U> dirichlet_nodes{1, 2, 3};
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
-  static constexpr std::array<unsigned int, 1U> right_nodes{2};
+  static constexpr std::array<unsigned int, 2U> right_nodes{2, 6};
   static constexpr param_float_t c = 1.;
   /*!***********************************************************************************************
    * \brief   Inverse diffusion coefficient in PDE as analytic function.
@@ -31,13 +30,6 @@ struct ChkpParametersPeakon
     pr[0] = 5.;   //same y, but x = 5
     return analytic_result(pr, t);
   }
-/*  
-  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
-                                     const param_float_t t = 0.)
-  {
-    return 0.;
-  }
-*/
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
@@ -66,7 +58,9 @@ struct ChkpParametersPeakon
   static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
   {
-    return 0;
+    auto pr = p;
+    pr[0] = 5.;   //same y, but x = 5
+    return analytic_result(p, t) - analytic_result(pr, t);
   }
 
   static constexpr param_float_t kappa=-.5;
@@ -86,7 +80,7 @@ struct ChkpParametersPeakon
 template <unsigned int space_dimT, typename param_float_t = double>
 struct ChkpParameters
 {
-  static constexpr double scale_t = .01;
+  static constexpr double scale_t = 1.;
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
@@ -126,6 +120,7 @@ struct ChkpParameters
   static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
                                       param_float_t t = 0.)
   {
+    t *= scale_t;
     return exp(-t) * cos(p[1]) * (1. - cos(p[0]));
   }
 
@@ -151,16 +146,6 @@ struct ChkpParameters
   
   static constexpr param_float_t kappa=-.5;
   
-  static param_float_t tau_f(param_float_t arg)
-  {
-    return 4.;
-  }
-  static param_float_t tau_df(param_float_t arg)
-  {
-    return 0.;
-  }
-
-  static constexpr param_float_t tau_fr = 4.;
 };  
 
 template <unsigned int space_dimT, typename param_float_t = double>

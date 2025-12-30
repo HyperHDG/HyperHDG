@@ -1360,7 +1360,7 @@ class Chkp
       	  lambda_values_out[bdr][n_shape_bdr_ + i] *= loc_normal[bdr][1];
       	}
       }
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[bdr]))
+      if (hyper_edge.node_descriptor[bdr] != 0)
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
