@@ -80,7 +80,7 @@ struct ChkpParametersPeakon
 template <unsigned int space_dimT, typename param_float_t = double>
 struct ChkpParameters
 {
-  static constexpr double scale_t = 1.;
+  static constexpr double scale_t = .01;
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/

@@ -23,8 +23,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  goal_time = .1
-  time_steps  = 10
+  goal_time = 1.
+  time_steps  = 100
 
   delta_time  = goal_time / time_steps
   
@@ -128,9 +128,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [2]:
+  for poly_degree in [1, 2, 3]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [16]:
+    for iteration in [2, 4, 8, 16, 32]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
