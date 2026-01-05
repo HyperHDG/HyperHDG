@@ -24,7 +24,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   h = 1. / iteration
   goal_time = .1
-  time_steps  = 100
+  time_steps  = 10
 
   delta_time  = goal_time / time_steps
   
@@ -40,7 +40,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParameters,double>"
+    + str(3*poly_degree) + ",ChkpParametersPeakon,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -48,30 +48,14 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(h, delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(h, delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq.geo", lsol_constr = get_loc_constr(h, delta_time) )
   HDG_wrapper.refine(iteration)
-  
-  # def ttf_mat(x, time):
-  #   col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
-  #   A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
-  #   At = sp.csc_matrix((vals, (col_ind, row_ind)), shape=(len(x),len(x)))
-  #   return At @ A, At
   
   def ttf_mat(x, time):
     col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(x, time)
     A = sp.csc_matrix((vals, (row_ind,col_ind)), shape=(len(x),len(x)))
     return A
-  
-  # def reduce_shape(M):
-  #   M.eliminate_zeros()
-  #   mask_r = M.getnnz(1) > 0
-  #   M = M[mask_r]
-  #   mask_c = M.getnnz(0) > 0
-  #   M = M[:, mask_c]
-  #   return M, mask_r, mask_c
 
-
-  # Alternative version that assumes square matrix and removes rows/columns at same indices
   def remove_zero_rows_and_columns(csc_matrix):
     # Find indices of non-zero rows
     col_sums = csc_matrix.sum(axis=0).A1
@@ -86,39 +70,10 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     return csc_matrix, non_zero_cols, non_zero_rows
 
 
-
-  # def prolong(x, mask_c):
-  #   r = np.zeros(mask_c.shape)
-  #   r[mask_c] = x
-  #   return r
-
   def prolong(x, keep_rows, full_length):
     r = np.zeros(full_length,)
     r[keep_rows] = x
     return r
-
-  # def rf(x):
-  #   return np.array(HDG_wrapper.residual_flux(x, time))
-
-  # def newton(An, At, mask_c, x, time, tol=1e-8):
-  #   rhs = np.array(HDG_wrapper.residual_flux(x, time))[mask_c]
-  #   ra = np.linalg.norm(rhs)
-  #   stepsize = 1.
-  #   i = 0
-  #   while ra > tol and i < 100:
-  #     step = sp.linalg.gmres(An, At @ rhs, atol=1e-10, rtol=1e-10)[0]
-  #     step = prolong(step, mask_c)
-  #     # print(datetime.now(), "End solve")
-  #     # sys.stdout.flush()
-
-  #     x   -= stepsize * step
-  #     rhs  = np.array(HDG_wrapper.residual_flux(x, time))
-  #     ra   = np.linalg.norm(rhs)
-  #     rhs = rhs[mask_c]
-  #     i   += 1
-  #     print(datetime.now(),  i, ra)
-  #     # sys.stdout.flush()
-  #   return x
 
   def newton(A, M, keep_cols, keep_rows, x, time, tol=1e-8):
     rhs  = np.array(HDG_wrapper.residual_flux(x, time))
@@ -133,28 +88,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     print("Newton failed!")
     return x
 
-  # vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
-  # An, At = ttf_mat(vectorSolution, delta_time)
-  # #An, mask_r, mask_c = reduce_shape(An)
-  # #At = At[mask_r]
-  # #At = At[:, mask_c]
-  # #M = sp.linalg.LinearOperator(An.shape, sp.linalg.spilu(An).solve)
-  # mask_c = np.ones(An.shape[0], dtype='bool')
-  # time = 0.
-
   time = 0.
   vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
-
-  # for time_step in range(time_steps):
-  #   time += delta_time
-  #   if time_step % 10 == 1:
-  #     An, At = ttf_mat(vectorSolution, time)
-  #     #An, mask_r, mask_c = reduce_shape(An)
-  #     #At = At[mask_r]
-  #     #At = At[:, mask_c]
-  #     #M = sp.linalg.LinearOperator(An.shape, sp.linalg.spilu(An).solve)
-  #   vectorSolution = newton(An, At, mask_c, vectorSolution, time)
-  #   time = round(time, 8)
+  
 
   for time_step in range(time_steps):
     time += delta_time
@@ -192,9 +128,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 2, 3]:
+  for poly_degree in [2]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [2, 4, 8, 16]:
+    for iteration in [16]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

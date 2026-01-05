@@ -1598,10 +1598,18 @@ class Chkp
              Chkp<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
       point_vals;
 
-    for (unsigned int d = 0; d < system_dim; ++d)
+    for (unsigned int d = 0; d < system_dim-1; ++d)
     {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = coefficients[i + d * n_shape_fct_];
+      for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
+        point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
+          coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
+    }
+    for (unsigned int d = system_dim-1; d < system_dim; ++d)
+    {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = coefficients[i + (d + 2) * n_shape_fct_];
       for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(abscissas_sizeT); ++pt)
         point_vals[d][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
           coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT> >(pt, helper));
