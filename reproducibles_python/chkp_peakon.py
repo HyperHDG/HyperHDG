@@ -24,8 +24,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   h = 1. / iteration
   start_time  = 0.
-  goal_time   = 4.
-  time_steps  = 400
+  goal_time   = 1.
+  time_steps  = 100
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -130,7 +130,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in [2]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [160]:
+    for iteration in [64]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

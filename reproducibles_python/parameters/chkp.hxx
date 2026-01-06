@@ -27,7 +27,7 @@ struct ChkpParametersPeakon
                                      const param_float_t t = 0.)
   {
     auto pr = p;
-    pr[0] = 5.;   //same y, but x = 5
+    pr[0] = 1.;   //same y, but x = 1
     return analytic_result(pr, t);
   }
   /*!***********************************************************************************************
@@ -59,7 +59,7 @@ struct ChkpParametersPeakon
                                      const param_float_t t = 0.)
   {
     auto pr = p;
-    pr[0] = 5.;   //same y, but x = 5
+    pr[0] = 1.;   //same y, but x = 1
     return analytic_result(p, t) - analytic_result(pr, t);
   }
 
