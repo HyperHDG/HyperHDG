@@ -10,7 +10,7 @@ from datetime import datetime
 import os, sys
 
 def get_loc_constr(h, t):
-  return [t,       -1.,     -1.,     1.,      -2,       4.   ]
+  return [t,       -1.,     -1.,     1.,      -2. * np.sqrt(h),       4.   ]
   #Order: delta_t, tau+zpu, tau-zpu, tau-zpv, tau_uqq,  tau_f
 
 
@@ -48,7 +48,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(h, delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq.geo", lsol_constr = get_loc_constr(h, delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/square.geo", lsol_constr = get_loc_constr(h, delta_time) )
   HDG_wrapper.refine(iteration)
   
   def ttf_mat(x, time):
@@ -94,7 +94,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    if time_step % 10 == 0:
+    if (time_step - 1) % 50 == 0 or time_step == 0:
       A = ttf_mat(vectorSolution, time)
       A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -105,10 +105,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
-    HDG_wrapper.plot_option( "printFileNumber" , "false" )
-    HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time)
+    if (time_step+1) % 10 == 0:
+      HDG_wrapper.plot_option( "fileName" , "chkp_conv" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
+      HDG_wrapper.plot_option( "printFileNumber" , "false" )
+      HDG_wrapper.plot_option( "scale" , "0.95" )
+      HDG_wrapper.plot_solution(vectorSolution, time)
   
     HDG_wrapper.set_data(vectorSolution, time)
 
@@ -128,9 +129,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1, 2, 3]:
+  for poly_degree in [3]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [2, 4, 8, 16, 32]:
+    for iteration in [2, 4, 8, 16, 32, 64]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

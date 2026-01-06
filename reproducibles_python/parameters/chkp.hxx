@@ -28,7 +28,7 @@ struct ChkpParametersPeakon
   {
     auto pr = p;
     pr[0] = 1.;   //same y, but x = 1
-    return analytic_result(pr, t);
+    return -neumann_value(pr, t);;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.

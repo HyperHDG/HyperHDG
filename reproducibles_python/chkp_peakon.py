@@ -10,7 +10,7 @@ from datetime import datetime
 import os, sys
 
 def get_loc_constr(h, t):
-  return [t,       -1.,     -1.,     1.,      -2.,       4.   ]
+  return [t,       -1.,     -1.,     1.,      -2. * np.sqrt(h),       4.   ]
   #Order: delta_t, tau+zpu, tau-zpu, tau-zpv, tau_uqq,  tau_f
 
 
@@ -94,7 +94,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    if time_step % 10 == 0:
+    if(time_step - 1) % 10 == 0 or time_step == 0:
       A = ttf_mat(vectorSolution, time)
       A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
