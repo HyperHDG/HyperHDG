@@ -18,8 +18,8 @@ def get_loc_constr(h, t):
 # Function diffusion_test.
 # --------------------------------------------------------------------------------------------------
 def diffusion_test(poly_degree, iteration, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
+  begin_time = datetime.now()
+  print("Starting time is", begin_time)
   os.system("mkdir -p output")
   
   h = 1. / iteration
@@ -105,7 +105,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    if time_step % 1 == 0:
+    if (time_step+1) % 10 == 0:
       HDG_wrapper.plot_option( "fileName" , "peakon" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
@@ -116,12 +116,12 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if time_step % 10 == 0 or time == start_time + delta_time:
+    if (time_step+1) % 10 == 0:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
   end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
+  print("Program ended at", end_time, "after", end_time-begin_time)
   
 
 # --------------------------------------------------------------------------------------------------
