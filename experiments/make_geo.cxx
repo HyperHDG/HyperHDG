@@ -444,6 +444,7 @@ int main(int argc, char** argv) {
   PetscCall(PetscObjectSetName((PetscObject)properties, "properties"));
 
   PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, buf, FILE_MODE_WRITE, &viewer));
+  PetscCall(PetscViewerHDF5SetCompress(viewer, PETSC_TRUE));
 
   PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
   PetscCall(ISView(is_edges, viewer));
