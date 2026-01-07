@@ -23,12 +23,3 @@
 [submodule "submodules/KaHIP"]
 	path = submodules/KaHIP
 	url = https://github.com/KaHIP/KaHIP
-[submodule "submodules/CLI11"]
-	path = submodules/CLI11
-	url = https://github.com/CLIUtils/CLI11.git
-[submodule "submodules/METIS"]
-	path = submodules/METIS
-	url = https://github.com/LecrisUT/METIS.git
-[submodule "submodules/structlog"]
-	path = submodules/structlog
-	url = https://github.com/takeshibaconsuzuki/structlog.git
