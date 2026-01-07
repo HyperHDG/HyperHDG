@@ -92,6 +92,10 @@ int main(int argc, char** argv) {
   PetscOptionsEnd();
 
   snprintf(buf, sizeof(buf), "%s.geo.h5", out);
+
+  printf("n: %" PetscInt_FMT "\n", n);
+  printf("o: %s\n", buf);
+
   PetscCall(generate_grid_graph(n, &points, &edges, &ntypes, &ftypes));
   PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, buf, FILE_MODE_WRITE, &viewer));
   PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
