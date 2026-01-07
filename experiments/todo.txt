@@ -1,9 +1,0 @@
-- higher max number of partitions
-- better example with corner
-- alles mit medium netzwerk
-- timings besser anschauen (auf cluster)
-- partition of unity coarse space testen
-- stabilitätsbeweis mit delta-overlap durchrechnen
-
-- take bxzstr outof partitioner
-- add parhip support/ and mt-KaHIP
