@@ -809,8 +809,6 @@ class DiffusionWaveFirst
     hyEdgeT& hy_edge,
     const lSol_float_t time = 0.
   ) const {
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
       decltype(hyEdgeT::geometry), n_shape_fct_, lSol_float_t>(
         hy_edge.data.u.data(), hy_edge.data.u.data(), hy_edge.geometry
@@ -916,9 +914,9 @@ DiffusionWaveFirst<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
       {
         // q cdot p
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral;
-        // u nabla cdot p
+        // v nabla cdot p
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= theta_*delta_t_ * grad_int_vec[dim];
-        // q nabla v
+        // q nabla w
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -=
           theta_ * delta_t_ * grad_int_vec[dim];
         // q normal
@@ -926,7 +924,7 @@ DiffusionWaveFirst<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
           theta_ * delta_t_ * normal_int_vec[dim];
       }
 
-      // u v over volume
+      // v w over volume
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
         integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(i, j,
                                                                                hyper_edge.geometry);
@@ -975,7 +973,7 @@ DiffusionWaveFirst<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
-            integral  * theta*delta_t_;
+            integral  * theta_*delta_t_;
       }
 
   return right_hand_side;
@@ -1016,7 +1014,7 @@ DiffusionWaveFirst<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
         continue;
-      // u_D^{n} v
+      // v_D^{n} w
       integral = integrator::template integrate_bdr_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
@@ -1026,12 +1024,14 @@ DiffusionWaveFirst<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](dim) * integral * theta_ * delta_;
+          hyper_edge.geometry.local_normal(face).operator[](dim) * integral * theta_ * delta_t_;
     }
   }
 
   for (unsigned int j = 0; j < hyEdge_dimT * n_shape_fct_; ++j)
-    right_hand_side[j] += delta_t_ * theta_ * hyper_edge.data.flux_u[j];
+    right_hand_side[j] +=
+      + hyper_edge.data.q[j] * hyper_edge.geometry.area()
+      + delta_t_ * (1-theta_) * hyper_edge.data.flux_u[j];
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
