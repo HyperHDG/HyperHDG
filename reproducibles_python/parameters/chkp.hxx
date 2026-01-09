@@ -44,7 +44,9 @@ struct ChkpParametersPeakon
   static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
   {
-    return -exp(-abs(p[0] + p[1] - c * t)) * copysign(1.0, p[0] + p[1] - c * t);
+    param_float_t arg = p[0] + p[1] - c * t;
+    param_float_t sgn_arg = 2. / (1 + exp(-1000. * arg)) - 1.;
+    return -exp(-abs(arg)) * sgn_arg;
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
