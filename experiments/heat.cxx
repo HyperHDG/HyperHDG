@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionParab<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
+    using LSol = LocalSolver::DiffusionParab<space_dim,poly_deg,2*poly_deg,TestHeat2,PetscReal>;
     using HDG = GlobalLoop::Parabolic<Top,Geo,NDes,LSol>;
 
     PetscReal tau = 1; // HDG penalty

@@ -18,7 +18,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   theta       = 1.
-  time_steps  = 10 ** 4
+  time_steps  = 10 ** 3
   delta_time  = 1 / time_steps
   
   try:
@@ -52,14 +52,14 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
     vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
                  (time_step+1) * delta_time), -1.)
     
-    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+    [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, rtol=1e-13)
     if num_iter != 0:
       print("CG failed with a total number of ", num_iter, " iterations in time step ", time_step, \
             ". Trying GMRES!")
-      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
+      [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,rtol=1e-13)
       if num_iter != 0:
         print("GMRES also failed with a total number of ", num_iter, "iterations.")
-        [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
+        [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,rtol=1e-13)
         if num_iter != 0:
           print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
           raise RuntimeError("All linear solvers did not converge!")
@@ -88,9 +88,9 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in range(1,4):
     print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
+    for dimension in range(1,1):
       print("Dimension is ", dimension, "\n")
-      for iteration in range(6):
+      for iteration in range(10):
         try:
           diffusion_test(poly_degree, dimension, iteration, debug_mode)
         except RuntimeError as error:

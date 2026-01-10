@@ -104,12 +104,12 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave3,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false;
     PetscReal tau = 1; // HDG penalty
-    PetscReal theta = .5; // one-step theta method
+    PetscReal theta = 1; // one-step theta method
     PetscInt iteration = 1;
     PetscInt ts = 1;
     PetscReal end_time = 1;
