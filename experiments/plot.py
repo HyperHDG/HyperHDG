@@ -6,11 +6,26 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import pandas as pd
 import numpy as np
+from pathlib import Path
+
+
+def plt_style(args):
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    if args.log:
+        if "x" in args.log: plt.xscale("log", base=args.xbase)
+        if "y" in args.log: plt.yscale("log", base=args.ybase)
+    plt.xlabel(args.xlabel or args.x)
+    plt.ylabel(args.ylabel or args.y)
+    plt.title(args.title)
+    ltitle = f"{args.group0},{args.group_by}" if args.group0 is not None else args.group_by
+    if args.group_by and args.legend: plt_legend2(legend_title=ltitle, lbbox=args.legend)
+    plt.gca().set_box_aspect(1)
+    plt.tight_layout()
 
 
 def fmt_names(names):
-  if names is None: return ''
-  return ",".join(map(str, names))
+    return ",".join(map(str, names))
 
 
 def plt_legend2(legend_title=None, lbbox=None):
@@ -48,7 +63,7 @@ def reference_triangle_loglog(rate, x0, y0, tx, ty, **kw):
 parser = argparse.ArgumentParser()
 parser.add_argument("-x", help="name of x variable")
 parser.add_argument("-y", help="name of y variable(s)")
-parser.add_argument("-g", "--group-by", help="how to group input data to display")
+parser.add_argument("-g", "--group-by", help="how to group input data to display by color/ line")
 parser.add_argument("--xlabel", help="label of x-axis, default=name of x variable")
 parser.add_argument("--ylabel", help="label of y-axis, default=name of y variable")
 parser.add_argument("--xbase", help="base of x-axis", type=int, default=10)
@@ -64,6 +79,7 @@ parser.add_argument("-w", "--where", help="select subset")
 parser.add_argument("--legend", help="legend loc '<loc: str>;<bbox: float,float>'", default='best')
 parser.add_argument("--trans", help="transform input 'f(x),g(y)'")
 parser.add_argument("--ref", help="generate reference triangle 'rate;x0,x1;y0'")
+parser.add_argument("--group0", help="group input data by plot")
 
 args = parser.parse_args()
 
@@ -85,25 +101,23 @@ if args.trans:
 else:
     tx, ty = lambda x: x, lambda y: y
 
-for names, group in df.groupby(args.group_by.split(',')) if args.group_by else [(None,df)]:
-    plot_func(tx(group[args.x]), ty(group[args.y]), label=fmt_names(names), marker="+")
+for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else [(0,(None,df))]:
+    for names, group in df0.groupby(args.group_by.split(',')) if args.group_by else [("",df0)]:
+        if name0 is not None: names = [name0]+list(names)
+        plot_func(tx(group[args.x]), ty(group[args.y]), label=fmt_names(names), marker="+")
 
-if args.ref:
-    rate, x, y0 = args.ref.split(';')
-    reference_triangle_loglog(int(rate), [float(xi) for xi in x.split(',')],
-      float(y0), tx, ty, linewidth=1, color='.5')
+        if args.ref:
+            rate, x, y0 = args.ref.split(';')
+            reference_triangle_loglog(int(rate), [float(xi) for xi in x.split(',')],
+              float(y0), tx, ty, linewidth=1, color='.5')
 
-plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-if args.log:
-    if "x" in args.log: plt.xscale("log", base=args.xbase)
-    if "y" in args.log: plt.yscale("log", base=args.ybase)
-plt.xlabel(args.xlabel or args.x)
-plt.ylabel(args.ylabel or args.y)
-plt.title(args.title)
-if args.group_by and args.legend: plt_legend2(legend_title=args.group_by, lbbox=args.legend)
-plt.gca().set_box_aspect(1)
-plt.tight_layout()
+    plt_style(args)
 
-if args.save: plt.savefig(args.save, bbox_inches="tight", pad_inches=0)
-if not args.nshow: plt.show()
+    if args.save:
+        path = args.save
+        if name0 is not None:
+            path = Path(path)
+            p, n, s = path.parent, path.name, path.suffix
+            path = (p / f"{n}_{args.group0}{idx}").with_suffix(s)
+        plt.savefig(path, bbox_inches="tight", pad_inches=0)
+    if not args.nshow: plt.show()
