@@ -9,6 +9,7 @@ import numpy as np
 
 
 def fmt_names(names):
+  if names is None: return ''
   return ",".join(map(str, names))
 
 
@@ -21,6 +22,26 @@ def plt_legend2(legend_title=None, lbbox=None):
     bbox = tuple(map(float,lbbox[1].split(','))) if len(lbbox) > 1 else None
 
     plt.legend(handles, labels, bbox_to_anchor=bbox, loc=lbbox[0])
+
+
+def reference_triangle_loglog(rate, x0, y0, tx, ty, **kw):
+    x = tx(np.array(x0))
+    y = x**rate
+    y /= y[0]
+    y *= y0
+    y = ty(y)
+
+    # up
+    xs = [x[0], x[1], x[1], x[0]]
+    ys = [y[0], y[0], y[1], y[0]]
+
+    # TODO: if triangle is upside down, make the text be on the left instead of the right side
+    plt.plot(xs, ys, **kw)
+    plt.text(np.sqrt(x[0]*x[1]), ys[0]*.9, '1', ha='center', va='top')
+    plt.text(xs[1]*1.05, np.sqrt(y[0]*y[1]), str(rate), ha='left', va='center')
+
+    # down
+    # swap the 0th and 1st elements of x and y, use max(*y) and min(*x) instead and va=bottom, ha=right instead
 
 #### MAIN ####
 
@@ -42,6 +63,7 @@ parser.add_argument("--lines", help="new line delimited json", default=True, act
 parser.add_argument("-w", "--where", help="select subset")
 parser.add_argument("--legend", help="legend loc '<loc: str>;<bbox: float,float>'", default='best')
 parser.add_argument("--trans", help="transform input 'f(x),g(y)'")
+parser.add_argument("--ref", help="generate reference triangle 'rate;x0,x1;y0'")
 
 args = parser.parse_args()
 
@@ -66,6 +88,11 @@ else:
 for names, group in df.groupby(args.group_by.split(',')) if args.group_by else [(None,df)]:
     plot_func(tx(group[args.x]), ty(group[args.y]), label=fmt_names(names), marker="+")
 
+if args.ref:
+    rate, x, y0 = args.ref.split(';')
+    reference_triangle_loglog(int(rate), [float(xi) for xi in x.split(',')],
+      float(y0), tx, ty, linewidth=1, color='.5')
+
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 if args.log:
@@ -77,15 +104,6 @@ plt.title(args.title)
 if args.group_by and args.legend: plt_legend2(legend_title=args.group_by, lbbox=args.legend)
 plt.gca().set_box_aspect(1)
 plt.tight_layout()
-
-x = tx(np.array([1,2]))
-y = x**4
-y /= y[0]
-y *= 1e-4
-y = ty(y)
-plt.plot([x[1], x[0], x[0], x[1]], [y[1], y[1], y[0], y[1]], linewidth=1, color='.5')
-plt.text(np.sqrt(x[0]*x[1]), y[1]*.9, '1', ha='center', va='top')
-plt.text(x[0]*1.05, np.sqrt(y[0]*y[1]), '4', ha='left', va='center')
 
 if args.save: plt.savefig(args.save, bbox_inches="tight", pad_inches=0)
 if not args.nshow: plt.show()
