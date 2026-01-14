@@ -119,10 +119,10 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
     plt_style(args)
 
     if args.save:
-        path = args.save
-        if name0 is not None:
-            path = Path(path)
-            p, n, s = path.parent, path.name, path.suffix
-            path = (p / f"{n}_{args.group0}{idx}").with_suffix(s)
-        plt.savefig(path, bbox_inches="tight", pad_inches=0)
+        for path in args.save.split(","):
+            if name0 is not None:
+                path = Path(path)
+                p, n, s = path.parent, path.name, path.suffix
+                path = (p / f"{n}_{args.group0}{idx}").with_suffix(s)
+            plt.savefig(path, bbox_inches="tight", pad_inches=0)
     if not args.nshow: plt.show()
