@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
     PetscLogStage s_as, s_ts, s_rf, s_hdg;
 
-    PetscBool is_set;
+    PetscBool is_set, plot = true;
     PetscInt N;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, e_abs = 0, e_rel = 0;
@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-plot", &plot, &is_set));
     PetscCall(PetscLogStageRegister("assembly", &s_as));
     PetscCall(PetscLogStageRegister("timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
@@ -157,7 +158,7 @@ int main(int argc, char **argv) {
     zero_v = hdg.zero_vector();
     temp = hdg.make_initial(zero_v);
     N = temp.size();
-    hdg.plot_solution(temp, 0.); // needs petsc
+    if (plot) hdg.plot_solution(temp, 0.); // needs petsc
     PRIN2SP();
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
@@ -200,7 +201,7 @@ int main(int argc, char **argv) {
         iterations += its;
 
         hdg.set_data(sol_span, (i+1)*dt);
-        hdg.plot_solution(sol_span, (i+1)*dt);
+        if (plot) hdg.plot_solution(sol_span, (i+1)*dt);
 
         temp2 = hdg.errors(temp, (i+1)*dt);
         temp3 = hdg.norms(temp, (i+1)*dt);
