@@ -15,5 +15,4 @@ link_libraries(HyperHDG PkgConfig::PETSC)
 
 add_executable(heat heat.cxx)
 add_executable(wave wave.cxx)
-add_executable(wave_conv wave_conv.cxx)
 add_executable(network network.cxx)
