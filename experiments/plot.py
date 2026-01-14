@@ -80,6 +80,7 @@ parser.add_argument("--legend", help="legend loc '<loc: str>;<bbox: float,float>
 parser.add_argument("--trans", help="transform input 'f(x),g(y)'")
 parser.add_argument("--ref", help="generate reference triangle 'rate;x0,x1;y0'")
 parser.add_argument("--group0", help="group input data by plot")
+parser.add_argument("--comment", help="place some text in the bottom right corner, like the git hash, date, etc")
 
 args = parser.parse_args()
 
@@ -106,10 +107,14 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
         if name0 is not None: names = [name0]+list(names)
         plot_func(tx(group[args.x]), ty(group[args.y]), label=fmt_names(names), marker="+")
 
-        if args.ref:
-            rate, x, y0 = args.ref.split(';')
-            reference_triangle_loglog(int(rate), [float(xi) for xi in x.split(',')],
-              float(y0), tx, ty, linewidth=1, color='.5')
+    if args.ref:
+        rate, x, y0 = args.ref.split(';')
+        reference_triangle_loglog(int(rate), [float(xi) for xi in x.split(',')],
+          float(y0), tx, ty, linewidth=1, color='.5')
+
+    if args.comment: plt.text(1.0, -0.1, args.comment, transform=plt.gca().transAxes,
+      ha='right', va='top', fontsize=9, color=".5")
+
 
     plt_style(args)
 
