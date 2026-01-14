@@ -105,7 +105,8 @@ else:
 for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else [(0,(None,df))]:
     for names, group in df0.groupby(args.group_by.split(',')) if args.group_by else [("",df0)]:
         if name0 is not None: names = [name0]+list(names)
-        plot_func(tx(group[args.x]), ty(group[args.y]), label=fmt_names(names), marker="+")
+        sgroup = group[[args.x, args.y]].sort_values(args.x)
+        plot_func(tx(sgroup[args.x]), ty(sgroup[args.y]), label=fmt_names(names), marker="+")
 
     if args.ref:
         rate, x, y0 = args.ref.split(';')
