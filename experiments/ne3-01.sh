@@ -8,4 +8,4 @@ parallel --progress --bar --results output/ne3-01.json \
 yq -I0 -o=json ".Stdout | from_yaml" output/ne3-01.json \
     | experiments/plot.py -f json -x it -y e_abs -g timesteps \
         --where "theta == .5" --log xy --trans "2.**-x,y" --xlabel h --xbase 2 \
-        --ref "4;1,2;1e-4"
+        --ref "4;2,1;1e-5"
