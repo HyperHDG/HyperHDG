@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .25; // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0;
+    PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0, e_abs = 0, e_rel = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -195,6 +195,9 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
 
+    Vec errors;
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt, nt, &errors));
+
     PRIN2S(s_ts);
     for (PetscInt i = 0; i < nt; i++) {
         std::span<PetscReal> span;
@@ -214,21 +217,24 @@ int main(int argc, char **argv) {
           hdg.plot_solution(span, (i+1)*dt);
         PetscCall(VecRestoreSpan(rhs, span));
 
+        temp2 = hdg.errors(temp, (i+1)*dt);
+        temp3 = hdg.norms(temp, (i+1)*dt);
+        e_abs = PetscMax(temp2[0], e_abs);
+        e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+        PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
     }
     PRIN2SP();
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
 
-    // zero_v unused
-    temp2 = hdg.errors(zero_v, T);
-    temp3 = hdg.norms(zero_v, T);
-    for (size_t i = 0; i < temp3.size(); i++)
-      temp3[i] = temp2[i] / temp3[i];
+    PetscCall(VecAssemblyBegin(errors));
+    PetscCall(VecAssemblyEnd(errors));
+
     avg_iterations = ((PetscReal)iterations) / nt;
 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_abs: %.5e\n", temp2[0]));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_rel: %.5e\n", temp3[0]));
+    PRIN2FY(e_abs);
+    PRIN2FY(e_rel);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);
