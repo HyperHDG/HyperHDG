@@ -1,10 +1,11 @@
 #!/bin/bash
+set -euox pipefail
 
 mkdir -p output
-parallel --progress --bar \
-    'python experiments/heat.py -i {1} -n {2} -t {=3 $_=2**-$_ =} | tee output/ne3-01-i{1}-n{2}-t{3}.yaml' \
-    ::: $(seq 6) ::: $(seq 6 13) ::: 0 1
-yq -cr "." output/ne3-01*.yaml \
-    | experiments/plot.py -f json -x iteration -y error -g timesteps \
+parallel --progress --bar --results output/ne3-01.json \
+    'build/rel/experiments/heat -i {1} -ts {2} -t {=3 $_=2**-$_ =}' \
+    ::: $(seq 6) ::: $(seq 6 13) ::: 1
+yq -I0 -o=json ".Stdout | from_yaml" output/ne3-01.json \
+    | experiments/plot.py -f json -x it -y e_abs -g timesteps \
         --where "theta == .5" --log xy --trans "2.**-x,y" --xlabel h --xbase 2 \
         --ref "4;1,2;1e-4"
