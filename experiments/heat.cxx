@@ -7,8 +7,42 @@
 #include <HyperHDG/local_solver/diffusion_parab_ldgh.hxx>
 #include <HyperHDG/global_loop/parabolic.hxx>
 #include "parameters.hxx"
+#include "../reproducibles_python/parameters/diffusion.hxx"
 
 static const char help[] = "experiments regarding the heat equation\n";
+
+static const char help_msg[] = "experiments regarding timoshenko networks\n";
+// static PetscInt PETSC_PRIN2_ROW_LEN = 10;
+static PetscLogDouble PETSC_PRIN2_TIMER = 0;
+static PetscInt PETSC_PRIN2_STAGE = 0;
+static const char* PETSC_PRIN2_STAGE_NAME = "";
+
+#define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
+#define PRIN2FY(VAR)  PetscCall(PetscPrin2fy(PETSC_COMM_WORLD, #VAR, VAR))
+#define PRIN2SY(VAR)  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s: %s\n", #VAR, VAR))
+#define PRIN2S(STAGE) do { PETSC_PRIN2_STAGE = STAGE; PetscCall(PetscLogStageGetName(STAGE, &PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscTime(&PETSC_PRIN2_TIMER)); PetscCall(PetscLogStagePush(STAGE)); } while(0)
+#define PRIN2SP()     do { PetscLogDouble time; PetscCall(PetscLogStagePop()); PetscCall(PetscTime(&time)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_%s: %.5e\n", PETSC_PRIN2_STAGE_NAME, (time-PETSC_PRIN2_TIMER))); } while(0)
+
+PetscErrorCode PetscPrin2iy(MPI_Comm comm, const char *name, PetscInt val) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: %d\n", name, val));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2fy(MPI_Comm comm, const char *name, PetscReal val) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: %.5e\n", name, val));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscPrin2iya(MPI_Comm comm, const char *name, PetscInt val, PetscInt num) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscPrintf(comm, "%s: [", name));
+  for (PetscInt i = 0; i < num; i++)
+    PetscCall(PetscPrintf(comm, "%d, ", val));
+  PetscCall(PetscPrintf(comm, "]\n"));
+  PetscFunctionReturn(0);
+}
 
 PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
   PetscCall(PetscPrintf(com, msg));
@@ -53,30 +87,31 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 }
 
 int main(int argc, char **argv) {
-    constexpr int space_dim = 2;
+    constexpr int space_dim = 1;
     constexpr int poly_deg = 3;
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionParab<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
+    using LSol = LocalSolver::DiffusionParab<space_dim,poly_deg,2*poly_deg,TestParametersSinParab,PetscReal>;
     using HDG = GlobalLoop::Parabolic<Top,Geo,NDes,LSol>;
 
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .5; // one-step theta method
-    PetscInt iteration = 2;
+    PetscInt it = 2;
     PetscInt timesteps = 100;
     PetscReal end_time = 1;
     PetscReal dt;
+    PetscReal rtol = 1e-13;
 
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "heat";
 
-    PetscLogStage s_as, s_ts, s_rf;
+    PetscLogStage s_as, s_ts, s_rf, s_hdg;
 
     PetscBool is_set;
     PetscInt N;
     PetscInt iterations = 0, its = 0;
-    PetscReal avg_it = 0;
+    PetscReal avg_iterations = 0, e_abs, e_rel;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -87,24 +122,33 @@ int main(int argc, char **argv) {
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "initialization...\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "# initialization...\n"));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &iteration, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &it, &is_set));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-ts", &timesteps, &is_set));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
-    PetscCall(PetscLogStageRegister("Assembly", &s_as));
-    PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
+    PetscCall(PetscLogStageRegister("assembly", &s_as));
+    PetscCall(PetscLogStageRegister("timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
+    PetscCall(PetscLogStageRegister("hdg_init", &s_hdg));
 
+    timesteps = 1<<timesteps;
     dt = end_time / timesteps;
 
-    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "timesteps", &timesteps, 1));
-    PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "dt", &dt, 1));
-    PetscCall(PetscPrin2f(PETSC_COMM_WORLD, "end time", &end_time, 1));
+    PRIN2IY(space_dim);
+    PRIN2IY(poly_deg);
+    PRIN2FY(tau);
+    PRIN2FY(theta);
+    PRIN2IY(it);
+    PRIN2IY(tau);
+    PRIN2IY(timesteps);
+    PRIN2FY(dt);
+    PRIN2FY(end_time);
 
-    HDG hdg((1 << iteration) * space_dim, {tau, theta, dt});
+    PRIN2S(s_hdg);
+    HDG hdg((1 << it) * space_dim, {tau, theta, dt});
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "true");
@@ -114,25 +158,29 @@ int main(int argc, char **argv) {
     temp = hdg.make_initial(zero_v);
     N = temp.size();
     hdg.plot_solution(temp, 0.); // needs petsc
+    PRIN2SP();
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
 
-    PetscLogStagePush(s_as);
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "assembly...\n"));
+    PRIN2S(s_as);
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", 1, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     mat_coo = hdg.trace_to_flux_mat(0.);
-    PetscCall(MatCreateSeqAIJFromTriple(PETSC_COMM_SELF, N, N, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data(), mat_coo.value_vec.data(), &mat, mat_coo.value_vec.size(), PETSC_FALSE /* 0-based */));
-    PetscLogStagePop();
+    PetscCall(MatSetPreallocationCOO(mat, mat_coo.row_vec.size(), (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+    PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+    PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
+
+    PRIN2SP();
 
     PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
+    PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "timestepping...\n"));
-    PetscLogStagePush(s_ts);
+    PRIN2S(s_ts);
     for (PetscInt i = 0; i < timesteps; i++) {
         std::span<PetscReal> rhs_span;
         std::span<PetscReal> sol_span;
@@ -154,19 +202,19 @@ int main(int argc, char **argv) {
         PetscCall(VecRestoreSpan(rhs, rhs_span));
         PetscCall(VecRestoreSpan(sol, sol_span));
     }
-    PetscLogStagePop();
+    PRIN2SP();
 
     temp2 = hdg.errors(temp, end_time);
     temp3 = hdg.norms(temp, end_time);
-    for (size_t i = 0; i < temp3.size(); i++)
-      temp3[i] = temp2[i] / temp3[i];
-    avg_it = ((PetscReal)iterations) / timesteps;
+    e_abs = temp2[0];
+    e_rel = temp2[0] / temp3[0];
+    avg_iterations = ((PetscReal)iterations) / timesteps;
 
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final abs error", temp2.data(), temp2.size()));
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "final rel error", temp3.data(), temp3.size()));
-    PetscCall(PetscPrin2i(PETSC_COMM_SELF, "tot iterations", &iterations, 1)); 
-    PetscCall(PetscPrin2f(PETSC_COMM_SELF, "avg iterations", &avg_it, 1)); 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "wrote output to '%s/%s.*.vtu'\n", output_directory, output_filename));
+    PRIN2FY(e_abs);
+    PRIN2FY(e_rel);
+    PRIN2IY(iterations);
+    PRIN2FY(avg_iterations);
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: '%s/%s.*.vtu'\n", output_directory, output_filename));
 
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
@@ -175,6 +223,3 @@ int main(int argc, char **argv) {
     PetscCall(PetscFinalize());
     return 0;
 }
-
-    // char network_path[PATH_MAX];
-    // PetscOptionsGetString(NULL, ns_pre, "network", network_path, PATH_MAX, &is_set);
