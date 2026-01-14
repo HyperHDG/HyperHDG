@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     PetscBool is_set;
     PetscInt N;
     PetscInt iterations = 0, its = 0;
-    PetscReal avg_iterations = 0, e_abs, e_rel;
+    PetscReal avg_iterations = 0, e_abs = 0, e_rel = 0;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -180,6 +180,9 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
 
+    Vec errors;
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, timesteps, timesteps, &errors));
+
     PRIN2S(s_ts);
     for (PetscInt i = 0; i < timesteps; i++) {
         std::span<PetscReal> rhs_span;
@@ -199,15 +202,20 @@ int main(int argc, char **argv) {
         hdg.set_data(sol_span, (i+1)*dt);
         hdg.plot_solution(sol_span, (i+1)*dt);
 
+        temp2 = hdg.errors(temp, (i+1)*dt);
+        temp3 = hdg.norms(temp, (i+1)*dt);
+        e_abs = PetscMax(temp2[0], e_abs);
+        e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+        PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
+
         PetscCall(VecRestoreSpan(rhs, rhs_span));
         PetscCall(VecRestoreSpan(sol, sol_span));
     }
     PRIN2SP();
 
-    temp2 = hdg.errors(temp, end_time);
-    temp3 = hdg.norms(temp, end_time);
-    e_abs = temp2[0];
-    e_rel = temp2[0] / temp3[0];
+    PetscCall(VecAssemblyBegin(errors));
+    PetscCall(VecAssemblyEnd(errors));
+
     avg_iterations = ((PetscReal)iterations) / timesteps;
 
     PRIN2FY(e_abs);
