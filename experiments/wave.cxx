@@ -5,6 +5,7 @@
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/local_solver/diffusion_wave_ldgh.hxx>
+#include <HyperHDG/local_solver/diffusion_wave1_ldgh.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 #include "parameters.hxx"
 #include <map>
@@ -102,14 +103,14 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false, is_set;
     PetscInt nx = 2, nt = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
-    PetscReal theta = .25; // one-step theta method
+    PetscReal theta = .5;  // one-step theta method
     PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0, e_abs = 0, e_rel = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
