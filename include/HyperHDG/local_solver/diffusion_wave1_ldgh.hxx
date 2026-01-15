@@ -871,7 +871,8 @@ DiffusionWave1<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) += vol_integral;
-        local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
+        local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -=
+          theta_ * delta_t_ * grad_int_vec[dim];
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -=
           theta_ * delta_t_ * grad_int_vec[dim];
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
