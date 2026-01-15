@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestWave0,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestWave1,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false, is_set;
