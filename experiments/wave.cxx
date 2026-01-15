@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestHeat,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false, is_set;
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
     sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, sol;
+    Vec rhs, sol, errors;
     Mat mat;
     KSP ksp;
     PC pc;
@@ -177,8 +177,17 @@ int main(int argc, char **argv) {
     if (plot)
       hdg.plot_solution(temp, 0.);
 
+    temp2 = hdg.errors(temp, 0);
+    temp3 = hdg.norms(temp, 0);
+    e_abs = PetscMax(temp2[0], e_abs);
+    e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt, nt, &errors));
+    PetscCall(VecSetValue(errors, 0, temp2[0]/temp3[0], INSERT_VALUES));
+
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_init: %.5e\n", e_rel));
 
     PRIN2S(s_as);
     mat_coo = hdg.trace_to_flux_mat(0.);
@@ -196,15 +205,14 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
 
-    Vec errors;
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt, nt, &errors));
-
     PRIN2S(s_ts);
-    for (PetscInt i = 0; i < nt; i++) {
+    for (PetscInt i = 1; i <= nt; i++) {
+        PetscReal ti = i*dt;
+
         std::span<PetscReal> span;
         PetscCall(VecGetSpan(rhs, span));
         PetscLogStagePush(s_rf);
-        hdg.residual_flux2(std::span{zero_v}, span, (i+1)*dt);
+        hdg.residual_flux2(std::span{zero_v}, span, ti);
         PetscLogStagePop();
 
         PetscCall(VecScale(rhs, -1.));
@@ -213,13 +221,13 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        hdg.set_data(span, (i+1)*dt);
+        hdg.set_data(span, ti);
         if (plot)
-          hdg.plot_solution(span, (i+1)*dt);
+          hdg.plot_solution(span, ti);
         PetscCall(VecRestoreSpan(rhs, span));
 
-        temp2 = hdg.errors(temp, (i+1)*dt);
-        temp3 = hdg.norms(temp, (i+1)*dt);
+        temp2 = hdg.errors(temp, ti);
+        temp3 = hdg.norms(temp, ti);
         e_abs = PetscMax(temp2[0], e_abs);
         e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
         PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
