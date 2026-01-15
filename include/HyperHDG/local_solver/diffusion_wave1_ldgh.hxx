@@ -589,7 +589,7 @@ class DiffusionWave1
           {
           hyper_edge.data.flux_old[i] += q_components[dim][j] * grad_int_vec[dim];
           hyper_edge.data.qflux_old[dim*n_shape_fct_+i] +=
-            hyper_edge.data.u_old[i] * grad_int_vec[dim];
+            hyper_edge.data.u_old[j] * grad_int_vec[dim];
           }
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
@@ -608,12 +608,10 @@ class DiffusionWave1
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
           {
-          hyper_edge.data.flux_old[i] +=
-            tau_ * lambda_values[face][j] *
-            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-              i, j, face, hyper_edge.geometry);
           auto integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
+          hyper_edge.data.flux_old[i] +=
+            tau_ * lambda_values[face][j] * integral;
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
             hyper_edge.data.qflux_old[dim * n_shape_fct_ + i] -=
               hyper_edge.geometry.local_normal(face).operator[](dim)
@@ -705,9 +703,10 @@ class DiffusionWave1
             i, j, hyper_edge.geometry);
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           {
+            // WRONG: why are here i and j switched!!!
           hyper_edge.data.flux_old[i] += q_components[dim][j] * grad_int_vec[dim];
           hyper_edge.data.qflux_old[dim*n_shape_fct_+i] +=
-            hyper_edge.data.u_old[i] * grad_int_vec[dim];
+            hyper_edge.data.u_old[j] * grad_int_vec[dim];
           }
 
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
@@ -724,12 +723,10 @@ class DiffusionWave1
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
           {
-          hyper_edge.data.flux_old[i] +=
-            tau_ * lambda_values[face][j] *
-            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-              i, j, face, hyper_edge.geometry);
           auto integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
+          hyper_edge.data.flux_old[i] +=
+            tau_ * lambda_values[face][j] * integral;
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
             hyper_edge.data.qflux_old[dim * n_shape_fct_ + i] -=
               hyper_edge.geometry.local_normal(face).operator[](dim)
@@ -993,20 +990,19 @@ DiffusionWave1<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
     {
       if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
         continue;
-      integral = integrator::template integrate_bdr_phifunc<
+      integral = theta_ * integrator::template integrate_bdr_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
                                                                         hyper_edge.geometry, time);
-      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        tau_ * theta_ * delta_t_ * integral +
-        tau_ * (1. - theta_) * delta_t_ *
-          integrator::template integrate_bdr_phifunc<
+      integral += (1. - theta_) * integrator::template integrate_bdr_phifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value,
             Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time - delta_t_);
+
+      right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * delta_t_ * integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](dim) * integral * delta_t_*theta_;
+          hyper_edge.geometry.local_normal(face).operator[](dim) * integral * delta_t_;
     }
   }
 
