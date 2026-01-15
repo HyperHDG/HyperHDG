@@ -47,7 +47,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT,
           typename lSol_float_t = double>
-class DiffusionWave
+class DiffusionWave2
 {
  public:
   // -----------------------------------------------------------------------------------------------
@@ -362,7 +362,7 @@ class DiffusionWave
    *
    * \param   constru       Constructor object.
    ************************************************************************************************/
-  DiffusionWave(const constructor_value_type& constru = std::vector(3, 1.))
+  DiffusionWave2(const constructor_value_type& constru = std::vector(3, 1.))
   : tau_(constru[0]), theta_(constru[1]), delta_t_(constru[2])
   {
   }
@@ -843,7 +843,7 @@ class DiffusionWave
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 //
-// IMPLEMENTATION OF MEMBER FUNCTIONS OF DiffusionWave
+// IMPLEMENTATION OF MEMBER FUNCTIONS OF DiffusionWave2
 //
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -860,9 +860,9 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
   const lSol_float_t tau,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -928,7 +928,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assem
   // std::cout << "local_mat=" << std::endl << local_mat << std::endl;
 
   return local_mat;
-}  // end of DiffusionWave::assemble_loc_matrix
+}  // end of DiffusionWave2::assemble_loc_matrix
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_lambda
@@ -942,9 +942,9 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
@@ -971,7 +971,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
       }
 
   return right_hand_side;
-}  // end of DiffusionWave::assemble_rhs_from_lambda
+}  // end of DiffusionWave2::assemble_rhs_from_lambda
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_global_rhs
@@ -985,9 +985,9 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   // std::cout << "global_rhs time=" << time << std::endl;
@@ -1032,7 +1032,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   // std::cout << "global_rhs= " << right_hand_side << std::endl;
 
   return right_hand_side;
-}  // end of DiffusionWave::assemble_rhs_from_global_rhs
+}  // end of DiffusionWave2::assemble_rhs_from_global_rhs
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_coeffs
@@ -1046,13 +1046,13 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
   lSol_float_t>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_coeffs(
     const std::array<
       lSol_float_t,
-      DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_>&
+      DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_>&
       coeffs,
     hyEdgeT& hyper_edge) const
 {
@@ -1064,7 +1064,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
   return right_hand_side;
-}  // end of DiffusionWave::assemble_rhs_from_coeffs
+}  // end of DiffusionWave2::assemble_rhs_from_coeffs
 
 // -------------------------------------------------------------------------------------------------
 // primal_at_boundary
@@ -1080,9 +1080,9 @@ template <typename hyEdgeT>
 inline std::array<
   std::array<
     lSol_float_t,
-    DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
+    DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
   const std::array<lSol_float_t, n_loc_dofs_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1100,7 +1100,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::prima
             i, j, face, hyper_edge.geometry);
 
   return bdr_values;
-}  // end of DiffusionWave::primal_at_boundary
+}  // end of DiffusionWave2::primal_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // dual_at_boundary
@@ -1116,9 +1116,9 @@ template <typename hyEdgeT>
 inline std::array<
   std::array<
     lSol_float_t,
-    DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
+    DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_>,
   2 * hyEdge_dimT>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
   const std::array<lSol_float_t, (hyEdge_dimT + 1) * n_shape_fct_>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1140,7 +1140,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_
       }
 
   return bdr_values;
-}  // end of DiffusionWave::dual_at_boundary
+}  // end of DiffusionWave2::dual_at_boundary
 
 // -------------------------------------------------------------------------------------------------
 // bulk_values
@@ -1157,8 +1157,8 @@ template <typename abscissa_float_t,
           class input_array_t,
           typename hyEdgeT>
 std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
-DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
+           DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
@@ -1170,7 +1170,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_
   SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+             DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)
@@ -1184,7 +1184,7 @@ DiffusionWave<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_
 
   return point_vals;
 }
-// end of DiffusionWave::bulk_values
+// end of DiffusionWave2::bulk_values
 
 // -------------------------------------------------------------------------------------------------
 /// \endcond
