@@ -103,14 +103,14 @@ int main(int argc, char **argv) {
     using Top = Topology::Cubic<space_dim,space_dim>;
     using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
     using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionWave<space_dim,poly_deg,2*poly_deg,TestWave2,PetscReal>;
+    using LSol = LocalSolver::DiffusionWave1<space_dim,poly_deg,2*poly_deg,TestWave0,PetscReal>;
     using HDG = GlobalLoop::Hyperbolic<Top,Geo,NDes,LSol>;
 
     PetscBool help = false, is_set;
     PetscInt nx = 2, nt = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
-    PetscReal theta = .5;  // one-step theta method
+    PetscReal theta = 1;  // one-step theta method
     PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0, e_abs = 0, e_rel = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
@@ -187,7 +187,8 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt, nt, &errors));
     PetscCall(VecSetValue(errors, 0, temp2[0]/temp3[0], INSERT_VALUES));
 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_init: %.5e\n", e_rel));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_abs0: %.5e\n", e_abs));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_rel0: %.5e\n", e_rel));
 
     PRIN2S(s_as);
     mat_coo = hdg.trace_to_flux_mat(0.);
