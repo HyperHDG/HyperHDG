@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt, nt, &errors));
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
     PetscCall(VecSetValue(errors, 0, temp2[0]/temp3[0], INSERT_VALUES));
 
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_abs0: %.5e\n", e_abs));

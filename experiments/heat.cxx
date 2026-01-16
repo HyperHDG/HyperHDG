@@ -97,10 +97,10 @@ int main(int argc, char **argv) {
 
     PetscReal tau = 1; // HDG penalty
     PetscReal theta = .5; // one-step theta method
-    PetscInt it = 2;
-    PetscInt timesteps = 100;
-    PetscReal end_time = 1;
-    PetscReal dt;
+    PetscInt  nx = 2;
+    PetscInt  nt = 100;
+    PetscReal T  = 1;
+    PetscReal dt, h;
     PetscReal rtol = 1e-13;
 
     char output_directory[PATH_MAX] = "output";
@@ -124,9 +124,9 @@ int main(int argc, char **argv) {
     PetscCall(PetscInitialize(&argc, &argv, NULL, help));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "# initialization...\n"));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-i", &it, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-ts", &timesteps, &is_set));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &end_time, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-nx", &nx, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-nt", &nt, &is_set));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &T, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-plot", &plot, &is_set));
@@ -135,21 +135,22 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
     PetscCall(PetscLogStageRegister("hdg_init", &s_hdg));
 
-    timesteps = 1<<timesteps;
-    dt = end_time / timesteps;
+    dt = T / nt;
+    h  = 1. / nx;
 
     PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
-    PRIN2IY(it);
     PRIN2IY(tau);
-    PRIN2IY(timesteps);
     PRIN2FY(dt);
-    PRIN2FY(end_time);
+    PRIN2FY(h);
+    PRIN2IY(nt);
+    PRIN2IY(nx);
+    PRIN2FY(T);
 
     PRIN2S(s_hdg);
-    HDG hdg((1 << it) * space_dim, {tau, theta, dt});
+    HDG hdg(nx, {tau, theta, dt});
     hdg.plot_option("fileName", output_filename);
     hdg.plot_option("outputDir", output_directory);
     hdg.plot_option("printFileNumber", "true");
@@ -182,10 +183,10 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetFromOptions(ksp));
 
     Vec errors;
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, timesteps, timesteps, &errors));
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
 
     PRIN2S(s_ts);
-    for (PetscInt i = 0; i < timesteps; i++) {
+    for (PetscInt i = 0; i < nt; i++) {
         std::span<PetscReal> rhs_span;
         std::span<PetscReal> sol_span;
         PetscCall(VecGetSpan(rhs, rhs_span));
@@ -217,7 +218,7 @@ int main(int argc, char **argv) {
     PetscCall(VecAssemblyBegin(errors));
     PetscCall(VecAssemblyEnd(errors));
 
-    avg_iterations = ((PetscReal)iterations) / timesteps;
+    avg_iterations = ((PetscReal)iterations) / nt;
 
     PRIN2FY(e_abs);
     PRIN2FY(e_rel);

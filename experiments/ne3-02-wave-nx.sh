@@ -1,14 +1,15 @@
 #!/bin/bash
-set -eox pipefail
+set -x
 
-mkdir -p output
-OUT=output/$(basename "${0%.sh}")
+: "${OUT:=${OUT_DIR:=output}/$(basename "${0%.sh}")}" # set default if unset
+mkdir -p $OUT_DIR
 
 if [ -z $NOGEN ]; then
-   mv $OUT.json $OUT.json.1 || true
    parallel --shuf --progress --bar --results $OUT.json \
     'build/rel/experiments/wave -plot 0 -nx {=1 $_=2**$_ =} -nt {=2 $_=2**$_ =}' \
     ::: $(seq 8) ::: $(seq 7 3 16)
+   echo "gen exit: $?"
+   cp $OUT.json{,.$(date +%s)}
 fi
 [ -z $NOPLOT ] && yq -I0 -o=json ".Stdout | from_yaml" $OUT.json \
     | experiments/plot.py -f json -x h -y e_abs -g nt \
