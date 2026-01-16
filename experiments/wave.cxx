@@ -9,6 +9,8 @@
 #include "parameters.hxx"
 #include <map>
 
+#include "hdg_base.hpp"
+
 static const char help_msg[] = "experiments regarding the wave equation\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
 static PetscLogDouble PETSC_PRIN2_TIMER = 0;
@@ -94,64 +96,6 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   return 0;
 }
 
-
-struct HDGBase {
-  using Real = double;
-  using Idx = unsigned int;
-  using Vector = std::vector<Real>;
-  using Span = std::span<Real>;
-
-  virtual void plot_solution(const Span& lambda, const Real time = 0.) = 0;
-  virtual std::string plot_option(const std::string& option, std::string value = "") = 0;
-  virtual Idx size_of_system() = 0;
-  virtual Vector zero_vector() = 0;
-  virtual Vector errors(const Vector& x_vec, const Real time = 0.) = 0;
-  virtual Vector norms(const Vector& x_vec, const Real time = 0.) = 0;
-  virtual Vector make_initial(const Vector& x_vec, const Real time = 0.) = 0;
-  virtual sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) = 0;
-  virtual void residual_flux2(const Span& x_vec, Span& vec_Ax, Real time = 0.) = 0;
-  virtual void set_data(const Span& x_vec, const Real time = 0.) = 0;
-  virtual ~HDGBase() = default;
-};
-
-template<typename HDG>
-struct HDGWrapper : HDGBase {
-  HDG hdg;
-
-  HDGWrapper(HDG&& h) : hdg(std::move(h)) {}
-
-  void plot_solution(const Span& lambda, const Real time = 0.) {
-    hdg.plot_solution(lambda, time);
-  }
-  std::string plot_option(const std::string& option, std::string value = "") {
-    return hdg.plot_option(option, value);
-  }
-  Idx size_of_system() {
-    return hdg.size_of_system();
-  }
-  Vector zero_vector() {
-    return hdg.zero_vector();
-  }
-  Vector errors(const Vector& x_vec, const Real time = 0.) {
-    return hdg.errors(x_vec, time);
-  }
-  Vector norms(const Vector& x_vec, const Real time = 0.) {
-    return hdg.norms(x_vec, time);
-  }
-  Vector make_initial(const Vector& x_vec, const Real time = 0.) {
-    return hdg.make_initial(x_vec, time);
-  }
-  sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
-    return hdg.trace_to_flux_mat(time);
-  }
-  void residual_flux2(const Span& x_vec, Span& vec_Ax, Real time = 0.) {
-    hdg.residual_flux2(x_vec, vec_Ax, time);
-  }
-  void set_data(const Span& x_vec, const Real time = 0.) {
-    hdg.set_data(x_vec, time);
-  }
-};
-
 static constexpr unsigned int poly_deg = 3;
 template<unsigned int space_dim>
 using HDGWave = GlobalLoop::Hyperbolic<
@@ -168,7 +112,7 @@ PetscErrorCode PetscHDGCreate(
 ) {
   switch(space_dim) {
   case 1: *hdg = new HDGWrapper(HDGWave<1>(nx, {tau, theta, dt})); return 0;
-  case 2: *hdg = new HDGWrapper(HDGWave<2>(nx, {tau, theta, dt})); return 0;
+    // case 2: *hdg = new HDGWrapper(HDGWave<2>(nx, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
       "unsupported space_dim = %d", space_dim);
