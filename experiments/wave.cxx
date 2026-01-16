@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     PetscInt nx = 2, nt = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
-    PetscReal theta = 1;  // one-step theta method
+    PetscReal theta = .5;  // one-step theta method
     PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0, e_abs = 0, e_rel = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
