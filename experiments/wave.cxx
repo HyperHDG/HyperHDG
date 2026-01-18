@@ -1,15 +1,4 @@
-#include <stdio.h>
-#include <petsc.h>
-
-#include <HyperHDG/topology/cubic.hxx>
-#include <HyperHDG/geometry/unit_cube.hxx>
-#include <HyperHDG/node_descriptor/cubic.hxx>
-#include <HyperHDG/local_solver/diffusion_wave1_ldgh.hxx>
-#include <HyperHDG/global_loop/hyperbolic.hxx>
-#include "parameters.hxx"
-#include <map>
-
-#include "hdg_base.hpp"
+// wave_pch.hxx is automatically included by CMake
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
@@ -95,15 +84,6 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   span = std::span<PetscScalar>();
   return 0;
 }
-
-static constexpr unsigned int poly_deg = 3;
-template<unsigned int space_dim>
-using HDGWave = GlobalLoop::Hyperbolic<
-  Topology::Cubic<space_dim, space_dim>,
-  Geometry::UnitCube<space_dim, space_dim, PetscReal>,
-  NodeDescriptor::Cubic<space_dim, space_dim>,
-  LocalSolver::DiffusionWave1<space_dim, poly_deg, 2*poly_deg, TestWave1, PetscReal>
->;
 
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(

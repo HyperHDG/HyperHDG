@@ -15,4 +15,5 @@ link_libraries(HyperHDG PkgConfig::PETSC)
 
 add_executable(heat heat.cxx)
 add_executable(wave wave.cxx)
+target_precompile_headers(wave PRIVATE wave_pch.hxx)
 add_executable(network network.cxx)
