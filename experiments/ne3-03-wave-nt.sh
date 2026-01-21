@@ -7,7 +7,7 @@ mkdir -p $OUT_DIR
 if [ -z $NOGEN ]; then
    parallel --shuf --progress --bar --results $OUT.json \
      'build/rel/experiments/wave -plot 0 -nx {1} -nt {=2 $_=2**$_ =} -theta {3}' \
-     ::: 1024 ::: $(seq 15) ::: 1 .5
+     ::: 1024 ::: $(seq 0 4 16) ::: 1 .5
    echo "gen exit: $?"
    cp $OUT.json{,$(date +%s)}
 fi
