@@ -671,10 +671,8 @@ class DiffusionWave1
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::initial>(i, hyper_edge.geometry, time);
 
+    // HACK: not passing dim to initial_q
     std::array<SmallVec<n_shape_fct_, lSol_float_t>, hyEdge_dimT> q_components;
-    // HACK: q should return an array, how to integrate then?
-    //       dimension where to evaluate as template paramter? -> easiest but kinda ugly?
-    static_assert(hyEdge_dimT == 1);
     for (unsigned int dim = 0; dim < hyEdge_dimT; dim++) {
         for (unsigned int i = 0; i < n_shape_fct_; ++i) {
           q_components[dim][i] = hyper_edge.data.q_old[dim*n_shape_fct_+i] =
@@ -1012,15 +1010,13 @@ DiffusionWave1<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
       hyper_edge.data.u_old[i] * hyper_edge.geometry.area() +
       delta_t_ * (1. - theta_) * hyper_edge.data.flux_old[i];
 
-  // HACK: only works for inverse diffusion coefficient == 1 and theta == 1
   for (unsigned int i = 0; i < n_shape_fct_*hyEdge_dimT; ++i)
-    right_hand_side[i] += hyper_edge.data.q_old[i] * hyper_edge.geometry.area();
-
-  // FIXING: arbitrary theta
-  // must set qflux_old in make_initial and set_data
-  for (unsigned int i = 0; i < n_shape_fct_*hyEdge_dimT; ++i)
-    right_hand_side[i] +=
-      delta_t_ * (1. - theta_) * hyper_edge.data.qflux_old[i];
+    right_hand_side[i] += hyper_edge.data.q_old[i]
+      * integrator::template integrate_vol_phiphifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::inverse_diffusion_coeff, Point<hyEdge_dimT, lSol_float_t>
+        >(i, i, hyper_edge.geometry, time)
+      + delta_t_ * (1. - theta_) * hyper_edge.data.qflux_old[i];
 
   return right_hand_side;
 }  // end of DiffusionWave1::assemble_rhs_from_global_rhs

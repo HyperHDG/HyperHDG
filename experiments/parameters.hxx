@@ -206,15 +206,20 @@ struct TestWave1
     return 1;
   }
 
-  // u = 1/M_PI * sin(M_PI*(point[0]+time))
-  // v = cos(M_PI*(point[0]+time))
-  // q = -cos(M_PI*(point[0]+time))
+  // u = sin(pi*(sum(x)+sqrt(d)*t))
+  // v = sqrt(d)*pi*cos(pi*(sum(x)+sqrt(d)*t))
+  // q =        -pi*cos(pi*(sum(x)+sqrt(d)*t))
+
+  // dt v  = - d*pi**2*sin(pi*(sum(x)+sqrt(d)*t))
 
   // v
   static param_float_t analytic_result(const Point<space_dimT, param_float_t>& point,
                                        const param_float_t time = 0.)
   {
-    return cos(M_PI*(point[0]+time));
+    param_float_t p = 0;
+    for (unsigned int i = 0; i < space_dimT; i++)
+      p += point[i];
+    return sqrt(space_dimT)*cos(M_PI*(p+sqrt(space_dimT)*time));
   }
 
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& point,
@@ -236,7 +241,10 @@ struct TestWave1
   static param_float_t initial_q(const Point<space_dimT, param_float_t>& point,
                                const param_float_t time = 0.)
   {
-    return -analytic_result(point, time);
+    param_float_t p = 0;
+    for (unsigned int i = 0; i < space_dimT; i++)
+      p += point[i];
+    return -cos(M_PI*(p+sqrt(space_dimT)*time));
   }
 
   static param_float_t neumann_value(const Point<space_dimT, param_float_t>&,
