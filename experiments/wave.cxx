@@ -112,7 +112,7 @@ PetscErrorCode PetscHDGCreate(
 ) {
   switch(space_dim) {
   case 1: *hdg = new HDGWrapper(HDGWave<1>(nx, {tau, theta, dt})); return 0;
-    // case 2: *hdg = new HDGWrapper(HDGWave<2>(nx, {tau, theta, dt})); return 0;
+  case 2: *hdg = new HDGWrapper(HDGWave<2>(nx, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
       "unsupported space_dim = %d", space_dim);
