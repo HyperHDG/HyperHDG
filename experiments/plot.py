@@ -25,7 +25,11 @@ def plt_style(args):
 
 
 def fmt_names(names):
-    return ",".join(map(str, names))
+    def fmt(x):
+        match x:
+            case float() | np.floating(): return f"{x:.3e}"
+            case _: return str(x)
+    return ",".join(map(fmt, names))
 
 
 def plt_legend2(legend_title=None, lbbox=None):

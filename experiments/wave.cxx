@@ -96,8 +96,7 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   return 0;
 }
 
-static constexpr unsigned int poly_deg = 3;
-template<unsigned int space_dim>
+template<unsigned int poly_deg, unsigned int space_dim>
 using HDGWave = GlobalLoop::Hyperbolic<
   Topology::Cubic<space_dim, space_dim>,
   Geometry::UnitCube<space_dim, space_dim, PetscReal>,
@@ -107,15 +106,20 @@ using HDGWave = GlobalLoop::Hyperbolic<
 
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(
-    PetscInt space_dim, PetscInt nx, PetscReal tau, PetscReal theta, PetscReal dt,
+    PetscInt space_dim, PetscInt poly_deg,
+    PetscInt nx, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase **hdg
 ) {
-  switch(space_dim) {
-  case 1: *hdg = new HDGWrapper(HDGWave<1>(nx, {tau, theta, dt})); return 0;
-  case 2: *hdg = new HDGWrapper(HDGWave<2>(nx, {tau, theta, dt})); return 0;
+  PetscCheck(space_dim<10, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+    "space_dim = %d must be less than 10", space_dim);
+  switch(poly_deg*10+space_dim) {
+  case 31: *hdg = new HDGWrapper(HDGWave<3,1>(nx, {tau, theta, dt})); return 0;
+  case 32: *hdg = new HDGWrapper(HDGWave<3,2>(nx, {tau, theta, dt})); return 0;
+  case 61: *hdg = new HDGWrapper(HDGWave<6,1>(nx, {tau, theta, dt})); return 0;
+  case 62: *hdg = new HDGWrapper(HDGWave<6,2>(nx, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-      "unsupported space_dim = %d", space_dim);
+      "unsupported combination: space_dim = %d, poly_deg = %d", space_dim, poly_deg);
   }
 
   return 0;
@@ -123,7 +127,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nx = 2, nt = 1, space_dim = 1;
+    PetscInt nx = 2, nt = 1, space_dim = 1, poly_deg = 3;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
@@ -149,6 +153,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
     PetscCall(PetscOptionsInt("-dim", "space dimension", NULL, space_dim, &space_dim, &is_set));
+    PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, poly_deg, &poly_deg, &is_set));
     PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsInt("-nx", "number of elements divide the domain into", NULL, nx, &nx, &is_set));
@@ -175,11 +180,12 @@ int main(int argc, char **argv) {
     h = 1. / nx;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(space_dim, nx, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(space_dim, poly_deg, nx, tau, theta, dt, &hdg));
     PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
+    PRIN2IY(nx);
     PRIN2IY(nt);
     PRIN2FY(dt);
     PRIN2FY(T);
