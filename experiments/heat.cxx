@@ -8,83 +8,9 @@
 #include <HyperHDG/global_loop/parabolic.hxx>
 #include "parameters.hxx"
 #include "../reproducibles_python/parameters/diffusion.hxx"
+#include "prin2.hxx"
 
 static const char help[] = "experiments regarding the heat equation\n";
-
-static const char help_msg[] = "experiments regarding timoshenko networks\n";
-// static PetscInt PETSC_PRIN2_ROW_LEN = 10;
-static PetscLogDouble PETSC_PRIN2_TIMER = 0;
-static PetscInt PETSC_PRIN2_STAGE = 0;
-static const char* PETSC_PRIN2_STAGE_NAME = "";
-
-#define PRIN2IY(VAR)  PetscCall(PetscPrin2iy(PETSC_COMM_WORLD, #VAR, VAR))
-#define PRIN2FY(VAR)  PetscCall(PetscPrin2fy(PETSC_COMM_WORLD, #VAR, VAR))
-#define PRIN2SY(VAR)  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s: %s\n", #VAR, VAR))
-#define PRIN2S(STAGE) do { PETSC_PRIN2_STAGE = STAGE; PetscCall(PetscLogStageGetName(STAGE, &PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# %s...\n", PETSC_PRIN2_STAGE_NAME)); PetscCall(PetscTime(&PETSC_PRIN2_TIMER)); PetscCall(PetscLogStagePush(STAGE)); } while(0)
-#define PRIN2SP()     do { PetscLogDouble time; PetscCall(PetscLogStagePop()); PetscCall(PetscTime(&time)); PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_%s: %.5e\n", PETSC_PRIN2_STAGE_NAME, (time-PETSC_PRIN2_TIMER))); } while(0)
-
-PetscErrorCode PetscPrin2iy(MPI_Comm comm, const char *name, PetscInt val) {
-  PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(comm, "%s: %d\n", name, val));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscPrin2fy(MPI_Comm comm, const char *name, PetscReal val) {
-  PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(comm, "%s: %.5e\n", name, val));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscPrin2iya(MPI_Comm comm, const char *name, PetscInt val, PetscInt num) {
-  PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(comm, "%s: [", name));
-  for (PetscInt i = 0; i < num; i++)
-    PetscCall(PetscPrintf(comm, "%d, ", val));
-  PetscCall(PetscPrintf(comm, "]\n"));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscPrin2f(MPI_Comm com, const char* msg, PetscReal* dat, PetscInt len) {
-  PetscCall(PetscPrintf(com, msg));
-  const PetscInt row_len = 10;
-  for (PetscInt i = 0; i < len; i++) {
-    if (i % row_len == 0)
-       PetscCall(PetscPrintf(com, "\n"));
-    PetscCall(PetscPrintf(com, "  % .5e", dat[i]));
-  }
-  PetscCall(PetscPrintf(com, "\n"));
-  return 0;
-}
-
-PetscErrorCode PetscPrin2i(MPI_Comm com, const char* msg, PetscInt* dat, PetscInt len) {
-  PetscCall(PetscPrintf(com, msg));
-  const PetscInt row_len = 10;
-  for (PetscInt i = 0; i < len; i++) {
-    if (i % row_len == 0)
-      PetscCall(PetscPrintf(com, "\n"));
-    PetscCall(PetscPrintf(com, "  % 12d", dat[i]));
-  }
-  PetscCall(PetscPrintf(com, "\n"));
-  return 0;
-}
-
-// must call VecRestoreSpan(x, span) after
-PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span) {
-  PetscScalar* p;
-  PetscInt n;
-  PetscCall(VecGetArray(x, &p));
-  PetscCall(VecGetLocalSize(x, &n));
-  span = {p, (size_t)n};
-  return 0;
-}
-
-// must be called after each VecGetSpan(x, span)
-PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
-  PetscScalar* p = span.data();
-  PetscCall(VecRestoreArray(x, &p));
-  span = std::span<PetscScalar>();
-  return 0;
-}
 
 int main(int argc, char **argv) {
     constexpr int space_dim = 1;

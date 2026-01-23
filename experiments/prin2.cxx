@@ -95,3 +95,12 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
   span = std::span<PetscScalar>();
   return 0;
 }
+
+PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf) {
+  PetscViewer viewer = vf->viewer;
+
+  PetscFunctionBegin;
+  if (it == 0) PetscCall(PetscViewerASCIIPrintf(viewer, "ksp_monitor:\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  - it: %3" PetscInt_FMT "\n    rnorm: %.16e\n", it, (double)rnorm));
+  PetscFunctionReturn(0);
+}
