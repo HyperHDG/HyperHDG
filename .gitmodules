@@ -17,9 +17,6 @@
 [submodule "submodules/nanoflann"]
 	path = submodules/nanoflann
 	url = https://github.com/jlblancoc/nanoflann.git
-[submodule "submodules/fmtlog"]
-	path = submodules/fmtlog
-	url = github.com:josephholten/fmtlog
 [submodule "submodules/KaHIP"]
 	path = submodules/KaHIP
 	url = https://github.com/KaHIP/KaHIP

@@ -6,8 +6,9 @@ add_subdirectory(tensor_product_chain_complex.git)
 add_subdirectory(tensor_product_polynomials.git)
 add_subdirectory(nanoflann)
 add_subdirectory(KaHIP)
-get_directory_property(KAHIP_TARGETS DIRECTORY KaHIP BUILDSYSTEM_TARGETS)
+
 # HACK: ignore -Wunused in KaHIP
+get_directory_property(KAHIP_TARGETS DIRECTORY KaHIP BUILDSYSTEM_TARGETS)
 foreach(target ${KAHIP_TARGETS})
   target_compile_options(${target} PRIVATE -Wno-unused)
 endforeach()

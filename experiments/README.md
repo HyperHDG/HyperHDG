@@ -9,9 +9,6 @@
 
 `cmake -B build && cmake --build build --target make_geo`
 
-Some other targets related to `fmtlog-shared` are seemingly not building, but can simply be ignored.
-That should be fixed soon.
-
 ## Run
 
 ```sh
