@@ -10,6 +10,7 @@
 #include "parameters.hxx"
 #include "prin2.hxx"
 #include "hdg_base.hxx"
+#include "net2as.hxx"
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
@@ -68,8 +69,6 @@ PetscErrorCode PCNet2ASVisCoarse(PC pc, HDGBase* hdg, const char* name) {
 }
 
 int main(int argc, char **argv) {
-    constexpr PetscInt bs = LSol::n_glob_dofs_per_node();
-
     int rank, comm_size, proc_name_len;
     PetscReal rtol = 1e-10;
 
@@ -86,6 +85,7 @@ int main(int argc, char **argv) {
     PetscInt N, ncoo;
     PetscReal tau = 1;
     PetscInt iterations;
+    PetscInt bs = 1;
 
     sparse_mat<std::vector<PetscReal>> mat_coo;
     VecScatter scatter;
@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("residual", &s_rf));
     PetscCall(PetscLogStageRegister("ksp", &s_ksp));
 
-    PetscCall(PetscHDGCreate(lsol, domain_filepath, tau, &hdg);
+    PetscCall(PetscHDGCreate(lsol, domain_filepath, tau, &hdg));
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
@@ -160,6 +160,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", NULL));
     PetscCall(KSPSetFromOptions(ksp));
 
+    bs = hdg->n_dofs_per_node();
     N = hdg.size_of_system();
     PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(KSPSetOperators(ksp, mat, mat));
