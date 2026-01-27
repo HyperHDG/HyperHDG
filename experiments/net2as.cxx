@@ -166,31 +166,30 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     // map to reference element
     PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
 
-    struct {
-      PetscInt row;
-      PetscInt col;
-      PetscReal val;
-    } rcv[4];
-    PetscInt n_rcv = 0;
-
     if (i>data->p[0] || j>data->p[1]) continue;
 
-    if (i>0 && j>0)
-      rcv[n_rcv++] = {vstart+n, (j-1)*data->p[0]+(i-1), (1-xx)*(1-yy)};
-
-    if (i<data->p[0] && j>0)
-      rcv[n_rcv++] = {vstart+n, (j-1)*data->p[0]+i, xx*(1-yy)};
-
-    if (i>0 && j<data->p[1])
-      rcv[n_rcv++] = {vstart+n, j*data->p[0]+i-1, (1-xx)*yy};
-
-    if (i<data->p[0] && j<data->p[1])
-      rcv[n_rcv++] = {vstart+n, j*data->p[0]+i, xx*yy};
-
-    for (PetscInt i_rcv = 0; i_rcv < n_rcv; i_rcv++) {
-      rows[nnz] = rcv[i_rcv].row;
-      cols[nnz] = rcv[i_rcv].col;
-      vals[nnz] = rcv[i_rcv].val;
+    if (i>0 && j>0) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = (j-1)*data->p[0]+(i-1);
+      vals[nnz] = (1-xx)*(1-yy);
+      nnz++;
+    }
+    if (i < data->p[0] && j > 0) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = (j-1)*data->p[0]+i;
+      vals[nnz] = xx*(1-yy);
+      nnz++;
+    }
+    if (i > 0 && j < data->p[1]) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = j*data->p[0]+(i-1);
+      vals[nnz] = (1-xx)*yy;
+      nnz++;
+    }
+    if (i < data->p[0] && j < data->p[1]) {
+      rows[nnz] = vstart+n;
+      cols[nnz] = j*data->p[0]+i;
+      vals[nnz] = xx*yy;
       nnz++;
     }
   }
