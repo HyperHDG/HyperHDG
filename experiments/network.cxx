@@ -81,15 +81,14 @@ int main(int argc, char **argv) {
     char viscoarse[PATH_MAX] = {0};
     char mat_cache[PATH_MAX] = {0};
 
-    PetscLogStage s_as, s_it, s_rf, s_ksp;
+    PetscLogStage s_as, s_it, s_rf, s_ksp, s_t2f, s_pa;
 
-    PetscBool is_set, help, set_mem_max = PETSC_FALSE;
-    PetscInt N, ncoo;
+    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE;
+    PetscInt N;
     PetscReal tau = 1;
     PetscInt iterations;
     PetscInt bs = 1;
 
-    sparse_mat<std::vector<PetscReal>> mat_coo;
     VecScatter scatter;
     Vec rhs, rhs0;
     Mat mat;
@@ -120,6 +119,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous caches", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
+    PetscCall(PetscOptionsBool("-mat_coo_off_proc", "print memory stats in yaml", NULL, mat_coo_off_proc, &mat_coo_off_proc, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -140,8 +140,9 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mpi:\n  sz: %" PetscInt_FMT "\n", comm_size));
-    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "  names:\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  names:\n"));
     PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - %s\n", proc_name));
+    PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
 
     if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
@@ -149,6 +150,8 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("iteration", &s_it));
     PetscCall(PetscLogStageRegister("residual", &s_rf));
     PetscCall(PetscLogStageRegister("ksp", &s_ksp));
+    PetscCall(PetscLogStageRegister("t2f", &s_t2f));
+    PetscCall(PetscLogStageRegister("prealloc", &s_pa));
 
     PetscCall(PetscHDGCreate(lsol, domain_filepath, tau, &hdg));
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
@@ -167,25 +170,43 @@ int main(int argc, char **argv) {
     PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
-    PRIN2S(s_as);
     PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
     if (have_cache) {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# loading matrix\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
       PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_READ, &viewer));
       PetscCall(MatLoad(mat, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
     } else {
-      mat_coo = hdg->trace_to_flux_mat();
-      ncoo = mat_coo.value_vec.size();
+      PRIN2S(s_t2f);
+      auto mat_coo = hdg->trace_to_flux_mat();
+      PetscInt ncoo = mat_coo.value_vec.size();
+      PRIN2SP();
 
+      if (mat_coo_off_proc) {
+        PetscInt off_count = 0, vstart, vend;
+        PetscCall(MatGetOwnershipRange(mat, &vstart, &vend));
+        for (PetscInt i = 0; i < ncoo; i++)
+          if (mat_coo.row_vec[i] < (unsigned)vstart || mat_coo.row_vec[i] >= (unsigned)vend) off_count++;
+        double off_frac = (double)off_count/ncoo;
+        double off_max = 0;
+        MPI_Reduce(&off_frac, &off_max, 1, MPI_DOUBLE, MPI_MAX, 0, PETSC_COMM_WORLD);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_coo_off_proc: %.5e\n", off_max));
+      }
+
+      PRIN2S(s_pa);
       PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
       PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
-      PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
+      PRIN2SP();
     }
 
-    if (*mat_cache) {
+    if (!have_cache && *mat_cache) {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# saving matrix\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
       PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_WRITE, &viewer));
       PetscCall(MatView(mat, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
     }
-    PRIN2SP();
 
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
@@ -235,13 +256,13 @@ int main(int argc, char **argv) {
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
+end:
     if (set_mem_max) {
       PetscLogDouble mem_max;
       PetscCall(PetscMemoryGetMaximumUsage(&mem_max));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mem_max: %.5e\n", mem_max));
     }
 
-end:
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&rhs));

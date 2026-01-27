@@ -1,10 +1,12 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 #include <span>
+#include <cmath>
 
 // HACK: the mpi communicator should be an argument to the function,
 //       but don't want to change all the global_loops
 // HACK: when compiling without mpi, simply provide trivial rank function;
 //       it is up to the call site to gather on the return
+// HACK: we should distribute the edges properly, using e.g. KaHIP for maximum performance -> minimize interprocess communication
 #ifdef HYPERHDG_MPI
 #include <mpi.h>
 #define HYPERHDG_COMM MPI_COMM_WORLD
@@ -145,9 +147,9 @@ struct sparse_mat
     size_t len = value_vec.size();
     size_t nz = 0;
     for (size_t i = 0; i < len; i++) {
-      if (value_vec[nz] > tol) {
-        row_vec[nz] = value_vec[i];
-        col_vec[nz] = value_vec[i];
+      if (std::abs(value_vec[i]) > tol) {
+        row_vec[nz] = row_vec[i];
+        col_vec[nz] = col_vec[i];
         value_vec[nz] = value_vec[i];
         nz++;
       }
@@ -176,12 +178,6 @@ struct sparse_mat
 #define prototype_mat_generate(fun_name, has_fun_name)                                        \
   [&]()                                                                                       \
   {                                                                                           \
-    sparse_mat<LargeVecT> result_mat(hyper_graph_.n_hyEdges() * 4 * hyEdge_dim * hyEdge_dim * \
-                                     n_dofs_per_node * n_dofs_per_node);                      \
-                                                                                              \
-    auto value_it = result_mat.value_vec.begin();                                             \
-    auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();            \
-                                                                                              \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                         \
     std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;        \
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
@@ -192,8 +188,14 @@ struct sparse_mat
     HYPERHDG_Comm_size(HYPERHDG_COMM, &csize); \
     iedge_t estart = crank*nedges/csize; \
     iedge_t eend = std::min((crank+1)*nedges/csize, nedges); \
+    \
+    sparse_mat<LargeVecT> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
+                                     n_dofs_per_node * n_dofs_per_node);                      \
                                                                                               \
-    for (decltype(nedges) iedge = estart; iedge < eend; iedge++)                              \
+    auto value_it = result_mat.value_vec.begin();                                             \
+    auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();            \
+                                                                                              \
+    for (iedge_t iedge = estart; iedge < eend; iedge++)                              \
       {                                                                                       \
         auto hyper_edge = hyper_graph_[iedge];                                                \
         hyNodes = hyper_edge.topology.get_hyNode_indices();                                   \
