@@ -160,7 +160,6 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
   vend /= 3;
   vstart /= 3;
   size = vend-vstart;
-  PetscPrintf(PETSC_COMM_WORLD, "DEBUG: size: %d\n", size);
   PetscCall(MatCOO_Alloc(coo, 4zu * size));
   PetscCall(VecGetSpan(data->points, vspan));
   for (PetscInt n = 0; n < size; n++) {
@@ -190,7 +189,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, msize, n_cols = data->p[0] * data->p[1], n_rows, n, m;
-  PetscReal eps = 1e-14;
+  PetscReal eps = 1e-12;
   PetscBool done;
   const PetscInt *ioff, *inds;
   Mat coarse_basis, A, subdomains;
