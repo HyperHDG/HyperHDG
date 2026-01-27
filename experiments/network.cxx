@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
     PetscLogStage s_as, s_it, s_rf, s_ksp, s_t2f, s_pa;
 
-    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE;
+    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE, plot = PETSC_TRUE;
     PetscInt N;
     PetscReal tau = 1;
     PetscInt iterations;
@@ -115,6 +115,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsBool("-plot", "control wether to plot", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous caches", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
@@ -242,19 +243,18 @@ int main(int argc, char **argv) {
     PRIN2FY(rnorm);
     PRIN2SY(creason);
 
-    PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
-
-    hdg->plot_option("fileName", output_filename);
-    hdg->plot_option("outputDir", output_directory);
-    hdg->plot_option("printFileNumber", "false");
-    hdg->plot_option("scale", plot_scale);
-    if (rank == 0) {
+    if (plot && rank == 0) {
+      PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
+      hdg->plot_option("fileName", output_filename);
+      hdg->plot_option("outputDir", output_directory);
+      hdg->plot_option("printFileNumber", "false");
+      hdg->plot_option("scale", plot_scale);
       PetscCall(VecGetSpan(rhs0, span));
       hdg->plot_solution(span);
       PetscCall(VecRestoreSpan(rhs0, span));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
     }
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
 
 end:
     if (set_mem_max) {
