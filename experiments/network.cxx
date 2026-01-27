@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
     } else {
       PRIN2S(s_t2f);
       auto mat_coo = hdg->trace_to_flux_mat();
+      mat_coo.eliminate_zeros(1e-16);
       PetscInt ncoo = mat_coo.value_vec.size();
       PRIN2SP();
 
