@@ -8,6 +8,8 @@ struct PC_Net2AS {
   char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec points;
+  // types 1 -> dirichlet
+  IS types_points;
   // bounding box of points
   PetscReal min[3], max[3];
   // number of subdomains in [x,y]
@@ -81,6 +83,10 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(VecGetSize(data->points, &n));
   PetscCall(VecGetBlockSize(data->points, &bs));
   n /= bs;
+
+  PetscCall(ISCreate(comm, &data->types_points));
+  PetscCall(PetscObjectSetName((PetscObject)data->types_points, "types_points"));
+  PetscCall(ISLoad(data->types_points, viewer));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, " points: %" PetscInt_FMT "\n", n));
@@ -189,7 +195,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, msize, n_cols = data->p[0] * data->p[1], n_rows, n, m;
-  PetscReal eps = 1e-12;
+  PetscReal eps = 1e-4;
   PetscBool done;
   const PetscInt *ioff, *inds;
   Mat coarse_basis, A, subdomains;
