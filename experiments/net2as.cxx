@@ -113,20 +113,90 @@ PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
   PetscFunctionReturn(0);
 }
 
+struct MatCOO {
+  PetscInt *rows, *cols, nnz, cap;
+  PetscReal *vals;
+};
+
+PetscErrorCode MatCOO_Alloc(MatCOO *coo, PetscInt cap) {
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc3(cap, &coo->rows, cap, &coo->cols, cap, &coo->vals));
+  coo->cap = cap;
+  coo->nnz = 0;
+  PetscFunctionReturn(0);
+};
+
+PetscErrorCode MatCOO_Free(MatCOO *coo) {
+  PetscFunctionBegin;
+  PetscCall(PetscFree3(coo->rows, coo->cols, coo->vals));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatCOO_Push(MatCOO *coo, PetscInt row, PetscInt col, PetscReal val) {
+  PetscInt nnz = coo->nnz;
+
+  PetscFunctionBegin;
+  PetscAssert(nnz < coo->cap, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "MatCOO_Push out of range");
+  coo->rows[nnz] = row;
+  coo->cols[nnz] = col;
+  coo->vals[nnz] = val;
+  coo->nnz++;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
+  PetscReal h[2];
+  PetscInt vstart, vend, size;
+  std::span<PetscReal> vspan;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < 2; i++) {
+    PetscCall(VecStrideMin(data->points, i, NULL, data->min+i));
+    PetscCall(VecStrideMax(data->points, i, NULL, data->max+i));
+    h[i] = (data->max[i]-data->min[i])/(data->p[i]+1);
+  }
+
+  PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
+  vend /= 3;
+  vstart /= 3;
+  size = vend-vstart;
+  PetscPrintf(PETSC_COMM_WORLD, "DEBUG: size: %d\n", size);
+  PetscCall(MatCOO_Alloc(coo, 4zu * size));
+  PetscCall(VecGetSpan(data->points, vspan));
+  for (PetscInt n = 0; n < size; n++) {
+    PetscReal x = vspan[3*n],            y = vspan[3*n+1];
+    PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
+    // map to reference element
+    PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
+
+    if (i>data->p[0] || j>data->p[1]) continue;
+
+    if (i>0 && j>0)
+      PetscCall(MatCOO_Push(coo, vstart+n, (j-1)*data->p[0]+(i-1), (1-xx)*(1-yy)));
+    if (i < data->p[0] && j > 0)
+      PetscCall(MatCOO_Push(coo, vstart+n, (j-1)*data->p[0]+i, xx*(1-yy)));
+    if (i > 0 && j < data->p[1])
+      PetscCall(MatCOO_Push(coo, vstart+n, j*data->p[0]+(i-1), (1-xx)*yy));
+    if (i < data->p[0] && j < data->p[1])
+      PetscCall(MatCOO_Push(coo, vstart+n, j*data->p[0]+i, xx*yy));
+  }
+  PetscCall(VecRestoreSpan(data->points, vspan));
+
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt vstart, vend, size, msize, nnz = 0, n_cols = data->p[0] * data->p[1], n_rows, n, m;
-  size_t max_nnz;
-  PetscInt *rows, *cols;
-  PetscReal *vals, h[2], eps = 1e-14;
+  PetscInt vstart, vend, size, msize, n_cols = data->p[0] * data->p[1], n_rows, n, m;
+  PetscReal eps = 1e-14;
   PetscBool done;
   const PetscInt *ioff, *inds;
-  std::span<PetscReal> vspan;
   Mat coarse_basis, A, subdomains;
   MatType type;
   int comm_size;
+  MatCOO coo;
 
   PetscFunctionBegin;
 
@@ -146,54 +216,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     "A_sz != v_sz / 3 * A_bs where"
     "block size A_bs == %" PetscInt_FMT ", size A_sz == %" PetscInt_FMT ","
     "flat size v_sz == %" PetscInt_FMT, data->bs, msize, size);
-  // TODO: take this from hdf5 format
-  for (PetscInt i = 0; i < 3; i++) {
-    PetscCall(VecStrideMin(data->points, i, NULL, data->min+i));
-    PetscCall(VecStrideMax(data->points, i, NULL, data->max+i));
-    if (i < 2) h[i] = (data->max[i]-data->min[i])/(data->p[i]+1);
-  }
+  size /= 3;
 
-  PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
-  vend /= 3;
-  vstart /= 3;
-  size = vend-vstart;
-  max_nnz = 4zu * size;
-  PetscCall(PetscMalloc3(max_nnz, &rows, max_nnz, &cols, max_nnz, &vals));
-  PetscCall(VecGetSpan(data->points, vspan));
-  for (PetscInt n = 0; n < size; n++) {
-    PetscReal x = vspan[3*n],            y = vspan[3*n+1];
-    PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
-    // map to reference element
-    PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
-
-    if (i>data->p[0] || j>data->p[1]) continue;
-
-    if (i>0 && j>0) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = (j-1)*data->p[0]+(i-1);
-      vals[nnz] = (1-xx)*(1-yy);
-      nnz++;
-    }
-    if (i < data->p[0] && j > 0) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = (j-1)*data->p[0]+i;
-      vals[nnz] = xx*(1-yy);
-      nnz++;
-    }
-    if (i > 0 && j < data->p[1]) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = j*data->p[0]+(i-1);
-      vals[nnz] = (1-xx)*yy;
-      nnz++;
-    }
-    if (i < data->p[0] && j < data->p[1]) {
-      rows[nnz] = vstart+n;
-      cols[nnz] = j*data->p[0]+i;
-      vals[nnz] = xx*yy;
-      nnz++;
-    }
-  }
-  PetscCall(VecRestoreSpan(data->points, vspan));
+  PetscCall(net2as_cb_q1(data, &coo));
 
   // setup coarse basis
   PetscCall(MatGetType(A, &type));
@@ -201,10 +226,10 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatSetType(coarse_basis, type));
   PetscCall(MatSetSizes(coarse_basis, size, PETSC_DECIDE, PETSC_DETERMINE, n_cols));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
-  PetscCall(MatSetPreallocationCOO(coarse_basis, nnz, rows, cols));
-  PetscCall(MatSetValuesCOO(coarse_basis, vals, INSERT_VALUES));
+  PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
+  PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
   PetscCall(MatFilter(coarse_basis, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
-  PetscCall(PetscFree3(rows, cols, vals));
+  PetscCall(MatCOO_Free(&coo));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
 
   // setup subdomains
