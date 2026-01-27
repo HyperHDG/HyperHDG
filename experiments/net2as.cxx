@@ -118,7 +118,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, msize, nnz = 0, n_cols = data->p[0] * data->p[1], n_rows, n, m;
-  size_t max_cols;
+  size_t max_nnz;
   PetscInt *rows, *cols;
   PetscReal *vals, h[2], eps = 1e-14;
   PetscBool done;
@@ -157,8 +157,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   vend /= 3;
   vstart /= 3;
   size = vend-vstart;
-  max_cols = 4zu * size;
-  PetscCall(PetscMalloc3(max_cols, &rows, max_cols, &cols, max_cols, &vals));
+  max_nnz = 4zu * size;
+  PetscCall(PetscMalloc3(max_nnz, &rows, max_nnz, &cols, max_nnz, &vals));
   PetscCall(VecGetSpan(data->points, vspan));
   for (PetscInt n = 0; n < size; n++) {
     PetscReal x = vspan[3*n],            y = vspan[3*n+1];
