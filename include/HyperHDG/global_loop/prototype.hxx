@@ -143,16 +143,16 @@ struct sparse_mat
   std::vector<unsigned int>& get_cols() { return col_vec; }
   std::vector<unsigned int>& get_rows() { return row_vec; }
   void resize(const unsigned int length) { row_vec.resize(length); col_vec.resize(length); value_vec.resize(length); }
-  void eliminate_zeros(double tol) {
+  void eliminate_zeros() {
     size_t len = value_vec.size();
     size_t nz = 0;
     for (size_t i = 0; i < len; i++) {
-      if (std::abs(value_vec[i]) > tol) {
-        row_vec[nz] = row_vec[i];
-        col_vec[nz] = col_vec[i];
-        value_vec[nz] = value_vec[i];
-        nz++;
-      }
+      if (value_vec[i] == 0.) continue;
+
+      row_vec[nz] = row_vec[i];
+      col_vec[nz] = col_vec[i];
+      value_vec[nz] = value_vec[i];
+      nz++;
     }
     row_vec.resize(nz);
     col_vec.resize(nz);
