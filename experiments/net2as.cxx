@@ -16,6 +16,7 @@ struct PC_Net2AS {
   PetscInt sz;
   // block size (number of dofs per node)
   PetscInt bs;
+  PetscBool print_local_size;
 
   // coarse basis representation of the overlapping subdomains,
   // expanded by block size
@@ -61,6 +62,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   if (set) data->p[0] = data->p[1] = p;
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
+  PetscCall(PetscOptionsBool("-pc_net2as_print_local_size", "wether to print the local sizes", NULL, data->print_local_size, &data->print_local_size, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -223,13 +225,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   (void)m; (void)n;
-  // PetscCall(MatGetSize(A, &m, &n));
-  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
-  // PetscCall(MatGetSize(data->mat[0], &m, &n));
-  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse_size: %" PetscInt_FMT "\n", m));
-  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local_size:\n"));
-  // PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "  local_sz: %d\n", vend-vstart));
-  // PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
+  PetscCall(MatGetSize(A, &m, &n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
+  PetscCall(MatGetSize(data->mat[0], &m, &n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse_size: %" PetscInt_FMT "\n", m));
+  if (data->print_local_size) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local_size:\n"));
 
   PetscCall(MatGetRowIJ(subdomains, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_TRUE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
@@ -237,7 +237,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   for (PetscInt s = 0; s < vend-vstart; s++) {
     Mat *mat;
     PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_COPY_VALUES, &data->is[s+1]));
-    // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    - %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
+    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
     //       tough it also allocates the output parameter
@@ -247,6 +247,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_SELF, s+1));
     PetscCall(VecScatterCreate(gtemp, data->is[s+1], data->sol[s+1], NULL, &data->sc[s+1]));
   }
+  PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   PetscCall(MatRestoreRowIJ(subdomains, 0, PETSC_FALSE, PETSC_FALSE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
 
