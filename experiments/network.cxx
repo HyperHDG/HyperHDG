@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
     char domain_filepath[PATH_MAX] = "domains/grid3.geo.bin";
     char plot_scale[PATH_MAX] = "1";
     char viscoarse[PATH_MAX] = {0};
+    char mat_cache[PATH_MAX] = {0};
 
     PetscLogStage s_as, s_it, s_rf, s_ksp;
 
@@ -97,8 +98,8 @@ int main(int argc, char **argv) {
     PetscViewer viewer;
     const char* creason;
     PetscReal rnorm;
-    PetscBool mat_only = PETSC_FALSE, mat_cached = PETSC_FALSE;
-    PetscInt mat_load = 0;
+    PetscBool have_cache;
+    PetscBool mat_only = PETSC_FALSE;
     std::span<PetscReal> span;
     char lsol[10] = "timo";
     HDGBase* hdg = NULL;
@@ -116,8 +117,8 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous", NULL, mat_only, &mat_only, &is_set));
-    PetscCall(PetscOptionsInt("-mat_load", "force mat load if > 0, assembly if < 0", NULL, mat_load, &mat_load, &is_set));
+    PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous caches", NULL, mat_only, &mat_only, &is_set));
+    PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     PetscOptionsEnd();
 
@@ -167,72 +168,27 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
     PRIN2S(s_as);
-    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain_filepath, FILE_MODE_APPEND, &viewer));
-    PetscCall(PetscViewerHDF5HasGroup(viewer, "/mat", &mat_cached));
-    PetscCall(PetscViewerHDF5PushGroup(viewer, "/mat"));
-    if (mat_load == 0) mat_load = mat_cached ? 1 : -1;
-
-    IS rows, cols;
-    Vec vals;
-
-    if (mat_load > 0) {
-      PetscCall(ISCreate(PETSC_COMM_WORLD, &rows));
-      PetscCall(ISCreate(PETSC_COMM_WORLD, &cols));
-      PetscCall(VecCreate(PETSC_COMM_WORLD, &vals));
+    PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
+    if (have_cache) {
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_READ, &viewer));
+      PetscCall(MatLoad(mat, viewer));
     } else {
       mat_coo = hdg->trace_to_flux_mat();
       ncoo = mat_coo.value_vec.size();
-      PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, ncoo, (PetscInt*)mat_coo.row_vec.data(), PETSC_USE_POINTER, &rows));
-      PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, ncoo, (PetscInt*)mat_coo.col_vec.data(), PETSC_USE_POINTER, &cols));
-      PetscCall(VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, ncoo, PETSC_DETERMINE, mat_coo.value_vec.data(), &vals));
+
+      PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+      PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
     }
 
-    PetscCall(PetscObjectSetName((PetscObject)rows, "rows"));
-    PetscCall(PetscObjectSetName((PetscObject)cols, "cols"));
-    PetscCall(PetscObjectSetName((PetscObject)vals, "vals"));
-
-    if (mat_load > 0) {
-      const PetscReal *v;
-      const PetscInt *r, *c;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#   loading matrix\n"));
-
-      PetscCall(ISLoad(rows, viewer));
-      PetscCall(ISLoad(cols, viewer));
-      PetscCall(VecLoad(vals, viewer));
-      PetscCall(VecGetLocalSize(vals, &ncoo));
-      mat_coo.resize(ncoo);
-
-      PetscCall(ISGetIndices(rows, &r));
-      PetscCall(ISGetIndices(cols, &c));
-      PetscCall(VecGetArrayRead(vals, &v));
-
-      PetscCall(PetscArraycpy((PetscInt*)mat_coo.row_vec.data(), r, ncoo));
-      PetscCall(PetscArraycpy((PetscInt*)mat_coo.col_vec.data(), c, ncoo));
-      PetscCall(PetscArraycpy((PetscReal*)mat_coo.value_vec.data(), v, ncoo));
-
-      PetscCall(ISRestoreIndices(rows, &r));
-      PetscCall(ISRestoreIndices(cols, &c));
-      PetscCall(VecRestoreArrayRead(vals, &v));
-    } else {
-      PetscCall(ISView(rows, viewer));
-      PetscCall(ISView(cols, viewer));
-      PetscCall(VecView(vals, viewer));
+    if (*mat_cache) {
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_WRITE, &viewer));
+      PetscCall(MatView(mat, viewer));
     }
-
-    // NOTE: may modify mat_coo
-    PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
-    PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
-    PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
-
-    PetscCall(ISDestroy(&rows));
-    PetscCall(ISDestroy(&cols));
-    PetscCall(VecDestroy(&vals));
-    PetscCall(PetscViewerDestroy(&viewer));
     PRIN2SP();
 
-    PetscCall(MatCreateVecs(mat, NULL, &rhs));
-
     if (mat_only) goto end;
+    PetscCall(MatCreateVecs(mat, NULL, &rhs));
 
     PRIN2S(s_ksp);
     PetscCall(KSPSetUp(ksp));
