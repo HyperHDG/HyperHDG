@@ -48,6 +48,7 @@ class Elliptic
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
   HAS_MEMBER_FUNCTION(norms, has_norms);
+ public:
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
    ************************************************************************************************/
@@ -144,6 +145,13 @@ class Elliptic
     static_assert(TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim(),
                   "Hyperedge dimension of hypergraph and local solver must be equal!");
   }
+
+  // stub
+  template <typename hyNode_index_t = dof_index_t>
+  LargeVecT make_initial(const LargeVecT& x_vec, const dof_index_t time = 0.) { return {}; }
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void set_data(const SpanT& x_vec, const dof_value_t time = 0.) {}
+
   /*!***********************************************************************************************
    * \brief   Read indices of Dirichlet type hypernodes/faces.
    *

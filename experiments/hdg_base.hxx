@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <span>
 #include <string>
@@ -11,13 +13,14 @@ struct HDGBase {
   virtual void plot_solution(const Span& lambda, const Real time = 0.) = 0;
   virtual std::string plot_option(const std::string& option, std::string value = "") = 0;
   virtual Idx size_of_system() = 0;
+  virtual Idx n_dofs_per_node() = 0;
   virtual Vector zero_vector() = 0;
   virtual Vector errors(const Vector& x_vec, const Real time = 0.) = 0;
   virtual Vector norms(const Vector& x_vec, const Real time = 0.) = 0;
   virtual Vector make_initial(const Vector& x_vec, const Real time = 0.) = 0;
   virtual sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) = 0;
-  virtual void residual_flux2(const Span& x_vec, Span& vec_Ax, Real time = 0.) = 0;
-  virtual void set_data(const Span& x_vec, const Real time = 0.) = 0;
+  virtual void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) = 0;
+  virtual void set_data(Span x_vec, const Real time = 0.) = 0;
   virtual ~HDGBase() = default;
 };
 
@@ -36,6 +39,9 @@ struct HDGWrapper : HDGBase {
   Idx size_of_system() {
     return hdg.size_of_system();
   }
+  Idx n_dofs_per_node() {
+    return HDG::n_dofs_per_node;
+  }
   Vector zero_vector() {
     return hdg.zero_vector();
   }
@@ -45,16 +51,17 @@ struct HDGWrapper : HDGBase {
   Vector norms(const Vector& x_vec, const Real time = 0.) {
     return hdg.norms(x_vec, time);
   }
-  Vector make_initial(const Vector& x_vec, const Real time = 0.) {
+  Vector make_initial(const Vector& x_vec, const Real time = 0.)
+  {
     return hdg.make_initial(x_vec, time);
   }
   sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
     return hdg.trace_to_flux_mat(time);
   }
-  void residual_flux2(const Span& x_vec, Span& vec_Ax, Real time = 0.) {
+  void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) {
     hdg.residual_flux2(x_vec, vec_Ax, time);
   }
-  void set_data(const Span& x_vec, const Real time = 0.) {
+  void set_data(Span x_vec, const Real time = 0.) {
     hdg.set_data(x_vec, time);
   }
 };

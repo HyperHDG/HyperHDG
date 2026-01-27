@@ -43,7 +43,7 @@ PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal ta
 
 // NOTE: can only be called sequentially
 PetscErrorCode PCNet2ASVisCoarse(PC pc, HDGBase* hdg, const char* name) {
-  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  Mat cb;
   Vec left, right;
   PetscInt start, end;
   std::span<PetscReal> span;
@@ -52,14 +52,15 @@ PetscErrorCode PCNet2ASVisCoarse(PC pc, HDGBase* hdg, const char* name) {
   PetscFunctionBeginUser;
   PCGetType(pc, &type);
   if (strcmp(type, "net2as") != 0) PetscFunctionReturn(0);
+  PetscCall(PCNet2ASGetCB(pc, &cb));
 
   hdg->plot_option("fileName", name);
   hdg->plot_option("printFileNumber", "true");
-  PetscCall(MatCreateVecs(data->cb, &right, &left));
+  PetscCall(MatCreateVecs(cb, &right, &left));
   PetscCall(VecGetOwnershipRange(left, &start, &end));
   for (PetscInt i = 0; i < end-start; i++) {
     PetscCall(VecSetValue(left, i+start, 1., INSERT_VALUES));
-    PetscCall(MatMultTranspose(data->cb, right, left));
+    PetscCall(MatMultTranspose(cb, right, left));
     PetscCall(VecGetSpan(left, span));
     hdg->plot_solution(span, i);
     PetscCall(VecRestoreSpan(left, span));
@@ -161,7 +162,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetFromOptions(ksp));
 
     bs = hdg->n_dofs_per_node();
-    N = hdg.size_of_system();
+    N = hdg->size_of_system();
     PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
@@ -179,7 +180,7 @@ int main(int argc, char **argv) {
       PetscCall(ISCreate(PETSC_COMM_WORLD, &cols));
       PetscCall(VecCreate(PETSC_COMM_WORLD, &vals));
     } else {
-      mat_coo = hdg.trace_to_flux_mat();
+      mat_coo = hdg->trace_to_flux_mat();
       ncoo = mat_coo.value_vec.size();
       PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, ncoo, (PetscInt*)mat_coo.row_vec.data(), PETSC_USE_POINTER, &rows));
       PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, ncoo, (PetscInt*)mat_coo.col_vec.data(), PETSC_USE_POINTER, &cols));
@@ -243,7 +244,8 @@ int main(int argc, char **argv) {
     if (rank == 0) {
       PRIN2S(s_rf);
       PetscCall(VecGetSpan(rhs0, span));
-      hdg.residual_flux2(hdg.zero_vector(), span, 0.);
+      auto zero = hdg->zero_vector();
+      hdg->residual_flux2(zero, span, 0.);
       PetscCall(VecRestoreSpan(rhs0, span));
       PRIN2SP();
     }
@@ -266,13 +268,13 @@ int main(int argc, char **argv) {
     PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
     PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
 
-    hdg.plot_option("fileName", output_filename);
-    hdg.plot_option("outputDir", output_directory);
-    hdg.plot_option("printFileNumber", "false");
-    hdg.plot_option("scale", plot_scale);
+    hdg->plot_option("fileName", output_filename);
+    hdg->plot_option("outputDir", output_directory);
+    hdg->plot_option("printFileNumber", "false");
+    hdg->plot_option("scale", plot_scale);
     if (rank == 0) {
       PetscCall(VecGetSpan(rhs0, span));
-      hdg.plot_solution(span);
+      hdg->plot_solution(span);
       PetscCall(VecRestoreSpan(rhs0, span));
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "output: %s/%s.vtu\n", output_directory, output_filename));
