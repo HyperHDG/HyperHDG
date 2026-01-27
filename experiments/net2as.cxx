@@ -223,7 +223,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, size, PETSC_DECIDE, PETSC_DETERMINE, n_cols));
+  PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
