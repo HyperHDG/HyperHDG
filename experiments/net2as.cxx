@@ -47,6 +47,17 @@ PetscErrorCode MatCOO_Push_s(MatCOO *coo, PetscInt row, PetscInt col, PetscReal 
 }
 
 struct PC_Net2AS {
+  // number of subdomains in [x,y]
+  PetscInt p[2];
+  // number of local data structures (should be prod(p)+1)
+  PetscInt sz;
+  // block size (number of dofs per node)
+  PetscInt bs;
+  // option to print local size
+  PetscBool print_local_size;
+  // coarse basis matrix small entry filter tolerance
+  PetscReal eps;
+
   // path to domain file
   char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
@@ -55,24 +66,11 @@ struct PC_Net2AS {
   IS types_points;
   // dirichlet points
   IS dirichlet;
-  // bounding box of points
-  PetscReal min[3], max[3];
-  // number of subdomains in [x,y]
-  PetscInt p[2];
-  // number of local data structures
-  PetscInt sz;
-  // block size (number of dofs per node)
-  PetscInt bs;
-  PetscBool print_local_size;
-  PetscReal eps;
-
   // sparse adj matrix representation of the edges in the network
   Mat adj;
-
   // coarse basis representation of the overlapping subdomains,
   // expanded by block size
   Mat  cb;
-
   // local datastructures
   // layout: i=0 -> coarse, 1 <= i < sz -> local, corresponding to subdomains
   //   ignore is[0]
@@ -109,12 +107,12 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", data->domain, PATH_MAX, &set));
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
 
-  PetscCall(PetscOptionsBoundedInt("-pc_net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
+  PetscCall(PetscOptionsBoundedInt("-net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
   if (set) data->p[0] = data->p[1] = p;
-  PetscCall(PetscOptionsBoundedInt("-pc_net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
-  PetscCall(PetscOptionsBoundedInt("-pc_net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
-  PetscCall(PetscOptionsBool("-pc_net2as_print_local_size", "wether to print the local sizes", NULL, data->print_local_size, &data->print_local_size, &set));
-  PetscCall(PetscOptionsReal("-pc_net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
+  PetscCall(PetscOptionsBoundedInt("-net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
+  PetscCall(PetscOptionsBoundedInt("-net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
+  PetscCall(PetscOptionsBool("-net2as_local_size", "wether to print the local sizes", NULL, data->print_local_size, &data->print_local_size, &set));
+  PetscCall(PetscOptionsReal("-net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -183,8 +181,8 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(MatCOO_Free(&coo));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " points: %" PetscInt_FMT "\n", n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " edges: %" PetscInt_FMT "\n", m));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  points: %" PetscInt_FMT "\n", n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  edges: %" PetscInt_FMT "\n", m));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -214,15 +212,15 @@ PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
 }
 
 PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
-  PetscReal h[2];
+  PetscReal h[2], min[2], max[2];
   PetscInt vstart, vend, size;
   std::span<PetscReal> vspan;
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < 2; i++) {
-    PetscCall(VecStrideMin(data->points, i, NULL, data->min+i));
-    PetscCall(VecStrideMax(data->points, i, NULL, data->max+i));
-    h[i] = (data->max[i]-data->min[i])/(data->p[i]+1);
+    PetscCall(VecStrideMin(data->points, i, NULL, min+i));
+    PetscCall(VecStrideMax(data->points, i, NULL, max+i));
+    h[i] = (max[i]-min[i])/(data->p[i]+1);
   }
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
@@ -233,9 +231,9 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
   PetscCall(VecGetSpan(data->points, vspan));
   for (PetscInt n = 0; n < size; n++) {
     PetscReal x = vspan[3*n],            y = vspan[3*n+1];
-    PetscInt  i = (x-data->min[0])/h[0], j = (y-data->min[1])/h[1];
+    PetscInt  i = (x-min[0])/h[0], j = (y-min[1])/h[1];
     // map to reference element
-    PetscReal xx = (x-(i*h[0]+data->min[0]))/h[0], yy = (y-(j*h[1]+data->min[1]))/h[1];
+    PetscReal xx = (x-(i*h[0]+min[0]))/h[0], yy = (y-(j*h[1]+min[1]))/h[1];
 
     if (i>data->p[0] || j>data->p[1]) continue;
 
@@ -254,34 +252,25 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
 }
 
 PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
-  MatPartitioning part;
-  IS partitioning;
-  PetscInt p = data->p[0]*data->p[1], vstart, vend, size;
-  const PetscInt *inds;
+  MatPartitioning p_ctx;
+  IS partition, subdoms;
+  PetscInt p = data->p[0]*data->p[1];
 
   PetscFunctionBegin;
-  PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &part));
-  PetscCall(MatPartitioningSetAdjacency(part, data->adj));
-  PetscCall(MatPartitioningSetNParts(part, p));
-  PetscCall(MatPartitioningSetFromOptions(part));
-  PetscCall(MatPartitioningApply(part, &partitioning));
-  PetscCall(MatPartitioningDestroy(&part));
-  PetscCall(ISPartitioningToNumbering(partitioning, new_is));
+  PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
+  PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
+  PetscCall(MatPartitioningSetNParts(p_ctx, p));
+  PetscCall(MatPartitioningSetFromOptions(p_ctx));
+  PetscCall(MatPartitioningApply(p_ctx, &partition));
+  PetscCall(MatPartitioningDestroy(&p_ctx));
 
-  // partitioning has the same parallel layout as the rows of the matrix = that of points
-  PetscCall(MatCOO_Alloc(coo, 10*size)); // should be enough??? -> is bounds checked
-  PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
-  PetscCall(ISGetIndices(partitioning, &inds));
-  vend /= 3;
-  vstart /= 3;
-  size = vend-vstart;
-  for (PetscInt i = 0; i < size; i++)
-    PetscCall(MatCOO_Push(&coo, inds[i], vstart+i, 1));
-  PetscCall(MatCOO_Free(coo));
+  (void)subdoms;
 
-  // transpose -> get all the nodes on one partition
-  // then construct the overlap
-  // return subdomain view
+  // allocate counts
+  // count locally
+  // create subdom to rank mapping -> this should depend only on the (globally known) number of total subdomains
+  // we could assume that the number of subdomains evenly divides the number of procs and assume their sizes to be distributed enough
+  // count how many subdoms per rank (maximum)
 
   PetscFunctionReturn(0);
 }
@@ -297,6 +286,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   MatType type;
   int comm_size;
   MatCOO coo;
+  PetscLogDouble t0, t1;
 
   PetscFunctionBegin;
 
@@ -344,32 +334,37 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   // setup coarse mat
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->mat[0]));
-  PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_WORLD, 0));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
-  (void)m; (void)n;
   PetscCall(MatGetSize(A, &m, &n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
   PetscCall(MatGetSize(data->mat[0], &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse_size: %" PetscInt_FMT "\n", m));
-  if (data->print_local_size) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local_size:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n    size: %" PetscInt_FMT "\n", m));
+  PetscCall(PetscTime(&t0));
+  PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_WORLD, 0));
+  PetscCall(PetscTime(&t1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t1-t0));
 
+  if (data->print_local_size) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   PetscCall(MatGetRowIJ(subdomains, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_TRUE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
   // setup local mat
   for (PetscInt s = 0; s < vend-vstart; s++) {
     Mat *mat;
     PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_COPY_VALUES, &data->is[s+1]));
-    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
+    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
     //       tough it also allocates the output parameter
     PetscCall(MatCreateSubMatrices(A, 1, &data->is[s+1], &data->is[s+1], MAT_INITIAL_MATRIX, &mat));
     data->mat[s+1] = *mat;
     PetscCall(PetscFree(mat));
+    PetscCall(PetscTime(&t0));
     PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_SELF, s+1));
+    PetscCall(PetscTime(&t1));
+    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t1-t0));
     PetscCall(VecScatterCreate(gtemp, data->is[s+1], data->sol[s+1], NULL, &data->sc[s+1]));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
@@ -411,11 +406,6 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
-
-  PetscCall(PetscViewerASCIIPrintf(viewer, "bs=%d\n", data->bs));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "p=%d,%d\n", data->p[0], data->p[1]));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "min=(%.5e,%.5e,%.5e)\n", data->min[0], data->min[1], data->min[2]));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "max=(%.5e,%.5e,%.5e)\n", data->max[0], data->max[1], data->max[2]));
 
   for (PetscInt i = 0; i < data->sz; i++) {
    PetscCall(PetscViewerASCIIPrintf(viewer, "--- SUB %d ---\n", i));
