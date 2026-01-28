@@ -10,6 +10,8 @@ struct PC_Net2AS {
   Vec points;
   // types 1 -> dirichlet
   IS types_points;
+  // dirichlet points
+  IS dirichlet;
   // bounding box of points
   PetscReal min[3], max[3];
   // number of subdomains in [x,y]
@@ -19,6 +21,7 @@ struct PC_Net2AS {
   // block size (number of dofs per node)
   PetscInt bs;
   PetscBool print_local_size;
+  PetscReal eps;
 
   // coarse basis representation of the overlapping subdomains,
   // expanded by block size
@@ -65,6 +68,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
   PetscCall(PetscOptionsBoundedInt("-pc_net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
   PetscCall(PetscOptionsBool("-pc_net2as_print_local_size", "wether to print the local sizes", NULL, data->print_local_size, &data->print_local_size, &set));
+  PetscCall(PetscOptionsReal("-pc_net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -72,7 +76,10 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
 PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscViewer viewer;
-  PetscInt n, bs;
+  PetscInt n, nn, bs;
+  PetscInt is_size, is_local, dsize = 0, start, end;
+  PetscInt* dir = NULL;
+  const PetscInt* types;
 
   PetscFunctionBeginUser;
   PetscCall(PetscViewerHDF5Open(comm, data->domain, FILE_MODE_READ, &viewer));
@@ -81,12 +88,29 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(PetscObjectSetName((PetscObject)data->points, "points"));
   PetscCall(VecLoad(data->points, viewer));
   PetscCall(VecGetSize(data->points, &n));
+  PetscCall(VecGetOwnershipRange(data->points, &start, &end));
   PetscCall(VecGetBlockSize(data->points, &bs));
+  end /= bs;
+  start /= bs;
   n /= bs;
+  nn = end-start;
 
   PetscCall(ISCreate(comm, &data->types_points));
   PetscCall(PetscObjectSetName((PetscObject)data->types_points, "types_points"));
   PetscCall(ISLoad(data->types_points, viewer));
+  PetscCall(ISGetSize(data->types_points, &is_size));
+  PetscCall(ISGetLocalSize(data->types_points, &is_local));
+
+  PetscCheck(is_size == n, comm, PETSC_ERR_ARG_SIZ, "types_points size %d != points size %d", is_size, nn);
+  PetscCheck(is_local == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "local sizes: types_points %d != points %d", is_local, nn);
+
+  // is_size is local
+  PetscCall(PetscMalloc1(is_local, &dir));
+  PetscCall(ISGetIndices(data->types_points, &types));
+  for (PetscInt i = 0; i < is_local; i++) {
+    if (types[i] != 0) dir[dsize++] = start+i;
+  }
+  PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->dirichlet));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, " points: %" PetscInt_FMT "\n", n));
@@ -195,7 +219,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
   PetscInt vstart, vend, size, msize, n_cols = data->p[0] * data->p[1], n_rows, n, m;
-  PetscReal eps = 1e-4;
   PetscBool done;
   const PetscInt *ioff, *inds;
   Mat coarse_basis, A, subdomains;
@@ -233,7 +256,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
-  PetscCall(MatFilter(coarse_basis, eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
+  PetscCall(MatZeroRowsIS(coarse_basis, data->dirichlet, 0, NULL, NULL));
+  PetscCall(MatFilter(coarse_basis, data->eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
   PetscCall(MatCOO_Free(&coo));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
 
@@ -340,6 +364,7 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
 
   // minimal for Q1
   data->p[0] = data->p[1] = 1;
+  data->eps = 1e-16;
 
   pc->ops->apply = PCApply_Net2AS;
   pc->ops->setup = PCSetup_Net2AS;
