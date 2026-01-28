@@ -53,8 +53,8 @@ struct PC_Net2AS {
   PetscInt sz;
   // block size (number of dofs per node)
   PetscInt bs;
-  // option to print local size
-  PetscBool print_local_size;
+  // option to print local information
+  PetscBool print_local;
   // coarse basis matrix small entry filter tolerance
   PetscReal eps;
 
@@ -111,7 +111,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   if (set) data->p[0] = data->p[1] = p;
   PetscCall(PetscOptionsBoundedInt("-net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
   PetscCall(PetscOptionsBoundedInt("-net2as_py", "number of subdomains", NULL, data->p[1], &data->p[1], &set, p_lb));
-  PetscCall(PetscOptionsBool("-net2as_local_size", "wether to print the local sizes", NULL, data->print_local_size, &data->print_local_size, &set));
+  PetscCall(PetscOptionsBool("-net2as_print_local", "wether to print the local sizes", NULL, data->print_local, &data->print_local, &set));
   PetscCall(PetscOptionsReal("-net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -347,14 +347,14 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscTime(&t1));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t1-t0));
 
-  if (data->print_local_size) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
+  if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   PetscCall(MatGetRowIJ(subdomains, 0, /* symmetric = */ PETSC_FALSE, /* inodecomp = */ PETSC_TRUE, &n_rows, &ioff, &inds, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ not done");
   // setup local mat
   for (PetscInt s = 0; s < vend-vstart; s++) {
     Mat *mat;
     PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, ioff[s+1]-ioff[s], inds+ioff[s], PETSC_COPY_VALUES, &data->is[s+1]));
-    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
+    if (data->print_local) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", data->bs*(ioff[s+1]-ioff[s])));
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
     //       tough it also allocates the output parameter
@@ -364,7 +364,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(PetscTime(&t0));
     PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_SELF, s+1));
     PetscCall(PetscTime(&t1));
-    if (data->print_local_size) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t1-t0));
+    if (data->print_local) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t1-t0));
     PetscCall(VecScatterCreate(gtemp, data->is[s+1], data->sol[s+1], NULL, &data->sc[s+1]));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
