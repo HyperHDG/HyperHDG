@@ -3,6 +3,49 @@
 #include <petsc/private/pcimpl.h>
 #include <petscviewerhdf5.h>
 
+struct MatCOO {
+  PetscInt *rows, *cols, nnz, cap;
+  PetscReal *vals;
+};
+
+PetscErrorCode MatCOO_Alloc(MatCOO *coo, PetscInt cap) {
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc3(cap, &coo->rows, cap, &coo->cols, cap, &coo->vals));
+  coo->cap = cap;
+  coo->nnz = 0;
+  PetscFunctionReturn(0);
+};
+
+PetscErrorCode MatCOO_Free(MatCOO *coo) {
+  PetscFunctionBegin;
+  PetscCall(PetscFree3(coo->rows, coo->cols, coo->vals));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatCOO_Push(MatCOO *coo, PetscInt row, PetscInt col, PetscReal val) {
+  PetscInt nnz = coo->nnz;
+
+  PetscFunctionBegin;
+  PetscAssert(nnz < coo->cap, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "MatCOO_Push out of range");
+  coo->rows[nnz] = row;
+  coo->cols[nnz] = col;
+  coo->vals[nnz] = val;
+  coo->nnz++;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatCOO_Push_s(MatCOO *coo, PetscInt row, PetscInt col, PetscReal val) {
+  PetscInt nnz = coo->nnz;
+
+  PetscFunctionBegin;
+  PetscCheck(nnz < coo->cap, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "MatCOO_Push out of range");
+  coo->rows[nnz] = row;
+  coo->cols[nnz] = col;
+  coo->vals[nnz] = val;
+  coo->nnz++;
+  PetscFunctionReturn(0);
+}
+
 struct PC_Net2AS {
   // path to domain file
   char domain[PATH_MAX];
@@ -22,6 +65,9 @@ struct PC_Net2AS {
   PetscInt bs;
   PetscBool print_local_size;
   PetscReal eps;
+
+  // sparse adj matrix representation of the edges in the network
+  Mat adj;
 
   // coarse basis representation of the overlapping subdomains,
   // expanded by block size
@@ -76,10 +122,11 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
 PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscViewer viewer;
-  PetscInt n, nn, bs;
+  PetscInt m, mm, n, nn, bs;
   PetscInt is_size, is_local, dsize = 0, start, end;
   PetscInt* dir = NULL;
-  const PetscInt* types;
+  const PetscInt *types, *ledges;
+  IS edges;
 
   PetscFunctionBeginUser;
   PetscCall(PetscViewerHDF5Open(comm, data->domain, FILE_MODE_READ, &viewer));
@@ -111,10 +158,33 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
     if (types[i] != 0) dir[dsize++] = start+i;
   }
   PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->dirichlet));
+  PetscCall(ISRestoreIndices(data->types_points, &types));
+
+  PetscCall(ISCreate(comm, &edges));
+  PetscCall(PetscObjectSetName((PetscObject)edges, "edges"));
+  PetscCall(ISLoad(edges, viewer));
+  PetscCall(ISGetSize(edges, &m));
+  PetscCall(ISGetLocalSize(edges, &mm));
+  m /= 2;
+  mm /= 2;
+
+  MatCOO coo;
+  PetscCall(MatCOO_Alloc(&coo, mm));
+  PetscCall(ISGetIndices(edges, &ledges));
+  for (PetscInt i = 0; i < mm; i++)
+    PetscCall(MatCOO_Push(&coo, ledges[2*i], ledges[2*i+1], 1.));
+  PetscCall(ISRestoreIndices(edges, &ledges));
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &data->adj));
+  PetscCall(MatSetType(data->adj, MATMPIAIJ));
+  PetscCall(MatSetSizes(data->adj, m, m, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetOptionsPrefix(data->adj, "adj_"));
+  PetscCall(MatSetPreallocationCOO(data->adj, coo.nnz, coo.rows, coo.cols));
+  PetscCall(MatSetValuesCOO(data->adj, coo.vals, INSERT_VALUES));
+  PetscCall(MatCOO_Free(&coo));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, " points: %" PetscInt_FMT "\n", n));
-  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, " edges: %zu\n", edges.size()));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " edges: %" PetscInt_FMT "\n", m));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -140,37 +210,6 @@ PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
   PetscCall(MatCreateVecs(data->mat[i], &data->sol[i], NULL));
   PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
   PetscCall(KSPSetUp(data->ksp[i]));
-  PetscFunctionReturn(0);
-}
-
-struct MatCOO {
-  PetscInt *rows, *cols, nnz, cap;
-  PetscReal *vals;
-};
-
-PetscErrorCode MatCOO_Alloc(MatCOO *coo, PetscInt cap) {
-  PetscFunctionBegin;
-  PetscCall(PetscMalloc3(cap, &coo->rows, cap, &coo->cols, cap, &coo->vals));
-  coo->cap = cap;
-  coo->nnz = 0;
-  PetscFunctionReturn(0);
-};
-
-PetscErrorCode MatCOO_Free(MatCOO *coo) {
-  PetscFunctionBegin;
-  PetscCall(PetscFree3(coo->rows, coo->cols, coo->vals));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatCOO_Push(MatCOO *coo, PetscInt row, PetscInt col, PetscReal val) {
-  PetscInt nnz = coo->nnz;
-
-  PetscFunctionBegin;
-  PetscAssert(nnz < coo->cap, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "MatCOO_Push out of range");
-  coo->rows[nnz] = row;
-  coo->cols[nnz] = col;
-  coo->vals[nnz] = val;
-  coo->nnz++;
   PetscFunctionReturn(0);
 }
 
@@ -210,6 +249,39 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
       PetscCall(MatCOO_Push(coo, vstart+n, j*data->p[0]+i, xx*yy));
   }
   PetscCall(VecRestoreSpan(data->points, vspan));
+
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
+  MatPartitioning part;
+  IS partitioning;
+  PetscInt p = data->p[0]*data->p[1], vstart, vend, size;
+  const PetscInt *inds;
+
+  PetscFunctionBegin;
+  PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &part));
+  PetscCall(MatPartitioningSetAdjacency(part, data->adj));
+  PetscCall(MatPartitioningSetNParts(part, p));
+  PetscCall(MatPartitioningSetFromOptions(part));
+  PetscCall(MatPartitioningApply(part, &partitioning));
+  PetscCall(MatPartitioningDestroy(&part));
+  PetscCall(ISPartitioningToNumbering(partitioning, new_is));
+
+  // partitioning has the same parallel layout as the rows of the matrix = that of points
+  PetscCall(MatCOO_Alloc(coo, 10*size)); // should be enough??? -> is bounds checked
+  PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
+  PetscCall(ISGetIndices(partitioning, &inds));
+  vend /= 3;
+  vstart /= 3;
+  size = vend-vstart;
+  for (PetscInt i = 0; i < size; i++)
+    PetscCall(MatCOO_Push(&coo, inds[i], vstart+i, 1));
+  PetscCall(MatCOO_Free(coo));
+
+  // transpose -> get all the nodes on one partition
+  // then construct the overlap
+  // return subdomain view
 
   PetscFunctionReturn(0);
 }
