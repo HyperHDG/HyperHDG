@@ -78,6 +78,8 @@ PetscErrorCode MatCOO_View(MatCOO *coo, PetscViewer viewer) {
 }
 
 struct PC_Net2AS {
+  // configuration paramters
+
   // number of subdomains in [x,y]
   PetscInt p[2];
   // number of local data structures (should be prod(p))
@@ -99,6 +101,8 @@ struct PC_Net2AS {
   // gr - simplest greedy load balancing
   char load_type[10];
 
+  // network information
+
   // path to domain file
   char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
@@ -111,15 +115,17 @@ struct PC_Net2AS {
   Mat adj;
 
   // coarse global data structures
-
-  // coarse basis representation of the overlapping subdomains,
-  // expanded by block size
-  Mat  cb;
+  Mat cb;
   Mat cmat;
   KSP cksp;
   Vec csol;
 
-  // local datastructures, corresponding to subdomains
+  // local rank data structures
+  VecScatter rank_sc;
+  Vec rank_sol;
+  IS rank_is;
+
+  // local subdomain datastructures,
   // arrays of length data->sz
   PetscInt *sd_gids; // local subdomain global ids
   Mat* mat;
@@ -140,15 +146,26 @@ PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscFunctionBegin;
+
+  // global resources
+  PetscCall(MatDestroy(&data->cb));
+  PetscCall(MatDestroy(&data->cmat));
+  PetscCall(KSPDestroy(&data->cksp));
+  PetscCall(VecDestroy(&data->csol));
+
+  // local rank resources
+  PetscCall(VecScatterDestroy(&data->rank_sc));
+  PetscCall(VecDestroy(&data->rank_sol));
+
+  // local subdomain resources
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(KSPDestroy(data->ksp+i));
     PetscCall(VecDestroy(data->sol+i));
     PetscCall(ISDestroy(data->is+i));
-    PetscCall(VecScatterDestroy(data->sc+i));
   }
   PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
-  PetscCall(MatDestroy(&data->cb));
   PetscCall(PetscFree5(data->ksp, data->is, data->sol, data->sc, data->sd_gids));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -543,6 +560,37 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode net2as_rank_is_local_is(PC_Net2AS *data, MatCOO *coo) {
+  PetscInt size = coo->nnz, *rank_is;
+  ISLocalToGlobalMapping l2g;
+
+  PetscFunctionBegin;
+
+  // create rank_is
+  //PetscCall(MatCOO_View(coo, PETSC_VIEWER_STDOUT_WORLD)); // DEBUG
+  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG_coo_nnz: %d\n", coo->nnz)); // DEBUG
+  PetscCall(PetscMalloc1(coo->nnz, &rank_is));
+  PetscCall(PetscArraycpy(rank_is, coo->rows, coo->nnz));
+  //PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "DEBUG_rank_is:", rank_is, coo->nnz)); // DEBUG
+  PetscCall(PetscSortRemoveDupsInt(&size, rank_is));
+  //PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "DEBUG_rank_is_sorted:", rank_is, coo->nnz)); // DEBUG
+  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG_size: %d\n", size)); // DEBUG
+  PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, size, rank_is, PETSC_COPY_VALUES, &data->rank_is));
+  PetscCall(PetscFree(rank_is));
+
+  // now convert data->is to local IS
+  PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
+  for (PetscInt i = 0; i < data->sz; i++) {
+    IS local;
+    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &local));
+    PetscCall(ISDestroy(&data->is[i]));
+    data->is[i] = local;
+  }
+  PetscCall(ISLocalToGlobalMappingDestroy(&l2g));
+
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec gtemp;
@@ -591,10 +639,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
   PetscCall(MatZeroRowsIS(coarse_basis, data->dirichlet, 0, NULL, NULL));
   PetscCall(MatFilter(coarse_basis, data->eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
-  PetscCall(MatCOO_Free(&coo));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
 
-  // setup coarse mat
+  // setup coarse global data structures
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->cmat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", data->part_type));
@@ -609,22 +656,30 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->cksp, &data->cmat, &data->csol, &t));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t));
 
-  // setup local mat
+  // setup local subdom mats using the still global is
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
+
+  // setup local rank data structures -> makes is local
+  PetscCall(net2as_rank_is_local_is(data, &coo));
+  PetscCall(ISGetLocalSize(data->rank_is, &size));
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, size, &data->rank_sol));
+  PetscCall(VecScatterCreate(gtemp, data->rank_is, data->rank_sol, NULL, &data->rank_sc));
+
+  // setup local subdom ksp and scatters
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &t));
+    PetscCall(VecScatterCreate(data->rank_sol, data->is[i], data->sol[i], NULL, &data->sc[i]));
     if (data->print_local) {
       PetscInt local_size;
       PetscCall(ISGetLocalSize(data->is[i], &local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
     }
-    // NOTE: as VecScatter must be created collectively, require equal distribution of subdomains
-    PetscCall(VecScatterCreate(gtemp, data->is[i], data->sol[i], NULL, &data->sc[i]));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
 
+  PetscCall(MatCOO_Free(&coo));
   PetscCall(MatDestroy(&coarse_basis));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -635,19 +690,32 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PetscFunctionBegin;
   if (!data->ksp) PetscCall(PCSetup_Net2AS(pc));
 
+  PetscCall(VecScatterBegin(data->rank_sc, x, data->rank_sol, INSERT_VALUES, SCATTER_FORWARD));
+
   // coarse
   PetscCall(MatMultTranspose(data->cb, x, data->csol));
   PetscCall(KSPSolve(data->cksp, data->csol, data->csol));
   PetscCall(MatMult(data->cb, data->csol, y));
 
+  PetscCall(VecScatterEnd(data->rank_sc, x, data->rank_sol, INSERT_VALUES, SCATTER_FORWARD));
+
   // local
+  // NOTE: separate loops are required as otherwise the reverse scatter would modify the other rank entries
   for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(VecScatterBegin(data->sc[i], x, data->sol[i], INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterEnd(data->sc[i], x, data->sol[i], INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(KSPSolve(data->ksp[i], data->sol[i], data->sol[i]));
-    PetscCall(VecScatterBegin(data->sc[i], data->sol[i], y, ADD_VALUES, SCATTER_REVERSE));
-    PetscCall(VecScatterEnd(data->sc[i], data->sol[i], y, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(data->sc[i], data->rank_sol, data->sol[i], INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(data->sc[i], data->rank_sol, data->sol[i], INSERT_VALUES, SCATTER_FORWARD));
   }
+  PetscCall(VecZeroEntries(data->rank_sol));
+  for (PetscInt i = 0; i < data->sz; i++)
+    PetscCall(KSPSolve(data->ksp[i], data->sol[i], data->sol[i]));
+  for (PetscInt i = 0; i < data->sz; i++) {
+    PetscCall(VecScatterBegin(data->sc[i], data->sol[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(data->sc[i], data->sol[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
+  }
+
+  // rank -> global
+  PetscCall(VecScatterBegin(data->rank_sc, data->rank_sol, y, ADD_VALUES, SCATTER_REVERSE));
+  PetscCall(VecScatterEnd(data->rank_sc, data->rank_sol, y, ADD_VALUES, SCATTER_REVERSE));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
