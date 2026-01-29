@@ -3,9 +3,6 @@
 #include <petsc/private/pcimpl.h>
 #include <petscviewerhdf5.h>
 
-// REFACTORING STEPS:
-//   - the submatrices should be pulled out at once
-
 // PROBLEMS: if we have unequal number of local problems per rank, then we need to fill is sol and scatter with dummy/ empty stuff,
 //   else we get a deadlock
 // REFACTOR: use one rank scattering context, one rank is and one rank sol, then work with subvectors
@@ -597,17 +594,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t));
 
   // setup local mat
+  PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 0; i < data->sz; i++) {
-    Mat *mat;
-    // IDEA: maybe we can now create all submatrices at once?
-    // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
-    //       while MatCreateSubmatrices always creates sequential matrices,
-    //       tough it also allocates the output parameter
-    // PetscCall(ISView(data->is[i], PETSC_VIEWER_STDOUT_WORLD));
-    PetscCall(MatCreateSubMatrices(A, 1, &data->is[i], &data->is[i], MAT_INITIAL_MATRIX, &mat));
-    data->mat[i] = *mat;
-    PetscCall(PetscFree(mat));
     PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &t));
     if (data->print_local) {
       PetscInt local_size;
@@ -615,7 +604,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
     }
-
+    // NOTE: as VecScatter must be created collectively, require equal distribution of subdomains
     PetscCall(VecScatterCreate(gtemp, data->is[i], data->sol[i], NULL, &data->sc[i]));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
