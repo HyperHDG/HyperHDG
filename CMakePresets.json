@@ -13,17 +13,6 @@
       }
     },
     {
-      "name": "debug-nosan",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-g -O0",
-        "CMAKE_C_FLAGS":   "-g -O0",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      }
-    },
-
-    {
       "name": "release",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -37,10 +26,6 @@
   "buildPresets": [
     {
       "name": "debug",
-      "configurePreset": "debug"
-    },
-    {
-      "name": "debug-nosan",
       "configurePreset": "debug"
     },
     {
