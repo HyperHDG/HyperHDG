@@ -329,12 +329,11 @@ PetscErrorCode net2as_loadbalance_round_robin(MPI_Comm comm, PetscInt *weights, 
 //   rows = global ids of local subdoms
 //   cols = global vertex ids
 //   will be allocated, must be freed
-PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatCOO *cb) {
+PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatCOO *cb, MatCOO *sd) {
   int rank, size, tag_vid = 0, tag_sid = 1;
   PetscInt p = data->p[0]*data->p[1], sd_count, sd_total_size, off, start;
   PetscInt *sd2lcounts, *sd2gcounts, *sd2rank, *rank2scount, *rank2rcount, *coo2rank;
   MPI_Request *reqs;
-  MatCOO sd[1];
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -451,13 +450,12 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   }
   PetscCheck(off == sd_count, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "detected '%d' subdomains, expected '%d'", off, sd_count);
 
-  PetscCall(MatCOO_Free(sd));
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
     rank2rcount, rank2scount, coo2rank, reqs));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
+PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscReal h[2], min[2], max[2], eps = data->eps;
   PetscInt vstart, vend, size;
   const PetscInt *types;
@@ -495,12 +493,12 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo) {
   }
   PetscCall(VecRestoreSpan(data->points, vspan));
 
-  PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo));
+  PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
+PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   IS partition;
   PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, *counts, vstart, vend;
@@ -526,7 +524,7 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
   PetscCall(ISRestoreIndices(partition, &inds));
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
-  PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo));
+  PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
 
   PetscCall(MatIncreaseOverlap(data->adj, data->sz, data->is, data->delta));
 
@@ -560,31 +558,37 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_rank_is_local_is(PC_Net2AS *data, MatCOO *coo) {
-  PetscInt size = coo->nnz, *rank_is;
+PetscErrorCode net2as_rank_is_local_is(PC_Net2AS *data, MatCOO *sd) {
+  PetscInt size = sd->nnz, *rank_is;
   ISLocalToGlobalMapping l2g;
 
   PetscFunctionBegin;
 
   // create rank_is
-  //PetscCall(MatCOO_View(coo, PETSC_VIEWER_STDOUT_WORLD)); // DEBUG
-  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG_coo_nnz: %d\n", coo->nnz)); // DEBUG
-  PetscCall(PetscMalloc1(coo->nnz, &rank_is));
-  PetscCall(PetscArraycpy(rank_is, coo->rows, coo->nnz));
-  //PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "DEBUG_rank_is:", rank_is, coo->nnz)); // DEBUG
+  PetscCall(PetscMalloc1(sd->nnz, &rank_is));
+  PetscCall(PetscArraycpy(rank_is, sd->cols, sd->nnz));
   PetscCall(PetscSortRemoveDupsInt(&size, rank_is));
-  //PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "DEBUG_rank_is_sorted:", rank_is, coo->nnz)); // DEBUG
-  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG_size: %d\n", size)); // DEBUG
   PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, size, rank_is, PETSC_COPY_VALUES, &data->rank_is));
-  PetscCall(PetscFree(rank_is));
 
   // now convert data->is to local IS
-  PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
+  PetscCall(ISLocalToGlobalMappingCreate(PETSC_COMM_SELF, 1, size, rank_is, PETSC_OWN_POINTER, &l2g));
   for (PetscInt i = 0; i < data->sz; i++) {
-    IS local;
-    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &local));
+    const PetscInt *global;
+    PetscInt *local;
+    PetscInt n_global, n_local;
+    IS is;
+
+    PetscCall(ISBlockGetLocalSize(data->is[i], &n_global));
+    PetscCall(ISBlockGetIndices(data->is[i], &global));
+
+    PetscCall(PetscMalloc1(n_global, &local));
+    PetscCall(ISGlobalToLocalMappingApply(l2g, IS_GTOLM_DROP, n_global, global, &n_local, local));
+    PetscCheck(n_global == n_local, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
+      "rank_is local to global mapping inds dropped: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_global, n_local);
+    PetscCall(ISBlockRestoreIndices(data->is[i], &global));
+    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, n_global, local, PETSC_OWN_POINTER, &is));
     PetscCall(ISDestroy(&data->is[i]));
-    data->is[i] = local;
+    data->is[i] = is;
   }
   PetscCall(ISLocalToGlobalMappingDestroy(&l2g));
 
@@ -599,7 +603,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Mat coarse_basis, A;
   MatType type;
   int comm_size;
-  MatCOO coo;
+  MatCOO coo, sd;
   PetscLogDouble t;
 
   PetscFunctionBegin;
@@ -623,9 +627,9 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   size /= 3;
 
   if (strcmp(data->part_type, "q1") == 0)
-    PetscCall(net2as_cb_q1(data, &coo));
+    PetscCall(net2as_cb_q1(data, &coo, &sd));
   else if (strcmp(data->part_type, "q1") == 0)
-    PetscCall(net2as_cb_alg(data, &coo));
+    PetscCall(net2as_cb_alg(data, &coo, &sd));
   else
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'alg'", data->part_type);
 
@@ -660,7 +664,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
 
   // setup local rank data structures -> makes is local
-  PetscCall(net2as_rank_is_local_is(data, &coo));
+  PetscCall(net2as_rank_is_local_is(data, &sd));
   PetscCall(ISGetLocalSize(data->rank_is, &size));
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, size, &data->rank_sol));
   PetscCall(VecScatterCreate(gtemp, data->rank_is, data->rank_sol, NULL, &data->rank_sc));
