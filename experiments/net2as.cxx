@@ -3,6 +3,14 @@
 #include <petsc/private/pcimpl.h>
 #include <petscviewerhdf5.h>
 
+// REFACTORING STEPS:
+//   - replace packed array of coarse and local by two different arrays, while considering the sz that becomes one smaller
+//   - the submatrices should be pulled out at once
+
+// PROBLEMS: if we have unequal number of local problems per rank, then we need to fill is sol and scatter with dummy/ empty stuff,
+//   else we get a deadlock
+// REFACTOR: use one rank scattering context, one rank is and one rank sol, then work with subvectors
+
 struct MatCOO {
   PetscInt *rows, *cols, nnz, cap;
   PetscReal *vals;
@@ -230,33 +238,37 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetup_Net2AS_SetupKSP(PC pc, MPI_Comm comm, PetscInt i) {
-  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *sol, PetscLogDouble *t) {
   PC subpc;
+  PetscLogDouble t0, t1;
   const char* prefix;
 
+  PetscCall(PetscTime(&t0));
   PetscFunctionBegin;
-  PetscCall(KSPCreate(comm, data->ksp+i));
-  PetscCall(KSPSetType(data->ksp[i], KSPPREONLY));
-  PetscCall(KSPGetPC(data->ksp[i], &subpc));
+  PetscCall(KSPCreate(comm, ksp));
+  PetscCall(KSPSetType(*ksp, KSPPREONLY));
+  PetscCall(KSPGetPC(*ksp, &subpc));
   PetscCall(PCSetType(subpc, PCCHOLESKY));
 
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
-  PetscCall(KSPSetOptionsPrefix(data->ksp[i], prefix));
-  PetscCall(KSPAppendOptionsPrefix(data->ksp[i], "net2as_"));
+  PetscCall(KSPSetOptionsPrefix(*ksp, prefix));
+  PetscCall(KSPAppendOptionsPrefix(*ksp, "net2as_"));
   PetscCall(PCSetOptionsPrefix(subpc, prefix));
   PetscCall(PCAppendOptionsPrefix(subpc, "net2as_"));
   PetscCall(PCSetFromOptions(subpc));
-  PetscCall(KSPSetFromOptions(data->ksp[i]));
+  PetscCall(KSPSetFromOptions(*ksp));
 
-  PetscCall(MatCreateVecs(data->mat[i], &data->sol[i], NULL));
-  PetscCall(KSPSetOperators(data->ksp[i], data->mat[i], data->mat[i]));
-  PetscCall(KSPSetUp(data->ksp[i]));
+  PetscCall(MatCreateVecs(*mat, sol, NULL));
+  PetscCall(KSPSetOperators(*ksp, *mat, *mat));
+  PetscCall(KSPSetUp(*ksp));
+  PetscCall(PetscTime(&t1));
+
+  *t = t1-t0;
   PetscFunctionReturn(0);
 }
 
 // simplest of all greedy load balancing strategies
-PetscErrorCode net2as_loadbalance(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count) {
+PetscErrorCode net2as_loadbalance_greedy(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count) {
   int size;
   PetscHeap loads;
 
@@ -274,6 +286,16 @@ PetscErrorCode net2as_loadbalance(MPI_Comm comm, PetscInt *weights, PetscInt *as
   }
   // PetscCall(PetscHeapView(loads, NULL));
   PetscCall(PetscHeapDestroy(&loads));
+  PetscFunctionReturn(0);
+}
+
+// naive round robin scheduling
+PetscErrorCode net2as_loadbalance_round_robin(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count) {
+  int size;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  for (PetscInt i = 0; i < count; i++) assignments[i] = i % size;
   PetscFunctionReturn(0);
 }
 
@@ -311,7 +333,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
 
   // compute some load balancing strategy
   // sd2rank is an assignment of subdomains (indices) to ranks (values)
-  if (rank == 0) PetscCall(net2as_loadbalance(comm, sd2gcounts, sd2rank, p));
+  if (rank == 0) PetscCall(net2as_loadbalance_round_robin(comm, sd2gcounts, sd2rank, p));
   // send this assignment to all ranks
   PetscCallMPI(MPI_Bcast(sd2rank, p, MPIU_INT, 0, comm));
 
@@ -514,7 +536,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   MatType type;
   int comm_size;
   MatCOO coo;
-  PetscLogDouble t0, t1;
+  PetscLogDouble t;
 
   PetscFunctionBegin;
 
@@ -572,20 +594,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
   PetscCall(MatGetSize(data->mat[0], &m, &n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n    size: %" PetscInt_FMT "\n", m));
-  PetscCall(PetscTime(&t0));
-  PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_WORLD, 0));
-  PetscCall(PetscTime(&t1));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t1-t0));
+  PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->ksp[0], &data->mat[0], &data->sol[0], &t));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t));
 
   // setup local mat
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 1; i < data->sz; i++) {
     Mat *mat;
-    if (data->print_local) {
-      PetscInt local_size;
-      PetscCall(ISGetLocalSize(data->is[i], &local_size));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
-    }
     // IDEA: maybe we can now create all submatrices at once?
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
@@ -594,10 +609,14 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     PetscCall(MatCreateSubMatrices(A, 1, &data->is[i], &data->is[i], MAT_INITIAL_MATRIX, &mat));
     data->mat[i] = *mat;
     PetscCall(PetscFree(mat));
-    PetscCall(PetscTime(&t0));
-    PetscCall(PCSetup_Net2AS_SetupKSP(pc, PETSC_COMM_SELF, i));
-    PetscCall(PetscTime(&t1));
-    if (data->print_local) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t1-t0));
+    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &t));
+    if (data->print_local) {
+      PetscInt local_size;
+      PetscCall(ISGetLocalSize(data->is[i], &local_size));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
+    }
+
     PetscCall(VecScatterCreate(gtemp, data->is[i], data->sol[i], NULL, &data->sc[i]));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
