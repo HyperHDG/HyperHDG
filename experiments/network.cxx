@@ -136,8 +136,8 @@ int main(int argc, char **argv) {
       MatDestroy(&m);
       KSPDestroy(&k);
       PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
-      PetscFinalize();
-      return 0;
+      // PetscFinalize();
+      // return 0;
     }
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mpi:\n  sz: %" PetscInt_FMT "\n", comm_size));

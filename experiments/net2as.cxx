@@ -1,6 +1,7 @@
 #include "net2as.hxx"
 #include "prin2.hxx"
 #include <petsc/private/pcimpl.h>
+#include <petsc/private/hashmapi.h>
 #include <petscviewerhdf5.h>
 
 // PROBLEMS: if we have unequal number of local problems per rank, then we need to fill is sol and scatter with dummy/ empty stuff,
@@ -444,7 +445,8 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
       end++;
     data->sd_gids[off] = sd->rows[start];
     // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "is", global_vertex_ids, end-start));
-    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off]));
+    // PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off]));
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off]));
     start = end;
     off++;
   }
@@ -452,6 +454,34 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
 
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
     rank2rcount, rank2scount, coo2rank, reqs));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode net2as_make_is_blocked(PC_Net2AS *data) {
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < data->sz; i++) {
+    const PetscInt *inds;
+    PetscInt sz;
+    IS is;
+    PetscCall(ISGetIndices(data->is[i], &inds));
+    PetscCall(ISGetLocalSize(data->is[i], &sz));
+    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, sz, inds, PETSC_COPY_VALUES, &is));
+    PetscCall(ISRestoreIndices(data->is[i], &inds));
+    PetscCall(ISDestroy(&data->is[i]));
+    data->is[i] = is;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode net2as_make_rank_is(PC_Net2AS *data, MatCOO *sd) {
+  PetscInt size = sd->nnz, *rank_is;
+
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(sd->nnz, &rank_is));
+  PetscCall(PetscArraycpy(rank_is, sd->cols, sd->nnz));
+  PetscCall(PetscSortRemoveDupsInt(&size, rank_is));
+  PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, size, rank_is, PETSC_COPY_VALUES, &data->rank_is));
+  PetscCall(PetscFree(rank_is));
   PetscFunctionReturn(0);
 }
 
@@ -494,6 +524,8 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(VecRestoreSpan(data->points, vspan));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
+  PetscCall(net2as_make_is_blocked(data));
+  PetscCall(net2as_make_rank_is(data, sd));
 
   PetscFunctionReturn(0);
 }
@@ -501,8 +533,9 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   IS partition;
-  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, *counts, vstart, vend;
+  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend;
   const PetscInt *inds, *types;
+  PetscHMapI counts;
 
   PetscFunctionBegin;
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
@@ -527,18 +560,20 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
-
   PetscCall(MatIncreaseOverlap(data->adj, data->sz, data->is, data->delta));
+  PetscCall(net2as_make_is_blocked(data));
+  PetscCall(net2as_make_rank_is(data, sd));
 
-  // NOTE: this should be the same size as the local part of points
   new_cap = 0;
-  PetscCall(PetscMalloc1(lsz_part, &counts));
+  PetscCall(PetscHMapICreate(&counts));
   for (PetscInt s = 0; s < data->sz; s++) {
-    PetscInt sz;
-    PetscCall(ISGetIndices(data->is[s], &inds));
+    PetscInt sz, val;
+    PetscCall(ISGetIndices(data->is[s], &inds)); // these will be global indices, not local ones which we need
     PetscCall(ISGetLocalSize(data->is[s], &sz));
-    for (PetscInt i = 0; i < sz; i++)
-      counts[inds[i]]++;
+    for (PetscInt i = 0; i < sz; i++) {
+      PetscCall(PetscHMapIGetWithDefault(counts, inds[i], 0, &val));
+      PetscCall(PetscHMapISet(counts, inds[i], val + 1));
+    }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
     new_cap += sz;
   }
@@ -547,33 +582,26 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatCOO_Alloc(coo, new_cap));
 
   for (PetscInt s = 0; s < data->sz; s++) {
-    PetscInt sz;
+    PetscInt sz, count;
     PetscCall(ISGetIndices(data->is[s], &inds));
     PetscCall(ISGetLocalSize(data->is[s], &sz));
-    for (PetscInt i = 0; i < sz; i++)
-      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[i], 1./counts[i]));
+    for (PetscInt i = 0; i < sz; i++) {
+      PetscCall(PetscHMapIGet(counts, inds[i], &count));
+      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[i], 1./count));
+    }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
   }
 
-  PetscCall(PetscFree(counts));
+  PetscCall(PetscHMapIDestroy(&counts));
 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_rank_is_local_is(PC_Net2AS *data, MatCOO *sd) {
-  PetscInt size = sd->nnz, *rank_is;
+PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
   ISLocalToGlobalMapping l2g;
 
   PetscFunctionBegin;
-
-  // create rank_is
-  PetscCall(PetscMalloc1(sd->nnz, &rank_is));
-  PetscCall(PetscArraycpy(rank_is, sd->cols, sd->nnz));
-  PetscCall(PetscSortRemoveDupsInt(&size, rank_is));
-  PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, size, rank_is, PETSC_COPY_VALUES, &data->rank_is));
-
-  // now convert data->is to local IS
-  PetscCall(ISLocalToGlobalMappingCreate(PETSC_COMM_SELF, 1, size, rank_is, PETSC_OWN_POINTER, &l2g));
+  PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
   for (PetscInt i = 0; i < data->sz; i++) {
     const PetscInt *global;
     PetscInt *local;
@@ -666,7 +694,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
 
   // setup local rank data structures -> makes is local
-  PetscCall(net2as_rank_is_local_is(data, &sd));
+  PetscCall(net2as_make_is_local(data, &sd));
   PetscCall(ISGetLocalSize(data->rank_is, &size));
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, size, &data->rank_sol));
   PetscCall(VecScatterCreate(gtemp, data->rank_is, data->rank_sol, NULL, &data->rank_sc));
