@@ -92,8 +92,12 @@ struct PC_Net2AS {
   PetscInt mult_bound;
   // overlap parameter in number of hops
   PetscInt delta;
-  // type one of q1, alg
-  char type[10];
+  // part_type one of "q1", "alg"
+  char part_type[10];
+  // load_type one of "rr", "gr"
+  // rr - naive round robin load balancing
+  // gr - simplest greedy load balancing
+  char load_type[10];
 
   // path to domain file
   char domain[PATH_MAX];
@@ -166,7 +170,8 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsReal("-net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscCall(PetscOptionsInt("-net2as_mult", "upper bound on the (pointwise) multiplicity of the cover formed by the subdomains", NULL, data->mult_bound, &data->mult_bound, &set));
   PetscCall(PetscOptionsInt("-net2as_delta", "overlap parameters in number of hops", NULL, data->delta, &data->delta, &set));
-  PetscCall(PetscOptionsString("-net2as_type", "subdomain construction type", NULL, data->type, data->type, sizeof(data->type), &set));
+  PetscCall(PetscOptionsString("-net2as_part_type", "subdomain partition type", NULL, data->part_type, data->part_type, sizeof(data->part_type), &set));
+  PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -335,7 +340,15 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
 
   // compute some load balancing strategy
   // sd2rank is an assignment of subdomains (indices) to ranks (values)
-  if (rank == 0) PetscCall(net2as_loadbalance_round_robin(comm, sd2gcounts, sd2rank, p));
+  if (rank == 0) {
+    if (strcmp(data->load_type, "rr") == 0)
+      PetscCall(net2as_loadbalance_round_robin(comm, sd2gcounts, sd2rank, p));
+    else if (strcmp(data->load_type, "gr") == 0)
+      PetscCall(net2as_loadbalance_greedy(comm, sd2gcounts, sd2rank, p));
+    else
+      PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE,
+        "unexptected load balancing type '%s', expected one of 'rr', 'gr'", data->load_type);
+  }
   // send this assignment to all ranks
   PetscCallMPI(MPI_Bcast(sd2rank, p, MPIU_INT, 0, comm));
 
@@ -560,12 +573,12 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     "flat size v_sz == %" PetscInt_FMT, data->bs, msize, size);
   size /= 3;
 
-  if (strcmp(data->type, "q1") == 0)
+  if (strcmp(data->part_type, "q1") == 0)
     PetscCall(net2as_cb_q1(data, &coo));
-  else if (strcmp(data->type, "q1") == 0)
+  else if (strcmp(data->part_type, "q1") == 0)
     PetscCall(net2as_cb_alg(data, &coo));
   else
-    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unsupported type '%s', muse be one of 'q1', 'alg'", data->type);
+    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'alg'", data->part_type);
 
   // setup coarse basis
   PetscCall(MatGetType(A, &type));
@@ -583,6 +596,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // setup coarse mat
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->cmat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", data->part_type));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_type: %s\n", data->load_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
@@ -656,7 +671,8 @@ end:
 
 PetscErrorCode PCCreate_Net2AS(PC pc) {
   PC_Net2AS *data;
-  const char* type = "q1";
+  const char* part = "q1";
+  const char* load = "rr";
 
   PetscFunctionBeginUser;
   PetscCall(PetscNew(&data));
@@ -667,7 +683,8 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   data->eps = 1e-10;
   data->mult_bound = 10;
   data->delta = 2;
-  memcpy(data->type, type, strlen(type)+1);
+  memcpy(data->part_type, part, strlen(part)+1);
+  memcpy(data->load_type, load, strlen(load)+1);
 
   pc->ops->apply = PCApply_Net2AS;
   pc->ops->setup = PCSetup_Net2AS;
