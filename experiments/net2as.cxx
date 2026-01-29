@@ -272,7 +272,7 @@ PetscErrorCode net2as_loadbalance(MPI_Comm comm, PetscInt *weights, PetscInt *as
     load += weights[i];
     PetscCall(PetscHeapAdd(loads, r, load));
   }
-  PetscCall(PetscHeapView(loads, NULL)); // DEBUG
+  // PetscCall(PetscHeapView(loads, NULL));
   PetscCall(PetscHeapDestroy(&loads));
   PetscFunctionReturn(0);
 }
@@ -297,17 +297,17 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   PetscCall(PetscCalloc7(p, &sd2lcounts, p, &sd2gcounts, p, &sd2rank,
     size, &rank2scount, size, &rank2rcount, cb->nnz, &coo2rank, 4*size, &reqs));
 
-  PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
+  // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
 
   // compute sizes of local parts of the subdomains
   for (PetscInt i = 0; i < cb->nnz; i++) sd2lcounts[cb->cols[i]]++;
 
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2lcounts", sd2lcounts, p));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2lcounts", sd2lcounts, p));
 
   // compute global sizes of the subdomains
   PetscCallMPI(MPI_Allreduce(sd2lcounts, sd2gcounts, p, MPIU_INT, MPI_SUM, comm));
 
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2gcounts", sd2gcounts, p));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2gcounts", sd2gcounts, p));
 
   // compute some load balancing strategy
   // sd2rank is an assignment of subdomains (indices) to ranks (values)
@@ -315,7 +315,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // send this assignment to all ranks
   PetscCallMPI(MPI_Bcast(sd2rank, p, MPIU_INT, 0, comm));
 
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2rank", sd2rank, p));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2rank", sd2rank, p));
 
   // count how many vertices I will send to each proc
   sd_count = 0;
@@ -328,9 +328,9 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
     rank2scount[sd2rank[i]] += sd2lcounts[i];
   }
 
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd_count", &sd_count, 1));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd_total_size", &sd_total_size, 1));
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rank2scount", rank2scount, size));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd_count", &sd_count, 1));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd_total_size", &sd_total_size, 1));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rank2scount", rank2scount, size));
 
   PetscCall(net2as_alloc_ds(data, sd_count+1));
 
@@ -338,7 +338,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // now rank2rcount specifies from which remote rank the local rank will receive how many vertex, sd_id pairs
   PetscCallMPI(MPI_Alltoall(rank2scount, 1, MPIU_INT, rank2rcount, 1, MPIU_INT, comm));
 
-  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rank2rcount", rank2rcount, size));
+  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "rank2rcount", rank2rcount, size));
 
   // allocate enough space for the sd the local rank owns
   PetscCall(MatCOO_Alloc(sd, sd_total_size));
@@ -358,8 +358,8 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   for (PetscInt i = 0; i < cb->nnz; i++) coo2rank[i] = sd2rank[cb->cols[i]];
   PetscCall(PetscSortIntWithArrayPair(cb->nnz, coo2rank, cb->rows, cb->cols));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "cb sorted by sd2rank\n"));
-  PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "cb sorted by sd2rank\n"));
+  // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
 
   // setup sends
   // corresponding vertex and subdomain ids
@@ -373,14 +373,14 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // then wait on all receives and sends
   PetscCall(MPI_Waitall(4*size, reqs, MPI_STATUSES_IGNORE));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "sd unsorted\n"));
-  PetscCall(MatCOO_View(sd, PETSC_VIEWER_STDOUT_WORLD));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "sd unsorted\n"));
+  // PetscCall(MatCOO_View(sd, PETSC_VIEWER_STDOUT_WORLD));
 
   // sort sd by subdomain indices
   PetscCall(PetscSortIntWithArray(sd->nnz, sd->rows, sd->cols));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "sd sorted by subdom\n"));
-  PetscCall(MatCOO_View(sd, PETSC_VIEWER_STDOUT_WORLD));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "sd sorted by subdom\n"));
+  // PetscCall(MatCOO_View(sd, PETSC_VIEWER_STDOUT_WORLD));
 
   // create IS
   start = 0; // start of contiguous subdomain indices
@@ -390,7 +390,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
     PetscInt *global_vertex_ids = &sd->cols[start];
     while (end < sd->nnz && sd->rows[end] == sd->rows[start])
       end++;
-    PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "is", global_vertex_ids, end-start));
+    // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "is", global_vertex_ids, end-start));
     PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off++]));
     start = end;
   }
@@ -590,7 +590,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     // NOTE: MatCreateSubMatrix creates a submatrix of same type as A, regardless of comm of is,
     //       while MatCreateSubmatrices always creates sequential matrices,
     //       tough it also allocates the output parameter
-    PetscCall(ISView(data->is[i], PETSC_VIEWER_STDOUT_WORLD));
+    // PetscCall(ISView(data->is[i], PETSC_VIEWER_STDOUT_WORLD));
     PetscCall(MatCreateSubMatrices(A, 1, &data->is[i], &data->is[i], MAT_INITIAL_MATRIX, &mat));
     data->mat[i] = *mat;
     PetscCall(PetscFree(mat));
