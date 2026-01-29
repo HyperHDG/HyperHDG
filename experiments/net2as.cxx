@@ -121,6 +121,7 @@ struct PC_Net2AS {
 
   // local datastructures, corresponding to subdomains
   // arrays of length data->sz
+  PetscInt *sd_gids; // local subdomain global ids
   Mat* mat;
   KSP* ksp;
   IS* is;
@@ -130,8 +131,8 @@ struct PC_Net2AS {
 
 PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
   PetscFunctionBegin;
-  PetscCall(PetscMalloc5(sz, &data->ksp, sz, &data->mat, sz, &data->is, sz,
-    &data->sol, sz, &data->sc));
+  PetscCall(PetscMalloc5(sz, &data->ksp, sz, &data->is, sz,
+    &data->sol, sz, &data->sc, sz, &data->sd_gids));
   data->sz = sz;
   PetscFunctionReturn(0);
 }
@@ -139,17 +140,15 @@ PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
 PetscErrorCode PCDestroy_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscFunctionBegin;
-  for (PetscInt i = 0; data->ksp && i < data->sz; i++) {
+  for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(KSPDestroy(data->ksp+i));
-    PetscCall(MatDestroy(data->mat+i));
     PetscCall(VecDestroy(data->sol+i));
-    if (i > 0) {
-      PetscCall(ISDestroy(data->is+i));
-      PetscCall(VecScatterDestroy(data->sc+i));
-    }
+    PetscCall(ISDestroy(data->is+i));
+    PetscCall(VecScatterDestroy(data->sc+i));
   }
+  PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
   PetscCall(MatDestroy(&data->cb));
-  PetscCall(PetscFree5(data->ksp, data->mat, data->is, data->sol, data->sc));
+  PetscCall(PetscFree5(data->ksp, data->is, data->sol, data->sc, data->sd_gids));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -427,9 +426,11 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
     PetscInt *global_vertex_ids = &sd->cols[start];
     while (end < sd->nnz && sd->rows[end] == sd->rows[start])
       end++;
+    data->sd_gids[off] = sd->rows[start];
     // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "is", global_vertex_ids, end-start));
-    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off++]));
+    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, end-start, global_vertex_ids, PETSC_COPY_VALUES, &data->is[off]));
     start = end;
+    off++;
   }
   PetscCheck(off == sd_count, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "detected '%d' subdomains, expected '%d'", off, sd_count);
 
@@ -533,7 +534,7 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo) {
     PetscCall(ISGetIndices(data->is[s], &inds));
     PetscCall(ISGetLocalSize(data->is[s], &sz));
     for (PetscInt i = 0; i < sz; i++)
-      PetscCall(MatCOO_Push(coo, inds[i], s, 1./counts[i]));  // WRONG: in multi proc -> need global ids
+      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[i], 1./counts[i]));
     PetscCall(ISRestoreIndices(data->is[s], &inds));
   }
 
