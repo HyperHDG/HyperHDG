@@ -745,7 +745,7 @@ end:
 PetscErrorCode PCCreate_Net2AS(PC pc) {
   PC_Net2AS *data;
   const char* part = "q1";
-  const char* load = "rr";
+  const char* load = "gr";
 
   PetscFunctionBeginUser;
   PetscCall(PetscNew(&data));
