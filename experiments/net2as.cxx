@@ -221,7 +221,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(ISGetSize(data->types_points, &is_size));
   PetscCall(ISGetLocalSize(data->types_points, &is_local));
 
-  PetscCheck(is_size == n, comm, PETSC_ERR_ARG_SIZ, "types_points size %d != points size %d", is_size, nn);
+  PetscCheck(is_size == n, comm, PETSC_ERR_ARG_SIZ, "types_points size %d != points size %d", is_size, n);
   PetscCheck(is_local == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "local sizes: types_points %d != points %d", is_local, nn);
 
   // is_size is local
@@ -249,7 +249,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(ISRestoreIndices(edges, &ledges));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &data->adj));
   PetscCall(MatSetType(data->adj, MATMPIAIJ));
-  PetscCall(MatSetSizes(data->adj, m, m, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetSizes(data->adj, nn, nn, n, n));
   PetscCall(MatSetOptionsPrefix(data->adj, "adj_"));
   PetscCall(MatSetPreallocationCOO(data->adj, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(data->adj, coo.vals, INSERT_VALUES));
@@ -513,11 +513,13 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningDestroy(&p_ctx));
 
   PetscCall(ISGetIndices(partition, &inds));
+  PetscCall(ISGetIndices(data->types_points, &types));
   PetscCall(ISGetLocalSize(partition, &lsz_part));
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vstart /= 3; vend /= 3;
   PetscCheck(vend-vstart == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_ARG_SIZ,
-    "parallel layout of data->points must match that of the partition");
+    "parallel layout of data->points must match that of the partition, data->points size '%d', "
+    "partition size '%d'", vend-vstart, lsz_part);
   PetscCall(MatCOO_Alloc(coo, lsz_part));
   for (PetscInt i = 0; i < lsz_part; i++)
     if (types[i] == 0) PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
@@ -628,7 +630,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   if (strcmp(data->part_type, "q1") == 0)
     PetscCall(net2as_cb_q1(data, &coo, &sd));
-  else if (strcmp(data->part_type, "q1") == 0)
+  else if (strcmp(data->part_type, "alg") == 0)
     PetscCall(net2as_cb_alg(data, &coo, &sd));
   else
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'alg'", data->part_type);
