@@ -6,9 +6,6 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-g -O0 -fsanitize=address,undefined",
-        "CMAKE_C_FLAGS":   "-g -O0 -fsanitize=address,undefined",
-        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },

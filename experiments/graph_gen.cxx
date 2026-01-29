@@ -64,7 +64,7 @@ PetscErrorCode generate_grid_graph(PetscInt _n, Vec *vpoints, IS *is_edges, IS *
 
   compute_types(points, n*n, edges, m, types_nodes, types_faces);
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n*n, types_nodes, PETSC_COPY_VALUES, is_types_nodes));
-  PetscCall(PetscObjectSetName((PetscObject)*is_types_nodes, "types_nodes"));
+  PetscCall(PetscObjectSetName((PetscObject)*is_types_nodes, "types_points"));
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 2*m, types_faces, PETSC_COPY_VALUES, is_types_faces));
   PetscCall(PetscObjectSetName((PetscObject)*is_types_faces, "types_faces"));
   PetscCall(ISSetBlockSize(*is_types_faces, 2));
