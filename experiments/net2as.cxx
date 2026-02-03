@@ -603,20 +603,14 @@ PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
   PetscFunctionBegin;
   PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
   for (PetscInt i = 0; i < data->sz; i++) {
-    const PetscInt *global;
-    PetscInt *local;
     PetscInt n_global, n_local;
     IS is;
 
-    PetscCall(ISBlockGetLocalSize(data->is[i], &n_global));
-    PetscCall(ISBlockGetIndices(data->is[i], &global));
-
-    PetscCall(PetscMalloc1(n_global, &local));
-    PetscCall(ISGlobalToLocalMappingApply(l2g, IS_GTOLM_DROP, n_global, global, &n_local, local));
+    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &is));
+    PetscCall(ISGetLocalSize(data->is[i], &n_global));
+    PetscCall(ISGetLocalSize(is, &n_local));
     PetscCheck(n_global == n_local, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
       "rank_is local to global mapping inds dropped: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_global, n_local);
-    PetscCall(ISBlockRestoreIndices(data->is[i], &global));
-    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, n_global, local, PETSC_OWN_POINTER, &is));
     PetscCall(ISDestroy(&data->is[i]));
     data->is[i] = is;
   }
