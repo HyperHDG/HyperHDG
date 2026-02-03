@@ -1,5 +1,6 @@
 #include "net2as.hxx"
 #include "prin2.hxx"
+#include "petsc_kahip.h"
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/hashmapi.h>
 #include <petscviewerhdf5.h>
@@ -108,10 +109,10 @@ struct PC_Net2AS {
   char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec points;
-  // types 1 -> dirichlet
+  // types 1 -> dirchlet boundary points
   IS types_points;
-  // dirichlet points
-  IS dirichlet;
+  // boundary points
+  IS boundary;
   // sparse adj matrix representation of the edges in the network
   Mat adj;
 
@@ -231,7 +232,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   for (PetscInt i = 0; i < is_local; i++) {
     if (types[i] != 0) dir[dsize++] = start+i;
   }
-  PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->dirichlet));
+  PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->boundary));
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
   PetscCall(ISCreate(comm, &edges));
@@ -243,10 +244,12 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   mm /= 2;
 
   MatCOO coo;
-  PetscCall(MatCOO_Alloc(&coo, mm));
+  PetscCall(MatCOO_Alloc(&coo, 2*mm));
   PetscCall(ISGetIndices(edges, &ledges));
-  for (PetscInt i = 0; i < mm; i++)
+  for (PetscInt i = 0; i < mm; i++) {
     PetscCall(MatCOO_Push(&coo, ledges[2*i], ledges[2*i+1], 1.));
+    PetscCall(MatCOO_Push(&coo, ledges[2*i+1], ledges[2*i], 1.));
+  }
   PetscCall(ISRestoreIndices(edges, &ledges));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &data->adj));
   PetscCall(MatSetType(data->adj, MATMPIAIJ));
@@ -533,17 +536,23 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   IS partition;
-  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend;
+  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut;
   const PetscInt *inds, *types;
   PetscHMapI counts;
 
   PetscFunctionBegin;
+
+  PetscCall(MatPartitioningRegister("kahip", MatPartitioningCreate_KaHIP));
+
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
   PetscCall(MatPartitioningSetNParts(p_ctx, p));
   PetscCall(MatPartitioningSetFromOptions(p_ctx));
   PetscCall(MatPartitioningApply(p_ctx, &partition));
+  PetscCall(MatPartitioningParmetisGetEdgeCut(p_ctx, &cut));
   PetscCall(MatPartitioningDestroy(&p_ctx));
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_alg:\n  cut: %" PetscInt_FMT "\n", cut));
 
   PetscCall(ISGetIndices(partition, &inds));
   PetscCall(ISGetIndices(data->types_points, &types));
@@ -560,10 +569,13 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
-  PetscCall(MatIncreaseOverlap(data->adj, data->sz, data->is, data->delta));
-  PetscCall(net2as_make_is_blocked(data));
-  PetscCall(net2as_make_rank_is(data, sd));
 
+  // NOTE: could also perform this before partitioning if we set the vertex weights correctly
+  PetscCall(MatZeroRowsColumnsIS(data->adj, data->boundary, 0., NULL, NULL));
+  PetscCall(MatFilter(data->adj, data->eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
+  PetscCall(MatIncreaseOverlap(data->adj, data->sz, data->is, data->delta));
+
+  // NOTE: we could do this via local is without HMap
   new_cap = 0;
   PetscCall(PetscHMapICreate(&counts));
   for (PetscInt s = 0; s < data->sz; s++) {
@@ -587,12 +599,15 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     PetscCall(ISGetLocalSize(data->is[s], &sz));
     for (PetscInt i = 0; i < sz; i++) {
       PetscCall(PetscHMapIGet(counts, inds[i], &count));
-      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[i], 1./count));
+      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./count));
     }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
   }
 
   PetscCall(PetscHMapIDestroy(&counts));
+
+  PetscCall(net2as_make_is_blocked(data));
+  PetscCall(net2as_make_rank_is(data, sd));
 
   PetscFunctionReturn(0);
 }
@@ -665,7 +680,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
-  PetscCall(MatZeroRowsIS(coarse_basis, data->dirichlet, 0, NULL, NULL));
+  PetscCall(MatZeroRowsIS(coarse_basis, data->boundary, 0, NULL, NULL));
   PetscCall(MatFilter(coarse_basis, data->eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
 
