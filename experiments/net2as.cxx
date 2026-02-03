@@ -96,8 +96,8 @@ struct PC_Net2AS {
   PetscInt mult_bound;
   // overlap parameter in number of hops
   PetscInt delta;
-  // part_type one of "q1", "alg"
-  char part_type[10];
+  // cb_type one of "q1", "pu"
+  char cb_type[10];
   // load_type one of "rr", "gr"
   // rr - naive round robin load balancing
   // gr - simplest greedy load balancing
@@ -188,7 +188,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsReal("-net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscCall(PetscOptionsInt("-net2as_mult", "upper bound on the (pointwise) multiplicity of the cover formed by the subdomains", NULL, data->mult_bound, &data->mult_bound, &set));
   PetscCall(PetscOptionsInt("-net2as_delta", "overlap parameters in number of hops", NULL, data->delta, &data->delta, &set));
-  PetscCall(PetscOptionsString("-net2as_part_type", "subdomain partition type", NULL, data->part_type, data->part_type, sizeof(data->part_type), &set));
+  PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -533,7 +533,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
+PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   IS partition;
   PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut;
@@ -552,7 +552,7 @@ PetscErrorCode net2as_cb_alg(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningParmetisGetEdgeCut(p_ctx, &cut));
   PetscCall(MatPartitioningDestroy(&p_ctx));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_alg:\n  cut: %" PetscInt_FMT "\n", cut));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n  cut: %" PetscInt_FMT "\n", cut));
 
   PetscCall(ISGetIndices(partition, &inds));
   PetscCall(ISGetIndices(data->types_points, &types));
@@ -665,12 +665,12 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     "flat size v_sz == %" PetscInt_FMT, data->bs, msize, size);
   size /= 3;
 
-  if (strcmp(data->part_type, "q1") == 0)
+  if (strcmp(data->cb_type, "q1") == 0)
     PetscCall(net2as_cb_q1(data, &coo, &sd));
-  else if (strcmp(data->part_type, "alg") == 0)
-    PetscCall(net2as_cb_alg(data, &coo, &sd));
+  else if (strcmp(data->cb_type, "pu") == 0)
+    PetscCall(net2as_cb_pu(data, &coo, &sd));
   else
-    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'alg'", data->part_type);
+    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'pu'", data->cb_type);
 
   // setup coarse basis
   PetscCall(MatGetType(A, &type));
@@ -687,7 +687,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // setup coarse global data structures
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->cmat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", data->part_type));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_type: %s\n", data->cb_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_type: %s\n", data->load_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
@@ -795,7 +795,7 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   data->eps = 1e-10;
   data->mult_bound = 10;
   data->delta = 2;
-  memcpy(data->part_type, part, strlen(part)+1);
+  memcpy(data->cb_type, part, strlen(part)+1);
   memcpy(data->load_type, load, strlen(load)+1);
 
   pc->ops->apply = PCApply_Net2AS;
