@@ -51,23 +51,16 @@ PetscErrorCode MatPartitioningApply_KaHIP(MatPartitioning part, IS *partition) {
   m = p_xadj[n];
 
   // convert PetscInt to idxtype
-  PetscCheck(sizeof(PetscInt) <= sizeof(idxtype), PETSC_COMM_WORLD, PETSC_ERR_PLIB,
+  PetscCheck(sizeof(PetscInt) <= sizeof(idxtype), PETSC_COMM_SELF, PETSC_ERR_PLIB,
     "ParHIP: sizeof(PetscInt) == %lu must be at most sizeof(idxtype) == %lu", sizeof(PetscInt), sizeof(idxtype));
   PetscCall(PetscMalloc7(n+1, &xadj, m, &adjncy, m, &adjcwgt, n, &parts, n, &p_parts, n, &vtxwgt, comm_size+1, &vtxdist));
   PetscArraycpyCast(xadj, p_xadj, n+1, idxtype, PetscInt);
   PetscArraycpyCast(adjncy, p_adjncy, m, idxtype, PetscInt);
-  if (p_adjcwgt)
-    PetscArraycpyCast(adjcwgt, p_adjcwgt, m, idxtype, PetscInt);
-  else
-    for (PetscInt i = 0; i < m; i++) adjcwgt[i] = 1;
-  if (part->vertex_weights)
-    PetscArraycpyCast(vtxwgt, part->vertex_weights, n, idxtype, PetscInt);
-  else
-    for (PetscInt i = 0; i < n; i++) vtxwgt[i] = 1;
+  (void)p_adjcwgt;
   PetscArraycpyCast(vtxdist, p_vtxdist, comm_size+1, idxtype, PetscInt);
 
   // perform partitioning
-  ParHIPPartitionKWay(vtxdist, xadj, adjncy, vtxwgt, adjcwgt,
+  ParHIPPartitionKWay(vtxdist, xadj, adjncy, NULL, NULL,
     &nparts, &imbalance, suppress, seed, mode, &edgecut, parts, &comm);
 
   // NOTE: narrowing cast is ok as the number of partitions already is a PetscInt
@@ -96,7 +89,7 @@ PetscErrorCode MatPartitioningCreate_KaHIP(MatPartitioning part) {
   PetscCall(PetscNew(&ctx));
   ctx->suppress_output = PETSC_TRUE;
   ctx->seed = 0;
-  ctx->imbalance = 0.3;
+  ctx->imbalance = 0.03;
   ctx->mode = ULTRAFASTMESH; // 0
   part->data         = (void*)ctx;
   part->ops->setfromoptions = MatPartitioningSetFromOptions_KaHIP;
