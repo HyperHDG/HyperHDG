@@ -580,9 +580,8 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   IS partition;
-  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut;
+  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts;
   const PetscInt *inds, *types;
-  PetscHMapI counts;
 
   PetscFunctionBegin;
 
@@ -619,18 +618,19 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatFilter(data->adj, data->eps, /* compress = */ PETSC_TRUE, /* keep = */ PETSC_FALSE));
   PetscCall(MatIncreaseOverlap(data->adj, data->sz, data->is, data->delta));
 
-  // NOTE: we could do this via local is without HMap
+  PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
+  PetscCall(net2as_make_is_local(data, sd));
+
   new_cap = 0;
-  PetscCall(PetscHMapICreate(&counts));
+  PetscCall(ISGetLocalSize(data->rank_is, &new_cap));
+  PetscCall(PetscCalloc1(new_cap, &counts));
+  new_cap = 0;
   for (PetscInt s = 0; s < data->sz; s++) {
-    PetscInt sz, val;
-    PetscCall(ISGetIndices(data->is[s], &inds)); // these will be global indices, not local ones which we need
-    PetscCall(ISGetLocalSize(data->is[s], &sz));
-    for (PetscInt i = 0; i < sz; i++) {
-      PetscCall(PetscHMapIGetWithDefault(counts, inds[i], 0, &val));
-      PetscCall(PetscHMapISet(counts, inds[i], val + 1));
-    }
-    PetscCall(ISRestoreIndices(data->is[s], &inds));
+    PetscInt sz;
+    PetscCall(ISGetIndices(data->local_is[s], &inds));
+    PetscCall(ISGetLocalSize(data->local_is[s], &sz));
+    for (PetscInt i = 0; i < sz; i++) counts[inds[i]]++;
+    PetscCall(ISRestoreIndices(data->local_is[s], &inds));
     new_cap += sz;
   }
 
@@ -638,20 +638,21 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatCOO_Alloc(coo, new_cap));
 
   for (PetscInt s = 0; s < data->sz; s++) {
-    PetscInt sz, count;
+    PetscInt sz, sz2;
+    const PetscInt *inds_l;
+    PetscCall(ISGetIndices(data->local_is[s], &inds_l));
     PetscCall(ISGetIndices(data->is[s], &inds));
     PetscCall(ISGetLocalSize(data->is[s], &sz));
-    for (PetscInt i = 0; i < sz; i++) {
-      PetscCall(PetscHMapIGet(counts, inds[i], &count));
-      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./count));
-    }
+    PetscCall(ISGetLocalSize(data->local_is[s], &sz2));
+    PetscCheck(sz == sz2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local and global is size should be the same, %" PetscInt_FMT " != %" PetscInt_FMT, sz, sz2);
+    for (PetscInt i = 0; i < sz; i++)
+      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./counts[inds_l[i]]));
     PetscCall(ISRestoreIndices(data->is[s], &inds));
+    PetscCall(ISRestoreIndices(data->local_is[s], &inds_l));
   }
 
-  PetscCall(PetscHMapIDestroy(&counts));
+  PetscCall(PetscFree(counts));
 
-  PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-  PetscCall(net2as_make_is_local(data, sd));
   PetscCall(net2as_make_is_blocked(data));
 
   PetscFunctionReturn(0);
