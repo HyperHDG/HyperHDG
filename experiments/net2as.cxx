@@ -372,7 +372,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // send this assignment to all ranks
   PetscCallMPI(MPI_Bcast(sd2rank, p, MPIU_INT, 0, comm));
 
-  // PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2rank", sd2rank, p));
+  PetscCall(PetscPrin2i(PETSC_COMM_WORLD, "sd2rank", sd2rank, p));
 
   // count how many vertices I will send to each proc
   sd_count = 0;
@@ -454,10 +454,10 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
     start = end;
     off++;
   }
-  PetscCheck(off == sd_count, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "detected '%d' subdomains, expected '%d'", off, sd_count);
+  PetscCheck(off == sd_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "detected '%d' subdomains, expected '%d'", off, sd_count);
 
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
-    rank2rcount, rank2scount, coo2rank, reqs));
+    rank2scount, rank2rcount, coo2rank, reqs));
   PetscFunctionReturn(0);
 }
 
@@ -565,6 +565,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningDestroy(&p_ctx));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n  cut: %" PetscInt_FMT "\n", cut));
+
+  PetscCall(ISView(partition, PETSC_VIEWER_STDOUT_WORLD));
 
   PetscCall(ISGetIndices(partition, &inds));
   PetscCall(ISGetIndices(data->types_points, &types));
