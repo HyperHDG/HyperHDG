@@ -133,14 +133,15 @@ struct PC_Net2AS {
   Mat* mat;
   KSP* ksp;
   IS* is;
+  IS* local_is;
   Vec* sol;
   VecScatter* sc;
 };
 
 PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
   PetscFunctionBegin;
-  PetscCall(PetscMalloc5(sz, &data->ksp, sz, &data->is, sz,
-    &data->sol, sz, &data->sc, sz, &data->sd_gids));
+  PetscCall(PetscMalloc6(sz, &data->ksp, sz, &data->is, sz,
+    &data->sol, sz, &data->sc, sz, &data->sd_gids, sz, &data->local_is));
   data->sz = sz;
   PetscFunctionReturn(0);
 }
@@ -165,9 +166,10 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
     PetscCall(KSPDestroy(data->ksp+i));
     PetscCall(VecDestroy(data->sol+i));
     PetscCall(ISDestroy(data->is+i));
+    PetscCall(ISDestroy(data->local_is+i));
   }
   PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
-  PetscCall(PetscFree5(data->ksp, data->is, data->sol, data->sc, data->sd_gids));
+  PetscCall(PetscFree6(data->ksp, data->is, data->sol, data->sc, data->sd_gids, data->local_is));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -629,16 +631,13 @@ PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
   PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscInt n_global, n_local;
-    IS is;
 
     // NOTE: the new IS is not a block-IS
-    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &is));
+    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &data->local_is[i]));
     PetscCall(ISGetLocalSize(data->is[i], &n_global));
-    PetscCall(ISGetLocalSize(is, &n_local));
+    PetscCall(ISGetLocalSize(data->local_is[i], &n_local));
     PetscCheck(n_global == n_local, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
       "rank_is local to global mapping inds dropped: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_global, n_local);
-    PetscCall(ISDestroy(&data->is[i]));
-    data->is[i] = is;
   }
   PetscCall(ISLocalToGlobalMappingDestroy(&l2g));
 
@@ -719,10 +718,10 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &t));
-    PetscCall(VecScatterCreate(data->rank_sol, data->is[i], data->sol[i], NULL, &data->sc[i]));
+    PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
     if (data->print_local) {
       PetscInt local_size;
-      PetscCall(ISGetLocalSize(data->is[i], &local_size));
+      PetscCall(ISGetLocalSize(data->local_is[i], &local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
     }
