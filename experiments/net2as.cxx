@@ -667,12 +667,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     for (PetscInt i = 0; i < sz; i++) {
       PetscInt li = inds_l[i], cb_idx = (data->pux_dim+1)*data->sd_gids[s];
       PetscCall(MatCOO_Push(coo, inds[i], cb_idx, 1./counts[li]));
-      if (data->pux_dim >= 1)
-        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+1, points[3*li]/counts[li]));
-      if (data->pux_dim >= 2)
-        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+2, points[3*li+1]/counts[li]));
-      if (data->pux_dim >= 3)
-        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+3, points[3*li+2]/counts[li]));
+      for (PetscInt j = 0; j < data->pux_dim; j++)
+        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+j+1, points[3*li+j]/counts[li]));
     }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
     PetscCall(ISRestoreIndices(data->local_is[s], &inds_l));
