@@ -500,6 +500,26 @@ PetscErrorCode net2as_make_rank_is(IS *is, PetscInt sz, PetscInt bs, IS *ris) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
+  ISLocalToGlobalMapping l2g;
+
+  PetscFunctionBegin;
+  PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
+  for (PetscInt i = 0; i < data->sz; i++) {
+    PetscInt n_global, n_local;
+
+    // NOTE: the new IS is not a block-IS
+    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &data->local_is[i]));
+    PetscCall(ISGetLocalSize(data->is[i], &n_global));
+    PetscCall(ISGetLocalSize(data->local_is[i], &n_local));
+    PetscCheck(n_global == n_local, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
+      "rank_is local to global mapping inds dropped: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_global, n_local);
+  }
+  PetscCall(ISLocalToGlobalMappingDestroy(&l2g));
+
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscReal h[2], min[2], max[2], eps = data->eps;
   PetscInt vstart, vend, size;
@@ -541,6 +561,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_is_blocked(data->is, data->sz, data->bs));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
+  PetscCall(net2as_make_is_local(data, sd));
 
   PetscFunctionReturn(0);
 }
@@ -620,26 +641,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(net2as_make_is_blocked(data->is, data->sz, data->bs));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
-  ISLocalToGlobalMapping l2g;
-
-  PetscFunctionBegin;
-  PetscCall(ISLocalToGlobalMappingCreateIS(data->rank_is, &l2g));
-  for (PetscInt i = 0; i < data->sz; i++) {
-    PetscInt n_global, n_local;
-
-    // NOTE: the new IS is not a block-IS
-    PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &data->local_is[i]));
-    PetscCall(ISGetLocalSize(data->is[i], &n_global));
-    PetscCall(ISGetLocalSize(data->local_is[i], &n_local));
-    PetscCheck(n_global == n_local, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
-      "rank_is local to global mapping inds dropped: expected %" PetscInt_FMT ", got %" PetscInt_FMT, n_global, n_local);
-  }
-  PetscCall(ISLocalToGlobalMappingDestroy(&l2g));
+  PetscCall(net2as_make_is_local(data, sd));
 
   PetscFunctionReturn(0);
 }
