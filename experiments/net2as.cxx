@@ -477,11 +477,11 @@ PetscErrorCode net2as_make_single_is_blocked(IS *is, PetscInt bs) {
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_make_is_blocked(IS *is, IS *ris, PetscInt sz, PetscInt bs) {
+PetscErrorCode net2as_make_is_blocked(PC_Net2AS *data) {
   PetscFunctionBegin;
-  PetscCall(net2as_make_single_is_blocked(ris, bs));
-  for (PetscInt i = 0; i < sz; i++) {
-    PetscCall(net2as_make_single_is_blocked(is+i, bs));
+  PetscCall(net2as_make_single_is_blocked(&data->rank_is, data->bs));
+  for (PetscInt i = 0; i < data->sz; i++) {
+    PetscCall(net2as_make_single_is_blocked(data->is+i, data->bs));
   }
   PetscFunctionReturn(0);
 }
@@ -570,7 +570,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-  PetscCall(net2as_make_is_blocked(data->is, &data->rank_is, data->sz, data->bs));
+  PetscCall(net2as_make_is_blocked(data));
   PetscCall(net2as_make_is_local(data, sd));
 
   PetscFunctionReturn(0);
@@ -650,7 +650,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscHMapIDestroy(&counts));
 
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-  PetscCall(net2as_make_is_blocked(data->is, &data->rank_is, data->sz, data->bs));
+  PetscCall(net2as_make_is_blocked(data));
   PetscCall(net2as_make_is_local(data, sd));
 
   PetscFunctionReturn(0);
