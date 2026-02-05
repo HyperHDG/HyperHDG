@@ -602,6 +602,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningDestroy(&p_ctx));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n  cut: %" PetscInt_FMT "\n", cut));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pux_dim: %" PetscInt_FMT "\n", data->pux_dim));
 
   PetscCall(ISGetIndices(partition, &inds));
   PetscCall(ISGetIndices(data->types_points, &types));
@@ -652,6 +653,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(VecScatterBegin(sc, data->points, rank_points, INSERT_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterEnd(sc, data->points, rank_points, INSERT_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterDestroy(&sc));
+  PetscCall(ISDestroy(&bis));
   PetscCall(VecGetArray(rank_points, &points));
 
   for (PetscInt s = 0; s < data->sz; s++) {
@@ -663,14 +665,14 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     PetscCall(ISGetLocalSize(data->local_is[s], &sz2));
     PetscCheck(sz == sz2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local and global is size should be the same, %" PetscInt_FMT " != %" PetscInt_FMT, sz, sz2);
     for (PetscInt i = 0; i < sz; i++) {
-      PetscInt li = inds_l[i];
-      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./counts[li]));
+      PetscInt li = inds_l[i], cb_idx = (data->pux_dim+1)*data->sd_gids[s];
+      PetscCall(MatCOO_Push(coo, inds[i], cb_idx, 1./counts[li]));
       if (data->pux_dim >= 1)
-        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li]/counts[li]));
+        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+1, points[3*li]/counts[li]));
       if (data->pux_dim >= 2)
-        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li+1]/counts[li]));
+        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+2, points[3*li+1]/counts[li]));
       if (data->pux_dim >= 3)
-        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li+2]/counts[li]));
+        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+3, points[3*li+2]/counts[li]));
     }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
     PetscCall(ISRestoreIndices(data->local_is[s], &inds_l));
@@ -723,7 +725,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols));
+  PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
