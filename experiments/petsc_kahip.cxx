@@ -73,7 +73,7 @@ PetscErrorCode MatPartitioningApply_KaHIP(MatPartitioning part, IS *partition) {
   // NOTE: narrowing cast is ok as the number of partitions already is a PetscInt
   data->cuts = edgecut;
   PetscArraycpyCast(p_parts, parts, n, PetscInt, idxtype);
-  PetscCall(ISCreateGeneral(comm, n, p_parts, PETSC_OWN_POINTER, partition));
+  PetscCall(ISCreateGeneral(comm, n, p_parts, PETSC_COPY_VALUES, partition));
 
   // NOTE: zeros n
   PetscCall(MatRestoreRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, &p_xadj, &p_adjncy, &done));
