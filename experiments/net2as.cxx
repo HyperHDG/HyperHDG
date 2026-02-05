@@ -96,6 +96,8 @@ struct PC_Net2AS {
   PetscInt mult_bound;
   // overlap parameter in number of hops
   PetscInt delta;
+  // the number of dimension to extend the PU to
+  PetscInt pux_dim;
   // cb_type one of "q1", "pu"
   char cb_type[10];
   // load_type one of "rr", "gr"
@@ -191,6 +193,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsReal("-net2as_eps", "filter tolerance", NULL, data->eps, &data->eps, &set));
   PetscCall(PetscOptionsInt("-net2as_mult", "upper bound on the (pointwise) multiplicity of the cover formed by the subdomains", NULL, data->mult_bound, &data->mult_bound, &set));
   PetscCall(PetscOptionsInt("-net2as_delta", "overlap parameters in number of hops", NULL, data->delta, &data->delta, &set));
+  PetscCall(PetscOptionsInt("-net2as_pux_dim", "number of dimension to extend the pu by", NULL, data->pux_dim, &data->pux_dim, &set));
   PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscOptionsHeadEnd();
@@ -579,9 +582,12 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
 PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
-  IS partition;
+  IS partition, bis;
   PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts;
   const PetscInt *inds, *types;
+  Vec rank_points;
+  VecScatter sc;
+  PetscReal *points;
 
   PetscFunctionBegin;
 
@@ -635,7 +641,18 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   }
 
   PetscCall(MatCOO_Free(coo));
-  PetscCall(MatCOO_Alloc(coo, new_cap));
+  PetscCall(MatCOO_Alloc(coo, new_cap*(data->pux_dim+1)));
+
+  PetscCall(ISGetLocalSize(data->rank_is, &new_cap));
+  PetscCall(ISGetIndices(data->rank_is, &inds));
+  PetscCall(ISCreateBlock(PETSC_COMM_SELF, 3, new_cap, inds, PETSC_COPY_VALUES, &bis));
+  PetscCall(ISRestoreIndices(data->rank_is, &inds));
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, 3*new_cap, &rank_points));
+  PetscCall(VecScatterCreate(data->points, bis, rank_points, NULL, &sc));
+  PetscCall(VecScatterBegin(sc, data->points, rank_points, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(sc, data->points, rank_points, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterDestroy(&sc));
+  PetscCall(VecGetArray(rank_points, &points));
 
   for (PetscInt s = 0; s < data->sz; s++) {
     PetscInt sz, sz2;
@@ -645,12 +662,22 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     PetscCall(ISGetLocalSize(data->is[s], &sz));
     PetscCall(ISGetLocalSize(data->local_is[s], &sz2));
     PetscCheck(sz == sz2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local and global is size should be the same, %" PetscInt_FMT " != %" PetscInt_FMT, sz, sz2);
-    for (PetscInt i = 0; i < sz; i++)
-      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./counts[inds_l[i]]));
+    for (PetscInt i = 0; i < sz; i++) {
+      PetscInt li = inds_l[i];
+      PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], 1./counts[li]));
+      if (data->pux_dim >= 1)
+        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li]/counts[li]));
+      if (data->pux_dim >= 2)
+        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li+1]/counts[li]));
+      if (data->pux_dim >= 3)
+        PetscCall(MatCOO_Push(coo, inds[i], data->sd_gids[s], points[3*li+2]/counts[li]));
+    }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
     PetscCall(ISRestoreIndices(data->local_is[s], &inds_l));
   }
 
+  PetscCall(VecRestoreArray(rank_points, &points));
+  PetscCall(VecDestroy(&rank_points));
   PetscCall(PetscFree(counts));
 
   PetscCall(net2as_make_is_blocked(data));
@@ -814,6 +841,7 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   data->eps = 1e-10;
   data->mult_bound = 10;
   data->delta = 2;
+  data->pux_dim = 0;
   memcpy(data->cb_type, part, strlen(part)+1);
   memcpy(data->load_type, load, strlen(load)+1);
 
