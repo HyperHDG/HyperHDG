@@ -482,6 +482,7 @@ PetscErrorCode net2as_make_is_blocked(PC_Net2AS *data) {
   PetscCall(net2as_make_single_is_blocked(&data->rank_is, data->bs));
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(net2as_make_single_is_blocked(data->is+i, data->bs));
+    PetscCall(net2as_make_single_is_blocked(data->local_is+i, data->bs));
   }
   PetscFunctionReturn(0);
 }
@@ -570,8 +571,8 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-  PetscCall(net2as_make_is_blocked(data));
   PetscCall(net2as_make_is_local(data, sd));
+  PetscCall(net2as_make_is_blocked(data));
 
   PetscFunctionReturn(0);
 }
@@ -650,8 +651,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscHMapIDestroy(&counts));
 
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
-  PetscCall(net2as_make_is_blocked(data));
   PetscCall(net2as_make_is_local(data, sd));
+  PetscCall(net2as_make_is_blocked(data));
 
   PetscFunctionReturn(0);
 }
@@ -721,7 +722,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
 
   // setup local rank data structures -> makes is local
-  PetscCall(net2as_make_is_local(data, &sd));
   PetscCall(ISGetLocalSize(data->rank_is, &size));
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, size, &data->rank_sol));
   PetscCall(VecScatterCreate(gtemp, data->rank_is, data->rank_sol, NULL, &data->rank_sc));
