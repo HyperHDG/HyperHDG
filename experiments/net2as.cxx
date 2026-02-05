@@ -158,6 +158,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   // local rank resources
   PetscCall(VecScatterDestroy(&data->rank_sc));
   PetscCall(VecDestroy(&data->rank_sol));
+  PetscCall(ISDestroy(&data->rank_is));
 
   // local subdomain resources
   for (PetscInt i = 0; i < data->sz; i++) {
@@ -460,31 +461,42 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_make_is_blocked(PC_Net2AS *data) {
+PetscErrorCode net2as_make_is_blocked(IS *is, PetscInt sz, PetscInt bs) {
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < data->sz; i++) {
+  for (PetscInt i = 0; i < sz; i++) {
     const PetscInt *inds;
     PetscInt sz;
-    IS is;
-    PetscCall(ISGetIndices(data->is[i], &inds));
-    PetscCall(ISGetLocalSize(data->is[i], &sz));
-    PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, sz, inds, PETSC_COPY_VALUES, &is));
-    PetscCall(ISRestoreIndices(data->is[i], &inds));
-    PetscCall(ISDestroy(&data->is[i]));
-    data->is[i] = is;
+    IS bis;
+    PetscCall(ISGetIndices(is[i], &inds));
+    PetscCall(ISGetLocalSize(is[i], &sz));
+    PetscCall(ISCreateBlock(PETSC_COMM_SELF, bs, sz, inds, PETSC_COPY_VALUES, &bis));
+    PetscCall(ISRestoreIndices(is[i], &inds));
+    PetscCall(ISDestroy(&is[i]));
+    is[i] = bis;
   }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode net2as_make_rank_is(PC_Net2AS *data, MatCOO *sd) {
-  PetscInt size = sd->nnz, *rank_is;
+PetscErrorCode net2as_make_rank_is(IS *is, PetscInt sz, PetscInt bs, IS *ris) {
+  PetscInt *all, n = 0, nn, off = 0;
+  const PetscInt *inds;
 
   PetscFunctionBegin;
-  PetscCall(PetscMalloc1(sd->nnz, &rank_is));
-  PetscCall(PetscArraycpy(rank_is, sd->cols, sd->nnz));
-  PetscCall(PetscSortRemoveDupsInt(&size, rank_is));
-  PetscCall(ISCreateBlock(PETSC_COMM_SELF, data->bs, size, rank_is, PETSC_COPY_VALUES, &data->rank_is));
-  PetscCall(PetscFree(rank_is));
+  for (PetscInt i = 0; i < sz; i++) {
+    PetscCall(ISBlockGetLocalSize(is[i], &nn));
+    n += nn;
+  }
+  PetscCall(PetscMalloc1(n, &all));
+  for (PetscInt i = 0; i < sz; i++) {
+    PetscCall(ISBlockGetLocalSize(is[i], &nn));
+    PetscCall(ISBlockGetIndices(is[i], &inds));
+    PetscCall(PetscArraycpy(all+off, inds, nn));
+    PetscCall(ISBlockRestoreIndices(is[i], &inds));
+    off += nn;
+  }
+  PetscCall(PetscSortRemoveDupsInt(&off, all));
+  PetscCall(ISCreateBlock(PETSC_COMM_SELF, bs, off, all, PETSC_COPY_VALUES, ris));
+  PetscCall(PetscFree(all));
   PetscFunctionReturn(0);
 }
 
@@ -527,8 +539,8 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(VecRestoreSpan(data->points, vspan));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
-  PetscCall(net2as_make_is_blocked(data));
-  PetscCall(net2as_make_rank_is(data, sd));
+  PetscCall(net2as_make_is_blocked(data->is, data->sz, data->bs));
+  PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
 
   PetscFunctionReturn(0);
 }
@@ -606,8 +618,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(PetscHMapIDestroy(&counts));
 
-  PetscCall(net2as_make_is_blocked(data));
-  PetscCall(net2as_make_rank_is(data, sd));
+  PetscCall(net2as_make_is_blocked(data->is, data->sz, data->bs));
+  PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
 
   PetscFunctionReturn(0);
 }
@@ -621,6 +633,7 @@ PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
     PetscInt n_global, n_local;
     IS is;
 
+    // NOTE: the new IS is not a block-IS
     PetscCall(ISGlobalToLocalMappingApplyIS(l2g, IS_GTOLM_DROP, data->is[i], &is));
     PetscCall(ISGetLocalSize(data->is[i], &n_global));
     PetscCall(ISGetLocalSize(is, &n_local));
