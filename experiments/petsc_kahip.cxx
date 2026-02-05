@@ -1,6 +1,9 @@
 #include <petsc/private/matimpl.h>
 #include <../src/mat/impls/adj/mpi/mpiadj.h>
-#include <KaHIP/interface/kaHIP_interface.h>
+#include <KaHIP/parallel/parallel_src/interface/parhip_interface.h>
+
+#define PetscArraycpyCast(dst, src, n, dsttype, srctype) \
+  do { for (typeof(n) _i = 0; _i < (n); _i++) (dst)[_i] = (dsttype)((srctype*)(src))[_i]; } while (0)
 
 struct MatPartitioning_KaHIP {
   // HACK: this must be at the same byte offset in the struct as the same field in the parmetis struct
@@ -28,26 +31,54 @@ PetscErrorCode MatPartitioningSetFromOptions_KaHIP(MatPartitioning part, PetscOp
 PetscErrorCode MatPartitioningApply_KaHIP(MatPartitioning part, IS *partition) {
   MatPartitioning_KaHIP *data = (MatPartitioning_KaHIP *)part->data;
   Mat            adj;
-  PetscInt       n, *xadj, *adjncy, *adjcwgt, *parts, nparts = part->n, comm_size;
+  PetscInt       n, m, *p_parts;
+  const PetscInt *p_vtxdist, *p_xadj, *p_adjncy, *p_adjcwgt;
   PetscBool      done;
 
+  MPI_Comm comm = PetscObjectComm((PetscObject)part);
+  idxtype *vtxdist, *xadj, *adjncy, *adjcwgt, *parts, *vtxwgt;
+  int seed = (int)data->seed, mode = (int)data->mode, edgecut, nparts = (int)part->n, comm_size;
+  double imbalance = (double)data->imbalance;
+  bool suppress = (bool)data->suppress_output;
+
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)part), &comm_size));
-  PetscCheck(comm_size == 1, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "kahip partitioner expects a single process");
-  PetscCheck(sizeof(PetscInt) == sizeof(int), PETSC_COMM_WORLD, PETSC_ERR_PLIB, "kahip partitioner expects 32-bit PetscInt");
-  PetscCheck(sizeof(PetscReal) == sizeof(double), PETSC_COMM_WORLD, PETSC_ERR_PLIB, "kahip partitioner expects 64-bit PetscReal");
-
+  PetscCallMPI(MPI_Comm_size(comm, &comm_size));
   PetscCall(MatConvert(part->adj, MATMPIADJ, MAT_INITIAL_MATRIX, &adj));
-  adjcwgt = ((Mat_MPIAdj*)adj->data)->values;
+  PetscCall(MatGetOwnershipRanges(adj, &p_vtxdist)); // of size ranks+1
+  PetscCall(MatGetRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, &p_xadj, &p_adjncy, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ failed");
+  p_adjcwgt = ((Mat_MPIAdj*)adj->data)->values;
+  m = p_xadj[n];
 
-  PetscCall(MatGetLocalSize(adj, &n, NULL));
-  PetscCall(PetscMalloc1(n, &parts));
+  // convert PetscInt to idxtype
+  PetscCheck(sizeof(PetscInt) <= sizeof(idxtype), PETSC_COMM_WORLD, PETSC_ERR_PLIB,
+    "ParHIP: sizeof(PetscInt) == %lu must be at most sizeof(idxtype) == %lu", sizeof(PetscInt), sizeof(idxtype));
+  PetscCall(PetscMalloc7(n+1, &xadj, m, &adjncy, m, &adjcwgt, n, &parts, n, &p_parts, n, &vtxwgt, comm_size+1, &vtxdist));
+  PetscArraycpyCast(xadj, p_xadj, n+1, idxtype, PetscInt);
+  PetscArraycpyCast(adjncy, p_adjncy, m, idxtype, PetscInt);
+  if (p_adjcwgt)
+    PetscArraycpyCast(adjcwgt, p_adjcwgt, m, idxtype, PetscInt);
+  else
+    for (PetscInt i = 0; i < m; i++) adjcwgt[i] = 1;
+  if (part->vertex_weights)
+    PetscArraycpyCast(vtxwgt, part->vertex_weights, n, idxtype, PetscInt);
+  else
+    for (PetscInt i = 0; i < n; i++) vtxwgt[i] = 1;
+  PetscArraycpyCast(vtxdist, p_vtxdist, comm_size+1, idxtype, PetscInt);
 
-  PetscCall(MatGetRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, (const PetscInt**)&xadj, (const PetscInt**)&adjncy, &done));
-  kaffpa(&n, part->vertex_weights, (int*)xadj, (int*)adjcwgt, (int*)adjncy, &nparts, &data->imbalance, data->suppress_output, data->seed, data->mode, &data->cuts, parts);
-  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)part), n, parts, PETSC_OWN_POINTER, partition));
+  // perform partitioning
+  ParHIPPartitionKWay(vtxdist, xadj, adjncy, vtxwgt, adjcwgt,
+    &nparts, &imbalance, suppress, seed, mode, &edgecut, parts, &comm);
+
+  // NOTE: narrowing cast is ok as the number of partitions already is a PetscInt
+  data->cuts = edgecut;
+  PetscArraycpyCast(p_parts, parts, n, PetscInt, idxtype);
+  PetscCall(ISCreateGeneral(comm, n, p_parts, PETSC_OWN_POINTER, partition));
+
   // NOTE: zeros n
-  PetscCall(MatRestoreRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, (const PetscInt**)&xadj, (const PetscInt**)&adjncy, &done));
+  PetscCall(MatRestoreRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, &p_xadj, &p_adjncy, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ failed");
+  PetscCall(PetscFree7(xadj, adjncy, adjcwgt, parts, p_parts, vtxwgt, vtxdist));
   PetscCall(MatDestroy(&adj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -66,7 +97,7 @@ PetscErrorCode MatPartitioningCreate_KaHIP(MatPartitioning part) {
   ctx->suppress_output = PETSC_TRUE;
   ctx->seed = 0;
   ctx->imbalance = 0.3;
-  ctx->mode = FAST;
+  ctx->mode = ULTRAFASTMESH; // 0
   part->data         = (void*)ctx;
   part->ops->setfromoptions = MatPartitioningSetFromOptions_KaHIP;
   part->ops->apply   = MatPartitioningApply_KaHIP;
