@@ -654,14 +654,10 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscInt size, msize, n_cols = data->p[0] * data->p[1], n, m;
   Mat coarse_basis, A;
   MatType type;
-  int comm_size;
   MatCOO coo, sd;
   PetscLogDouble t;
 
   PetscFunctionBegin;
-
-  PetscCallMPI(MPI_Comm_size(comm, &comm_size));
-  PetscCheck(n_cols % comm_size == 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "n_cols = %" PetscInt_FMT" must be divisible by MPI_Comm_size = %d", n_cols, comm_size);
 
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
