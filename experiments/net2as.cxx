@@ -582,6 +582,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
 PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
+  MatPartitioningType p_type;
   IS partition, bis;
   PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts;
   const PetscInt *inds, *types;
@@ -599,10 +600,11 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningSetFromOptions(p_ctx));
   PetscCall(MatPartitioningApply(p_ctx, &partition));
   PetscCall(MatPartitioningParmetisGetEdgeCut(p_ctx, &cut));
-  PetscCall(MatPartitioningDestroy(&p_ctx));
-
+  PetscCall(MatPartitioningGetType(p_ctx, &p_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n  cut: %" PetscInt_FMT "\n", cut));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pux_dim: %" PetscInt_FMT "\n", data->pux_dim));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", p_type));
+  PetscCall(MatPartitioningDestroy(&p_ctx));
 
   PetscCall(ISGetIndices(partition, &inds));
   PetscCall(ISGetIndices(data->types_points, &types));
