@@ -5,7 +5,7 @@
 #define PetscArraycpyCast(dst, src, n, dsttype, srctype) \
   do { for (typeof(n) _i = 0; _i < (n); _i++) (dst)[_i] = (dsttype)((srctype*)(src))[_i]; } while (0)
 
-struct MatPartitioning_KaHIP {
+struct MatPartitioning_ParHIP {
   // HACK: this must be at the same byte offset in the struct as the same field in the parmetis struct
   PetscInt cuts;
   PetscInt seed;
@@ -14,22 +14,22 @@ struct MatPartitioning_KaHIP {
   PetscBool suppress_output;
 };
 
-PetscErrorCode MatPartitioningSetFromOptions_KaHIP(MatPartitioning part, PetscOptionItems PetscOptionsObject) {
-  MatPartitioning_KaHIP *ctx = (MatPartitioning_KaHIP*)part->data;
+PetscErrorCode MatPartitioningSetFromOptions_ParHIP(MatPartitioning part, PetscOptionItems PetscOptionsObject) {
+  MatPartitioning_ParHIP *ctx = (MatPartitioning_ParHIP*)part->data;
 
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "KaHIP Partitioning Options");
-  PetscCall(PetscOptionsReal("-kahip_imbalance", "partition imbalance", NULL, ctx->imbalance, &ctx->imbalance, NULL));
-  PetscCall(PetscOptionsInt("-kahip_seed", "random seed", NULL, ctx->seed, &ctx->seed, NULL));
-  PetscCall(PetscOptionsBool("-kahip_suppress_output", "suppress kahip logging", NULL, ctx->suppress_output, &ctx->suppress_output, NULL));
-  PetscCall(PetscOptionsInt("-kahip_mode", "kahip configuration mode", NULL, ctx->mode, &ctx->mode, NULL));
+  PetscOptionsHeadBegin(PetscOptionsObject, "ParHIP Partitioning Options");
+  PetscCall(PetscOptionsReal("-parhip_imbalance", "partition imbalance", NULL, ctx->imbalance, &ctx->imbalance, NULL));
+  PetscCall(PetscOptionsInt("-parhip_seed", "random seed", NULL, ctx->seed, &ctx->seed, NULL));
+  PetscCall(PetscOptionsBool("-parhip_suppress_output", "suppress parhip logging", NULL, ctx->suppress_output, &ctx->suppress_output, NULL));
+  PetscCall(PetscOptionsInt("-parhip_mode", "parhip configuration mode", NULL, ctx->mode, &ctx->mode, NULL));
 
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatPartitioningApply_KaHIP(MatPartitioning part, IS *partition) {
-  MatPartitioning_KaHIP *data = (MatPartitioning_KaHIP *)part->data;
+PetscErrorCode MatPartitioningApply_ParHIP(MatPartitioning part, IS *partition) {
+  MatPartitioning_ParHIP *data = (MatPartitioning_ParHIP *)part->data;
   Mat            adj;
   PetscInt       n, m, *p_parts;
   const PetscInt *p_vtxdist, *p_xadj, *p_adjncy, *p_adjcwgt;
@@ -76,14 +76,14 @@ PetscErrorCode MatPartitioningApply_KaHIP(MatPartitioning part, IS *partition) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatPartitioningDestroy_KaHIP(MatPartitioning part) {
+PetscErrorCode MatPartitioningDestroy_ParHIP(MatPartitioning part) {
   PetscFunctionBegin;
   PetscCall(PetscFree(part->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatPartitioningCreate_KaHIP(MatPartitioning part) {
-  MatPartitioning_KaHIP *ctx;
+PetscErrorCode MatPartitioningCreate_ParHIP(MatPartitioning part) {
+  MatPartitioning_ParHIP *ctx;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&ctx));
@@ -92,9 +92,9 @@ PetscErrorCode MatPartitioningCreate_KaHIP(MatPartitioning part) {
   ctx->imbalance = 0.03;
   ctx->mode = ULTRAFASTMESH; // 0
   part->data         = (void*)ctx;
-  part->ops->setfromoptions = MatPartitioningSetFromOptions_KaHIP;
-  part->ops->apply   = MatPartitioningApply_KaHIP;
-  part->ops->destroy = MatPartitioningDestroy_KaHIP;
+  part->ops->setfromoptions = MatPartitioningSetFromOptions_ParHIP;
+  part->ops->apply   = MatPartitioningApply_ParHIP;
+  part->ops->destroy = MatPartitioningDestroy_ParHIP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

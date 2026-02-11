@@ -8,7 +8,7 @@ add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-secu
 link_libraries(PkgConfig::PETSC)
 
 add_library(prin2 prin2.cxx)
-add_library(net2as net2as.cxx petsc_kahip.cxx)
+add_library(net2as net2as.cxx petsc_parhip.cxx)
 target_link_libraries(net2as PRIVATE prin2 parhip_interface_static)
 
 add_executable(graph_gen graph_gen.cxx)

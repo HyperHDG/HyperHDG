@@ -1,6 +1,6 @@
 #include "net2as.hxx"
 #include "prin2.hxx"
-#include "petsc_kahip.h"
+#include "petsc_parhip.h"
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/hashmapi.h>
 #include <petscviewerhdf5.h>
@@ -591,7 +591,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscFunctionBegin;
 
-  PetscCall(MatPartitioningRegister("kahip", MatPartitioningCreate_KaHIP));
+  PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
 
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
