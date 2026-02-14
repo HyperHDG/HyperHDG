@@ -698,6 +698,8 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscFunctionBegin;
 
   PetscCall(PCDestroy_Net2AS(pc));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCheck(size <= n_cols, comm, PETSC_ERR_ARG_SIZ, "size of comm = %" PetscInt_FMT " must be smaller then number of subdomains = %" PetscInt_FMT, size, n_cols);
   PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(data->points, &size));
@@ -764,6 +766,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       MatInfo info;
       Mat factored;
       PC subpc;
+      PetscLogDouble fill_ratio;
 
       PetscCall(KSPGetPC(data->ksp[i], &subpc));
       PetscCall(PCFactorGetMatrix(subpc, &factored));
@@ -771,11 +774,12 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       nz_mat = (PetscInt)info.nz_used;
       PetscCall(MatGetInfo(factored, MAT_LOCAL, &info));
       nz_fac = (PetscInt)info.nz_used;
+      fill_ratio = (PetscLogDouble)nz_fac / nz_mat;
       PetscCall(ISGetLocalSize(data->local_is[i], &local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", nz_mat));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", nz_fac));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", info.fill_ratio_needed));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", fill_ratio));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
     }
   }
