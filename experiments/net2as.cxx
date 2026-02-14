@@ -271,12 +271,21 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *sol, PetscLogDouble *t) {
+struct Net2AS_SolveInfo {
+  PetscInt size;
+  PetscInt nz_mat;
+  PetscInt nz_fac;
+  PetscLogDouble fill;
+  PetscLogDouble time;
+};
+
+PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *sol, Net2AS_SolveInfo *info) {
   PC subpc;
   PetscLogDouble t0, t1;
   const char* prefix;
+  Mat factored;
+  MatInfo minfo
 
-  PetscCall(PetscTime(&t0));
   PetscFunctionBegin;
   PetscCall(KSPCreate(comm, ksp));
   PetscCall(KSPSetType(*ksp, KSPPREONLY));
@@ -293,10 +302,20 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
 
   PetscCall(MatCreateVecs(*mat, sol, NULL));
   PetscCall(KSPSetOperators(*ksp, *mat, *mat));
+  PetscCall(PetscTime(&t0));
   PetscCall(KSPSetUp(*ksp));
   PetscCall(PetscTime(&t1));
+  if (info) {
+    info->time = t1-t0;
+    PetscCall(MatGetSize(*mat, &info->size, NULL));
+    PetscCall(PCFactorGetMatrix(subpc, &factored));
+    PetscCall(MatGetInfo(*mat, MAT_GLOBAL_SUM, &minfo));
+    info->nz_mat = (PetscInt)minfo.nz_used;
+    PetscCall(MatGetInfo(factored, MAT_LOCAL, &minfo));
+    info->nz_fac = (PetscInt)minfo.nz_used;
+    info->fill = (PetscLogDouble)info->nz_fac / info->nz_mat;
+  }
 
-  *t = t1-t0;
   PetscFunctionReturn(0);
 }
 
@@ -693,7 +712,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   Mat coarse_basis, A;
   MatType type;
   MatCOO coo, sd;
-  PetscLogDouble t;
+  Net2AS_SolveInfo info;
 
   PetscFunctionBegin;
 
@@ -742,11 +761,14 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global_size: %" PetscInt_FMT "\n", m));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global:\n    size: %" PetscInt_FMT "\n", m));
   PetscCall(MatGetSize(data->cmat, &m, &n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n    size: %" PetscInt_FMT "\n", m));
-  PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->cksp, &data->cmat, &data->csol, &t));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", t));
+  PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->cksp, &data->cmat, &data->csol, &info));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    fill: %.5e\n", info.fill));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", info.time));
 
   // setup local subdom mats using the still global is
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
@@ -759,28 +781,14 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // setup local subdom ksp and scatters
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &t));
+    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &info));
     PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
     if (data->print_local) {
-      PetscInt local_size, nz_fac, nz_mat;
-      MatInfo info;
-      Mat factored;
-      PC subpc;
-      PetscLogDouble fill_ratio;
-
-      PetscCall(KSPGetPC(data->ksp[i], &subpc));
-      PetscCall(PCFactorGetMatrix(subpc, &factored));
-      PetscCall(MatGetInfo(data->mat[i], MAT_LOCAL, &info));
-      nz_mat = (PetscInt)info.nz_used;
-      PetscCall(MatGetInfo(factored, MAT_LOCAL, &info));
-      nz_fac = (PetscInt)info.nz_used;
-      fill_ratio = (PetscLogDouble)nz_fac / nz_mat;
-      PetscCall(ISGetLocalSize(data->local_is[i], &local_size));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", local_size));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", nz_mat));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", nz_fac));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", fill_ratio));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", t));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", info.size));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", info.fill));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", info.time));
     }
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));

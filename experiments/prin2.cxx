@@ -98,9 +98,16 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf) {
   PetscViewer viewer = vf->viewer;
+  PetscReal emax, emin;
 
   PetscFunctionBegin;
-  if (it == 0) PetscCall(PetscViewerASCIIPrintf(viewer, "ksp_monitor:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  - it: %3" PetscInt_FMT "\n    rnorm: %.16e\n", it, (double)rnorm));
+  if (it == 0) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "ksp_monitor:\n"));
+    PetscCall(KSPSetComputeSingularValues(ksp, PETSC_TRUE));
+  }
+  PetscCall(KSPComputeExtremeSingularValues(ksp, &emax, &emin));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  - it: %3" PetscInt_FMT "\n", it));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "    rnorm: %.16e\n", (double)rnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "    rcond: %.5e\n", (double)(emax/emin)));
   PetscFunctionReturn(0);
 }
