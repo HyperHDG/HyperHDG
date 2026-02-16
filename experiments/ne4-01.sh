@@ -6,7 +6,7 @@ mkdir -p $OUT_DIR
 
 if [ -z $NOGEN ]; then
   parallel -j 1 --progress --bar --results $OUT.json \
-    'build/rel/experiments/network -plot 0 -net2as_print_local -domain domains/paper-small.geo.h5 -mat_cache output/small-mat.bin -net2as_p {1}' \
+    'build/rel/experiments/network -plot 0 -net2as_print_local -domain domains/paper-small.geo.h5 -mat_cache output/small-mat.bin -net2as_p {1} -net2as_pc_factor_mat_solver_type mumps' \
       ::: 1 2 4 8 16
   echo "gen exit: $?"
   cp $OUT.json{,.$(date +%s)}
