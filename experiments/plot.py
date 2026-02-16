@@ -85,6 +85,7 @@ parser.add_argument("--trans", help="transform input 'f(x),g(y)'")
 parser.add_argument("--ref", help="generate reference triangle 'rate;x0,x1;y0'")
 parser.add_argument("--group0", help="group input data by plot")
 parser.add_argument("--comment", help="place some text in the bottom right corner, like the git hash, date, etc")
+parser.add_argument("--marker", help="set the marker", default="+")
 
 args = parser.parse_args()
 
@@ -110,7 +111,7 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
     for names, group in df0.groupby(args.group_by.split(',')) if args.group_by else [("",df0)]:
         if name0 is not None: names = [name0]+list(names)
         sgroup = group[[args.x, args.y]].sort_values(args.x)
-        plot_func(tx(sgroup[args.x]), ty(sgroup[args.y]), label=fmt_names(names), marker="+")
+        plot_func(tx(sgroup[args.x]), ty(sgroup[args.y]), label=fmt_names(names), marker=args.marker)
 
     if args.ref:
         rate, x, y0 = args.ref.split(';')
