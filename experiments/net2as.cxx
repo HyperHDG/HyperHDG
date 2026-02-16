@@ -266,6 +266,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(MatCOO_Free(&coo));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  filepath: %s\n", data->domain));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  points: %" PetscInt_FMT "\n", n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  edges: %" PetscInt_FMT "\n", m));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -284,7 +285,7 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
   PetscLogDouble t0, t1;
   const char* prefix;
   Mat factored;
-  MatInfo minfo
+  MatInfo minfo;
 
   PetscFunctionBegin;
   PetscCall(KSPCreate(comm, ksp));
@@ -311,7 +312,7 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
     PetscCall(PCFactorGetMatrix(subpc, &factored));
     PetscCall(MatGetInfo(*mat, MAT_GLOBAL_SUM, &minfo));
     info->nz_mat = (PetscInt)minfo.nz_used;
-    PetscCall(MatGetInfo(factored, MAT_LOCAL, &minfo));
+    PetscCall(MatGetInfo(factored, MAT_GLOBAL_SUM, &minfo));
     info->nz_fac = (PetscInt)minfo.nz_used;
     info->fill = (PetscLogDouble)info->nz_fac / info->nz_mat;
   }
