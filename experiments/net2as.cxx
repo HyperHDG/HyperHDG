@@ -141,10 +141,11 @@ struct PC_Net2AS {
 };
 
 PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
+  PetscInt min_sz = PetscMax(1, sz);
   PetscFunctionBegin;
-  PetscCall(PetscMalloc6(sz, &data->ksp, sz, &data->is, sz,
-    &data->sol, sz, &data->sc, sz, &data->sd_gids, sz, &data->local_is));
-  data->sz = sz;
+  PetscCall(PetscMalloc6(min_sz, &data->ksp, min_sz, &data->is, min_sz,
+    &data->sol, min_sz, &data->sc, min_sz, &data->sd_gids, min_sz, &data->local_is));
+  data->sz = min_sz;
   PetscFunctionReturn(0);
 }
 
@@ -479,6 +480,9 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   }
   PetscCheck(off == sd_count, PETSC_COMM_SELF, PETSC_ERR_PLIB, "detected '%d' subdomains, expected '%d'", off, sd_count);
 
+  if (sd_count == 0 && data->sz > 0)
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 0, NULL, PETSC_COPY_VALUES, &data->is[0]));
+
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
     rank2scount, rank2rcount, coo2rank, reqs));
   PetscFunctionReturn(0);
@@ -719,7 +723,6 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheck(size <= n_cols, comm, PETSC_ERR_ARG_SIZ, "size of comm = %" PetscInt_FMT " must be smaller then number of subdomains = %" PetscInt_FMT, size, n_cols);
   PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(data->points, &size));
