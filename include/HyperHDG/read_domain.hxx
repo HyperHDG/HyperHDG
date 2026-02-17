@@ -194,9 +194,15 @@ read_domain_hdf5(const std::string& filename)
   const PetscReal *ra;
   const PetscInt *ia;
   PetscBool has_props;
-  MPI_Comm comm = PETSC_COMM_SELF;
+  // NOTE: HACK: world needs to be equal to HYPERHDG_COMM in prototype.hxx
+  MPI_Comm comm = PETSC_COMM_SELF, world = PETSC_COMM_WORLD;
+  int rank, size;
 
   // TODO: assert PetscInt == HDG index type
+
+  MPI_Comm_rank(world, &rank);
+  MPI_Comm_size(world, &size);
+  if (rank != 0) MPI_Recv(NULL, 0, MPI_INT, rank-1, 0, world, MPI_STATUS_IGNORE);
 
   PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
   PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
@@ -214,6 +220,8 @@ read_domain_hdf5(const std::string& filename)
   PetscCallAbort(comm, VecLoad(points, viewer));
   PetscCallAbort(comm, ISLoad(edges, viewer));
   PetscCallAbort(comm, ISLoad(types_faces, viewer));
+
+  if (rank != size-1) MPI_Send(NULL, 0, MPI_INT, rank+1, 0, world);
 
   PetscCallAbort(comm, ISGetSize(edges, &n_edges));
   PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
