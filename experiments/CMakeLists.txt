@@ -6,6 +6,10 @@ add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-secu
 #######################
 
 link_libraries(PkgConfig::PETSC)
+find_package(HDF5)
+if (HDF5_FOUND)
+  link_libraries(HDF5::HDF5)
+endif()
 
 add_library(prin2 prin2.cxx)
 add_library(net2as net2as.cxx petsc_parhip.cxx)
