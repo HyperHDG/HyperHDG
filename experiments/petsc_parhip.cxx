@@ -1,9 +1,33 @@
 #include <petsc/private/matimpl.h>
-#include <../src/mat/impls/adj/mpi/mpiadj.h>
 #include <KaHIP/parallel/parallel_src/interface/parhip_interface.h>
 
 #define PetscArraycpyCast(dst, src, n, dsttype, srctype) \
   do { for (typeof(n) _i = 0; _i < (n); _i++) (dst)[_i] = (dsttype)((srctype*)(src))[_i]; } while (0)
+
+// HACK: to avoid dependency on the full petsc source tree, include the neccessary header directly
+//       this needs to updated if the struct changes in the petsc source
+// NOTE: this could be fixed if this file was merged into the petsc source
+#include <petsc/private/hashsetij.h>
+typedef struct {
+  PetscHSetIJ ht;
+
+  /*
+     once the matrix is assembled (either by calling MatAssemblyBegin/End() or MatMPIAdjSetPreallocation() or MatCreateMPIAdj()
+     then the data structures below are valid and cannot be changed
+  */
+  PetscInt     nz;
+  PetscInt    *diag;            /* pointers to diagonal elements, if they exist */
+  PetscInt    *i;               /* pointer to beginning of each row */
+  PetscInt    *j;               /* column values: j + i[k] is start of row k */
+  PetscInt    *values;          /* numerical values */
+  PetscBool    useedgeweights;  /* if edge weights are used  */
+  PetscBool    symmetric;       /* user indicates the nonzero structure is symmetric */
+  PetscBool    freeaij;         /* free a, i,j at destroy */
+  PetscBool    freeaijwithfree; /* use free() to free i,j instead of PetscFree() */
+  PetscScalar *rowvalues;       /* scalar work space for MatGetRow() */
+  PetscInt     rowvalues_alloc;
+} Mat_MPIAdj;
+
 
 struct MatPartitioning_ParHIP {
   // HACK: this must be at the same byte offset in the struct as the same field in the parmetis struct
