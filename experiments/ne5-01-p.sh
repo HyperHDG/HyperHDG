@@ -8,6 +8,7 @@ DATA_DIR=.
 DOMAIN="paper-small"
 DOMAIN="-domain $DATA_DIR/domains/$DOMAIN.geo.h5 -mat_cache $DATA_DIR/output/$DOMAIN.bin"
 BIN_DIR=build/rel/experiments
+export OMP_NUM_THREADS=1
 
 parallel -j 1 --progress --bar --results $OUT.json \
   "$BIN_DIR/network -plot 0 $DOMAIN -net2as_p" \
