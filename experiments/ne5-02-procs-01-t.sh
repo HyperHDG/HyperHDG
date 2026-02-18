@@ -1,0 +1,8 @@
+#!/bin/bash
+set -x
+: "${OUT:=${OUT_DIR:=output}/ne5-02-procs}" # set default if unset
+jq -c '.Stdout | {p: .mpi.sz, load_bal: .net2as.load_bal}' $OUT.json
+jq -sc 'map(.Stdout | {p: .mpi.sz, t_t2f}) | sort_by(.p) | .[0].t_t2f as $t2f | .[] | {p, E_t2f: ($t2f / (.t_t2f * .p))}' $OUT.json
+jq -sc 'map(.Stdout | {p: .mpi.sz, t_ksp}) | sort_by(.p) | .[]' $OUT.json
+jq -sc 'map(.Stdout | {p: .mpi.sz, t_ksp}) | sort_by(.p) | .[0].t_ksp as $ksp | .[] | {p, E_ksp: ($ksp / (.t_ksp * .p))}' $OUT.json
+jq -sc 'map(.Stdout | {p: .mpi.sz, t_it: .t_iteration}) | sort_by(.p) | .[0].t_it as $it | .[] | {p, E_it : ($it / (.t_it * .p))}' $OUT.json
