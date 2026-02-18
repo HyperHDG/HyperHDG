@@ -888,6 +888,11 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (!isascii) goto end;
 
+  PetscCall(PetscViewerASCIIPrintf(viewer, "--- COARSE ---\n"));
+  PetscCall(MatView(data->cb, viewer));
+  PetscCall(MatView(data->cmat, viewer));
+  PetscCall(KSPView(data->cksp, viewer));
+
   for (PetscInt i = 0; i < data->sz; i++) {
    PetscCall(PetscViewerASCIIPrintf(viewer, "--- SUB %d ---\n", i));
    PetscCall(MatView(data->mat[i], viewer));
