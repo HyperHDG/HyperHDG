@@ -139,6 +139,8 @@ struct PC_Net2AS {
   IS* local_is;
   Vec* sol;
   VecScatter* sc;
+
+  PetscReal bal_est;
 };
 
 PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
@@ -337,9 +339,10 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
 }
 
 // simplest of all greedy load balancing strategies
-PetscErrorCode net2as_loadbalance_greedy(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count) {
+PetscErrorCode net2as_loadbalance_greedy(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count, PetscReal *bal) {
   int size;
   PetscHeap loads;
+  PetscInt max_load = 0, sum_load = 0;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -351,20 +354,32 @@ PetscErrorCode net2as_loadbalance_greedy(MPI_Comm comm, PetscInt *weights, Petsc
     PetscCall(PetscHeapPop(loads, &r, &load));
     assignments[i] = r;
     load += weights[i];
+    sum_load += weights[i];
+    max_load = PetscMax(max_load, load);
     PetscCall(PetscHeapAdd(loads, r, load));
   }
-  // PetscCall(PetscHeapView(loads, NULL));
+  *bal = (PetscReal)max_load / sum_load * size;
   PetscCall(PetscHeapDestroy(&loads));
   PetscFunctionReturn(0);
 }
 
 // naive round robin scheduling
-PetscErrorCode net2as_loadbalance_round_robin(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count) {
+PetscErrorCode net2as_loadbalance_round_robin(MPI_Comm comm, PetscInt *weights, PetscInt *assignments, PetscInt count, PetscReal *bal) {
   int size;
+  PetscInt *loads, max_load = 0, sum_load = 0;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  for (PetscInt i = 0; i < count; i++) assignments[i] = i % size;
+  PetscCall(PetscMalloc1(size, &loads));
+  for (PetscInt i = 0; i < count; i++) {
+    PetscInt r = i % size;
+    assignments[i] = r;
+    loads[r] += weights[i];
+    max_load = PetscMax(max_load, weights[i]);
+    sum_load += weights[i];
+  }
+  *bal = (PetscReal)max_load / sum_load * size;
+  PetscCall(PetscFree(loads));
   PetscFunctionReturn(0);
 }
 
@@ -403,9 +418,9 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // sd2rank is an assignment of subdomains (indices) to ranks (values)
   if (rank == 0) {
     if (strcmp(data->load_type, "rr") == 0)
-      PetscCall(net2as_loadbalance_round_robin(comm, sd2gcounts, sd2rank, p));
+      PetscCall(net2as_loadbalance_round_robin(comm, sd2gcounts, sd2rank, p, &data->bal_est));
     else if (strcmp(data->load_type, "gr") == 0)
-      PetscCall(net2as_loadbalance_greedy(comm, sd2gcounts, sd2rank, p));
+      PetscCall(net2as_loadbalance_greedy(comm, sd2gcounts, sd2rank, p, &data->bal_est));
     else
       PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE,
         "unexptected load balancing type '%s', expected one of 'rr', 'gr'", data->load_type);
@@ -737,6 +752,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   MatCOO coo, sd;
   Net2AS_SolveInfo info;
   MatInfo mat_info;
+  PetscReal t_max = 0, t_sum = 0, t_loc = 0;
 
   PetscFunctionBegin;
 
@@ -808,6 +824,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   for (PetscInt i = 0; i < data->sz; i++) {
     PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &info));
     PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
+    t_loc += info.time;
     if (data->print_local) {
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", info.size));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
@@ -817,6 +834,10 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     }
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
+  PetscCallMPI(MPI_Reduce(&t_loc, &t_max, 1, MPIU_REAL, MPI_MAX, 0, PETSC_COMM_WORLD));
+  PetscCallMPI(MPI_Reduce(&t_loc, &t_sum, 1, MPIU_REAL, MPI_SUM, 0, PETSC_COMM_WORLD));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_bal:\n    est: %.5e\n    mes: %.5e\n", (double)data->bal_est, (double)t_max / t_sum * size));
 
   PetscCall(MatCOO_Free(&coo));
   PetscCall(MatDestroy(&coarse_basis));
