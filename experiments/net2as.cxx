@@ -736,6 +736,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   MatType type;
   MatCOO coo, sd;
   Net2AS_SolveInfo info;
+  MatInfo mat_info;
 
   PetscFunctionBegin;
 
@@ -781,9 +782,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global:\n    size: %" PetscInt_FMT "\n", m));
+  PetscCall(MatGetInfo(A, MAT_GLOBAL_SUM, &mat_info));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  global:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    size: %" PetscInt_FMT "\n", m));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_mat: %" PetscInt_FMT "\n", (PetscInt)mat_info.nz_used));
   PetscCall(MatGetSize(data->cmat, &m, &n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n    size: %" PetscInt_FMT "\n", m));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    size: %" PetscInt_FMT "\n", m));
   PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->cksp, &data->cmat, &data->csol, &info));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
