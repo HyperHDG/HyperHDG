@@ -4,31 +4,6 @@
 #define PetscArraycpyCast(dst, src, n, dsttype, srctype) \
   do { for (typeof(n) _i = 0; _i < (n); _i++) (dst)[_i] = (dsttype)((srctype*)(src))[_i]; } while (0)
 
-// HACK: to avoid dependency on the full petsc source tree, include the neccessary header directly
-//       this needs to updated if the struct changes in the petsc source
-// NOTE: this could be fixed if this file was merged into the petsc source
-#include <petsc/private/hashsetij.h>
-typedef struct {
-  PetscHSetIJ ht;
-
-  /*
-     once the matrix is assembled (either by calling MatAssemblyBegin/End() or MatMPIAdjSetPreallocation() or MatCreateMPIAdj()
-     then the data structures below are valid and cannot be changed
-  */
-  PetscInt     nz;
-  PetscInt    *diag;            /* pointers to diagonal elements, if they exist */
-  PetscInt    *i;               /* pointer to beginning of each row */
-  PetscInt    *j;               /* column values: j + i[k] is start of row k */
-  PetscInt    *values;          /* numerical values */
-  PetscBool    useedgeweights;  /* if edge weights are used  */
-  PetscBool    symmetric;       /* user indicates the nonzero structure is symmetric */
-  PetscBool    freeaij;         /* free a, i,j at destroy */
-  PetscBool    freeaijwithfree; /* use free() to free i,j instead of PetscFree() */
-  PetscScalar *rowvalues;       /* scalar work space for MatGetRow() */
-  PetscInt     rowvalues_alloc;
-} Mat_MPIAdj;
-
-
 struct MatPartitioning_ParHIP {
   // HACK: this must be at the same byte offset in the struct as the same field in the parmetis struct
   PetscInt cuts;
@@ -56,11 +31,11 @@ PetscErrorCode MatPartitioningApply_ParHIP(MatPartitioning part, IS *partition) 
   MatPartitioning_ParHIP *data = (MatPartitioning_ParHIP *)part->data;
   Mat            adj;
   PetscInt       n, m, *p_parts;
-  const PetscInt *p_vtxdist, *p_xadj, *p_adjncy, *p_adjcwgt;
+  const PetscInt *p_vtxdist, *p_xadj, *p_adjncy;
   PetscBool      done;
 
   MPI_Comm comm = PetscObjectComm((PetscObject)part);
-  idxtype *vtxdist, *xadj, *adjncy, *adjcwgt, *parts, *vtxwgt;
+  idxtype *vtxdist, *xadj, *adjncy, *adjcwgt = NULL, *parts, *vtxwgt;
   int seed = (int)data->seed, mode = (int)data->mode, edgecut, nparts = (int)part->n, comm_size;
   double imbalance = (double)data->imbalance;
   bool suppress = (bool)data->suppress_output;
@@ -71,20 +46,19 @@ PetscErrorCode MatPartitioningApply_ParHIP(MatPartitioning part, IS *partition) 
   PetscCall(MatGetOwnershipRanges(adj, &p_vtxdist)); // of size ranks+1
   PetscCall(MatGetRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, &p_xadj, &p_adjncy, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ failed");
-  p_adjcwgt = ((Mat_MPIAdj*)adj->data)->values;
   m = p_xadj[n];
 
   // convert PetscInt to idxtype
   PetscCheck(sizeof(PetscInt) <= sizeof(idxtype), PETSC_COMM_SELF, PETSC_ERR_PLIB,
     "ParHIP: sizeof(PetscInt) == %lu must be at most sizeof(idxtype) == %lu", sizeof(PetscInt), sizeof(idxtype));
-  PetscCall(PetscMalloc7(n+1, &xadj, m, &adjncy, m, &adjcwgt, n, &parts, n, &p_parts, n, &vtxwgt, comm_size+1, &vtxdist));
+  PetscCall(PetscMalloc6(n+1, &xadj, m, &adjncy, n, &parts, n, &p_parts, n, &vtxwgt, comm_size+1, &vtxdist));
   PetscArraycpyCast(xadj, p_xadj, n+1, idxtype, PetscInt);
   PetscArraycpyCast(adjncy, p_adjncy, m, idxtype, PetscInt);
-  (void)p_adjcwgt;
+  PetscArraycpyCast(vtxwgt, part->vertex_weights, n, idxtype, PetscInt);
   PetscArraycpyCast(vtxdist, p_vtxdist, comm_size+1, idxtype, PetscInt);
 
   // perform partitioning
-  ParHIPPartitionKWay(vtxdist, xadj, adjncy, NULL, NULL,
+  ParHIPPartitionKWay(vtxdist, xadj, adjncy, vtxwgt, adjcwgt,
     &nparts, &imbalance, suppress, seed, mode, &edgecut, parts, &comm);
 
   // NOTE: narrowing cast is ok as the number of partitions already is a PetscInt
@@ -95,7 +69,7 @@ PetscErrorCode MatPartitioningApply_ParHIP(MatPartitioning part, IS *partition) 
   // NOTE: zeros n
   PetscCall(MatRestoreRowIJ(adj, 0, PETSC_FALSE, PETSC_FALSE, &n, &p_xadj, &p_adjncy, &done));
   PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "MatGetRowIJ failed");
-  PetscCall(PetscFree7(xadj, adjncy, adjcwgt, parts, p_parts, vtxwgt, vtxdist));
+  PetscCall(PetscFree6(xadj, adjncy, parts, p_parts, vtxwgt, vtxdist));
   PetscCall(MatDestroy(&adj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
