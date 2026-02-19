@@ -5,6 +5,8 @@ import numpy as np
 import argparse
 import paraview.simple as pv
 import math
+from vtk.numpy_interface import dataset_adapter as dsa
+import vtk
 
 parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
 parser.add_argument("--network", help="input", default="network.vtk")
@@ -16,27 +18,14 @@ parser.add_argument("--data_dim", help="number of components in data, default: 6
                     default=6, type=int)
 args = parser.parse_args()
 
-pipe = pv.OpenDataFile(args.network)
-pipe.UpdatePipeline()
-
-# could also use vtk
-#from vtk.numpy_interface import dataset_adapter as dsa
-#import vtk
-#vtkReader = vtk.vtkUnstructuredGridReader()  # or appropriate reader
-#vtkReader.SetFileName(args.i)
-#vtkReader.Update()
-#data = dsa.WrapDataObject(vtkReader.GetOutput())
-#data.PointData.append(displacements, "displacement")  # displacements shape: (n, 3) for vector
-#from paraview.vtk.numpy_interface import dataset_adapter as dsa
-#tp = pv.TrivialProducer()
-#tp.GetClientSideObject().SetOutput(vtkReader.GetOutput())
-#tp.UpdatePipeline()
-
-n_points = pipe.GetDataInformation().GetNumberOfPoints()
-print("n_points", n_points)
-
 if args.data == "SIN":
   print("NOTE: APPLYING DEBUG SIN DATA")
+
+  pipe = pv.OpenDataFile(args.network)
+  pipe.UpdatePipeline()
+
+  n_points = pipe.GetDataInformation().GetNumberOfPoints()
+  print("n_points", n_points)
 
   bounds = np.array(pipe.GetDataInformation().GetBounds()).reshape(3,2).T
   dims = bounds[1] - bounds[0]
@@ -54,14 +43,26 @@ else:
     print("NOTE: READING DATA FROM STDIN")
     data = np.frombuffer(sys.stdin.buffer.read(), dtype=args.float_t)
   else:
-    data = np.fromfile("solution.bin", dtype=args.float_t)
+    data = np.fromfile(args.data, dtype=args.float_t)
   print(data.shape)
 
-  data = data.reshape(args.data_dim)[:,:3]
-  print(data.shape, n_points)
+  data = data.reshape(-1, args.data_dim)[:,:3]
 
-  pipe = pv.WarpByScalar(Input=pipe)
-  pipe.Scalars = ['POINTS', 'data']
+  reader = vtk.vtkUnstructuredGridReader()
+  reader.SetFileName(args.network)
+  reader.Update()
+
+  n_points = reader.GetOutput().GetNumberOfPoints()
+  print("n_points", n_points)
+
+  wrapped = dsa.WrapDataObject(reader.GetOutput())
+  wrapped.PointData.append(data, "data")
+  pipe = pv.TrivialProducer()
+  pipe.GetClientSideObject().SetOutput(reader.GetOutput())
+  pipe.UpdatePipeline()
+
+  pipe = pv.WarpByVector(Input=pipe)
+  pipe.Vectors = ['POINTS', 'data']
 
 pipe = pv.Show(pipe)
 view = pv.GetActiveViewOrCreate("RenderView")
