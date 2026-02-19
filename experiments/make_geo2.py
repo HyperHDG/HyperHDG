@@ -58,14 +58,14 @@ except FileNotFoundError:
 
 tprint("info", info)
 
-mins = nodes.min(axis=0)
-maxs = nodes.max(axis=0)
+mins = nodes.min(axis=0)[:2]
+maxs = nodes.max(axis=0)[:2]
 dims = maxs - mins
 
 tprint("size", dims)
 
 types_points = np.where(
-  np.any(((nodes - mins) < args.t * dims) | ((maxs - nodes) < args.t * dims), axis=1),
+  np.any(((nodes[:,:2] - mins) < args.t * dims) | ((maxs - nodes[:,:2]) < args.t * dims), axis=1),
   1, 0
 ).astype(np.int32)
 
