@@ -6,32 +6,31 @@ import paraview.simple as pv
 import math
 
 parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
-parser.add_argument("-i", help="input", default="network.vtk")
-parser.add_argument("-o", help="output", default="graph.png")
-parser.add_argument("-n", help="noshow", default=False, action="store_true")
-parser.add_argument("--sin", help="debug sin", default=True, action="store_true")
+parser.add_argument("--network", help="input", default="network.vtk")
+parser.add_argument("--save", help="save to file", default="network.png")
+parser.add_argument("--noshow", help="noshow", default=False, action="store_true")
+parser.add_argument("--data", help="which data to display, one of: binary file, SIN, --")
 args = parser.parse_args()
 
-reader = pv.OpenDataFile(args.i)
-reader.UpdatePipeline()
+pipe = pv.OpenDataFile(args.network)
+pipe.UpdatePipeline()
 
-bounds = np.array(reader.GetDataInformation().GetBounds()).reshape(3,2).T
+bounds = np.array(pipe.GetDataInformation().GetBounds()).reshape(3,2).T
 dims = bounds[1] - bounds[0]
 print(dims)
 
-calc = pv.Calculator(Input=reader)
-calc.ResultArrayName = "result"
-calc.Function = f"sin(coordsX / {dims[0]} * 2 * {math.pi}) * sin(coordsY / {dims[1]} * 2 * {math.pi})"
+if args.data == "SIN":
+  pipe = pv.Calculator(Input=pipe)
+  pipe.ResultArrayName = "result"
+  pipe.Function = f"sin(coordsX / {dims[0]} * 2 * {math.pi}) * sin(coordsY / {dims[1]} * 2 * {math.pi})"
 
-warp = pv.WarpByScalar(Input=calc)
-warp.Scalars = ['POINTS', 'result']
-warp.ScaleFactor = np.max(dims)/10
+  pipe = pv.WarpByScalar(Input=pipe)
+  pipe.Scalars = ['POINTS', 'result']
+  pipe.ScaleFactor = np.max(dims)/10
 
-display = pv.Show(warp)
+pipe = pv.Show(pipe)
 view = pv.GetActiveViewOrCreate("RenderView")
 pv.Render()
 
-display = pv.Show(warp)
-
-if args.o: pv.SaveScreenshot(args.o)
-if not args.n: pv.Interact()
+if args.save: pv.SaveScreenshot(args.save)
+if not args.noshow: pv.Interact()
