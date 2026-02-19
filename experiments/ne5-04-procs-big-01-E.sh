@@ -7,4 +7,4 @@ jq -sc '
   ["t_t2f", "t_ksp", "t_it"] | .[] as $key |
   $all | (.[0][$key]) as $base |
   .[] | {p, stage: $key, E: ($base / (.[$key] * .p))}
-' $OUT.json
+' $OUT.json | experiments/plot.py -x p -y E -g stage --log x
