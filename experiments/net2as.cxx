@@ -296,6 +296,7 @@ struct Net2AS_SolveInfo {
   PetscInt nz_fac;
   PetscLogDouble fill;
   PetscLogDouble time;
+  MatSolverType factor_type;
 };
 
 PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *sol, Net2AS_SolveInfo *info) {
@@ -333,6 +334,7 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
     PetscCall(MatGetInfo(factored, MAT_GLOBAL_SUM, &minfo));
     info->nz_fac = (PetscInt)minfo.nz_used;
     info->fill = (PetscLogDouble)info->nz_fac / info->nz_mat;
+    PetscCall(PCFactorGetMatSolverType(subpc, &info->factor_type));
   }
 
   PetscFunctionReturn(0);
@@ -821,6 +823,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    fill: %.5e\n", info.fill));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", info.time));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    factor_type: %s\n", info.factor_type));
 
   // setup local subdom mats using the still global is
   PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
@@ -842,6 +845,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", info.fill));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", info.time));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      factor_type: %s\n", info.factor_type));
     }
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
