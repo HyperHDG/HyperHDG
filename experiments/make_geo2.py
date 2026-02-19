@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import time
 import argparse
@@ -9,10 +11,10 @@ def tprint(*args, **kwargs):
     print(f"[{time.strftime('%H:%M:%S')}]", *args, **kwargs)
 
 
-parser = argparse.ArgumentParser(description="make_geo by Joseph Holten")
+parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
 parser.add_argument("-i", help="input", default=".")
 parser.add_argument("-o", help="output", default="graph")
-parser.add_argument("-t", help="tolerance to the edg", type=float, default=1e-6)
+parser.add_argument("-t", help="tolerance to the edg", type=float, default=1e-3)
 args = parser.parse_args()
 
 tprint("reading nodes")
@@ -44,21 +46,38 @@ try:
 except FileNotFoundError:
   info = {}
 
+try:
+  with open(args.i + '/units.txt') as f:
+    for unit, value in zip(
+        ["length", "time", "weight"],
+        f.readlines()
+    ):
+      info["unit_"+unit] = value.strip()
+except FileNotFoundError:
+  units = {}
+
 tprint("info", info)
 
 mins = nodes.min(axis=0)
 maxs = nodes.max(axis=0)
 dims = maxs - mins
 
+tprint("size", dims)
+
 types_points = np.where(
-  np.any(((nodes - mins)/dims < args.t) | ((maxs - nodes)/dims < args.t), axis=1),
+  np.any(((nodes - mins) < args.t * dims) | ((maxs - nodes) < args.t * dims), axis=1),
   1, 0
 ).astype(np.int32)
+
+count_dir = types_points.sum()
+frac_dir = count_dir / len(types_points)
+tprint("count dir", count_dir)
+tprint(f"frac dir {frac_dir:.5e}")
 
 types_faces = types_points[edges].astype(np.int32)
 
 tprint("writing h5 file")
-with h5py.File(args.o + ".h5", "w") as f:
+with h5py.File(args.o + ".geo.h5", "w") as f:
     g = f.create_group("domain")
     g.create_dataset("points", data=nodes, compression="gzip")
     g.create_dataset("edges", data=edges, compression="gzip")
