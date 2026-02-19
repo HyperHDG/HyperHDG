@@ -718,16 +718,27 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   for (PetscInt s = 0; s < data->sz; s++) {
     PetscInt sz, sz2;
     const PetscInt *inds_l;
+    PetscReal centroid[3] = {0}, min_sd[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, max_sd[3] = {PETSC_MIN_REAL, PETSC_MIN_REAL, PETSC_MIN_REAL};
     PetscCall(ISGetIndices(data->local_is[s], &inds_l));
     PetscCall(ISGetIndices(data->is[s], &inds));
     PetscCall(ISGetLocalSize(data->is[s], &sz));
     PetscCall(ISGetLocalSize(data->local_is[s], &sz2));
     PetscCheck(sz == sz2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local and global is size should be the same, %" PetscInt_FMT " != %" PetscInt_FMT, sz, sz2);
     for (PetscInt i = 0; i < sz; i++) {
+      for (PetscInt j = 0; j < 3; j++) {
+        PetscReal r = points[3*inds_l[i]+j];
+        centroid[j] += r;
+        min_sd[j] = PetscMin(min_sd[j], r);
+        max_sd[j] = PetscMax(max_sd[j], r);
+      }
+    }
+    for (PetscInt j = 0; j < 3; j++) centroid[j] /= sz;
+
+    for (PetscInt i = 0; i < sz; i++) {
       PetscInt li = inds_l[i], cb_idx = (data->pux_dim+1)*data->sd_gids[s];
       PetscCall(MatCOO_Push(coo, inds[i], cb_idx, 1./counts[li]));
       for (PetscInt j = 0; j < data->pux_dim; j++)
-        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+j+1, points[3*li+j]/counts[li]));
+        PetscCall(MatCOO_Push(coo, inds[i], cb_idx+j+1, (points[3*li+j]-centroid[j])/(max_sd[j]-min_sd[j]) /counts[li]));
     }
     PetscCall(ISRestoreIndices(data->is[s], &inds));
     PetscCall(ISRestoreIndices(data->local_is[s], &inds_l));
