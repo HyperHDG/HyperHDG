@@ -23,9 +23,15 @@ calc = pv.Calculator(Input=reader)
 calc.ResultArrayName = "result"
 calc.Function = f"sin(coordsX / {dims[0]} * 2 * {math.pi}) * sin(coordsY / {dims[1]} * 2 * {math.pi})"
 
-display = pv.Show(calc)
+warp = pv.WarpByScalar(Input=calc)
+warp.Scalars = ['POINTS', 'result']
+warp.ScaleFactor = np.max(dims)/10
+
+display = pv.Show(warp)
 view = pv.GetActiveViewOrCreate("RenderView")
 pv.Render()
+
+display = pv.Show(warp)
 
 if args.o: pv.SaveScreenshot(args.o)
 if not args.n: pv.Interact()
