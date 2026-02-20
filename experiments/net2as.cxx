@@ -299,10 +299,9 @@ struct Net2AS_SolveInfo {
   MatSolverType factor_type;
 };
 
-PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *sol, Net2AS_SolveInfo *info) {
+PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, const char *prefix, KSP *ksp, Mat *mat, Vec *sol, Net2AS_SolveInfo *info) {
   PC subpc;
   PetscLogDouble t0, t1;
-  const char* prefix;
   Mat factored;
   MatInfo minfo;
 
@@ -312,11 +311,10 @@ PetscErrorCode net2as_setup_ds(PC pc, MPI_Comm comm, KSP *ksp, Mat *mat, Vec *so
   PetscCall(KSPGetPC(*ksp, &subpc));
   PetscCall(PCSetType(subpc, PCCHOLESKY));
 
-  PetscCall(PCGetOptionsPrefix(pc, &prefix));
-  PetscCall(KSPSetOptionsPrefix(*ksp, prefix));
-  PetscCall(KSPAppendOptionsPrefix(*ksp, "net2as_"));
-  PetscCall(PCSetOptionsPrefix(subpc, prefix));
-  PetscCall(PCAppendOptionsPrefix(subpc, "net2as_"));
+  PetscCall(KSPSetOptionsPrefix(*ksp, "net2as_"));
+  PetscCall(KSPAppendOptionsPrefix(*ksp, prefix));
+  PetscCall(PCSetOptionsPrefix(subpc, "net2as_"));
+  PetscCall(PCAppendOptionsPrefix(subpc, prefix));
   PetscCall(PCSetFromOptions(subpc));
   PetscCall(KSPSetFromOptions(*ksp));
 
@@ -818,7 +816,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetSize(data->cmat, &m, &n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  coarse:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    size: %" PetscInt_FMT "\n", m));
-  PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, &data->cksp, &data->cmat, &data->csol, &info));
+  PetscCall(net2as_setup_ds(pc, PETSC_COMM_WORLD, "coarse_", &data->cksp, &data->cmat, &data->csol, &info));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    fill: %.5e\n", info.fill));
@@ -836,7 +834,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // setup local subdom ksp and scatters
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
   for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, &data->ksp[i], &data->mat[i], &data->sol[i], &info));
+    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, "", &data->ksp[i], &data->mat[i], &data->sol[i], &info));
     PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
     t_loc += info.time;
     if (data->print_local) {

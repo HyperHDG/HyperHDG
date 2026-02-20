@@ -74,8 +74,6 @@ PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
     char **names;
     char **values;
 
-    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
-
     PetscCall(PetscOptionsLeftGet(NULL, &unused, &names, &values));
     if (unused == 0) goto end;
 
@@ -85,6 +83,7 @@ PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - name: \"%s\"\n    value: \"%s\"\n", names[i], values[i]));
 end:
     PetscCall(PetscOptionsLeftRestore(NULL, &unused, &names, &values));
+    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
     return 0;
 }
 
