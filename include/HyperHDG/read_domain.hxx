@@ -190,9 +190,9 @@ read_domain_hdf5(const std::string& filename)
   PetscViewer viewer;
   Vec points, props;
   IS edges, types_faces;
-  PetscInt n_points, n_edges, n_props, sdim, hydim, propdim;
-  const PetscReal *ra;
-  const PetscInt *ia;
+  PetscInt n_points, n_edges, n_props, sdim, hydim, propdim, ibuf_sz;
+  PetscReal *ra;
+  PetscInt *ibuf, *ia;
   PetscBool has_props;
   // NOTE: HACK: world needs to be equal to HYPERHDG_COMM in prototype.hxx
   MPI_Comm comm = PETSC_COMM_SELF, world = PETSC_COMM_WORLD;
@@ -202,77 +202,108 @@ read_domain_hdf5(const std::string& filename)
 
   MPI_Comm_rank(world, &rank);
   MPI_Comm_size(world, &size);
-  if (rank != 0) MPI_Recv(NULL, 0, MPI_INT, rank-1, 0, world, MPI_STATUS_IGNORE);
 
-  PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
-  PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
+  if (rank == 0) {
+    PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
+    PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
 
-  PetscCallAbort(comm, VecCreate(comm, &points));
-  PetscCallAbort(comm, VecCreate(comm, &props));
-  PetscCallAbort(comm, ISCreate(comm, &edges));
-  PetscCallAbort(comm, ISCreate(comm, &types_faces));
+    PetscCallAbort(comm, VecCreate(comm, &points));
+    PetscCallAbort(comm, VecCreate(comm, &props));
+    PetscCallAbort(comm, ISCreate(comm, &edges));
+    PetscCallAbort(comm, ISCreate(comm, &types_faces));
 
-  PetscCallAbort(comm, PetscObjectSetName((PetscObject)points, "points"));
-  PetscCallAbort(comm, PetscObjectSetName((PetscObject)props, "properties"));
-  PetscCallAbort(comm, PetscObjectSetName((PetscObject)edges, "edges"));
-  PetscCallAbort(comm, PetscObjectSetName((PetscObject)types_faces, "types_faces"));
+    PetscCallAbort(comm, PetscObjectSetName((PetscObject)points, "points"));
+    PetscCallAbort(comm, PetscObjectSetName((PetscObject)props, "properties"));
+    PetscCallAbort(comm, PetscObjectSetName((PetscObject)edges, "edges"));
+    PetscCallAbort(comm, PetscObjectSetName((PetscObject)types_faces, "types_faces"));
 
-  PetscCallAbort(comm, VecLoad(points, viewer));
-  PetscCallAbort(comm, ISLoad(edges, viewer));
-  PetscCallAbort(comm, ISLoad(types_faces, viewer));
+    PetscCallAbort(comm, VecLoad(points, viewer));
+    PetscCallAbort(comm, ISLoad(edges, viewer));
+    PetscCallAbort(comm, ISLoad(types_faces, viewer));
 
-  if (rank != size-1) MPI_Send(NULL, 0, MPI_INT, rank+1, 0, world);
+    PetscCallAbort(comm, ISGetSize(edges, &n_edges));
+    PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
+    n_edges /= hydim;
+    PetscCallAbort(comm, VecGetSize(points, &n_points));
+    PetscCallAbort(comm, VecGetBlockSize(points, &sdim));
+    n_points /= sdim;
 
-  PetscCallAbort(comm, ISGetSize(edges, &n_edges));
-  PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
-  n_edges /= hydim;
-  PetscCallAbort(comm, VecGetSize(points, &n_points));
-  PetscCallAbort(comm, VecGetBlockSize(points, &sdim));
-  n_points /= sdim;
+    PetscCallAbort(comm, PetscViewerHDF5HasDataset(viewer, "properties", &has_props));
+
+    if (has_props) {
+      PetscCallAbort(comm, VecLoad(props, viewer));
+      PetscCallAbort(comm, VecGetSize(props, &n_props));
+      PetscCallAbort(comm, VecGetBlockSize(props, &propdim));
+      n_props /= propdim;
+    } else {
+      n_props = propdim = 0;
+    }
+  }
+
+  // TODO: dont ignore all mpi errors
+
+  MPI_Bcast(&n_edges,  1, MPIU_INT, 0, PETSC_COMM_WORLD);
+  MPI_Bcast(&hydim,     1, MPIU_INT, 0, PETSC_COMM_WORLD);
+  MPI_Bcast(&n_points, 1, MPIU_INT, 0, PETSC_COMM_WORLD);
+  MPI_Bcast(&sdim,     1, MPIU_INT, 0, PETSC_COMM_WORLD);
+  MPI_Bcast(&n_props,  1, MPIU_INT, 0, PETSC_COMM_WORLD);
+  MPI_Bcast(&propdim,  1, MPIU_INT, 0, PETSC_COMM_WORLD);
+
+  if (rank != 0) {
+    PetscCallAbort(comm, VecCreateSeq(comm, n_points*sdim, &points));
+    PetscCallAbort(comm, VecCreateSeq(comm, n_props*propdim, &props));
+  }
+
+
+  ibuf_sz = n_edges*hydim;
+  PetscCallAbort(comm, PetscMalloc1(ibuf_sz, &ibuf));
+
   // TODO: assert bs == point_t::size()
 
   DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
     domain_info(n_points, n_edges, n_points, n_points);
 
-  PetscCallAbort(comm, VecGetArrayRead(points, &ra));
+  PetscCallAbort(comm, VecGetArray(points, &ra));
+  MPI_Bcast(ra, n_points*sdim, MPIU_REAL, 0, PETSC_COMM_WORLD);
   memcpy((void*)domain_info.points.data(), ra, n_points*sdim*sizeof(PetscReal));
-  PetscCallAbort(comm, VecRestoreArrayRead(points, &ra));
+  PetscCallAbort(comm, VecRestoreArray(points, &ra));
 
-  PetscCallAbort(comm, ISGetIndices(edges, &ia));
+  if (rank == 0) PetscCallAbort(comm, ISGetIndices(edges, (const PetscInt**)&ia));
+  else ia = ibuf;
+  MPI_Bcast(ia, n_edges*hydim, MPIU_INT, 0, PETSC_COMM_WORLD);
   memcpy((void*)domain_info.hyNodes_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
   memcpy((void*)domain_info.points_hyEdge.data(),  ia, n_edges*hydim*sizeof(PetscInt));
-  PetscCallAbort(comm, ISRestoreIndices(edges, &ia));
+  if (rank == 0) PetscCallAbort(comm, ISRestoreIndices(edges, (const PetscInt**)&ia));
 
-  PetscCallAbort(comm, ISGetIndices(types_faces, &ia));
+  if (rank == 0) PetscCallAbort(comm, ISGetIndices(types_faces, (const PetscInt**)&ia));
+  else ia = ibuf;
+  MPI_Bcast(ia, n_edges*hydim, MPIU_INT, 0, PETSC_COMM_WORLD);
   memcpy((void*)domain_info.hyFaces_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
-  PetscCallAbort(comm, ISRestoreIndices(types_faces, &ia));
+  if (rank == 0) PetscCallAbort(comm, ISRestoreIndices(types_faces, (const PetscInt**)&ia));
 
   // props
-  PetscCallAbort(comm, PetscViewerHDF5HasDataset(viewer, "properties", &has_props));
-  if (!has_props) goto end;
-
-  PetscCallAbort(comm, VecLoad(props, viewer));
-  PetscCallAbort(comm, VecGetSize(props, &n_props));
-  PetscCallAbort(comm, VecGetBlockSize(props, &propdim));
-  n_props /= propdim;
   // TOOD: assert n_props == n_edges
+
+  if (n_props == 0) goto end;
 
   domain_info.hyEdge_properties.resize(n_props);
   domain_info.n_properties = propdim;
-  PetscCallAbort(comm, VecGetArrayRead(props, &ra));
+  PetscCallAbort(comm, VecGetArray(props, &ra));
+  MPI_Bcast(ra, n_points*propdim, MPIU_REAL, 0, PETSC_COMM_WORLD);
   for (PetscInt i = 0; i < n_props; i++) {
     domain_info.hyEdge_properties[i].resize(propdim);
     memcpy(domain_info.hyEdge_properties[i].data(),
               ra + i*propdim,
               propdim*sizeof(PetscReal));
   }
-  PetscCallAbort(comm, VecRestoreArrayRead(props, &ra));
+  PetscCallAbort(comm, VecRestoreArray(props, &ra));
 
 end:
   VecDestroy(&points);
   VecDestroy(&props);
   ISDestroy(&edges);
   ISDestroy(&types_faces);
+  PetscCallAbort(comm, PetscFree(ibuf));
   return domain_info;
 }
 #endif
