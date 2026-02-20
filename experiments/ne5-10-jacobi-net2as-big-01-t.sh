@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
-: "${OUT:=${OUT_DIR:=output}/ne5-09-jacobi-net2as}" # set default if unset
-jq -c ' .Stdout
+: "${OUT:=${OUT_DIR:=output}/ne5-10-jacobi-net2as-big}" # set default if unset
+jq -c '.Stdout
   | .net2as.sz as $p
   | {"net2as": "cg+as", "jacobi": "cg+jacobi"}[.pc_type] as $type
   | if .net2as.sz == 1 then "direct" else $type end as $type
