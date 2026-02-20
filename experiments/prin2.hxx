@@ -17,4 +17,8 @@ PetscErrorCode PetscPrin2Options();
 PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span);
 // must be called after each VecGetSpan(x, span)
 PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span);
+
+struct KSPMonitorYAML_Ctx {
+  PetscLogDouble t0;
+};
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf);

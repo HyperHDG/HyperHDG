@@ -2,6 +2,7 @@
 
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;
 static PetscLogDouble PETSC_PRIN2_TIMER = 0;
+static PetscLogDouble PETSC_PRIN2_LAST_T = 0;
 static PetscInt PETSC_PRIN2_STAGE = 0;
 static const char* PETSC_PRIN2_STAGE_NAME = "";
 
@@ -18,8 +19,14 @@ PetscErrorCode PRIN2SP() {
   PetscLogDouble time;
   PetscCall(PetscLogStagePop());
   PetscCall(PetscTime(&time));
+  PETSC_PRIN2_LAST_T = time-PETSC_PRIN2_TIMER;
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_%s: %.5e\n",
-    PETSC_PRIN2_STAGE_NAME, (time-PETSC_PRIN2_TIMER)));
+    PETSC_PRIN2_STAGE_NAME, PETSC_PRIN2_LAST_T));
+  return 0;
+}
+
+PetscErrorCode PRIN2SP(PetscLogDouble *t) {
+  *t = PETSC_PRIN2_LAST_T;
   return 0;
 }
 
@@ -98,15 +105,19 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf) {
   PetscViewer viewer = vf->viewer;
+  KSPMonitorYAML_Ctx *ctx = (KSPMonitorYAML_Ctx*)vf->data;
   PetscReal emax, emin;
+  PetscLogDouble t1;
 
   PetscFunctionBegin;
   if (it == 0) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "ksp_monitor:\n"));
     PetscCall(KSPSetComputeSingularValues(ksp, PETSC_TRUE));
   }
+  PetscCall(PetscTime(&t1));
   PetscCall(KSPComputeExtremeSingularValues(ksp, &emax, &emin));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  - it: %3" PetscInt_FMT "\n", it));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "    time: %.16e\n", (double)(t1-ctx->t0)));
   PetscCall(PetscViewerASCIIPrintf(viewer, "    rnorm: %.16e\n", (double)rnorm));
   PetscCall(PetscViewerASCIIPrintf(viewer, "    rcond: %.5e\n", (double)(emax/emin)));
   PetscFunctionReturn(0);

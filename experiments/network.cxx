@@ -116,9 +116,12 @@ int main(int argc, char **argv) {
     PetscReal rnorm;
     PetscBool have_cache;
     PetscBool mat_only = PETSC_FALSE;
+    PetscBool ksp_monitor_yaml = PETSC_FALSE;
     std::span<PetscReal> span;
     char lsol[10] = "timo";
     HDGBase* hdg = NULL;
+    KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
+    const char *pc_type;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# ------- " __FILE__ " -------\n"));
@@ -135,6 +138,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     PetscCall(PetscOptionsBool("-mat_coo_off_proc", "print memory stats in yaml", NULL, mat_coo_off_proc, &mat_coo_off_proc, &is_set));
+    PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -155,9 +159,10 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mpi:\n  sz: %" PetscInt_FMT "\n", comm_size));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  names:\n"));
-    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - %s\n", proc_name));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  names: ["));
+    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%s, ", proc_name));
     PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
 
     if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
@@ -177,8 +182,10 @@ int main(int argc, char **argv) {
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
-    PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", NULL));
+    PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", &ksp_monitor_yaml_ctx));
     PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(PCGetType(pc, &pc_type));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
 
     bs = hdg->n_dofs_per_node();
     N = hdg->size_of_system();
@@ -228,10 +235,6 @@ int main(int argc, char **argv) {
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
 
-    PRIN2S(s_ksp);
-    PetscCall(KSPSetUp(ksp));
-    PRIN2SP();
-
     if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
 
     PetscCall(VecScatterCreateToZero(rhs, &scatter, &rhs0));
@@ -247,6 +250,12 @@ int main(int argc, char **argv) {
     PetscCall(VecScatterEnd(scatter, rhs0, rhs, INSERT_VALUES, SCATTER_REVERSE));
 
     PetscCall(VecScale(rhs, -1.));
+
+    PetscTime(&ksp_monitor_yaml_ctx.t0);
+
+    PRIN2S(s_ksp);
+    PetscCall(KSPSetUp(ksp));
+    PRIN2SP();
 
     PRIN2S(s_it);
     PetscCall(KSPSolve(ksp, rhs, rhs));
