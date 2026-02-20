@@ -69,6 +69,26 @@ PetscErrorCode PCNet2ASVisCoarse(PC pc, HDGBase* hdg, const char* name) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
+    PetscInt unused;
+    char **names;
+    char **values;
+
+    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
+
+    PetscCall(PetscOptionsLeftGet(NULL, &unused, &names, &values));
+    if (unused == 0) goto end;
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING! There are options you set that were not used!\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "options_left:\n"));
+    for (PetscInt i = 0; i < unused; i++)
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - name: \"%s\"\n    value: \"%s\"\n", names[i], values[i]));
+end:
+    PetscCall(PetscOptionsLeftRestore(NULL, &unused, &names, &values));
+    return 0;
+}
+
+
 int main(int argc, char **argv) {
     int rank, comm_size, proc_name_len;
     PetscReal rtol = 1e-10;
@@ -253,6 +273,8 @@ end:
       PetscCall(PetscMemoryGetMaximumUsage(&mem_max));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mem_max: %.5e\n", mem_max));
     }
+
+    PetscCall(PetscOptionsLeftYAML(NULL));
 
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
