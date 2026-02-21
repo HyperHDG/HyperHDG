@@ -8,4 +8,4 @@ jq -c '.Stdout
   | .ksp_monitor[]
   | {p: $p // 1, type: $type, time, rnorm}
 ' $OUT.json \
-  | experiments/plot.py -x time -y rnorm -g type --log xy --marker '' --save $OUT.png,$OUT.pgf --ylabel 'rel. residual'
+  | experiments/plot.py -x time -y rnorm -g type --log y --marker '' --save $OUT.png,$OUT.pgf --ylabel 'rel. residual'
