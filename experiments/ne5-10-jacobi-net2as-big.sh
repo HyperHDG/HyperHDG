@@ -13,7 +13,7 @@ MUMPS="-net2as_pc_factor_mat_solver_type mumps"
 export OMP_NUM_THREADS=1
 
 parallel --progress --bar --results $OUT.json \
-  "$BIN_DIR/network $DOMAIN -ksp_monitor_yaml -pc_type {1} -net2as_p {2} -ksp_rtol 1e-3" \
+  "$BIN_DIR/network $DOMAIN -ksp_monitor_yaml -pc_type {1} -net2as_p {2}" \
   ::: jacobi net2as :::+ '' 24
 echo "gen exit: $?"
 yq -i '.Stdout |= from_yaml' $OUT.json
