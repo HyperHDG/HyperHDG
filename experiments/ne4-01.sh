@@ -12,8 +12,8 @@ if [ -z $NOGEN ]; then
   cp $OUT.json{,.$(date +%s)}
 fi
 [ -z $NOPLOT ] && yq -I0 -o=json '.Stdout | from_yaml | .net2as | .sz as $sz | .local.[] | {"n": .size, "t": .time, "p": $sz}' output/ne4-01.json \
-    | experiments/plot.py -f json --scatter -x n -y t -g p --save $OUT-a.png $PLOTARGS --log xy --ref "1;5e2,2e3;6e-4"
+    | experiments/plot.py -f json --scatter -x n -y t -g p --save $OUT-a.png,$OUT-a.pgf $PLOTARGS --log xy --ref "1;5e2,2e3;6e-4"
 [ -z $NOPLOT ] && yq -I0 -o=json '.Stdout | from_yaml | .net2as | .sz as $sz | .local.[] | {"n": .size, "fill": .fill, "p": $sz}' output/ne4-01.json \
     | experiments/plot.py -f json --scatter -x n -y fill -g p --save $OUT-b.png $PLOTARGS --log xy
 [ -z $NOPLOT ] && yq -I0 -o=json '.Stdout | from_yaml | {"p": .net2as.sz, "t": .t_ksp}' output/ne4-01.json \
-    | experiments/plot.py -f json -x p -y t --save $OUT-c.png $PLOTARGS --log xy
+    | experiments/plot.py -f json -x p -y t --save $OUT-c.png,$OUT-c.pgf $PLOTARGS --log xy
