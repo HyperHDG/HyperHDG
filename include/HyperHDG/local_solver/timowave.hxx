@@ -230,6 +230,9 @@ class TimoshenkoBeam
    ************************************************************************************************/
   struct data_type
   {
+    SmallVec<n_shape_fct_, lSol_float_t> u_old, flux_old, r_old, rflux_old;
+    SmallVec<n_shape_fct_*hyEdge_dimT, lSol_float_t> n_old, nflux_old, m_old, mflux_old;
+    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> n_boundary_flux_old, m_boundary_flux_old;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -327,7 +330,7 @@ class TimoshenkoBeam
   /*!***********************************************************************************************
    * \brief   Number of (local) degrees of freedom per hyperedge.
    ************************************************************************************************/
-  static constexpr unsigned int n_loc_dofs_ = 4 * space_dim * n_shape_fct_;
+  static constexpr unsigned int n_loc_dofs_ = 6 * space_dim * n_shape_fct_;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    *
@@ -728,10 +731,11 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<2 * space_dim, lSol_float_t> extra_coeffs(1.);
+  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
 
   if (hyper_edge.geometry.has_extra_data())
   {
+    // HACK: TODO: read C_r, C_u from file!!!
     auto extra_data = hyper_edge.geometry.extra_data();
     // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
     // (n_11,n_12,n_13) : normal 1
@@ -799,7 +803,11 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           normal_int_vec[0] - grad_int_vec[0];
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
                   (2 * space_dim + dim) * n_shape_fct_ + j) += tau_ * face_integral;
+
+        local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
+                  (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / extra_coeffs[2*space_dim+dim];
       }
+
 
       // Consider the cross product
       local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
