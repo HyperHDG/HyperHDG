@@ -18,7 +18,7 @@ using HDGWave = GlobalLoop::Hyperbolic<
   Topology::Cubic<space_dim, space_dim>,
   Geometry::UnitCube<space_dim, space_dim, PetscReal>,
   NodeDescriptor::Cubic<space_dim, space_dim>,
-  LocalSolver::Timowave<space_dim, poly_deg, 2*poly_deg, TestWave1, PetscReal>
+  LocalSolver::TimoshenkoWave<space_dim, poly_deg, 2*poly_deg, TestWave1, PetscReal>
 >;
 
 // hdg must be deallocated with `delete`

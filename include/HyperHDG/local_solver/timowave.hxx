@@ -1,5 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+// TODO: write the integrator function where the func can be vector valued in diff wave!! -> andreas
+
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
@@ -222,7 +224,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = TimoschenkoBeamParametersDefault,
           typename lSol_float_t = double>
-class TimoshenkoBeam
+class TimoshenkoWave
 {
  public:
   /*!***********************************************************************************************
@@ -230,9 +232,7 @@ class TimoshenkoBeam
    ************************************************************************************************/
   struct data_type
   {
-    SmallVec<n_shape_fct_, lSol_float_t> u_old, flux_old, r_old, rflux_old;
-    SmallVec<n_shape_fct_*hyEdge_dimT, lSol_float_t> n_old, nflux_old, m_old, mflux_old;
-    SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> n_boundary_flux_old, m_boundary_flux_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -349,6 +349,11 @@ class TimoshenkoBeam
    ************************************************************************************************/
   const lSol_float_t tau_;
 
+  const lSol_float_t delta_t_;
+  const lSol_float_t theta_;
+  const lSol_float_t theta_t_;
+  const lSol_float_t theta_t1_;
+
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
     TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT>>,
@@ -365,7 +370,53 @@ class TimoshenkoBeam
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  TimoshenkoBeam(const constructor_value_type& tau = 1.) : tau_(tau) {}
+  // NOTE: tau, theta, delta_t
+  TimoshenkoWave(const constructor_value_type& vals = std::vector(3, 1.)) : tau_(vals[0]),
+    theta_(vals[1]), delta_t_(vals[2]), theta_t_(vals[1]/vals[2]), theta_t1_((1-vals[2])/vals[1]) {}
+
+  template <typename point_t, typename geom_t,
+            return_t fun(const point_t&, const point_t&, const param_t),
+            typename smallVec_t = point_t,
+            unsigned int n_comps = 3>
+  static std::array<return_t, n_comps> integrate_vol_phivecfunccomp_beam_avg(const unsigned int i,
+                                                                         std::array<unsigned int, n_comps> comps, geom_t& geom, const param_t time)
+  {
+    std::array<return_t, n_comps> ret;
+    for (unsigned int i = 0; i < n_comps; i++) {
+      ret[i] = theta_ * integrator::template integrate_vol_phivecfunccomp<
+        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[i], hyper_edge.geometry,
+                                                                         time);
+      ret[i] += (1-theta_) * integrator::template integrate_vol_phivecfunccomp<
+        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[i], hyper_edge.geometry,
+                                                                         time-delta_t_);
+
+    }
+    return ret;
+  }
+
+  template <typename point_t,
+            typename geom_t,
+            return_t fun(const point_t&, const point_t&, const param_t),
+            typename smallVec_t = point_t,
+            unsigned int n_comps = 3>
+  static return_t integrate_bdr_phivecfunccomp_beam_avg(const unsigned int i,
+                                               const unsigned int bdr,
+                                               std::array<unsigned int, n_comps> comps,
+                                               geom_t& geom,
+                                               const param_t time = 0.)
+  {
+   std::array<return_t, n_comps> ret;
+   for (unsigned int i = 0; i < n_comps; i++) {
+      ret[i] = theta_ * integrator::template integrate_bdr_phivecfunccomp<point_t, geom_t, fun, smallVec_t>(
+                 i, bdr, comps[i], geom, time);
+      ret[i] += (1-theta_) * integrator::template integrate_bdr_phivecfunccomp<point_t, geom_t, fun, smallVec_t>(
+                 i, bdr, comps[i], geom, time-delta_);
+
+   }
+
+    return ret;
+  }
+
 
   template <typename hyEdgeT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix(
@@ -707,7 +758,46 @@ class TimoshenkoBeam
 
     return result;
   }
-};  // end of class LengtheningBernoulliBendingBeam
+
+  template <class hyEdgeT>
+  void set_data(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const
+  {
+    for (unsigned int i = 0; i < n_shape_fct_; i++) {
+      for (unsigned int j = 0; j < n_shape_fct_; j++) {
+        SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
+            integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+              decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
+
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        {
+          grad_int_vec -= integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+            i, j, face, hyper_edge.geometry)* hyper_edge.geometry.local_normal(face);
+        }
+
+        for (unsigned int dim = 0; dim < space_dim; dim++) {
+          flux_u[dim*n_shape_fct + i] += grad_int_vec[0] * (1-theta_t_)
+            * n_old[dim*n_shape_fct_ +j];
+          flux_r[dim*n_shape_fct + i] += grad_int_vec[0] * (1-theta_t_)
+            * m_old[dim*n_shape_fct_ +j];
+        }
+
+        // Consider the cross product
+        flux_u[(3 * space_dim + 2) * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_t_);
+        flux_r[(3 * space_dim + 1) * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_t_);
+      }
+    }
+  }
+
+  template <class hyEdgeT, typename SmallMatT>
+  SmallMatT& make_initial(SmallMatT& lambda_values,
+                          hyEdgeT& hyper_edge,
+                          const lSol_float_t time = 0.) const
+  {
+  }
+};  // end of class LengtheningBernoulliBendingWave
 
 // -------------------------------------------------------------------------------------------------
 // assemble_loc_matrix
@@ -721,10 +811,10 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_loc_matrix(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -793,6 +883,8 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
       }
 
+      //TODO: mult by theta
+
       for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
@@ -806,6 +898,10 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
         local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
                   (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / extra_coeffs[2*space_dim+dim];
+        local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
+                  (2 * space_dim + dim) * n_shape_fct_ + j) -= vol_integral / delta_t_;
+        local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
+                  (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / delta_t_;
       }
 
 
@@ -832,10 +928,10 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
@@ -878,6 +974,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 // assemble_rhs_from_global_rhs
 // -------------------------------------------------------------------------------------------------
 
+
 template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
           unsigned int poly_deg,
@@ -886,104 +983,77 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim) const
+TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+// NOTE: dim unncessary
+  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   // constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
+  std::array<lSol_float_t, 3> integrals;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[2 * space_dim * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
+    // distributed loads
+    // f
+    integrals = integrator::template integrate_vol_phivecfunccomp_beam_avg<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(2 * space_dim + 1) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(2 * space_dim + 2) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
-                                                                         0.);
+        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>
+      >(i, {1, -1, -2}, hyper_edge.geometry, time);
+    for (unsigned int comp = 0; comp < 3; comp++)
+      right_hand_side[2 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp]
 
-    right_hand_side[3 * space_dim * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
+    // g
+    integrals = integrator::template integrate_vol_phivecfunccomp_beam_avg<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(3 * space_dim + 1) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(3 * space_dim + 2) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
-                                                                         0.);
+        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
+      >(i, {1, -1, -2}, hyper_edge.geometry, time);
+    for (unsigned int comp = 0; comp < 3; comp++)
+      right_hand_side[3 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp]
+
+    // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
       {
-        integral = integrator::template integrate_bdr_phivecfunccomp<
+        // u
+        integrals = integrator::template integrate_bdr_phivecfunccomp_beam_avg<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, 1, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 0) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 0) * n_shape_fct_ + i] += tau_ * integral;
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
+        for (unsigned int comp = 0; comp < 3; comp++) {
+          right_hand_side[(0 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+          right_hand_side[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integrals[comp];
+        }
 
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 1) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 1) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -2, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 2) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 2) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
+        // phi
+        integrals = integrator::template integrate_bdr_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, 1, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 0) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 0) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 1) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 1) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -2, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 2) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 2) * n_shape_fct_ + i] += tau_ * integral;
+          Point<hyEdge_dimT, lSol_float_t>>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
+        for (unsigned int comp = 0; comp < 3; comp++) {
+          right_hand_side[(1 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integral;
+          right_hand_side[(3 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integral;
+        }
       }
     }
   }
+
+  // time derivatives
+  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  {
+    right_hand_side[2 * space_dim * n_shape_fct_ + i] += v_old[i] * hyper_edge.geometry.area() / delta_t_;
+    right_hand_side[3 * space_dim * n_shape_fct_ + i] += s_old[i] * hyper_edge.geometry.area() / delta_t_;
+    right_hand_side[4 * space_dim * n_shape_fct_ + i] -= u_old[i] * hyper_edge.geometry.area() / delta_t_;
+    right_hand_side[5 * space_dim * n_shape_fct_ + i] -= r_old[i] * hyper_edge.geometry.area() / delta_t_;
+  }
+
 
   return right_hand_side;
 }  // end of Bilaplacian::assemble_rhs_from_global_rhs
