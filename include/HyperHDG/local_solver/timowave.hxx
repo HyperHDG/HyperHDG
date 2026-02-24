@@ -761,32 +761,54 @@ class TimoshenkoWave
 
   template <class hyEdgeT>
   void set_data(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    const std::array<std::array<lSol_float_t, n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
+    auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+
+
+    // TODO: make u_old by solving_loc problem
+    // TODO: make local flux, *_old then set the hyper_edge.geom.data to that
+    // NOTE: sign!!!
+
     for (unsigned int i = 0; i < n_shape_fct_; i++) {
       for (unsigned int j = 0; j < n_shape_fct_; j++) {
         SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
-            integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+          (-1.) * integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
               decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
+        SmallVec<hyEdge_dimT, lSol_float_t> bdr_int;
 
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
-          grad_int_vec -= integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
-            i, j, face, hyper_edge.geometry)* hyper_edge.geometry.local_normal(face);
+          auto helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
+          grad_int_vec += helper * hyper_edge.geometry.local_normal(face);
+          bdr_int += helper;
         }
 
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct + i] += grad_int_vec[0] * (1-theta_t_)
-            * n_old[dim*n_shape_fct_ +j];
-          flux_r[dim*n_shape_fct + i] += grad_int_vec[0] * (1-theta_t_)
-            * m_old[dim*n_shape_fct_ +j];
+          flux_u[dim*n_shape_fct + i] -= grad_int_vec[0] * (1-theta_t_)
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_t) * u_old[dim*n_shape_fct_];
+          flux_r[dim*n_shape_fct + i] -= grad_int_vec[0] * (1-theta_t_)
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_t) * r_old[dim*n_shape_fct_];
         }
 
         // Consider the cross product
-        flux_u[(3 * space_dim + 2) * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_t_);
-        flux_r[(3 * space_dim + 1) * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_t_);
+        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_t_);
+        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_t_);
+      }
+
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+      {
+        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        {
+          for (unsigned int face = 0; face < 2 * hyEdge_dimT; face++) {
+            flux_u[dim*n_shape_fct_+i] += lambda_values[face][j+dim*n_shape_bdr_]
+              * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
+            flux_r[dim*n_shape_fct_+i] += lambda_values[face][j+(dim+space_dim)*n_shape_bdr_]
+              * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
+          }
+        }
       }
     }
   }
@@ -796,6 +818,7 @@ class TimoshenkoWave
                           hyEdgeT& hyper_edge,
                           const lSol_float_t time = 0.) const
   {
+    // TODO: L^2 project all inital_param
   }
 };  // end of class LengtheningBernoulliBendingWave
 
@@ -1013,7 +1036,13 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
       >(i, {1, -1, -2}, hyper_edge.geometry, time);
     for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[3 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp]
+      right_hand_side[3 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+
+    // NOTE: sign??
+    for (unsigned int dim = 0; dim < space_dim; dim++) {
+      right_hand_side[2*(space_dim+dim) * n_shape_fct_+i] += flux_u[dim*n_shape_fct_+i];
+      right_hand_side[3*(space_dim+dim) * n_shape_fct_+i] += flux_r[dim*n_shape_fct_+i];
+    }
 
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
