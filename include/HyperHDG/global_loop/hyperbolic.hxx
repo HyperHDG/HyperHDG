@@ -438,8 +438,10 @@ class Hyperbolic
   template <typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> norms(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(norms, has_norms);
-    return std::vector<dof_value_t>(result.begin(), result.end());
+    // TODO: relative
+    // auto result = prototype_errors(norms, has_norms);
+    // return std::vector<dof_value_t>(result.begin(), result.end());
+    return {};
   }
   /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.

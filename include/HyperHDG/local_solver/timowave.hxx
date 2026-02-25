@@ -814,13 +814,13 @@ class TimoshenkoWave
 
   template <class hyEdgeT>
   void set_data(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
+    const std::array<std::array<lSol_float_t, 2*n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
-    std::array<lSol_float_t, n_loc_dofs_> coeffs =
+    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& u_old = hyper_edge.data.u_old;
@@ -905,7 +905,8 @@ class TimoshenkoWave
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] = 0.;
       else
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j) {
+        // WRONG
+        for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
           helper = integrator::template integrate_bdrUni_psivecfunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::initial_u,

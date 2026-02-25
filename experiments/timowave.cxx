@@ -40,11 +40,11 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nx = 2, nt = 1, space_dim = 1, poly_deg = 3;
+    PetscInt nt = 2, space_dim = 1, poly_deg = 3;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
-    PetscReal theta = .5;  // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, h = 0, e_abs = 0, e_rel = 0;
+    PetscReal theta = 1;  // one-step theta method
+    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -52,7 +52,9 @@ int main(int argc, char **argv) {
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "wave";
     char plot_scale[PATH_MAX] = "0.95";
-    char network_path[PATH_MAX] = "cross.geo";
+    char domain_path[PATH_MAX] = "domain/cross.geo";
+
+    (void)e_rel;
 
     PetscLogStage s_as, s_ts, s_rf;
 
@@ -70,13 +72,13 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, poly_deg, &poly_deg, &is_set));
     PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
-    PetscCall(PetscOptionsInt("-nx", "number of elements divide the domain into", NULL, nx, &nx, &is_set));
     PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, nt, &nt, &is_set));
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
     PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -91,20 +93,17 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
 
     dt = T / nt;
-    h = 1. / nx;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(space_dim, poly_deg, network_path, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(space_dim, poly_deg, domain_path, tau, theta, dt, &hdg));
 
     PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
-    PRIN2IY(nx);
     PRIN2IY(nt);
     PRIN2FY(dt);
     PRIN2FY(T);
-    PRIN2FY(h);
     hdg->plot_option("fileName", output_filename);
     hdg->plot_option("outputDir", output_directory);
     hdg->plot_option("printFileNumber", "true");
@@ -117,17 +116,17 @@ int main(int argc, char **argv) {
       hdg->plot_solution(temp, 0.);
 
     temp2 = hdg->errors(temp, 0);
-    temp3 = hdg->norms(temp, 0);
+    // temp3 = hdg->norms(temp, 0);
     e_abs = PetscMax(temp2[0], e_abs);
-    e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+    // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
-    PetscCall(VecSetValue(errors, 0, temp2[0]/temp3[0], INSERT_VALUES));
+    PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
 
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_abs0: %.5e\n", e_abs));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_rel0: %.5e\n", e_rel));
+    // PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_rel0: %.5e\n", e_rel));
 
     PRIN2S(s_as);
     mat_coo = hdg->trace_to_flux_mat(0.);
@@ -169,8 +168,9 @@ int main(int argc, char **argv) {
         temp2 = hdg->errors(temp, ti);
         temp3 = hdg->norms(temp, ti);
         e_abs = PetscMax(temp2[0], e_abs);
-        e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
-        PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
+        // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+        // PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
+        PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
     }
     PRIN2SP();
 
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
     avg_iterations = ((PetscReal)iterations) / nt;
 
     PRIN2FY(e_abs);
-    PRIN2FY(e_rel);
+    // PRIN2FY(e_rel);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);
