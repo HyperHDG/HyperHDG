@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <petsc.h>
 
-#include <HyperHDG/topology/cubic.hxx>
-#include <HyperHDG/geometry/unit_cube.hxx>
-#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/topology/file.hxx>
+#include <HyperHDG/geometry/file.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
+
 #include <HyperHDG/local_solver/timowave.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 
@@ -13,34 +14,34 @@
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
-template<unsigned int poly_deg, unsigned int space_dim>
-using HDGWave = GlobalLoop::Hyperbolic<
-  Topology::Cubic<space_dim, space_dim>,
-  Geometry::UnitCube<space_dim, space_dim, PetscReal>,
-  NodeDescriptor::Cubic<space_dim, space_dim>,
-  LocalSolver::TimoshenkoWave<space_dim, poly_deg, 2*poly_deg, TimoschenkoBeamParametersDefault, PetscReal>
+template<unsigned int poly_deg>
+using HDGGlobal = GlobalLoop::Hyperbolic<
+  Topology::File<1,3>,
+  Geometry::File<1,3>,
+  NodeDescriptor::File<1,3>,
+  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, LocalSolver::TimoschenkoWaveParametersDefault, PetscReal>
 >;
 
 // hdg must be deallocated with `delete`
-PetscErrorCode PetscHDGCreate(
-    PetscInt space_dim, PetscInt poly_deg,
-    PetscInt nx, PetscReal tau, PetscReal theta, PetscReal dt,
-    HDGBase **hdg
-) {
-  PetscCheck(space_dim<10, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-    "space_dim = %d must be less than 10", space_dim);
-  switch(poly_deg*10+space_dim) {
-  case 31: *hdg = new HDGWrapper(HDGWave<3,1>(nx, {tau, theta, dt})); return 0;
-  case 32: *hdg = new HDGWrapper(HDGWave<3,2>(nx, {tau, theta, dt})); return 0;
-  case 61: *hdg = new HDGWrapper(HDGWave<6,1>(nx, {tau, theta, dt})); return 0;
-  case 62: *hdg = new HDGWrapper(HDGWave<6,2>(nx, {tau, theta, dt})); return 0;
-  default:
-    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-      "unsupported combination: space_dim = %d, poly_deg = %d", space_dim, poly_deg);
-  }
-
-  return 0;
-}
+// PetscErrorCode PetscHDGCreate(
+//     PetscInt space_dim, PetscInt poly_deg,
+//     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
+//     HDGBase **hdg
+// ) {
+//   PetscCheck(space_dim<10, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+//     "space_dim = %d must be less than 10", space_dim);
+//   switch(poly_deg*10+space_dim) {
+//   case 31: *hdg = new HDGWrapper(HDGWave<3,1>(path, {tau, theta, dt})); return 0;
+//   case 32: *hdg = new HDGWrapper(HDGWave<3,2>(path, {tau, theta, dt})); return 0;
+//   case 61: *hdg = new HDGWrapper(HDGWave<6,1>(path, {tau, theta, dt})); return 0;
+//   case 62: *hdg = new HDGWrapper(HDGWave<6,2>(path, {tau, theta, dt})); return 0;
+//   default:
+//     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+//       "unsupported combination: space_dim = %d, poly_deg = %d", space_dim, poly_deg);
+//   }
+// 
+//   return 0;
+// }
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
@@ -56,6 +57,7 @@ int main(int argc, char **argv) {
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "wave";
     char plot_scale[PATH_MAX] = "0.95";
+    char network_path[PATH_MAX] = "cross.geo";
 
     PetscLogStage s_as, s_ts, s_rf;
 
@@ -97,7 +99,9 @@ int main(int argc, char **argv) {
     h = 1. / nx;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(space_dim, poly_deg, nx, tau, theta, dt, &hdg));
+    HDGGlobal<3> global_loop(network_path, {tau, theta, dt});
+    // PetscCall(PetscHDGCreate(space_dim, poly_deg, network_path, tau, theta, dt, &hdg));
+
     PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
