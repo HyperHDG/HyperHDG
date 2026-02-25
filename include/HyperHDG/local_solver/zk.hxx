@@ -702,67 +702,56 @@ class Chkp
           lSol_float_t h = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
               i, j, bdr, hyper_edge.geometry);
           u_int += h * ca[j];
-          uo_int += h * hyper_edge.data.u_old[j];
-          q_int += h * ca[1 * n_shape_fct_ + j];
-          p_int += h * ca[2 * n_shape_fct_ + j];
-          v_int += h * ca[4 * n_shape_fct_ + j];
-          z_int += h * ca[5 * n_shape_fct_ + j];
+          p_int += h * ca[1 * n_shape_fct_ + j];
+          q_int += h * ca[2 * n_shape_fct_ + j];
+          r_int += h * ca[3 * n_shape_fct_ + j];
+          s_int += h * ca[4 * n_shape_fct_ + j];
         }
-        lSol_float_t uh_int = 0, uho_int = 0, qh_int = 0, vh_int = 0;
+        lSol_float_t uh_int = 0, qh_int = 0, sh_int = 0;
         for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         {
           lSol_float_t h = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               i, j, bdr, hyper_edge.geometry);
           uh_int += h * lambda_values[bdr][j];
-          uho_int += h * hyper_edge.data.uh_old[bdr][j];
           qh_int += h * lambda_values[bdr][n_shape_bdr_ + j];
-          vh_int += h * lambda_values[bdr][2 * n_shape_bdr_ + j];
+          sh_int += h * lambda_values[bdr][2 * n_shape_bdr_ + j];
         }
         lSol_float_t flux_ux = (uh_int - u_int) * normal[0];
-        lSol_float_t flux_q = (qh_int - q_int) * normal[0];
-        lSol_float_t flux_v = (vh_int - v_int) * normal[0];
-        lSol_float_t trace_f = 0, trace_q2 = 0, trace_uq = 0;
-        
-        trace_f += 2 * parameters::kappa * u_int - tau_f_ * flux_ux;
-        trace_uq += tau_uqq_ * flux_q;
-        lSol_float_t trace_vv = 0, trace_vh = 0, trace_r = 0;
-        lSol_float_t trace_zp = 0., trace_uh = 0.;
-        if (normal[1] * normal[1] < eps && normal[0] < 0) //V+
+        lSol_float_t flux_uy = (uh_int - u_int) * normal[1];
+
+        lSol_float_t trace_f = - tau_f_ * flux_ux;
+        lSol_float_t trace_p = 0., trace_q = 0., trace_r = 0., trace_s = 0.;
+        if (normal[1] * normal[1] < eps && normal[0] < 0) //left
         {
-          trace_zp = z_int - p_int + (tau_pzpu_) * flux_ux;
-          trace_vv = v_int;
-          trace_r = -1. / delta_t_ * (uh_int - uho_int);
+          trace_p = p_int + tau_ppu_ * flux_ux;
+          trace_q = q_int + tau_pqu_ * flux_ux;
+          trace_s = s_int + tau_psu_ * flux_ux;
         }
-        else if (normal[1] * normal[1] < eps && normal[0] > 0) //V-
+        else if (normal[1] * normal[1] < eps && normal[0] > 0) //right
         {
-          trace_zp = z_int - p_int + (tau_mzpu_) * flux_ux + (tau_mzpv_) * flux_v;
-          trace_vv = vh_int;
-          trace_r = -1. / delta_t_ * (uh_int - uho_int);
+          trace_p = p_int + tau_mpu_ * flux_ux + tau_mpq_ * (qh_int - q_int) * normal[0];
+          trace_q = qh_int;
+          trace_s = sh_int;
         }
-        else if (normal[0] * normal[0] < eps && normal[1] < 0) //H+
+        else if (normal[0] * normal[0] < eps) //horizontal
         {
-          trace_vh = v_int;
-          trace_uh = uh_int;
-        }
-        else if (normal[0] * normal[0] < eps && normal[1] > 0) //H-
-        {
-          trace_vh = vh_int;
-          trace_uh = u_int;
+          trace_r = r_int + tau_ru_ * flux_uy;
         }
 
-        residual[i] -= uh_int * normal[0];
-        residual[n_shape_fct_ + i] -= trace_uq * normal[0];
-        residual[2 * n_shape_fct_ + i] -= trace_uh * normal[1];
-        residual[3 * n_shape_fct_ + i] -= trace_vv * normal[0];
-        residual[4 * n_shape_fct_ + i] -= trace_r * normal[0];
-        residual[5 * n_shape_fct_ + i] -= (trace_zp + trace_f + 0.5 * trace_q2) * normal[0];
-        residual[5 * n_shape_fct_ + i] -= trace_vh * normal[1];
+        residual[i] += (trace_f + trace_p) * normal[0];
+        residual[i] += trace_r * normal[1];
+        residual[n_shape_fct_ + i] -= trace_q * normal[0];
+        residual[2 * n_shape_fct_ + i] -= uh_int * normal[0];
+        residual[3 * n_shape_fct_ + i] -= trace_s * normal[0];
+        residual[4 * n_shape_fct_ + i] -= uh_int * normal[1];
       }
 
+      /*
       lSol_float_t rhs = integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> > (i, hyper_edge.geometry, time);
-      residual[5 * n_shape_fct_ + i] += rhs;
+      residual[0 * n_shape_fct_ + i] += rhs;
+      */
     }
     for (unsigned int bdr = 0; bdr < 2; ++bdr)
     {
@@ -776,62 +765,25 @@ class Chkp
           {
             const lSol_float_t sss_ijk = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
                 i, j, k, bdr, hyper_edge.geometry);
-            residual[5 * n_shape_fct_ + i] -= onepointfive * 2 * sss_ijk * ca[j] * ca[k] * nx;
-            residual[5 * n_shape_fct_ + j] -= onepointfive * 2 * sss_ijk * ca[i] * ca[k] * nx;
-            residual[5 * n_shape_fct_ + k] -= onepointfive * 2 * sss_ijk * ca[j] * ca[i] * nx;
-            residual[1 * n_shape_fct_ + i] -= .5 * sss_ijk * (ca[j] * ca[n_shape_fct_ + k] + ca[k] * ca[n_shape_fct_ + j]) * nx;
-            residual[1 * n_shape_fct_ + j] -= .5 * sss_ijk * (ca[i] * ca[n_shape_fct_ + k] + ca[k] * ca[n_shape_fct_ + i]) * nx;
-            residual[1 * n_shape_fct_ + k] -= .5 * sss_ijk * (ca[j] * ca[n_shape_fct_ + i] + ca[i] * ca[n_shape_fct_ + j]) * nx;
+            residual[i] += onehalf * 2 * sss_ijk * ca[j] * ca[k] * nx;
+            residual[j] += onehalf * 2 * sss_ijk * ca[i] * ca[k] * nx;
+            residual[k] += onehalf * 2 * sss_ijk * ca[j] * ca[i] * nx;
           }
           const lSol_float_t sss_ijj = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
                 i, j, j, bdr, hyper_edge.geometry);
-          residual[5 * n_shape_fct_ + i] -= onepointfive * sss_ijj * ca[j] * ca[j] * nx;
-          residual[5 * n_shape_fct_ + j] -= onepointfive * 2 * sss_ijj * ca[i] * ca[j] * nx;
-          residual[1 * n_shape_fct_ + i] -= .5 * sss_ijj * ca[j] * ca[n_shape_fct_ + j] * nx;
-          residual[1 * n_shape_fct_ + j] -= .5 * sss_ijj * (ca[i] * ca[n_shape_fct_ + j] + ca[j] * ca[n_shape_fct_ + i]) * nx;
+          residual[i] += onehalf * sss_ijj * ca[j] * ca[j] * nx;
+          residual[j] += onehalf * 2 * sss_ijj * ca[i] * ca[j] * nx;
         }
         for (unsigned int k = 0; k < i; ++k)
         {
           const lSol_float_t sss_iik = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
                 i, i, k, bdr, hyper_edge.geometry);
-          residual[5 * n_shape_fct_ + k] -= onepointfive * sss_iik * ca[i] * ca[i] * nx;
-          residual[5 * n_shape_fct_ + i] -= onepointfive * 2 * sss_iik * ca[i] * ca[k] * nx;
-          residual[1 * n_shape_fct_ + k] -= .5 * sss_iik * ca[i] * ca[n_shape_fct_ + i] * nx;
-          residual[1 * n_shape_fct_ + i] -= .5 * sss_iik * (ca[i] * ca[n_shape_fct_ + k] + ca[k] * ca[n_shape_fct_ + i]) * nx;
+          residual[k] += onehalf * sss_iik * ca[i] * ca[i] * nx;
+          residual[i] += onehalf * 2 * sss_iik * ca[i] * ca[k] * nx;
         }
         const lSol_float_t sss_iii = integrator::template integrate_bdr_phiphiphi<decltype(hyEdgeT::geometry)>(
               i, i, i, bdr, hyper_edge.geometry);
-        residual[5 * n_shape_fct_ + i] -= onepointfive * sss_iii * ca[i] * ca[i] * nx;
-        residual[1 * n_shape_fct_ + i] -= .5 * sss_iii * ca[i] * ca[n_shape_fct_ + i] * nx;
-        
-        for (unsigned int j = 0; j < i; ++j)
-        {
-          for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-          {
-            const lSol_float_t ssb_ijk = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-                i, j, k, bdr, hyper_edge.geometry);
-            residual[1 * n_shape_fct_ + i] -= .5 * ssb_ijk * ca[j] * lambda_values[bdr][n_shape_bdr_ + k] * nx;
-            residual[1 * n_shape_fct_ + j] -= .5 * ssb_ijk * ca[i] * lambda_values[bdr][n_shape_bdr_ + k] * nx;
-          }
-        }
-        for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-        {
-          const lSol_float_t ssb_iik = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-              i, i, k, bdr, hyper_edge.geometry);
-          residual[1 * n_shape_fct_ + i] -= .5 * ssb_iik * ca[i] * lambda_values[bdr][n_shape_bdr_ + k] * nx;
-        }
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          for (unsigned int k = 0; k < j; ++k)
-          {
-            const lSol_float_t sbb_ijk = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
-                i, j, k, bdr, hyper_edge.geometry);
-            residual[5 * n_shape_fct_ + i] -= 0.5 * 2 * sbb_ijk * lambda_values[bdr][n_shape_bdr_ + j] * lambda_values[bdr][n_shape_bdr_ + k] * nx;
-          }
-          const lSol_float_t sbb_ijj = integrator::template integrate_bdr_phipsipsi<decltype(hyEdgeT::geometry)>(
-              i, j, j, bdr, hyper_edge.geometry);
-          residual[5 * n_shape_fct_ + i] -= 0.5 *  sbb_ijj * lambda_values[bdr][n_shape_bdr_ + j] * lambda_values[bdr][n_shape_bdr_ + j] * nx;
-        }
+        residual[i] += onehalf * sss_iii * ca[i] * ca[i] * nx;
       }
     }
  
