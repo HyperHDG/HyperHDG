@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
 template<unsigned int poly_deg>
-using HDGGlobal = GlobalLoop::Hyperbolic<
+using HDGTimoWave = GlobalLoop::Hyperbolic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
@@ -31,10 +31,10 @@ using HDGGlobal = GlobalLoop::Hyperbolic<
 //   PetscCheck(space_dim<10, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
 //     "space_dim = %d must be less than 10", space_dim);
 //   switch(poly_deg*10+space_dim) {
-//   case 31: *hdg = new HDGWrapper(HDGWave<3,1>(path, {tau, theta, dt})); return 0;
-//   case 32: *hdg = new HDGWrapper(HDGWave<3,2>(path, {tau, theta, dt})); return 0;
-//   case 61: *hdg = new HDGWrapper(HDGWave<6,1>(path, {tau, theta, dt})); return 0;
-//   case 62: *hdg = new HDGWrapper(HDGWave<6,2>(path, {tau, theta, dt})); return 0;
+//   case 31: *hdg = new HDGWrapper(HDGTimoWave<3,1>(path, {tau, theta, dt})); return 0;
+//   case 32: *hdg = new HDGWrapper(HDGTimoWave<3,2>(path, {tau, theta, dt})); return 0;
+//   case 61: *hdg = new HDGWrapper(HDGTimoWave<6,1>(path, {tau, theta, dt})); return 0;
+//   case 62: *hdg = new HDGWrapper(HDGTimoWave<6,2>(path, {tau, theta, dt})); return 0;
 //   default:
 //     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
 //       "unsupported combination: space_dim = %d, poly_deg = %d", space_dim, poly_deg);
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
     h = 1. / nx;
 
     HDGBase *hdg = NULL;
-    HDGGlobal<3> global_loop(network_path, {tau, theta, dt});
+    HDGTimoWave<3> global_loop(network_path, {tau, theta, dt});
     // PetscCall(PetscHDGCreate(space_dim, poly_deg, network_path, tau, theta, dt, &hdg));
 
     PRIN2IY(space_dim);
