@@ -23,25 +23,20 @@ using HDGTimoWave = GlobalLoop::Hyperbolic<
 >;
 
 // hdg must be deallocated with `delete`
-// PetscErrorCode PetscHDGCreate(
-//     PetscInt space_dim, PetscInt poly_deg,
-//     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
-//     HDGBase **hdg
-// ) {
-//   PetscCheck(space_dim<10, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-//     "space_dim = %d must be less than 10", space_dim);
-//   switch(poly_deg*10+space_dim) {
-//   case 31: *hdg = new HDGWrapper(HDGTimoWave<3,1>(path, {tau, theta, dt})); return 0;
-//   case 32: *hdg = new HDGWrapper(HDGTimoWave<3,2>(path, {tau, theta, dt})); return 0;
-//   case 61: *hdg = new HDGWrapper(HDGTimoWave<6,1>(path, {tau, theta, dt})); return 0;
-//   case 62: *hdg = new HDGWrapper(HDGTimoWave<6,2>(path, {tau, theta, dt})); return 0;
-//   default:
-//     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-//       "unsupported combination: space_dim = %d, poly_deg = %d", space_dim, poly_deg);
-//   }
-// 
-//   return 0;
-// }
+PetscErrorCode PetscHDGCreate(
+    PetscInt space_dim, PetscInt poly_deg,
+    const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
+    HDGBase **hdg
+) {
+  switch(poly_deg) {
+  case 3: *hdg = new HDGWrapper(HDGTimoWave<3>(path, {tau, theta, dt})); return 0;
+  default:
+    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+      "unsupported: poly_deg = %d", poly_deg);
+  }
+
+  return 0;
+}
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
@@ -99,8 +94,7 @@ int main(int argc, char **argv) {
     h = 1. / nx;
 
     HDGBase *hdg = NULL;
-    HDGTimoWave<3> global_loop(network_path, {tau, theta, dt});
-    // PetscCall(PetscHDGCreate(space_dim, poly_deg, network_path, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(space_dim, poly_deg, network_path, tau, theta, dt, &hdg));
 
     PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
