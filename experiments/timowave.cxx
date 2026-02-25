@@ -4,7 +4,7 @@
 #include <HyperHDG/topology/cubic.hxx>
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
-#include <HyperHDG/local_solver/diffusion_wave1_ldgh.hxx>
+#include <HyperHDG/local_solver/timowave.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
 
 #include "parameters.hxx"
@@ -18,7 +18,7 @@ using HDGWave = GlobalLoop::Hyperbolic<
   Topology::Cubic<space_dim, space_dim>,
   Geometry::UnitCube<space_dim, space_dim, PetscReal>,
   NodeDescriptor::Cubic<space_dim, space_dim>,
-  LocalSolver::TimoshenkoWave<space_dim, poly_deg, 2*poly_deg, TestWave1, PetscReal>
+  LocalSolver::TimoshenkoWave<space_dim, poly_deg, 2*poly_deg, TimoschenkoBeamParametersDefault, PetscReal>
 >;
 
 // hdg must be deallocated with `delete`

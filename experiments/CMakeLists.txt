@@ -23,6 +23,7 @@ link_libraries(HyperHDG prin2)
 
 add_executable(heat heat.cxx)
 add_executable(wave wave.cxx)
+add_executable(timowave timowave.cxx)
 add_executable(network network.cxx)
 
 target_link_libraries(network net2as)
