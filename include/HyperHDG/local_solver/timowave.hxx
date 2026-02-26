@@ -79,18 +79,18 @@ struct TimoschenkoWaveParametersDefault
    ************************************************************************************************/
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
+                                         const param_float_t time = 0.)
   {
-    return analytic_result_u(point, normal);
+    return analytic_result_u(point, normal, time);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
    ************************************************************************************************/
   static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
                                            const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
+                                           const param_float_t time = 0.)
   {
-    return analytic_result_phi(point, normal);
+    return analytic_result_phi(point, normal, time);
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
@@ -99,7 +99,7 @@ struct TimoschenkoWaveParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return 0.;
+    return 1.;
     // return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
@@ -119,7 +119,8 @@ struct TimoschenkoWaveParametersDefault
 
   // TODO: construct simple good example
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
-    return {};
+    SmallVec<space_dimT, param_float_t> res(1.);
+    return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
@@ -572,6 +573,8 @@ class TimoshenkoWave
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
+      std::cout << "-- solve_local" << std::endl;
+      std::cout << rhs << std::endl;
       return rhs / assemble_loc_matrix(hyper_edge, time);
     }
     catch (Wrapper::LAPACKexception& exc)
@@ -820,7 +823,20 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+
+    std::cout << " -- set_data before lambda" << std::endl;
+    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+      for (unsigned int j=0; j < lambda_values_in[i].size(); j++) {
+        std::cout << lambda_values_in[i][j] << " ";
+      }
+      std::cout << std::endl;
+    }
+
+    auto lambda_values_in2 = lambda_values_in;
+    lambda_values_in2[0] = {1, 1, 1, 0, 0, 0};
+    lambda_values_in2[1] = {1, 1, 1, 0, 0, 0};
+
+    auto lambda_values = node_dof_to_edge_dof(lambda_values_in2, hyper_edge);
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
@@ -883,6 +899,23 @@ class TimoshenkoWave
         }
       }
     }
+
+    std::cout << "----- set_data " << std::endl;
+    std::cout << hyper_edge.data.u_old << std::endl;
+    std::cout << hyper_edge.data.r_old << std::endl;
+    std::cout << hyper_edge.data.n_old << std::endl;
+    std::cout << hyper_edge.data.m_old << std::endl;
+    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+      for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
+        std::cout << lambda_values_in[i][j] << " ";
+      std::cout << std::endl;
+    }
+    for (unsigned int i=0; i < lambda_values.size(); i++) {
+      for (unsigned int j=0; j < lambda_values[i].size(); j++)
+        std::cout << lambda_values[i][j] << " ";
+      std::cout << std::endl;
+    }
+
   }
 
   template <class hyEdgeT, typename SmallMatT>
@@ -896,6 +929,8 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_u = hyper_edge.data.flux_u;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_r = hyper_edge.data.flux_r;
+
+    // TODO: set v,s to something!!
 
     // first u then r in skeletal variables
     SmallVec<space_dim, lSol_float_t> helper;
@@ -1005,6 +1040,19 @@ class TimoshenkoWave
         }
       }
     }
+
+    std::cout << "----- make_initial" << std::endl;
+    std::cout << hyper_edge.data.u_old << std::endl;
+    std::cout << hyper_edge.data.r_old << std::endl;
+    std::cout << hyper_edge.data.n_old << std::endl;
+    std::cout << hyper_edge.data.m_old << std::endl;
+    for (unsigned int i=0; i < lambda_values.size(); i++) {
+      for (unsigned int j=0; j < lambda_values[i].size(); j++)
+        std::cout << lambda_values[i][j] << " ";
+      std::cout << std::endl;
+    }
+    std::cout << hyper_edge.data.flux_u << std::endl;
+    std::cout << hyper_edge.data.flux_r << std::endl;
 
     return lambda_values;
   }
@@ -1177,6 +1225,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         }
       }
 
+  // std::cout << "-- rhs_from_lambda" << std::endl;
   // std::cout << right_hand_side << std::endl;
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
@@ -1231,6 +1280,11 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       right_hand_side[3*(space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_r[dim*n_shape_fct_+i];
     }
 
+    // std::cout << "  -- n" << std::endl;
+    // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+    //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
+    // std::cout << std::endl;
+
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
@@ -1259,6 +1313,11 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
   }
 
+  // std::cout << "  -- n" << std::endl;
+  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
+  // std::cout << std::endl;
+
   // time derivatives
   for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
   {
@@ -1268,6 +1327,32 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     right_hand_side[5 * space_dim * n_shape_fct_ + i] -= hyper_edge.data.r_old[i] * hyper_edge.geometry.area() / delta_t_;
   }
 
+  std::cout << "-- rhs_from_global_rhs" << std::endl;
+  std::cout << "  -- u" << std::endl;
+  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+    std::cout << right_hand_side[i] << " ";
+  std::cout << std::endl;
+  std::cout << "  -- r" << std::endl;
+  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+    std::cout << right_hand_side[i+space_dim*n_shape_fct_] << " ";
+  std::cout << std::endl;
+  std::cout << "  -- n" << std::endl;
+  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+    std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
+  std::cout << std::endl;
+  std::cout << "  -- m" << std::endl;
+  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+    std::cout << right_hand_side[i+3*space_dim*n_shape_fct_] << " ";
+  std::cout << std::endl;
+
+  std::cout << "  -- v" << std::endl;
+  std::cout << hyper_edge.data.v_old << std::endl;
+  std::cout << "  -- s" << std::endl;
+  std::cout << hyper_edge.data.s_old << std::endl;
+  std::cout << std::endl;
+
+
+  // std::cout << right_hand_side << std::endl;
 
   return right_hand_side;
 }  // end of Bilaplacian::assemble_rhs_from_global_rhs
