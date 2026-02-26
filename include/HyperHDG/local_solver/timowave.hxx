@@ -404,12 +404,12 @@ class TimoshenkoWave
                                                                          std::array<int, n_comps> comps, geom_t& geom, const lSol_float_t time) const
   {
     std::array<lSol_float_t, n_comps> ret;
-    for (unsigned int i = 0; i < n_comps; i++) {
-      ret[i] = theta_ * integrator::template integrate_vol_phivecfunccomp<
-        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[i], geom,
+    for (unsigned int j = 0; j < n_comps; j++) {
+      ret[j] = theta_ * integrator::template integrate_vol_phivecfunccomp<
+        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[j], geom,
                                                                          time);
-      ret[i] += (1-theta_) * integrator::template integrate_vol_phivecfunccomp<
-        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[i], geom,
+      ret[j] += (1-theta_) * integrator::template integrate_vol_phivecfunccomp<
+        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[j], geom,
                                                                          time-delta_t_);
 
     }
