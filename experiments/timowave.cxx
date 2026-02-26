@@ -24,11 +24,12 @@ using HDGTimoWave = GlobalLoop::Hyperbolic<
 
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(
-    PetscInt space_dim, PetscInt poly_deg,
+    PetscInt poly_deg,
     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase **hdg
 ) {
   switch(poly_deg) {
+  case 1: *hdg = new HDGWrapper(HDGTimoWave<1>(path, {tau, theta, dt})); return 0;
   case 3: *hdg = new HDGWrapper(HDGTimoWave<3>(path, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
@@ -40,7 +41,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nt = 2, space_dim = 1, poly_deg = 3;
+    PetscInt nt = 2, poly_deg = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = 1;  // one-step theta method
@@ -68,7 +69,6 @@ int main(int argc, char **argv) {
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
-    PetscCall(PetscOptionsInt("-dim", "space dimension", NULL, space_dim, &space_dim, &is_set));
     PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, poly_deg, &poly_deg, &is_set));
     PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
