@@ -95,9 +95,8 @@ int main(int argc, char **argv) {
     dt = T / nt;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(space_dim, poly_deg, domain_path, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(poly_deg, domain_path, tau, theta, dt, &hdg));
 
-    PRIN2IY(space_dim);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
