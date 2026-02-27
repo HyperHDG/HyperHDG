@@ -1052,9 +1052,9 @@ class TimoshenkoWave
         for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         {
           for (unsigned int face = 0; face < 2 * hyEdge_dimT; face++) {
-            flux_u[dim*n_shape_fct_+i] += lambda_values[face][j+dim*n_shape_bdr_]
+            flux_u[dim*n_shape_fct_+i] += (1-theta_)*lambda_values[face][j+dim*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
-            flux_r[dim*n_shape_fct_+i] += lambda_values[face][j+(dim+space_dim)*n_shape_bdr_]
+            flux_r[dim*n_shape_fct_+i] += (1-theta_)*lambda_values[face][j+(dim+space_dim)*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
           }
         }
