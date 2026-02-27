@@ -372,8 +372,6 @@ class TimoshenkoWave
   const lSol_float_t tau_;
   const lSol_float_t theta_;
   const lSol_float_t delta_t_;
-  const lSol_float_t theta_t_;
-  const lSol_float_t theta_t1_;
 
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
@@ -407,7 +405,7 @@ class TimoshenkoWave
    ************************************************************************************************/
   // NOTE: tau, theta, delta_t
   TimoshenkoWave(const constructor_value_type& vals = std::vector(3, 1.)) : tau_(vals[0]),
-    theta_(vals[1]), delta_t_(vals[2]), theta_t_(vals[1]/vals[2]), theta_t1_((1-vals[2])/vals[1]) {}
+    theta_(vals[1]), delta_t_(vals[2]) {}
 
   template <typename point_t, typename geom_t,
             lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
@@ -877,15 +875,15 @@ class TimoshenkoWave
         }
 
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_t_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_) * u_old[dim*n_shape_fct_];
-          flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_t_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_) * r_old[dim*n_shape_fct_];
+          flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_];
+          flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_];
         }
 
         // Consider the cross product
-        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_t_);
-        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_t_);
+        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_);
+        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_);
       }
 
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -1038,15 +1036,15 @@ class TimoshenkoWave
         }
 
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_t_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_) * u_old[dim*n_shape_fct_];
-          flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_t_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_t_) * r_old[dim*n_shape_fct_];
+          flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_];
+          flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_];
         }
 
         // Consider the cross product
-        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_t_);
-        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_t_);
+        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_);
+        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_);
       }
 
       for (unsigned int dim = 0; dim < space_dim; ++dim)
