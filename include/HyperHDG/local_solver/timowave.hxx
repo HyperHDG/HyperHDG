@@ -1019,6 +1019,8 @@ class TimoshenkoWave
     r_old = glob_dof_to_loc_dof(r_old, hyper_edge);
     n_old = glob_dof_to_loc_dof(n_old, hyper_edge);
     m_old = glob_dof_to_loc_dof(m_old, hyper_edge);
+    v_old = glob_dof_to_loc_dof(v_old, hyper_edge);
+    s_old = glob_dof_to_loc_dof(s_old, hyper_edge);
 
     // compute fluxes
     for (unsigned int i = 0; i < n_shape_fct_; i++) {
