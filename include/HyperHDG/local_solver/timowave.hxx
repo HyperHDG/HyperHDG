@@ -146,101 +146,6 @@ struct TimoschenkoWaveParametersDefault
 };  // end of struct DiffusionParametersDefault
 
 /*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template <unsigned int space_dimT, typename param_float_t = double>
-struct TimoschenkoBeamParametersClamped
-{
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
-  /*!***********************************************************************************************
-   * \brief   Inverse diffusionbeam_network_bilaplacian.hxx coefficient in PDE as analytic function.
-   ************************************************************************************************/
-  // static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
-  //                                              const param_float_t = 0.)
-  // {
-  //   return 1.;
-  //   // return 1. / M_PI / M_PI;
-  // }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return 0;
-    // return -M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-  }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return 0.;
-    // return  (M_PI * M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2]
-    // == 0.); return  -M_PI * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] ==
-    // 0.); return M_PI * M_PI * sin(M_PI * point[0]) * normal[0]; return M_PI * M_PI * sin(M_PI *
-    // point[0]) * normal[0];
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return analytic_result_u(point, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return analytic_result_phi(point, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    // return 0.;
-    return 5e-4 * ((point[0] > 1e-3) * normal[0] + (point[1] > .5e-3) * normal[1] + normal[2]);
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return 0.;
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
-  }
-};  // end of struct DiffusionParametersDefault
-
-/*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.
  *
@@ -396,7 +301,7 @@ class TimoshenkoWave
 
   struct data_type
   {
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
@@ -874,11 +779,12 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
+        // NOTE: shouldnt it be +j on the rhs?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_];
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
           flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_];
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
         }
 
         // Consider the cross product
@@ -931,6 +837,10 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_u = hyper_edge.data.flux_u;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_r = hyper_edge.data.flux_r;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_v = hyper_edge.data.flux_v;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_s = hyper_edge.data.flux_s;
+
+    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
 
     // TODO: set v,s to something!!
 
@@ -1035,11 +945,16 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
+        // NOTE: also need theta of old v with extra coeffs
+        // NOTE: why no normal_int_vec here?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_];
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];  // NOTE: why no plus j here?
           flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_];
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];  // NOTE: same here?
+
+          flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+j] * (1-theta_) / extra_coeffs[2*space_dim+dim]; // C_u coeffs
+          flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+j] * (1-theta_) / extra_coeffs[3*space_dim+dim]; // C_r coeffs
         }
 
         // Consider the cross product
@@ -1100,7 +1015,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
+  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.); // C_n, C_m, C_u, C_r
 
   if (hyper_edge.geometry.has_extra_data())
   {
@@ -1171,12 +1086,12 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         local_mat(dim * n_shape_fct_ + i, (2 * space_dim + dim) * n_shape_fct_ + j) -=
           grad_int_vec[0];
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
-          normal_int_vec[0] - grad_int_vec[0];
+          theta_ * (normal_int_vec[0] - grad_int_vec[0]);
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
-                  (2 * space_dim + dim) * n_shape_fct_ + j) += tau_ * face_integral;
+                  (2 * space_dim + dim) * n_shape_fct_ + j) += theta_ * tau_ * face_integral;
 
         local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
-                  (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / extra_coeffs[2*space_dim+dim];
+                  (4 * space_dim + dim) * n_shape_fct_ + j) += theta_ * vol_integral / extra_coeffs[2*space_dim+dim];
         local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
                   (2 * space_dim + dim) * n_shape_fct_ + j) -= vol_integral / delta_t_;
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
@@ -1185,10 +1100,10 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
 
       // Consider the cross product
-      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
-      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
-      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= vol_integral;
-      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += vol_integral;
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= theta_ * vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += theta_ * vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= theta_ * vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += theta_ * vol_integral;
     }
   }
 
@@ -1284,7 +1199,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         parameters::right_hand_side_n
       >(i, {1, -1, -2}, hyper_edge.geometry, time);
     for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[2 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+      right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
 
     // g
     integrals = integrate_vol_phivecfunccomp_beam_avg<
@@ -1292,12 +1207,18 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         parameters::right_hand_side_m
       >(i, {1, -1, -2}, hyper_edge.geometry, time);
     for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[3 * (space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+      right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
 
     // NOTE: sign??
+    // NOTE: think it should be subtracted here
+    // NOTE: flux_* should be constructed with the sign as on the LHS, then it will be subtracted here
+
+    // NOTE: it should probably not be *(space+dim) but *spac + dim???
     for (unsigned int dim = 0; dim < space_dim; dim++) {
-      right_hand_side[2*(space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_u[dim*n_shape_fct_+i];
-      right_hand_side[3*(space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_r[dim*n_shape_fct_+i];
+      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_u[dim*n_shape_fct_+i];
+      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_r[dim*n_shape_fct_+i];
+      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_v[dim*n_shape_fct_+i];
+      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_s[dim*n_shape_fct_+i];
     }
 
     // std::cout << "  -- n" << std::endl;
