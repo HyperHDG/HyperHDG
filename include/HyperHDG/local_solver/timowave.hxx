@@ -796,11 +796,14 @@ class TimoshenkoWave
       {
         for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         {
+          // NOTE: does this fix???
           for (unsigned int face = 0; face < 2 * hyEdge_dimT; face++) {
-            flux_u[dim*n_shape_fct_+i] += lambda_values[face][j+dim*n_shape_bdr_]
+            flux_u[dim*n_shape_fct_+i] += (1-theta_) * lambda_values[face][j+dim*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
-            flux_r[dim*n_shape_fct_+i] += lambda_values[face][j+(dim+space_dim)*n_shape_bdr_]
+            flux_r[dim*n_shape_fct_+i] += (1-theta_) * lambda_values[face][j+(dim+space_dim)*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
+
+            // NOTE: should set flux_v, flux_s
           }
         }
       }
@@ -1192,6 +1195,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
+    // NOTE: it should probably not be *(space+dim) but *spac + dim???
+
     // distributed loads
     // f
     integrals = integrate_vol_phivecfunccomp_beam_avg<
