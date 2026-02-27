@@ -832,19 +832,7 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-
-    std::cout << " -- set_data before lambda" << std::endl;
-    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-      for (unsigned int j=0; j < lambda_values_in[i].size(); j++) {
-        std::cout << lambda_values_in[i][j] << " ";
-      }
-      std::cout << std::endl;
-    }
-
     auto lambda_values_in2 = lambda_values_in;
-    lambda_values_in2[0] = {1, 1, 1, 0, 0, 0};
-    lambda_values_in2[1] = {1, 1, 1, 0, 0, 0};
-
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in2, hyper_edge);
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
