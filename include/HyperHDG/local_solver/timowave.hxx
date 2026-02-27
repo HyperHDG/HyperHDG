@@ -99,7 +99,8 @@ struct TimoschenkoWaveParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return 1.;
+    SmallVec<space_dimT, param_float_t> res(1.);
+    return scalar_product(res, normal);
     // return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
@@ -121,6 +122,14 @@ struct TimoschenkoWaveParametersDefault
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
     SmallVec<space_dimT, param_float_t> res(1.);
     return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
+    return {};
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
+    return {};
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
@@ -845,6 +854,8 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& r_old = hyper_edge.data.r_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& n_old = hyper_edge.data.n_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_u = hyper_edge.data.flux_u;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_r = hyper_edge.data.flux_r;
 
@@ -853,6 +864,8 @@ class TimoshenkoWave
       m_old[i] = coeffs[i+1*space_dim*n_shape_fct_];
       u_old[i] = coeffs[i+2*space_dim*n_shape_fct_];
       r_old[i] = coeffs[i+3*space_dim*n_shape_fct_];
+      v_old[i] = coeffs[i+4*space_dim*n_shape_fct_];
+      s_old[i] = coeffs[i+5*space_dim*n_shape_fct_];
     }
 
     flux_u *= 0;
@@ -860,6 +873,7 @@ class TimoshenkoWave
 
     // NOTE: sign!!!
 
+    // compute flux
     for (unsigned int i = 0; i < n_shape_fct_; i++) {
       for (unsigned int j = 0; j < n_shape_fct_; j++) {
         SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
@@ -927,6 +941,8 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& r_old = hyper_edge.data.r_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& n_old = hyper_edge.data.n_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_u = hyper_edge.data.flux_u;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_r = hyper_edge.data.flux_r;
 
@@ -968,6 +984,22 @@ class TimoshenkoWave
         parametersT<space_dim, lSol_float_t>::initial_u, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry, time);
       for (unsigned int dim = 0; dim < space_dim; dim++)
         u_old[i+dim*n_shape_fct_] = res[dim];
+    }
+
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      auto res = integrator::template integrate_volUni_phivecfunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parametersT<space_dim, lSol_float_t>::initial_v, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry, time);
+      for (unsigned int dim = 0; dim < space_dim; dim++)
+        v_old[i+dim*n_shape_fct_] = res[dim];
+    }
+
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      auto res = integrator::template integrate_volUni_phivecfunc<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parametersT<space_dim, lSol_float_t>::initial_s, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry, time);
+      for (unsigned int dim = 0; dim < space_dim; dim++)
+        s_old[i+dim*n_shape_fct_] = res[dim];
     }
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
