@@ -137,10 +137,10 @@ struct TimoschenkoWaveParametersDefault
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = 1 * point[0] * point[0] * point[0];
-    res[1] = 2 * point[0] * point[0] * point[0];
-    res[2] = 3 * point[0] * point[0] * point[0];
+    SmallVec<space_dimT, param_float_t> res(.5 / sqrt(.2) * (3*(2*point[0]-1)*(2*point[0]-1)-1));
+    //res[0] = 1 * point[0] * point[0] * point[0];
+    //res[1] = 2 * point[0] * point[0] * point[0];
+    //res[2] = 3 * point[0] * point[0] * point[0];
     return res;
   }
 
