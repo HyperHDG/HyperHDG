@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     zero_v = hdg->zero_vector();
     N = zero_v.size();
     temp = hdg->make_initial(zero_v);
-    hdg->set_data(temp, 0);
+    // hdg->set_data(temp, 0);
 
     // if (plot)
     //   hdg->plot_solution(temp, 0.);
@@ -167,20 +167,20 @@ int main(int argc, char **argv) {
           hdg->plot_solution(span, ti);
         PetscCall(VecRestoreSpan(rhs, span));
 
-        // temp2 = hdg->errors(temp, ti);
+        temp2 = hdg->errors(temp, ti);
         // temp3 = hdg->norms(temp, ti);
-        // e_abs = PetscMax(temp2[0], e_abs);
+        e_abs = PetscMax(temp2[0], e_abs);
         // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
         // PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
-        // PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
+        PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
     }
     PRIN2SP();
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
 
-    // PetscCall(VecAssemblyBegin(errors));
-    // PetscCall(VecAssemblyEnd(errors));
+    PetscCall(VecAssemblyBegin(errors));
+    PetscCall(VecAssemblyEnd(errors));
 
     avg_iterations = ((PetscReal)iterations) / nt;
 
