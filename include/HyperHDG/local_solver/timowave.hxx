@@ -64,7 +64,9 @@ struct TimoschenkoWaveParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return 0;
+    SmallVec<space_dimT, param_float_t> res(0.);
+    res[1] = 1.;
+    return scalar_product(res, normal);
     // return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] *
     //          (point[1] == 0. && point[2] == 0.) +
     //        (M_PI * M_PI + 1.) * sin(M_PI * point[1]) * normal[2] *
@@ -100,6 +102,7 @@ struct TimoschenkoWaveParametersDefault
                                          const param_float_t = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(1.);
+    res[2] = point[0];
     return scalar_product(res, normal);
     // return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
     // return point[0] * normal[0];
@@ -119,8 +122,9 @@ struct TimoschenkoWaveParametersDefault
   }
 
   // TODO: construct simple good example
-  static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
+  static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(1.);
+    res[2] = point[0];
     return res;
   }
 
@@ -132,12 +136,14 @@ struct TimoschenkoWaveParametersDefault
     return {};
   }
 
-  static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
-    return {};
+  static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    return analytic_result_phi(point, time);
   }
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {
-    return {};
+    SmallVec<space_dimT, param_float_t> res(0.);
+    res[2] = -1;
+    return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_m(const Point<space_dimT, param_float_t>& point, const param_float_t = 0.) {

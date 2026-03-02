@@ -157,9 +157,8 @@ int main(int argc, char **argv) {
         hdg->residual_flux2(std::span{zero_v}, span, ti);
         PetscLogStagePop();
 
-        // HACK: do not solve
-        // PetscCall(VecScale(rhs, -1.));
-        // PetscCall(KSPSolve(ksp, rhs, rhs));
+        PetscCall(VecScale(rhs, -1.));
+        PetscCall(KSPSolve(ksp, rhs, rhs));
 
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
