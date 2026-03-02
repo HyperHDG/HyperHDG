@@ -798,7 +798,7 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
-        // NOTE: shouldnt it be +j on the rhs?
+        // NOTE: tau bdr_int and grad_int might have different signs!!
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
             * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
@@ -1253,11 +1253,14 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     // NOTE: flux_* should be constructed with the sign as on the LHS, then it will be subtracted here
 
     // NOTE: it should probably not be *(space+dim) but *spac + dim???
+
+
+    // NOTE: this fixes???
     for (unsigned int dim = 0; dim < space_dim; dim++) {
-      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_u[dim*n_shape_fct_+i];
-      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_r[dim*n_shape_fct_+i];
-      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_v[dim*n_shape_fct_+i];
-      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] -= hyper_edge.data.flux_s[dim*n_shape_fct_+i];
+      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_u[dim*n_shape_fct_+i];
+      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_r[dim*n_shape_fct_+i];
+      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_v[dim*n_shape_fct_+i];
+      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] += hyper_edge.data.flux_s[dim*n_shape_fct_+i];
     }
 
     // std::cout << "  -- n" << std::endl;
