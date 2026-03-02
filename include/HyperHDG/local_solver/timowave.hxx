@@ -528,6 +528,8 @@ class TimoshenkoWave
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
   {
+    std::cout << "------------- trace_to_flux" << std::endl;
+
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
               "Both matrices must be of same size which corresponds to the number of faces!");
@@ -580,6 +582,8 @@ class TimoshenkoWave
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
   {
+    std::cout << "------------- residual_flux" << std::endl;
+
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
               "Both matrices must be of same size which corresponds to the number of faces!");
@@ -735,8 +739,21 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
+    // HACK: need to extract extra coeffs from extra data in hyperedge
+    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
+
     auto lambda_values_in2 = lambda_values_in;
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in2, hyper_edge);
+
+    std::cout << "  ---  set_data before" << std::endl;
+    std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    std::cout << "lambda_in" << std::endl;
+    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+      for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
+        std::cout << lambda_values_in[i][j] << " ";
+      std::cout << std::endl;
+    }
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
@@ -772,6 +789,8 @@ class TimoshenkoWave
               decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
         SmallVec<hyEdge_dimT, lSol_float_t> bdr_int;
 
+        // NOTE: also need theta of old v with extra coeffs
+        // NOTE: why does normal_int_vec not occurr here?
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
           auto helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
@@ -810,15 +829,23 @@ class TimoshenkoWave
     }
 
     std::cout << "----- set_data " << std::endl;
-    std::cout << hyper_edge.data.u_old << std::endl;
-    std::cout << hyper_edge.data.r_old << std::endl;
-    std::cout << hyper_edge.data.n_old << std::endl;
-    std::cout << hyper_edge.data.m_old << std::endl;
+    std::cout << "u " << hyper_edge.data.u_old << std::endl;
+    std::cout << "r " << hyper_edge.data.r_old << std::endl;
+    std::cout << "n " << hyper_edge.data.n_old << std::endl;
+    std::cout << "m " << hyper_edge.data.m_old << std::endl;
+    std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
+    std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
+    std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
+    std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
+    std::cout << "lambda_in" << std::endl;
     for (unsigned int i=0; i < lambda_values_in.size(); i++) {
       for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
         std::cout << lambda_values_in[i][j] << " ";
       std::cout << std::endl;
     }
+    std::cout << "lambda " << std::endl;
     for (unsigned int i=0; i < lambda_values.size(); i++) {
       for (unsigned int j=0; j < lambda_values[i].size(); j++)
         std::cout << lambda_values[i][j] << " ";
@@ -952,15 +979,17 @@ class TimoshenkoWave
         // NOTE: why no normal_int_vec here?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];  // NOTE: why no plus j here?
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
           flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];  // NOTE: same here?
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
 
+          // NOTE: u_old are already summed in rhs_from_global_rhs
           flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+j] * (1-theta_) / extra_coeffs[2*space_dim+dim]; // C_u coeffs
           flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+j] * (1-theta_) / extra_coeffs[3*space_dim+dim]; // C_r coeffs
         }
 
         // Consider the cross product
+        // NOTE: do we need geometry.area() here?
         flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_);
         flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_);
       }
@@ -980,17 +1009,22 @@ class TimoshenkoWave
     }
 
     std::cout << "----- make_initial" << std::endl;
-    std::cout << hyper_edge.data.u_old << std::endl;
-    std::cout << hyper_edge.data.r_old << std::endl;
-    std::cout << hyper_edge.data.n_old << std::endl;
-    std::cout << hyper_edge.data.m_old << std::endl;
+    std::cout << "u " << hyper_edge.data.u_old << std::endl;
+    std::cout << "r " << hyper_edge.data.r_old << std::endl;
+    std::cout << "n " << hyper_edge.data.n_old << std::endl;
+    std::cout << "m " << hyper_edge.data.m_old << std::endl;
+    std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    std::cout << "s " << hyper_edge.data.s_old << std::endl;
     for (unsigned int i=0; i < lambda_values.size(); i++) {
+      std::cout << "lambda " << i << "| ";
       for (unsigned int j=0; j < lambda_values[i].size(); j++)
         std::cout << lambda_values[i][j] << " ";
       std::cout << std::endl;
     }
-    std::cout << hyper_edge.data.flux_u << std::endl;
-    std::cout << hyper_edge.data.flux_r << std::endl;
+    std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
+    std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
+    std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
+    std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
 
     return lambda_values;
   }
@@ -1163,8 +1197,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         }
       }
 
-  // std::cout << "-- rhs_from_lambda" << std::endl;
-  // std::cout << right_hand_side << std::endl;
+  std::cout << "-- rhs_from_lambda" << std::endl;
+  std::cout << right_hand_side << std::endl;
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
 
@@ -1297,8 +1331,15 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   std::cout << hyper_edge.data.s_old << std::endl;
   std::cout << std::endl;
 
+  std::cout << "  -- flux_u" << std::endl;
+  std::cout << hyper_edge.data.flux_u << std::endl;
+  std::cout << "  -- flux_r" << std::endl;
+  std::cout << hyper_edge.data.flux_r << std::endl;
+  std::cout << std::endl;
 
-  // std::cout << right_hand_side << std::endl;
+
+  std::cout << "  -- rhs" << std::endl;
+  std::cout << right_hand_side << std::endl;
 
   return right_hand_side;
 }  // end of Bilaplacian::assemble_rhs_from_global_rhs

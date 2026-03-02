@@ -111,12 +111,15 @@ int main(int argc, char **argv) {
     zero_v = hdg->zero_vector();
     N = zero_v.size();
     temp = hdg->make_initial(zero_v);
-    if (plot)
-      hdg->plot_solution(temp, 0.);
+    hdg->set_data(temp, 0);
 
-    temp2 = hdg->errors(temp, 0);
+    return 1;
+    // if (plot)
+    //   hdg->plot_solution(temp, 0.);
+
+    // temp2 = hdg->errors(temp, 0);
     // temp3 = hdg->norms(temp, 0);
-    e_abs = PetscMax(temp2[0], e_abs);
+    // e_abs = PetscMax(temp2[0], e_abs);
     // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
@@ -145,6 +148,7 @@ int main(int argc, char **argv) {
 
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
         PetscReal ti = i*dt;
 
         std::span<PetscReal> span;
@@ -153,8 +157,9 @@ int main(int argc, char **argv) {
         hdg->residual_flux2(std::span{zero_v}, span, ti);
         PetscLogStagePop();
 
-        PetscCall(VecScale(rhs, -1.));
-        PetscCall(KSPSolve(ksp, rhs, rhs));
+        // HACK: do not solve
+        // PetscCall(VecScale(rhs, -1.));
+        // PetscCall(KSPSolve(ksp, rhs, rhs));
 
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
@@ -164,20 +169,20 @@ int main(int argc, char **argv) {
           hdg->plot_solution(span, ti);
         PetscCall(VecRestoreSpan(rhs, span));
 
-        temp2 = hdg->errors(temp, ti);
-        temp3 = hdg->norms(temp, ti);
-        e_abs = PetscMax(temp2[0], e_abs);
+        // temp2 = hdg->errors(temp, ti);
+        // temp3 = hdg->norms(temp, ti);
+        // e_abs = PetscMax(temp2[0], e_abs);
         // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
         // PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
-        PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
+        // PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
     }
     PRIN2SP();
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
 
-    PetscCall(VecAssemblyBegin(errors));
-    PetscCall(VecAssemblyEnd(errors));
+    // PetscCall(VecAssemblyBegin(errors));
+    // PetscCall(VecAssemblyEnd(errors));
 
     avg_iterations = ((PetscReal)iterations) / nt;
 
