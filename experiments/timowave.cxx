@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     const char* creason = NULL;
     PetscBool plot = true;
     char output_directory[PATH_MAX] = "output";
-    char output_filename[PATH_MAX] = "wave";
+    char output_filename[PATH_MAX] = "timowave";
     char plot_scale[PATH_MAX] = "0.95";
     char domain_path[PATH_MAX] = "domain/cross.geo";
 
@@ -113,7 +113,6 @@ int main(int argc, char **argv) {
     temp = hdg->make_initial(zero_v);
     hdg->set_data(temp, 0);
 
-    return 1;
     // if (plot)
     //   hdg->plot_solution(temp, 0.);
 
