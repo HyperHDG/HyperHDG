@@ -774,43 +774,44 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < n_shape_fct_; j++) {
         SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
           integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
-              decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
-        SmallVec<hyEdge_dimT, lSol_float_t> bdr_int;
+              decltype(hyEdgeT::geometry)>(j, i, hyper_edge.geometry);
+        lSol_float_t bdr_int = 0;
 
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
           auto helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
-          grad_int_vec += helper * hyper_edge.geometry.local_normal(face);
+          // grad_int_vec += helper * hyper_edge.geometry.local_normal(face);
           bdr_int += helper;
         }
 
         // NOTE: also need theta of old v with extra coeffs
         // NOTE: why no normal_int_vec here?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] -= (-1)*grad_int_vec[0]
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * u_old[dim*n_shape_fct_+j];
-          flux_r[dim*n_shape_fct_ + i] -= (-1)*grad_int_vec[0]
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * r_old[dim*n_shape_fct_+j];
+          flux_u[dim*n_shape_fct_ + i] += grad_int_vec[0]
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * u_old[dim*n_shape_fct_+j];
+          flux_r[dim*n_shape_fct_ + i] += grad_int_vec[0]
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * r_old[dim*n_shape_fct_+j];
 
           // NOTE: u_old are already summed in rhs_from_global_rhs
           flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+j] / extra_coeffs[2*space_dim+dim]; // C_u coeffs
           flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+j] / extra_coeffs[3*space_dim+dim]; // C_r coeffs
         }
 
-        // Consider the cross product
-        // NOTE: do we need geometry.area() here?
-        flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j];
-        flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j];
       }
+
+      // Consider the cross product
+      flux_r[2 * n_shape_fct_ + i] -= n_old[1 * n_shape_fct_ + i] * hyper_edge.geometry.area();
+      flux_r[1 * n_shape_fct_ + i] += n_old[2 * n_shape_fct_ + i] * hyper_edge.geometry.area();
+
 
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
         for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         {
           for (unsigned int face = 0; face < 2 * hyEdge_dimT; face++) {
-            flux_u[dim*n_shape_fct_+i] += lambda_values_loc[face][j+dim*n_shape_bdr_]
+            flux_u[dim*n_shape_fct_+i] -= tau_*lambda_values_loc[face][j+dim*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
-            flux_r[dim*n_shape_fct_+i] += lambda_values_loc[face][j+(dim+space_dim)*n_shape_bdr_]
+            flux_r[dim*n_shape_fct_+i] -= tau_*lambda_values_loc[face][j+(dim+space_dim)*n_shape_bdr_]
               * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
           }
         }
@@ -832,10 +833,10 @@ class TimoshenkoWave
     std::cout << "  ---  set_data before" << std::endl;
     std::cout << "v " << hyper_edge.data.v_old << std::endl;
     std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    std::cout << "lambda_in" << std::endl;
+    std::cout << "lambda" << std::endl;
     for (unsigned int i=0; i < lambda_values_in.size(); i++) {
       for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-        std::cout << lambda_values_in[i][j] << " ";
+        std::cout << lambda_values[i][j] << " ";
       std::cout << std::endl;
     }
 
@@ -1001,7 +1002,7 @@ class TimoshenkoWave
     for (unsigned int i=0; i < lambda_values.size(); i++) {
       std::cout << "lambda " << i << "| ";
       for (unsigned int j=0; j < lambda_values[i].size(); j++)
-        std::cout << lambda_values[i][j] << " ";
+        std::cout << lambda_values_loc[i][j] << " ";
       std::cout << std::endl;
     }
     std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
@@ -1240,10 +1241,10 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
     // NOTE: this fixes???
     for (unsigned int dim = 0; dim < space_dim; dim++) {
-      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] += (1-theta_)*hyper_edge.data.flux_u[dim*n_shape_fct_+i];
-      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] += (1-theta_)*hyper_edge.data.flux_r[dim*n_shape_fct_+i];
-      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] += (1-theta_)*hyper_edge.data.flux_v[dim*n_shape_fct_+i];
-      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] += (1-theta_)*hyper_edge.data.flux_s[dim*n_shape_fct_+i];
+      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_u[dim*n_shape_fct_+i];
+      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_r[dim*n_shape_fct_+i];
+      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_v[dim*n_shape_fct_+i];
+      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_s[dim*n_shape_fct_+i];
     }
 
     // std::cout << "  -- n" << std::endl;

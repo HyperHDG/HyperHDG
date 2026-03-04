@@ -117,9 +117,9 @@ int main(int argc, char **argv) {
     zero_v = hdg->zero_vector();
     N = zero_v.size();
     temp = hdg->make_initial(zero_v);
-    // hdg->set_data(temp, 1);
-    // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING ONLY SET DATA\n"));
-    // return 1;
+    hdg->set_data(temp, 1);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING ONLY SET DATA\n"));
+    return 1;
 
     // if (plot)
     //   hdg->plot_solution(temp, 0.);
