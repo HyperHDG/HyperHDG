@@ -797,7 +797,7 @@ class TimoshenkoWave
     for (unsigned int i = 0; i < n_shape_fct_; i++) {
       for (unsigned int j = 0; j < n_shape_fct_; j++) {
         SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
-          (-1.) * integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
               decltype(hyEdgeT::geometry)>(i, j, hyper_edge.geometry);
         SmallVec<hyEdge_dimT, lSol_float_t> bdr_int;
 
@@ -812,10 +812,10 @@ class TimoshenkoWave
 
         // NOTE: tau bdr_int and grad_int might have different signs!!
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
-          flux_r[dim*n_shape_fct_ + i] -= grad_int_vec[0] * (1-theta_)
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
+          flux_u[dim*n_shape_fct_ + i] += grad_int_vec[0] * (1-theta_)
+            * n_old[dim*n_shape_fct_ +j] - tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
+          flux_r[dim*n_shape_fct_ + i] += grad_int_vec[0] * (1-theta_)
+            * m_old[dim*n_shape_fct_ +j] - tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
         }
 
         // Consider the cross product
