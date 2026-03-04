@@ -251,6 +251,109 @@ struct TestWave1
   }
 };
 
+template <unsigned int space_dimT, typename param_float_t = double>
+struct TestTimoWave1
+{
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t time = 0.)
+  {
+    return 0;
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t time = 0.)
+  {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    res[1] = 1;
+    return scalar_product(res, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t time = 0.)
+  {
+    return analytic_result_u(point, normal, time);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t time = 0.)
+  {
+    return analytic_result_phi(point, normal, time);
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t time = 0.)
+  {
+    auto res = initial_u(point, time);
+    return scalar_product(res, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t time = 0.)
+  {
+    auto res = initial_r(point, time);
+    return scalar_product(res, normal);
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(1.);
+    res[2] = point[0];
+    return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    res[2] = -1;
+    return res;
+  }
+
+  static SmallVec<space_dimT, param_float_t> initial_m(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+    SmallVec<space_dimT, param_float_t> res(0.);
+    return res;
+  }
+};
+
 // timowave
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestTimoWave2

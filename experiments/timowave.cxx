@@ -14,23 +14,26 @@
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
-template<unsigned int poly_deg>
+template<unsigned int poly_deg, template<unsigned int, typename param_float_t> typename Test>
 using HDGTimoWave = GlobalLoop::Hyperbolic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
-  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, TestTimoWave0, PetscReal>
+  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, Test, PetscReal>
 >;
 
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(
-    PetscInt poly_deg,
+    PetscInt poly_deg, PetscInt test,
     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase **hdg
 ) {
-  switch(poly_deg) {
-  case 1: *hdg = new HDGWrapper(HDGTimoWave<1>(path, {tau, theta, dt})); return 0;
-  case 3: *hdg = new HDGWrapper(HDGTimoWave<3>(path, {tau, theta, dt})); return 0;
+  int i = poly_deg*10 + test;
+  switch(i) {
+  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave0>(path, {tau, theta, dt})); return 0;
+  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
+  case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave0>(path, {tau, theta, dt})); return 0;
+  case 31: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
       "unsupported: poly_deg = %d", poly_deg);
@@ -54,6 +57,7 @@ int main(int argc, char **argv) {
     char output_filename[PATH_MAX] = "timowave";
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
+    PetscInt timowave_test = 0;
 
     (void)e_rel;
 
@@ -79,6 +83,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -95,8 +100,9 @@ int main(int argc, char **argv) {
     dt = T / nt;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(poly_deg, domain_path, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, theta, dt, &hdg));
 
+    PRIN2IY(timowave_test);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
