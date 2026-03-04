@@ -68,13 +68,11 @@ struct TimoschenkoWaveParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    auto res_n = initial_n(point, time);
+    // auto res_n = initial_n(point, time);
     SmallVec<space_dimT, param_float_t> res;
     res[0] = -30*time*point[0];
-    res[1] = -42*time*point[0];
-    res[2] = -66*time*point[0];
-    res[1] -= res_n[2];
-    res[2] += res_n[1];
+    res[1] = -42*time*point[0]+9*time*point[0]*point[0]+ 7*time*point[0]*point[0]*point[0];
+    res[2] = -66*time*point[0]-6*time*point[0]*point[0]+11*time*point[0]*point[0]*point[0];
     return scalar_product(res, normal);
     // return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] *
     //          (point[1] == 0. && point[2] == 0.) +
