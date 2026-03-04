@@ -754,8 +754,7 @@ class TimoshenkoWave
     // HACK: need to extract extra coeffs from extra data in hyperedge
     SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
 
-    auto lambda_values_in2 = lambda_values_in;
-    auto lambda_values = node_dof_to_edge_dof(lambda_values_in2, hyper_edge);
+    auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
     std::cout << "  ---  set_data before" << std::endl;
     std::cout << "v " << hyper_edge.data.v_old << std::endl;
