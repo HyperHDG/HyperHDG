@@ -19,7 +19,7 @@ using HDGTimoWave = GlobalLoop::Hyperbolic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
-  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, LocalSolver::TimoschenkoWaveParametersDefault, PetscReal>
+  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, TestTimoWave0, PetscReal>
 >;
 
 // hdg must be deallocated with `delete`
