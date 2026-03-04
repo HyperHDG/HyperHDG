@@ -68,10 +68,13 @@ struct TimoschenkoWaveParametersDefault
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    auto res = initial_n(point, time);
-    res[0] += -30*time*point[0];
-    res[1] += -42*time*point[0];
-    res[2] += -66*time*point[0];
+    auto res_n = initial_n(point, time);
+    SmallVec<space_dimT, param_float_t> res;
+    res[0] = -30*time*point[0];
+    res[1] = -42*time*point[0];
+    res[2] = -66*time*point[0];
+    res[1] -= res_n[2];
+    res[2] += res_n[1];
     return scalar_product(res, normal);
     // return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] *
     //          (point[1] == 0. && point[2] == 0.) +
@@ -137,10 +140,10 @@ struct TimoschenkoWaveParametersDefault
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(.5 / sqrt(.2) * (3*(2*point[0]-1)*(2*point[0]-1)-1));
-    //res[0] = 1 * point[0] * point[0] * point[0];
-    //res[1] = 2 * point[0] * point[0] * point[0];
-    //res[2] = 3 * point[0] * point[0] * point[0];
+    SmallVec<space_dimT, param_float_t> res(.5 / sqrt(.2) * (3*(2*point[0]-1)*(2*point[0]-1)-1)); // ingore this
+    res[0] = 1 * point[0] * point[0] * point[0];
+    res[1] = 2 * point[0] * point[0] * point[0];
+    res[2] = 3 * point[0] * point[0] * point[0];
     return res;
   }
 
@@ -163,16 +166,16 @@ struct TimoschenkoWaveParametersDefault
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
     res[0] = -3*time*point[0]*point[0] - 0 *  5 * time*point[0]*point[0]*point[0];
-    res[1] = -3*time*point[0]*point[0] + 1 * 11 * time*point[0]*point[0]*point[0];
-    res[2] = -3*time*point[0]*point[0] - 0 *  7 * time*point[0]*point[0]*point[0];
+    res[1] = -6*time*point[0]*point[0] + 1 * 11 * time*point[0]*point[0]*point[0];
+    res[2] = -9*time*point[0]*point[0] - 1 *  7 * time*point[0]*point[0]*point[0];
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_m(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
     res[0] = -15*time*point[0]*point[0];
-    res[0] = -21*time*point[0]*point[0];
-    res[0] = -33*time*point[0]*point[0];
+    res[1] = -21*time*point[0]*point[0];
+    res[2] = -33*time*point[0]*point[0];
     return res;
   }
 };  // end of struct DiffusionParametersDefault

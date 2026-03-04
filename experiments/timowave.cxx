@@ -41,7 +41,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nt = 2, poly_deg = 1;
+    PetscInt nt = 1, poly_deg = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = 1;  // one-step theta method
@@ -52,8 +52,8 @@ int main(int argc, char **argv) {
     PetscBool plot = true;
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "timowave";
-    char plot_scale[PATH_MAX] = "0.95";
-    char domain_path[PATH_MAX] = "domain/cross.geo";
+    char plot_scale[PATH_MAX] = "1";
+    char domain_path[PATH_MAX] = "domains/single1.geo";
 
     (void)e_rel;
 
@@ -111,7 +111,9 @@ int main(int argc, char **argv) {
     zero_v = hdg->zero_vector();
     N = zero_v.size();
     temp = hdg->make_initial(zero_v);
-    // hdg->set_data(temp, 0);
+    // hdg->set_data(temp, 1);
+    // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING ONLY SET DATA\n"));
+    // return 1;
 
     // if (plot)
     //   hdg->plot_solution(temp, 0.);
