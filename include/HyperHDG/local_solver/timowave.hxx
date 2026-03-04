@@ -812,10 +812,10 @@ class TimoshenkoWave
 
         // NOTE: tau bdr_int and grad_int might have different signs!!
         for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] += grad_int_vec[0] * (1-theta_)
-            * n_old[dim*n_shape_fct_ +j] - tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
-          flux_r[dim*n_shape_fct_ + i] += grad_int_vec[0] * (1-theta_)
-            * m_old[dim*n_shape_fct_ +j] - tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
+          flux_u[dim*n_shape_fct_ + i] -= (-1)*grad_int_vec[0] * (1-theta_)
+            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
+          flux_r[dim*n_shape_fct_ + i] -= (-1)*grad_int_vec[0] * (1-theta_)
+            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
         }
 
         // Consider the cross product
