@@ -791,7 +791,8 @@ class TimoshenkoWave
     flux_u *= 0;
     flux_r *= 0;
 
-    // NOTE: sign!!!
+    // NOTE: when we compute fluxes, -= for stuff from LHS, += for stuff from RHS
+    //       finally is += to rhs
 
     // compute flux
     for (unsigned int i = 0; i < n_shape_fct_; i++) {
@@ -810,7 +811,7 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
-        // NOTE: tau bdr_int and grad_int might have different signs!!
+        // NOTE: this is from LHS
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] -= (-1)*grad_int_vec[0] * (1-theta_)
             * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * u_old[dim*n_shape_fct_+j];
@@ -818,7 +819,9 @@ class TimoshenkoWave
             * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int[0] * (1-theta_) * r_old[dim*n_shape_fct_+j];
         }
 
+        // NOTE: should probably have geometry area here or the vol integral
         // Consider the cross product
+        // NOTE: this also comes from LHS -> so should probably have -=
         flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + j] * (1-theta_);
         flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + j] * (1-theta_);
       }
