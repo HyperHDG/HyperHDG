@@ -791,18 +791,17 @@ class TimoshenkoWave
             * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * u_old[dim*n_shape_fct_+j];
           flux_r[dim*n_shape_fct_ + i] += grad_int_vec[0]
             * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * r_old[dim*n_shape_fct_+j];
-
-          // NOTE: u_old are already summed in rhs_from_global_rhs
-          flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+j] / extra_coeffs[2*space_dim+dim]; // C_u coeffs
-          flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+j] / extra_coeffs[3*space_dim+dim]; // C_r coeffs
         }
+      }
 
+      for (unsigned int dim = 0; dim < space_dim; dim++) {
+        flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+i] / extra_coeffs[2*space_dim+dim] * hyper_edge.geometry.area();
+        flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+i] / extra_coeffs[3*space_dim+dim] * hyper_edge.geometry.area();
       }
 
       // Consider the cross product
       flux_r[2 * n_shape_fct_ + i] -= n_old[1 * n_shape_fct_ + i] * hyper_edge.geometry.area();
       flux_r[1 * n_shape_fct_ + i] += n_old[2 * n_shape_fct_ + i] * hyper_edge.geometry.area();
-
 
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
@@ -1281,7 +1280,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
         for (unsigned int comp = 0; comp < 3; comp++) {
           right_hand_side[(1 * space_dim + comp) * n_shape_fct_ + i] -=
-            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           right_hand_side[(3 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
         }
       }

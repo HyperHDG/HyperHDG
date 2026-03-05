@@ -32,8 +32,10 @@ PetscErrorCode PetscHDGCreate(
   switch(i) {
   case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave0>(path, {tau, theta, dt})); return 0;
   case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
+  case 12: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave2>(path, {tau, theta, dt})); return 0;
   case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave0>(path, {tau, theta, dt})); return 0;
   case 31: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave1>(path, {tau, theta, dt})); return 0;
+  case 39: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave9>(path, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
       "unsupported: poly_deg = %d", poly_deg);
