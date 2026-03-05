@@ -766,6 +766,8 @@ class TimoshenkoWave
 
     flux_u *= 0;
     flux_r *= 0;
+    flux_v *= 0;
+    flux_s *= 0;
 
     // NOTE: when we compute fluxes, -= for stuff from LHS, += for stuff from RHS
     //       finally is += to rhs
