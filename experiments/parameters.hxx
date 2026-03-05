@@ -461,7 +461,7 @@ struct TestTimoWave2
 
 // timowave
 template <unsigned int space_dimT, typename param_float_t = double>
-struct TestTimoWave9
+struct TestTimoWave3
 {
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.

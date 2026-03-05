@@ -29,5 +29,5 @@ Print[Table[Pn[n,x],{n,0,3}]]
 prod[f_,g_]:=Integrate[f*g, {x,0,1}]
 
 Print["----inner products at t=0 for v, s"]
-Print[Transpose[N[Table[prod[Pn[n,x],v[x,0]],{n,0,3}],4]]]
-Print[Transpose[N[Table[prod[Pn[n,x],s[x,0]],{n,0,3}],4]]]
+Print[Transpose[N[Table[prod[Pn[n,x],v[x,0]],{n,0,3}]]]]
+Print[Transpose[N[Table[prod[Pn[n,x],s[x,0]],{n,0,3}]]]]
