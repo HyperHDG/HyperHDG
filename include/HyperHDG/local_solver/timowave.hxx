@@ -647,37 +647,19 @@ class TimoshenkoWave
                 "Matrix must have appropriate size!");
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
-
-    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-      solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
-    lSol_float_t error = 0.;
+    std::array<lSol_float_t,3> comps = {1,-1,-2};
     std::array<lSol_float_t, n_shape_fct_> coeffs;
+    lSol_float_t error = 0;
 
-    for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + (2 * space_dim + 0) * n_shape_fct_];
-    error += integrator::template integrate_vol_diffsquare_discanacomp<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, 1,
-                                                                       hyper_edge.geometry, time);
+    for (unsigned int dim = 0; dim < 3; dim++) {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = hyper_edge.data.u_old[i + dim * n_shape_fct_];
+      error += integrator::template integrate_vol_diffsquare_discanacomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, comps[dim],
+                                                                         hyper_edge.geometry, time);
+    }
 
-    for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + (2 * space_dim + 1) * n_shape_fct_];
-    error += integrator::template integrate_vol_diffsquare_discanacomp<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, -1,
-                                                                       hyper_edge.geometry, time);
-
-    for (unsigned int i = 0; i < coeffs.size(); ++i)
-      coeffs[i] = coefficients[i + (2 * space_dim + 2) * n_shape_fct_];
-    error += integrator::template integrate_vol_diffsquare_discanacomp<
-      Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-      parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, -2,
-                                                                       hyper_edge.geometry, time);
-
-    // error += len_beam.errors(lambda_values, hyper_edge, time)[0];
-    // error += twist_beam.errors(lambda_values, hyper_edge, time)[0];
-    // error += ben_beam.errors(lambda_values, hyper_edge, time)[0];
     return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************

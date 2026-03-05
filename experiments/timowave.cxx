@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
-        PetscReal ti = i*dt;
+      PetscReal ti = i*dt, error = 0;
 
         std::span<PetscReal> span;
         PetscCall(VecGetSpan(rhs, span));
@@ -171,16 +171,12 @@ int main(int argc, char **argv) {
         iterations += its;
 
         hdg->set_data(span, ti);
-        if (plot)
-          hdg->plot_solution(span, ti);
-        PetscCall(VecRestoreSpan(rhs, span));
+        if (plot) hdg->plot_solution(span, ti);
+        error = hdg->errors(span, ti)[0];
+        e_abs = PetscMax(error, e_abs);
+        PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
 
-        temp2 = hdg->errors(temp, ti);
-        // temp3 = hdg->norms(temp, ti);
-        e_abs = PetscMax(temp2[0], e_abs);
-        // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
-        // PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
-        PetscCall(VecSetValue(errors, i, e_abs, INSERT_VALUES));
+        PetscCall(VecRestoreSpan(rhs, span));
     }
     PRIN2SP();
 
@@ -193,7 +189,6 @@ int main(int argc, char **argv) {
     avg_iterations = ((PetscReal)iterations) / nt;
 
     PRIN2FY(e_abs);
-    // PRIN2FY(e_rel);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);

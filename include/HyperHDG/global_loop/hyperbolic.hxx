@@ -422,8 +422,8 @@ class Hyperbolic
    * \param   time          Time at which error is evaluated.
    * \retval  error         L2 error.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> errors(const SpanT& x_vec, const dof_value_t time = 0.)
   {
     auto result = prototype_errors(errors, has_errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
