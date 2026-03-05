@@ -399,7 +399,7 @@ class ZK
     for (unsigned int bdr = 0; bdr < 2; ++bdr)
     {
       SmallVec<hyEdge_dim(), lSol_float_t> normal = hyper_edge.geometry.local_normal(bdr);
-      std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> u_int, q_int;
+      std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> u_int;
       u_int.fill(0.);
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
       {
@@ -771,7 +771,7 @@ class ZK
     return out;
   }
 
-  /*
+  
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallMatT coupling_coeff_directional_derivative(const SmallMatT& lambda_values,
                                                          const SmallVec<n_loc_dofs_, lSol_float_t>& coeff,
@@ -787,7 +787,7 @@ class ZK
       using parameters = parametersT<hyEdge_dim(), lSol_float_t>;
       //delete
       //out[bdr].fill(0.);
-      if (normal[1] * normal[1] < eps && normal[0] > 0 && hyper_edge.node_descriptor[bdr] == 0) //V-
+      if (normal[1] * normal[1] < eps && normal[0] > 0 && hyper_edge.node_descriptor[bdr] == 0) //right
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -795,33 +795,24 @@ class ZK
           {
             lSol_float_t b_sk_sh_ij = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               j, i, bdr, hyper_edge.geometry);
-            //contributions of p and z
-            out[bdr][i] += normal[0] * b_sk_sh_ij * (coeff_dir[5 * n_shape_fct_ + j] - coeff_dir[2 * n_shape_fct_ + j]);
+            //contribution of p
+            out[bdr][i] += normal[0] * b_sk_sh_ij * coeff_dir[n_shape_fct_ + j];
             //contributions of the fluxes
-            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mzpu_ - tau_f_) * coeff_dir[j];
-            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mzpv_) * coeff_dir[4 * n_shape_fct_ + j];
-            out[bdr][n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_uqq_ * coeff_dir[n_shape_fct_ + j];
-            //contribution of f and uq
-            lSol_float_t fc = 2 * parameters::kappa * b_sk_sh_ij * coeff_dir[j], uqc = 0;
+            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_mpu_ - tau_f_) * coeff_dir[j];
+            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_mpq_ * coeff_dir[n_shape_fct_ + j];
+            //contribution of f
+            lSol_float_t fc = 0.;
             for (unsigned int k = 0; k < n_shape_fct_; ++k)
             {
               lSol_float_t b_sk_sh_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              fc += 2 * onepointfive * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
-              uqc += 0.5 * b_sk_sh_sh_ikj * (coeff[n_shape_fct_ + k] * coeff_dir[j] + coeff[k] * coeff_dir[n_shape_fct_ + j]);
-            }
-            for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-            {
-              lSol_float_t b_sk_sk_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-                j, k, i, bdr, hyper_edge.geometry);
-              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_bdr_ + k] * coeff_dir[j];
+              fc += 2 * onehalf * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
             }
             out[bdr][i] += normal[0] * fc;
-            out[bdr][n_shape_bdr_ + i] += normal[0] * uqc;
           }
         }
       }
-      else if (normal[1] * normal[1] < eps && normal[0] < 0 && hyper_edge.node_descriptor[bdr] == 0) //V+
+      else if (normal[1] * normal[1] < eps && normal[0] < 0 && hyper_edge.node_descriptor[bdr] == 0) //left
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -829,34 +820,29 @@ class ZK
           {
             lSol_float_t b_sk_sh_ij = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               j, i, bdr, hyper_edge.geometry);
-            //contributions of p and z
-            out[bdr][i] += normal[0] * b_sk_sh_ij * (coeff_dir[5 * n_shape_fct_ + j] - coeff_dir[2 * n_shape_fct_ + j]);
-            //contribution of v
+            //contribution of p
+            out[bdr][i] += normal[0] * b_sk_sh_ij * coeff_dir[n_shape_fct_ + j];
+            //contribution of q
+            out[bdr][n_shape_bdr_ + i] += normal[0] * b_sk_sh_ij * coeff_dir[2 * n_shape_fct_ + j];
+            //contribution of s
             out[bdr][2 * n_shape_bdr_ + i] += normal[0] * b_sk_sh_ij * coeff_dir[4 * n_shape_fct_ + j];
             //contributions of the fluxes
-            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_pzpu_ - tau_f_) * coeff_dir[j];
-            out[bdr][n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_uqq_ * coeff_dir[n_shape_fct_ + j];
-            //contribution of f and uq
-            lSol_float_t fc = 2 * parameters::kappa * b_sk_sh_ij * coeff_dir[j], uqc = 0;
+            out[bdr][i] -= normal[0] * normal[0] * b_sk_sh_ij * (tau_ppu_ - tau_f_) * coeff_dir[j];
+            out[bdr][n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_pqu_ * coeff_dir[j];
+            out[bdr][2 * n_shape_bdr_ + i] -= normal[0] * normal[0] * b_sk_sh_ij * tau_psu_ * coeff_dir[j];
+            //contribution of f
+            lSol_float_t fc = 0.;
             for (unsigned int k = 0; k < n_shape_fct_; ++k)
             {
               lSol_float_t b_sk_sh_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
                 j, k, i, bdr, hyper_edge.geometry);
-              fc += 2 * onepointfive * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
-              uqc += 0.5 * b_sk_sh_sh_ikj * (coeff[n_shape_fct_ + k] * coeff_dir[j] + coeff[k] * coeff_dir[n_shape_fct_ + j]);
-            }
-            for (unsigned int k = 0; k < n_shape_bdr_; ++k)
-            {
-              lSol_float_t b_sk_sk_sh_ikj = integrator::template integrate_bdr_phiphipsi<decltype(hyEdgeT::geometry)>(
-                j, k, i, bdr, hyper_edge.geometry);
-              uqc += 0.5 * b_sk_sk_sh_ikj * lambda_values[bdr][n_shape_bdr_ + k] * coeff_dir[j];
+              fc += 2 * onehalf * b_sk_sh_sh_ikj * coeff[j] * coeff_dir[k];
             }
             out[bdr][i] += normal[0] * fc;
-            out[bdr][n_shape_bdr_ + i] += normal[0] * uqc;
           }
         }
       }
-      else if (normal[0] * normal[0] < eps && normal[1] < 0 && hyper_edge.node_descriptor[bdr] == 0) //H+
+      else if (normal[0] * normal[0] < eps && hyper_edge.node_descriptor[bdr] == 0) //horizontal
       {
         for (unsigned int i = 0; i < n_shape_bdr_; ++i)
         {
@@ -864,29 +850,18 @@ class ZK
           {
             lSol_float_t b_sk_sh_ij = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
               j, i, bdr, hyper_edge.geometry);
-            //contribution of v
-            out[bdr][i] += normal[1] * b_sk_sh_ij * coeff_dir[4 * n_shape_fct_ + j];
-          }
-        }
-      }
-      else if (normal[0] * normal[0] < eps && normal[1] > 0 && hyper_edge.node_descriptor[bdr] == 0) //H-
-      {
-        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-        {
-          for (unsigned int j = 0; j < n_shape_fct_; ++j)
-          {
-            lSol_float_t b_sk_sh_ij = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-              j, i, bdr, hyper_edge.geometry);
-            //contribution of u
-            out[bdr][n_shape_bdr_ + i] += normal[1] * b_sk_sh_ij * coeff_dir[j];
+            //contribution of r
+            out[bdr][i] += normal[1] * b_sk_sh_ij * coeff_dir[3 * n_shape_fct_ + j];
+            //contributions of the fluxes
+            out[bdr][i] -= normal[1] * normal[1] * b_sk_sh_ij * tau_ru_ * coeff_dir[j];
           }
         }
       }
     }
     return out;
   }
-*/
-  /*
+
+  
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in_uc,
                               const SmallMatInT& lambda_values_dir,
@@ -916,7 +891,7 @@ class ZK
     
     return lambda_values_out;
   }
-*/
+
   /*!***********************************************************************************************
    * \brief   Solve local problem (with right-hand side from skeletal).
    *
@@ -928,7 +903,7 @@ class ZK
    * \param   time          Point of time the problem is solved.
    * \retval  residual      Residual (should be zero).
    ************************************************************************************************/
- /*
+ 
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in_uc,
                                                            SmallMatOutT& lambda_values_out,
@@ -944,7 +919,7 @@ class ZK
     //call residual function
     return coupling_function(lambda_values_in, coeff, lambda_values_out, hyper_edge, time);
   }
-*/
+
 
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& coupling_function(const SmallMatInT& lambda_values_in,
