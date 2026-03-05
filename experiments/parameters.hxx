@@ -1074,6 +1074,9 @@ struct TestTimoWave8
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
+    res[0] = 0;
+    res[1] = time;
+    res[2] = 0;
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1084,8 +1087,10 @@ struct TestTimoWave8
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    SmallVec<space_dimT, param_float_t> res(1.);
+    SmallVec<space_dimT, param_float_t> res(0.);
     res[0] = 0;
+    res[1] = 1;
+    res[2] = time*point[0];
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1139,26 +1144,26 @@ struct TestTimoWave8
 
   static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = point[0];
+    res[2] = point[0];
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(1.);
-    res[0] = time*point[0];
+    res[2] = time*point[0];
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = 1;
+    res[1] = time*point[0];
     res[2] = -1;
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_m(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -time;
+    res[2] = -time;
     return res;
   }
 };
