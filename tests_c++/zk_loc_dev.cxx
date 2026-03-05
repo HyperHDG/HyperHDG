@@ -274,11 +274,11 @@ int main()
         std::cout << ls.newton(lambda_n, coeff, he, 1) << std::endl;
         print_coeff(coeff);
 
-        //ls.coupling_function(lambda_n, coeff, res_flux, he, 1.);
+        ls.coupling_function(lambda_n, coeff, res_flux, he, 1.);
           
         for (unsigned int n = 0; n < 4; ++n)
         {
-          //std::for_each(res_flux[n].begin(), res_flux[n].end(), [](auto i){std::cout << i <<"\t";});
+          std::for_each(res_flux[n].begin(), res_flux[n].end(), [](auto i){std::cout << i <<"\t";});
           std::cout << "\n";
         }
        std::cout << "\n";
