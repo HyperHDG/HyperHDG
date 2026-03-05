@@ -33,6 +33,7 @@ PetscErrorCode PetscHDGCreate(
   case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave0>(path, {tau, theta, dt})); return 0;
   case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   case 12: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave2>(path, {tau, theta, dt})); return 0;
+  case 15: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave5>(path, {tau, theta, dt})); return 0;
   case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave0>(path, {tau, theta, dt})); return 0;
   case 31: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   case 33: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave3>(path, {tau, theta, dt})); return 0;
@@ -135,9 +136,6 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
-
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_abs0: %.5e\n", e_abs));
-    // PetscCall(PetscPrintf(PETSC_COMM_SELF, "e_rel0: %.5e\n", e_rel));
 
     PRIN2S(s_as);
     mat_coo = hdg->trace_to_flux_mat(0.);
