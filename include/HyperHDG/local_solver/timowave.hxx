@@ -768,6 +768,9 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
+        std::cout << "---- compute fluxes" << std::endl;
+        std::cout << i << " " << j << "|" << bdr_int << " " << u_old[j] << std::endl;
+
         // NOTE: also need theta of old v with extra coeffs
         // NOTE: why no normal_int_vec here?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
@@ -1235,6 +1238,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
     // std::cout << std::endl;
 
+    std::cout << "------ global_rhs" << std::endl;
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
@@ -1252,6 +1256,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           right_hand_side[(0 * space_dim + comp) * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           right_hand_side[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
+          std::cout << i << " " << comp << "|" << theta_*integrals1[comp] << std::endl;
         }
 
         // phi
