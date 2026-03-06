@@ -694,6 +694,7 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
+    res[2] = 2*M_PI*cos(2*M_PI*time)*sin(2*M_PI*point[0]);
     return res;
   }
 
