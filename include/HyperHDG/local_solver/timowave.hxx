@@ -414,6 +414,28 @@ class TimoshenkoWave
   }
 
   template <class hyEdgeT, typename SmallMatT>
+  inline SmallMatT loc_dof_to_glob_dof(
+    const SmallMatT& loc_dof,
+    hyEdgeT& hyper_edge) const
+  {
+    SmallMatT glob_dof;
+    Point<space_dim, lSol_float_t> normal_vec =
+      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        glob_dof[i + dim * n_shape_fct_] += normal_vec[dim] * loc_dof[i];
+
+    for (unsigned int ind = 0; ind < space_dim - 1; ++ind)
+    {
+      normal_vec = (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(ind);
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+          glob_dof[i + dim * n_shape_fct_] += normal_vec[dim] * loc_dof[i + (1 + ind) * n_shape_fct_];
+    }
+    return glob_dof;
+  }
+
+  template <class hyEdgeT, typename SmallMatT>
   inline std::array<std::array<double, 2 * space_dim>, 2 * hyEdge_dimT> node_dof_to_edge_dof(
     const SmallMatT& glob_lambda,
     hyEdgeT& hyper_edge) const
@@ -641,19 +663,17 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    hy_assert(lambda_values.size() == 2 * hyEdge_dimT, "Matrix must have appropriate size!");
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-      hy_assert(lambda_values[i].size() == n_glob_dofs_per_node(),
-                "Matrix must have appropriate size!");
+    (void)lambda_values;
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t,3> comps = {1,-1,-2};
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     lSol_float_t error = 0;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = loc_dof_to_glob_dof(hyper_edge.data.u_old, hyper_edge);
 
     for (unsigned int dim = 0; dim < 3; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
-        coeffs[i] = hyper_edge.data.u_old[i + dim * n_shape_fct_];
+        coeffs[i] = u_old[i + dim * n_shape_fct_];
       error += integrator::template integrate_vol_diffsquare_discanacomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, comps[dim],
