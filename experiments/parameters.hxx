@@ -631,7 +631,7 @@ struct TestTimoWave4
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
 
-  static constexpr param_float_t omega = M_PI;
+  static constexpr param_float_t omega = 2*M_PI;
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
@@ -652,7 +652,7 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = -omega*cos(omega*time)*sin(omega*point[0]);
+    res[1] = -omega*cos(omega*time)*sin(omega*(point[0]+point[1]));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -696,13 +696,13 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = cos(omega*time)*cos(omega*point[0]);
+    res[2] = cos(omega*time)*cos(omega*(point[0]+point[1]));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0);
-    res[2] = -omega*cos(omega*point[0])*sin(omega*time);
+    res[2] = -omega*cos(omega*(point[0]+point[1]))*sin(omega*time);
     return res;
   }
 
@@ -718,7 +718,7 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = omega*sin(omega*point[0])*cos(omega*time);
+    res[2] = omega*sin(omega*(point[0]+point[1]))*cos(omega*time);
     return res;
   }
 
