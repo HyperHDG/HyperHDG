@@ -1,7 +1,7 @@
 i:= {1, 0, 0}
-omega := 2 Pi
+omega := Pi
 
-u[x_,t_] := {0, 0, Sin[omega x] Cos[omega t]}
+u[x_,t_] := {0, 0, Cos[omega x] Cos[omega t]}
 r[x_,t_] := {0, 0, 0}
 
 v[x_,t_] =  D[u[x,t],t]
