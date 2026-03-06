@@ -497,8 +497,8 @@ class TimoshenkoWave
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      std::cout << "-- solve_local" << std::endl;
-      std::cout << rhs << std::endl;
+      // std::cout << "-- solve_local" << std::endl;
+      // std::cout << rhs << std::endl;
       return rhs / assemble_loc_matrix(hyper_edge, time);
     }
     catch (Wrapper::LAPACKexception& exc)
@@ -540,7 +540,7 @@ class TimoshenkoWave
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
   {
-    std::cout << "------------- trace_to_flux" << std::endl;
+    // std::cout << "------------- trace_to_flux" << std::endl;
 
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -594,7 +594,7 @@ class TimoshenkoWave
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
   {
-    std::cout << "------------- residual_flux" << std::endl;
+    // std::cout << "------------- residual_flux" << std::endl;
 
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
@@ -768,8 +768,8 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
-        std::cout << "---- compute fluxes" << std::endl;
-        std::cout << i << " " << j << "|" << bdr_int << " " << u_old[j] << std::endl;
+        // std::cout << "---- compute fluxes" << std::endl;
+        // std::cout << i << " " << j << "|" << bdr_int << " " << u_old[j] << std::endl;
 
         // NOTE: also need theta of old v with extra coeffs
         // NOTE: why no normal_int_vec here?
@@ -816,15 +816,15 @@ class TimoshenkoWave
 
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
-    std::cout << "  ---  set_data before" << std::endl;
-    std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    std::cout << "lambda" << std::endl;
-    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-      for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-        std::cout << lambda_values[i][j] << " ";
-      std::cout << std::endl;
-    }
+    // std::cout << "  ---  set_data before" << std::endl;
+    // std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    // std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    // std::cout << "lambda" << std::endl;
+    // for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+    //   for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
+    //     std::cout << lambda_values[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
@@ -847,29 +847,29 @@ class TimoshenkoWave
 
     compute_fluxes(lambda_values, hyper_edge, time);
 
-    std::cout << "----- set_data " << std::endl;
-    std::cout << "u " << hyper_edge.data.u_old << std::endl;
-    std::cout << "r " << hyper_edge.data.r_old << std::endl;
-    std::cout << "n " << hyper_edge.data.n_old << std::endl;
-    std::cout << "m " << hyper_edge.data.m_old << std::endl;
-    std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
-    std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
-    std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
-    std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
-    std::cout << "lambda_in" << std::endl;
-    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-      for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-        std::cout << lambda_values_in[i][j] << " ";
-      std::cout << std::endl;
-    }
-    std::cout << "lambda " << std::endl;
-    for (unsigned int i=0; i < lambda_values.size(); i++) {
-      for (unsigned int j=0; j < lambda_values[i].size(); j++)
-        std::cout << lambda_values[i][j] << " ";
-      std::cout << std::endl;
-    }
+    // std::cout << "----- set_data " << std::endl;
+    // std::cout << "u " << hyper_edge.data.u_old << std::endl;
+    // std::cout << "r " << hyper_edge.data.r_old << std::endl;
+    // std::cout << "n " << hyper_edge.data.n_old << std::endl;
+    // std::cout << "m " << hyper_edge.data.m_old << std::endl;
+    // std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    // std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    // std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
+    // std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
+    // std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
+    // std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
+    // std::cout << "lambda_in" << std::endl;
+    // for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+    //   for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
+    //     std::cout << lambda_values_in[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
+    // std::cout << "lambda " << std::endl;
+    // for (unsigned int i=0; i < lambda_values.size(); i++) {
+    //   for (unsigned int j=0; j < lambda_values[i].size(); j++)
+    //     std::cout << lambda_values[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
 
   }
 
@@ -978,23 +978,23 @@ class TimoshenkoWave
     auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
     compute_fluxes(lambda_values_loc, hyper_edge, time);
 
-    std::cout << "----- make_initial" << std::endl;
-    std::cout << "u " << hyper_edge.data.u_old << std::endl;
-    std::cout << "r " << hyper_edge.data.r_old << std::endl;
-    std::cout << "n " << hyper_edge.data.n_old << std::endl;
-    std::cout << "m " << hyper_edge.data.m_old << std::endl;
-    std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    for (unsigned int i=0; i < lambda_values.size(); i++) {
-      std::cout << "lambda " << i << "| ";
-      for (unsigned int j=0; j < lambda_values[i].size(); j++)
-        std::cout << lambda_values_loc[i][j] << " ";
-      std::cout << std::endl;
-    }
-    std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
-    std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
-    std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
-    std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
+    // std::cout << "----- make_initial" << std::endl;
+    // std::cout << "u " << hyper_edge.data.u_old << std::endl;
+    // std::cout << "r " << hyper_edge.data.r_old << std::endl;
+    // std::cout << "n " << hyper_edge.data.n_old << std::endl;
+    // std::cout << "m " << hyper_edge.data.m_old << std::endl;
+    // std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    // std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    // for (unsigned int i=0; i < lambda_values.size(); i++) {
+    //   std::cout << "lambda " << i << "| ";
+    //   for (unsigned int j=0; j < lambda_values[i].size(); j++)
+    //     std::cout << lambda_values_loc[i][j] << " ";
+    //   std::cout << std::endl;
+    // }
+    // std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
+    // std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
+    // std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
+    // std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
 
     return lambda_values;
   }
@@ -1167,8 +1167,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         }
       }
 
-  std::cout << "-- rhs_from_lambda" << std::endl;
-  std::cout << right_hand_side << std::endl;
+  // std::cout << "-- rhs_from_lambda" << std::endl;
+  // std::cout << right_hand_side << std::endl;
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
 
@@ -1238,7 +1238,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
     // std::cout << std::endl;
 
-    std::cout << "------ global_rhs" << std::endl;
+    // std::cout << "------ global_rhs" << std::endl;
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
@@ -1256,7 +1256,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           right_hand_side[(0 * space_dim + comp) * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           right_hand_side[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
-          std::cout << i << " " << comp << "|" << theta_*integrals1[comp] << std::endl;
+          // std::cout << i << " " << comp << "|" << theta_*integrals1[comp] << std::endl;
         }
 
         // phi
@@ -1290,39 +1290,39 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     right_hand_side[5 * space_dim * n_shape_fct_ + i] -= hyper_edge.data.r_old[i] * hyper_edge.geometry.area() / delta_t_;
   }
 
-  std::cout << "-- rhs_from_global_rhs" << std::endl;
-  std::cout << "  -- u" << std::endl;
-  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-    std::cout << right_hand_side[i] << " ";
-  std::cout << std::endl;
-  std::cout << "  -- r" << std::endl;
-  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-    std::cout << right_hand_side[i+space_dim*n_shape_fct_] << " ";
-  std::cout << std::endl;
-  std::cout << "  -- n" << std::endl;
-  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-    std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
-  std::cout << std::endl;
-  std::cout << "  -- m" << std::endl;
-  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-    std::cout << right_hand_side[i+3*space_dim*n_shape_fct_] << " ";
-  std::cout << std::endl;
+  // std::cout << "-- rhs_from_global_rhs" << std::endl;
+  // std::cout << "  -- u" << std::endl;
+  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  //   std::cout << right_hand_side[i] << " ";
+  // std::cout << std::endl;
+  // std::cout << "  -- r" << std::endl;
+  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  //   std::cout << right_hand_side[i+space_dim*n_shape_fct_] << " ";
+  // std::cout << std::endl;
+  // std::cout << "  -- n" << std::endl;
+  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
+  // std::cout << std::endl;
+  // std::cout << "  -- m" << std::endl;
+  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
+  //   std::cout << right_hand_side[i+3*space_dim*n_shape_fct_] << " ";
+  // std::cout << std::endl;
 
-  std::cout << "  -- v" << std::endl;
-  std::cout << hyper_edge.data.v_old << std::endl;
-  std::cout << "  -- s" << std::endl;
-  std::cout << hyper_edge.data.s_old << std::endl;
-  std::cout << std::endl;
+  // std::cout << "  -- v" << std::endl;
+  // std::cout << hyper_edge.data.v_old << std::endl;
+  // std::cout << "  -- s" << std::endl;
+  // std::cout << hyper_edge.data.s_old << std::endl;
+  // std::cout << std::endl;
 
-  std::cout << "  -- flux_u" << std::endl;
-  std::cout << hyper_edge.data.flux_u << std::endl;
-  std::cout << "  -- flux_r" << std::endl;
-  std::cout << hyper_edge.data.flux_r << std::endl;
-  std::cout << std::endl;
+  // std::cout << "  -- flux_u" << std::endl;
+  // std::cout << hyper_edge.data.flux_u << std::endl;
+  // std::cout << "  -- flux_r" << std::endl;
+  // std::cout << hyper_edge.data.flux_r << std::endl;
+  // std::cout << std::endl;
 
 
-  std::cout << "  -- rhs" << std::endl;
-  std::cout << right_hand_side << std::endl;
+  // std::cout << "  -- rhs" << std::endl;
+  // std::cout << right_hand_side << std::endl;
 
   return right_hand_side;
 }  // end of Bilaplacian::assemble_rhs_from_global_rhs

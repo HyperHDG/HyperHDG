@@ -33,6 +33,7 @@ PetscErrorCode PetscHDGCreate(
   case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave0>(path, {tau, theta, dt})); return 0;
   case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   case 12: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave2>(path, {tau, theta, dt})); return 0;
+  case 13: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave3>(path, {tau, theta, dt})); return 0;
   case 15: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave5>(path, {tau, theta, dt})); return 0;
   case 16: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave6>(path, {tau, theta, dt})); return 0;
   case 17: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave7>(path, {tau, theta, dt})); return 0;
@@ -55,7 +56,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nt = 1, poly_deg = 1;
+    PetscInt nt = 1, nx = 1, poly_deg = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = 1;  // one-step theta method
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, poly_deg, &poly_deg, &is_set));
     PetscCall(PetscOptionsReal("-theta", "time-step averaging weight, 0 < theta <= 0.5, use theta=0.25 for CN", NULL, theta, &theta, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
+    PetscCall(PetscOptionsInt("-nx", "number of refinements", NULL, nx, &nx, &is_set));
     PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, nt, &nt, &is_set));
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
     PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
@@ -112,12 +114,14 @@ int main(int argc, char **argv) {
 
     HDGBase *hdg = NULL;
     PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, theta, dt, &hdg));
+    hdg->set_refinement(nx);
 
     PRIN2IY(timowave_test);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2FY(theta);
     PRIN2IY(nt);
+    PRIN2IY(nx);
     PRIN2FY(dt);
     PRIN2FY(T);
     hdg->plot_option("fileName", output_filename);
@@ -163,7 +167,7 @@ int main(int argc, char **argv) {
 
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
+      // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
 
         std::span<PetscReal> span;
