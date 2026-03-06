@@ -669,7 +669,8 @@ class TimoshenkoWave
     std::array<lSol_float_t,3> comps = {1,-1,-2};
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     lSol_float_t error = 0;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = loc_dof_to_glob_dof(hyper_edge.data.u_old, hyper_edge);
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = hyper_edge.data.u_old;
+      // loc_dof_to_glob_dof(hyper_edge.data.u_old, hyper_edge);
 
     for (unsigned int dim = 0; dim < 3; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
