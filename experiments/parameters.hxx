@@ -641,6 +641,8 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
+    // res[0] = -omega*omega*cos(omega*time)*cos(omega*point[1]);
+    // res[1] = -omega*omega*cos(omega*time)*cos(omega*point[0]);
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -652,7 +654,8 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = -omega*cos(omega*time)*sin(omega*(point[0]));
+    // res[2] = omega*cos(omega*time)*(sin(omega*point[0])-sin(omega*point[1]));
+    res[2] = omega*cos(omega*time)*(sin(omega*point[0]));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -696,13 +699,15 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = cos(omega*time)*cos(omega*(point[0]+point[1]));
+    // res[0] = cos(omega*time)*cos(omega*(point[1]));
+    res[1] = cos(omega*time)*cos(omega*(point[0]));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0);
-    res[2] = -omega*cos(omega*(point[0]+point[1]))*sin(omega*time);
+    // res[0] = -omega*sin(omega*time)*cos(omega*(point[1]));
+    res[1] = -omega*sin(omega*time)*cos(omega*(point[0]));
     return res;
   }
 
@@ -718,7 +723,8 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = omega*sin(omega*(point[0]+point[1]))*cos(omega*time);
+    // res[0] = omega*sin(omega*(point[1]))*cos(omega*time);
+    res[1] = omega*sin(omega*(point[0]))*cos(omega*time);
     return res;
   }
 
@@ -727,6 +733,11 @@ struct TestTimoWave4
     return res;
   }
 };
+
+
+
+
+
 
 // timowave
 template <unsigned int space_dimT, typename param_float_t = double>
