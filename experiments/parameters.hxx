@@ -652,7 +652,7 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = -omega*cos(omega*time)*sin(omega*(point[0]+point[1]));
+    res[1] = -omega*cos(omega*time)*sin(omega*(point[0]));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
