@@ -882,7 +882,12 @@ struct TestTimoWave6
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = time;
+    if (std::abs(point[0]) > 1e-14)
+      res[1] = time;
+    else if (std::abs(point[1]) > 1e-14)
+      res[0] = time;
+    else
+      std::abort();
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -926,13 +931,13 @@ struct TestTimoWave6
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = time*point[0];
+    res[2] = time*(point[0]+point[1]);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0);
-    res[2] = point[0];
+    res[2] = point[0]+point[1];
     return res;
   }
 
