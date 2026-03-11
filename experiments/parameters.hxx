@@ -925,7 +925,7 @@ struct TestTimoWave6
   }
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(1.);
+    SmallVec<space_dimT, param_float_t> res(0.);
     res[2] = time*point[0];
     return res;
   }
