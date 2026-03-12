@@ -622,63 +622,40 @@ struct TestTimoWave3
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestTimoWave4
 {
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
   static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
 
   static constexpr param_float_t omega = 2*M_PI;
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
+
   // f
   static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    // res[0] = -omega*omega*cos(omega*time)*cos(omega*point[1]);
-    // res[1] = -omega*omega*cos(omega*time)*cos(omega*point[0]);
     return scalar_product(res, normal);
   }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
   // g
   static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    // res[2] = omega*cos(omega*time)*(sin(omega*point[0])-sin(omega*point[1]));
-    res[2] = omega*cos(omega*time)*(sin(omega*point[0]));
+    res[1] = -omega*cos(omega*time)*(sin(omega*point[0]));
     return scalar_product(res, normal);
   }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
     return analytic_result_u(point, normal, time);
   }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
   static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
                                            const Point<space_dimT, param_float_t>& normal,
                                            const param_float_t time = 0.)
   {
     return analytic_result_phi(point, normal, time);
   }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
   static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
@@ -686,9 +663,6 @@ struct TestTimoWave4
     auto res = initial_u(point, time);
     return scalar_product(res, normal);
   }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
   static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
                                            const Point<space_dimT, param_float_t>& normal,
                                            const param_float_t time = 0.)
@@ -699,15 +673,13 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    // res[0] = cos(omega*time)*cos(omega*(point[1]));
-    res[1] = cos(omega*time)*cos(omega*(point[0]));
+    res[2] = cos(omega*time)*cos(omega*(point[0]));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0);
-    // res[0] = -omega*sin(omega*time)*cos(omega*(point[1]));
-    res[1] = -omega*sin(omega*time)*cos(omega*(point[0]));
+    res[2] = -omega*sin(omega*time)*cos(omega*(point[0]));
     return res;
   }
 
@@ -723,8 +695,7 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    // res[0] = omega*sin(omega*(point[1]))*cos(omega*time);
-    res[1] = omega*sin(omega*(point[0]))*cos(omega*time);
+    res[2] = omega*sin(omega*(point[0]))*cos(omega*time);
     return res;
   }
 
