@@ -633,7 +633,7 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = omega*omega*cos(omega*point[0]);
+    res[2] = omega*omega*cos(omega*point[1]);
     return scalar_product(res, normal);
   }
   // g
@@ -642,7 +642,7 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = -omega*(sin(omega*point[0]));
+    res[0] = -omega*(sin(omega*point[1])); // NOTE: again! opposite sign as mathematica
     return scalar_product(res, normal);
   }
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
@@ -674,7 +674,7 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = cos(omega*(point[0]));
+    res[2] = cos(omega*(point[1]));
     return res;
   }
 
@@ -695,7 +695,7 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = omega*sin(omega*(point[0]));
+    res[2] = omega*sin(omega*(point[1]));
     return res;
   }
 
@@ -856,7 +856,7 @@ struct TestTimoWave6
     if (std::abs(point[0]) > 1e-14)
       res[1] = time;
     else if (std::abs(point[1]) > 1e-14)
-      res[0] = time;
+      res[0] = time; // NOTE: this is the opposite sign as mathematica says!
     else
       std::abort();
     return scalar_product(res, normal);
