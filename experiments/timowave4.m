@@ -1,7 +1,7 @@
 i:= {1, 0, 0}
 omega := Pi
 
-u[x_,y_,t_] := {0, 0, Cos[omega x]}
+u[x_,y_,t_] := {0, 0, Cos[omega x] Cos[omega t]}
 r[x_,y_,t_] := {0, 0, 0}
 
 v[x_,y_,t_] =  D[u[x,y,t],t]
@@ -25,7 +25,7 @@ Print[g[x,y,t]]
 i:= {0, 1, 0}
 omega := Pi
 
-u[x_,y_,t_] := {0, 0, Cos[omega y]}
+u[x_,y_,t_] := {0, 0, Cos[omega y] Cos[omega t]}
 r[x_,y_,t_] := {0, 0, 0}
 
 v[x_,y_,t_] =  D[u[x,y,t],t]
