@@ -139,8 +139,8 @@ int main(int argc, char **argv) {
     // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING ONLY SET DATA\n"));
     // return 1;
 
-    // if (plot)
-    //   hdg->plot_solution(temp, 0.);
+    if (plot)
+      hdg->plot_solution(temp, 0.);
 
     // temp2 = hdg->errors(temp, 0);
     // temp3 = hdg->norms(temp, 0);
