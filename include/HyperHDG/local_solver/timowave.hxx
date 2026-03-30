@@ -670,6 +670,7 @@ class TimoshenkoWave
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     lSol_float_t error = 0;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = hyper_edge.data.u_old;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> r_old = hyper_edge.data.r_old;
       // loc_dof_to_glob_dof(hyper_edge.data.u_old, hyper_edge);
 
     for (unsigned int dim = 0; dim < 3; dim++) {
@@ -678,6 +679,15 @@ class TimoshenkoWave
       error += integrator::template integrate_vol_diffsquare_discanacomp<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, comps[dim],
+                                                                         hyper_edge.geometry, time);
+    }
+
+    for (unsigned int dim = 0; dim < 3; dim++) {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = r_old[i + dim * n_shape_fct_];
+      error += integrator::template integrate_vol_diffsquare_discanacomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::analytic_result_phi, Point<hyEdge_dimT, lSol_float_t>>(coeffs, comps[dim],
                                                                          hyper_edge.geometry, time);
     }
 
