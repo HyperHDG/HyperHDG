@@ -1,12 +1,12 @@
 i:= {1, 0, 0}
 
-u[x_,t_] := {1, 1, x}
+u[x_,t_] := {x, y, z}
 r[x_,t_] := {0, 0, 0}
 
 v[x_,t_] =  D[u[x,t],t]
-s[x_,t_] =  D[r[x,t], t]
+s[x_,t_] =  D[r[x,t],t]
 n[x_,t_] = -D[u[x,t],x]-Cross[i, r[x,t]]
-m[x_,t_] = -D[r[x,t], x]
+m[x_,t_] = -D[r[x,t],x]
 f[x_,t_] =  D[v[x,t],t]+D[n[x,t],x]
 g[x_,t_] =  D[s[x,t],t]+D[m[x,t],x]+Cross[i,n[x,t]]
 
