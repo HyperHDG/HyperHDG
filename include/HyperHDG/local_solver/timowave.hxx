@@ -868,29 +868,29 @@ class TimoshenkoWave
 
     compute_fluxes(lambda_values, hyper_edge, time);
 
-    // std::cout << "----- set_data " << std::endl;
-    // std::cout << "u " << hyper_edge.data.u_old << std::endl;
-    // std::cout << "r " << hyper_edge.data.r_old << std::endl;
-    // std::cout << "n " << hyper_edge.data.n_old << std::endl;
-    // std::cout << "m " << hyper_edge.data.m_old << std::endl;
-    // std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    // std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    // std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
-    // std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
-    // std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
-    // std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
-    // std::cout << "lambda_in" << std::endl;
-    // for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-    //   for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-    //     std::cout << lambda_values_in[i][j] << " ";
-    //   std::cout << std::endl;
-    // }
-    // std::cout << "lambda " << std::endl;
-    // for (unsigned int i=0; i < lambda_values.size(); i++) {
-    //   for (unsigned int j=0; j < lambda_values[i].size(); j++)
-    //     std::cout << lambda_values[i][j] << " ";
-    //   std::cout << std::endl;
-    // }
+    std::cout << "----- set_data " << std::endl;
+    std::cout << "u " << hyper_edge.data.u_old << std::endl;
+    std::cout << "r " << hyper_edge.data.r_old << std::endl;
+    std::cout << "n " << hyper_edge.data.n_old << std::endl;
+    std::cout << "m " << hyper_edge.data.m_old << std::endl;
+    std::cout << "v " << hyper_edge.data.v_old << std::endl;
+    std::cout << "s " << hyper_edge.data.s_old << std::endl;
+    std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
+    std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
+    std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
+    std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
+    std::cout << "lambda_in" << std::endl;
+    for (unsigned int i=0; i < lambda_values_in.size(); i++) {
+      for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
+        std::cout << lambda_values_in[i][j] << " ";
+      std::cout << std::endl;
+    }
+    std::cout << "lambda " << std::endl;
+    for (unsigned int i=0; i < lambda_values.size(); i++) {
+      for (unsigned int j=0; j < lambda_values[i].size(); j++)
+        std::cout << lambda_values[i][j] << " ";
+      std::cout << std::endl;
+    }
 
   }
 
