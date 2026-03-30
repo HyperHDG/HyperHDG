@@ -8,4 +8,4 @@ jq -c '.Stdout
   | {p: $p, t: .value, type: .key, it: $it, cb: $cb}
   | select(.type == "t")
 ' $OUT.json \
-  | experiments/plot.py -x p -y t -g cb --log xy --xbase 2 --save $OUT.png,$OUT.pgf
+  | experiments/plot.py -x p -y t -g cb --log xy --xbase 2 --save $OUT.png,$OUT.pgf --xlabel "number of subdomains" --ylabel "compute time"
