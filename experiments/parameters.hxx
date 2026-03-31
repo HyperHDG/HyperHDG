@@ -882,6 +882,7 @@ struct TestTimoWave5
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestTimoWave6
 {
+  static constexpr param_float_t omega = 2.*M_PI;
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
@@ -898,7 +899,7 @@ struct TestTimoWave6
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    SmallVec<space_dimT, param_float_t> res(0.);
+    SmallVec<space_dimT, param_float_t> res(-omega*omega*cos(omega*time));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -910,12 +911,6 @@ struct TestTimoWave6
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    if (std::abs(point[0]) > 1e-14)
-      res[1] = time;
-    else if (std::abs(point[1]) > 1e-14)
-      res[0] = time; // NOTE: this is the opposite sign as mathematica says!
-    else
-      std::abort();
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -958,14 +953,12 @@ struct TestTimoWave6
   }
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = time*(point[0]+point[1]);
+    SmallVec<space_dimT, param_float_t> res(cos(omega*time));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0);
-    res[2] = point[0]+point[1];
+    SmallVec<space_dimT, param_float_t> res(-sin(omega*time));
     return res;
   }
 

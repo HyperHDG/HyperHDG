@@ -1,6 +1,7 @@
 i:= {1, 0, 0}
+omega := 2*Pi
 
-u[x_,y_,t_] := {0, 0, t (x+y)}
+u[x_,y_,t_] := {1, 1, 1} * Cos[omega*t]
 r[x_,y_,t_] := {0, 0, 0}
 
 v[x_,y_,t_] =  D[u[x,y,t],t]
@@ -20,7 +21,9 @@ Print[s[x,y,t]]
 Print[f[x,y,t]]
 Print[g[x,y,t]]
 
-i:= {0, 1, 0}
+i:= {0, -1, 0}
+omega := 2*Pi
+
 v[x_,y_,t_] =  D[u[x,y,t],t]
 s[x_,y_,t_] =  D[r[x,y,t],t]
 n[x_,y_,t_] = -D[u[x,y,t],y]-Cross[i, r[x,y,t]]
@@ -37,4 +40,3 @@ Print[v[x,y,t]]
 Print[s[x,y,t]]
 Print[f[x,y,t]]
 Print[g[x,y,t]]
-
