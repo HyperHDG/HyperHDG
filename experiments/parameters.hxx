@@ -1005,7 +1005,7 @@ struct TestTimoWave7
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    SmallVec<space_dimT, param_float_t> res(0.);
+    SmallVec<space_dimT, param_float_t> res(6*time*(point[0]+point[1]));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1017,7 +1017,14 @@ struct TestTimoWave7
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = -time;
+    if (point[0] != 0) {
+      res[1] = time*time*time;
+      res[2] = -time*time*time;
+    }
+    if (point[1] != 0) {
+      res[0] = time*time*time;
+      res[2] = -time*time*time;
+    }
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1060,14 +1067,12 @@ struct TestTimoWave7
   }
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(1.);
-    res[1] = time*point[0];
+    SmallVec<space_dimT, param_float_t> res(time*time*time*(point[0]+point[1]));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0);
-    res[1] = point[0];
+    SmallVec<space_dimT, param_float_t> res(3*time*time*(point[0]+point[1]));
     return res;
   }
 
@@ -1082,8 +1087,7 @@ struct TestTimoWave7
   }
 
   static SmallVec<space_dimT, param_float_t> initial_n(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
-    res[1] = -time;
+    SmallVec<space_dimT, param_float_t> res(-time*time*time);
     return res;
   }
 
