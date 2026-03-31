@@ -517,11 +517,11 @@ struct TestTimoWave3
   {
     SmallVec<space_dimT, param_float_t> res(0.);
     res[0] =  -6*time*point[0] - 0*15*time*point[0]*point[0]
-              -6*time*point[1] - 1*33*time*point[1]*point[1];
+              -6*time*point[1] + 1*33*time*point[1]*point[1];
     res[1] = -12*time*point[0] + 1*33*time*point[0]*point[0]
              -12*time*point[1];
     res[2] = -18*time*point[0] - 1*21*time*point[0]*point[0]
-             -18*time*point[1] + 1*15*time*point[1]*point[1];
+             -18*time*point[1] - 1*15*time*point[1]*point[1];
     return scalar_product(res, normal);
     // return M_PI * (M_PI - 1.) * cos(M_PI * point[0]) * normal[2] *
     //          (point[1] == 0. && point[2] == 0.) +
@@ -542,11 +542,11 @@ struct TestTimoWave3
     // auto res_n = initial_n(point, time);
     SmallVec<space_dimT, param_float_t> res;
     res[0] = -30*time*point[0]
-             -30*time*point[1]-9*time*point[1]*point[1]+ 5*time*point[1]*point[1]*point[1];
+             -30*time*point[1]+9*time*point[1]*point[1]+ 5*time*point[1]*point[1]*point[1];
     res[1] = -42*time*point[0]+9*time*point[0]*point[0]+ 7*time*point[0]*point[0]*point[0]
              -42*time*point[1];
     res[2] = -66*time*point[0]-6*time*point[0]*point[0]+11*time*point[0]*point[0]*point[0]
-             -66*time*point[1]+3*time*point[1]*point[1]+11*time*point[1]*point[1]*point[1];
+             -66*time*point[1]-3*time*point[1]*point[1]+11*time*point[1]*point[1]*point[1];
     return scalar_product(res, normal);
     // return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] *
     //          (point[1] == 0. && point[2] == 0.) +
