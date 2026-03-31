@@ -646,7 +646,7 @@ struct TestTimoWave3
     res[1] = -6*time*point[0]*point[0] + 1 * 11 * time*point[0]*point[0]*point[0]
              -6*time*point[1]*point[1];
     res[2] = -9*time*point[0]*point[0] - 1 *  7 * time*point[0]*point[0]*point[0]
-             -9*time*point[1]*point[1] + 1 *  5 * time*point[0]*point[0]*point[0];
+             -9*time*point[1]*point[1] + 1 *  5 * time*point[1]*point[1]*point[1];
     return res;
   }
 
