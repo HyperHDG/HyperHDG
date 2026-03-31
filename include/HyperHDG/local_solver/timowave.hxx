@@ -1213,8 +1213,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         }
       }
 
-  // std::cout << "-- rhs_from_lambda" << std::endl;
-  // std::cout << right_hand_side << std::endl;
+  std::cout << "-- rhs_from_lambda" << std::endl;
+  std::cout << right_hand_side << std::endl;
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_lambda
 
@@ -1367,8 +1367,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   // std::cout << std::endl;
 
 
-  // std::cout << "  -- rhs" << std::endl;
-  // std::cout << right_hand_side << std::endl;
+  std::cout << "  -- rhs global" << std::endl;
+  std::cout << right_hand_side << std::endl;
 
   return right_hand_side;
 }  // end of Bilaplacian::assemble_rhs_from_global_rhs

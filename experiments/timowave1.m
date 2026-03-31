@@ -1,6 +1,6 @@
 i:= {1, 0, 0}
 
-u[x_,y_,z_,t_] := {x, y, z}
+u[x_,y_,z_,t_] := {x, y, z}*t
 r[x_,y_,z_,t_] := {0, 0, 0}
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
@@ -22,7 +22,7 @@ Print[g[x,y,z,t]]
 
 i:= {0, 1, 0}
 
-u[x_,y_,z_,t_] := {x, y, z}
+u[x_,y_,z_,t_] := {x, y, z}*t
 r[x_,y_,z_,t_] := {0, 0, 0}
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
@@ -45,7 +45,7 @@ Print[g[x,y,z,t]]
 
 i:= {0, 0, 1}
 
-u[x_,y_,z_,t_] := {x, y, z}
+u[x_,y_,z_,t_] := {x, y, z}*t
 r[x_,y_,z_,t_] := {0, 0, 0}
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
