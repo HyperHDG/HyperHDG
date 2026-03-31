@@ -1,31 +1,66 @@
 i:= {1, 0, 0}
 
-u[x_,t_] := {x, y, z}
-r[x_,t_] := {0, 0, 0}
+u[x_,y_,z_,t_] := {x, y, z}
+r[x_,y_,z_,t_] := {0, 0, 0}
 
-v[x_,t_] =  D[u[x,t],t]
-s[x_,t_] =  D[r[x,t],t]
-n[x_,t_] = -D[u[x,t],x]-Cross[i, r[x,t]]
-m[x_,t_] = -D[r[x,t],x]
-f[x_,t_] =  D[v[x,t],t]+D[n[x,t],x]
-g[x_,t_] =  D[s[x,t],t]+D[m[x,t],x]+Cross[i,n[x,t]]
+v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
+s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]
+n[x_,y_,z_,t_] = -D[u[x,y,z,t],x]-Cross[i, r[x,y,z,t]]
+m[x_,y_,z_,t_] = -D[r[x,y,z,t],x]
+f[x_,y_,z_,t_] =  D[v[x,y,z,t],t]+D[n[x,y,z,t],x]
+g[x_,y_,z_,t_] =  D[s[x,y,z,t],t]+D[m[x,y,z,t],x]+Cross[i,n[x,y,z,t]]
 
 Print["----u,r,n,m,v,s,f,g"]
-Print[u[x,t]]
-Print[r[x,t]]
-Print[n[x,t]]
-Print[m[x,t]]
-Print[v[x,t]]
-Print[s[x,t]]
-Print[f[x,t]]
-Print[g[x,t]]
+Print[u[x,y,z,t]]
+Print[r[x,y,z,t]]
+Print[n[x,y,z,t]]
+Print[m[x,y,z,t]]
+Print[v[x,y,z,t]]
+Print[s[x,y,z,t]]
+Print[f[x,y,z,t]]
+Print[g[x,y,z,t]]
 
-P[n_,x_]  := LegendreP[n,2x-1]
-Pn[n_,x_] := P[n,x]/Sqrt[Integrate[P[n,x]^2, {x,0,1}]]
+i:= {0, 1, 0}
 
-prod[f_,g_]:=Integrate[f*g, {x,0,1}]
+u[x_,y_,z_,t_] := {x, y, z}
+r[x_,y_,z_,t_] := {0, 0, 0}
 
-Print["----inner products at t=0 for u"]
-Print[Transpose[Table[prod[Pn[n,x],u[x,0]],{n,0,1}]]]
-Print["----inner products at t=0 for u (rounded)"]
-Print[Transpose[N[Table[prod[Pn[n,x],u[x,0]],{n,0,1}]]]]
+v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
+s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]
+n[x_,y_,z_,t_] = -D[u[x,y,z,t],y]-Cross[i, r[x,y,z,t]]
+m[x_,y_,z_,t_] = -D[r[x,y,z,t],y]
+f[x_,y_,z_,t_] =  D[v[x,y,z,t],t]+D[n[x,y,z,t],y]
+g[x_,y_,z_,t_] =  D[s[x,y,z,t],t]+D[m[x,y,z,t],y]+Cross[i,n[x,y,z,t]]
+
+Print["----u,r,n,m,v,s,f,g"]
+Print[u[x,y,z,t]]
+Print[r[x,y,z,t]]
+Print[n[x,y,z,t]]
+Print[m[x,y,z,t]]
+Print[v[x,y,z,t]]
+Print[s[x,y,z,t]]
+Print[f[x,y,z,t]]
+Print[g[x,y,z,t]]
+
+
+i:= {0, 0, 1}
+
+u[x_,y_,z_,t_] := {x, y, z}
+r[x_,y_,z_,t_] := {0, 0, 0}
+
+v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
+s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]
+n[x_,y_,z_,t_] = -D[u[x,y,z,t],z]-Cross[i, r[x,y,z,t]]
+m[x_,y_,z_,t_] = -D[r[x,y,z,t],z]
+f[x_,y_,z_,t_] =  D[v[x,y,z,t],t]+D[n[x,y,z,t],z]
+g[x_,y_,z_,t_] =  D[s[x,y,z,t],t]+D[m[x,y,z,t],z]+Cross[i,n[x,y,z,t]]
+
+Print["----u,r,n,m,v,s,f,g"]
+Print[u[x,y,z,t]]
+Print[r[x,y,z,t]]
+Print[n[x,y,z,t]]
+Print[m[x,y,z,t]]
+Print[v[x,y,z,t]]
+Print[s[x,y,z,t]]
+Print[f[x,y,z,t]]
+Print[g[x,y,z,t]]
