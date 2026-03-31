@@ -801,7 +801,7 @@ struct TestTimoWave5
       res[1] =  cos(omega*time);
       res[2] = -cos(omega*time);
     }
-    if (point[1] != 1) {
+    if (point[1] != 0) {
       res[0] =  cos(omega*time);
       res[2] = -cos(omega*time);
     }
