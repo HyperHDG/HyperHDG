@@ -284,8 +284,8 @@ struct TestTimoWave1
       res[2] = -time;
     }
     if (point[1] != 0) {
-      res[0] = -time;
-      res[2] =  time;
+      res[0] =  time;  // OPPOSITE SIGN AS IN MATHEMATICA
+      res[2] = -time;
     }
     return scalar_product(res, normal);
   }
