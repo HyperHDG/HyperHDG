@@ -1,6 +1,6 @@
 i:= {1, 0, 0}
 
-u[x_,t_] := {1, 1, t}
+u[x_,t_] := {t^2, t^2, t^2}
 r[x_,t_] := {0, 0, 0}
 
 v[x_,t_] =  D[u[x,t],t]
@@ -19,15 +19,3 @@ Print[v[x,t]]
 Print[s[x,t]]
 Print[f[x,t]]
 Print[g[x,t]]
-
-P[n_,x_]  := LegendreP[n,2x-1]
-Pn[n_,x_] := P[n,x]/Sqrt[Integrate[P[n,x]^2, {x,0,1}]]
-
-Print["----orthonormal Legendre Polynomials on [0,1]"]
-Print[Table[Pn[n,x],{n,0,3}]]
-
-prod[f_,g_]:=Integrate[f*g, {x,0,1}]
-
-Print["----inner products at t=0 for v, s"]
-Print[Transpose[N[Table[prod[Pn[n,x],v[x,0]],{n,0,3}]]]]
-Print[Transpose[N[Table[prod[Pn[n,x],s[x,0]],{n,0,3}]]]]
