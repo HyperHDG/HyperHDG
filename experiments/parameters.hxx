@@ -767,6 +767,8 @@ struct TestTimoWave4
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestTimoWave5
 {
+  static constexpr param_float_t omega = 2*M_PI;
+
   /*!***********************************************************************************************
    * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
    ************************************************************************************************/
@@ -783,7 +785,7 @@ struct TestTimoWave5
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
-    SmallVec<space_dimT, param_float_t> res(-cos(time));
+    SmallVec<space_dimT, param_float_t> res(-omega*omega*cos(omega*time));
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -837,12 +839,12 @@ struct TestTimoWave5
   }
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(cos(time));
+    SmallVec<space_dimT, param_float_t> res(cos(omega*time));
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(-sin(time));
+    SmallVec<space_dimT, param_float_t> res(-omega*sin(omega*time));
     return res;
   }
 
