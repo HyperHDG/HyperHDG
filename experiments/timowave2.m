@@ -1,7 +1,7 @@
 i:= {1, 0, 0}
 
 u[x_,y_,z_,t_] := {0, 0, 0}
-r[x_,y_,z_,t_] := {x, y, z}
+r[x_,y_,z_,t_] := {x, y, z}*t
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
 s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]
@@ -24,7 +24,7 @@ Print[g[x,y,z,t]]
 i:= {0, 1, 0}
 
 u[x_,y_,z_,t_] := {0, 0, 0}
-r[x_,y_,z_,t_] := {x, y, z}
+r[x_,y_,z_,t_] := {x, y, z}*t
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
 s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]
