@@ -142,10 +142,11 @@ int main(int argc, char **argv) {
     if (plot)
       hdg->plot_solution(temp, 0.);
 
-    // temp2 = hdg->errors(temp, 0);
-    // temp3 = hdg->norms(temp, 0);
-    // e_abs = PetscMax(temp2[0], e_abs);
+    temp2 = hdg->errors(temp, 0);
+    temp3 = hdg->norms(temp, 0);
+    e_abs = PetscMax(temp2[0], e_abs);
     // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
 
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
