@@ -38,7 +38,16 @@ struct Timo0
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return 0;
+    Point<space_dimT, param_float_t> res(0.);
+    if (point[0] != 0) {
+      res[1] = 1;
+      res[2] = -1;
+    }
+    if (point[1] != 0) {
+      res[0] = 1;
+      res[2] = -1;
+    }
+    return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -65,7 +74,8 @@ struct Timo0
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return normal[0];
+    Point<space_dimT, param_float_t> res(point[0]+point[1]+point[2]);
+    return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
    * \brief   Analytic result of PDE (for convergence tests).
@@ -741,7 +751,7 @@ class TimoshenkoBeam
     // std::cout << std::endl;
 
     char names[5] = "nmur";
-    printf("PRINTING\n");
+    printf("PRINTING coefficients\n");
     for (unsigned int c = 0; c < 4; c++) {
       printf("%c | ", names[c]);
       for (unsigned int d = 0; d < space_dim; d++) {
@@ -779,6 +789,15 @@ class TimoshenkoBeam
     for (unsigned int dim = 0; dim < result.size(); ++dim)
       for (unsigned int q = 0; q < result[dim].size(); ++q)
         result[dim][q] += point_vals[2][q] * normal_vector[dim];
+
+    printf("PRINTING bulk values\n");
+    printf("u | ");
+    for (unsigned int d = 0; d < space_dim; d++) {
+      for (unsigned int i = 0; i < result[d].size(); i++)
+        printf("%+.5e ", result[d][i]);
+      printf("| ");
+    }
+    printf("\n");
 
     return result;
   }
