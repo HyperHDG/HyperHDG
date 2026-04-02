@@ -40,12 +40,12 @@ struct Timo0
   {
     Point<space_dimT, param_float_t> res(0.);
     if (point[0] != 0) {
-      res[1] = 1;
+      res[1] =  1;
       res[2] = -1;
     }
     if (point[1] != 0) {
-      res[0] = -1;
-      res[2] =  1;
+      res[0] =  1;
+      res[2] = -1;
     }
     return scalar_product(res, normal);
   }
@@ -900,10 +900,10 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       }
 
       // Consider the cross product
-      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) += vol_integral;
-      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) -= vol_integral;
-      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) += vol_integral;
-      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= vol_integral;
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += vol_integral;
     }
   }
 
