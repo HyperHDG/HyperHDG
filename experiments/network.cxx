@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
+using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::Timo0>;
 template<unsigned int poly_deg>
 using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
 
@@ -30,7 +30,7 @@ using HDGNetwork = GlobalLoop::Elliptic<
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal tau, HDGBase **hdg) {
   if (0 == strcmp(lsol, "timo")) {
-    *hdg = new HDGWrapper(HDGNetwork<3,TB_LSol>(domain, tau)); return 0;
+    *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
   } else {
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 
     PetscLogStage s_as, s_it, s_rf, s_ksp, s_t2f, s_pa;
 
-    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE, plot = PETSC_FALSE;
+    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE, plot = PETSC_FALSE, plotc = PETSC_FALSE;
     PetscInt N;
     PetscReal tau = 1;
     PetscInt iterations;
@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsString("-plot", "save solution for plotting as binary file", NULL, plot_path, plot_path, PATH_MAX, &plot));
+    PetscCall(PetscOptionsBool("-plotc", "plot solution (classic)", NULL, plotc, &plotc, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous caches", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
@@ -268,11 +269,19 @@ int main(int argc, char **argv) {
     PRIN2FY(rnorm);
     PRIN2SY(creason);
 
-    if (plot) {
+    if (plot && !plotc) {
       PetscViewerBinaryOpen(PETSC_COMM_WORLD, plot_path, FILE_MODE_WRITE, &viewer);
       VecView(rhs, viewer);
       PetscViewerDestroy(&viewer);
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "plot_path: %s\n", plot_path));
+    }
+
+    if (plot && plotc) {
+      PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecGetSpan(rhs0, span));
+      hdg->plot_solution(span);
+      PetscCall(VecRestoreSpan(rhs0, span));
     }
 
 end:

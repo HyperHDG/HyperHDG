@@ -19,11 +19,3 @@ Print[v[x,t]]
 Print[s[x,t]]
 Print[f[x,t]]
 Print[g[x,t]]
-
-P[n_,x_]  := LegendreP[n,2x-1]
-Pn[n_,x_] := P[n,x]/Sqrt[Integrate[P[n,x]^2, {x,0,1}]]
-
-prod[f_,g_]:=Integrate[f*g, {x,0,1}]
-
-Print["----inner products at t=0 for u"]
-Print[Transpose[N[Table[prod[Pn[n,x],u[x,0]],{n,0,1}]]]]

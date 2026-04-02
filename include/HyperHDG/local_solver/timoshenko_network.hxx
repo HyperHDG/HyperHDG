@@ -6,11 +6,79 @@
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 #include <iostream>
+#include <cstdio>
 
 #include <tuple>
 
 namespace LocalSolver
 {
+
+/*!*************************************************************************************************
+ * \brief   Default parameters for the diffusion equation, cf. below.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ **************************************************************************************************/
+template <unsigned int space_dimT, typename param_float_t = double>
+struct Timo0
+{
+  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+
+  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return 0;
+  }
+  /*!***********************************************************************************************
+   * \brief   Right-hand side in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return 0;
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return normal[0];
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t = 0.)
+  {
+    return 0;
+  }
+};  // end of struct DiffusionParametersDefault
+
+
 
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
@@ -672,7 +740,17 @@ class TimoshenkoBeam
     //     std::cout << lambda_values_loc[i][j] << " ";
     // std::cout << std::endl;
 
-    // std::cout << coefficients;
+    char names[5] = "nmur";
+    printf("PRINTING\n");
+    for (unsigned int c = 0; c < 4; c++) {
+      printf("%c | ", names[c]);
+      for (unsigned int d = 0; d < space_dim; d++) {
+        for (unsigned int i = 0; i < n_shape_fct_; i++)
+          printf("%+.5e ", coefficients[(c*space_dim+d)*n_shape_fct_+i]);
+        printf("| ");
+      }
+      printf("\n");
+    }
 
     std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
       point_vals, result;
