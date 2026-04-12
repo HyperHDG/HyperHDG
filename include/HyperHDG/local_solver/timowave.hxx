@@ -373,6 +373,11 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time) const;
 
+  template <typename hyEdgeT>
+  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix_a(
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time) const;
+
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_lambda(
     const SmallMatT& lambda_values,
@@ -947,6 +952,8 @@ class TimoshenkoWave
         }
     }
 
+    auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+
     // set u, r, n, m old
     // NOTE: computing in global dofs
     // Define primary as L^2 projection!
@@ -982,22 +989,6 @@ class TimoshenkoWave
         r_old[i+dim*n_shape_fct_] = res[dim];
     }
 
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      auto res = integrator::template integrate_volUni_phivecfunc<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parametersT<space_dim, lSol_float_t>::initial_n, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry, time);
-      for (unsigned int dim = 0; dim < space_dim; dim++)
-        n_old[i+dim*n_shape_fct_] = res[dim];
-    }
-
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      auto res = integrator::template integrate_volUni_phivecfunc<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parametersT<space_dim, lSol_float_t>::initial_m, Point<hyEdge_dimT, lSol_float_t>>(i, hyper_edge.geometry, time);
-      for (unsigned int dim = 0; dim < space_dim; dim++)
-        m_old[i+dim*n_shape_fct_] = res[dim];
-    }
-
     std::cout << "----- make_initial (normals)" << std::endl;
     std::cout << (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
     std::cout << (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(0);
@@ -1016,12 +1007,88 @@ class TimoshenkoWave
     // transform global dofs to edge dofs
     u_old = glob_dof_to_loc_dof(u_old, hyper_edge);
     r_old = glob_dof_to_loc_dof(r_old, hyper_edge);
-    n_old = glob_dof_to_loc_dof(n_old, hyper_edge);
-    m_old = glob_dof_to_loc_dof(m_old, hyper_edge);
+    //n_old = glob_dof_to_loc_dof(n_old, hyper_edge);
+    //m_old = glob_dof_to_loc_dof(m_old, hyper_edge);
     v_old = glob_dof_to_loc_dof(v_old, hyper_edge);
     s_old = glob_dof_to_loc_dof(s_old, hyper_edge);
 
-    auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    SmallVec<n_shape_fct_*6*space_dim, lSol_float_t> coeffs_old;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      for (unsigned int dim = 0; dim < space_dim; dim++) {
+        coeffs_old[(0*space_dim+dim)*n_shape_fct_+i] = u_old[i+dim*n_shape_fct_];
+      }
+    }
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      for (unsigned int dim = 0; dim < space_dim; dim++) {
+        coeffs_old[(1*space_dim+dim)*n_shape_fct_+i] = r_old[i+dim*n_shape_fct_];
+      }
+    }
+
+    auto mat = assemble_loc_matrix_a(hyper_edge, time);
+    auto coefs_nm = mat*coeffs_old
+      - assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
+      //  - assemble_rhs_from_global_rhs(hyper_edge, time);
+
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      {
+        if (is_dirichlet<parametersT<space_dim, lSol_float_t>>(hyper_edge.node_descriptor[face]))
+        {
+          // u
+          auto integrals1 = integrate_bdr_phivecfunccomp_beam<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_u>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
+
+          for (unsigned int comp = 0; comp < 3; comp++) {
+            coefs_nm[(0 * space_dim + comp) * n_shape_fct_ + i] -=
+              hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
+          }
+
+          // phi
+          integrals1 = integrate_bdr_phivecfunccomp_beam<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_phi>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
+
+          for (unsigned int comp = 0; comp < 3; comp++) {
+            coefs_nm[(1 * space_dim + comp) * n_shape_fct_ + i] -=
+              hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
+          }
+        }
+      }
+    }
+
+    // TODO: maybe -1?
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      for (unsigned int d = 0; d < space_dim; ++d) {
+        coefs_nm[i+(0*space_dim+d)*n_shape_fct_] *= 1; // TODO: missing extra coefs -> function
+      }
+    }
+
+    SmallSquareMat<n_shape_fct_> mmat;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
+      for (unsigned int j = 0; j < n_shape_fct_; ++j) {
+        auto vol_integral = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        mmat(i, j) = vol_integral;
+      }
+    }
+
+    SmallVec<n_shape_fct_> temp;
+    for (unsigned int d = 0; d < space_dim; d++) {
+      for (unsigned int i = 0; i < n_shape_fct_; i++)
+        temp[i] = coefs_nm[(0*space_dim+d)*n_shape_fct_+i];
+      temp = temp / mmat;
+      for (unsigned int i = 0; i < n_shape_fct_; i++)
+        n_old[d*n_shape_fct_+i] = temp[i];
+    }
+
+    for (unsigned int d = 0; d < space_dim; d++) {
+      for (unsigned int i = 0; i < n_shape_fct_; i++)
+        temp[i] = coefs_nm[(1*space_dim+d)*n_shape_fct_+i];
+      temp = temp / mmat;
+      for (unsigned int i = 0; i < n_shape_fct_; i++)
+        m_old[d*n_shape_fct_+i] = temp[i];
+    }
+
     compute_fluxes(lambda_values_loc, hyper_edge, time);
 
     std::cout << "----- make_initial" << std::endl;
@@ -1049,6 +1116,116 @@ class TimoshenkoWave
 // -------------------------------------------------------------------------------------------------
 // assemble_loc_matrix
 // -------------------------------------------------------------------------------------------------
+
+template <unsigned int hyEdge_dimT,
+          unsigned int space_dim,
+          unsigned int poly_deg,
+          unsigned int quad_deg,
+          template <unsigned int, typename> typename parametersT,
+          typename lSol_float_t>
+template <typename hyEdgeT>
+inline SmallSquareMat<
+  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+    n_loc_dofs_,
+  lSol_float_t>
+TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  assemble_loc_matrix_a(hyEdgeT& hyper_edge, const lSol_float_t time) const
+{
+  // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+  SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
+  lSol_float_t vol_integral, face_integral, helper;
+  SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
+  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.); // C_n, C_m, C_u, C_r
+
+  if (hyper_edge.geometry.has_extra_data())
+  {
+    // HACK: TODO: read C_r, C_u from file!!!
+    auto extra_data = hyper_edge.geometry.extra_data();
+    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
+    // (n_11,n_12,n_13) : normal 1
+    // (n_21,n_22,n_23) : normal 2
+    SmallVec<space_dim, lSol_float_t> normal1 =
+      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
+    SmallVec<space_dim, lSol_float_t> normal2 =
+      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
+    SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
+    SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
+
+    extra_coeffs[0] = extra_data[0];
+    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
+                      extra_data[2] * scalar_product(outer1, normal2);
+    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
+                      extra_data[2] * scalar_product(outer2, normal2);
+    extra_coeffs[3] = extra_data[3];
+    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
+                      extra_data[5] * scalar_product(outer1, normal2);
+    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
+                      extra_data[5] * scalar_product(outer2, normal2);
+
+    extra_coeffs[0] *= 1e4;
+    extra_coeffs[1] *= 1e4;
+    extra_coeffs[2] *= 1e4;
+    extra_coeffs[3] *= 1e12;
+    extra_coeffs[4] *= 1e12;
+    extra_coeffs[5] *= 1e12;
+  }
+
+  for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
+    extra_coeffs[i] = std::abs(extra_coeffs[i]);
+  // extra_coeffs[i] = 1.;
+  // hy_assert(false, extra_coeffs);
+
+  for (unsigned int i = 0; i < n_shape_fct_; ++i)
+  {
+    for (unsigned int j = 0; j < n_shape_fct_; ++j)
+    {
+      // Integral_element phi_i phi_j dx in diagonal blocks
+      vol_integral = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+
+      grad_int_vec =
+        integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                       decltype(hyEdgeT::geometry)>(
+          i, j, hyper_edge.geometry);
+
+      face_integral = 0.;
+      normal_int_vec = 0.;
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      {
+        helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+          i, j, face, hyper_edge.geometry);
+        face_integral += helper;
+        normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
+      }
+
+      //TODO: mult by theta
+
+      for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+      {
+        local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
+          vol_integral / extra_coeffs[dim];
+        local_mat(dim * n_shape_fct_ + i, (2 * space_dim + dim) * n_shape_fct_ + j) -=
+          grad_int_vec[0];
+        local_mat((2 * space_dim + dim) * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
+          theta_ * (normal_int_vec[0] - grad_int_vec[0]);
+        local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
+                  (2 * space_dim + dim) * n_shape_fct_ + j) += theta_ * tau_ * face_integral;
+
+        local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
+                  (4 * space_dim + dim) * n_shape_fct_ + j) += theta_ * vol_integral / extra_coeffs[2*space_dim+dim];
+      }
+
+
+      // Consider the cross product
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= theta_ * vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += theta_ * vol_integral;
+    }
+  }
+
+  return local_mat;
+}  // end of Diffusion::assemble_loc_matrix
+
 
 template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
