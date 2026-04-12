@@ -1015,12 +1015,12 @@ class TimoshenkoWave
     SmallVec<n_shape_fct_*6*space_dim, lSol_float_t> coeffs_old;
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int dim = 0; dim < space_dim; dim++) {
-        coeffs_old[(0*space_dim+dim)*n_shape_fct_+i] = u_old[i+dim*n_shape_fct_];
+        coeffs_old[(2*space_dim+dim)*n_shape_fct_+i] = u_old[i+dim*n_shape_fct_];
       }
     }
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int dim = 0; dim < space_dim; dim++) {
-        coeffs_old[(1*space_dim+dim)*n_shape_fct_+i] = r_old[i+dim*n_shape_fct_];
+        coeffs_old[(3*space_dim+dim)*n_shape_fct_+i] = r_old[i+dim*n_shape_fct_];
       }
     }
 
@@ -1040,7 +1040,7 @@ class TimoshenkoWave
             decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_u>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
 
           for (unsigned int comp = 0; comp < 3; comp++) {
-            coefs_nm[(0 * space_dim + comp) * n_shape_fct_ + i] -=
+            coefs_nm[(0 * space_dim + comp) * n_shape_fct_ + i] +=
               hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           }
 
@@ -1050,7 +1050,7 @@ class TimoshenkoWave
             decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_phi>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
 
           for (unsigned int comp = 0; comp < 3; comp++) {
-            coefs_nm[(1 * space_dim + comp) * n_shape_fct_ + i] -=
+            coefs_nm[(1 * space_dim + comp) * n_shape_fct_ + i] +=
               hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           }
         }
@@ -1060,7 +1060,7 @@ class TimoshenkoWave
     // TODO: maybe -1?
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int d = 0; d < space_dim; ++d) {
-        coefs_nm[i+(0*space_dim+d)*n_shape_fct_] *= 1; // TODO: missing extra coefs -> function
+        coefs_nm[i+(0*space_dim+d)*n_shape_fct_] *= -1; // TODO: missing extra coefs -> function
       }
     }
 
