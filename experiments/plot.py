@@ -33,14 +33,9 @@ def fmt_names(names):
 
 
 def plt_legend2(legend_title=None, lbbox=None):
-    handles, labels = plt.gca().get_legend_handles_labels()
-    handles.insert(0, Patch(color="none", visible=False))
-    labels.insert(0, legend_title)
-
     lbbox = lbbox.split(';')
     bbox = tuple(map(float,lbbox[1].split(','))) if len(lbbox) > 1 else None
-
-    plt.legend(handles, labels, bbox_to_anchor=bbox, loc=lbbox[0])
+    plt.legend(bbox_to_anchor=bbox, loc=lbbox[0], title=legend_title, alignment="left")
 
 
 def reference_triangle_loglog(rate, x0, y0, tx, ty, **kw):
