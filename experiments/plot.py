@@ -109,9 +109,11 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
         plot_func(tx(sgroup[args.x]), ty(sgroup[args.y]), label=fmt_names(names), marker=args.marker)
 
     if args.ref:
-        rate, x, y0 = args.ref.split(';')
-        reference_triangle_loglog(float(rate), [float(xi) for xi in x.split(',')],
-          float(y0), tx, ty, linewidth=1, color='.5')
+        refs = args.ref.split('|')
+        for ref in refs:
+          rate, x, y0 = ref.split(';')
+          reference_triangle_loglog(float(rate), [float(xi) for xi in x.split(',')],
+            float(y0), tx, ty, linewidth=1, color='.5')
 
     if args.comment: plt.text(1.0, -0.1, args.comment, transform=plt.gca().transAxes,
       ha='right', va='top', fontsize=9, color=".5")
