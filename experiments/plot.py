@@ -81,6 +81,7 @@ parser.add_argument("--ref", help="generate reference triangle 'rate;x0,x1;y0'")
 parser.add_argument("--group0", help="group input data by plot")
 parser.add_argument("--comment", help="place some text in the bottom right corner, like the git hash, date, etc")
 parser.add_argument("--marker", help="set the marker", default="+")
+parser.add_argument("--figsize", help="figure size 'w,h' in inches", default="6,6")
 
 args = parser.parse_args()
 
@@ -101,6 +102,9 @@ if args.trans:
     tx, ty = [eval(f"lambda {v}: {t}") for t, v in zip(ts, 'xy')]
 else:
     tx, ty = lambda x: x, lambda y: y
+
+w, h = map(float, args.figsize.split(','))
+plt.figure(figsize=(w, h))
 
 for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else [(0,(None,df))]:
     for names, group in df0.groupby(args.group_by.split(',')) if args.group_by else [("",df0)]:
@@ -127,5 +131,5 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
                 path = Path(path)
                 p, n, s = path.parent, path.name, path.suffix
                 path = (p / f"{n}_{args.group0}{idx}").with_suffix(s)
-            plt.savefig(path, bbox_inches="tight", pad_inches=0)
+            plt.savefig(path, bbox_inches="tight", pad_inches=.05)
     if not args.nshow: plt.show()
