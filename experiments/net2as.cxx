@@ -116,6 +116,8 @@ struct PC_Net2AS {
   IS types_points;
   // boundary points
   IS boundary;
+  // partition of points (only used by cb_pu), same parallel layout as points and as adj
+  IS partition;
   // sparse adj matrix representation of the edges in the network
   Mat adj;
 
@@ -176,6 +178,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   }
   PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
   PetscCall(PetscFree6(data->ksp, data->is, data->sol, data->sc, data->sd_gids, data->local_is));
+  PetscCall(ISDestroy(data->partition));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -637,7 +640,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   MatPartitioningType p_type;
-  IS partition, bis;
+  IS partition = data->partition, bis;
   PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts, *vtxwgt;
   const PetscInt *inds, *types;
   Vec rank_points;
@@ -951,5 +954,69 @@ PetscErrorCode PCNet2ASGetCB(PC pc, Mat *cb) {
   PetscAssertPointer(cb, 2);
   data = (PC_Net2AS *)pc->data;
   *cb = data->cb;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PCNet2ASGetQuotientGraph(PC pc, Mat *q) {
+  PC_Net2AS *data;
+  PetscInt n_rows, n_cols;
+  const PetscInt *ia, *ja;
+  PetscBool done;
+  PetscSF sf;
+  PetscLayout col_layout;
+  ISLocalToGlobalMapping col_lgmap;
+  const PetscInt *col_globals, *part_idx;
+  PetscInt *leaf_part;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(q, 2);
+  data = (PC_Net2AS *)pc->data;
+
+  // get local CSR
+  PetscCall(MatGetLocalMat(data->adj, MAT_INITIAL_MATRIX, &local_adj));
+  PetscCall(MatGetRowIJ(local_adj, 0, PETSC_FALSE, PETSC_TRUE, &n_rows, &ia, &ja, &done));
+  PetscCheck(done, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, "MatGetRowIJ failed");
+
+  // get column local-to-global mapping and its size
+  PetscCall(MatGetLocalToGlobalMapping(data->adj, NULL, &col_lgmap));
+  PetscCall(ISLocalToGlobalMappingGetSize(col_lgmap, &n_cols));
+  PetscCall(ISLocalToGlobalMappingGetIndices(col_lgmap, &col_globals));
+
+  // build SF for ghost exchange
+  PetscCall(MatGetLayouts(data->adj, &col_layout, NULL));
+  PetscCall(PetscSFCreate(PETSC_COMM_WORLD, &sf));
+  PetscCall(PetscSFSetGraphLayout(sf, col_layout, n_cols, NULL, PETSC_COPY_VALUES, col_globals));
+
+  // scatter partition values to local columns
+  PetscCall(ISGetIndices(data->partition, &part_idx));
+  PetscCall(PetscMalloc1(n_cols, &leaf_part));
+  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, part_idx, leaf_part, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, part_idx, leaf_part, MPI_REPLACE));
+
+  // build quotient graph
+  PetscCall(MatCreate(PETSC_COMM_WORLD, q));
+  PetscCall(MatSetSizes(*q, PETSC_DECIDE, PETSC_DECIDE, data->n_parts, data->n_parts));
+  PetscCall(MatSetUp(*q));
+
+  for (PetscInt i = 0; i < n_rows; i++) {
+    for (PetscInt k = ia[i]; k < ia[i + 1]; k++) {
+      PetscInt j = ja[k];
+      if (leaf_part[i] != leaf_part[j])
+        PetscCall(MatSetValue(*q, leaf_part[i], leaf_part[j], 1.0, INSERT_VALUES));
+    }
+  }
+
+  PetscCall(MatAssemblyBegin(*q, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*q, MAT_FINAL_ASSEMBLY));
+
+  // cleanup
+  PetscCall(ISRestoreIndices(data->partition, &part_idx));
+  PetscCall(ISLocalToGlobalMappingRestoreIndices(col_lgmap, &col_globals));
+  PetscCall(MatRestoreRowIJ(local_adj, 0, PETSC_FALSE, PETSC_TRUE, &n_rows, &ia, &ja, &done));
+  PetscCall(MatDestroy(&local_adj));
+  PetscCall(PetscFree(leaf_part));
+  PetscCall(PetscSFDestroy(&sf));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
