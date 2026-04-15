@@ -45,6 +45,9 @@ def reference_triangle_loglog(rate, x0, y0, tx, ty, **kw):
     y *= y0
     y = ty(y)
 
+    if rate.is_integer():
+        rate = int(rate)
+
     # up
     xs = [x[0], x[1], x[1], x[0]]
     ys = [y[0], y[0], y[1], y[0]]
