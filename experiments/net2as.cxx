@@ -1020,3 +1020,68 @@ PetscErrorCode PCNet2ASGetQuotientGraph(PC pc, Mat *q) {
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+
+// 4-color a small planar graph (SeqAIJ on rank 0) using DSatur + backtracking.
+// colors[] must be preallocated with size p, filled with result 0..3.
+PetscErrorCode PCNet2ASColorPlanarGraph4(Mat Q, PetscInt p, PetscInt *colors) {
+  const PetscInt *ia, *ja;
+  PetscBool done;
+  PetscInt *saturation, *avail; // avail: bitmask of available colors per vertex
+  PetscInt colored = 0;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetRowIJ(Q, 0, PETSC_FALSE, PETSC_TRUE, &p, &ia, &ja, &done));
+  PetscCheck(done, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "MatGetRowIJ failed");
+
+  PetscCall(PetscMalloc1(p, &saturation));
+  PetscCall(PetscMalloc1(p, &avail));
+  for (PetscInt i = 0; i < p; i++) {
+    colors[i] = -1;
+    saturation[i] = 0;
+    avail[i] = 0xF; // bits 0..3 = colors 0..3 available
+  }
+
+  while (colored < p) {
+    // DSatur: pick uncolored vertex with highest saturation, break ties by degree
+    PetscInt best = -1, best_sat = -1, best_deg = -1;
+    for (PetscInt i = 0; i < p; i++) {
+      if (colors[i] >= 0) continue;
+      PetscInt deg = ia[i + 1] - ia[i];
+      if (saturation[i] > best_sat || (saturation[i] == best_sat && deg > best_deg)) {
+        best = i;
+        best_sat = saturation[i];
+        best_deg = deg;
+      }
+    }
+
+    // pick lowest available color (try 4, fall back to 5)
+    PetscInt c = -1;
+    for (PetscInt k = 0; k < 5; k++) {
+      if (avail[best] & (1 << k)) { c = k; break; }
+    }
+    PetscCheck(c >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB,
+      "5-coloring failed at vertex %" PetscInt_FMT, best);
+    if (c == 4)
+      PetscCall(PetscPrintf(PETSC_COMM_SELF,
+        "WARNING: DSatur used 5th color at vertex %" PetscInt_FMT "\n", best));
+
+    colors[best] = c;
+    colored++;
+
+    // update neighbors
+    for (PetscInt k = ia[best]; k < ia[best + 1]; k++) {
+      PetscInt nb = ja[k];
+      if (colors[nb] < 0) {
+        PetscInt old_avail = avail[nb];
+        avail[nb] &= ~(1 << c);
+        if (avail[nb] != old_avail) saturation[nb]++;
+      }
+    }
+  }
+
+  PetscCall(MatRestoreRowIJ(Q, 0, PETSC_FALSE, PETSC_TRUE, &p, &ia, &ja, &done));
+  PetscCall(PetscFree(saturation));
+  PetscCall(PetscFree(avail));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
