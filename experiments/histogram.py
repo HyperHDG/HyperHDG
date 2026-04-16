@@ -29,23 +29,32 @@ lengths = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
 kG1A, kG2A = props[:, 1], props[:, 2]
 E1I1, E2I2 = props[:, 4], props[:, 5]
 k_shear = np.sqrt(np.maximum(kG1A / E1I1, kG2A / E2I2))
+ratio = k_shear * lengths
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
 lo = min(lengths.min(), (1/k_shear).min())
 hi = max(lengths.max(), (1/k_shear).max())
-bins = np.logspace(np.log10(lengths.min()), np.log10(lengths.max()), args.bins + 1)
+bins = np.logspace(np.log10(lo), np.log10(hi), args.bins + 1)
+bins_r = np.logspace(np.log10(ratio.min()), np.log10(ratio.max()), args.bins + 1)
 
-plt.hist(lengths, bins=bins, weights=np.ones_like(lengths) / len(lengths), histtype="step", label="lengths")
-plt.hist(1/k_shear, bins=bins, weights=np.ones_like(k_shear)/len(k_shear),
-         histtype="step", label=r"$k_shear=\sqrt{EI/kGA}$")
+ax1.hist(lengths, bins=bins, weights=np.ones_like(lengths)/len(lengths),
+         histtype="step", label="L")
+ax1.hist(1/k_shear, bins=bins, weights=np.ones_like(k_shear)/len(k_shear),
+         histtype="step", label=r"$k_\mathrm{shear}$")
+ax1.set_xscale("log")
+ax1.set_yscale("log")
+ax1.set_xlabel(f"length {unit_length}")
+ax1.set_ylabel("density")
+ax1.legend()
 
-kG1A, kG2A = props[:, 1], props[:, 2]
-E1I1, E2I2 = props[:, 4], props[:, 5]
-k_shear = np.sqrt(np.maximum(kG1A / E1I1, kG2A / E2I2))
+ax2.hist(ratio, bins=bins_r, weights=np.ones_like(ratio)/len(ratio),
+         histtype="step")
+ax2.axvline(1, color="k", linestyle="--", alpha=0.5)
+ax2.set_xscale("log"); ax2.set_yscale("log")
+ax2.set_xlabel(r"$L / k_\mathrm{shear}$")
+ax2.set_ylabel("density")
 
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel(f"edge length {unit_length}")
-plt.ylabel("density")
-plt.title(args.title)
-if args.output: plt.savefig(args.output)
+fig.suptitle(args.title)
+if args.output: fig.savefig(args.output)
 plt.show()
