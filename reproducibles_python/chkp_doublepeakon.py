@@ -24,8 +24,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   
   h = 1. / iteration
   start_time  = 0.
-  goal_time   = .01
-  time_steps  = 1
+  goal_time   = .1
+  time_steps  = 100
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -49,7 +49,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(h, delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq10.geo", lsol_constr = get_loc_constr(h, delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq5.geo", lsol_constr = get_loc_constr(h, delta_time) )
   HDG_wrapper.refine(iteration)
   
   def ttf_mat(x, time):
@@ -94,7 +94,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    if(time_step - 1) % 10 == 0 or time_step == 0:
+    if(time_step - 1) % 20 == 0 or time_step == 0:
       A = ttf_mat(vectorSolution, time)
       A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -128,9 +128,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [2]:
+  for poly_degree in [1]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [32]:
+    for iteration in [64]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
