@@ -32,12 +32,21 @@ E1I1, E2I2 = props[:, 4], props[:, 5]
 k_shear = np.sqrt(np.maximum(kG1A / E1I1, kG2A / E2I2))
 ratio = k_shear * lengths
 
-lo = min(lengths.min(), (1/k_shear).min())
-hi = max(lengths.max(), (1/k_shear).max())
+L_cut = 1.0
+k_cut = 1.0
 
-plt.hist2d(np.log10(lengths), np.log10(k_shear),
+plt.hist2d(np.log10(lengths), np.log10(1/k_shear),
            bins=args.bins, weights=np.ones(len(lengths))/len(lengths),
            cmin=1e-7, norm=LogNorm())
+
+xlim = plt.gca().get_xlim()
+ylim = plt.gca().get_ylim()
+plt.plot([np.log10(L_cut), np.log10(L_cut), xlim[1]], [ylim[1], np.log10(k_cut), np.log10(k_cut)], "r-", linewidth=2)
+
+n_imp = (lengths < L_cut) | (k_shear > k_cut)
+f_exp = 1-n_imp.sum()/len(n_imp)
+plt.text(np.log10(L_cut), np.log10(k_cut), f"{f_exp:.2f}", ha="right", va="top", color="r")
+
 plt.colorbar(label="density")
 plt.xlabel(f"log10(L) {unit_length}")
 plt.ylabel("log10($k_{shear}$)")
