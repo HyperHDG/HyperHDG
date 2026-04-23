@@ -28,7 +28,7 @@ struct ChkpParametersPeakon
   {
     auto pr = p;
     pr[0] = 1.;   //same y, but x = 1
-    return -neumann_value(pr, t);;
+    return -neumann_value(pr, t);
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -103,10 +103,12 @@ struct ChkpParametersDoublePeakon
   
   static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
-  {
+  {/*
     auto pr = p;
     pr[0] = right_boundary;   //same y, but x = 10
     return -neumann_value(pr, t);
+    */
+    return 0.;
   }
   /*!***********************************************************************************************
    * \brief   Dirichlet values of solution as analytic function.
@@ -142,6 +144,7 @@ struct ChkpParametersDoublePeakon
   static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
                                      const param_float_t t = 0.)
   {
+  /*
     const param_float_t r = right_boundary;
     param_float_t x = p[0];
     param_float_t y = p[1];
@@ -151,6 +154,8 @@ struct ChkpParametersDoublePeakon
     param_float_t g2 = r + y - x2(t);
     return m1(t) * (exp(-abs(a1)) - exp(-abs(g1))) 
       + m2(t) * (exp(-abs(a2)) - exp(-abs(g2)));
+  */
+    return analytic_result(p, t);
   }
 
   static constexpr param_float_t kappa=-.5;
@@ -174,12 +179,12 @@ struct ChkpParametersDoublePeakon
   static param_float_t x1(param_float_t t)
   {
     param_float_t tau = t - tc;
-    return -log(c1 * exp(-c1 * tau) + c2 * exp(-c2 * tau) / (c1 - c2));
+    return -log( (c1 * exp(-c1 * tau) + c2 * exp(-c2 * tau)) / (c1 - c2));
   }
   static param_float_t x2(param_float_t t)
   {
     param_float_t tau = t - tc;
-    return log(c1 * exp(c1 * tau) + c2 * exp(c2 * tau)  / (c1 - c2));
+    return log( (c1 * exp(c1 * tau) + c2 * exp(c2 * tau))  / (c1 - c2));
   }
   
   static param_float_t m1(param_float_t t)
