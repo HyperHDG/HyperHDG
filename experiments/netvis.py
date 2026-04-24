@@ -23,6 +23,8 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False):
     assert n_edges == nrows, \
       f"domain/properties: expected n_edges == {n_edges} rows, found {nrows}"
 
+    tp_size = f["domain/types_points"].dtype.itemsize  # 4
+
   xdmf = etree.Element("Xdmf", Version="3.0")
   dom = etree.SubElement(xdmf, "Domain")
   grid = etree.SubElement(dom, "Grid", Name="network", GridType="Uniform")
@@ -38,6 +40,10 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False):
                           AttributeType="Matrix")
   etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
                    Dimensions=f"{n_edges} {n_props}").text = f"{domain}:/domain/properties"
+
+  attr = etree.SubElement(grid, "Attribute", Name="types_points", Center="Node")
+  etree.SubElement(attr, "DataItem", Format="HDF", DataType="Int", Precision=str(tp_size),
+                   Dimensions=str(n_points)).text = f"{domain}:/domain/types_points"
 
   if partition:
     partition = os.path.abspath(partition)
@@ -63,7 +69,7 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False):
 
   return xdmf
 
-def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None):
+def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False):
   if radius is None:
     try:
       with h5py.File(domain, "r") as f:
@@ -106,6 +112,13 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
     display.RescaleTransferFunctionToDataRange(True)
     lut = GetColorTransferFunction("partition")
     lut.ApplyPreset("Paired", True)
+  elif dirichlet:
+    ColorBy(display, ("POINTS", "types_points"))
+    display.RescaleTransferFunctionToDataRange(True)
+    lut = GetColorTransferFunction("types_points")
+    lut.RGBPoints = [0.0, *to_rgb(args.fg), 1.0, *to_rgb("red")]
+    lut.ColorSpace = "RGB"
+    display.SetScalarBarVisibility(GetActiveView(), False)
   else:
     display.SetScalarColoring(None, 0)
     display.DiffuseColor = list(to_rgb(args.fg))
@@ -134,7 +147,8 @@ if __name__ == "__main__":
   p.add_argument("--h5-i64", default=False, help="select 64-bit integers in h5", action="store_true")
   p.add_argument("-o", "--output", default="netvis.png", help="save screenshot of network (after interact)")
   p.add_argument("--resolution", default="1000x1000", help="render resolution")
+  p.add_argument("--dirichlet", default=False, help="color Dirichlet nodes (types_points == 1)", action="store_true")
   args = p.parse_args()
 
   resolution = map(int, args.resolution.split("x"))
-  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution)
+  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet)
