@@ -178,7 +178,7 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
   }
   PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
   PetscCall(PetscFree6(data->ksp, data->is, data->sol, data->sc, data->sd_gids, data->local_is));
-  PetscCall(ISDestroy(data->partition));
+  PetscCall(ISDestroy(&data->partition));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -957,8 +957,10 @@ PetscErrorCode PCNet2ASGetCB(PC pc, Mat *cb) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if 0
 PetscErrorCode PCNet2ASGetQuotientGraph(PC pc, Mat *q) {
   PC_Net2AS *data;
+  Mat local_adj;
   PetscInt n_rows, n_cols;
   const PetscInt *ia, *ja;
   PetscBool done;
@@ -1085,3 +1087,4 @@ PetscErrorCode PCNet2ASColorPlanarGraph4(Mat Q, PetscInt p, PetscInt *colors) {
   PetscCall(PetscFree(avail));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
