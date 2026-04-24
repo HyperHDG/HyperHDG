@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
 parser.add_argument("-i", help="input", default=".")
 parser.add_argument("-o", help="output", default="graph")
 parser.add_argument("-t", help="tolerance to the edg", type=float, default=1e-3)
+parser.add_argument("--dirichlet", help="dimension to clamp outer most as dirichlet", nargs="+", type=int, default=[0, 1])
 args = parser.parse_args()
 
 tprint("reading nodes")
@@ -64,8 +65,13 @@ dims = maxs - mins
 
 tprint("size", dims)
 
+d = args.dirichlet
 types_points = np.where(
-  np.any(((nodes[:,:2] - mins[:2]) < args.t * dims[:2]) | ((maxs[:2] - nodes[:,:2]) < args.t * dims[:2]), axis=1),
+  np.any(
+    ((nodes[:, d] - mins[d]) < args.t * dims[d]) |
+    ((maxs[d] - nodes[:, d]) < args.t * dims[d]),
+    axis=1
+  ),
   1, 0
 ).astype(np.int32)
 
