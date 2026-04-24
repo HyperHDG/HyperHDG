@@ -123,7 +123,7 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
 
 if __name__ == "__main__":
   p = argparse.ArgumentParser()
-  p.add_argument("-d", "--domain", help="domain file .geo.h5")
+  p.add_argument("-d", "--domain", help="domain file .geo.h5", required=True)
   p.add_argument("-r", "--radius", default=None, help="radius value", type=float)
   p.add_argument("-p", "--partition", help="discrete data, e.g. partition .h5", default=None)
   p.add_argument("-s", "--solution", help="continuous data, e.g. solution .h5", default=None)
