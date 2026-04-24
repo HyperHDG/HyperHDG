@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::Timo0>;
+using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoClamped0>;
 template<unsigned int poly_deg>
 using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
 

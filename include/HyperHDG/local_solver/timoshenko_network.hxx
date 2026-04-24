@@ -287,6 +287,57 @@ struct TimoschenkoBeamParametersClamped
   }
 };  // end of struct DiffusionParametersDefault
 
+
+
+template <unsigned int space_dimT, typename param_float_t = double>
+struct TimoClamped0
+{
+  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+
+  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return 0;
+  }
+
+  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& normal,
+                                         const param_float_t = 0.)
+  {
+    // assume units are in um and domain is 8000 x 8000
+    // this sets 10% displacment at the far side of the x1-direction
+    return 0;
+  }
+
+  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
+                                           const Point<space_dimT, param_float_t>& normal,
+                                           const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};
+
+
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.
