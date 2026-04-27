@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoClamped0>;
+using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
 template<unsigned int poly_deg>
 using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
 
@@ -88,6 +88,58 @@ end:
 }
 
 
+PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
+  PetscViewer viewer;
+  IS types;
+  Vec points;
+  const PetscInt    *ts;
+  const PetscScalar *ps;
+  PetscScalar *ss;
+  PetscInt           nt, np, ns;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
+  PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &points));
+  PetscCall(PetscObjectSetName((PetscObject)points, "points"));
+  PetscCall(VecLoad(points, viewer));
+
+  PetscCall(ISCreate(PETSC_COMM_WORLD, &types));
+  PetscCall(PetscObjectSetName((PetscObject)types, "types_points"));
+  PetscCall(ISLoad(types, viewer));
+
+  PetscCall(ISGetLocalSize(types, &nt));
+  PetscCall(VecGetLocalSize(points, &np));
+  PetscCall(VecGetLocalSize(sol, &ns));
+  PetscCheck(np == 3 * nt, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "layout mismatch points - types");
+  PetscCheck(ns == 6 * nt, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "layout mismatch types  - sol");
+
+  PetscCall(ISGetIndices(types, &ts));
+  PetscCall(VecGetArrayRead(points, &ps));
+  PetscCall(VecGetArrayWrite(sol, &ss));
+
+  for (PetscInt i = 0; i < nt; ++i) {
+    if (ts[i] == 1) {
+      const PetscScalar *p = &ps[3*i];
+      // HACK: only apply dirichlet u for now
+      ss[6*i+0] = 5e-4 * (p[0] >  1e-3);
+      ss[6*i+1] = 5e-4 * (p[1] > .5e-3);
+      ss[6*i+2] = 5e-4;
+    }
+  }
+
+  PetscCall(VecRestoreArrayRead(points, &ps));
+  PetscCall(ISRestoreIndices(types, &ts));
+
+  PetscCall(ISDestroy(&types));
+  PetscCall(VecDestroy(&points));
+  PetscCall(PetscViewerHDF5PopGroup(viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
+
+  PetscFunctionReturn(0);
+}
+
+
 int main(int argc, char **argv) {
     int rank, comm_size, proc_name_len;
     PetscReal rtol = 1e-10;
@@ -100,7 +152,7 @@ int main(int argc, char **argv) {
 
     PetscLogStage s_as, s_it, s_rf, s_ksp, s_t2f, s_pa;
 
-    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE, plot = PETSC_FALSE, plotc = PETSC_FALSE;
+    PetscBool is_set, help, set_mem_max = PETSC_FALSE, mat_coo_off_proc = PETSC_FALSE;
     PetscInt N;
     PetscReal tau = 1;
     PetscInt iterations;
@@ -132,8 +184,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-lsol", "local solver type: (timo|diff)", NULL, lsol, lsol, sizeof(lsol), &is_set));
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
-    PetscCall(PetscOptionsString("-plot", "save solution for plotting as binary file", NULL, plot_path, plot_path, PATH_MAX, &plot));
-    PetscCall(PetscOptionsBool("-plotc", "plot solution (classic)", NULL, plotc, &plotc, &is_set));
+    PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot_path, plot_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only assemble matrix, overwrite any previous caches", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
@@ -269,20 +320,18 @@ int main(int argc, char **argv) {
     PRIN2FY(rnorm);
     PRIN2SY(creason);
 
-    if (plot && !plotc) {
-      PetscViewerBinaryOpen(PETSC_COMM_WORLD, plot_path, FILE_MODE_WRITE, &viewer);
-      VecView(rhs, viewer);
-      PetscViewerDestroy(&viewer);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "plot_path: %s\n", plot_path));
-    }
-
-    if (plot && plotc) {
+    if (*plot_path) {
+      hdg->plot_option("fileName", plot_path);
+      hdg->plot_option("printFileNumber", "false");
       PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecGetSpan(rhs0, span));
       hdg->plot_solution(span);
       PetscCall(VecRestoreSpan(rhs0, span));
     }
+
+    PetscCall(apply_dirichlet(domain_filepath, rhs));
+    VecViewFromOptions(rhs, NULL, "-sol_view");
 
 end:
     if (set_mem_max) {

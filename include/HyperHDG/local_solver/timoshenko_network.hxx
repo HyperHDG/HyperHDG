@@ -326,7 +326,7 @@ struct TimoClamped0
   {
     // assume units are in um and domain is 8000 x 8000
     // this sets 10% displacment at the far side of the x1-direction
-    return 0;
+    return 100*((point[0] > 4000)*normal[0] + (point[1] > 4000)*normal[1]);
   }
 
   static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
