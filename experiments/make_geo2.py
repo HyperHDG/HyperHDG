@@ -35,6 +35,12 @@ edgeProps   = edgeProps.to_numpy()[:,2:]
 n_edgeProps = edgeProps.shape[0]
 edgeProps_dim = edgeProps.shape[1]
 
+canon = np.sort(edges, axis=1)
+unique_edges, edge_inv, edge_counts = np.unique(canon, axis=0, return_inverse=True, return_counts=True)
+n_dup_edges = (edge_counts > 1).sum()
+tprint(f"unique edges: {len(unique_edges)} / {n_edges}, duplicates: {n_dup_edges}")
+tprint(f"self-loops: {(edges[:,0] == edges[:,1]).sum()}")
+
 tprint("nodes", nodes.shape)
 tprint("edges", edges.shape)
 tprint("edgeProps", edgeProps.shape)
