@@ -81,7 +81,7 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False):
 
   return xdmf
 
-def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False):
+def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False, no_ref=False):
   if radius is None:
     try:
       with h5py.File(domain, "r") as f:
@@ -108,11 +108,13 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
     pipe.Function = "solution_0*iHat + solution_1*jHat + solution_2*kHat"
     pipe.UpdatePipeline()
 
-    ref = Show(pipe, GetActiveView())
-    ref.Representation = "Wireframe"
-    ref.AmbientColor = list(to_rgb(args.fg))
-    ref.DiffuseColor = list(to_rgb(args.fg))
-    ref.Opacity = 0.4
+    if not no_ref:
+      ref = Show(pipe, GetActiveView())
+      ref.Representation = "Wireframe"
+      ColorBy(ref, None)
+      ref.AmbientColor = list(to_rgb(args.fg))
+      ref.DiffuseColor = list(to_rgb(args.fg))
+      ref.Opacity = 0.4
 
     pipe = WarpByVector(Input=pipe)
     pipe.Vectors = ["POINTS", "displacement"]
@@ -169,7 +171,8 @@ if __name__ == "__main__":
   p.add_argument("--dirichlet", default=False, help="color Dirichlet nodes (types_points == 1)", action="store_true")
   p.add_argument("--view", choices=list(VIEWS) + [None], default="top",
                  help="named camera view")
+  p.add_argument("--no-ref", help="no reference view", action='store_true')
   args = p.parse_args()
 
   resolution = map(int, args.resolution.split("x"))
-  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet)
+  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref)
