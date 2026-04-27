@@ -8,6 +8,18 @@ import tempfile
 import os
 import sys
 
+VIEWS = {
+  "top":    {"position": (0, 0, 1), "focal": (0, 0, 0), "up": (0, 1, 0), "parallel": 1.0},
+  "bottom": {"position": (0, 0,-1), "focal": (0, 0, 0), "up": (1, 0, 0), "parallel": 1.0},
+  "iso":   {"position": (1, 1, 1), "focal": (0, 0, 0), "up": (0, 0, 1), "parallel": 1.0},
+}
+
+def apply_view(cam, v):
+  cam.SetPosition(*v["position"])
+  cam.SetFocalPoint(*v["focal"])
+  cam.SetViewUp(*v["up"])
+  cam.SetParallelScale(v["parallel"])
+
 def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False):
   domain = os.path.abspath(domain)
   with h5py.File(domain, "r") as f:
@@ -133,7 +145,8 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
   view.ViewSize = list(resolution)
   view.Background = list(to_rgb(args.bg))
   view.UseColorPaletteForBackground = 0
-  view.ResetCamera()
+  cam = GetActiveCamera()
+  apply_view(cam, VIEWS[args.view])
   Render()
   Interact()
   if output:
@@ -154,6 +167,8 @@ if __name__ == "__main__":
   p.add_argument("-o", "--output", default="netvis.png", help="save screenshot of network (after interact)")
   p.add_argument("--resolution", default="1000x1000", help="render resolution")
   p.add_argument("--dirichlet", default=False, help="color Dirichlet nodes (types_points == 1)", action="store_true")
+  p.add_argument("--view", choices=list(VIEWS) + [None], default="top",
+                 help="named camera view")
   args = p.parse_args()
 
   resolution = map(int, args.resolution.split("x"))
