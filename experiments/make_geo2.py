@@ -14,7 +14,7 @@ def tprint(*args, **kwargs):
 parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
 parser.add_argument("-i", help="input", default=".")
 parser.add_argument("-o", help="output", default="graph")
-parser.add_argument("-t", help="tolerance to the edg", type=float, default=1e-3)
+parser.add_argument("-t", help="tolerance to the edg", type=float, default=2e-2)
 parser.add_argument("--dirichlet", help="dimension to clamp outer most as dirichlet", nargs="+", type=int, default=[0, 1])
 args = parser.parse_args()
 
@@ -57,14 +57,14 @@ try:
 except FileNotFoundError:
   units = {}
 
-tprint("info", info)
 
 mins = nodes.min(axis=0)
 maxs = nodes.max(axis=0)
 dims = maxs - mins
 
-tprint("size", dims)
-g.attrs["size"] = dims
+info["size"] = dims
+
+tprint("info", info)
 
 d = args.dirichlet
 types_points = np.where(
