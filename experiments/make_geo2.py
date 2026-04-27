@@ -6,6 +6,7 @@ import argparse
 import pandas
 import h5py
 import yaml
+import scipy.sparse as sp
 
 def tprint(*args, **kwargs):
     print(f"[{time.strftime('%H:%M:%S')}]", *args, **kwargs)
@@ -82,6 +83,31 @@ tprint("count dir", count_dir)
 tprint(f"frac dir {frac_dir:.5e}")
 
 types_faces = types_points[edges].astype(np.int32)
+
+A = sp.csr_matrix((np.ones(len(edges)), (edges[:,0], edges[:,1])), shape=(n_nodes, n_nodes))
+n_comp, labels = sp.csgraph.connected_components(A, directed=False)
+free = sum(1 for c in range(n_comp) if types_points[labels == c].sum() == 0)
+tprint(f"{n_comp} components, {free} without any Dirichlet node")
+
+sizes = np.bincount(labels)
+order = np.argsort(sizes)[::-1]
+tprint(f"component sizes: min={sizes.min()} max={sizes.max()} mean={sizes.mean():.1f} median={np.median(sizes):.1f}")
+tprint(f"sizes: {sizes[order].tolist()}")
+
+free_mask = np.array([types_points[labels == c].sum() == 0 for c in range(n_comp)])
+free_sizes = sizes[free_mask]
+if len(free_sizes):
+    tprint(f"floating: count={len(free_sizes)} total_nodes={free_sizes.sum()} "
+           f"min={free_sizes.min()} max={free_sizes.max()} mean={free_sizes.mean():.1f}")
+
+_, inv, counts = np.unique(nodes, axis=0, return_inverse=True, return_counts=True)
+n_dup = (counts > 1).sum()
+tprint(f"unique node positions: {len(counts)} / {n_nodes}, duplicates: {n_dup}")
+
+comp_path = args.o + ".comp.h5"
+tprint(f"writing components to {comp_path}")
+with h5py.File(comp_path, "w") as f:
+    f.create_dataset("net2as_part", data=labels.astype(edges.dtype))
 
 tprint("writing h5 file")
 with h5py.File(args.o + ".geo.h5", "w") as f:
