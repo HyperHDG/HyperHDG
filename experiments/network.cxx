@@ -122,9 +122,9 @@ PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
     if (ts[i] == 1) {
       const PetscScalar *p = &ps[3*i];
       // HACK: only apply dirichlet u for now
-      ss[6*i+0] = 5e-4 * p[0]/4e-3;
+      ss[6*i+0] = 5e+2 * p[0]/8e+3;
       // ss[6*i+1] = 5e-4 * (p[1] > .5e-3);
-      ss[6*i+2] = 5e-4;
+      ss[6*i+2] = 5e+2;
     }
   }
 

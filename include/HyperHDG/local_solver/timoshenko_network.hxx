@@ -271,9 +271,9 @@ struct TimoschenkoBeamParametersClamped
   {
     // return 0.;
     // return 5e-4 * ((point[0] > 1e-3) * normal[0] + normal[2]);
-    return 5e-4 * (point[0]/4e-3 * normal[0] + normal[2]);
+    // return 5e-4 * (point[0]/4e-3 * normal[0] + normal[2]);
     // now in um -> * 1e6
-    // return 5e+2 * ((point[0] > 1e+3) * normal[0] + normal[2]);
+    return 5e+2 * ((point[0] > 1e+3) * normal[0] + normal[2]);
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
   }
