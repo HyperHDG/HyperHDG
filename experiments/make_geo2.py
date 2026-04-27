@@ -64,6 +64,7 @@ maxs = nodes.max(axis=0)
 dims = maxs - mins
 
 tprint("size", dims)
+g.attrs["size"] = dims
 
 d = args.dirichlet
 types_points = np.where(
@@ -92,3 +93,4 @@ with h5py.File(args.o + ".geo.h5", "w") as f:
     g.create_dataset("types_faces", data=types_faces, compression="gzip")
     for k, v in info.items():
       g.attrs[k] = v
+

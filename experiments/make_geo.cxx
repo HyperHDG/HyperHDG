@@ -160,6 +160,11 @@ void compute_types(const std::vector<Point>& vertices, const std::vector<Edge>& 
       max_p[i] = std::max(max_p[i], vertex[i]);
     }
   }
+
+  printf("sizes: ");
+  for (int i = 0; i < 3; i++) printf("%.5e ", max_p[i] - min_p[i]);
+  printf("\n");
+
   for (size_t n = 0; n < vertices.size(); n++)
     node_types[n] = compute_vertex_type(vertices[n], max_p, min_p);
 
