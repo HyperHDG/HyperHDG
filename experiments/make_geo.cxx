@@ -140,8 +140,10 @@ std::vector<Prop> read_props(const char* path) {
 }
 
 ID compute_vertex_type(const Point& vertex, const Point& max_p, const Point& min_p) {
-    if (vertex[0] - min_p[0] < 1e-6 * (max_p[0] - min_p[0]) || max_p[0] - vertex[0] < 1e-6 * (max_p[0] - min_p[0]) ||
-        vertex[1] - min_p[1] < 1e-6 * (max_p[1] - min_p[1]) || max_p[1] - vertex[1] < 1e-6 * (max_p[1] - min_p[1]))
+    if (vertex[0] - min_p[0] <  2e-2 * (max_p[0] - min_p[0])
+        || max_p[0] - vertex[0] < 2e-2 * (max_p[0] - min_p[0])
+        || vertex[1] - min_p[1] < 2e-2 * (max_p[1] - min_p[1])
+        || max_p[1] - vertex[1] < 2e-2 * (max_p[1] - min_p[1]))
       return 1;
     else
       return 0;
