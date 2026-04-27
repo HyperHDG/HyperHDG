@@ -96,6 +96,12 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
     pipe.Function = "solution_0*iHat + solution_1*jHat + solution_2*kHat"
     pipe.UpdatePipeline()
 
+    ref = Show(pipe, GetActiveView())
+    ref.Representation = "Wireframe"
+    ref.AmbientColor = list(to_rgb(args.fg))
+    ref.DiffuseColor = list(to_rgb(args.fg))
+    ref.Opacity = 0.4
+
     pipe = WarpByVector(Input=pipe)
     pipe.Vectors = ["POINTS", "displacement"]
     pipe.ScaleFactor = 1.0
@@ -140,7 +146,7 @@ if __name__ == "__main__":
   p.add_argument("-r", "--radius", default=None, help="radius value", type=float)
   p.add_argument("-p", "--partition", help="discrete data, e.g. partition .h5", default=None)
   p.add_argument("-s", "--solution", help="continuous data, e.g. solution .h5", default=None)
-  p.add_argument("--fg", default="gray", help="fg color")
+  p.add_argument("--fg", default="white", help="fg color")
   p.add_argument("--bg", default="black", help="bg color")
   p.add_argument("--xmf3", default=tempfile.mktemp(suffix=".xmf3"), help="xmf3 path")
   p.add_argument("--no-tubes", default=False, help="select tubes", action="store_true")
