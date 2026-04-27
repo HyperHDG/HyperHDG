@@ -19,6 +19,7 @@ parser.add_argument("-o", help="output", default="graph")
 parser.add_argument("-t", help="tolerance to the edg", type=float, default=2e-2)
 parser.add_argument("--merge-tol", help="merge nodes tolerance", type=float, default=1e-6)
 parser.add_argument("--dirichlet", help="dimension to clamp outer most as dirichlet", nargs="+", type=int, default=[0, 1])
+parser.add_argument("--min-comp-size", type=int, default=10)
 args = parser.parse_args()
 
 tprint("reading nodes")
@@ -125,6 +126,24 @@ info["size"] = dims
 
 tprint("info", info)
 
+
+d = args.dirichlet
+types_points = np.where(
+  np.any(
+    ((nodes[:, d] - mins[d]) < args.t * dims[d]) |
+    ((maxs[d] - nodes[:, d]) < args.t * dims[d]),
+    axis=1
+  ),
+  1, 0
+).astype(np.int32)
+
+count_dir = types_points.sum()
+frac_dir = count_dir / len(types_points)
+tprint("count dir", count_dir)
+tprint(f"frac dir {frac_dir:.5e}")
+
+types_faces = types_points[edges].astype(np.int32)
+
 A = sp.csr_matrix((np.ones(len(edges)), (edges[:,0], edges[:,1])), shape=(n_nodes, n_nodes))
 n_comp, labels = sp.csgraph.connected_components(A, directed=False)
 free = sum(1 for c in range(n_comp) if types_points[labels == c].sum() == 0)
@@ -139,6 +158,27 @@ free_sizes = sizes[free_mask]
 if len(free_sizes):
     tprint(f"floating: count={len(free_sizes)} total_nodes={free_sizes.sum()} "
            f"min={free_sizes.min()} max={free_sizes.max()} mean={free_sizes.mean():.1f}")
+
+keep_comp = sizes >= args.min_comp_size  # boolean per component
+# drop floating components (no Dirichlet node) regardless of size:
+keep_comp &= ~free_mask
+keep_node = keep_comp[labels]
+tprint(f"keeping {keep_comp.sum()}/{n_comp} components, {keep_node.sum()}/{n_nodes} nodes")
+
+# remap: old node index -> new node index, -1 for dropped
+remap = np.full(n_nodes, -1, dtype=edges.dtype)
+remap[keep_node] = np.arange(keep_node.sum())
+
+nodes        = nodes[keep_node]
+types_points = types_points[keep_node]
+n_nodes      = len(nodes)
+
+keep_edge = keep_node[edges[:,0]] & keep_node[edges[:,1]]
+edges     = remap[edges[keep_edge]]
+edgeProps = edgeProps[keep_edge]
+types_faces  = types_faces[keep_edge]
+n_edges   = len(edges)
+tprint(f"after pruning: {n_nodes} nodes, {n_edges} edges")
 
 tprint("writing h5 file")
 with h5py.File(args.o + ".geo.h5", "w") as f:
