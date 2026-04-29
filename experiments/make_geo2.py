@@ -18,7 +18,7 @@ parser.add_argument("-i", help="input", default=".")
 parser.add_argument("-o", help="output", default="graph")
 parser.add_argument("-t", help="tolerance to the edg", type=float, default=2e-2)
 parser.add_argument("--merge-tol", help="merge nodes tolerance", type=float, default=1e-6)
-parser.add_argument("--dirichlet", help="dimension to clamp outer most as dirichlet", nargs="+", type=int, default=[0, 1])
+parser.add_argument("--dirichlet", help="dimension to clamp outer most as dirichlet", nargs="+", type=int, default=[0])
 parser.add_argument("--min-comp-size", type=int, default=10)
 args = parser.parse_args()
 
