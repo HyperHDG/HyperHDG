@@ -54,12 +54,13 @@ int main(int argc, char **argv) {
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
-    PetscBool plot = true;
+    PetscBool plot = true, have_cache = PETSC_FALSE;
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "timowave";
     char output_h5[PATH_MAX] = {0};
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
+    char mat_cache[PATH_MAX] = {0};
     PetscInt timowave_test = 0;
     PetscViewer h5_viewer = NULL;
     const char *pc_type;
@@ -67,7 +68,7 @@ int main(int argc, char **argv) {
 
     (void)e_rel;
 
-    PetscLogStage s_as, s_ts, s_rf;
+    PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -89,6 +90,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-sol_h5", "save solution as h5", NULL, output_h5, output_h5, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
@@ -101,7 +103,9 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    PetscCall(PetscLogStageRegister("Assembly", &s_as));
+    PetscCall(PetscLogStageRegister("t2f", &s_t2f));
+    PetscCall(PetscLogStageRegister("preallocation", &s_pa));
+    PetscCall(PetscLogStageRegister("make_initial", &s_mk));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
 
@@ -159,13 +163,35 @@ int main(int argc, char **argv) {
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
     PetscCall(VecSetValue(times,  0, 0, INSERT_VALUES));
 
-    PRIN2S(s_as);
-    mat_coo = hdg->trace_to_flux_mat(0.);
-    PetscCall(MatCreateFromOptions(PETSC_COMM_SELF, NULL, 1, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
-    PetscCall(MatSetPreallocationCOO(mat, mat_coo.value_vec.size(), (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
-    PetscCall(MatSetValuesCOO(mat, mat_coo.value_vec.data(), INSERT_VALUES));
-    PetscCall(MatEliminateZeros(mat, PETSC_TRUE));
-    PRIN2SP();
+    PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
+    if (have_cache) {
+      PetscViewer viewer;
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# loading matrix\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_READ, &viewer));
+      PetscCall(MatLoad(mat, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
+    } else {
+      PRIN2S(s_t2f);
+      auto mat_coo = hdg->trace_to_flux_mat();
+      mat_coo.eliminate_zeros();
+      PetscInt ncoo = mat_coo.value_vec.size();
+      PRIN2SP();
+
+      PRIN2S(s_pa);
+      PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+      PRIN2SP();
+    }
+
+    if (!have_cache && *mat_cache) {
+      PetscViewer viewer;
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# saving matrix\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_WRITE, &viewer));
+      PetscCall(MatView(mat, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
+    }
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
 
