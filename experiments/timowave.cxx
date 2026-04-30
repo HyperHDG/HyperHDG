@@ -31,6 +31,7 @@ PetscErrorCode PetscHDGCreate(
 ) {
   int i = poly_deg*10 + test;
   switch(i) {
+  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;
@@ -46,7 +47,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nt = 1, nx = 1, poly_deg = 3;
+    PetscInt nt = 1, nx = 1, poly_deg = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
@@ -65,10 +66,12 @@ int main(int argc, char **argv) {
     PetscViewer h5_viewer = NULL;
     const char *pc_type;
     char name[64];
+    PetscBool ksp_monitor_yaml = PETSC_FALSE;
+    KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
 
     (void)e_rel;
 
-    PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk;
+    PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk, s_ksp;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -93,6 +96,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-sol_h5", "save solution as h5", NULL, output_h5, output_h5, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscOptionsEnd();
 
@@ -104,6 +108,7 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(PetscLogStageRegister("t2f", &s_t2f));
+    PetscCall(PetscLogStageRegister("ksp", &s_ksp));
     PetscCall(PetscLogStageRegister("preallocation", &s_pa));
     PetscCall(PetscLogStageRegister("make_initial", &s_mk));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
@@ -131,6 +136,7 @@ int main(int argc, char **argv) {
     zero_v = hdg->zero_vector();
     N = zero_v.size();
 
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", hdg->n_dofs_per_node(), PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
     PetscCall(VecSetBlockSize(rhs, hdg->n_dofs_per_node()));
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
@@ -194,6 +200,7 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
+    PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
     PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
@@ -201,13 +208,19 @@ int main(int argc, char **argv) {
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+    PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", &ksp_monitor_yaml_ctx));
     PetscCall(KSPSetFromOptions(ksp));
     PetscCall(PCGetType(pc, &pc_type));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
 
+    PetscTime(&ksp_monitor_yaml_ctx.t0);
+    PRIN2S(s_ksp);
+    PetscCall(KSPSetUp(ksp));
+    PRIN2SP();
+
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
-      // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
         PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
