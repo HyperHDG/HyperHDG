@@ -11,6 +11,7 @@
 #include "parameters.hxx"
 #include "hdg_base.hxx"
 #include "prin2.hxx"
+#include "net2as.hxx"
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
@@ -30,25 +31,10 @@ PetscErrorCode PetscHDGCreate(
 ) {
   int i = poly_deg*10 + test;
   switch(i) {
-  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave0>(path, {tau, theta, dt})); return 0;
-  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
-  case 12: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave2>(path, {tau, theta, dt})); return 0;
-  case 13: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave3>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-  case 15: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave5>(path, {tau, theta, dt})); return 0;
-  case 16: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave6>(path, {tau, theta, dt})); return 0;
-  case 17: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave7>(path, {tau, theta, dt})); return 0;
-    //case 18: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave8>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-    //case 25: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave5>(path, {tau, theta, dt})); return 0;
-    //case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave0>(path, {tau, theta, dt})); return 0;
-    //case 31: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave1>(path, {tau, theta, dt})); return 0;
-  case 33: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave3>(path, {tau, theta, dt})); return 0;
   case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-    //case 35: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave5>(path, {tau, theta, dt})); return 0;
-    //case 36: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave6>(path, {tau, theta, dt})); return 0;
-    //case 37: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave7>(path, {tau, theta, dt})); return 0;
-    //case 38: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave8>(path, {tau, theta, dt})); return 0;
+  case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
   case 64: *hdg = new HDGWrapper(HDGTimoWave<6,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
@@ -60,7 +46,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set;
-    PetscInt nt = 1, nx = 1, poly_deg = 1;
+    PetscInt nt = 1, nx = 1, poly_deg = 3;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
@@ -71,9 +57,13 @@ int main(int argc, char **argv) {
     PetscBool plot = true;
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "timowave";
+    char output_h5[PATH_MAX] = {0};
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
     PetscInt timowave_test = 0;
+    PetscViewer h5_viewer = NULL;
+    const char *pc_type;
+    char name[64];
 
     (void)e_rel;
 
@@ -82,7 +72,7 @@ int main(int argc, char **argv) {
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
     sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, sol, errors;
+    Vec rhs, errors, times;
     Mat mat;
     KSP ksp;
     PC pc;
@@ -99,6 +89,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
     PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-sol_h5", "save solution as h5", NULL, output_h5, output_h5, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscOptionsEnd();
@@ -135,10 +126,27 @@ int main(int argc, char **argv) {
 
     zero_v = hdg->zero_vector();
     N = zero_v.size();
+
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
+    PetscCall(VecSetBlockSize(rhs, hdg->n_dofs_per_node()));
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
+    PetscCall(PetscObjectSetName((PetscObject)times, "times"));
+
     temp = hdg->make_initial(zero_v);
-    // hdg->set_data(temp, 1);
-    // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING ONLY SET DATA\n"));
-    // return 1;
+
+    if (output_h5[0]) {
+      PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, output_h5, FILE_MODE_WRITE, &h5_viewer));
+      PetscCall(PetscViewerHDF5PushGroup(h5_viewer, "/trace"));
+
+      for (PetscInt k = 0; k < N; k++)
+        PetscCall(VecSetValue(rhs, k, temp[k], INSERT_VALUES));
+      PetscCall(VecAssemblyBegin(rhs));
+      PetscCall(VecAssemblyEnd(rhs));
+      snprintf(name, sizeof name, "timestep_%05d", 0);
+      PetscCall(PetscObjectSetName((PetscObject)rhs, name));
+      PetscCall(VecView(rhs, h5_viewer));
+    }
 
     if (plot)
       hdg->plot_solution(temp, 0.);
@@ -148,11 +156,8 @@ int main(int argc, char **argv) {
     e_abs = PetscMax(temp2[0], e_abs);
     // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
-
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
+    PetscCall(VecSetValue(times,  0, 0, INSERT_VALUES));
 
     PRIN2S(s_as);
     mat_coo = hdg->trace_to_flux_mat(0.);
@@ -162,18 +167,23 @@ int main(int argc, char **argv) {
     PetscCall(MatEliminateZeros(mat, PETSC_TRUE));
     PRIN2SP();
 
+    PetscCall(PCRegister("net2as", PCCreate_Net2AS));
+
     PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
+    PetscCall(PCSetType(pc, "net2as"));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(PCGetType(pc, &pc_type));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
 
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
       // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
+        PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
         std::span<PetscReal> span;
         PetscCall(VecGetSpan(rhs, span));
@@ -193,9 +203,24 @@ int main(int argc, char **argv) {
         e_abs = PetscMax(error, e_abs);
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
 
+        if (h5_viewer) {
+          snprintf(name, sizeof name, "timestep_%05d", (int)i);
+          PetscCall(PetscObjectSetName((PetscObject)rhs, name));
+          PetscCall(VecView(rhs, h5_viewer));
+        }
+
         PetscCall(VecRestoreSpan(rhs, span));
     }
     PRIN2SP();
+
+    PetscCall(VecAssemblyBegin(times));
+    PetscCall(VecAssemblyEnd(times));
+
+    if (h5_viewer) {
+      PetscCall(PetscObjectSetName((PetscObject)rhs, "times"));
+      PetscCall(VecView(times, h5_viewer));
+      PetscCall(PetscViewerHDF5PopGroup(h5_viewer));
+    }
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
@@ -215,7 +240,10 @@ int main(int argc, char **argv) {
     delete hdg;
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
-    PetscCall(VecDestroy(&sol));
+    PetscCall(VecDestroy(&times));
+    PetscCall(VecDestroy(&errors));
+    PetscCall(VecDestroy(&rhs));
+    PetscCall(PetscViewerDestroy(&h5_viewer));
 
     PetscCall(PetscFinalize());
     return 0;

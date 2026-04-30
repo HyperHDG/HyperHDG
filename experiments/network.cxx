@@ -331,6 +331,7 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(apply_dirichlet(domain_filepath, rhs));
+    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
     VecViewFromOptions(rhs, NULL, "-sol_view");
 
 end:
