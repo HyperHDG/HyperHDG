@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
-    PetscBool plot = true, have_cache = PETSC_FALSE;
+    PetscBool plot = false, have_cache = PETSC_FALSE;
     char output_directory[PATH_MAX] = "output";
     char output_filename[PATH_MAX] = "timowave";
     char output_h5[PATH_MAX] = {0};
@@ -143,7 +143,9 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
     PetscCall(PetscObjectSetName((PetscObject)times, "times"));
 
+    PRIN2S(s_mk);
     temp = hdg->make_initial(zero_v);
+    PRIN2SP();
 
     if (output_h5[0]) {
       PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, output_h5, FILE_MODE_WRITE, &h5_viewer));
@@ -229,6 +231,7 @@ int main(int argc, char **argv) {
         PetscLogStagePush(s_rf);
         hdg->residual_flux2(std::span{zero_v}, span, ti);
         PetscLogStagePop();
+        PetscCall(VecRestoreSpan(rhs, span));
 
         PetscCall(VecScale(rhs, -1.));
         PetscCall(KSPSolve(ksp, rhs, rhs));
@@ -236,10 +239,13 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
+        PetscCall(VecGetSpan(rhs, span));
         hdg->set_data(span, ti);
         if (plot) hdg->plot_solution(span, ti);
         error = hdg->errors(span, ti)[0];
         e_abs = PetscMax(error, e_abs);
+        PetscCall(VecRestoreSpan(rhs, span));
+
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
 
         if (h5_viewer) {
@@ -248,7 +254,6 @@ int main(int argc, char **argv) {
           PetscCall(VecView(rhs, h5_viewer));
         }
 
-        PetscCall(VecRestoreSpan(rhs, span));
     }
     PRIN2SP();
 
