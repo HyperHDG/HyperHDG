@@ -23,9 +23,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 0.
-  goal_time   = 5.
-  time_steps  = 1000
+  start_time  = 2.4001
+  goal_time   = 2.5001
+  time_steps  = 100
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -112,8 +112,21 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     print("Standard-Newton failed!")
     return x
 
-  time = 0.
-  vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector()))
+  def fallback_newton_step(x, time, tol=1e-8):
+    A = ttf_mat(x, time)
+    A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
+    assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
+    sA_iLU = sp.linalg.spilu(A)
+    M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
+    rhs  = np.array(HDG_wrapper.residual_flux(x, time))
+    rhs_len = len(rhs)
+    rhs  = rhs[keep_rows]
+    step, _ = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
+    x   -= prolong(step, keep_cols, rhs_len)
+    return A, M, keep_cols, keep_rows, x
+
+  time = start_time
+  vectorSolution = np.array(HDG_wrapper.make_initial(HDG_wrapper.zero_vector(), time))
 
   for time_step in range(time_steps):
     time += delta_time
@@ -130,21 +143,23 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       vectorSolution   -= prolong(step, keep_cols, rhs_len)
       print("First additional step")
 
-    if ((time_step - 1) % 20 == 0 or time_step == 0) and abs(time - 2.5) > 0.4:
+    if ((time_step - 1) % 10 == 0 or time_step == 0):
       A = ttf_mat(vectorSolution, time)
       A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
       sA_iLU = sp.linalg.spilu(A)
       M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
 
-    if abs(time - 2.5) > 0.4:
-      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
-    else:
+    if time_step == 0:
       vectorSolution = fallback_newton(vectorSolution, time)
+    else:
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+      #A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    if (time_step+1) % 100 == 0:
+    if (time_step+1) % 10 == 0:
       HDG_wrapper.plot_option( "fileName" , "antipeakon" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
@@ -155,7 +170,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if (time_step+1) % 20 == 0 or time_step == 0:
+    if (time_step+1) % 10 == 0 or time_step == 0:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
