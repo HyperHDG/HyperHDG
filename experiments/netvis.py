@@ -114,16 +114,16 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False, trace
     etree.ElementTree(xdmf).write(path, xml_declaration=True, pretty_print=True)
     return xdmf
 
-def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False, no_ref=False, trace=None):
+def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False, no_ref=False, trace=None, duration=5):
   if radius is None:
     try:
       with h5py.File(domain, "r") as f:
-        args.radius = f["domain"].attrs["radius"]
+        radius = f["domain"].attrs["radius"]
     except KeyError as e:
       print("ERROR: no radius provided, and couldnt find radius in the domain file", file=sys.stderr)
   else:
     with h5py.File(domain, "a") as f:
-      f["domain"].attrs["radius"] = args.radius
+      f["domain"].attrs["radius"] = radius
 
   print(f"xmf3_path: {args.xmf3}")
   write_xdmf3(args.xmf3, domain, partition=partition, solution=solution, trace=trace)
@@ -134,6 +134,7 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
   if trace:
     scene = GetAnimationScene()
     scene.UpdateAnimationUsingDataTimeSteps()
+    scene.PlayMode = "Snap To TimeSteps"
 
   pipe = ExtractSurface(Input=pipe)
   pipe.UpdatePipeline()
@@ -162,7 +163,7 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
 
   if use_tubes:
     pipe = Tube(Input=pipe)
-    pipe.Radius = args.radius
+    pipe.Radius = radius
     pipe.NumberofSides = 4
 
   display = Show(pipe, GetActiveViewOrCreate("RenderView"))
@@ -208,6 +209,7 @@ if __name__ == "__main__":
   p.add_argument("--h5-i64", default=False, help="select 64-bit integers in h5", action="store_true")
   p.add_argument("-o", "--output", default="netvis.png", help="save screenshot of network (after interact)")
   p.add_argument("--resolution", default="1000x1000", help="render resolution")
+  p.add_argument("--duration", type=float, default=5, help="animation duration")
   p.add_argument("--dirichlet", default=False, help="color Dirichlet nodes (types_points == 1)", action="store_true")
   p.add_argument("--view", choices=list(VIEWS) + [None], default="top",
                  help="named camera view")
@@ -215,4 +217,4 @@ if __name__ == "__main__":
   args = p.parse_args()
 
   resolution = map(int, args.resolution.split("x"))
-  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref, trace=args.trace)
+  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref, trace=args.trace, duration=args.duration)
