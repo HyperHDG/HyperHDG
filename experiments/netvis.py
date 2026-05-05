@@ -149,9 +149,8 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
     pipe.UpdatePipeline()
 
     if not no_ref:
-      ref = Show(pipe, GetActiveView())
-      ref.Representation = "Wireframe"
-      ColorBy(ref, "types_points" if dirichlet else None)
+      outline = Outline(Input=pipe)
+      ref = Show(outline, GetActiveView())
       ref.AmbientColor = list(to_rgb(args.fg))
       ref.DiffuseColor = list(to_rgb(args.fg))
       ref.Opacity = 0.4

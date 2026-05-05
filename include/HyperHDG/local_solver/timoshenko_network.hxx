@@ -20,83 +20,6 @@ namespace LocalSolver
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
-struct Timo0
-{
-  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
-
-  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return 0;
-  }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    Point<space_dimT, param_float_t> res(0.);
-    if (point[0] != 0) {
-      res[1] =  1;
-      res[2] = -1;
-    }
-    if (point[1] != 0) {
-      res[0] =  1;
-      res[2] = -1;
-    }
-    return scalar_product(res, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return analytic_result_u(point, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
-  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return analytic_result_phi(point, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    Point<space_dimT, param_float_t> res(point[0]+point[1]+point[2]);
-    return scalar_product(res, normal);
-  }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
-  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return 0;
-  }
-};  // end of struct DiffusionParametersDefault
-
-
-
-/*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-template <unsigned int space_dimT, typename param_float_t = double>
 struct TimoschenkoBeamParametersDefault
 {
   /*!***********************************************************************************************
@@ -197,148 +120,51 @@ struct TimoschenkoBeamParametersDefault
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \authors   Joseph Holten, KIT, 2026--
  **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TimoschenkoBeamParametersClamped
 {
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
-   ************************************************************************************************/
   static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  /*!***********************************************************************************************
-   * \brief   Array containing hypernode types corresponding to Neumann boundary.
-   ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
-  /*!***********************************************************************************************
-   * \brief   Inverse diffusionbeam_network_bilaplacian.hxx coefficient in PDE as analytic function.
-   ************************************************************************************************/
-  // static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
-  //                                              const param_float_t = 0.)
-  // {
-  //   return 1.;
-  //   // return 1. / M_PI / M_PI;
-  // }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
   static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
     return 0;
-    // return -M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
   }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
   static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
     return 0.;
-    // return  (M_PI * M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2]
-    // == 0.); return  -M_PI * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] ==
-    // 0.); return M_PI * M_PI * sin(M_PI * point[0]) * normal[0]; return M_PI * M_PI * sin(M_PI *
-    // point[0]) * normal[0];
   }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
     return analytic_result_u(point, normal);
   }
-  /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
-   ************************************************************************************************/
   static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
                                            const Point<space_dimT, param_float_t>& normal,
                                            const param_float_t = 0.)
   {
     return analytic_result_phi(point, normal);
   }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
   static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    // return 0.;
-    // return 5e-4 * ((point[0] > 1e-3) * normal[0] + normal[2]);
-    // return 5e-4 * (point[0]/4e-3 * normal[0] + normal[2]);
-    // now in um -> * 1e6
-    return 5e+2 * ((point[0] > 1e+3) * normal[0] + normal[2]);
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
+    return 5e+2 * (point[0] > 1e+3) * normal[0];
   }
-  /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
-   ************************************************************************************************/
   static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
                                            const Point<space_dimT, param_float_t>& normal,
                                            const param_float_t = 0.)
   {
     return 0.;
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct DiffusionParametersDefault
 
-
-
-template <unsigned int space_dimT, typename param_float_t = double>
-struct TimoClamped0
-{
-  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
-
-  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return 0;
-  }
-
-  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return 0.;
-  }
-  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    return analytic_result_u(point, normal);
-  }
-  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return analytic_result_phi(point, normal);
-  }
-  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
-  {
-    // assume units are in um and domain is 8000 x 8000
-    // this sets 10% displacment at the far side of the x1-direction
-    return 100*((point[0] > 4000)*normal[0] + (point[1] > 4000)*normal[1]);
-  }
-
-  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
-  {
-    return 0.;
-  }
-};
 
 
 /*!*************************************************************************************************
