@@ -19,8 +19,7 @@ parser.add_argument("-o", help="output", default="graph")
 parser.add_argument("-t", help="tolerance to the edg", type=float, default=2e-2)
 parser.add_argument("--merge-tol", help="merge nodes tolerance", type=float, default=1e-6)
 parser.add_argument("--dirichlet", help="borders to clamp as dirichlet",
-                    nargs="+", choices=["xmin","xmax","ymin","ymax"],
-                    default=["xmin","xmax"])
+                    nargs="+", default=["xmin=0b111111","xmax=0b111111"])
 parser.add_argument("--min-comp-size", type=int, default=10)
 args = parser.parse_args()
 
@@ -133,9 +132,11 @@ sides = {"xmin": nodes[:,0] - mins[0] < args.t * dims[0],
          "ymin": nodes[:,1] - mins[1] < args.t * dims[1],
          "ymax": maxs[1] - nodes[:,1] < args.t * dims[1]}
 
-types_points = np.any([sides[b] for b in args.dirichlet], axis=0).astype(np.int32)
+dir_side = np.array([sides[x.split('=')[0]]  for x in args.dirichlet])
+dir_desc = np.array([int(x.split('=')[1], 0) for x in args.dirichlet], dtype=np.int32)
+types_points = np.bitwise_or.reduce(dir_side * dir_desc[:, None], axis=0).astype(np.int32)
 
-count_dir = types_points.sum()
+count_dir = (types_points != 0).sum()
 frac_dir = count_dir / len(types_points)
 tprint("count dir", count_dir)
 tprint(f"frac dir {frac_dir:.5e}")

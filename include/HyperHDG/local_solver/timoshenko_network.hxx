@@ -125,8 +125,6 @@ struct TimoschenkoBeamParametersDefault
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TimoschenkoBeamParametersClamped
 {
-  static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
@@ -261,13 +259,6 @@ class TimoshenkoBeam
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return space_dim; }
-
-  template <typename parameters>
-  static constexpr bool is_dirichlet(const unsigned int node_type)
-  {
-    return std::find(parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
-                     node_type) != parameters::dirichlet_nodes.end();
-  }
 
  private:
   // -----------------------------------------------------------------------------------------------
@@ -471,8 +462,6 @@ class TimoshenkoBeam
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
@@ -502,8 +491,9 @@ class TimoshenkoBeam
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        lambda_values_out[i].fill(0.);
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
   }
@@ -523,8 +513,6 @@ class TimoshenkoBeam
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
@@ -537,8 +525,9 @@ class TimoshenkoBeam
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        lambda_values_out[i].fill(0.);
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
   }
@@ -869,10 +858,11 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
   int comps[] = {1, -1, -2};
+  static_assert(space_dim <= 3);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    for (unsigned int c = 0; c < 3; c++) {
+    for (unsigned int c = 0; c < space_dim; c++) {
       right_hand_side[(2 * space_dim + c)* n_shape_fct_ + i] =
         integrator::template integrate_vol_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
@@ -887,9 +877,8 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
-      {
-        for (unsigned int c = 0; c < 3; c++) {
+      for (unsigned int c = 0; c < space_dim; c++) {
+        if (hyper_edge.node_descriptor[face] & (1<<c)) {
           integral = integrator::template integrate_bdr_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
@@ -897,7 +886,9 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           right_hand_side[(0 * space_dim + c) * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](0) * integral;
           right_hand_side[(2 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
+        }
 
+        if (hyper_edge.node_descriptor[face] & (1<<(c+3))) {
           integral = integrator::template integrate_bdr_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
