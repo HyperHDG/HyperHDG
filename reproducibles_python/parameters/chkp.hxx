@@ -205,6 +205,118 @@ struct ChkpParametersDoublePeakon
 };  
 
 template <unsigned int space_dimT, typename param_float_t = double>
+struct ChkpParametersAntipeakon
+{
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Dirichlet boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 3U> dirichlet_nodes{1, 2, 3};
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 2U> neumann_nodes{1, 2};
+  static constexpr std::array<unsigned int, 2U> right_nodes{2, 6};
+  /*!***********************************************************************************************
+   * \brief   Inverse diffusion coefficient in PDE as analytic function.
+   ************************************************************************************************/
+  static param_float_t initial(const Point<space_dimT, param_float_t>& p,
+                               const param_float_t t = 0.)
+  {
+    return analytic_result(p, t);
+  }
+  
+  static param_float_t right_hand_side(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value(const Point<space_dimT, param_float_t>& p,
+                                       const param_float_t t = 0.)
+  {
+    return analytic_result(p, t);
+  }
+  /*!***********************************************************************************************
+   * \brief   Neumann values of solution as analytic function.
+   ************************************************************************************************/
+  static param_float_t neumann_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    param_float_t x = p[0];
+    param_float_t y = p[1];
+    param_float_t a1 = x + y - x1(t);
+    param_float_t a2 = x + y - x2(t);
+    return -m1(t) * sgn(a1) * exp(-abs(a1)) - m2(t) * sgn(a2) * exp(-abs(a2));
+  }
+  /*!***********************************************************************************************
+   * \brief   Analytic result of PDE (for convergence tests).
+   ************************************************************************************************/
+  static param_float_t analytic_result(const Point<space_dimT, param_float_t>& p,
+                                       const param_float_t t = 0.)
+  {
+    param_float_t x = p[0];
+    param_float_t y = p[1];
+    if(abs(t - tc) < 1e-10)
+      return (c1 - c2) * exp(-abs(x + y));
+    else
+      return m1(t) * exp(-abs(x + y - x1(t))) + m2(t) * exp(-abs(x + y - x2(t)));
+  }
+  
+  static param_float_t reference_value(const Point<space_dimT, param_float_t>& p,
+                                     const param_float_t t = 0.)
+  {
+    return analytic_result(p, t);
+  }
+
+  static constexpr param_float_t kappa=-.5;
+  
+  static param_float_t tau_f(param_float_t arg)
+  {
+    return 4.;
+  }
+  static param_float_t tau_df(param_float_t arg)
+  {
+    return 0.;
+  }
+  static constexpr param_float_t tau_fr = 4.;
+  
+  private:
+  static constexpr param_float_t tc = 2.5;
+  static constexpr param_float_t c1 = 1.2;
+  static constexpr param_float_t c2 = 0.6;
+  
+  static param_float_t x1(param_float_t t)
+  {
+    param_float_t tau = t - tc;
+    return -log( (c1 * exp(-c1 * tau) + c2 * exp(c2 * tau)) / (c1 + c2));
+  }
+  static param_float_t x2(param_float_t t)
+  {
+    param_float_t tau = t - tc;
+    return log( (c1 * exp(c1 * tau) + c2 * exp(-c2 * tau))  / (c1 + c2));
+  }
+  
+  static param_float_t m1(param_float_t t)
+  {
+    param_float_t tau = t - tc;
+    return (c1 * exp(-c1 * tau) + c2 * exp(c2 * tau)) / (exp(-c1 * tau) - exp(c2 * tau));
+  }
+  static param_float_t m2(param_float_t t)
+  {
+    param_float_t tau = t - tc;
+    return (c1 * exp(c1 * tau) + c2 * exp(-c2 * tau)) / (exp(c1 * tau) - exp(-c2 * tau));
+  }
+  
+  static param_float_t sgn(param_float_t arg)
+  {
+    return 2. / (1. + exp(-1000. * arg)) - 1.;
+  }
+};  
+
+
+template <unsigned int space_dimT, typename param_float_t = double>
 struct ChkpParameters
 {
   static constexpr double scale_t = .01;
