@@ -124,7 +124,7 @@ PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
       // HACK: only apply dirichlet u for now
       ss[6*i+0] = 5e+2 * p[0]/8e+3;
       // ss[6*i+1] = 5e-4 * (p[1] > .5e-3);
-      ss[6*i+2] = 5e+2;
+      // ss[6*i+2] = 5e+2;
     }
   }
 

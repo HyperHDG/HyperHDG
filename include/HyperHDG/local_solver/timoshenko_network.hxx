@@ -868,91 +868,44 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   // constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
+  int comps[] = {1, -1, -2};
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    right_hand_side[2 * space_dim * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(2 * space_dim + 1) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(2 * space_dim + 2) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
-                                                                         0.);
+    for (unsigned int c = 0; c < 3; c++) {
+      right_hand_side[(2 * space_dim + c)* n_shape_fct_ + i] =
+        integrator::template integrate_vol_phivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>
+        >(i, comps[c], hyper_edge.geometry, 0.);
 
-    right_hand_side[3 * space_dim * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, 1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(3 * space_dim + 1) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, -1, hyper_edge.geometry,
-                                                                         0.);
-    right_hand_side[(3 * space_dim + 2) * n_shape_fct_ + i] =
-      integrator::template integrate_vol_phivecfunccomp<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>>(i, -2, hyper_edge.geometry,
-                                                                         0.);
+      right_hand_side[(3 * space_dim + c)* n_shape_fct_ + i] =
+        integrator::template integrate_vol_phivecfunccomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
+        >(i, comps[c], hyper_edge.geometry, 0.);
+    }
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
       {
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, 1, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 0) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 0) * n_shape_fct_ + i] += tau_ * integral;
+        for (unsigned int c = 0; c < 3; c++) {
+          integral = integrator::template integrate_bdr_phivecfunccomp<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
+            Point<hyEdge_dimT, lSol_float_t>>(i, face, comps[c], hyper_edge.geometry, 0.);
+          right_hand_side[(0 * space_dim + c) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integral;
+          right_hand_side[(2 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
 
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 1) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 1) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -2, hyper_edge.geometry, 0.);
-        right_hand_side[(0 * space_dim + 2) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(2 * space_dim + 2) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, 1, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 0) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 0) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -1, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 1) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 1) * n_shape_fct_ + i] += tau_ * integral;
-
-        integral = integrator::template integrate_bdr_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-          Point<hyEdge_dimT, lSol_float_t>>(i, face, -2, hyper_edge.geometry, 0.);
-        right_hand_side[(1 * space_dim + 2) * n_shape_fct_ + i] -=
-          hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-        right_hand_side[(3 * space_dim + 2) * n_shape_fct_ + i] += tau_ * integral;
+          integral = integrator::template integrate_bdr_phivecfunccomp<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
+            Point<hyEdge_dimT, lSol_float_t>>(i, face, comps[c], hyper_edge.geometry, 0.);
+          right_hand_side[(1 * space_dim + c) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integral;
+          right_hand_side[(3 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
+        }
       }
     }
   }
