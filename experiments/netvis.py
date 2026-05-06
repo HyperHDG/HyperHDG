@@ -2,12 +2,16 @@
 import argparse
 from paraview.simple import *
 from matplotlib.colors import to_rgb
+import matplotlib.cm as cm
 from lxml import etree
 import h5py
 import tempfile
 import os
 import sys
 import copy
+from paraview.servermanager import Fetch
+from vtkmodules.util.numpy_support import vtk_to_numpy
+import numpy as np, colorsys
 
 VIEWS = {
   "top":    {"position": (0, 0, 1), "focal": (0, 0, 0), "up": (0, 1, 0), "parallel": 1.0},
@@ -173,11 +177,21 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
     lut.ApplyPreset("Paired", True)
   elif dirichlet:
     ColorBy(display, ("POINTS", "types_points"))
-    display.RescaleTransferFunctionToDataRange(True)
     lut = GetColorTransferFunction("types_points")
-    lut.RGBPoints = [0.0, *to_rgb(args.fg), 1.0, *to_rgb("red")]
-    lut.ColorSpace = "RGB"
-    display.SetScalarBarVisibility(GetActiveView(), False)
+    lut.InterpretValuesAsCategories = 1
+
+    arr = Fetch(pipe).GetPointData().GetArray("types_points")
+    present = sorted(np.unique(vtk_to_numpy(arr)).astype(int).tolist())
+
+    def color_for(v):
+        if v == 0:  return to_rgb(args.fg)
+        if v == 63: return to_rgb("red")
+        return colorsys.hsv_to_rgb((v - 1) / 62 * 0.85, 0.7, 0.9)
+
+    lut.Annotations    = [s for v in present for s in (str(v), f"{v:06b}")]
+    lut.IndexedColors  = [c for v in present for c in color_for(v)]
+
+    display.SetScalarBarVisibility(GetActiveView(), True)
   else:
     display.SetScalarColoring(None, 0)
     display.DiffuseColor = list(to_rgb(args.fg))
