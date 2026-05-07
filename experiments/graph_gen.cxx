@@ -3,18 +3,18 @@
 #include <petscviewerhdf5.h>
 #include <assert.h>
 
-PetscInt compute_vertex_type(const PetscReal* vertex, const PetscReal* max_p, const PetscReal* min_p) {
-    if (vertex[0] - min_p[0] < 1e-6 * (max_p[0] - min_p[0]) || max_p[0] - vertex[0] < 1e-6 * (max_p[0] - min_p[0]) ||
-        vertex[1] - min_p[1] < 1e-6 * (max_p[1] - min_p[1]) || max_p[1] - vertex[1] < 1e-6 * (max_p[1] - min_p[1]))
+PetscInt compute_vertex_type(PetscReal tol, const PetscReal* vertex, const PetscReal* max_p, const PetscReal* min_p) {
+    if (vertex[0] - min_p[0] <= tol * (max_p[0] - min_p[0]) || max_p[0] - vertex[0] <= tol * (max_p[0] - min_p[0]) ||
+        vertex[1] - min_p[1] <= tol * (max_p[1] - min_p[1]) || max_p[1] - vertex[1] <= tol * (max_p[1] - min_p[1]))
       return 1;
     else
       return 0;
 }
 
-void compute_types(const PetscReal* vertices, size_t n, const PetscInt* edges, size_t m, PetscInt* node_types, PetscInt* types) {
+void compute_types(const PetscReal* vertices, size_t n, const PetscInt* edges, size_t m, PetscReal tol, PetscInt* node_types, PetscInt* types) {
   // Calculate the bounding box (min/max x, y, z) for all vertices
   PetscReal min_p[3] = {1e10, 1e10, 1e10};
-  PetscReal max_p[3] = {1e-10, 1e-10, 1e-10};
+  PetscReal max_p[3] = {0, 0, 0};
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < 3; j++) {
       min_p[j] = std::min(min_p[j], vertices[3*i+j]);
@@ -22,13 +22,13 @@ void compute_types(const PetscReal* vertices, size_t n, const PetscInt* edges, s
     }
   }
   for (size_t i = 0; i < n; i++)
-    node_types[i] = compute_vertex_type(vertices+3*i, max_p, min_p);
+    node_types[i] = compute_vertex_type(tol, vertices+3*i, max_p, min_p);
 
   for (size_t i = 0; i < 2*m; i++)
     types[i] = node_types[edges[i]];
 }
 
-PetscErrorCode generate_grid_graph(PetscInt _n, Vec *vpoints, IS *is_edges, IS *is_types_nodes, IS *is_types_faces) {
+PetscErrorCode generate_grid_graph(PetscInt _n, Vec *vpoints, IS *is_edges, IS *is_types_nodes, IS *is_types_faces, PetscReal border_tol) {
   size_t k = 0, n = _n, m = 2*(n-1)*n;
   double h = 1. / (n-1);
   PetscInt *edges, *types_nodes, *types_faces;
@@ -62,13 +62,13 @@ PetscErrorCode generate_grid_graph(PetscInt _n, Vec *vpoints, IS *is_edges, IS *
   PetscCall(ISSetBlockSize(*is_edges, 2));
   PetscCall(PetscObjectSetName((PetscObject)*is_edges, "edges"));
 
-  compute_types(points, n*n, edges, m, types_nodes, types_faces);
+  compute_types(points, n*n, edges, m, border_tol, types_nodes, types_faces);
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n*n, types_nodes, PETSC_COPY_VALUES, is_types_nodes));
   PetscCall(PetscObjectSetName((PetscObject)*is_types_nodes, "types_points"));
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 2*m, types_faces, PETSC_COPY_VALUES, is_types_faces));
   PetscCall(PetscObjectSetName((PetscObject)*is_types_faces, "types_faces"));
   PetscCall(ISSetBlockSize(*is_types_faces, 2));
-  
+
   PetscCall(VecRestoreArray(*vpoints, &points));
   PetscCall(PetscFree(edges));
 
@@ -83,11 +83,14 @@ int main(int argc, char** argv) {
   IS edges, ntypes, ftypes;
   PetscViewer viewer;
   char buf[PATH_MAX];
+  PetscReal size[3] = {1.0, 1.0, 0.0};
+  PetscReal border_tol = 1e-3;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "graph_gen options", NULL);
   PetscCall(PetscOptionsInt("-n", "n", NULL, n, &n, &is_set));
+  PetscCall(PetscOptionsReal("-t", "tolerance to xmin/xmax/ymin/ymax (dirichlet)", NULL, border_tol, &border_tol, &is_set));
   PetscCall(PetscOptionsString("-o", "output path", NULL, out, out, PATH_MAX, &is_set));
   PetscOptionsEnd();
 
@@ -96,13 +99,14 @@ int main(int argc, char** argv) {
   printf("n: %" PetscInt_FMT "\n", n);
   printf("o: %s\n", buf);
 
-  PetscCall(generate_grid_graph(n, &points, &edges, &ntypes, &ftypes));
+  PetscCall(generate_grid_graph(n, &points, &edges, &ntypes, &ftypes, border_tol));
   PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, buf, FILE_MODE_WRITE, &viewer));
   PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
   PetscCall(VecView(points, viewer));
   PetscCall(ISView(edges, viewer));
   PetscCall(ISView(ntypes, viewer));
   PetscCall(ISView(ftypes, viewer));
+  PetscCall(PetscViewerHDF5WriteAttribute(viewer, NULL, "size", PETSC_REAL, size));
 
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(VecDestroy(&points));
