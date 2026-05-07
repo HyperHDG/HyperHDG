@@ -116,53 +116,60 @@ struct TimoschenkoBeamParametersDefault
 };  // end of struct DiffusionParametersDefault
 
 /*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
+ * \brief     Timoschenko Network tensile stiffness experiment.
+ *
+ *            Applies a prescribed tensile strain to the right Dirichlet boundary
+ *            of a clamped beam network. The displacement is computed as
+ *            `strain * length` and applied in the x-direction.
+ *
+ *            Both `length` and `strain` are runtime-configurable static members
+ *            and must be set after loading the mesh, before the solve.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  * \authors   Joseph Holten, KIT, 2026--
  **************************************************************************************************/
-template <unsigned int space_dimT, typename param_float_t = double>
-struct TimoschenkoBeamParametersClamped
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoTensile
 {
-  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
+  static inline Scalar length = 8e+3;
+
+  /// Applied tensile strain (dimensionless)
+  static inline Scalar strain = 0.10;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return 0;
   }
-  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return 0.;
   }
-  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return analytic_result_u(point, normal);
   }
-  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return analytic_result_phi(point, normal);
   }
-  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
-                                         const param_float_t = 0.)
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
-    return 5e+2 * (point[0] > 1e+3) * normal[0];
+    return strain * length * (point[0] > .5 * length) * normal[0];
   }
-  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
-                                           const param_float_t = 0.)
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return 0.;
   }
-};  // end of struct DiffusionParametersDefault
-
+};
 
 
 /*!*************************************************************************************************

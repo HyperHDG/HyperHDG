@@ -14,8 +14,10 @@
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
+template <unsigned int dim, typename Scalar = double>
+using TB_Params = LocalSolver::TimoshenkoTensile<dim, Scalar>;
 template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg,LocalSolver::TimoschenkoBeamParametersClamped>;
+using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
 template<unsigned int poly_deg>
 using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
 
@@ -29,8 +31,17 @@ using HDGNetwork = GlobalLoop::Elliptic<
 
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal tau, HDGBase **hdg) {
+  PetscViewer viewer;
+  PetscReal size[3];
+
+  PetscFunctionBeginUser;
+
   if (0 == strcmp(lsol, "timo")) {
     *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    TB_Params<3>::length = size[0];
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
   } else {
@@ -119,10 +130,10 @@ PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
   PetscCall(VecGetArrayWrite(sol, &ss));
 
   for (PetscInt i = 0; i < nt; ++i) {
-    if (ts[i]) {
-      const PetscScalar *p = &ps[3*i];
+    const PetscScalar *p = &ps[3*i];
+    if (ts[i] && p[0] > .5 * 8e+3) {
       // HACK: only apply dirichlet u for now
-      ss[6*i+0] = 5e+2 * p[0]/8e+3;
+      ss[6*i+0] = 8e+2 * p[0]/8e+3;
       // ss[6*i+1] = 5e-4 * (p[1] > .5e-3);
       // ss[6*i+2] = 5e+2;
     }
