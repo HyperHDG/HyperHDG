@@ -139,6 +139,20 @@ PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
+  Mat AT, D;
+  PetscReal nrm, nrm_a;
+
+  PetscFunctionBeginUser;
+  MatTranspose(mat, MAT_INITIAL_MATRIX, &AT);
+  MatDuplicate(mat, MAT_COPY_VALUES, &D);
+  MatAXPY(D, -1.0, AT, DIFFERENT_NONZERO_PATTERN);
+  MatNorm(D, NORM_FROBENIUS, &nrm);
+  MatNorm(mat, NORM_FROBENIUS, &nrm_a);
+  PetscPrintf(PETSC_COMM_WORLD, "%s: %g\n", msg, (double)(nrm/nrm_a));
+  MatDestroy(&AT); MatDestroy(&D);
+  PetscFunctionReturn(0);
+}
 
 int main(int argc, char **argv) {
     int rank, comm_size, proc_name_len;
@@ -283,6 +297,8 @@ int main(int argc, char **argv) {
       PetscCall(MatView(mat, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
     }
+
+    PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
 
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
