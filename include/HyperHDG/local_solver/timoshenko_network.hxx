@@ -462,7 +462,14 @@ class TimoshenkoBeam
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+    SmallMatInT lambda_in = lambda_values_in;
+
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_in[i][j] = 0.;
+
+    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -512,8 +519,14 @@ class TimoshenkoBeam
         lambda_values_in[i].size() == lambda_values_out[i].size() &&
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
+    SmallMatInT lambda_in = lambda_values_in;
 
-    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_in[i][j] = 0.;
+
+    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
