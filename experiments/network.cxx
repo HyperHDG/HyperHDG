@@ -37,11 +37,11 @@ PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal ta
   PetscFunctionBeginUser;
 
   if (0 == strcmp(lsol, "timo")) {
-    *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
     PetscCall(PetscViewerDestroy(&viewer));
     TB_Params<3>::length = size[0];
+    *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
   } else {
@@ -131,11 +131,8 @@ PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
 
   for (PetscInt i = 0; i < nt; ++i) {
     const PetscScalar *p = &ps[3*i];
-    if (ts[i] && p[0] > .5 * 8e+3) {
-      // HACK: only apply dirichlet u for now
-      ss[6*i+0] = 8e+2 * p[0]/8e+3;
-      // ss[6*i+1] = 5e-4 * (p[1] > .5e-3);
-      // ss[6*i+2] = 5e+2;
+    if (ts[i] && p[0] > .5 * TB_Params<3>::length) {
+      ss[6*i+0] = TB_Params<3>::strain * TB_Params<3>::length;
     }
   }
 
