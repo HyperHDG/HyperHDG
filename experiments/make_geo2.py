@@ -13,6 +13,39 @@ def tprint(*args, **kwargs):
     print(f"[{time.strftime('%H:%M:%S')}]", *args, **kwargs)
 
 class Network:
+  def generate_grid(self, nx, ny):
+    tprint(f"generating grid graph {nx} x {ny} on unit square")
+    h_x = 1.0 / (nx - 1)
+    h_y = 1.0 / (ny - 1)
+
+    n_nodes = nx * ny
+    nodes = np.zeros((n_nodes, 3))
+    ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    nodes[:, 0] = (jj * h_x).ravel()
+    nodes[:, 1] = (ii * h_y).ravel()
+
+    # horizontal edges: (i,j) -- (i,j+1), for j < nx-1
+    h_src = (ii[:, :-1] * nx + jj[:, :-1]).ravel()
+    h_dst = (ii[:, :-1] * nx + jj[:, :-1] + 1).ravel()
+
+    # vertical edges: (i,j) -- (i+1,j), for i < ny-1
+    v_src = (ii[:-1, :] * nx + jj[:-1, :]).ravel()
+    v_dst = ((ii[:-1, :] + 1) * nx + jj[:-1, :]).ravel()
+
+    edges = np.column_stack([
+        np.concatenate([h_src, v_src]),
+        np.concatenate([h_dst, v_dst]),
+    ]).astype(np.int64)
+
+    tprint("nodes", nodes.shape)
+    tprint("edges", edges.shape)
+
+    self.nodes = nodes
+    self.edges = edges
+    self.info = {"size": np.array([1.0, 1.0, 0.0])}
+    self.edgeProps = None
+
+
   def read_morgan(self, path):
     tprint("reading nodes")
     nodes   = pandas.read_csv(path + "/nodes.csv")
@@ -208,11 +241,47 @@ class Network:
       g = f.create_group("domain")
       g.create_dataset("points", data=self.nodes, compression="gzip")
       g.create_dataset("edges", data=self.edges, compression="gzip")
-      g.create_dataset("properties", data=self.edgeProps, compression="gzip")
+      if hasattr(self, "edgeProps") and self.edgeProps is not None:
+        g.create_dataset("properties", data=self.edgeProps, compression="gzip")
       g.create_dataset("types_points", data=self.types_points, compression="gzip")
       g.create_dataset("types_faces", data=self.types_faces, compression="gzip")
       for k, v in self.info.items():
         g.attrs[k] = v
+
+
+  def clamp_xy(self, x, y):
+    nodes, edges, edgeProps = self.nodes, self.edges, self.edgeProps
+    n_nodes_old, n_edges_old = nodes.shape[0], edges.shape[0]
+
+    xmin = 0
+    ymin = 0
+    xmax, ymax = self.info["size"][:2] * np.array([x, y])
+
+    inside = ((nodes[:,0] >= xmin) & (nodes[:,0] <= xmax) &
+              (nodes[:,1] >= ymin) & (nodes[:,1] <= ymax))
+
+    both_in    = inside[edges[:,0]] & inside[edges[:,1]]
+    both_out   = (~inside[edges[:,0]]) & (~inside[edges[:,1]])
+    partial    = ~(both_in | both_out)
+
+    tprint(f"clamp xy to [{xmin},{xmax}] x [{ymin},{ymax}]")
+    tprint(f"  edges fully outside:    {both_out.sum()}")
+    tprint(f"  edges partially outside: {partial.sum()}")
+    tprint(f"  edges kept:             {both_in.sum()} / {n_edges_old}")
+
+    edges     = edges[both_in]
+    edgeProps = edgeProps[both_in]
+
+    # drop now-unused nodes
+    used = np.zeros(n_nodes_old, dtype=bool)
+    used[edges.ravel()] = True
+    remap = np.full(n_nodes_old, -1, dtype=edges.dtype)
+    remap[used] = np.arange(used.sum())
+
+    self.nodes     = nodes[used]
+    self.edges     = remap[edges]
+    self.edgeProps = edgeProps
+    tprint(f"  nodes kept: {used.sum()} / {n_nodes_old}")
 
 
 if __name__ == "__main__":
@@ -224,12 +293,34 @@ if __name__ == "__main__":
   parser.add_argument("--dirichlet", help="borders to clamp as dirichlet",
                       nargs="+", default=["xmin=0b111111","xmax=0b111111"])
   parser.add_argument("--min-comp-size", type=int, default=10)
+  parser.add_argument("--grid", type=int, nargs="+", metavar="N",
+    help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
+  parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
+    help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   args = parser.parse_args()
 
   network = Network()
-  network.read_morgan(args.input)
-  network.node_edge_dedupe(args.merge_tol)
+  if args.grid is not None:
+    if len(args.grid) == 1:
+      nx = ny = args.grid[0]
+    elif len(args.grid) == 2:
+      nx, ny = args.grid
+    else:
+      parser.error("--grid takes 1 or 2 arguments")
+    network.generate_grid(nx, ny)
+  else:
+    network.read_morgan(args.input)
+    if args.clamp_xy is not None:
+      if len(args.clamp_xy) == 1:
+        fx = fy = args.clamp_xy[0]
+      elif len(args.clamp_xy) == 2:
+        fx, fy = args.clamp_xy
+      else:
+        parser.error("--clamp-xy takes 1 or 2 arguments")
+      network.clamp_xy(fx, fy)
+    network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
   network.compute_types(args.dirichlet_tol)
-  network.drop_floating_and_small_components(args.min_comp_size)
+  if args.grid is None:
+    network.drop_floating_and_small_components(args.min_comp_size)
   network.write_h5(args.output)
