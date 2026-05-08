@@ -35,9 +35,11 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False, trace
         n_points, ncols = f["domain/points"].shape
         fsize = f["domain/points"].dtype.itemsize
         assert ncols == 3, f"domain/points: expected 3 columns, found {ncols}"
-        nrows, n_props = f["domain/properties"].shape
-        assert n_edges == nrows, \
-            f"domain/properties: expected n_edges == {n_edges} rows, found {nrows}"
+        has_props = "domain/properties" in f
+        if has_props:
+          nrows, n_props = f["domain/properties"].shape
+          assert n_edges == nrows, \
+              f"domain/properties: expected n_edges == {n_edges} rows, found {nrows}"
         tp_size = f["domain/types_points"].dtype.itemsize
 
     static_children = []
@@ -53,11 +55,12 @@ def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False, trace
                      Dimensions=f"{n_points} 3").text = f"{domain}:/domain/points"
     static_children.append(geo)
 
-    attr = etree.Element("Attribute", Name="properties", Center="Cell",
-                         AttributeType="Matrix")
-    etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
-                     Dimensions=f"{n_edges} {n_props}").text = f"{domain}:/domain/properties"
-    static_children.append(attr)
+    if has_props:
+      attr = etree.Element("Attribute", Name="properties", Center="Cell",
+                           AttributeType="Matrix")
+      etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
+                       Dimensions=f"{n_edges} {n_props}").text = f"{domain}:/domain/properties"
+      static_children.append(attr)
 
     attr = etree.Element("Attribute", Name="types_points", Center="Node")
     etree.SubElement(attr, "DataItem", Format="HDF", DataType="Int", Precision=str(tp_size),
