@@ -236,7 +236,7 @@ class Network:
 
 
   def write_h5(self, out):
-    tprint("writing h5 file")
+    tprint(f"writing h5 file to '{out}'")
     with h5py.File(out + ".geo.h5", "w") as f:
       g = f.create_group("domain")
       g.create_dataset("points", data=self.nodes, compression="gzip")
