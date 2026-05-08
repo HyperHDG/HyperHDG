@@ -160,7 +160,7 @@ def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, sho
       ref = Show(outline, GetActiveView())
       ref.AmbientColor = list(to_rgb(args.fg))
       ref.DiffuseColor = list(to_rgb(args.fg))
-      ref.Opacity = 0.4
+      ref.Opacity = 1
 
     pipe = WarpByVector(Input=pipe)
     pipe.Vectors = ["POINTS", "displacement"]
@@ -233,4 +233,4 @@ if __name__ == "__main__":
   args = p.parse_args()
 
   resolution = map(int, args.resolution.split("x"))
-  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref, trace=args.trace, duration=args.duration)
+  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref, trace=args.trace, duration=args.duration, use_tubes=not args.no_tubes)
