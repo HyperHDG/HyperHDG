@@ -16,8 +16,11 @@ class View:
   def __init__(self, view):
     self.view = View.VIEWS[view]
 
-  def orient(self, cam):
+  def orient(self, rview):
+    cam = pv.GetActiveCamera()
     v = self.view
+    if v != "iso":
+      rview.CameraParallelProjection = 1
     cam.SetPosition(*v["position"])
     cam.SetFocalPoint(*v["focal"])
     cam.SetViewUp(*v["up"])
@@ -145,7 +148,7 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
   rview.UseColorPaletteForBackground = 0
   rview.OrientationAxesVisibility = int(axis)
 
-  view.orient(pv.GetActiveCamera())
+  view.orient(rview)
   pv.ResetCamera()
   pv.Render()
   if show:
