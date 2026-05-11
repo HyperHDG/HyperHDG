@@ -14,12 +14,13 @@ class View:
   }
 
   def __init__(self, view):
-    self.view = View.VIEWS[view]
+    self.view = view
 
   def orient(self, rview):
     cam = pv.GetActiveCamera()
-    v = self.view
-    if v != "iso":
+    v = View.VIEWS[self.view]
+    if self.view != "iso":
+      print("using parallel projection")
       rview.CameraParallelProjection = 1
     cam.SetPosition(*v["position"])
     cam.SetFocalPoint(*v["focal"])
@@ -172,17 +173,15 @@ if __name__ == "__main__":
   p.add_argument("--fg", default="white")
   p.add_argument("--bg", default="black")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
-  p.add_argument("--warp", type=int, default=1,
+  p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
-  p.add_argument("--warp-scale", type=float, default=1.0)
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
   p.add_argument("--show", type=int, default=1, help="skip Interact()")
   p.add_argument("--axis", type=int, default=1, help="display orientation axis")
-  p.add_argument("--tubes", type=int, default=1, help="apply tubes filter")
-  p.add_argument("-r", "--tubes-radius", type=float, default=None,
-                 help="tube radius (auto if unset)")
+  p.add_argument("-r", "--tubes-radius", type=float, default=20,
+                 help="tube radius")
   p.add_argument("--tubes-sides", type=int, default=4)
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1.)
@@ -194,18 +193,17 @@ if __name__ == "__main__":
   assert(len(resolution) == 2)
 
   ops = []
-  if args.ref:
-    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
-  if args.warp:
-    ops.append(Warp(scale=args.warp_scale))
-  if args.tubes:
+  if args.warp != 0.:
+    ops.append(Warp(scale=args.warp))
+  if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
-
   if args.color_by:
     name, comp = parse_color(args.color_by)
     ops.append(ArrayColor(name, component=comp, fg=args.fg))
   else:
     ops.append(SolidColor(args.fg))
+  if args.ref:
+    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
 
   netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
          resolution=resolution, output=args.output, show=args.show)
