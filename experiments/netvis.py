@@ -1,236 +1,216 @@
 #!/usr/bin/env pvpython
 import argparse
-from paraview.simple import *
-from matplotlib.colors import to_rgb
-import matplotlib.cm as cm
-from lxml import etree
-import h5py
-import tempfile
-import os
 import sys
-import copy
-from paraview.servermanager import Fetch
-from vtkmodules.util.numpy_support import vtk_to_numpy
-import numpy as np, colorsys
+import os
+import paraview.simple as pv
+from matplotlib.colors import to_rgb
 
-VIEWS = {
-  "top":    {"position": (0, 0, 1), "focal": (0, 0, 0), "up": (0, 1, 0), "parallel": 1.0},
-  "bottom": {"position": (0, 0,-1), "focal": (0, 0, 0), "up": (1, 0, 0), "parallel": 1.0},
-  "side":   {"position": (0, -1, 0), "focal": (0, 0, 0), "up": (0, 0, 1), "parallel": 1.0},
-  "iso":   {"position": (1, 1, 1), "focal": (0, 0, 0), "up": (0, 0, 1), "parallel": 1.0},
-}
+class View:
+  VIEWS = {
+    "top":    {"position": (0, 0, 1), "focal": (0, 0, 0), "up": (0, 1, 0)},
+    "bottom": {"position": (0, 0,-1), "focal": (0, 0, 0), "up": (1, 0, 0)},
+    "side":   {"position": (0,-1, 0), "focal": (0, 0, 0), "up": (0, 0, 1)},
+    "iso":    {"position": (1, 1, 1), "focal": (0, 0, 0), "up": (0, 0, 1)},
+  }
 
-def apply_view(cam, v):
-  cam.SetPosition(*v["position"])
-  cam.SetFocalPoint(*v["focal"])
-  cam.SetViewUp(*v["up"])
-  cam.SetParallelScale(v["parallel"])
+  def __init__(self, view):
+    self.view = view
 
-def write_xdmf3(path, domain, partition=None, solution=None, h5_i64=False, trace=None):
-    domain = os.path.abspath(domain)
-    with h5py.File(domain, "r") as f:
-        n_edges, ncols = f["domain/edges"].shape
-        isize = f["domain/edges"].dtype.itemsize
-        assert ncols == 2, f"domain/edges: expected 2 columns, found {ncols}"
-        n_points, ncols = f["domain/points"].shape
-        fsize = f["domain/points"].dtype.itemsize
-        assert ncols == 3, f"domain/points: expected 3 columns, found {ncols}"
-        has_props = "domain/properties" in f
-        if has_props:
-          nrows, n_props = f["domain/properties"].shape
-          assert n_edges == nrows, \
-              f"domain/properties: expected n_edges == {n_edges} rows, found {nrows}"
-        tp_size = f["domain/types_points"].dtype.itemsize
+  def orient(self, rview):
+    cam = pv.GetActiveCamera()
+    v = View.VIEWS[self.view]
+    if self.view != "iso":
+      print("using parallel projection")
+      rview.CameraParallelProjection = 1
+    cam.SetPosition(*v["position"])
+    cam.SetFocalPoint(*v["focal"])
+    cam.SetViewUp(*v["up"])
 
-    static_children = []
+def find_array(pipe, name):
+  for assoc, getter in (("POINTS", pipe.GetPointDataInformation),
+                        ("CELLS",  pipe.GetCellDataInformation)):
+    info = getter()
+    if any(info.GetArray(i).GetName() == name for i in range(info.GetNumberOfArrays())):
+      return assoc
+  return None
 
-    topo = etree.Element("Topology", TopologyType="Polyline", NodesPerElement="2",
-                         NumberOfElements=str(n_edges))
-    etree.SubElement(topo, "DataItem", Format="HDF", DataType="Int",
-                     Dimensions=f"{n_edges} 2").text = f"{domain}:/domain/edges"
-    static_children.append(topo)
+# --- Pipeline ops ------------------------------------------------------------
+# Each op is a callable: pipe -> pipe. May skip and return input unchanged.
 
-    geo = etree.Element("Geometry", GeometryType="XYZ")
-    etree.SubElement(geo, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
-                     Dimensions=f"{n_points} 3").text = f"{domain}:/domain/points"
-    static_children.append(geo)
+class Warp:
+  def __init__(self, components=(6, 7, 8), scale=1.0, source_array="values"):
+    self.components = components
+    self.scale = scale
+    self.source_array = source_array
 
-    if has_props:
-      attr = etree.Element("Attribute", Name="properties", Center="Cell",
-                           AttributeType="Matrix")
-      etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
-                       Dimensions=f"{n_edges} {n_props}").text = f"{domain}:/domain/properties"
-      static_children.append(attr)
-
-    attr = etree.Element("Attribute", Name="types_points", Center="Node")
-    etree.SubElement(attr, "DataItem", Format="HDF", DataType="Int", Precision=str(tp_size),
-                     Dimensions=str(n_points)).text = f"{domain}:/domain/types_points"
-    static_children.append(attr)
-
-    if partition:
-        partition = os.path.abspath(partition)
-        attr = etree.Element("Attribute", Name="partition", Center="Node")
-        etree.SubElement(attr, "DataItem", Format="HDF", DataType="Int", Precision=str(isize),
-                         Dimensions=str(n_points)).text = f"{partition}:/net2as_part"
-        static_children.append(attr)
-
-    if solution:
-        solution = os.path.abspath(solution)
-        with h5py.File(solution, "r") as f:
-            dset = list(f.keys())[0]
-            srows, scols = f[dset].shape
-            size = f[dset].dtype.itemsize
-            assert srows == n_points, f"/{dset}: expected n_points == {n_points} rows, found {srows}"
-            assert scols == 6, f"/{dset}: expected 6 cols, found {scols}"
-            assert size == fsize, f"/{dset}: expected size {fsize} data type, found {size}"
-        attr = etree.Element("Attribute", Name="solution", Center="Node",
-                             AttributeType="Matrix")
-        etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float", Precision=str(fsize),
-                         Dimensions=f"{srows} {scols}").text = f"{solution}:/{dset}"
-        static_children.append(attr)
-
-    xdmf = etree.Element("Xdmf", Version="3.0")
-    dom = etree.SubElement(xdmf, "Domain")
-
-    if trace:
-        trace = os.path.abspath(trace)
-        grid = etree.SubElement(dom, "Grid", Name="network",
-                                GridType="Collection", CollectionType="Temporal")
-        with h5py.File(trace, "r") as f:
-            group = f["trace"]
-            timesteps = sorted(k for k in group.keys() if k.startswith("timestep_"))
-            for k, ts in enumerate(timesteps):
-                d = group[ts]
-                trows, tcols = d.shape
-                assert d.dtype.itemsize == fsize
-                sub = etree.SubElement(grid, "Grid", Name=ts, GridType="Uniform")
-                etree.SubElement(sub, "Time", Value=str(k))
-                for child in static_children:
-                    sub.append(copy.deepcopy(child))
-                attr = etree.SubElement(sub, "Attribute", Name="trace",
-                                        Center="Node", AttributeType="Matrix")
-                etree.SubElement(attr, "DataItem", Format="HDF", DataType="Float",
-                                 Precision=str(fsize),
-                                 Dimensions=f"{trows} {tcols}"
-                                 ).text = f"{trace}:/trace/{ts}"
-    else:
-        grid = etree.SubElement(dom, "Grid", Name="network", GridType="Uniform")
-        for child in static_children:
-            grid.append(child)
-
-    etree.ElementTree(xdmf).write(path, xml_declaration=True, pretty_print=True)
-    return xdmf
-
-def netvis(domain, partition=None, radius=None, use_tubes=True, output=None, show=True, resolution=(1000, 1000), solution=None, dirichlet=False, no_ref=False, trace=None, duration=5):
-  if radius is None:
-    try:
-      with h5py.File(domain, "r") as f:
-        radius = f["domain"].attrs["radius"]
-    except KeyError as e:
-      print("ERROR: no radius provided, and couldnt find radius in the domain file", file=sys.stderr)
-  else:
-    with h5py.File(domain, "a") as f:
-      f["domain"].attrs["radius"] = radius
-
-  print(f"xmf3_path: {args.xmf3}")
-  write_xdmf3(args.xmf3, domain, partition=partition, solution=solution, trace=trace)
-
-  pipe = Xdmf3ReaderS(FileName=[args.xmf3])
-  pipe.UpdatePipeline()
-
-  if trace:
-    scene = GetAnimationScene()
-    scene.UpdateAnimationUsingDataTimeSteps()
-    scene.PlayMode = "Snap To TimeSteps"
-
-  pipe = ExtractSurface(Input=pipe)
-  pipe.UpdatePipeline()
-
-  disp_src = "solution" if solution else ("trace" if trace else None)
-
-  if disp_src:
-    pipe = Calculator(Input=pipe)
-    pipe.AttributeType = "Point Data"
-    pipe.ResultArrayName = "displacement"
-    pipe.Function = f"{disp_src}_0*iHat + {disp_src}_1*jHat + {disp_src}_2*kHat"
-    pipe.UpdatePipeline()
-
-    if not no_ref:
-      outline = Outline(Input=pipe)
-      ref = Show(outline, GetActiveView())
-      ref.AmbientColor = list(to_rgb(args.fg))
-      ref.DiffuseColor = list(to_rgb(args.fg))
-      ref.Opacity = 1
-
-    pipe = WarpByVector(Input=pipe)
+  def apply(self, pipe, view):
+    if find_array(pipe, self.source_array) != "POINTS":
+      print(f"warning: Warp: '{self.source_array}' not found, skipping",
+            file=sys.stderr)
+      return pipe
+    cx, cy, cz = self.components
+    calc = pv.Calculator(Input=pipe)
+    calc.AttributeType = "Point Data"
+    calc.ResultArrayName = "displacement"
+    calc.Function = (f"{self.source_array}_{cx}*iHat + "
+                     f"{self.source_array}_{cy}*jHat + "
+                     f"{self.source_array}_{cz}*kHat")
+    calc.UpdatePipeline()
+    pipe = pv.WarpByVector(Input=calc)
     pipe.Vectors = ["POINTS", "displacement"]
-    pipe.ScaleFactor = 1.0
+    pipe.ScaleFactor = self.scale
     pipe.UpdatePipeline()
+    return pipe
 
-  if use_tubes:
-    pipe = Tube(Input=pipe)
-    pipe.Radius = radius
-    pipe.NumberofSides = 4
+class Tubes:
+  def __init__(self, radius=None, sides=4):
+    self.radius = radius
+    self.sides = sides
 
-  display = Show(pipe, GetActiveViewOrCreate("RenderView"))
-  if partition:
-    ColorBy(display, ("POINTS", "partition"))
-    display.RescaleTransferFunctionToDataRange(True)
-    lut = GetColorTransferFunction("partition")
-    lut.ApplyPreset("Paired", True)
-  elif dirichlet:
-    ColorBy(display, ("POINTS", "types_points"))
-    lut = GetColorTransferFunction("types_points")
-    lut.InterpretValuesAsCategories = 1
+  def apply(self, pipe, view):
+    pipe = pv.ExtractSurface(Input=pipe)
+    pipe.UpdatePipeline()
+    tube = pv.Tube(Input=pipe)
+    if self.radius is not None:
+      tube.Radius = self.radius
+    tube.NumberofSides = self.sides
+    tube.UpdatePipeline()
+    return tube
 
-    arr = Fetch(pipe).GetPointData().GetArray("types_points")
-    present = sorted(np.unique(vtk_to_numpy(arr)).astype(int).tolist())
+class Reference:
+  def __init__(self, color="white", opacity=1.0):
+    self.color = color
+    self.opacity = opacity
 
-    def color_for(v):
-        if v == 0:  return to_rgb(args.fg)
-        if v == 63: return to_rgb("red")
-        return colorsys.hsv_to_rgb((v - 1) / 62 * 0.85, 0.7, 0.9)
+  def apply(self, pipe, view):
+    outline = pv.Outline(Input=pipe)
+    outline.UpdatePipeline()
+    display = pv.Show(outline, view)
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
+    display.Opacity = self.opacity
+    return pipe
 
-    lut.Annotations    = [s for v in present for s in (str(v), f"{v:06b}")]
-    lut.IndexedColors  = [c for v in present for c in color_for(v)]
+# --- Display config ----------------------------------------------------------
+# Applied to the Show() proxy after the pipeline is rendered.
 
-    display.SetScalarBarVisibility(GetActiveView(), True)
-  else:
+class SolidColor:
+  def __init__(self, color="white"):
+    self.color = color
+
+  def apply(self, pipe, rview):
+    display = pv.Show(pipe, rview)
     display.SetScalarColoring(None, 0)
-    display.DiffuseColor = list(to_rgb(args.fg))
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
 
-  view = GetActiveView()
-  view.ViewSize = list(resolution)
-  view.Background = list(to_rgb(args.bg))
-  view.UseColorPaletteForBackground = 0
-  cam = GetActiveCamera()
-  apply_view(cam, VIEWS[args.view])
-  Render()
-  Interact()
+
+class ArrayColor:
+  def __init__(self, spec, fg="white", invert=False):
+    """'name' or 'name:N' -> (name, component_or_None)."""
+    self.invert = invert
+    self.fg = fg
+
+    if ":" in spec:
+      self.name, self.comp = spec.rsplit(":", 1)
+      self.comp = int(self.comp)
+    else:
+      self.name = spec
+      self.comp = None
+
+  def apply(self, pipe, rview):
+    display = pv.Show(pipe, rview)
+    assoc = find_array(pipe, self.name)
+    if assoc is None:
+      print(f"warning: '{self.name}' not found", file=sys.stderr)
+      return
+    if self.comp is None:
+      target = (assoc, self.name)
+    else:
+      target = (assoc, self.name, self.comp)
+    pv.ColorBy(display, target)
+    ctf = pv.GetColorTransferFunction(self.name)
+    ctf.ApplyPreset("Cool to Warm", True)
+    rng = display.GetArrayInformationForColorArray().GetComponentRange(self.comp)
+    M = max(abs(rng[0]), abs(rng[1]))
+    ctf.RescaleTransferFunction(-M, M)
+    if self.invert:
+      ctf.InvertTransferFunction()
+    display.SetScalarBarVisibility(pv.GetActiveView(), True)
+
+
+# --- Runner ------------------------------------------------------------------
+
+def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(1000, 1000),
+           axis=True, output=None, show=True):
+  if not os.path.isfile(path):
+    sys.exit(f"error: file not found: {path}")
+
+  pipe = pv.VTKHDFReader(FileName=[path])
+  pipe.UpdatePipeline()
+  pipe = pv.ExtractSurface(Input=pipe)
+  pipe.UpdatePipeline()
+  rview = pv.GetActiveViewOrCreate("RenderView")
+
+  for op in ops:
+    pipe = op.apply(pipe, rview)
+
+  rview.ViewSize = list(resolution)
+  rview.Background = list(to_rgb(bg))
+  rview.UseColorPaletteForBackground = 0
+  rview.OrientationAxesVisibility = int(axis)
+
+  view.orient(rview)
+  pv.ResetCamera()
+  pv.Render()
+  if show:
+    pv.Interact()
   if output:
-    view.OrientationAxesVisibility = 0
-    SaveScreenshot(output, view, TransparentBackground=1)
+    pv.SaveScreenshot(output, rview, TransparentBackground=1)
+
+
+# --- CLI ---------------------------------------------------------------------
 
 if __name__ == "__main__":
   p = argparse.ArgumentParser()
-  p.add_argument("-d", "--domain", help="domain file .geo.h5", required=True)
-  p.add_argument("-r", "--radius", default=None, help="radius value", type=float)
-  p.add_argument("-p", "--partition", help="discrete data, e.g. partition .h5", default=None)
-  p.add_argument("-s", "--solution", help="continuous data, e.g. solution .h5", default=None)
-  p.add_argument("-t", "--trace", help="trace data .sol.h5", default=None)
-  p.add_argument("--fg", default="white", help="fg color")
-  p.add_argument("--bg", default="black", help="bg color")
-  p.add_argument("--xmf3", default=tempfile.mktemp(suffix=".xmf3"), help="xmf3 path")
-  p.add_argument("--no-tubes", default=False, help="select tubes", action="store_true")
-  p.add_argument("--h5-i64", default=False, help="select 64-bit integers in h5", action="store_true")
-  p.add_argument("-o", "--output", default="netvis.png", help="save screenshot of network (after interact)")
-  p.add_argument("--resolution", default="1000x1000", help="render resolution")
-  p.add_argument("--duration", type=float, default=5, help="animation duration")
-  p.add_argument("--dirichlet", default=False, help="color Dirichlet nodes (types_points == 1)", action="store_true")
-  p.add_argument("--view", choices=list(VIEWS) + [None], default="top",
-                 help="named camera view")
-  p.add_argument("--no-ref", help="no reference view", action='store_true')
+  p.add_argument("input", help="path to .vtkhdf file")
+  p.add_argument("--fg", default="white")
+  p.add_argument("--bg", default="black")
+  p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
+  p.add_argument("--color-invert", action="store_true")
+  p.add_argument("--warp", type=float, default=1.,
+                 help="warp by displacement (components 6-8 of 'values')")
+  p.add_argument("--view", choices=list(View.VIEWS), default="top")
+  p.add_argument("--resolution", default="1000x1000")
+  p.add_argument("-o", "--output", default=None, help="optional screenshot path")
+  p.add_argument("--show", type=int, default=1, help="skip Interact()")
+  p.add_argument("--axis", type=int, default=1, help="display orientation axis")
+  p.add_argument("-r", "--tubes-radius", type=float, default=20,
+                 help="tube radius")
+  p.add_argument("--tubes-sides", type=int, default=4)
+  p.add_argument("--ref", type=int, default=1, help="show reference outline")
+  p.add_argument("--ref-opacity", type=float, default=1.)
+
   args = p.parse_args()
 
-  resolution = map(int, args.resolution.split("x"))
-  netvis(args.domain, partition=args.partition, radius=args.radius, resolution=resolution, output=args.output, solution=args.solution, dirichlet=args.dirichlet, no_ref=args.no_ref, trace=args.trace, duration=args.duration, use_tubes=not args.no_tubes)
+  assert("x" in args.resolution)
+  resolution = tuple(map(int, args.resolution.split("x")))
+  assert(len(resolution) == 2)
+
+  ops = []
+  # ref must go before warp
+  if args.ref:
+    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
+  if args.warp != 0.:
+    ops.append(Warp(scale=args.warp))
+  if args.tubes_radius != 0.:
+    ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
+  if args.color_by:
+    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert))
+  else:
+    ops.append(SolidColor(args.fg))
+
+  netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
+         resolution=resolution, output=args.output, show=args.show)

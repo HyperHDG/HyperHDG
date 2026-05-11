@@ -103,54 +103,6 @@ end:
 }
 
 
-PetscErrorCode apply_dirichlet(const char *domain, Vec sol) {
-  PetscViewer viewer;
-  IS types;
-  Vec points;
-  const PetscInt    *ts;
-  const PetscScalar *ps;
-  PetscScalar *ss;
-  PetscInt           nt, np, ns;
-
-  PetscFunctionBeginUser;
-  PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
-  PetscCall(PetscViewerHDF5PushGroup(viewer, "/domain"));
-  PetscCall(VecCreate(PETSC_COMM_WORLD, &points));
-  PetscCall(PetscObjectSetName((PetscObject)points, "points"));
-  PetscCall(VecLoad(points, viewer));
-
-  PetscCall(ISCreate(PETSC_COMM_WORLD, &types));
-  PetscCall(PetscObjectSetName((PetscObject)types, "types_points"));
-  PetscCall(ISLoad(types, viewer));
-
-  PetscCall(ISGetLocalSize(types, &nt));
-  PetscCall(VecGetLocalSize(points, &np));
-  PetscCall(VecGetLocalSize(sol, &ns));
-  PetscCheck(np == 3 * nt, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "layout mismatch points - types");
-  PetscCheck(ns == 6 * nt, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "layout mismatch types  - sol");
-
-  PetscCall(ISGetIndices(types, &ts));
-  PetscCall(VecGetArrayRead(points, &ps));
-  PetscCall(VecGetArrayWrite(sol, &ss));
-
-  for (PetscInt i = 0; i < nt; ++i) {
-    const PetscScalar *p = &ps[3*i];
-    if (ts[i] && p[0] > .5 * TB_Params<3>::length) {
-      ss[6*i+0] = TB_Params<3>::strain * TB_Params<3>::length;
-    }
-  }
-
-  PetscCall(VecRestoreArrayRead(points, &ps));
-  PetscCall(ISRestoreIndices(types, &ts));
-
-  PetscCall(ISDestroy(&types));
-  PetscCall(VecDestroy(&points));
-  PetscCall(PetscViewerHDF5PopGroup(viewer));
-  PetscCall(PetscViewerDestroy(&viewer));
-
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
   Mat AT, D;
   PetscReal nrm, nrm_a;
@@ -358,10 +310,6 @@ int main(int argc, char **argv) {
       hdg->plot_solution(span);
       PetscCall(VecRestoreSpan(rhs0, span));
     }
-
-    PetscCall(apply_dirichlet(domain_filepath, rhs));
-    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
-    VecViewFromOptions(rhs, NULL, "-sol_view");
 
 end:
     if (set_mem_max) {
