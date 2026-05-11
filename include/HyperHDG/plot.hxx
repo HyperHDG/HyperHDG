@@ -785,31 +785,168 @@ template <class HyperGraphT,
           typename LargeVecT,
           typename floatT,
           unsigned int n_subdivisions = 1,
-          typename hyEdge_index_t = unsigned int>
-void plot_vtkhdf(HyperGraphT& /*hyper_graph*/,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const LocalSolverT& /*local_solver*/,
                  const LargeVecT& /*lambda*/,
                  const PlotOptions& plot_options,
                  const floatT /*time*/ = 0.)
 {
-  std::string filename = plot_options.outputDir + "/" + plot_options.fileName;
-  filename += "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
+  constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
+  constexpr unsigned int space_dim = HyperGraphT::space_dim();
+  static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
 
+  constexpr unsigned int n_subpoints     = n_subdivisions + 1;
+  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+  constexpr unsigned int cells_per_edge  = Hypercube<edge_dim>::pow(n_subdivisions);
+  constexpr unsigned int verts_per_cell  = Hypercube<edge_dim>::n_vertices();
+
+  // VTK cell type id (same logic as plot_vtu)
+  uint8_t element_id = 0;
+  if constexpr (edge_dim == 1) element_id = 3;   // VTK_LINE
+  else if constexpr (edge_dim == 2) element_id = 8;
+  else if constexpr (edge_dim == 3) element_id = 11;
+
+  // Abscissas (same as plot_vtu, no boundary scaling since we don't do boundaries)
+  SmallVec<n_subpoints, float> abscissas;
+  for (unsigned int i = 0; i < n_subpoints; ++i)
+    abscissas[i] = plot_options.scale * (1.f * i / n_subdivisions - 0.5f) + 0.5f;
+
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const pt_index_t n_points    = static_cast<pt_index_t>(n_edges) * points_per_edge;
+  const pt_index_t n_cells     = static_cast<pt_index_t>(n_edges) * cells_per_edge;
+  const pt_index_t n_conn      = n_cells * verts_per_cell;
+
+  // -----------------------------------------------------------------------
+  // Build buffers
+  // -----------------------------------------------------------------------
+
+  // Points: (n_points, 3), row-major, padded to 3D
+  std::vector<float> points(3 * n_points, 0.f);
+  for (hyEdge_index_t he = 0; he < n_edges; ++he)
+  {
+    auto edge = hyper_graph.hyEdge_geometry(he);
+    for (unsigned int p = 0; p < points_per_edge; ++p)
+    {
+      const Point<space_dim> pt =
+        (Point<space_dim>)edge.template lexicographic<n_subpoints>(p, abscissas);
+      const pt_index_t row = he * points_per_edge + p;
+      for (unsigned int d = 0; d < space_dim; ++d)
+        points[3 * row + d] = pt[d];
+      // dims [space_dim, 3) already zero
+    }
+  }
+
+  // Connectivity: lexicographic sub-cube vertices per edge.
+  // We replicate vtu_sub_cube_connectivity inline here to fill a buffer
+  // instead of streaming text. Only handle 1D for now; 2D/3D can follow
+  // the same pattern as plot_vtu if needed.
+  std::vector<int64_t> connectivity;
+  connectivity.reserve(n_conn);
+  for (hyEdge_index_t he = 0; he < n_edges; ++he)
+  {
+    const pt_index_t offset = he * points_per_edge;
+    if constexpr (edge_dim == 1)
+      for (unsigned int i = 0; i < n_subdivisions; ++i)
+      {
+        connectivity.push_back(offset + i);
+        connectivity.push_back(offset + i + 1);
+      }
+    else
+      static_assert(edge_dim == 1, "Only edge_dim == 1 implemented here for now.");
+  }
+
+  // Offsets: length n_cells + 1, starts at 0, ends at n_conn (VTKHDF convention)
+  std::vector<int64_t> offsets(n_cells + 1);
+  for (pt_index_t i = 0; i <= n_cells; ++i)
+    offsets[i] = static_cast<int64_t>(i * verts_per_cell);
+
+  // Types: one per cell
+  std::vector<uint8_t> types(n_cells, element_id);
+
+  // Per-piece counts (single piece = length-1 arrays)
+  const int64_t np  = n_points;
+  const int64_t nc  = n_cells;
+  const int64_t nci = n_conn;
+
+  // -----------------------------------------------------------------------
+  // Write file
+  // -----------------------------------------------------------------------
+
+  std::string filename = plot_options.outputDir + "/" + plot_options.fileName;
+  if (plot_options.printFileNumber)
+    filename += "." + std::to_string(plot_options.fileNumber);
+  filename += "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
   if (std::filesystem::create_directory(plot_options.outputDir))
     std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
 
   hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   hy_check(file >= 0, "failed to create HDF5 file '" << filename << "'");
 
-  int dummy = 42;
-  hsize_t dim = 1;
-  hid_t space = H5Screate_simple(1, &dim, nullptr);
-  hid_t dset  = H5Dcreate2(file, "hello", H5T_STD_I32LE, space,
-                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dummy);
-  H5Dclose(dset);
-  H5Sclose(space);
+  hid_t root = H5Gcreate2(file, "VTKHDF", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
+  // --- attribute: Version = [2, 0]
+  {
+    hsize_t dim = 2;
+    hid_t space = H5Screate_simple(1, &dim, nullptr);
+    hid_t attr  = H5Acreate2(root, "Version", H5T_STD_I64LE, space,
+                             H5P_DEFAULT, H5P_DEFAULT);
+    int64_t version[2] = {2, 0};
+    H5Awrite(attr, H5T_NATIVE_INT64, version);
+    H5Aclose(attr); H5Sclose(space);
+  }
+  // --- attribute: Type = "UnstructuredGrid"
+  {
+    const char* s = "UnstructuredGrid";
+    hid_t stype = H5Tcopy(H5T_C_S1);
+    H5Tset_size(stype, std::strlen(s));
+    H5Tset_strpad(stype, H5T_STR_NULLPAD);
+    hid_t space = H5Screate(H5S_SCALAR);
+    hid_t attr  = H5Acreate2(root, "Type", stype, space, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(attr, stype, s);
+    H5Aclose(attr); H5Sclose(space); H5Tclose(stype);
+  }
+
+  // --- helper to write a chunked + unlimited dataset (whole buffer)
+  auto write_dset = [&](hid_t loc, const char* name,
+                        hid_t file_type, hid_t mem_type,
+                        int rank, const hsize_t* dims, const void* data)
+  {
+    std::vector<hsize_t> maxdims(rank), chunk(rank);
+    for (int i = 0; i < rank; ++i)
+    {
+      maxdims[i] = (i == 0) ? H5S_UNLIMITED : dims[i];
+      chunk[i]   = (i == 0) ? std::max<hsize_t>(dims[i], 1) : dims[i];
+    }
+    hid_t space = H5Screate_simple(rank, dims, maxdims.data());
+    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(dcpl, rank, chunk.data());
+    hid_t dset = H5Dcreate2(loc, name, file_type, space,
+                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5Dwrite(dset, mem_type, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
+    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  };
+
+  // --- geometry
+  { hsize_t d[2] = {(hsize_t)n_points, 3};
+    write_dset(root, "Points", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, points.data()); }
+  { hsize_t d = (hsize_t)n_conn;
+    write_dset(root, "Connectivity", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, connectivity.data()); }
+  { hsize_t d = (hsize_t)offsets.size();
+    write_dset(root, "Offsets", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, offsets.data()); }
+  { hsize_t d = (hsize_t)n_cells;
+    write_dset(root, "Types", H5T_STD_U8LE, H5T_NATIVE_UINT8, 1, &d, types.data()); }
+
+  // --- per-piece counts (single piece → length 1)
+  { hsize_t d = 1;
+    write_dset(root, "NumberOfPoints",          H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &np); }
+  { hsize_t d = 1;
+    write_dset(root, "NumberOfCells",           H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nc); }
+  { hsize_t d = 1;
+    write_dset(root, "NumberOfConnectivityIds", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nci); }
+
+  H5Gclose(root);
   H5Fclose(file);
 }
 #endif
