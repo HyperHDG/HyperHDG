@@ -33,14 +33,18 @@ using HDGNetwork = GlobalLoop::Elliptic<
 PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal tau, HDGBase **hdg) {
   PetscViewer viewer;
   PetscReal size[3];
+  PetscReal strain = .1;
+  PetscBool is_set;
 
   PetscFunctionBeginUser;
 
   if (0 == strcmp(lsol, "timo")) {
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
     PetscCall(PetscViewerDestroy(&viewer));
     TB_Params<3>::length = size[0];
+    TB_Params<3>::strain = strain;
     *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;

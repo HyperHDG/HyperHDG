@@ -527,7 +527,7 @@ template <unsigned int hyEdge_dim,
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
 read_domain(std::string filename)
 {
-  hy_assert(std::filesystem::exists(filename), "File does not exist.");
+  hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
   if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
   {
@@ -545,7 +545,7 @@ read_domain(std::string filename)
   }
 #endif
 
-  hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
+  hy_check(filename.substr(filename.size() - 4, filename.size()) == ".geo",
             "The given file needs to be a .geo file, since no other input file types are currently"
               << " implemented.");
 
