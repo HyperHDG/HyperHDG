@@ -643,20 +643,28 @@ class TimoshenkoBeam
     std::array<std::array<std::array<lSol_float_t, n_pts>, space_dim>, n_fields> point_vals{};
 
     for (unsigned int c = 0; c < n_fields; ++c)
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-      {
+      for (unsigned int dim = 0; dim < space_dim; ++dim) {
         for (unsigned int i = 0; i < coeffs.size(); ++i)
           coeffs[i] = coefficients[(c * space_dim + dim) * n_shape_fct_ + i];
         for (unsigned int pt = 0; pt < n_pts; ++pt)
           point_vals[c][dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
-            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
+            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper)
+          );
       }
 
     std::array<std::array<lSol_float_t, n_pts>, system_dimension()> result{};
 
-    for (unsigned int c = 0; c < n_fields; ++c)
+    static_assert(2 <= n_fields);
+
+    // fields n m should be in local frame -> stay
+    for (unsigned int c = 0; c < 2; ++c)
       for (unsigned int local = 0; local < space_dim; ++local)
-      {
+        for (unsigned int q = 0; q < n_pts; ++q)
+          result[c * space_dim + local][q] = point_vals[c][local][q];
+
+    // fields u r should be in global frame -> need to transform
+    for (unsigned int c = 2; c < n_fields; ++c)
+      for (unsigned int local = 0; local < space_dim; ++local) {
         const int idx = -static_cast<int>(local);  // 0, -1, -2
         Point<space_dim, lSol_float_t> nv =
           edge_frame_vector<hyEdgeT, lSol_float_t>(hyper_edge, idx);
