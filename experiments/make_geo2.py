@@ -253,6 +253,11 @@ class Network:
     nodes, edges, edgeProps = self.nodes, self.edges, self.edgeProps
     n_nodes_old, n_edges_old = nodes.shape[0], edges.shape[0]
 
+    mins = nodes.min(axis=0)
+    maxs = nodes.max(axis=0)
+    dims = maxs - mins
+    self.info["size"] = dims
+
     xmin = 0
     ymin = 0
     xmax, ymax = self.info["size"][:2] * np.array([x, y])
