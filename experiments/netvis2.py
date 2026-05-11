@@ -2,7 +2,7 @@
 import argparse
 import sys
 import os
-from paraview.simple import *
+import paraview.simple as pv
 from matplotlib.colors import to_rgb
 
 class View:
@@ -39,20 +39,20 @@ class Warp:
     self.scale = scale
     self.source_array = source_array
 
-  def apply(self, pipe):
+  def apply(self, pipe, view):
     if find_array(pipe, self.source_array) != "POINTS":
       print(f"warning: Warp: '{self.source_array}' not found, skipping",
             file=sys.stderr)
       return pipe
     cx, cy, cz = self.components
-    calc = Calculator(Input=pipe)
+    calc = pv.Calculator(Input=pipe)
     calc.AttributeType = "Point Data"
     calc.ResultArrayName = "displacement"
     calc.Function = (f"{self.source_array}_{cx}*iHat + "
                      f"{self.source_array}_{cy}*jHat + "
                      f"{self.source_array}_{cz}*kHat")
     calc.UpdatePipeline()
-    pipe = WarpByVector(Input=calc)
+    pipe = pv.WarpByVector(Input=calc)
     pipe.Vectors = ["POINTS", "displacement"]
     pipe.ScaleFactor = self.scale
     pipe.UpdatePipeline()
@@ -63,15 +63,30 @@ class Tubes:
     self.radius = radius
     self.sides = sides
 
-  def apply(self, pipe):
-    pipe = ExtractSurface(Input=pipe)
+  def apply(self, pipe, view):
+    pipe = pv.ExtractSurface(Input=pipe)
     pipe.UpdatePipeline()
-    tube = Tube(Input=pipe)
+    tube = pv.Tube(Input=pipe)
     if self.radius is not None:
       tube.Radius = self.radius
     tube.NumberofSides = self.sides
     tube.UpdatePipeline()
     return tube
+
+class Reference:
+  def __init__(self, color="white", opacity=1.0):
+    self.color = color
+    self.opacity = opacity
+
+  def apply(self, pipe, view):
+    outline = pv.Outline(Input=pipe)
+    outline.UpdatePipeline()
+    display = pv.Show(outline, view)
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
+    display.Opacity = self.opacity
+    return pipe
 
 # --- Display config ----------------------------------------------------------
 # Applied to the Show() proxy after the pipeline is rendered.
@@ -80,7 +95,8 @@ class SolidColor:
   def __init__(self, color="white"):
     self.color = color
 
-  def apply(self, display, pipe):
+  def apply(self, pipe, rview):
+    display = pv.Show(pipe, rview)
     display.SetScalarColoring(None, 0)
     rgb = list(to_rgb(self.color))
     display.AmbientColor = rgb
@@ -93,7 +109,8 @@ class ArrayColor:
     self.component = component
     self.fg = fg
 
-  def apply(self, display, pipe):
+  def apply(self, pipe, rview):
+    display = pv.Show(pipe, rview)
     assoc = find_array(pipe, self.name)
     if assoc is None:
       print(f"warning: '{self.name}' not found", file=sys.stderr)
@@ -102,43 +119,39 @@ class ArrayColor:
       target = (assoc, self.name)
     else:
       target = (assoc, self.name, self.component)
-    ColorBy(display, target)
+    pv.ColorBy(display, target)
     display.RescaleTransferFunctionToDataRange(True)
     display.SetScalarBarVisibility(GetActiveView(), True)
 
 
 # --- Runner ------------------------------------------------------------------
 
-def netvis(path, ops=(),
-           fg=SolidColor("white"), bg="black", view="iso", resolution=(1000, 1000),
+def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(1000, 1000),
            axis=True, output=None, show=True):
   if not os.path.isfile(path):
     sys.exit(f"error: file not found: {path}")
 
-  pipe = VTKHDFReader(FileName=[path])
+  pipe = pv.VTKHDFReader(FileName=[path])
   pipe.UpdatePipeline()
-  pipe = ExtractSurface(Input=pipe)
+  pipe = pv.ExtractSurface(Input=pipe)
   pipe.UpdatePipeline()
-  for op in ops:
-    pipe = op.apply(pipe)
+  rview = pv.GetActiveViewOrCreate("RenderView")
 
-  rview = GetActiveViewOrCreate("RenderView")
-  display = Show(pipe, rview)
-  #display.Representation = "Wireframe"
-  fg.apply(display, pipe)
+  for op in ops:
+    pipe = op.apply(pipe, rview)
 
   rview.ViewSize = list(resolution)
   rview.Background = list(to_rgb(bg))
   rview.UseColorPaletteForBackground = 0
   rview.OrientationAxesVisibility = int(axis)
 
-  view.orient(GetActiveCamera())
-  ResetCamera()
-  Render()
+  view.orient(pv.GetActiveCamera())
+  pv.ResetCamera()
+  pv.Render()
   if show:
-    Interact()
+    pv.Interact()
   if output:
-    SaveScreenshot(output, rview, TransparentBackground=1)
+    pv.SaveScreenshot(output, rview, TransparentBackground=1)
 
 
 # --- CLI ---------------------------------------------------------------------
@@ -156,18 +169,20 @@ if __name__ == "__main__":
   p.add_argument("--fg", default="white")
   p.add_argument("--bg", default="black")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
-  p.add_argument("--warp", action="store_true",
+  p.add_argument("--warp", type=int, default=1,
                  help="warp by displacement (components 6-8 of 'values')")
   p.add_argument("--warp-scale", type=float, default=1.0)
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
-  p.add_argument("--no-show", action="store_true", help="skip Interact()")
-  p.add_argument("--no-axis", action="store_true")
-  p.add_argument("--tubes", action="store_true")
+  p.add_argument("--show", type=int, default=1, help="skip Interact()")
+  p.add_argument("--axis", type=int, default=1, help="display orientation axis")
+  p.add_argument("--tubes", type=int, default=1, help="apply tubes filter")
   p.add_argument("-r", "--tubes-radius", type=float, default=None,
                  help="tube radius (auto if unset)")
   p.add_argument("--tubes-sides", type=int, default=4)
+  p.add_argument("--ref", type=int, default=1, help="show reference outline")
+  p.add_argument("--ref-opacity", type=float, default=1.)
 
   args = p.parse_args()
 
@@ -176,6 +191,8 @@ if __name__ == "__main__":
   assert(len(resolution) == 2)
 
   ops = []
+  if args.ref:
+    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
   if args.warp:
     ops.append(Warp(scale=args.warp_scale))
   if args.tubes:
@@ -183,9 +200,9 @@ if __name__ == "__main__":
 
   if args.color_by:
     name, comp = parse_color(args.color_by)
-    fg = ArrayColor(name, component=comp, fg=args.fg)
+    ops.append(ArrayColor(name, component=comp, fg=args.fg))
   else:
-    fg = SolidColor(args.fg)
+    ops.append(SolidColor(args.fg))
 
-  netvis(args.input, ops=ops, fg=fg, bg=args.bg, view=View(args.view), axis=not args.no_axis,
-         resolution=resolution, output=args.output, show=not args.no_show)
+  netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
+         resolution=resolution, output=args.output, show=args.show)
