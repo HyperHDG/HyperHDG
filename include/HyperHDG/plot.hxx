@@ -36,7 +36,8 @@ struct PlotOptions
    ************************************************************************************************/
   enum fileType
   {
-    vtu
+    vtu,
+    vtkhdf,
   };
   /*!***********************************************************************************************
    * \brief   File ending and also way of plotting.
@@ -133,6 +134,8 @@ std::string set_plot_option(PlotOptions& plot_options,
   {
     if (value == "vtu")
       plot_options.fileEnding = PlotOptions::vtu;
+    if (value == "vtkhdf")
+      plot_options.fileEnding = PlotOptions::vtkhdf;
     else
       hy_assert(false, "You have chosen an invalid file type!");
   }
@@ -241,6 +244,8 @@ std::string fileType_to_string(const PlotOptions::fileType& type)
   {
     case PlotOptions::fileType::vtu:
       return "vtu";
+    case PlotOptions::fileType::vtkhdf:
+      return "vtkhdf";
   }
   hy_assert(false, "File type seems to be invalid.");
   return "";
@@ -772,6 +777,43 @@ void plot_vtu(HyperGraphT& hyper_graph,
   PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
 
+#ifdef HYPERHDG_PETSC
+#include <hdf5.h>
+
+template <class HyperGraphT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int>
+void plot_vtkhdf(HyperGraphT& /*hyper_graph*/,
+                 const LocalSolverT& /*local_solver*/,
+                 const LargeVecT& /*lambda*/,
+                 const PlotOptions& plot_options,
+                 const floatT /*time*/ = 0.)
+{
+  std::string filename = plot_options.outputDir + "/" + plot_options.fileName;
+  filename += "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
+
+  if (std::filesystem::create_directory(plot_options.outputDir))
+    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
+
+  hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  hy_check(file >= 0, "failed to create HDF5 file '" << filename << "'");
+
+  int dummy = 42;
+  hsize_t dim = 1;
+  hid_t space = H5Screate_simple(1, &dim, nullptr);
+  hid_t dset  = H5Dcreate2(file, "hello", H5T_STD_I32LE, space,
+                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dummy);
+  H5Dclose(dset);
+  H5Sclose(space);
+
+  H5Fclose(file);
+}
+#endif
+
 // -------------------------------------------------------------------------------------------------
 // plot()
 // -------------------------------------------------------------------------------------------------
@@ -783,12 +825,18 @@ void plot(HyperGraphT& hyper_graph,
           PlotOptions& plot_options,
           const floatT time)
 {
-  hy_assert(plot_options.fileEnding == PlotOptions::vtu,
-            "Only file ending vtu is supported at the moment. Your choice has been "
-              << plot_options.fileEnding << ", which is invalid.");
-  hy_assert(!plot_options.fileName.empty(), "File name must not be empty!");
-  hy_assert(!plot_options.outputDir.empty(), "Ouput directory must not be empty!");
-  plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+  hy_check(!plot_options.fileName.empty(), "expected non-empty file name");
+  hy_check(!plot_options.outputDir.empty(), "output directory must not be empty!");
+
+  if (plot_options.fileEnding == PlotOptions::vtu)
+    plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+#ifdef HYPERHDG_PETSC
+  else if (plot_options.fileEnding == PlotOptions::vtkhdf)
+    plot_vtkhdf(hyper_graph, local_solver, lambda, plot_options, time);
+#endif
+  else
+    hy_assert(false, "Unsupported file ending.");
+
   if (plot_options.incrementFileNumber)
     ++plot_options.fileNumber;
-}  // end of void plot
+}

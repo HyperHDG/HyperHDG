@@ -1,3 +1,5 @@
+#include <iostream>
+
 /*!*************************************************************************************************
  * \file    hy_assert.hxx
  * \brief   This file provides the function \c hy_assert.
@@ -23,6 +25,18 @@
  **************************************************************************************************/
 
 #pragma once  // Ensure that file is included only once in a single compilation.
+
+#define hy_check(Expr, Msg)                                                 \
+  do {                                                                       \
+    if (!(Expr)) {                                                           \
+      std::stringstream __hy_check_text;                                     \
+      __hy_check_text << Msg;                                                \
+      std::cerr << "Check failed: " << #Expr                                 \
+                << "\n  at " << __FILE__ << ":" << __LINE__                  \
+                << "\n  " << __hy_check_text.str() << std::endl;             \
+      std::abort();                                                          \
+    }                                                                        \
+  } while (0)
 
 #ifndef NDEBUG
 

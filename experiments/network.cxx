@@ -347,6 +347,7 @@ int main(int argc, char **argv) {
     if (*plot_path) {
       hdg->plot_option("fileName", plot_path);
       hdg->plot_option("printFileNumber", "false");
+      hdg->plot_option("fileEnding", "vtkhdf");
       PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecGetSpan(rhs0, span));
