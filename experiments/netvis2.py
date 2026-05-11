@@ -108,10 +108,17 @@ class SolidColor:
 
 
 class ArrayColor:
-  def __init__(self, name, component=None, fg="white"):
-    self.name = name
-    self.component = component
+  def __init__(self, spec, fg="white", invert=False):
+    """'name' or 'name:N' -> (name, component_or_None)."""
+    self.invert = invert
     self.fg = fg
+
+    if ":" in spec:
+      self.name, self.comp = spec.rsplit(":", 1)
+      self.comp = int(self.comp)
+    else:
+      self.name = spec
+      self.comp = None
 
   def apply(self, pipe, rview):
     display = pv.Show(pipe, rview)
@@ -119,13 +126,19 @@ class ArrayColor:
     if assoc is None:
       print(f"warning: '{self.name}' not found", file=sys.stderr)
       return
-    if self.component is None:
+    if self.comp is None:
       target = (assoc, self.name)
     else:
-      target = (assoc, self.name, self.component)
+      target = (assoc, self.name, self.comp)
     pv.ColorBy(display, target)
-    display.RescaleTransferFunctionToDataRange(True)
-    display.SetScalarBarVisibility(GetActiveView(), True)
+    ctf = pv.GetColorTransferFunction(self.name)
+    ctf.ApplyPreset("Cool to Warm", True)
+    rng = display.GetArrayInformationForColorArray().GetComponentRange(self.comp)
+    M = max(abs(rng[0]), abs(rng[1]))
+    ctf.RescaleTransferFunction(-M, M)
+    if self.invert:
+      ctf.InvertTransferFunction()
+    display.SetScalarBarVisibility(pv.GetActiveView(), True)
 
 
 # --- Runner ------------------------------------------------------------------
@@ -160,19 +173,13 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
 
 # --- CLI ---------------------------------------------------------------------
 
-def parse_color(spec):
-  """'name' or 'name:N' -> (name, component_or_None)."""
-  if ":" in spec:
-    name, comp = spec.rsplit(":", 1)
-    return name, int(comp)
-  return spec, None
-
 if __name__ == "__main__":
   p = argparse.ArgumentParser()
   p.add_argument("input", help="path to .vtkhdf file")
   p.add_argument("--fg", default="white")
   p.add_argument("--bg", default="black")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
+  p.add_argument("--color-invert", action="store_true")
   p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
@@ -193,17 +200,17 @@ if __name__ == "__main__":
   assert(len(resolution) == 2)
 
   ops = []
+  # ref must go before warp
+  if args.ref:
+    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
-    name, comp = parse_color(args.color_by)
-    ops.append(ArrayColor(name, component=comp, fg=args.fg))
+    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert))
   else:
     ops.append(SolidColor(args.fg))
-  if args.ref:
-    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
 
   netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
          resolution=resolution, output=args.output, show=args.show)
