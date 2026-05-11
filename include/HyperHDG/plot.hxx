@@ -788,10 +788,10 @@ template <class HyperGraphT,
           typename hyEdge_index_t = unsigned int,
           typename pt_index_t = unsigned int>
 void plot_vtkhdf(HyperGraphT& hyper_graph,
-                 const LocalSolverT& /*local_solver*/,
-                 const LargeVecT& /*lambda*/,
+                 const LocalSolverT& local_solver,
+                 const LargeVecT& lambda,
                  const PlotOptions& plot_options,
-                 const floatT /*time*/ = 0.)
+                 const floatT time = 0.)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -824,11 +824,9 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
 
   // Points: (n_points, 3), row-major, padded to 3D
   std::vector<float> points(3 * n_points, 0.f);
-  for (hyEdge_index_t he = 0; he < n_edges; ++he)
-  {
+  for (hyEdge_index_t he = 0; he < n_edges; ++he) {
     auto edge = hyper_graph.hyEdge_geometry(he);
-    for (unsigned int p = 0; p < points_per_edge; ++p)
-    {
+    for (unsigned int p = 0; p < points_per_edge; ++p) {
       const Point<space_dim> pt =
         (Point<space_dim>)edge.template lexicographic<n_subpoints>(p, abscissas);
       const pt_index_t row = he * points_per_edge + p;
@@ -844,12 +842,10 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
   // the same pattern as plot_vtu if needed.
   std::vector<int64_t> connectivity;
   connectivity.reserve(n_conn);
-  for (hyEdge_index_t he = 0; he < n_edges; ++he)
-  {
+  for (hyEdge_index_t he = 0; he < n_edges; ++he) {
     const pt_index_t offset = he * points_per_edge;
     if constexpr (edge_dim == 1)
-      for (unsigned int i = 0; i < n_subdivisions; ++i)
-      {
+      for (unsigned int i = 0; i < n_subdivisions; ++i) {
         connectivity.push_back(offset + i);
         connectivity.push_back(offset + i + 1);
       }
@@ -945,6 +941,62 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
     write_dset(root, "NumberOfCells",           H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nc); }
   { hsize_t d = 1;
     write_dset(root, "NumberOfConnectivityIds", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nci); }
+
+  // -----------------------------------------------------------------------
+  // Point data: solver bulk_values
+  // -----------------------------------------------------------------------
+  if constexpr (LocalSolverT::system_dimension() != 0) {
+    using dof_value_t = typename LargeVecT::value_type;
+    constexpr unsigned int n_components = LocalSolverT::system_dimension();
+
+    // Flat buffer: (n_points, n_components), row-major.
+    // Float32 to match VTU on-disk type.
+    std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
+
+    std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
+      hyEdge_dofs;
+
+    for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+      hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
+          hyper_graph, he, lambda);
+
+      std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
+
+      using bulk_fn = decltype(local_values)(
+        decltype(abscissas.data())&, decltype(hyEdge_dofs)&, decltype(time));
+      using bulk_fn_geom = decltype(local_values)(
+        decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
+        decltype(hyper_graph[he])&, decltype(time));
+
+      if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
+        local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
+      }
+      else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
+        auto geometry = hyper_graph[he];
+        local_values =
+          local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+      }
+      else {
+        hy_check(false, "bulk_values overload not found on LocalSolverT");
+      }
+
+      // Interleave into the flat buffer.
+      // local_values is [component][corner]; we write row-major per point.
+      for (unsigned int p = 0; p < points_per_edge; ++p) {
+        const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
+        for (unsigned int d = 0; d < n_components; ++d)
+          values[row + d] = static_cast<float>(local_values[d][p]);
+      }
+    }
+
+    hid_t pdata =
+      H5Gcreate2(root, "PointData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    hsize_t d[2] = {(hsize_t)n_points, n_components};
+    write_dset(pdata, "values", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, values.data());
+
+    H5Gclose(pdata);
+  }
 
   H5Gclose(root);
   H5Fclose(file);
