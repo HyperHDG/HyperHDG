@@ -39,7 +39,7 @@ class Warp:
     self.scale = scale
     self.source_array = source_array
 
-  def __call__(self, pipe):
+  def apply(self, pipe):
     if find_array(pipe, self.source_array) != "POINTS":
       print(f"warning: Warp: '{self.source_array}' not found, skipping",
             file=sys.stderr)
@@ -58,6 +58,20 @@ class Warp:
     pipe.UpdatePipeline()
     return pipe
 
+class Tubes:
+  def __init__(self, radius=None, sides=4):
+    self.radius = radius
+    self.sides = sides
+
+  def apply(self, pipe):
+    pipe = ExtractSurface(Input=pipe)
+    pipe.UpdatePipeline()
+    tube = Tube(Input=pipe)
+    if self.radius is not None:
+      tube.Radius = self.radius
+    tube.NumberofSides = self.sides
+    tube.UpdatePipeline()
+    return tube
 
 # --- Display config ----------------------------------------------------------
 # Applied to the Show() proxy after the pipeline is rendered.
@@ -103,12 +117,14 @@ def netvis(path, ops=(),
 
   pipe = VTKHDFReader(FileName=[path])
   pipe.UpdatePipeline()
+  pipe = ExtractSurface(Input=pipe)
+  pipe.UpdatePipeline()
   for op in ops:
-    pipe = op(pipe)
+    pipe = op.apply(pipe)
 
   rview = GetActiveViewOrCreate("RenderView")
   display = Show(pipe, rview)
-  display.Representation = "Wireframe"
+  #display.Representation = "Wireframe"
   fg.apply(display, pipe)
 
   rview.ViewSize = list(resolution)
@@ -148,6 +164,10 @@ if __name__ == "__main__":
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
   p.add_argument("--no-show", action="store_true", help="skip Interact()")
   p.add_argument("--no-axis", action="store_true")
+  p.add_argument("--tubes", action="store_true")
+  p.add_argument("-r", "--tubes-radius", type=float, default=None,
+                 help="tube radius (auto if unset)")
+  p.add_argument("--tubes-sides", type=int, default=4)
 
   args = p.parse_args()
 
@@ -158,6 +178,8 @@ if __name__ == "__main__":
   ops = []
   if args.warp:
     ops.append(Warp(scale=args.warp_scale))
+  if args.tubes:
+    ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
 
   if args.color_by:
     name, comp = parse_color(args.color_by)
