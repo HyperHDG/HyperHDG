@@ -284,6 +284,51 @@ class Network:
     tprint(f"  nodes kept: {used.sum()} / {n_nodes_old}")
 
 
+  def write_vtkhdf_view(self, out):
+    """Add VTKHDF view to the .geo.h5 file: virtual Connectivity over /domain/edges,
+    plus real Offsets, Types, and NumberOf* datasets.
+    """
+    path = out + ".geo.h5"
+    tprint(f"adding VTKHDF view to '{path}'")
+    with h5py.File(path, "a") as f:
+      if "VTKHDF" in f:
+          del f["VTKHDF"]
+
+      n_points = f["domain/points"].shape[0]
+      n_cells  = f["domain/edges"].shape[0]
+      n_conn   = 2 * n_cells
+
+      root = f.create_group("VTKHDF")
+      root.attrs.create("Version", [2, 0], dtype="int64")
+      root.attrs.create("Type", np.bytes_("UnstructuredGrid"))
+
+      root["Points"] = h5py.SoftLink("/domain/points")
+
+      layout = h5py.VirtualLayout(shape=(n_conn,), dtype=f["domain/edges"].dtype)
+      layout[...] = h5py.VirtualSource(path, "domain/edges",
+                                       shape=f["domain/edges"].shape)
+      root.create_virtual_dataset("Connectivity", layout)
+
+      root.create_dataset(
+          "Offsets",
+          data=np.arange(0, n_conn + 2, 2, dtype=np.int64),
+          compression="gzip",
+      )
+
+      root.create_dataset(
+        "Types",
+        data=np.full(n_cells, 3, dtype=np.uint8),
+        compression="gzip",
+      )
+
+      root.create_dataset("NumberOfPoints",          data=np.array([n_points], dtype=np.int64))
+      root.create_dataset("NumberOfCells",           data=np.array([n_cells],  dtype=np.int64))
+      root.create_dataset("NumberOfConnectivityIds", data=np.array([n_conn],   dtype=np.int64))
+
+      if "domain/types_points" in f:
+        pd = root.create_group("PointData")
+        pd["types_points"] = h5py.SoftLink("/domain/types_points")
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
   parser.add_argument("-i", "--input", help="input", default=".")
@@ -324,3 +369,4 @@ if __name__ == "__main__":
   if args.grid is None:
     network.drop_floating_and_small_components(args.min_comp_size)
   network.write_h5(args.output)
+  network.write_vtkhdf_view(args.output)
