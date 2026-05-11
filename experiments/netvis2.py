@@ -112,7 +112,7 @@ if __name__ == "__main__":
   p.add_argument("input", help="path to .vtkhdf file")
   p.add_argument("--fg", default="white")
   p.add_argument("--bg", default="black")
-  p.add_argument("--view", choices=list(View.VIEWS), default="iso")
+  p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("--warp", action="store_true",
                  help="warp by displacement (components 6-8 of 'values')")
