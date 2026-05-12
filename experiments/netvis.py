@@ -153,7 +153,7 @@ class ArrayColor:
 
       annotations = []
       for v in cats:
-          label = "" if v == 0 else str(v)
+          label = f"{int(v):06b}"
           annotations.extend([str(v), label])
       ctf.Annotations = annotations
 
