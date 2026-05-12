@@ -165,7 +165,7 @@ struct TimoshenkoStiffness
 
   static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
-    return strain * length * (point[0] > .5 * length) * normal[comp];
+    return strain * point[0] * (point[0] > .5 * length) * normal[comp];
   }
 
   static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
