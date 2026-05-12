@@ -8,27 +8,27 @@ per step (n_steps * n_points rows), indexed by PointDataOffsets.
 import h5py
 import numpy as np
 
-n_steps = 5
-n_points = 4
-n_cells = 3
+n_steps = 20
+n_points = 20
+n_cells = n_points - 1
 
-# Geometry: 4 points along x, 3 line segments connecting them.
-points = np.array([[0, 0, 0],
-                   [1, 0, 0],
-                   [2, 0, 0],
-                   [3, 0, 0]], dtype=np.float32)
+# Geometry: linspace between 0 and 1 along x.
+points = np.zeros((n_points, 3), dtype=np.float32)
+points[:, 0] = np.linspace(0, 1, n_points, dtype=np.float32)
 
-# VTK_LINE = 3, two points each
-connectivity = np.array([0,1, 1,2, 2,3], dtype=np.int64)
-offsets      = np.array([0, 2, 4, 6],    dtype=np.int64)  # n_cells + 1
-types        = np.array([3, 3, 3],       dtype=np.uint8)
+# VTK_LINE = 3, two points each, chained
+connectivity = np.empty(2 * n_cells, dtype=np.int64)
+connectivity[0::2] = np.arange(n_cells)
+connectivity[1::2] = np.arange(1, n_cells + 1)
+offsets = np.arange(n_cells + 1, dtype=np.int64) * 2
+types   = np.full(n_cells, 3, dtype=np.uint8)
 
-# Time-varying scalar: value at point i, step k = sin(k) + 0.1*i
-times = np.linspace(0.0, 1.0, n_steps, dtype=np.float64)
+# Field: sin(2*pi*x) * cos(t), t in [0, 2*pi]
+times = np.linspace(0.0, 2*np.pi, n_steps, dtype=np.float64)
 scalar = np.zeros(n_steps * n_points, dtype=np.float32)
 for k in range(n_steps):
     for i in range(n_points):
-        scalar[k * n_points + i] = np.sin(2 * np.pi * times[k]) + 0.1 * i
+        scalar[k * n_points + i] = np.sin(2 * np.pi * points[i, 0]) * np.cos(times[k])
 
 # PointDataOffsets: row in PointData/scalar where each step starts
 pd_offsets = np.arange(n_steps, dtype=np.int64) * n_points
