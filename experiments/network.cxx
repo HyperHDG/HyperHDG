@@ -48,7 +48,7 @@ PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal ta
     TB_Params<3>::length = size[0];
     TB_Params<3>::strain = strain;
     TB_Params<3>::comp = comp;
-    *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
+    *hdg = new HDGWrapper(HDGNetwork<3,TB_LSol>(domain, tau)); return 0;
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
   } else {
@@ -57,34 +57,6 @@ PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal ta
   }
 
   return 0;
-}
-
-// NOTE: can only be called sequentially
-PetscErrorCode PCNet2ASVisCoarse(PC pc, HDGBase* hdg, const char* name) {
-  Mat cb;
-  Vec left, right;
-  PetscInt start, end;
-  std::span<PetscReal> span;
-  PCType type;
-
-  PetscFunctionBeginUser;
-  PCGetType(pc, &type);
-  if (strcmp(type, "net2as") != 0) PetscFunctionReturn(0);
-  PetscCall(PCNet2ASGetCB(pc, &cb));
-
-  hdg->plot_option("fileName", name);
-  hdg->plot_option("printFileNumber", "true");
-  PetscCall(MatCreateVecs(cb, &right, &left));
-  PetscCall(VecGetOwnershipRange(left, &start, &end));
-  for (PetscInt i = 0; i < end-start; i++) {
-    PetscCall(VecSetValue(left, i+start, 1., INSERT_VALUES));
-    PetscCall(MatMultTranspose(cb, right, left));
-    PetscCall(VecGetSpan(left, span));
-    hdg->plot_solution(span, i);
-    PetscCall(VecRestoreSpan(left, span));
-    PetscCall(VecZeroEntries(right));
-  }
-  PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
@@ -270,8 +242,6 @@ int main(int argc, char **argv) {
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
 
-    if (strlen(viscoarse) > 0) PetscCall(PCNet2ASVisCoarse(pc, hdg, viscoarse));
-
     PetscCall(VecScatterCreateToZero(rhs, &scatter, &rhs0));
     if (rank == 0) {
       PRIN2S(s_rf);
@@ -305,7 +275,7 @@ int main(int argc, char **argv) {
 
     if (*plot_path) {
       hdg->plot_option("fileName", plot_path);
-      hdg->plot_option("printFileNumber", "false");
+      hdg->plot_option("fileNumber", "0");
       hdg->plot_option("fileEnding", "vtkhdf");
       PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
