@@ -145,7 +145,6 @@ class ArrayColor:
     comp = self.comp if self.comp is not None else 0
     rng = display.GetArrayInformationForColorArray().GetComponentRange(comp)
     ctf.ApplyPreset("Cool to Warm", True)
-    print(self.categories)
     if len(self.categories) != 0:
       ctf.InterpretValuesAsCategories = 1
       ctf.AnnotationsInitialized = 1
@@ -176,11 +175,14 @@ class ArrayColor:
 # --- Runner ------------------------------------------------------------------
 
 def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(1000, 1000),
-           axis=True, output=None, show=True):
+           axis=True, output=None, show=True, duration=5, fps=30):
   if not os.path.isfile(path):
     sys.exit(f"error: file not found: {path}")
 
-  pipe = pv.VTKHDFReader(FileName=[path])
+  reader = pv.VTKHDFReader(FileName=[path])
+  times = reader.TimestepValues
+
+  pipe = reader
   pipe.UpdatePipeline()
   pipe = pv.ExtractSurface(Input=pipe)
   pipe.UpdatePipeline()
@@ -197,10 +199,25 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
   view.orient(rview)
   pv.ResetCamera()
   pv.Render()
+
   if show:
+    scene = pv.GetAnimationScene()
+    scene.UpdateAnimationUsingDataTimeSteps()
+    scene.PlayMode = "Snap To TimeSteps"
+    scene.NumberOfFrames = len(times)
+    if len(times) > 0:
+      scene.FramesPerTimestep = max(1, round(duration * fps / len(times)))
+    else:
+      scene.FramesPerTimestep = 1
+    scene.Play()
     pv.Interact()
   if output:
-    pv.SaveScreenshot(output, rview, TransparentBackground=1)
+    if len(times) > 0:
+      print("saving animation...")
+      scene.FramesPerTimestep = 1
+      pv.SaveAnimation(output, rview, FrameRate=fps)
+    else:
+      pv.SaveScreenshot(output, rview, TransparentBackground=1)
 
 
 # --- CLI ---------------------------------------------------------------------
@@ -225,6 +242,8 @@ if __name__ == "__main__":
   p.add_argument("--tubes-sides", type=int, default=4)
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1.)
+  p.add_argument("--fps", type=int, default=30, help="target fps")
+  p.add_argument("--duration", type=float, default=5, help="target duration of animation")
 
   args = p.parse_args()
 
@@ -246,4 +265,4 @@ if __name__ == "__main__":
     ops.append(SolidColor(args.fg))
 
   netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
-         resolution=resolution, output=args.output, show=args.show)
+         resolution=resolution, output=args.output, show=args.show, duration=args.duration, fps=args.fps)
