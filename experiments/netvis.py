@@ -4,6 +4,7 @@ import sys
 import os
 import paraview.simple as pv
 from matplotlib.colors import to_rgb
+from colorsys import hsv_to_rgb
 
 class View:
   VIEWS = {
@@ -108,11 +109,19 @@ class SolidColor:
 
 
 class ArrayColor:
-  def __init__(self, spec, fg="white", invert=False, categorical=False):
+  def __init__(self, spec, fg="white", invert=False, categories=""):
     """'name' or 'name:N' -> (name, component_or_None)."""
-    self.categorical = categorical
     self.invert = invert
     self.fg = fg
+
+    self.categories = []
+    items = categories.split(",")
+    for item in items:
+      if ":" in item:
+        a,b = item.split(":")
+        self.categories.extend(range(a,b+1))
+      else:
+        self.categories.append(item)
 
     if ":" in spec:
       self.name, self.comp = spec.rsplit(":", 1)
@@ -136,15 +145,24 @@ class ArrayColor:
     comp = self.comp if self.comp is not None else 0
     rng = display.GetArrayInformationForColorArray().GetComponentRange(comp)
     ctf.ApplyPreset("Cool to Warm", True)
-    if self.categorical:
+    if len(self.categories) != 0:
       ctf.InterpretValuesAsCategories = 1
       ctf.AnnotationsInitialized = 1
-      values = range(int(rng[0]), int(rng[1]) + 1)
+
+      cats = [0] + [c for c in self.categories if c != 0]
+
       annotations = []
-      for v in values:
-        annotations.extend([str(v), str(v)])
+      for v in cats:
+          label = "" if v == 0 else str(v)
+          annotations.extend([str(v), label])
       ctf.Annotations = annotations
-      ctf.ApplyPreset("Brewer Qualitative Set1", True)
+
+      colors = list(to_rgb(self.fg))
+      n = len(cats) - 1
+      for i in range(n):
+          colors.extend(hsv_to_rgb(i / n, 0.7, 0.9))
+      ctf.IndexedColors = colors
+      ctf.IndexedOpacities = [1.0] * len(cats)
     else:
       ctf.ApplyPreset("Cool to Warm", True)
       M = max(abs(rng[0]), abs(rng[1]))
@@ -193,7 +211,7 @@ if __name__ == "__main__":
   p.add_argument("--bg", default="black")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
   p.add_argument("--color-invert", action="store_true")
-  p.add_argument("--color-categorical", action="store_true")
+  p.add_argument("--color-categories", help="color categories e.g. '1-4,7'", default=None)
   p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
@@ -222,7 +240,7 @@ if __name__ == "__main__":
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
-    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert, categorical=args.color_categorical))
+    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert, categories=args.color_categories))
   else:
     ops.append(SolidColor(args.fg))
 
