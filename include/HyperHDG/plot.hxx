@@ -780,6 +780,49 @@ void plot_vtu(HyperGraphT& hyper_graph,
 #ifdef HYPERHDG_PETSC
 #include <hdf5.h>
 
+// Append n_new_rows to axis 0 of an existing extendable dataset, then write the data.
+// For 1D datasets pass n_cols = 1 (ignored). For 2D, axis-1 must match the dataset.
+inline void h5_append(hid_t loc, const char* name,
+                      hid_t mem_type,
+                      hsize_t n_new_rows, hsize_t n_cols,
+                      const void* data)
+{
+  hid_t dset = H5Dopen2(loc, name, H5P_DEFAULT);
+  hy_check(dset >= 0, "h5_append: cannot open '" << name << "'");
+
+  hid_t fspace = H5Dget_space(dset);
+  int rank = H5Sget_simple_extent_ndims(fspace);
+  hsize_t cur[2] = {0, 0};
+  H5Sget_simple_extent_dims(fspace, cur, nullptr);
+  H5Sclose(fspace);
+
+  hsize_t new_dims[2] = {cur[0] + n_new_rows, (rank == 2 ? n_cols : 0)};
+  H5Dset_extent(dset, new_dims);
+
+  fspace = H5Dget_space(dset);
+  hsize_t start[2] = {cur[0], 0};
+  hsize_t count[2] = {n_new_rows, (rank == 2 ? n_cols : 0)};
+  H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, nullptr, count, nullptr);
+
+  hsize_t mem_dims[2] = {n_new_rows, (rank == 2 ? n_cols : 0)};
+  hid_t mspace = H5Screate_simple(rank, mem_dims, nullptr);
+
+  H5Dwrite(dset, mem_type, mspace, fspace, H5P_DEFAULT, data);
+
+  H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
+}
+
+// Update a scalar int64 attribute on a group (delete + recreate; HDF5 attrs are not extendable).
+inline void h5_set_attr_i64(hid_t loc, const char* name, int64_t value)
+{
+  if (H5Aexists(loc, name) > 0)
+    H5Adelete(loc, name);
+  hid_t space = H5Screate(H5S_SCALAR);
+  hid_t attr  = H5Acreate2(loc, name, H5T_STD_I64LE, space, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(attr, H5T_NATIVE_INT64, &value);
+  H5Aclose(attr); H5Sclose(space);
+}
+
 // =================================================================================================
 // plot_vtkhdf_mesh: write the static mesh (geometry, topology, NumberOf* arrays, types_points).
 // Truncates the file.
@@ -789,7 +832,7 @@ template <class HyperGraphT,
           typename hyEdge_index_t = unsigned int,
           typename pt_index_t = unsigned int>
 void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
-                      const PlotOptions& plot_options)
+                      const PlotOptions& plot_options, unsigned int n_components)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -954,6 +997,47 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     write_dset(pdata, "types_points", H5T_STD_I32LE, H5T_NATIVE_INT32, 1, &d, node_types.data());
   }
 
+  // --- empty extendable PointData/values: (0, n_components), unlimited axis 0
+  {
+    hsize_t dims[2]    = {0, n_components};
+    hsize_t maxdims[2] = {H5S_UNLIMITED, n_components};
+    hsize_t chunk[2]   = {std::max<hsize_t>(n_points, 1), n_components};
+    hid_t space = H5Screate_simple(2, dims, maxdims);
+    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(dcpl, 2, chunk);
+    hid_t dset = H5Dcreate2(pdata, "values", H5T_IEEE_F32LE, space,
+                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  }
+
+  // --- Steps group + NSteps=0 attribute
+  hid_t steps = H5Gcreate2(root, "Steps", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  h5_set_attr_i64(steps, "NSteps", 0);
+
+  // helper for empty 1D extendable datasets
+  auto make_empty_1d = [&](hid_t loc, const char* name, hid_t file_type) {
+    hsize_t dims    = 0;
+    hsize_t maxdims = H5S_UNLIMITED;
+    hsize_t chunk   = 1;
+    hid_t space = H5Screate_simple(1, &dims, &maxdims);
+    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(dcpl, 1, &chunk);
+    hid_t dset = H5Dcreate2(loc, name, file_type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  };
+
+  make_empty_1d(steps, "Values",                H5T_IEEE_F64LE);
+  make_empty_1d(steps, "PartOffsets",           H5T_STD_I64LE);
+  make_empty_1d(steps, "PointOffsets",          H5T_STD_I64LE);
+  make_empty_1d(steps, "CellOffsets",           H5T_STD_I64LE);
+  make_empty_1d(steps, "ConnectivityIdOffsets", H5T_STD_I64LE);
+  make_empty_1d(steps, "NumberOfParts",         H5T_STD_I64LE);
+
+  hid_t pdo = H5Gcreate2(steps, "PointDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  make_empty_1d(pdo, "values", H5T_STD_I64LE);
+
+  H5Gclose(pdo);
+  H5Gclose(steps);
   H5Gclose(pdata);
   H5Gclose(root);
   H5Fclose(file);
@@ -1029,6 +1113,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
     }
   }
 
+  // --- open file R/W
   std::string filename = plot_options.outputDir + "/" + plot_options.fileName
     + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
   hid_t file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
@@ -1036,19 +1121,36 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
   hid_t root  = H5Gopen2(file, "VTKHDF",   H5P_DEFAULT);
   hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
+  hid_t steps = H5Gopen2(root, "Steps",     H5P_DEFAULT);
+  hid_t pdo   = H5Gopen2(steps, "PointDataOffsets", H5P_DEFAULT);
 
-  // Reuse the same write_dset helper logic; inline to avoid duplication overhead.
-  hsize_t d[2] = {(hsize_t)n_points, n_components};
-  std::vector<hsize_t> maxdims = {H5S_UNLIMITED, n_components};
-  std::vector<hsize_t> chunk   = {std::max<hsize_t>(n_points, 1), n_components};
+  const int64_t step_index = static_cast<int64_t>(plot_options.fileNumber);
 
-  hid_t space = H5Screate_simple(2, d, maxdims.data());
-  hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
-  H5Pset_chunk(dcpl, 2, chunk.data());
-  hid_t dset = H5Dcreate2(pdata, "values", H5T_IEEE_F32LE, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-  H5Dwrite(dset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
-  H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  // --- append PointData/values: n_points new rows
+  h5_append(pdata, "values", H5T_NATIVE_FLOAT,
+                           n_points, n_components, values.data());
 
+  // --- append Steps/Values: one timestamp
+  double t = static_cast<double>(time);
+  h5_append(steps, "Values", H5T_NATIVE_DOUBLE, 1, 1, &t);
+
+  // --- append Steps offset entries (all zeros for single-part static mesh)
+  int64_t zero = 0, one = 1;
+  h5_append(steps, "PartOffsets",           H5T_NATIVE_INT64, 1, 1, &zero);
+  h5_append(steps, "PointOffsets",          H5T_NATIVE_INT64, 1, 1, &zero);
+  h5_append(steps, "CellOffsets",           H5T_NATIVE_INT64, 1, 1, &zero);
+  h5_append(steps, "ConnectivityIdOffsets", H5T_NATIVE_INT64, 1, 1, &zero);
+  h5_append(steps, "NumberOfParts",         H5T_NATIVE_INT64, 1, 1, &one);
+
+  // --- append PointDataOffsets entries
+  int64_t off_values = step_index * static_cast<int64_t>(n_points);
+  h5_append(pdo, "values", H5T_NATIVE_INT64, 1, 1, &off_values);
+
+  // --- update NSteps
+  h5_set_attr_i64(steps, "NSteps", step_index + 1);
+
+  H5Gclose(pdo);
+  H5Gclose(steps);
   H5Gclose(pdata);
   H5Gclose(root);
   H5Fclose(file);
@@ -1070,8 +1172,9 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const PlotOptions& plot_options,
                  const floatT time = 0.)
 {
-  plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
-    hyper_graph, plot_options);
+  if (plot_options.fileNumber == 0)
+    plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
+      hyper_graph, plot_options, LocalSolverT::system_dimension());
   plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
                    n_subdivisions, hyEdge_index_t, pt_index_t>(
     hyper_graph, local_solver, lambda, plot_options, time);
