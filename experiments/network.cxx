@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template <unsigned int dim, typename Scalar = double>
-using TB_Params = LocalSolver::TimoshenkoTensile<dim, Scalar>;
+using TB_Params = LocalSolver::TimoshenkoStiffness<dim, Scalar>;
 template<unsigned int poly_deg>
 using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
 template<unsigned int poly_deg>
@@ -34,17 +34,20 @@ PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal ta
   PetscViewer viewer;
   PetscReal size[3];
   PetscReal strain = .1;
+  PetscInt  comp = 0;
   PetscBool is_set;
 
   PetscFunctionBeginUser;
 
   if (0 == strcmp(lsol, "timo")) {
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp, &is_set));
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
     PetscCall(PetscViewerDestroy(&viewer));
     TB_Params<3>::length = size[0];
     TB_Params<3>::strain = strain;
+    TB_Params<3>::comp = comp;
     *hdg = new HDGWrapper(HDGNetwork<1,TB_LSol>(domain, tau)); return 0;
   } else if (0 == strcmp(lsol, "diff")) {
     *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;

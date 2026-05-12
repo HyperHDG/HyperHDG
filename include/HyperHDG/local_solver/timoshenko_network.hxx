@@ -130,15 +130,18 @@ struct TimoschenkoBeamParametersDefault
  * \authors   Joseph Holten, KIT, 2026--
  **************************************************************************************************/
 template <unsigned int dim, typename Scalar = double>
-struct TimoshenkoTensile
+struct TimoshenkoStiffness
 {
   using Pt = Point<dim, Scalar>;
 
   /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
-  static inline Scalar length = 8e+3;
+  static inline Scalar length = 0;
 
   /// Applied tensile strain (dimensionless)
-  static inline Scalar strain = 0.10;
+  static inline Scalar strain = 0;
+
+  /// Strain normal component
+  static inline unsigned int comp = 0;
 
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
@@ -162,7 +165,7 @@ struct TimoshenkoTensile
 
   static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
-    return strain * length * (point[0] > .5 * length) * normal[0];
+    return strain * length * (point[0] > .5 * length) * normal[comp];
   }
 
   static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
