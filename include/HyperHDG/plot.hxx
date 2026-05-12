@@ -780,18 +780,16 @@ void plot_vtu(HyperGraphT& hyper_graph,
 #ifdef HYPERHDG_PETSC
 #include <hdf5.h>
 
+// =================================================================================================
+// plot_vtkhdf_mesh: write the static mesh (geometry, topology, NumberOf* arrays, types_points).
+// Truncates the file.
+// =================================================================================================
 template <class HyperGraphT,
-          class LocalSolverT,
-          typename LargeVecT,
-          typename floatT,
           unsigned int n_subdivisions = 1,
           typename hyEdge_index_t = unsigned int,
           typename pt_index_t = unsigned int>
-void plot_vtkhdf(HyperGraphT& hyper_graph,
-                 const LocalSolverT& local_solver,
-                 const LargeVecT& lambda,
-                 const PlotOptions& plot_options,
-                 const floatT time = 0.)
+void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
+                      const PlotOptions& plot_options)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -956,58 +954,127 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
     write_dset(pdata, "types_points", H5T_STD_I32LE, H5T_NATIVE_INT32, 1, &d, node_types.data());
   }
 
-  // --- solver bulk_values
-  if constexpr (LocalSolverT::system_dimension() != 0) {
-    using dof_value_t = typename LargeVecT::value_type;
-    constexpr unsigned int n_components = LocalSolverT::system_dimension();
+  H5Gclose(pdata);
+  H5Gclose(root);
+  H5Fclose(file);
+}
 
-    // Flat buffer: (n_points, n_components), row-major.
-    // Float32 to match VTU on-disk type.
-    std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
+// =================================================================================================
+// plot_vtkhdf_bulk: open existing file R/W, write PointData/values for this step.
+// (Currently overwrites — temporal append comes next.)
+// =================================================================================================
+template <class HyperGraphT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
+                      const LocalSolverT& local_solver,
+                      const LargeVecT& lambda,
+                      const PlotOptions& plot_options,
+                      const floatT time = 0.)
+{
+  constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
+  static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
 
-    std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
-      hyEdge_dofs;
+  constexpr unsigned int n_subpoints     = n_subdivisions + 1;
+  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
 
-    for (hyEdge_index_t he = 0; he < n_edges; ++he) {
-      hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
-          hyper_graph, he, lambda);
+  SmallVec<n_subpoints, float> abscissas;
+  for (unsigned int i = 0; i < n_subpoints; ++i)
+    abscissas[i] = plot_options.scale * (1.f * i / n_subdivisions - 0.5f) + 0.5f;
 
-      std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const pt_index_t n_points    = static_cast<pt_index_t>(n_edges) * points_per_edge;
 
-      using bulk_fn = decltype(local_values)(
-        decltype(abscissas.data())&, decltype(hyEdge_dofs)&, decltype(time));
-      using bulk_fn_geom = decltype(local_values)(
-        decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
-        decltype(hyper_graph[he])&, decltype(time));
+  if constexpr (LocalSolverT::system_dimension() == 0) return;
 
-      if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
-        local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
-      }
-      else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
-        auto geometry = hyper_graph[he];
-        local_values =
-          local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
-      }
-      else {
-        hy_check(false, "bulk_values overload not found on LocalSolverT");
-      }
+  using dof_value_t = typename LargeVecT::value_type;
+  constexpr unsigned int n_components = LocalSolverT::system_dimension();
 
-      // Interleave into the flat buffer.
-      // local_values is [component][corner]; we write row-major per point.
-      for (unsigned int p = 0; p < points_per_edge; ++p) {
-        const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
-        for (unsigned int d = 0; d < n_components; ++d)
-          values[row + d] = static_cast<float>(local_values[d][p]);
-      }
+  std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
+
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
+    hyEdge_dofs;
+
+  for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
+        hyper_graph, he, lambda);
+
+    std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
+
+    using bulk_fn = decltype(local_values)(
+      decltype(abscissas.data())&, decltype(hyEdge_dofs)&, decltype(time));
+    using bulk_fn_geom = decltype(local_values)(
+      decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
+      decltype(hyper_graph[he])&, decltype(time));
+
+    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
+    }
+    else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
+      auto geometry = hyper_graph[he];
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+    }
+    else {
+      hy_check(false, "bulk_values overload not found on LocalSolverT");
     }
 
-    hsize_t d[2] = {(hsize_t)n_points, n_components};
-    write_dset(pdata, "values", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, values.data());
+    for (unsigned int p = 0; p < points_per_edge; ++p) {
+      const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
+      for (unsigned int d = 0; d < n_components; ++d)
+        values[row + d] = static_cast<float>(local_values[d][p]);
+    }
   }
+
+  std::string filename = plot_options.outputDir + "/" + plot_options.fileName
+    + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
+  hid_t file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  hy_check(file >= 0, "failed to open HDF5 file '" << filename << "'");
+
+  hid_t root  = H5Gopen2(file, "VTKHDF",   H5P_DEFAULT);
+  hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
+
+  // Reuse the same write_dset helper logic; inline to avoid duplication overhead.
+  hsize_t d[2] = {(hsize_t)n_points, n_components};
+  std::vector<hsize_t> maxdims = {H5S_UNLIMITED, n_components};
+  std::vector<hsize_t> chunk   = {std::max<hsize_t>(n_points, 1), n_components};
+
+  hid_t space = H5Screate_simple(2, d, maxdims.data());
+  hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(dcpl, 2, chunk.data());
+  hid_t dset = H5Dcreate2(pdata, "values", H5T_IEEE_F32LE, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+  H5Dwrite(dset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
+  H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
 
   H5Gclose(pdata);
   H5Gclose(root);
   H5Fclose(file);
+}
+
+// =================================================================================================
+// plot_vtkhdf: dispatcher.
+// =================================================================================================
+template <class HyperGraphT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf(HyperGraphT& hyper_graph,
+                 const LocalSolverT& local_solver,
+                 const LargeVecT& lambda,
+                 const PlotOptions& plot_options,
+                 const floatT time = 0.)
+{
+  plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
+    hyper_graph, plot_options);
+  plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
+                   n_subdivisions, hyEdge_index_t, pt_index_t>(
+    hyper_graph, local_solver, lambda, plot_options, time);
 }
 #endif
 
