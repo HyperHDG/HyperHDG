@@ -43,9 +43,11 @@ with h5py.File("transient.vtkhdf", "w") as f:
     root.create_dataset("Connectivity", data=connectivity)
     root.create_dataset("Offsets", data=offsets)
     root.create_dataset("Types", data=types)
-    root.create_dataset("NumberOfPoints",          data=np.array([n_points], dtype=np.int64))
-    root.create_dataset("NumberOfCells",           data=np.array([n_cells],  dtype=np.int64))
-    root.create_dataset("NumberOfConnectivityIds", data=np.array([len(connectivity)], dtype=np.int64))
+
+    # Length n_steps, one entry per step (all equal for static mesh)
+    root.create_dataset("NumberOfPoints",          data=np.full(n_steps, n_points, dtype=np.int64))
+    root.create_dataset("NumberOfCells",           data=np.full(n_steps, n_cells,  dtype=np.int64))
+    root.create_dataset("NumberOfConnectivityIds", data=np.full(n_steps, len(connectivity), dtype=np.int64))
 
     # PointData
     pd = root.create_group("PointData")
@@ -59,6 +61,7 @@ with h5py.File("transient.vtkhdf", "w") as f:
     steps.create_dataset("PointOffsets",         data=np.zeros(n_steps, dtype=np.int64))
     steps.create_dataset("CellOffsets",          data=np.zeros(n_steps, dtype=np.int64))
     steps.create_dataset("ConnectivityIdOffsets", data=np.zeros(n_steps, dtype=np.int64))
+    steps.create_dataset("NumberOfParts", data=np.ones(n_steps, dtype=np.int64))
 
     pdo = steps.create_group("PointDataOffsets")
     pdo.create_dataset("scalar", data=pd_offsets)
