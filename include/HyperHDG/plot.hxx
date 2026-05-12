@@ -870,10 +870,8 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
   // Write file
   // -----------------------------------------------------------------------
 
-  std::string filename = plot_options.outputDir + "/" + plot_options.fileName;
-  if (plot_options.printFileNumber)
-    filename += "." + std::to_string(plot_options.fileNumber);
-  filename += "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
+  std::string filename = plot_options.outputDir + "/" + plot_options.fileName
+    + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
   if (std::filesystem::create_directory(plot_options.outputDir))
     std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
 
