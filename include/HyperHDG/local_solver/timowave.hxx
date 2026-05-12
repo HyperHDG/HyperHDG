@@ -202,11 +202,11 @@ class TimoshenkoWave
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
-  static constexpr unsigned int system_dimension() { return space_dim; }
+  static constexpr unsigned int system_dimension() { return 6*space_dim; }
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return space_dim; }
+  static constexpr unsigned int node_system_dimension() { return 6*space_dim; }
 
   template <typename parameters>
   static constexpr bool is_dirichlet(const unsigned int node_type)
@@ -238,12 +238,6 @@ class TimoshenkoWave
    * This allows to the use of this quantity as template parameter in member functions.
    ************************************************************************************************/
   static constexpr unsigned int system_dim = system_dimension();
-  /*!***********************************************************************************************
-   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
-   *
-   * This allows to the use of this quantity as template parameter in member functions.
-   ************************************************************************************************/
-  static constexpr unsigned int node_system_dim = node_system_dimension();
 
   /*!***********************************************************************************************
    * \brief   (Globally constant) penalty parameter for HDG scheme.
@@ -698,19 +692,20 @@ class TimoshenkoWave
 
     return std::array<lSol_float_t, 1U>({error});
   }
-  /*!***********************************************************************************************
-   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
-   *
-   * \tparam  absc_float_t      Floating type for the abscissa values.
-   * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
-   * \tparam  input_array_t     Type of input array.
-   * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
-   * \param   abscissas         Abscissas of the supporting points.
-   * \param   lambda_values     The values of the skeletal variable's coefficients.
-   * \param   hyper_edge        The geometry of the considered hyperedge (of typename GeomT).
-   * \param   time              Time.
-   * \retval  func_values       Function values at tensorial points.
-   ************************************************************************************************/
+
+  // Edge-local frame vector: idx == 0 → inner_normal(0),
+  // idx == -k (k>=1) → outer_normal(k-1).
+  // Convention: nonneg → inner, neg → outer.
+  template <class hyEdgeT, typename float_t>
+  Point<space_dim, float_t>
+  edge_frame_vector(hyEdgeT& hyper_edge, int idx) const
+  {
+    if (idx >= 0)
+      return (Point<space_dim, float_t>)hyper_edge.geometry.inner_normal(idx);
+    else
+      return (Point<space_dim, float_t>)hyper_edge.geometry.outer_normal(-idx - 1);
+  }
+
   template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, class hyEdgeT>
   std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
   bulk_values(const std::array<abscissa_float_t, sizeT>& abscissas,
@@ -718,47 +713,50 @@ class TimoshenkoWave
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const
   {
-    // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    constexpr unsigned int n_pts    = Hypercube<hyEdge_dimT>::pow(sizeT);
+    constexpr unsigned int n_fields = 6;  // n, m, u, r, v, s
+
     input_array_t lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
       solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
+
     SmallVec<n_shape_fct_, lSol_float_t> coeffs;
     SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
 
-    // for(unsigned int i = 0; i < 2; ++i)
-    //   for(unsigned int j = 0; j < 3; ++j)
-    //     std::cout << lambda_values_loc[i][j] << " ";
-    // std::cout << std::endl;
+    // Edge-local-frame component values at each abscissa, per field.
+    // shape: [field][local_component][pt]
+    std::array<std::array<std::array<lSol_float_t, n_pts>, space_dim>, n_fields> point_vals{};
 
-    // std::cout << coefficients;
+    for (unsigned int c = 0; c < n_fields; ++c)
+      for (unsigned int dim = 0; dim < space_dim; ++dim) {
+        for (unsigned int i = 0; i < coeffs.size(); ++i)
+          coeffs[i] = coefficients[(c * space_dim + dim) * n_shape_fct_ + i];
+        for (unsigned int pt = 0; pt < n_pts; ++pt)
+          point_vals[c][dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
+            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper)
+          );
+      }
 
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-      point_vals, result;
+    std::array<std::array<lSol_float_t, n_pts>, system_dimension()> result{};
 
-    for (unsigned int dim = 0; dim < space_dim; ++dim)
-    {
-      for (unsigned int i = 0; i < coeffs.size(); ++i)
-        coeffs[i] = coefficients[(2 * space_dim + dim) * n_shape_fct_ + i];
-      for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(sizeT); ++pt)
-        point_vals[dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
-          coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
-    }
+    static_assert(2 <= n_fields);
 
-    Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] = point_vals[0][q] * normal_vector[dim];
+    // fields n m should be in local frame -> stay
+    for (unsigned int c = 0; c < 2; ++c)
+      for (unsigned int local = 0; local < space_dim; ++local)
+        for (unsigned int q = 0; q < n_pts; ++q)
+          result[c * space_dim + local][q] = point_vals[c][local][q];
 
-    normal_vector = (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(0);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] += point_vals[1][q] * normal_vector[dim];
-
-    normal_vector = (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(1);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] += point_vals[2][q] * normal_vector[dim];
+    // fields u r should be in global frame -> need to transform
+    for (unsigned int c = 2; c < n_fields; ++c)
+      for (unsigned int local = 0; local < space_dim; ++local) {
+        const int idx = -static_cast<int>(local);  // 0, -1, -2
+        Point<space_dim, lSol_float_t> nv =
+          edge_frame_vector<hyEdgeT, lSol_float_t>(hyper_edge, idx);
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+          for (unsigned int q = 0; q < n_pts; ++q)
+            result[c * space_dim + dim][q] += point_vals[c][local][q] * nv[dim];
+      }
 
     return result;
   }

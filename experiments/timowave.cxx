@@ -55,17 +55,13 @@ int main(int argc, char **argv) {
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
-    PetscBool plot = false, have_cache = PETSC_FALSE;
-    char output_directory[PATH_MAX] = "output";
-    char output_filename[PATH_MAX] = "timowave";
-    char output_h5[PATH_MAX] = {0};
+    PetscBool have_cache = PETSC_FALSE;
+    char plot[PATH_MAX] = {0};
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
     PetscInt timowave_test = 0;
-    PetscViewer h5_viewer = NULL;
     const char *pc_type;
-    char name[64];
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
 
@@ -89,12 +85,8 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsInt("-nx", "number of refinements", NULL, nx, &nx, &is_set));
     PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, nt, &nt, &is_set));
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
-    PetscCall(PetscOptionsString("-o", "output filename", NULL, output_filename, output_filename, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsString("-od", "output directory", NULL, output_directory, output_directory, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsBool("-plot", "plot solution", NULL, plot, &plot, &is_set));
-    PetscCall(PetscOptionsString("-plot_scale", "subdomain scale factor for plotting", NULL, plot_scale, plot_scale, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot, plot, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsString("-sol_h5", "save solution as h5", NULL, output_h5, output_h5, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
@@ -128,10 +120,9 @@ int main(int argc, char **argv) {
     PRIN2IY(nx);
     PRIN2FY(dt);
     PRIN2FY(T);
-    hdg->plot_option("fileName", output_filename);
-    hdg->plot_option("outputDir", output_directory);
-    hdg->plot_option("printFileNumber", "true");
+    hdg->plot_option("fileName", plot);
     hdg->plot_option("scale", plot_scale);
+    hdg->plot_option("fileEnding", "vtkhdf");
 
     zero_v = hdg->zero_vector();
     N = zero_v.size();
@@ -147,20 +138,7 @@ int main(int argc, char **argv) {
     temp = hdg->make_initial(zero_v);
     PRIN2SP();
 
-    if (output_h5[0]) {
-      PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, output_h5, FILE_MODE_WRITE, &h5_viewer));
-      PetscCall(PetscViewerHDF5PushGroup(h5_viewer, "/trace"));
-
-      for (PetscInt k = 0; k < N; k++)
-        PetscCall(VecSetValue(rhs, k, temp[k], INSERT_VALUES));
-      PetscCall(VecAssemblyBegin(rhs));
-      PetscCall(VecAssemblyEnd(rhs));
-      snprintf(name, sizeof name, "timestep_%05d", 0);
-      PetscCall(PetscObjectSetName((PetscObject)rhs, name));
-      PetscCall(VecView(rhs, h5_viewer));
-    }
-
-    if (plot)
+    if (*plot)
       hdg->plot_solution(temp, 0.);
 
     temp2 = hdg->errors(temp, 0);
@@ -241,30 +219,17 @@ int main(int argc, char **argv) {
 
         PetscCall(VecGetSpan(rhs, span));
         hdg->set_data(span, ti);
-        if (plot) hdg->plot_solution(span, ti);
+        if (*plot) hdg->plot_solution(span, ti);
         error = hdg->errors(span, ti)[0];
         e_abs = PetscMax(error, e_abs);
         PetscCall(VecRestoreSpan(rhs, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
-
-        if (h5_viewer) {
-          snprintf(name, sizeof name, "timestep_%05d", (int)i);
-          PetscCall(PetscObjectSetName((PetscObject)rhs, name));
-          PetscCall(VecView(rhs, h5_viewer));
-        }
-
     }
     PRIN2SP();
 
     PetscCall(VecAssemblyBegin(times));
     PetscCall(VecAssemblyEnd(times));
-
-    if (h5_viewer) {
-      PetscCall(PetscObjectSetName((PetscObject)rhs, "times"));
-      PetscCall(VecView(times, h5_viewer));
-      PetscCall(PetscViewerHDF5PopGroup(h5_viewer));
-    }
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
@@ -279,7 +244,8 @@ int main(int argc, char **argv) {
     PRIN2FY(rnorm);
     PRIN2SY(creason);
     PRIN2FY(avg_iterations);
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: %s/%s.*.vtu\n", output_directory, output_filename));
+    if (*plot)
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: output/%s.vtkhdf\n", plot));
 
     delete hdg;
     PetscCall(KSPDestroy(&ksp));
@@ -287,7 +253,6 @@ int main(int argc, char **argv) {
     PetscCall(VecDestroy(&times));
     PetscCall(VecDestroy(&errors));
     PetscCall(VecDestroy(&rhs));
-    PetscCall(PetscViewerDestroy(&h5_viewer));
 
     PetscCall(PetscFinalize());
     return 0;
