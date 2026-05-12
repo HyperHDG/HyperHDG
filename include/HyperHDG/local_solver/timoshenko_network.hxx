@@ -863,7 +863,6 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  // constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
   int comps[] = {1, -1, -2};
@@ -887,7 +886,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
       for (unsigned int c = 0; c < space_dim; c++) {
-        if (hyper_edge.node_descriptor[face] & (1<<c)) {
+        if (hyper_edge.node_descriptor[face]) { // HACK: this only works if dirichlet_value_* returns zero in non-constrained directions
           integral = integrator::template integrate_bdr_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
@@ -895,9 +894,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           right_hand_side[(0 * space_dim + c) * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](0) * integral;
           right_hand_side[(2 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
-        }
 
-        if (hyper_edge.node_descriptor[face] & (1<<(c+3))) {
           integral = integrator::template integrate_bdr_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
