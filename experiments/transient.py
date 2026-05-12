@@ -44,10 +44,10 @@ with h5py.File("transient.vtkhdf", "w") as f:
     root.create_dataset("Offsets", data=offsets)
     root.create_dataset("Types", data=types)
 
-    # Length n_steps, one entry per step (all equal for static mesh)
-    root.create_dataset("NumberOfPoints",          data=np.full(n_steps, n_points, dtype=np.int64))
-    root.create_dataset("NumberOfCells",           data=np.full(n_steps, n_cells,  dtype=np.int64))
-    root.create_dataset("NumberOfConnectivityIds", data=np.full(n_steps, len(connectivity), dtype=np.int64))
+    # NumberOf* as length-1 arrays (single part, static mesh)
+    root.create_dataset("NumberOfPoints",          data=np.array([n_points], dtype=np.int64))
+    root.create_dataset("NumberOfCells",           data=np.array([n_cells],  dtype=np.int64))
+    root.create_dataset("NumberOfConnectivityIds", data=np.array([len(connectivity)], dtype=np.int64))
 
     # PointData
     pd = root.create_group("PointData")
