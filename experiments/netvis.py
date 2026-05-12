@@ -108,8 +108,9 @@ class SolidColor:
 
 
 class ArrayColor:
-  def __init__(self, spec, fg="white", invert=False):
+  def __init__(self, spec, fg="white", invert=False, categorical=False):
     """'name' or 'name:N' -> (name, component_or_None)."""
+    self.categorical = categorical
     self.invert = invert
     self.fg = fg
 
@@ -132,12 +133,24 @@ class ArrayColor:
       target = (assoc, self.name, self.comp)
     pv.ColorBy(display, target)
     ctf = pv.GetColorTransferFunction(self.name)
+    comp = self.comp if self.comp is not None else 0
+    rng = display.GetArrayInformationForColorArray().GetComponentRange(comp)
     ctf.ApplyPreset("Cool to Warm", True)
-    rng = display.GetArrayInformationForColorArray().GetComponentRange(self.comp)
-    M = max(abs(rng[0]), abs(rng[1]))
-    ctf.RescaleTransferFunction(-M, M)
-    if self.invert:
-      ctf.InvertTransferFunction()
+    if self.categorical:
+      ctf.InterpretValuesAsCategories = 1
+      ctf.AnnotationsInitialized = 1
+      values = range(int(rng[0]), int(rng[1]) + 1)
+      annotations = []
+      for v in values:
+        annotations.extend([str(v), str(v)])
+      ctf.Annotations = annotations
+      ctf.ApplyPreset("Brewer Qualitative Set1", True)
+    else:
+      ctf.ApplyPreset("Cool to Warm", True)
+      M = max(abs(rng[0]), abs(rng[1]))
+      ctf.RescaleTransferFunction(-M, M)
+      if self.invert:
+        ctf.InvertTransferFunction()
     display.SetScalarBarVisibility(pv.GetActiveView(), True)
 
 
@@ -180,6 +193,7 @@ if __name__ == "__main__":
   p.add_argument("--bg", default="black")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
   p.add_argument("--color-invert", action="store_true")
+  p.add_argument("--color-categorical", action="store_true")
   p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
@@ -208,7 +222,7 @@ if __name__ == "__main__":
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
-    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert))
+    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert, categorical=args.color_categorical))
   else:
     ops.append(SolidColor(args.fg))
 
