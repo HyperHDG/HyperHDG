@@ -942,9 +942,23 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
   { hsize_t d = 1;
     write_dset(root, "NumberOfConnectivityIds", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nci); }
 
-  // -----------------------------------------------------------------------
-  // Point data: solver bulk_values
-  // -----------------------------------------------------------------------
+  // --- point data  group
+  hid_t pdata = H5Gcreate2(root, "PointData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  // --- types points
+  if constexpr (n_subdivisions == 1 && edge_dim == 1) {
+    std::vector<int32_t> node_types(n_points);
+    for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+      auto edge = hyper_graph[he];
+      const pt_index_t base = he * points_per_edge;
+      node_types[base+0] = static_cast<int32_t>(edge.node_descriptor[0]);
+      node_types[base+1] = static_cast<int32_t>(edge.node_descriptor[1]);
+    }
+    hsize_t d = (hsize_t)n_points;
+    write_dset(pdata, "types_points", H5T_STD_I32LE, H5T_NATIVE_INT32, 1, &d, node_types.data());
+  }
+
+  // --- solver bulk_values
   if constexpr (LocalSolverT::system_dimension() != 0) {
     using dof_value_t = typename LargeVecT::value_type;
     constexpr unsigned int n_components = LocalSolverT::system_dimension();
@@ -989,15 +1003,11 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
       }
     }
 
-    hid_t pdata =
-      H5Gcreate2(root, "PointData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
     hsize_t d[2] = {(hsize_t)n_points, n_components};
     write_dset(pdata, "values", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, values.data());
-
-    H5Gclose(pdata);
   }
 
+  H5Gclose(pdata);
   H5Gclose(root);
   H5Fclose(file);
 }
