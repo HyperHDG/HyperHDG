@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <iostream>
 #include <tuple>
+#include <cstring>
 
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
