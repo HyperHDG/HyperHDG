@@ -891,7 +891,7 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
         connectivity.push_back(offset + i + 1);
       }
     else
-      static_assert(edge_dim == 1, "Only edge_dim == 1 implemented here for now.");
+      hy_check(edge_dim == 1, "expected edge_dim == 1 found edge_dim == " << edge_dim);
   }
 
   // Offsets: length n_cells + 1, starts at 0, ends at n_conn (VTKHDF convention)
