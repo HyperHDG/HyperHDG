@@ -22,6 +22,7 @@ include_directories(submodules)
 
 if(HYPERHDG_PETSC)
   add_subdirectory(experiments)
+  find_package(HDF5)
 else()
   message("NO PETSC - no experiments")
 endif()
@@ -68,6 +69,8 @@ target_link_libraries(
   HyperHDG::tpp
   HyperHDG::tpcc
   ${LAPACK_LIBRARIES}
+  $<$<BOOL:${HYPERHDG_PETSC}>:PkgConfig::PETSC>
+  $<$<BOOL:${HDF5_FOUND}>:HDF5::HDF5>
 )
 
 ## Add the necessary C++ standard requirement

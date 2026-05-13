@@ -14,9 +14,6 @@
 	path = submodules/fiber_network.git
 	url = https://github.com/HyperHDG/fiber_network.git
 	branch = main
-[submodule "submodules/nanoflann"]
-	path = submodules/nanoflann
-	url = https://github.com/jlblancoc/nanoflann.git
 [submodule "submodules/KaHIP"]
 	path = submodules/KaHIP
 	url = https://github.com/KaHIP/KaHIP

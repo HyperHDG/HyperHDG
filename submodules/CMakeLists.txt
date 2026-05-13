@@ -4,7 +4,6 @@ endif()
 
 add_subdirectory(tensor_product_chain_complex.git)
 add_subdirectory(tensor_product_polynomials.git)
-add_subdirectory(nanoflann)
 # HACK: overwrite default setting of NOMPI
 set(NOMPI ON CACHE BOOL "disable all targets that depend on MPI (kaffpaE, ParHIP)")
 add_subdirectory(KaHIP)
