@@ -17,6 +17,7 @@ parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, d
 parser.add_argument("-c", "--component", help=f"stiffness component index: {dict(enumerate(LABELS))}",
                     type=int, default=0)
 parser.add_argument("--title", default="")
+parser.add_argument("--no-show", action="store_true")
 args = parser.parse_args()
 
 with h5py.File(args.input, "r") as f:
@@ -39,4 +40,4 @@ plt.xlabel(f"log10(L) {unit_length}")
 plt.ylabel(f"log10({label})")
 if args.title: plt.title(args.title)
 if args.output: plt.savefig(args.output)
-plt.show()
+if not args.no_show: plt.show()
