@@ -10,7 +10,7 @@ from datetime import datetime
 import os, sys
 
 def get_loc_constr(h, t):
-  return [t,       -1.,     -1.,     1.,      -2. * np.sqrt(h),       4.   ]
+  return [t,       -1.,     -1.,     1.,      -0.25,    4.   ]
   #Order: delta_t, tau+zpu, tau-zpu, tau-zpv, tau_uqq,  tau_f
 
 
@@ -23,9 +23,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 2.4001
-  goal_time   = 2.5001
-  time_steps  = 100
+  start_time  = 0.0001
+  goal_time   = 4.0001
+  time_steps  = 8000
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -49,7 +49,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   lsol_constr = get_loc_constr(h, delta_time)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq5.geo", lsol_constr = get_loc_constr(h, delta_time) )
+  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/lsq2.geo", lsol_constr = get_loc_constr(h, delta_time) )
   HDG_wrapper.refine(iteration)
   
   def ttf_mat(x, time):
@@ -76,11 +76,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     r[keep_rows] = x
     return r
 
-  def newton(A, M, keep_cols, keep_rows, x, time, tol=1e-8):
+  def newton(A, M, keep_cols, keep_rows, x, time, tol=1e-10):
     rhs  = np.array(HDG_wrapper.residual_flux(x, time))
     rhs_len = len(rhs)
     rhs  = rhs[keep_rows]
-    for _ in range(20):
+    for _ in range(25):
       step, _ = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
       x   -= prolong(step, keep_cols, rhs_len)
       rhs = np.array(HDG_wrapper.residual_flux(x, time))
@@ -89,7 +89,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     print("Newton failed!")
     return x
 
-  def fallback_newton(x, time, tol=1e-8):
+  def fallback_newton(x, time, tol=1e-10):
     A = ttf_mat(x, time)
     A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
     assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -108,11 +108,11 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
       rhs = np.array(HDG_wrapper.residual_flux(x, time))
       rhs = rhs[keep_rows]
-      if np.linalg.norm(rhs) < tol:  return x
+      if np.linalg.norm(rhs) < tol:  return A, M, keep_cols, keep_rows, x
     print("Standard-Newton failed!")
-    return x
+    return A, M, keep_cols, keep_rows, x
 
-  def fallback_newton_step(x, time, tol=1e-8):
+  def fallback_newton_step(x, time):
     A = ttf_mat(x, time)
     A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
     assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -130,36 +130,26 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   for time_step in range(time_steps):
     time += delta_time
-    if time_step == 0:
-      A = ttf_mat(vectorSolution, time)
-      A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
-      assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
-      sA_iLU = sp.linalg.spilu(A)
-      M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
-      rhs  = np.array(HDG_wrapper.residual_flux(vectorSolution, time))
-      rhs_len = len(rhs)
-      rhs  = rhs[keep_rows]
-      step, _ = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
-      vectorSolution   -= prolong(step, keep_cols, rhs_len)
-      print("First additional step")
 
-    if ((time_step - 1) % 10 == 0 or time_step == 0):
-      A = ttf_mat(vectorSolution, time)
-      A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
-      assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
-      sA_iLU = sp.linalg.spilu(A)
-      M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
-
-    if time_step == 0:
-      vectorSolution = fallback_newton(vectorSolution, time)
-    else:
+    if (abs(time - 2.5) < 0.005) or time_step == 0:
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton(vectorSolution, time)
+    elif (abs(time - 2.5) < 0.2):
       A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
-      #A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
       vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+    elif (abs(time - 2.5) < 0.4 and (time_step - 1) % 5 == 0):
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+    elif ((time_step - 1) % 20 == 0):
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+    else:
+      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+
+    vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    if (time_step+1) % 10 == 0:
+    if (time_step+1) % 100 == 0:
       HDG_wrapper.plot_option( "fileName" , "antipeakon" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
@@ -170,7 +160,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if (time_step+1) % 10 == 0 or time_step == 0:
+    if ((time_step+1) % 10 == 0 and abs(time - 2.5) < 0.5) or (time_step + 1) % 200 == 0 or time_step == 0:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
@@ -184,7 +174,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 def main(debug_mode):
   for poly_degree in [1]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [16]:
+    for iteration in [32]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)

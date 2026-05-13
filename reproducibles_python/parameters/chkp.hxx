@@ -284,8 +284,8 @@ struct ChkpParametersAntipeakon
   
   private:
   static constexpr param_float_t tc = 2.5;
-  static constexpr param_float_t c1 = 1.2;
-  static constexpr param_float_t c2 = 0.6;
+  static constexpr param_float_t c1 = 0.6;
+  static constexpr param_float_t c2 = 0.4;
   
   static param_float_t x1(param_float_t t)
   {
