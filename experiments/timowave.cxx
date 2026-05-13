@@ -46,7 +46,7 @@ PetscErrorCode PetscHDGCreate(
 }
 
 int main(int argc, char **argv) {
-    PetscBool help = false, is_set;
+    PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
     PetscInt nt = 1, nx = 1, poly_deg = 1;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
+    PetscCall(PetscOptionsInt("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -200,7 +201,8 @@ int main(int argc, char **argv) {
 
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
+      if (print_timestep)
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
         PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
