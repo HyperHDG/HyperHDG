@@ -5,7 +5,7 @@ set -x
 mkdir -p $OUT_DIR
 
 DATA_DIR=.
-DOMAIN="cross.geo"
+DOMAIN="cross2.geo"
 DOMAIN="-domain $DATA_DIR/domains/$DOMAIN"
 BIN_DIR=build/rel/experiments
 export OMP_NUM_THREADS=1
