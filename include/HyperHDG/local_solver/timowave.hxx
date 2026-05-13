@@ -208,13 +208,6 @@ class TimoshenkoWave
    ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return 6*space_dim; }
 
-  template <typename parameters>
-  static constexpr bool is_dirichlet(const unsigned int node_type)
-  {
-    return std::find(parameters::dirichlet_nodes.begin(), parameters::dirichlet_nodes.end(),
-                     node_type) != parameters::dirichlet_nodes.end();
-  }
-
  private:
   // -----------------------------------------------------------------------------------------------
   // Private, static constexpr functions
@@ -572,9 +565,14 @@ class TimoshenkoWave
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    SmallMatInT lambda_in = lambda_values_in;
 
-    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_in[i][j] = 0.;
+
+    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -603,8 +601,9 @@ class TimoshenkoWave
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        lambda_values_out[i].fill(0.);
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
   }
@@ -626,9 +625,14 @@ class TimoshenkoWave
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
-    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    SmallMatInT lambda_in = lambda_values_in;
 
-    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_in[i][j] = 0.;
+
+    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
@@ -640,8 +644,9 @@ class TimoshenkoWave
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        lambda_values_out[i].fill(0.);
+      for (unsigned int j = 0; j < 2*space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+          lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
   }
@@ -926,14 +931,11 @@ class TimoshenkoWave
     // first u then r in skeletal variables
     SmallVec<space_dim, lSol_float_t> helper;
 
+    static_assert(lambda_values[0].size() == 2*space_dim);
+
     // Set skeltal variable!
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
-      if (is_dirichlet<parametersT<space_dim, lSol_float_t>>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] = 0.;
-      else
-        // WRONG
         for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
           helper = integrator::template integrate_bdrUni_psivecfunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
@@ -949,6 +951,11 @@ class TimoshenkoWave
             lambda_values[i][j+space_dim+dim] = helper[dim];
         }
     }
+
+    for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      for (unsigned int j = 0; j < 2*space_dim; ++j)
+        if (hyper_edge.node_descriptor[i] & (1<<j))
+            lambda_values[i][j] = 0.;
 
     auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -1030,7 +1037,7 @@ class TimoshenkoWave
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        if (is_dirichlet<parametersT<space_dim, lSol_float_t>>(hyper_edge.node_descriptor[face]))
+        if (hyper_edge.node_descriptor[face])
         {
           // u
           auto integrals1 = integrate_bdr_phivecfunccomp_beam<
@@ -1463,7 +1470,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+      if (hyper_edge.node_descriptor[face])
       {
         // u
         auto integrals1 = integrate_bdr_phivecfunccomp_beam<
