@@ -166,7 +166,6 @@ int main(int argc, char **argv) {
       temp.resize(span.size());
       std::copy(span.begin(), span.end(), temp.begin());
       PetscCall(VecRestoreSpan(rhs, span));
-      PetscCall(VecDestroy(&rhs));
       PetscCall(PetscViewerDestroy(&viewer));
     }
     else {
@@ -176,8 +175,6 @@ int main(int argc, char **argv) {
 
     if (*plot)
       hdg->plot_solution(temp, 0.);
-
-    return 1;
 
     temp2 = hdg->errors(temp, 0);
     temp3 = hdg->norms(temp, 0);
