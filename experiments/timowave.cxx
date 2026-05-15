@@ -136,6 +136,7 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
     PetscCall(PetscObjectSetName((PetscObject)times, "times"));
+    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
 
     PRIN2S(s_mk);
     if (*static_init) {
@@ -145,6 +146,7 @@ int main(int argc, char **argv) {
       PetscCall(VecLoad(rhs, viewer));
       PetscCall(VecGetSpan(rhs, span));
       hdg->make_initial_from_static(span);
+      temp.resize(span.size());
       std::copy(span.begin(), span.end(), temp.begin());
       PetscCall(VecRestoreSpan(rhs, span));
       PetscCall(VecDestroy(&rhs));

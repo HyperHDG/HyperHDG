@@ -284,6 +284,7 @@ int main(int argc, char **argv) {
       PetscCall(VecRestoreSpan(rhs0, span));
     }
 
+    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
     PetscCall(VecViewFromOptions(rhs, NULL, "-trace_view"));
 
 end:
