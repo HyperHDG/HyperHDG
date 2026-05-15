@@ -284,6 +284,8 @@ int main(int argc, char **argv) {
       PetscCall(VecRestoreSpan(rhs0, span));
     }
 
+    PetscCall(VecViewFromOptions(rhs, NULL, "-trace_view"));
+
 end:
     if (set_mem_max) {
       PetscLogDouble mem_max;

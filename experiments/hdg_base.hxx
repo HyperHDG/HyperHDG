@@ -18,6 +18,7 @@ struct HDGBase {
   virtual Vector errors(const Span& x_vec, const Real time = 0.) = 0;
   virtual Vector norms(const Vector& x_vec, const Real time = 0.) = 0;
   virtual Vector make_initial(const Vector& x_vec, const Real time = 0.) = 0;
+  virtual void make_initial_from_static(const Span& x_vec, const Real time = 0.) = 0;
   virtual sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) = 0;
   virtual void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) = 0;
   virtual void set_data(Span x_vec, const Real time = 0.) = 0;
@@ -55,6 +56,10 @@ struct HDGWrapper : HDGBase {
   Vector make_initial(const Vector& x_vec, const Real time = 0.)
   {
     return hdg.make_initial(x_vec, time);
+  }
+  void make_initial_from_static(const Span& x_vec, const Real time = 0.)
+  {
+    return hdg.make_initial_from_static(x_vec, time);
   }
   sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
     return hdg.trace_to_flux_mat(time);

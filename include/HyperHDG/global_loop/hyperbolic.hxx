@@ -44,6 +44,7 @@ class Hyperbolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(make_initial, has_make_initial);
+  HAS_MEMBER_FUNCTION(make_initial_from_static, has_make_initial_from_static);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -356,6 +357,56 @@ class Hyperbolic
         }
         else
           hy_assert(false, "Function seems not to be implemented!");
+      });
+  }
+  /*!***********************************************************************************************
+   * \brief   Evaluate the initial flux of the problem.
+   *
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time for initial data.
+   * \retval  y_vec         A vector containing the initial fluxes.
+   ************************************************************************************************/
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void make_initial_from_static(const SpanT& x_vec, const dof_index_t time = 0.)
+  {
+    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+
+    // Do matrix--vector multiplication by iterating over all hyperedges.
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        // Fill x_vec's degrees of freedom of a hyperedge into hyEdge_dofs array.
+        hyEdge_hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+          hyEdge_dofs[hyNode].fill(0.);
+
+        // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
+        if constexpr (has_make_initial_from_static<LocalSolverT,
+                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                  2 * TopologyT::hyEdge_dim()>&(
+                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                    2 * TopologyT::hyEdge_dim()>&,
+                                         dof_value_t)>::value)
+        {
+          local_solver_.make_initial_from_static(hyEdge_dofs, time);
+        }
+        else if constexpr (has_make_initial_from_static<LocalSolverT,
+                                            std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                       2 * TopologyT::hyEdge_dim()>&(
+                                              std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                         2 * TopologyT::hyEdge_dim()>&,
+                                              decltype(hyper_edge)&, dof_value_t)>::value)
+        {
+          local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, time);
+        }
+        else
+          hy_assert(false, "Function seems not to be implemented!");
+
       });
   }
   /*!***********************************************************************************************

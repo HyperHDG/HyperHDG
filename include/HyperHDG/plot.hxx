@@ -1173,9 +1173,13 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const PlotOptions& plot_options,
                  const floatT time = 0.)
 {
-  if (plot_options.fileNumber == 0)
+  if (plot_options.fileNumber == 0) {
+    std::string filename = plot_options.outputDir + "/" + plot_options.fileName
+      + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
+    std::filesystem::remove(filename);
     plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
       hyper_graph, plot_options, LocalSolverT::system_dimension());
+  }
   plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
                    n_subdivisions, hyEdge_index_t, pt_index_t>(
     hyper_graph, local_solver, lambda, plot_options, time);

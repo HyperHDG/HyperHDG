@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
+    char static_init[PATH_MAX] = {0};
     PetscInt timowave_test = 0;
     const char *pc_type;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot, plot, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
@@ -136,11 +138,27 @@ int main(int argc, char **argv) {
     PetscCall(PetscObjectSetName((PetscObject)times, "times"));
 
     PRIN2S(s_mk);
-    temp = hdg->make_initial(zero_v);
+    if (*static_init) {
+      PetscViewer viewer;
+      std::span<PetscReal> span;
+      PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, static_init, FILE_MODE_READ, &viewer));
+      PetscCall(VecLoad(rhs, viewer));
+      PetscCall(VecGetSpan(rhs, span));
+      hdg->make_initial_from_static(span);
+      std::copy(span.begin(), span.end(), temp.begin());
+      PetscCall(VecRestoreSpan(rhs, span));
+      PetscCall(VecDestroy(&rhs));
+      PetscCall(PetscViewerDestroy(&viewer));
+    }
+    else {
+      temp = hdg->make_initial(zero_v);
+    }
     PRIN2SP();
 
     if (*plot)
       hdg->plot_solution(temp, 0.);
+
+    return 1;
 
     temp2 = hdg->errors(temp, 0);
     temp3 = hdg->norms(temp, 0);
