@@ -9,6 +9,9 @@ from datetime import datetime
 
 import os, sys
 
+import warnings
+warnings.filterwarnings("error", category=RuntimeWarning)
+
 def get_loc_constr(h, t):
   return [t,       -1.,     -1.,     1.,      -0.25,    4.   ]
   #Order: delta_t, tau+zpu, tau-zpu, tau-zpv, tau_uqq,  tau_f
@@ -23,9 +26,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 0.0001
-  goal_time   = 4.0001
-  time_steps  = 8000
+  start_time  = 2.4005
+  goal_time   = 2.7005
+  time_steps  = 300
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -86,10 +89,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       rhs = np.array(HDG_wrapper.residual_flux(x, time))
       rhs = rhs[keep_rows]
       if np.linalg.norm(rhs) < tol:  return x
-    print("Newton failed!")
-    return x
+    raise ValueError("Frozen Newton failed")
 
-  def fallback_newton(x, time, tol=1e-10):
+  def fallback_newton(x, time, tol=1e-10, alpha=0.1, beta=0.5):
     A = ttf_mat(x, time)
     A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
     assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -98,18 +100,33 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     rhs  = np.array(HDG_wrapper.residual_flux(x, time))
     rhs_len = len(rhs)
     rhs  = rhs[keep_rows]
+    res_old = np.linalg.norm(rhs)
     for _ in range(20):
       step, _ = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
-      x   -= prolong(step, keep_cols, rhs_len)
+      x_cand = x - prolong(step, keep_cols, rhs_len)
+      stepsize = 1.
+      rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
+      rhs = rhs[keep_rows]
+      res = np.linalg.norm(rhs)
+      while stepsize > 0.01 and res > (1. - alpha * stepsize) * res_old:
+        stepsize *= beta
+        x_cand = x - prolong(step, keep_cols, rhs_len)
+        rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
+        rhs = rhs[keep_rows]
+        res = np.linalg.norm(rhs)
+      if stepsize <= 0.0001:
+        raise ValueError("Stepsize too small")
+      x = x_cand
+      res_old = res
+      print(res_old, stepsize)
+      if res_old < tol:
+        return A, M, keep_cols, keep_rows, x
       A = ttf_mat(x, time)
       A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
       sA_iLU = sp.linalg.spilu(A)
       M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
-      rhs = np.array(HDG_wrapper.residual_flux(x, time))
-      rhs = rhs[keep_rows]
-      if np.linalg.norm(rhs) < tol:  return A, M, keep_cols, keep_rows, x
-    print("Standard-Newton failed!")
+    raise ValueError("Fallback Newton failed")
     return A, M, keep_cols, keep_rows, x
 
   def fallback_newton_step(x, time):
@@ -131,21 +148,29 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   for time_step in range(time_steps):
     time += delta_time
 
-    if (abs(time - 2.5) < 0.005) or time_step == 0:
-      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton(vectorSolution, time)
-    elif (abs(time - 2.5) < 0.2):
+    if time_step == 0:
       A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
-      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
-    elif (abs(time - 2.5) < 0.4 and (time_step - 1) % 5 == 0):
-      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
-      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
-    elif ((time_step - 1) % 20 == 0):
-      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
-      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
-    else:
-      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+      print("First additional step")
 
-    vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+    vs = np.copy(vectorSolution)
+    try:
+      vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+    except (ValueError, RuntimeWarning, np.linalg.LinAlgError) as e:
+      print(f'Compute new matrix at time {time:.6f}: ', e)
+      vectorSolution = np.copy(vs)
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+      try:
+        vectorSolution = newton(A, M, keep_cols, keep_rows, vectorSolution, time)
+      except (ValueError, RuntimeWarning, np.linalg.LinAlgError) as e:
+        print("Try fallback Newton instead: ", e)
+        vectorSolution = np.copy(vs)
+        A, M, keep_cols, keep_rows, vectorSolution = fallback_newton(vectorSolution, time)
+      
+      
+      
+    if ((time_step - 1) % 20 == 0):
+      A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
+
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
