@@ -29,13 +29,30 @@ PetscErrorCode PetscHDGCreate(
     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase **hdg
 ) {
+  if (test == 0) {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscReal strain = .15;
+    PetscInt  comp = 2;
+    PetscBool is_set;
+
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp, &is_set));
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    TimoshenkoStiffness<3>::length = size[0];
+    TimoshenkoStiffness<3>::strain = strain;
+    TimoshenkoStiffness<3>::comp = comp;
+  }
+
   int i = poly_deg*10 + test;
   switch(i) {
-  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
+  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-  case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
+  case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
   case 64: *hdg = new HDGWrapper(HDGTimoWave<6,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,

@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template <unsigned int dim, typename Scalar = double>
-using TB_Params = LocalSolver::TimoshenkoStiffness<dim, Scalar>;
+using TB_Params = TimoshenkoStiffness<dim, Scalar>;
 template<unsigned int poly_deg>
 using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
 template<unsigned int poly_deg>

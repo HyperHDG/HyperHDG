@@ -721,9 +721,16 @@ class TimoshenkoWave
     constexpr unsigned int n_pts    = Hypercube<hyEdge_dimT>::pow(sizeT);
     constexpr unsigned int n_fields = 6;  // n, m, u, r, v, s
 
-    input_array_t lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
-    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-      solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
+   // Read stored fields directly (edge-local frame).
+    // Order matches field index c: 0=n, 1=m, 2=u, 3=r, 4=v, 5=s.
+    const SmallVec<space_dim*n_shape_fct_, lSol_float_t>* old_fields[n_fields] = {
+      &hyper_edge.data.n_old,
+      &hyper_edge.data.m_old,
+      &hyper_edge.data.u_old,
+      &hyper_edge.data.r_old,
+      &hyper_edge.data.v_old,
+      &hyper_edge.data.s_old,
+    };
 
     SmallVec<n_shape_fct_, lSol_float_t> coeffs;
     SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
@@ -735,7 +742,7 @@ class TimoshenkoWave
     for (unsigned int c = 0; c < n_fields; ++c)
       for (unsigned int dim = 0; dim < space_dim; ++dim) {
         for (unsigned int i = 0; i < coeffs.size(); ++i)
-          coeffs[i] = coefficients[(c * space_dim + dim) * n_shape_fct_ + i];
+          coeffs[i] = (*old_fields[c])[dim * n_shape_fct_ + i];
         for (unsigned int pt = 0; pt < n_pts; ++pt)
           point_vals[c][dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
             coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper)
@@ -1164,13 +1171,15 @@ class TimoshenkoWave
   }
 
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT& make_initial_from_static(SmallMatT& lambda_values,
+  SmallMatT& make_initial_from_static(SmallMatT& lambda_values_in,
                           hyEdgeT& hyper_edge,
                           const lSol_float_t time = 0.) const
   {
     // HACK
     // solves static problem
     // with rhs from lambdas and global rhs but where we consider all dirichlet
+
+    auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     auto mat = assemble_loc_matrix_a(hyper_edge, time);
@@ -1200,13 +1209,13 @@ class TimoshenkoWave
     // from global
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int c = 0; c < space_dim; c++) {
-        rhs[(2 * space_dim + c)* n_shape_fct_ + i] =
+        rhs[(2 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>
           >(i, comps[c], hyper_edge.geometry, 0.);
 
-        rhs[(3 * space_dim + c)* n_shape_fct_ + i] =
+        rhs[(3 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
@@ -1247,7 +1256,9 @@ class TimoshenkoWave
 
     // rest is zero initialized
 
-    return lambda_values; // returns the input without changes
+    compute_fluxes(lambda_values, hyper_edge, time);
+
+    return lambda_values_in; // returns the input without changes
   }
 };  // end of class LengtheningBernoulliBendingWave
 
