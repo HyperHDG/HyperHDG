@@ -45,6 +45,66 @@ class Network:
     self.info = {"size": np.array([1.0, 1.0, 0.0])}
     self.edgeProps = None
 
+  def generate_honeycomb(self, nx, ny):
+    tprint(f"generating honeycomb graph {nx} x {ny}")
+    # Brick layout. Each hex row has 2 node-rows (top/bottom zigzag).
+    # Node-rows: 2*ny + 2 total (indexed 0..2*ny+1).
+    # Columns per node-row: 2*nx + 1.
+    n_cols = 2 * nx + 1
+    n_rows = 2 * ny + 2
+    s = 1.0 / (1.5 * nx + 0.5)            # hex side; bbox width = (3*nx+1)*s/2 = 1
+    dx = 0.5 * s
+    dy = 0.5 * np.sqrt(3.0) * s
+
+    jj, ii = np.meshgrid(np.arange(n_cols), np.arange(n_rows), indexing='xy')
+    # jj shape (n_rows, n_cols)? With indexing='xy' and args (cols, rows) -> shapes are (n_rows, n_cols). Use ij to be safe:
+    ii, jj = np.meshgrid(np.arange(n_rows), np.arange(n_cols), indexing='ij')
+
+    n_nodes = n_rows * n_cols
+    nodes = np.zeros((n_nodes, 3))
+    nodes[:, 0] = (jj * dx).ravel()
+    nodes[:, 1] = (ii * dy).ravel()
+
+    def idx(i, j):
+        return i * n_cols + j
+
+    # Horizontal edges: in node-row i, connect (i,j)--(i,j+1) only on "rail" columns.
+    # Rail pattern alternates by row parity to form the zigzag tops/bottoms of bricks.
+    # Even node-rows (i % 2 == 0): edges on j even -> j+1 (i.e., j=0,2,4,...)
+    # Odd  node-rows (i % 2 == 1): edges on j odd  -> j+1 (i.e., j=1,3,5,...)
+    h_src_list, h_dst_list = [], []
+    for i in range(n_rows):
+        j_start = 0 if i % 2 == 0 else 1
+        js = np.arange(j_start, n_cols - 1, 2)
+        h_src_list.append(idx(i, js))
+        h_dst_list.append(idx(i, js + 1))
+    h_src = np.concatenate(h_src_list)
+    h_dst = np.concatenate(h_dst_list)
+
+    # Vertical edges connect node-row i to i+1 at every other column,
+    # alternating by hex-row index k = i // ??? -- simplest: vertical edges exist
+    # between rows (2k+1) and (2k+2) at columns j with j % 2 == k % 2.
+    # (This gives one vertical per hex per row, properly staggered.)
+    v_src_list, v_dst_list = [], []
+    for k in range(ny):
+        i = 2 * k + 1
+        js = np.arange(k % 2, n_cols, 2)
+        v_src_list.append(idx(i, js))
+        v_dst_list.append(idx(i + 1, js))
+    v_src = np.concatenate(v_src_list)
+    v_dst = np.concatenate(v_dst_list)
+
+    edges = np.column_stack([
+        np.concatenate([h_src, v_src]),
+        np.concatenate([h_dst, v_dst]),
+    ]).astype(np.int64)
+
+    tprint("nodes", nodes.shape)
+    tprint("edges", edges.shape)
+    self.nodes = nodes
+    self.edges = edges
+    self.info = {"size": np.array([1.0, (n_rows - 1) * dy, 0.0])}
+    self.edgeProps = None
 
   def read_morgan(self, path):
     tprint("reading nodes")
