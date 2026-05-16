@@ -1623,7 +1623,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (hyper_edge.node_descriptor[face] & 63) {
+      if (hyper_edge.node_descriptor[face] & (1<<6)) continue;
+      if (hyper_edge.node_descriptor[face]) {
         // u
         auto integrals1 = integrate_bdr_phivecfunccomp_beam<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
