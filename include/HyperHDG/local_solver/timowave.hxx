@@ -567,10 +567,12 @@ class TimoshenkoWave
 
     SmallMatInT lambda_in = lambda_values_in;
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
+      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
       for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j) & (~(1<<6)))
+        if (hyper_edge.node_descriptor[i] & (1<<j))
           lambda_in[i][j] = 0.;
+    }
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
@@ -600,10 +602,12 @@ class TimoshenkoWave
 
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
+      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
       for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j) & (~(1<<6)))
+        if (hyper_edge.node_descriptor[i] & (1<<j))
           lambda_values_out[i][j] = 0.;
+    }
 
     return lambda_values_out;
   }
@@ -627,10 +631,12 @@ class TimoshenkoWave
 
     SmallMatInT lambda_in = lambda_values_in;
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
+      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
       for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j) & (~(1<<6)))
+        if (hyper_edge.node_descriptor[i] & (1<<j))
           lambda_in[i][j] = 0.;
+    }
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
@@ -643,10 +649,12 @@ class TimoshenkoWave
         lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
+      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
       for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j) & (~(1<<6)))
+        if (hyper_edge.node_descriptor[i] & (1<<j))
           lambda_values_out[i][j] = 0.;
+    }
 
     return lambda_values_out;
   }
@@ -1006,7 +1014,7 @@ class TimoshenkoWave
 
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
       for (unsigned int j = 0; j < 2*space_dim; ++j)
-        if (hyper_edge.node_descriptor[i] & (1<<j) & (~(1<<6)))
+        if (hyper_edge.node_descriptor[i] & (1<<j))
             lambda_values[i][j] = 0.;
 
     auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
@@ -1089,8 +1097,7 @@ class TimoshenkoWave
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
-        if (hyper_edge.node_descriptor[face] & (~(1<<6)))
-        {
+        if (hyper_edge.node_descriptor[face]) {
           // u
           auto integrals1 = integrate_bdr_phivecfunccomp_beam<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
@@ -1616,8 +1623,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      if (hyper_edge.node_descriptor[face] & (~(1<<7)))
-      {
+      if (hyper_edge.node_descriptor[face] & 63) {
         // u
         auto integrals1 = integrate_bdr_phivecfunccomp_beam<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
