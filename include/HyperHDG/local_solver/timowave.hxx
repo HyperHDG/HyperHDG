@@ -1263,6 +1263,38 @@ class TimoshenkoWave
 
     // rest is zero initialized
 
+    // at the static-only dirichlet nodes the trace lambda is zero
+    // at these dirichlet nodes, the trace lambda should be non zero for the wave problem,
+    // hence we need to project the static bulk solution to the static-only dirichlet
+    // trace lambda
+
+    // Project bulk u_old, r_old onto trace lambda on bit-6 faces,
+    // only in components where bit-j (j=0..2*space_dim-1) is unset.
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+    {
+      if (!(hyper_edge.node_descriptor[face] & (1u << 6))) continue;
+
+      for (unsigned int k = 0; k < n_shape_bdr_; ++k)
+      {
+        for (unsigned int d = 0; d < space_dim; ++d)
+        {
+            lSol_float_t num = 0;
+            for (unsigned int i = 0; i < n_shape_fct_; ++i)
+              num += integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                       i, k, face, hyper_edge.geometry)
+                     * hyper_edge.data.u_old[d * n_shape_fct_ + i];
+            lambda_values[face][k + d] = num;
+
+            num = 0;
+            for (unsigned int i = 0; i < n_shape_fct_; ++i)
+              num += integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                       i, k, face, hyper_edge.geometry)
+                     * hyper_edge.data.r_old[d * n_shape_fct_ + i];
+            lambda_values[face][k + space_dim + d] = num;
+        }
+      }
+    }
+
     compute_fluxes(lambda_values, hyper_edge, time);
 
     return lambda_values_in; // returns the input without changes
