@@ -47,63 +47,52 @@ class Network:
 
   def generate_honeycomb(self, nx, ny):
     tprint(f"generating honeycomb graph {nx} x {ny}")
-    # Brick layout. Each hex row has 2 node-rows (top/bottom zigzag).
-    # Node-rows: 2*ny + 2 total (indexed 0..2*ny+1).
-    # Columns per node-row: 2*nx + 1.
-    n_cols = 2 * nx + 1
-    n_rows = 2 * ny + 2
-    s = 1.0 / (1.5 * nx + 0.5)            # hex side; bbox width = (3*nx+1)*s/2 = 1
-    dx = 0.5 * s
-    dy = 0.5 * np.sqrt(3.0) * s
+    # Honeycomb as two interpenetrating triangular sublattices A, B.
+    # Lattice vectors:
+    a1 = np.array([1.5, 0.5 * np.sqrt(3.0)])
+    a2 = np.array([1.5, -0.5 * np.sqrt(3.0)])
+    # Basis: A at (0,0), B at (1,0)
+    # We'll index by (i, j) in [0, nx) x [0, ny), with two atoms each.
 
-    jj, ii = np.meshgrid(np.arange(n_cols), np.arange(n_rows), indexing='xy')
-    # jj shape (n_rows, n_cols)? With indexing='xy' and args (cols, rows) -> shapes are (n_rows, n_cols). Use ij to be safe:
-    ii, jj = np.meshgrid(np.arange(n_rows), np.arange(n_cols), indexing='ij')
+    # Build all A and B positions
+    ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    base = jj[..., None] * a1 + ii[..., None] * a2  # shape (ny, nx, 2)
+    A = base.reshape(-1, 2)
+    B = A + np.array([1.0, 0.0])
 
-    n_nodes = n_rows * n_cols
-    nodes = np.zeros((n_nodes, 3))
-    nodes[:, 0] = (jj * dx).ravel()
-    nodes[:, 1] = (ii * dy).ravel()
+    nodes2 = np.vstack([A, B])
+    n_per = nx * ny
+    # index: A(i,j) = i*nx + j ; B(i,j) = n_per + i*nx + j
+    def Aidx(i, j): return i * nx + j
+    def Bidx(i, j): return n_per + i * nx + j
 
-    def idx(i, j):
-        return i * n_cols + j
+    e = []
+    # Bond 1: A(i,j) -- B(i,j)  (always)
+    i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    e.append(np.stack([Aidx(i,j).ravel(), Bidx(i,j).ravel()], axis=1))
+    # Bond 2: B(i,j) -- A(i, j+1)   for j < nx-1
+    i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
+    e.append(np.stack([Bidx(i,j).ravel(), Aidx(i,j+1).ravel()], axis=1))
+    # Bond 3: B(i,j) -- A(i+1, j)   for i < ny-1
+    i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
+    e.append(np.stack([Bidx(i,j).ravel(), Aidx(i+1,j).ravel()], axis=1))
 
-    # Horizontal edges: in node-row i, connect (i,j)--(i,j+1) only on "rail" columns.
-    # Rail pattern alternates by row parity to form the zigzag tops/bottoms of bricks.
-    # Even node-rows (i % 2 == 0): edges on j even -> j+1 (i.e., j=0,2,4,...)
-    # Odd  node-rows (i % 2 == 1): edges on j odd  -> j+1 (i.e., j=1,3,5,...)
-    h_src_list, h_dst_list = [], []
-    for i in range(n_rows):
-        j_start = 0 if i % 2 == 0 else 1
-        js = np.arange(j_start, n_cols - 1, 2)
-        h_src_list.append(idx(i, js))
-        h_dst_list.append(idx(i, js + 1))
-    h_src = np.concatenate(h_src_list)
-    h_dst = np.concatenate(h_dst_list)
+    edges = np.vstack(e).astype(np.int64)
 
-    # Vertical edges connect node-row i to i+1 at every other column,
-    # alternating by hex-row index k = i // ??? -- simplest: vertical edges exist
-    # between rows (2k+1) and (2k+2) at columns j with j % 2 == k % 2.
-    # (This gives one vertical per hex per row, properly staggered.)
-    v_src_list, v_dst_list = [], []
-    for k in range(ny):
-        i = 2 * k + 1
-        js = np.arange(k % 2, n_cols, 2)
-        v_src_list.append(idx(i, js))
-        v_dst_list.append(idx(i + 1, js))
-    v_src = np.concatenate(v_src_list)
-    v_dst = np.concatenate(v_dst_list)
+    # rescale so x extent = 1
+    nodes2 -= nodes2.min(axis=0)
+    scale = 1.0 / nodes2[:, 0].max()
+    nodes2 *= scale
 
-    edges = np.column_stack([
-        np.concatenate([h_src, v_src]),
-        np.concatenate([h_dst, v_dst]),
-    ]).astype(np.int64)
+    nodes = np.zeros((nodes2.shape[0], 3))
+    nodes[:, :2] = nodes2
 
     tprint("nodes", nodes.shape)
     tprint("edges", edges.shape)
     self.nodes = nodes
     self.edges = edges
-    self.info = {"size": np.array([1.0, (n_rows - 1) * dy, 0.0])}
+    size = nodes.max(axis=0) - nodes.min(axis=0)
+    self.info = {"size": size}
     self.edgeProps = None
 
   def read_morgan(self, path):
@@ -404,6 +393,8 @@ if __name__ == "__main__":
   parser.add_argument("--min-comp-size", type=int, default=10)
   parser.add_argument("--grid", type=int, nargs="+", metavar="N",
     help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
+  parser.add_argument("--hex", type=int, nargs="+", metavar="N",
+    help="generate hexagonal honeycomb graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   args = parser.parse_args()
@@ -417,6 +408,14 @@ if __name__ == "__main__":
     else:
       parser.error("--grid takes 1 or 2 arguments")
     network.generate_grid(nx, ny)
+  elif args.hex is not None:
+    if len(args.hex) == 1:
+      nx = ny = args.hex[0]
+    elif len(args.hex) == 2:
+      nx, ny = args.hex
+    else:
+      parser.error("--hex takes 1 or 2 arguments")
+    network.generate_honeycomb(nx, ny)
   else:
     network.read_morgan(args.input)
     if args.clamp_xy is not None:
@@ -430,7 +429,7 @@ if __name__ == "__main__":
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
   network.compute_types(args.dirichlet_tol)
-  if args.grid is None:
+  if args.grid is None and args.hex is None:
     network.drop_floating_and_small_components(args.min_comp_size)
   network.write_h5(args.output)
   network.write_vtkhdf_view(args.output)
