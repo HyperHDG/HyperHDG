@@ -45,8 +45,8 @@ class Network:
     self.info = {"size": np.array([1.0, 1.0, 0.0])}
     self.edgeProps = None
 
-  def generate_honeycomb(self, nx, ny):
-    tprint(f"generating honeycomb graph {nx} x {ny}")
+  def generate_honeycomb(self, nx, ny, nz=1):
+    tprint(f"generating honeycomb graph {nx} x {ny} x {nz}")
     s3 = np.sqrt(3.0)
     basis = np.array([
         [0.0,  0.0     ],
@@ -56,54 +56,69 @@ class Network:
     ])
     a1 = np.array([3.0, 0.0])
     a2 = np.array([0.0, s3 ])
-
     ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
     origins = jj[..., None] * a1 + ii[..., None] * a2
     pts = origins[..., None, :] + basis[None, None, :, :]
     nodes2 = pts.reshape(-1, 2)
-
     def idx(i, j, k): return (i * nx + j) * 4 + k
-
     e = []
     i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
     e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
     e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
     e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
-
     i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
     e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
-
     i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
     e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
-
     i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
     e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
+    edges2d = np.vstack(e).astype(np.int64)
 
-    edges = np.vstack(e).astype(np.int64)
-
-    # Drop left-boundary atom-0 (column j=0) and right-boundary atom-3 (column j=nx-1):
-    # these are the only atoms that produce dangling horizontal stubs.
-    n_nodes = nodes2.shape[0]
-    keep = np.ones(n_nodes, dtype=bool)
+    # Drop left-boundary atom-0 and right-boundary atom-3 stubs
+    n2d = nodes2.shape[0]
+    keep = np.ones(n2d, dtype=bool)
     i_all = np.arange(ny)
-    keep[(i_all * nx + 0) * 4 + 0] = False           # atom 0 of column 0
-    keep[(i_all * nx + (nx-1)) * 4 + 3] = False      # atom 3 of last column
-
-    # Drop edges touching removed nodes, then remap node indices
-    edge_keep = keep[edges[:,0]] & keep[edges[:,1]]
-    edges = edges[edge_keep]
-
-    remap = np.full(n_nodes, -1, dtype=edges.dtype)
+    keep[(i_all * nx + 0) * 4 + 0] = False
+    keep[(i_all * nx + (nx-1)) * 4 + 3] = False
+    edge_keep = keep[edges2d[:,0]] & keep[edges2d[:,1]]
+    edges2d = edges2d[edge_keep]
+    remap = np.full(n2d, -1, dtype=edges2d.dtype)
     remap[keep] = np.arange(keep.sum())
-    edges = remap[edges]
+    edges2d = remap[edges2d]
     nodes2 = nodes2[keep]
 
+    # Rescale 2D so x extent = 1
     nodes2 -= nodes2.min(axis=0)
     scale = 1.0 / nodes2[:, 0].max()
     nodes2 *= scale
 
-    nodes = np.zeros((nodes2.shape[0], 3))
-    nodes[:, :2] = nodes2
+    # Layer spacing: typical bond length in-plane after scaling.
+    # All in-plane edges have length 1*scale (= s in original units), so dz = scale.
+    dz = scale
+
+    n_per_layer = nodes2.shape[0]
+    n_nodes = n_per_layer * nz
+    nodes = np.zeros((n_nodes, 3))
+    layer_ids = np.arange(nz)
+    # tile xy across layers
+    nodes[:, :2] = np.tile(nodes2, (nz, 1))
+    nodes[:, 2]  = np.repeat(layer_ids * dz, n_per_layer)
+
+    # In-plane edges, replicated per layer with offset
+    offsets = (np.arange(nz) * n_per_layer)[:, None, None]   # (nz,1,1)
+    in_plane = edges2d[None, :, :] + offsets                 # (nz, n_e2d, 2)
+    in_plane = in_plane.reshape(-1, 2)
+
+    # Vertical edges between consecutive layers
+    base = np.arange(n_per_layer)
+    if nz > 1:
+      base = np.arange(n_per_layer)
+      v_src = np.concatenate([base + k*n_per_layer     for k in range(nz-1)])
+      v_dst = np.concatenate([base + (k+1)*n_per_layer for k in range(nz-1)])
+      vert = np.column_stack([v_src, v_dst])
+    else:
+      vert = np.empty((0, 2), dtype=np.int64)
+    edges = np.vstack([in_plane, vert]).astype(np.int64)
 
     tprint("nodes", nodes.shape)
     tprint("edges", edges.shape)
@@ -429,11 +444,15 @@ if __name__ == "__main__":
   elif args.hex is not None:
     if len(args.hex) == 1:
       nx = ny = args.hex[0]
+      nz = 1
     elif len(args.hex) == 2:
       nx, ny = args.hex
+      nz = 1
+    elif len(args.hex) == 3:
+      nx, ny, nz = args.hex
     else:
       parser.error("--hex takes 1 or 2 arguments")
-    network.generate_honeycomb(nx, ny)
+    network.generate_honeycomb(nx, ny, nz)
   else:
     network.read_morgan(args.input)
     if args.clamp_xy is not None:
