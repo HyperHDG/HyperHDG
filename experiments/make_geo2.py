@@ -47,35 +47,56 @@ class Network:
 
   def generate_honeycomb(self, nx, ny):
     tprint(f"generating honeycomb graph {nx} x {ny}")
-    # Honeycomb as two interpenetrating triangular sublattices A, B.
-    # Lattice vectors:
-    a1 = np.array([1.5, 0.5 * np.sqrt(3.0)])
-    a2 = np.array([1.5, -0.5 * np.sqrt(3.0)])
-    # Basis: A at (0,0), B at (1,0)
-    # We'll index by (i, j) in [0, nx) x [0, ny), with two atoms each.
+    # Orthogonal unit cell with 4 atoms, side length 1 (rescaled later).
+    # Cell vectors: a1 = (3, 0), a2 = (0, sqrt(3))
+    # Atoms in cell:
+    #   0: (0,        0)
+    #   1: (1,        0)
+    #   2: (1.5,  s3/2)
+    #   3: (2.5,  s3/2)
+    s3 = np.sqrt(3.0)
+    basis = np.array([
+        [0.0,  0.0     ],
+        [1.0,  0.0     ],
+        [1.5,  0.5*s3  ],
+        [2.5,  0.5*s3  ],
+    ])
+    a1 = np.array([3.0, 0.0   ])
+    a2 = np.array([0.0, s3    ])
 
-    # Build all A and B positions
     ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    base = jj[..., None] * a1 + ii[..., None] * a2  # shape (ny, nx, 2)
-    A = base.reshape(-1, 2)
-    B = A + np.array([1.0, 0.0])
+    origins = jj[..., None] * a1 + ii[..., None] * a2          # (ny, nx, 2)
+    pts = origins[..., None, :] + basis[None, None, :, :]      # (ny, nx, 4, 2)
+    nodes2 = pts.reshape(-1, 2)
 
-    nodes2 = np.vstack([A, B])
-    n_per = nx * ny
-    # index: A(i,j) = i*nx + j ; B(i,j) = n_per + i*nx + j
-    def Aidx(i, j): return i * nx + j
-    def Bidx(i, j): return n_per + i * nx + j
+    n_cells = nx * ny
+    def idx(i, j, k):  # cell (i,j), atom k
+        return (i * nx + j) * 4 + k
 
     e = []
-    # Bond 1: A(i,j) -- B(i,j)  (always)
+    # Intra-cell bonds (always present):
+    #   0--1, 1--2, 2--3
     i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    e.append(np.stack([Aidx(i,j).ravel(), Bidx(i,j).ravel()], axis=1))
-    # Bond 2: B(i,j) -- A(i, j+1)   for j < nx-1
+    e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
+    e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
+    e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
+
+    # Inter-cell horizontal: atom 3 of (i,j) -- atom 0 of (i, j+1)
     i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
-    e.append(np.stack([Bidx(i,j).ravel(), Aidx(i,j+1).ravel()], axis=1))
-    # Bond 3: B(i,j) -- A(i+1, j)   for i < ny-1
+    e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
+
+    # Inter-cell vertical: atom 1 of (i,j) -- atom 2 of (i-1, j) (offset by -a2)
+    # i.e., atom 2 of (i, j) -- atom 1 of (i+1, j)
     i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
-    e.append(np.stack([Bidx(i,j).ravel(), Aidx(i+1,j).ravel()], axis=1))
+    e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
+    # Also: atom 0 of (i,j) -- atom 3 of (i-1, j-1)? No, check geometry.
+    # Atom 0 at (0,0) has neighbors at (1,0) [intra 0-1], (-0.5, s3/2), (-0.5, -s3/2).
+    # (-0.5, s3/2) from (0,0) in cell (i,j) lands at (-0.5, s3/2), which is
+    #   atom 3 of cell (i, j-1): (2.5, s3/2) + (-3, 0) = (-0.5, s3/2). Already covered.
+    # (-0.5, -s3/2) from (0,0) lands at (-0.5, -s3/2) = atom 3 of (i-1, j-1):
+    #   (2.5, s3/2) + (-3, -s3) = (-0.5, -s3/2). NEW bond.
+    i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
+    e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
 
     edges = np.vstack(e).astype(np.int64)
 
