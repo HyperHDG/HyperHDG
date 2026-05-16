@@ -47,13 +47,6 @@ class Network:
 
   def generate_honeycomb(self, nx, ny):
     tprint(f"generating honeycomb graph {nx} x {ny}")
-    # Orthogonal unit cell with 4 atoms, side length 1 (rescaled later).
-    # Cell vectors: a1 = (3, 0), a2 = (0, sqrt(3))
-    # Atoms in cell:
-    #   0: (0,        0)
-    #   1: (1,        0)
-    #   2: (1.5,  s3/2)
-    #   3: (2.5,  s3/2)
     s3 = np.sqrt(3.0)
     basis = np.array([
         [0.0,  0.0     ],
@@ -61,46 +54,50 @@ class Network:
         [1.5,  0.5*s3  ],
         [2.5,  0.5*s3  ],
     ])
-    a1 = np.array([3.0, 0.0   ])
-    a2 = np.array([0.0, s3    ])
+    a1 = np.array([3.0, 0.0])
+    a2 = np.array([0.0, s3 ])
 
     ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    origins = jj[..., None] * a1 + ii[..., None] * a2          # (ny, nx, 2)
-    pts = origins[..., None, :] + basis[None, None, :, :]      # (ny, nx, 4, 2)
+    origins = jj[..., None] * a1 + ii[..., None] * a2
+    pts = origins[..., None, :] + basis[None, None, :, :]
     nodes2 = pts.reshape(-1, 2)
 
-    n_cells = nx * ny
-    def idx(i, j, k):  # cell (i,j), atom k
-        return (i * nx + j) * 4 + k
+    def idx(i, j, k): return (i * nx + j) * 4 + k
 
     e = []
-    # Intra-cell bonds (always present):
-    #   0--1, 1--2, 2--3
     i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
     e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
     e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
     e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
 
-    # Inter-cell horizontal: atom 3 of (i,j) -- atom 0 of (i, j+1)
     i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
     e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
 
-    # Inter-cell vertical: atom 1 of (i,j) -- atom 2 of (i-1, j) (offset by -a2)
-    # i.e., atom 2 of (i, j) -- atom 1 of (i+1, j)
     i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
     e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
-    # Also: atom 0 of (i,j) -- atom 3 of (i-1, j-1)? No, check geometry.
-    # Atom 0 at (0,0) has neighbors at (1,0) [intra 0-1], (-0.5, s3/2), (-0.5, -s3/2).
-    # (-0.5, s3/2) from (0,0) in cell (i,j) lands at (-0.5, s3/2), which is
-    #   atom 3 of cell (i, j-1): (2.5, s3/2) + (-3, 0) = (-0.5, s3/2). Already covered.
-    # (-0.5, -s3/2) from (0,0) lands at (-0.5, -s3/2) = atom 3 of (i-1, j-1):
-    #   (2.5, s3/2) + (-3, -s3) = (-0.5, -s3/2). NEW bond.
+
     i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
     e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
 
     edges = np.vstack(e).astype(np.int64)
 
-    # rescale so x extent = 1
+    # Drop left-boundary atom-0 (column j=0) and right-boundary atom-3 (column j=nx-1):
+    # these are the only atoms that produce dangling horizontal stubs.
+    n_nodes = nodes2.shape[0]
+    keep = np.ones(n_nodes, dtype=bool)
+    i_all = np.arange(ny)
+    keep[(i_all * nx + 0) * 4 + 0] = False           # atom 0 of column 0
+    keep[(i_all * nx + (nx-1)) * 4 + 3] = False      # atom 3 of last column
+
+    # Drop edges touching removed nodes, then remap node indices
+    edge_keep = keep[edges[:,0]] & keep[edges[:,1]]
+    edges = edges[edge_keep]
+
+    remap = np.full(n_nodes, -1, dtype=edges.dtype)
+    remap[keep] = np.arange(keep.sum())
+    edges = remap[edges]
+    nodes2 = nodes2[keep]
+
     nodes2 -= nodes2.min(axis=0)
     scale = 1.0 / nodes2[:, 0].max()
     nodes2 *= scale
