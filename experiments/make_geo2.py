@@ -15,8 +15,8 @@ def tprint(*args, **kwargs):
 class Network:
   def generate_grid(self, nx, ny):
     tprint(f"generating grid graph {nx} x {ny} on unit square")
-    h_x = 1.0 / (nx - 1)
-    h_y = 1.0 / (ny - 1)
+    h_x = 1.0 / (nx - 1) if nx > 1 else 0.0
+    h_y = 1.0 / (ny - 1) if ny > 1 else 0.0
 
     n_nodes = nx * ny
     nodes = np.zeros((n_nodes, 3))
