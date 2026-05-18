@@ -63,49 +63,6 @@ class Warp:
     pipe.UpdatePipeline()
     return pipe
 
-class Glyphs:
-  def __init__(self, components=(9, 10, 11), scale=1.0, source_array="values",
-               mode="All Points", stride=1, color="yellow", offset_z=0):
-    self.components = components
-    self.scale = scale
-    self.source_array = source_array
-    self.mode = mode      # "All Points" or "Every Nth Point"
-    self.stride = stride
-    self.color = color
-    self.offset_z = offset_z
-
-  def apply(self, pipe, rview):
-    if find_array(pipe, self.source_array) != "POINTS":
-      print(f"warning: Glyphs: '{self.source_array}' not found, skipping",
-            file=sys.stderr)
-      return pipe
-    cx, cy, cz = self.components
-    calc = pv.Calculator(Input=pipe)
-    calc.AttributeType = "Point Data"
-    calc.ResultArrayName = "rotation"
-    calc.Function = (f"{self.source_array}_{cx}*iHat + "
-                     f"{self.source_array}_{cy}*jHat + "
-                     f"{self.source_array}_{cz}*kHat")
-    calc.UpdatePipeline()
-    off = pv.Calculator(Input=calc)
-    off.AttributeType = "Point Data"
-    off.CoordinateResults = 1
-    off.Function = f"coords + {self.offset_z}*kHat"
-    off.UpdatePipeline()
-    glyph = pv.Glyph(Input=off, GlyphType="Arrow")
-    glyph.OrientationArray = ["POINTS", "rotation"]
-    glyph.ScaleArray = ["POINTS", "rotation"]
-    glyph.ScaleFactor = self.scale
-    glyph.GlyphMode = self.mode
-    if self.mode == "Every Nth Point":
-        glyph.Stride = self.stride
-    glyph.UpdatePipeline()
-    display = pv.Show(glyph, rview)
-    rgb = list(to_rgb(self.color))
-    display.AmbientColor = rgb
-    display.DiffuseColor = rgb
-    return pipe
-
 class Tubes:
   def __init__(self, radius=None, sides=4):
     self.radius = radius
@@ -214,7 +171,7 @@ class ArrayColor:
         ctf.InvertTransferFunction()
     display.SetScalarBarVisibility(pv.GetActiveView(), True)
 
-class CoarseGlyphs:
+class CoarseArrows:
   def __init__(self, disp_components=(6, 7, 8), rot_components=(9, 10, 11),
     source_array="values", resolution=(10, 10), plane="xy", kernel_radius=None,
     warp_scale=1.0, offset_z=0.0, scale=3.0, color="red"):
@@ -231,7 +188,7 @@ class CoarseGlyphs:
 
   def apply(self, pipe, rview):
     if find_array(pipe, self.source_array) != "POINTS":
-      print(f"warning: CoarseGlyphs: '{self.source_array}' not found, skipping",
+      print(f"warning: CoarseArrows: '{self.source_array}' not found, skipping",
         file=sys.stderr)
       return pipe
 
@@ -379,10 +336,10 @@ if __name__ == "__main__":
   p.add_argument("--color-categories", help="color categories e.g. '1-4,7'", default="")
   p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
-  p.add_argument("--glyphs", type=float, default=1.,
-                 help="place glyphs (components 6-8 of 'values')")
-  p.add_argument("--glyphs-offset", type=float, default=0.,
-                 help="glyph offset z")
+  p.add_argument("--arrows", type=float, default=1.,
+                 help="place arrows (components 6-8 of 'values')")
+  p.add_argument("--arrows-offset", type=float, default=0.,
+                 help="arrows offset z")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
@@ -406,8 +363,8 @@ if __name__ == "__main__":
   # ref must go before warp
   if args.ref:
     ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
-  if args.glyphs != 0.:
-    ops.append(CoarseGlyphs(scale=args.glyphs, warp_scale=args.warp, offset_z=args.glyphs_offset))
+  if args.arrows != 0.:
+    ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp, offset_z=args.arrows_offset))
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
   if args.tubes_radius != 0.:
