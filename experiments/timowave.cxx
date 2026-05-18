@@ -62,6 +62,21 @@ PetscErrorCode PetscHDGCreate(
   return 0;
 }
 
+PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
+  Mat AT, D;
+  PetscReal nrm, nrm_a;
+
+  PetscFunctionBeginUser;
+  MatTranspose(mat, MAT_INITIAL_MATRIX, &AT);
+  MatDuplicate(mat, MAT_COPY_VALUES, &D);
+  MatAXPY(D, -1.0, AT, DIFFERENT_NONZERO_PATTERN);
+  MatNorm(D, NORM_FROBENIUS, &nrm);
+  MatNorm(mat, NORM_FROBENIUS, &nrm_a);
+  PetscPrintf(PETSC_COMM_WORLD, "%s: %g\n", msg, (double)(nrm/nrm_a));
+  MatDestroy(&AT); MatDestroy(&D);
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv) {
     PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
     PetscInt nt = 1, nx = 1, poly_deg = 1;
@@ -213,6 +228,9 @@ int main(int argc, char **argv) {
       PetscCall(MatView(mat, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
     }
+
+
+    PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
