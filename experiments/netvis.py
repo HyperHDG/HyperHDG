@@ -65,13 +65,14 @@ class Warp:
 
 class Glyphs:
   def __init__(self, components=(9, 10, 11), scale=1.0, source_array="values",
-             mode="All Points", stride=1, color="yellow"):
+               mode="All Points", stride=1, color="yellow", offset_z=0):
     self.components = components
     self.scale = scale
     self.source_array = source_array
     self.mode = mode      # "All Points" or "Every Nth Point"
     self.stride = stride
     self.color = color
+    self.offset_z = offset_z
 
   def apply(self, pipe, rview):
     if find_array(pipe, self.source_array) != "POINTS":
@@ -86,7 +87,12 @@ class Glyphs:
                      f"{self.source_array}_{cy}*jHat + "
                      f"{self.source_array}_{cz}*kHat")
     calc.UpdatePipeline()
-    glyph = pv.Glyph(Input=calc, GlyphType="Arrow")
+    off = pv.Calculator(Input=calc)
+    off.AttributeType = "Point Data"
+    off.CoordinateResults = 1
+    off.Function = f"coords + {self.offset_z}*kHat"
+    off.UpdatePipeline()
+    glyph = pv.Glyph(Input=off, GlyphType="Arrow")
     glyph.OrientationArray = ["POINTS", "rotation"]
     glyph.ScaleArray = ["POINTS", "rotation"]
     glyph.ScaleFactor = self.scale
@@ -271,6 +277,8 @@ if __name__ == "__main__":
                  help="warp by displacement (components 6-8 of 'values')")
   p.add_argument("--glyphs", type=float, default=1.,
                  help="place glyphs (components 6-8 of 'values')")
+  p.add_argument("--glyphs-offset", type=float, default=0.,
+                 help="glyph offset z")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
@@ -297,7 +305,7 @@ if __name__ == "__main__":
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
   if args.glyphs != 0.:
-    ops.append(Glyphs(scale=args.glyphs))
+    ops.append(Glyphs(scale=args.glyphs, offset_z=args.glyphs_offset))
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
