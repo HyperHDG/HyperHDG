@@ -665,7 +665,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscMalloc1(vend-vstart, &vtxwgt));
   PetscCall(ISGetIndices(data->types_points, &types));
   for (PetscInt i = 0; i < vend-vstart; i++)
-    vtxwgt[i] = net2as_is_dirichlet(types[i], data->wave) ? 1 : 0;
+    vtxwgt[i] = net2as_is_dirichlet(types[i], data->wave) ? 0 : 1;
   PetscCall(ISRestoreIndices(data->types_points, &types));
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
