@@ -63,6 +63,43 @@ class Warp:
     pipe.UpdatePipeline()
     return pipe
 
+class Glyphs:
+  def __init__(self, components=(9, 10, 11), scale=1.0, source_array="values",
+             mode="All Points", stride=1, color="yellow"):
+    self.components = components
+    self.scale = scale
+    self.source_array = source_array
+    self.mode = mode      # "All Points" or "Every Nth Point"
+    self.stride = stride
+    self.color = color
+
+  def apply(self, pipe, rview):
+    if find_array(pipe, self.source_array) != "POINTS":
+      print(f"warning: Glyphs: '{self.source_array}' not found, skipping",
+            file=sys.stderr)
+      return pipe
+    cx, cy, cz = self.components
+    calc = pv.Calculator(Input=pipe)
+    calc.AttributeType = "Point Data"
+    calc.ResultArrayName = "rotation"
+    calc.Function = (f"{self.source_array}_{cx}*iHat + "
+                     f"{self.source_array}_{cy}*jHat + "
+                     f"{self.source_array}_{cz}*kHat")
+    calc.UpdatePipeline()
+    glyph = pv.Glyph(Input=calc, GlyphType="Arrow")
+    glyph.OrientationArray = ["POINTS", "rotation"]
+    glyph.ScaleArray = ["POINTS", "rotation"]
+    glyph.ScaleFactor = self.scale
+    glyph.GlyphMode = self.mode
+    if self.mode == "Every Nth Point":
+        glyph.Stride = self.stride
+    glyph.UpdatePipeline()
+    display = pv.Show(glyph, rview)
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
+    return pipe
+
 class Tubes:
   def __init__(self, radius=None, sides=4):
     self.radius = radius
@@ -232,6 +269,8 @@ if __name__ == "__main__":
   p.add_argument("--color-categories", help="color categories e.g. '1-4,7'", default="")
   p.add_argument("--warp", type=float, default=1.,
                  help="warp by displacement (components 6-8 of 'values')")
+  p.add_argument("--glyphs", type=float, default=1.,
+                 help="place glyphs (components 6-8 of 'values')")
   p.add_argument("--view", choices=list(View.VIEWS), default="top")
   p.add_argument("--resolution", default="1000x1000")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
@@ -257,6 +296,8 @@ if __name__ == "__main__":
     ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
+  if args.glyphs != 0.:
+    ops.append(Glyphs(scale=args.glyphs))
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
