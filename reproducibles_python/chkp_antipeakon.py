@@ -26,9 +26,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 2.4005
-  goal_time   = 2.7005
-  time_steps  = 300
+  start_time  = 0.
+  goal_time   = 5.
+  time_steps  = 500
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -91,7 +91,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       if np.linalg.norm(rhs) < tol:  return x
     raise ValueError("Frozen Newton failed")
 
-  def fallback_newton(x, time, tol=1e-10, alpha=0.1, beta=0.5):
+  def fallback_newton(x, time, tol=1e-8, alpha=0., beta=0.5):
     A = ttf_mat(x, time)
     A, keep_cols, keep_rows = remove_zero_rows_and_columns(A)
     assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
@@ -101,24 +101,24 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     rhs_len = len(rhs)
     rhs  = rhs[keep_rows]
     res_old = np.linalg.norm(rhs)
-    for _ in range(20):
-      step, _ = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
+    for _ in range(50):
+      step, info = sp.linalg.gmres(A, rhs, M=M, atol=1e-10, rtol=1e-10)
+      print(res_old, info, np.linalg.norm(A@step - rhs))
       x_cand = x - prolong(step, keep_cols, rhs_len)
       stepsize = 1.
       rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
       rhs = rhs[keep_rows]
       res = np.linalg.norm(rhs)
-      while stepsize > 0.01 and res > (1. - alpha * stepsize) * res_old:
+      while stepsize > 1e-9 and res > (1. - alpha * stepsize) * res_old:
         stepsize *= beta
-        x_cand = x - prolong(step, keep_cols, rhs_len)
+        x_cand = x - stepsize * prolong(step, keep_cols, rhs_len)
         rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
         rhs = rhs[keep_rows]
         res = np.linalg.norm(rhs)
-      if stepsize <= 0.0001:
+      if stepsize <= 1e-9:
         raise ValueError("Stepsize too small")
       x = x_cand
       res_old = res
-      print(res_old, stepsize)
       if res_old < tol:
         return A, M, keep_cols, keep_rows, x
       A = ttf_mat(x, time)
@@ -126,7 +126,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
       sA_iLU = sp.linalg.spilu(A)
       M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
-    raise ValueError("Fallback Newton failed")
+    #raise ValueError("Fallback Newton failed")
     return A, M, keep_cols, keep_rows, x
 
   def fallback_newton_step(x, time):
@@ -174,7 +174,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    if (time_step+1) % 100 == 0:
+    if (time_step+1) % 10 == 0:
       HDG_wrapper.plot_option( "fileName" , "antipeakon" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
@@ -185,7 +185,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if ((time_step+1) % 10 == 0 and abs(time - 2.5) < 0.5) or (time_step + 1) % 200 == 0 or time_step == 0:
+    if ((time_step+1) % 1 == 0 and abs(time - 2.5) < 0.5) or (time_step + 1) % 10 == 0 or time_step == 0:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
