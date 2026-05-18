@@ -83,6 +83,8 @@ PetscErrorCode MatCOO_View(MatCOO *coo, PetscViewer viewer) {
 struct PC_Net2AS {
   // configuration paramters
 
+  // if true, bit 6 means "ignore other dirichlet bits"
+  PetscBool wave;
   // number of subdomains in [x,y]
   PetscInt p[2];
   // number of local data structures (should be prod(p))
@@ -192,6 +194,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", data->domain, PATH_MAX, &set));
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
 
+  PetscCall(PetscOptionsBool("-net2as_wave", "treat bit 6 as static-only dirichlet (free in wave)", NULL, data->wave, &data->wave, &set));
   PetscCall(PetscOptionsBoundedInt("-net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
   if (set) data->p[0] = data->p[1] = p;
   PetscCall(PetscOptionsBoundedInt("-net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
@@ -205,6 +208,12 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscBool net2as_is_dirichlet(PetscInt type, PetscBool wave) {
+  if (type == 0) return PETSC_FALSE;
+  if (wave && (type & (1u << 6))) return PETSC_FALSE;  // static-only, free in wave
+  return PETSC_TRUE;
 }
 
 PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
@@ -245,7 +254,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(PetscMalloc1(is_local, &dir));
   PetscCall(ISGetIndices(data->types_points, &types));
   for (PetscInt i = 0; i < is_local; i++) {
-    if (types[i] != 0) dir[dsize++] = start+i;
+    if (net2as_is_dirichlet(types[i], data->wave)) dir[dsize++] = start+i;
   }
   PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->boundary));
   PetscCall(ISRestoreIndices(data->types_points, &types));
@@ -617,7 +626,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     // map to reference element
     PetscReal xx = (x-(i*h[0]+min[0]))/h[0], yy = (y-(j*h[1]+min[1]))/h[1];
 
-    if (i>data->p[0] || j>data->p[1] || types[n] != 0) continue;
+    if (i>data->p[0] || j>data->p[1] || net2as_is_dirichlet(types[n], data->wave)) continue;
     if (i>0 && j>0 && (1-xx)*(1-yy) > eps)
       PetscCall(MatCOO_Push(coo, vstart+n, (j-1)*data->p[0]+(i-1), (1-xx)*(1-yy)));
     if (i < data->p[0] && j > 0 && PetscAbs(xx*(1-yy)) > eps)
@@ -656,7 +665,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscMalloc1(vend-vstart, &vtxwgt));
   PetscCall(ISGetIndices(data->types_points, &types));
   for (PetscInt i = 0; i < vend-vstart; i++)
-    vtxwgt[i] = types[i] == 0 ? 1 : 0;
+    vtxwgt[i] = net2as_is_dirichlet(types[i], data->wave) ? 1 : 0;
   PetscCall(ISRestoreIndices(data->types_points, &types));
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
@@ -679,7 +688,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     "partition size '%d'", vend-vstart, lsz_part);
   PetscCall(MatCOO_Alloc(coo, lsz_part));
   for (PetscInt i = 0; i < lsz_part; i++)
-    if (types[i] == 0) PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
+    if (!net2as_is_dirichlet(types[i], data->wave))
+      PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
   PetscCall(ISRestoreIndices(partition, &inds));
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
