@@ -317,13 +317,13 @@ class Network:
     tprint(f"after pruning: {n_nodes} nodes, {n_edges} edges")
 
 
-  def write_h5(self, out):
+  def write_h5(self, out, no_props=False):
     tprint(f"writing h5 file to '{out}'")
     with h5py.File(out + ".geo.h5", "w") as f:
       g = f.create_group("domain")
       g.create_dataset("points", data=self.nodes, compression="gzip")
       g.create_dataset("edges", data=self.edges, compression="gzip")
-      if hasattr(self, "edgeProps") and self.edgeProps is not None:
+      if hasattr(self, "edgeProps") and self.edgeProps is not None and not no_props:
         g.create_dataset("properties", data=self.edgeProps, compression="gzip")
       g.create_dataset("types_points", data=self.types_points, compression="gzip")
       g.create_dataset("types_faces", data=self.types_faces, compression="gzip")
@@ -415,6 +415,15 @@ class Network:
         pd = root.create_group("PointData")
         pd["types_points"] = h5py.SoftLink("/domain/types_points")
 
+  def rescale_unit(self):
+    mins = self.nodes.min(axis=0)
+    maxs = self.nodes.max(axis=0)
+    dims = maxs - mins
+    scale = 1.0 / max(dims[0], dims[1])
+    tprint(f"rescaling by {scale:.3e} (bbox was {dims})")
+    self.nodes = (self.nodes - mins) * scale
+    self.info["size"] = (maxs - mins) * scale
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
   parser.add_argument("-i", "--input", help="input", default=".")
@@ -430,6 +439,10 @@ if __name__ == "__main__":
     help="generate hexagonal honeycomb graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
+  parser.add_argument("--no-props", action="store_true",
+                    help="do not write per-edge properties to h5")
+  parser.add_argument("--rescale", action="store_true",
+                    help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
   args = parser.parse_args()
 
   network = Network()
@@ -465,8 +478,10 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
+  if args.rescale:
+    network.rescale_unit()
   network.compute_types(args.dirichlet_tol)
   if args.grid is None and args.hex is None:
     network.drop_floating_and_small_components(args.min_comp_size)
-  network.write_h5(args.output)
+  network.write_h5(args.output, no_props=args.no_props)
   network.write_vtkhdf_view(args.output)
