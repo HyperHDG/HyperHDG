@@ -215,15 +215,17 @@ class ArrayColor:
     display.SetScalarBarVisibility(pv.GetActiveView(), True)
 
 class CoarseGlyphs:
-  def __init__(self, components=(9, 10, 11), source_array="values",
-             resolution=(10, 10), plane="xy", plane_offset=None,
-             kernel_radius=None, scale=1.0, color="cyan"):
-    self.components = components
+  def __init__(self, disp_components=(6, 7, 8), rot_components=(9, 10, 11),
+    source_array="values", resolution=(10, 10), plane="xy", kernel_radius=None,
+    warp_scale=1.0, offset_z=0.0, scale=3.0, color="red"):
+    self.disp_components = disp_components
+    self.rot_components = rot_components
     self.source_array = source_array
     self.resolution = resolution       # 2D: (n1, n2) in-plane
     self.plane = plane                 # "xy", "xz", "yz"
-    self.plane_offset = plane_offset   # coordinate on the flat axis; None -> midplane
     self.kernel_radius = kernel_radius # None -> auto from grid spacing
+    self.warp_scale = warp_scale     # match the main Warp scale
+    self.offset_z = offset_z         # fixed lift after warping
     self.scale = scale
     self.color = color
 
@@ -233,54 +235,78 @@ class CoarseGlyphs:
         file=sys.stderr)
       return pipe
 
-    cx, cy, cz = self.components
+    # build both vector fields on the (reference) input
+    dx_, dy_, dz_ = self.disp_components
+    rx, ry, rz = self.rot_components
     calc = pv.Calculator(Input=pipe)
     calc.AttributeType = "Point Data"
     calc.ResultArrayName = "rotation"
-    calc.Function = (f"{self.source_array}_{cx}*iHat + "
-                     f"{self.source_array}_{cy}*jHat + "
-                     f"{self.source_array}_{cz}*kHat")
+    calc.Function = (f"{self.source_array}_{rx}*iHat + "
+                     f"{self.source_array}_{ry}*jHat + "
+                     f"{self.source_array}_{rz}*kHat")
     calc.UpdatePipeline()
 
-    # bounds of the fiber network
-    xmin, xmax, ymin, ymax, zmin, zmax = calc.GetDataInformation().GetBounds()
+    calc2 = pv.Calculator(Input=calc)
+    calc2.AttributeType = "Point Data"
+    calc2.ResultArrayName = "displacement"
+    calc2.Function = (f"{self.source_array}_{dx_}*iHat + "
+                      f"{self.source_array}_{dy_}*jHat + "
+                      f"{self.source_array}_{dz_}*kHat")
+    calc2.UpdatePipeline()
 
+    # reference bounds (un-warped)
+    xmin, xmax, ymin, ymax, zmin, zmax = calc2.GetDataInformation().GetBounds()
     n1, n2 = self.resolution
     if self.plane == "xy":
-      z = self.plane_offset if self.plane_offset is not None else 0.5*(zmin+zmax)
+      z = 0.5*(zmin+zmax)
       dims = [n1, n2, 1]
       bounds = [xmin, xmax, ymin, ymax, z, z]
-      dx = max((xmax-xmin)/max(n1-1,1), (ymax-ymin)/max(n2-1,1))
+      ds = max((xmax-xmin)/max(n1-1,1), (ymax-ymin)/max(n2-1,1))
     elif self.plane == "xz":
-      y = self.plane_offset if self.plane_offset is not None else 0.5*(ymin+ymax)
+      y = 0.5*(ymin+ymax)
       dims = [n1, 1, n2]
       bounds = [xmin, xmax, y, y, zmin, zmax]
-      dx = max((xmax-xmin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = max((xmax-xmin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
     elif self.plane == "yz":
-      x = self.plane_offset if self.plane_offset is not None else 0.5*(xmin+xmax)
+      x = 0.5*(xmin+xmax)
       dims = [1, n1, n2]
       bounds = [x, x, ymin, ymax, zmin, zmax]
-      dx = max((ymax-ymin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = max((ymax-ymin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
     else:
       raise ValueError(f"unknown plane: {self.plane}")
 
-    # grid as a geometry-only source
-    grid = pv.ResampleToImage(Input=calc)
+    grid = pv.ResampleToImage(Input=calc2)
     grid.UseInputBounds = 0
     grid.SamplingDimensions = dims
     grid.SamplingBounds = bounds
     grid.UpdatePipeline()
 
-    # kernel-weighted average of nearby fiber points
-    interp = pv.PointVolumeInterpolator(Input=calc, Source=grid)
+    # interpolate rotation AND displacement onto the grid
+    interp = pv.PointVolumeInterpolator(Input=calc2, Source=grid)
     interp.Kernel = "GaussianKernel"
     interp.Locator = "Static Point Locator"
-    radius = self.kernel_radius if self.kernel_radius is not None else 2*dx
+    radius = self.kernel_radius if self.kernel_radius is not None else 2*ds
     interp.Kernel.Radius = radius
-    # GaussianKernel also has a Sharpness; default ~2 is fine
     interp.UpdatePipeline()
 
-    glyph = pv.Glyph(Input=interp, GlyphType="Arrow")
+    # warp the grid by the interpolated displacement (matches main Warp)
+    warped = pv.WarpByVector(Input=interp)
+    warped.Vectors = ["POINTS", "displacement"]
+    warped.ScaleFactor = self.warp_scale
+    warped.UpdatePipeline()
+
+    # fixed vertical offset on top
+    if self.offset_z != 0.0:
+      off = pv.Calculator(Input=warped)
+      off.AttributeType = "Point Data"
+      off.CoordinateResults = 1
+      off.Function = f"coords + {self.offset_z}*kHat"
+      off.UpdatePipeline()
+      glyph_input = off
+    else:
+      glyph_input = warped
+
+    glyph = pv.Glyph(Input=glyph_input, GlyphType="Arrow")
     glyph.OrientationArray = ["POINTS", "rotation"]
     glyph.ScaleArray = ["POINTS", "rotation"]
     glyph.ScaleFactor = self.scale
@@ -292,7 +318,6 @@ class CoarseGlyphs:
     display.AmbientColor = rgb
     display.DiffuseColor = rgb
     return pipe
-
 
 # --- Runner ------------------------------------------------------------------
 
@@ -381,10 +406,10 @@ if __name__ == "__main__":
   # ref must go before warp
   if args.ref:
     ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
+  if args.glyphs != 0.:
+    ops.append(CoarseGlyphs(scale=args.glyphs, warp_scale=args.warp, offset_z=args.glyphs_offset))
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
-  if args.glyphs != 0.:
-    ops.append(CoarseGlyphs(scale=args.glyphs, plane_offset=args.glyphs_offset))
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
