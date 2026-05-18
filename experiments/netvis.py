@@ -214,6 +214,85 @@ class ArrayColor:
         ctf.InvertTransferFunction()
     display.SetScalarBarVisibility(pv.GetActiveView(), True)
 
+class CoarseGlyphs:
+  def __init__(self, components=(9, 10, 11), source_array="values",
+             resolution=(10, 10), plane="xy", plane_offset=None,
+             kernel_radius=None, scale=1.0, color="cyan"):
+    self.components = components
+    self.source_array = source_array
+    self.resolution = resolution       # 2D: (n1, n2) in-plane
+    self.plane = plane                 # "xy", "xz", "yz"
+    self.plane_offset = plane_offset   # coordinate on the flat axis; None -> midplane
+    self.kernel_radius = kernel_radius # None -> auto from grid spacing
+    self.scale = scale
+    self.color = color
+
+  def apply(self, pipe, rview):
+    if find_array(pipe, self.source_array) != "POINTS":
+      print(f"warning: CoarseGlyphs: '{self.source_array}' not found, skipping",
+        file=sys.stderr)
+      return pipe
+
+    cx, cy, cz = self.components
+    calc = pv.Calculator(Input=pipe)
+    calc.AttributeType = "Point Data"
+    calc.ResultArrayName = "rotation"
+    calc.Function = (f"{self.source_array}_{cx}*iHat + "
+                     f"{self.source_array}_{cy}*jHat + "
+                     f"{self.source_array}_{cz}*kHat")
+    calc.UpdatePipeline()
+
+    # bounds of the fiber network
+    xmin, xmax, ymin, ymax, zmin, zmax = calc.GetDataInformation().GetBounds()
+
+    n1, n2 = self.resolution
+    if self.plane == "xy":
+      z = self.plane_offset if self.plane_offset is not None else 0.5*(zmin+zmax)
+      dims = [n1, n2, 1]
+      bounds = [xmin, xmax, ymin, ymax, z, z]
+      dx = max((xmax-xmin)/max(n1-1,1), (ymax-ymin)/max(n2-1,1))
+    elif self.plane == "xz":
+      y = self.plane_offset if self.plane_offset is not None else 0.5*(ymin+ymax)
+      dims = [n1, 1, n2]
+      bounds = [xmin, xmax, y, y, zmin, zmax]
+      dx = max((xmax-xmin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+    elif self.plane == "yz":
+      x = self.plane_offset if self.plane_offset is not None else 0.5*(xmin+xmax)
+      dims = [1, n1, n2]
+      bounds = [x, x, ymin, ymax, zmin, zmax]
+      dx = max((ymax-ymin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+    else:
+      raise ValueError(f"unknown plane: {self.plane}")
+
+    # grid as a geometry-only source
+    grid = pv.ResampleToImage(Input=calc)
+    grid.UseInputBounds = 0
+    grid.SamplingDimensions = dims
+    grid.SamplingBounds = bounds
+    grid.UpdatePipeline()
+
+    # kernel-weighted average of nearby fiber points
+    interp = pv.PointVolumeInterpolator(Input=calc, Source=grid)
+    interp.Kernel = "GaussianKernel"
+    interp.Locator = "Static Point Locator"
+    radius = self.kernel_radius if self.kernel_radius is not None else 2*dx
+    interp.Kernel.Radius = radius
+    # GaussianKernel also has a Sharpness; default ~2 is fine
+    interp.UpdatePipeline()
+
+    glyph = pv.Glyph(Input=interp, GlyphType="Arrow")
+    glyph.OrientationArray = ["POINTS", "rotation"]
+    glyph.ScaleArray = ["POINTS", "rotation"]
+    glyph.ScaleFactor = self.scale
+    glyph.GlyphMode = "All Points"
+    glyph.UpdatePipeline()
+
+    display = pv.Show(glyph, rview)
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
+    return pipe
+
 
 # --- Runner ------------------------------------------------------------------
 
@@ -305,7 +384,7 @@ if __name__ == "__main__":
   if args.warp != 0.:
     ops.append(Warp(scale=args.warp))
   if args.glyphs != 0.:
-    ops.append(Glyphs(scale=args.glyphs, offset_z=args.glyphs_offset))
+    ops.append(CoarseGlyphs(scale=args.glyphs, plane_offset=args.glyphs_offset))
   if args.tubes_radius != 0.:
     ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
   if args.color_by:
