@@ -5,6 +5,7 @@ import os
 import paraview.simple as pv
 from matplotlib.colors import to_rgb
 from colorsys import hsv_to_rgb
+import math
 
 class View:
   VIEWS = {
@@ -266,7 +267,7 @@ class CoarseArrows:
     glyph = pv.Glyph(Input=glyph_input, GlyphType="Arrow")
     glyph.OrientationArray = ["POINTS", "rotation"]
     glyph.ScaleArray = ["POINTS", "rotation"]
-    glyph.ScaleFactor = self.scale
+    glyph.ScaleFactor = ds / (2. * math.pi) * self.scale
     glyph.GlyphMode = "All Points"
     glyph.UpdatePipeline()
 
