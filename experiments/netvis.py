@@ -325,6 +325,49 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
       pv.SaveScreenshot(output, rview, TransparentBackground=1)
 
 
+def netvis_overlay(path, ops_frames, times, bg="black", view=None,
+                   resolution=(1000, 1000), axis=True, output=None, show=True,
+                   reference=None):
+  if not os.path.isfile(path):
+    sys.exit(f"error: file not found: {path}")
+
+  reader = pv.VTKHDFReader(FileName=[path])
+  available = list(reader.TimestepValues)
+  rview = pv.GetActiveViewOrCreate("RenderView")
+
+  for t, ops in zip(times, ops_frames):
+    t_snap = min(available, key=lambda x: abs(x - t)) if available else t
+    idx = available.index(t_snap)
+
+    extract = pv.ExtractTimeSteps(Input=reader)
+    extract.TimeStepIndices = [idx]
+    extract.UpdatePipeline()
+
+    # shift this branch's single timestep to t=0
+    shift = pv.TemporalShiftScale(Input=extract)
+    shift.PreShift = -t_snap
+    shift.UpdatePipeline()
+
+    pipe = pv.ExtractSurface(Input=shift)
+    pipe.UpdatePipeline()
+    for op in ops:
+        pipe = op.apply(pipe, rview)
+
+  rview.ViewTime = 0.0
+  rview.ViewSize = list(resolution)
+  rview.Background = list(to_rgb(bg))
+  rview.UseColorPaletteForBackground = 0
+  rview.OrientationAxesVisibility = int(axis)
+
+  view.orient(rview)
+  pv.ResetCamera()
+  pv.Render()
+
+  if show:
+    pv.Interact()
+  if output:
+    pv.SaveScreenshot(output, rview, TransparentBackground=1)
+
 # --- CLI ---------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -353,6 +396,10 @@ if __name__ == "__main__":
   p.add_argument("--ref-opacity", type=float, default=1.)
   p.add_argument("--fps", type=int, default=30, help="target fps")
   p.add_argument("--duration", type=float, default=5, help="target duration of animation")
+  p.add_argument("--frames", default=None,
+               help="overlay mode: comma-separated times, e.g. '0.0,0.3,0.6'")
+  p.add_argument("--frame-colors", default=None,
+               help="comma-separated colors, one per frame (default: cycle fg)")
 
   args = p.parse_args()
 
@@ -360,20 +407,38 @@ if __name__ == "__main__":
   resolution = tuple(map(int, args.resolution.split("x")))
   assert(len(resolution) == 2)
 
-  ops = []
-  # ref must go before warp
-  if args.ref:
-    ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
-  if args.arrows != 0.:
-    ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp, offset_z=args.arrows_offset))
-  if args.warp != 0.:
-    ops.append(Warp(scale=args.warp))
-  if args.tubes_radius != 0.:
-    ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
-  if args.color_by:
-    ops.append(ArrayColor(args.color_by, fg=args.fg, invert=args.color_invert, categories=args.color_categories))
-  else:
-    ops.append(SolidColor(args.fg))
+  def ops_factory(fg):
+    ops = []
+    # ref must go before warp
+    if args.ref:
+      ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
+    if args.arrows != 0.:
+      ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp, offset_z=args.arrows_offset))
+    if args.warp != 0.:
+      ops.append(Warp(scale=args.warp))
+    if args.tubes_radius != 0.:
+      ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
+    if args.color_by:
+      ops.append(ArrayColor(args.color_by, fg=fg, invert=args.color_invert, categories=args.color_categories))
+    else:
+      ops.append(SolidColor(fg))
+    return ops
 
-  netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
+  if args.frames:
+    times = [float(s) for s in args.frames.split(",")]
+    if args.frame_colors:
+      colors = args.frame_colors.split(",")
+      assert len(colors) == len(times), "need one color per frame"
+    else:
+      colors = [args.fg] * len(times)
+
+    ops = [ops_factory(fg) for fg in colors]
+
+    netvis_overlay(args.input, ops, times, bg=args.bg,
+                   view=View(args.view), axis=args.axis, resolution=resolution,
+                   output=args.output, show=args.show)
+  else:
+    ops = ops_factory(args.fg)
+
+    netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
          resolution=resolution, output=args.output, show=args.show, duration=args.duration, fps=args.fps)
