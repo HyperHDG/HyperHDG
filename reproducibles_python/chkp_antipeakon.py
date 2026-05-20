@@ -26,9 +26,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 0.
-  goal_time   = 5.
-  time_steps  = 500
+  start_time  = 2.0001
+  goal_time   = 3.0001
+  time_steps  = 1000
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -44,7 +44,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   const.geometry        = "File<2,2>"
   const.node_descriptor = "File<2,2>"
   const.local_solver    = "Chkp<" + str(2) + "," + str(poly_degree) + "," \
-    + str(3*poly_degree) + ",ChkpParametersAntipeakon,double>"
+    + str(3*poly_degree) + ",ChkpParametersAntipeakonManufactured,double>"
   const.cython_replacements = ["string", "string", \
     "double", "vector[double]"]
   const.include_files   = ["reproducibles_python/parameters/chkp.hxx"]
@@ -109,13 +109,13 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
       rhs = rhs[keep_rows]
       res = np.linalg.norm(rhs)
-      while stepsize > 1e-9 and res > (1. - alpha * stepsize) * res_old:
+      while stepsize > 1e-12 and res > (1. - alpha * stepsize) * res_old:
         stepsize *= beta
         x_cand = x - stepsize * prolong(step, keep_cols, rhs_len)
         rhs = np.array(HDG_wrapper.residual_flux(x_cand, time))
         rhs = rhs[keep_rows]
         res = np.linalg.norm(rhs)
-      if stepsize <= 1e-9:
+      if stepsize <= 1e-12:
         raise ValueError("Stepsize too small")
       x = x_cand
       res_old = res
@@ -175,7 +175,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
     if (time_step+1) % 10 == 0:
-      HDG_wrapper.plot_option( "fileName" , "antipeakon" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
+      HDG_wrapper.plot_option( "fileName" , "antipeakon_manufactured" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
       HDG_wrapper.plot_solution(vectorSolution, time)
