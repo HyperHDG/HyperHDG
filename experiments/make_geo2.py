@@ -128,7 +128,7 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
-  def read_morgan(self, path):
+  def read_morgan(self, path, rescale_props=None):
     tprint("reading nodes")
     nodes   = pandas.read_csv(path + "/nodes.csv")
     nodes   = nodes.to_numpy()[:,1:]
@@ -137,10 +137,14 @@ class Network:
     edges   = pandas.read_csv(path + '/edges.csv')
     edges   = edges.to_numpy()[:,1:]
 
-
     tprint("reading edgeProps")
     edgeProps   = pandas.read_csv(path + '/edgeProperties.csv')
     edgeProps   = edgeProps.to_numpy()[:,2:]
+
+    if rescale_props is not None:
+      n_props = edgeProps.shape[-1]
+      print(rescale_props)
+      edgeProps *= rescale_props
 
     tprint("nodes", nodes.shape)
     tprint("edges", edges.shape)
@@ -415,7 +419,7 @@ class Network:
         pd = root.create_group("PointData")
         pd["types_points"] = h5py.SoftLink("/domain/types_points")
 
-  def rescale_unit(self):
+  def rescale_bbox(self):
     mins = self.nodes.min(axis=0)
     maxs = self.nodes.max(axis=0)
     dims = maxs - mins
@@ -441,9 +445,14 @@ if __name__ == "__main__":
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   parser.add_argument("--no-props", action="store_true",
                     help="do not write per-edge properties to h5")
-  parser.add_argument("--rescale", action="store_true",
+  parser.add_argument("--rescale-bbox", action="store_true",
                     help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
+  parser.add_argument("--rescale-props", default=None,
+                    help="rescale network material properties, format '1,2,3,...'")
   args = parser.parse_args()
+
+  if args.rescale_props is not None:
+    rescale_props = np.array(list(map(float, args.rescale_props.split(","))))
 
   network = Network()
   if args.grid is not None:
@@ -467,7 +476,7 @@ if __name__ == "__main__":
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
   else:
-    network.read_morgan(args.input)
+    network.read_morgan(args.input, rescale_props=rescale_props)
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
         fx = fy = args.clamp_xy[0]
@@ -478,8 +487,8 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
-  if args.rescale:
-    network.rescale_unit()
+  if args.rescale_bbox:
+    network.rescale_bbox()
   network.compute_types(args.dirichlet_tol)
   if args.grid is None and args.hex is None:
     network.drop_floating_and_small_components(args.min_comp_size)

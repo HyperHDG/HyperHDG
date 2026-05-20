@@ -813,13 +813,6 @@ class TimoshenkoWave
     extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
                       extra_data[5] * scalar_product(outer2, normal2);
 
-    extra_coeffs[0] *= 1e4;
-    extra_coeffs[1] *= 1e4;
-    extra_coeffs[2] *= 1e4;
-    extra_coeffs[3] *= 1e12;
-    extra_coeffs[4] *= 1e12;
-    extra_coeffs[5] *= 1e12;
-
     for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
       extra_coeffs[i] = std::abs(extra_coeffs[i]);
 

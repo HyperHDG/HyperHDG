@@ -7,6 +7,7 @@ from matplotlib.colors import to_rgb
 from colorsys import hsv_to_rgb
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 class View:
   VIEWS = {
@@ -429,10 +430,11 @@ if __name__ == "__main__":
   if args.frames:
     times = [float(s) for s in args.frames.split(",")]
     if args.frame_colors:
-      colors = args.frame_colors.split(",")
-      assert len(colors) == len(times), "need one color per frame"
-    else:
-      colors = [args.fg] * len(times)
+      try:
+        cmap = plt.get_cmap(args.frame_colors)
+        colors = [cmap(i / max(len(times) - 1, 1)) for i in range(len(times))]
+      except ValueError:
+        colors = args.frame_colors.split(",")
 
     ops = [ops_factory(fg) for fg in colors]
 
