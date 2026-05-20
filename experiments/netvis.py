@@ -6,12 +6,14 @@ import paraview.simple as pv
 from matplotlib.colors import to_rgb
 from colorsys import hsv_to_rgb
 import math
+import numpy as np
 
 class View:
   VIEWS = {
     "top":    {"position": (0, 0, 1), "focal": (0, 0, 0), "up": (0, 1, 0)},
     "bottom": {"position": (0, 0,-1), "focal": (0, 0, 0), "up": (1, 0, 0)},
-    "side":   {"position": (0,-1, 0), "focal": (0, 0, 0), "up": (0, 0, 1)},
+    "pside":  {"position": (0,-1, 0), "focal": (0, 0, 0), "up": (0, 0, 1)},
+    "iside":  {"position": (-0.1128, 0.9824, 0.1486), "focal": (0, 0, 0), "up": (0, -0.1496, 0.9887)},
     "iso":    {"position": (1, 1, 1), "focal": (0, 0, 0), "up": (0, 0, 1)},
   }
 
@@ -442,3 +444,15 @@ if __name__ == "__main__":
 
     netvis(args.input, ops=ops, bg=args.bg, view=View(args.view), axis=args.axis,
          resolution=resolution, output=args.output, show=args.show, duration=args.duration, fps=args.fps)
+
+  cam = pv.GetActiveCamera()
+  pos   = np.array(cam.GetPosition())
+  focal = np.array(cam.GetFocalPoint())
+  up    = np.array(cam.GetViewUp())
+
+  rot   = pos - focal
+  rot  /= np.linalg.norm(rot)
+  up   /= np.linalg.norm(up)
+
+  print("view:")
+  print(f'"custom": {{"position": {tuple(rot.round(4).tolist())}, ' f'"focal": (0, 0, 0), "up": {tuple(up.round(4).tolist())}}},')
