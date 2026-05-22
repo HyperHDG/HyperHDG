@@ -649,10 +649,14 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   if (hyper_edge.geometry.has_extra_data())
   {
-    auto extra_data = hyper_edge.geometry.extra_data();
+    auto extra_data_ = hyper_edge.geometry.extra_data();
+    // (mass) -> need to ignore this
     // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
     // (n_11,n_12,n_13) : normal 1
     // (n_21,n_22,n_23) : normal 2
+    // (width1,width2)
+    // (fiber_id,fiber_edge_id)
+    lSol_float_t* extra_data = extra_data_.data() + 1; // ignore mass
     SmallVec<space_dim, lSol_float_t> normal1 =
       std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
     SmallVec<space_dim, lSol_float_t> normal2 =

@@ -139,7 +139,7 @@ class Network:
 
     tprint("reading edgeProps")
     edgeProps   = pandas.read_csv(path + '/edgeProperties.csv')
-    edgeProps   = edgeProps.to_numpy()[:,2:]
+    edgeProps   = edgeProps.to_numpy()[:,1:]
 
     if rescale_props is not None:
       n_props = edgeProps.shape[-1]
@@ -158,11 +158,7 @@ class Network:
 
     try:
       with open(path + '/units.txt') as f:
-        for unit, value in zip(
-            ["length", "time", "weight"],
-            f.readlines()
-        ):
-          info["unit_"+unit] = value.strip()
+        info["units"] = f.read()
     except FileNotFoundError:
       pass
 
@@ -244,7 +240,6 @@ class Network:
     tprint(f"after dedup: {n_edges} edges")
 
     assert(n_edges == n_edgeProps)
-    assert(edgeProps_dim == 12)
 
     self.nodes = nodes
     self.edges = edges
@@ -418,6 +413,10 @@ class Network:
       if "domain/types_points" in f:
         pd = root.create_group("PointData")
         pd["types_points"] = h5py.SoftLink("/domain/types_points")
+      if "domain/properties" in f:
+        cd = root.create_group("CellData")
+        cd["properties"] = h5py.SoftLink("/domain/properties")
+
 
   def rescale_bbox(self):
     mins = self.nodes.min(axis=0)
@@ -476,7 +475,7 @@ if __name__ == "__main__":
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
   else:
-    network.read_morgan(args.input, rescale_props=rescale_props)
+    network.read_morgan(args.input, rescale_props=args.rescale_props)
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
         fx = fy = args.clamp_xy[0]
