@@ -224,6 +224,18 @@ class Network:
       else:
         tprint(f"  {vec_name} length: ok (all unit)")
 
+    fiber_id = props[:, 15].astype(np.int64)
+    virtual = (fiber_id == -1)
+    real    = ~virtual
+
+    n_virt_zero_mass = (virtual & (props[:, 0] == 0)).sum()
+    n_real_zero_mass = (real    & (props[:, 0] == 0)).sum()
+    n_virt_total     = virtual.sum()
+    n_real_total     = real.sum()
+
+    tprint(f"virtual fibers (id=-1): {n_virt_total}, of which zero-mass: {n_virt_zero_mass}")
+    tprint(f"real fibers:            {n_real_total}, of which zero-mass: {n_real_zero_mass}")
+
     # orthogonality of n1 and n2 (cheap bonus check)
     dots = np.einsum('ij,ij->i', n1, n2)
     n_nonorth = (np.abs(dots) > 1e-6).sum()
