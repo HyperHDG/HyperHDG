@@ -172,6 +172,73 @@ class Network:
     self.edgeProps = edgeProps
     self.info = info
 
+  def verify_nonzero(self):
+    """Verify that material properties are nonzero where required.
+    Reports per-column zero/near-zero counts and degenerate normal vectors.
+    """
+    if self.edgeProps is None:
+      tprint("verify_nonzero: no edgeProps loaded, skipping")
+      return
+
+    eps = 1e-30
+    props = self.edgeProps
+    n = props.shape[0]
+    tprint(f"verify_nonzero: checking {n} fibers")
+
+    # column groups: (indices, label)
+    groups = [
+      ([0],              "mass"),
+      ([1, 2, 3],        "displacement stiffness (EA, kG_1A, kG_2A)"),
+      ([4, 5, 6],        "rotation stiffness (G_xI_x, E_1I_1, E_2I_2)"),
+      ([13, 14],         "widths (width1, width2)"),
+    ]
+
+    all_ok = True
+    for cols, label in groups:
+      for c in cols:
+        col = props[:, c]
+        n_zero  = (col == 0).sum()
+        n_small = ((np.abs(col) < eps) & (col != 0)).sum()
+        n_neg   = (col < 0).sum()
+        if n_zero or n_small or n_neg:
+          all_ok = False
+          tprint(f"  col {c:2d} ({label}): "
+                 f"zero={n_zero} subnormal={n_small} negative={n_neg} "
+                 f"min={col.min():.3e} max={col.max():.3e}")
+        else:
+          tprint(f"  col {c:2d} ({label}): ok "
+                 f"min={col.min():.3e} max={col.max():.3e}")
+
+    # normal vector lengths
+    n1 = props[:, 7:10]
+    n2 = props[:, 10:13]
+    len1 = np.linalg.norm(n1, axis=1)
+    len2 = np.linalg.norm(n2, axis=1)
+    for vec_name, lens in [("normal 1", len1), ("normal 2", len2)]:
+      n_zero  = (lens < eps).sum()
+      n_nonunit = (np.abs(lens - 1.0) > 1e-6).sum()
+      if n_zero or n_nonunit:
+        all_ok = False
+        tprint(f"  {vec_name} length: zero={n_zero} non-unit={n_nonunit} "
+               f"min={lens.min():.3e} max={lens.max():.3e}")
+      else:
+        tprint(f"  {vec_name} length: ok (all unit)")
+
+    # orthogonality of n1 and n2 (cheap bonus check)
+    dots = np.einsum('ij,ij->i', n1, n2)
+    n_nonorth = (np.abs(dots) > 1e-6).sum()
+    if n_nonorth:
+      all_ok = False
+      tprint(f"  normal1 · normal2: non-orthogonal pairs={n_nonorth} "
+               f"max|dot|={np.abs(dots).max():.3e}")
+    else:
+      tprint(f"  normal1 · normal2: ok (all orthogonal)")
+
+    if all_ok:
+      tprint("verify_nonzero: all checks passed")
+    else:
+      tprint("verify_nonzero: FAILED — see above")
+
 
   def node_edge_dedupe(self, merge_tol):
     nodes = self.nodes
@@ -476,6 +543,7 @@ if __name__ == "__main__":
     network.generate_honeycomb(nx, ny, nz)
   else:
     network.read_morgan(args.input, rescale_props=args.rescale_props)
+    network.verify_nonzero()
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
         fx = fy = args.clamp_xy[0]
