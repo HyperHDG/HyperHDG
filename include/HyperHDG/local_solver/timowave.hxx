@@ -703,6 +703,8 @@ class TimoshenkoWave
                                                                          hyper_edge.geometry, time);
     }
 
+    hy_check(std::isfinite(error), "error u_old" << u_old << " r_old " << r_old);
+
     return std::array<lSol_float_t, 1U>({error});
   }
 
@@ -789,32 +791,75 @@ class TimoshenkoWave
 
     if (!hyper_edge.geometry.has_extra_data()) return extra_coeffs;
 
+    // 17 quantities associated with each fiber
+    // column      header                  description
+    //  0          mass,                   mass
+    //  1, 2, 3    EA,kG_1A,kG_2A,         displacement stiffness
+    //  4, 5, 6    G_xI_x,E_1I_1,E_2I_2,   rotation stiffness
+    //  7, 8, 9    n_11,n_12,n_13,         normal 1
+    // 10,11,12    n_21,n_22,n_23,         normal 2
+    // 13,14       width1,width2,          widths in direction of normals
+    // 15,16       fiber_id,fiber_edge_id  indicates which fiber this beam is part of
+    //                                     -1 indicates no fiber, just virtual connection
+    // material coefficients are given in the tangent,normal1,normal2 basis
+    // so must be transformed into local basis chosen by HyperHDG, tangent coincides upto sign
+
     auto extra_data = hyper_edge.geometry.extra_data();
-    hy_check(extra_data.size() == 12,
-      "timowave expected 12 material coefficients, found " << extra_data.size());
-    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-    // (n_11,n_12,n_13) : normal 1
-    // (n_21,n_22,n_23) : normal 2
+    hy_check(extra_data.size() == 17,
+      "timowave expected 17 material coefficients, found " << extra_data.size());
+
+    lSol_float_t mass = extra_data[0];
     SmallVec<space_dim, lSol_float_t> normal1 =
-      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
+      std::array<lSol_float_t, space_dim>{{extra_data[7], extra_data[8], extra_data[9]}};
     SmallVec<space_dim, lSol_float_t> normal2 =
-      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
+      std::array<lSol_float_t, space_dim>{{extra_data[10], extra_data[11], extra_data[12]}};
     SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
     SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
 
-    extra_coeffs[0] = extra_data[0];
-    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
-                      extra_data[2] * scalar_product(outer1, normal2);
-    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
-                      extra_data[2] * scalar_product(outer2, normal2);
-    extra_coeffs[3] = extra_data[3];
-    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
-                      extra_data[5] * scalar_product(outer1, normal2);
-    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
-                      extra_data[5] * scalar_product(outer2, normal2);
+    auto length = hyper_edge.geometry.area();
+    auto density = mass / (extra_data[13] * extra_data[14] * length);
 
-    for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
+    auto w1 = extra_data[13];
+    auto w2 = extra_data[14];
+
+    // approximation to second moment in direction of normal1, normal2
+    // valid for rectangular cross section
+    auto moment1 = w1*w1*w1 * w2 / 12;
+    auto moment2 = w1 * w2*w2*w2 / 12;
+
+    // displacement stiffness C_n
+    extra_coeffs[0] = extra_data[1];
+    extra_coeffs[1] = extra_data[2] * scalar_product(outer1, normal1) +
+                      extra_data[3] * scalar_product(outer1, normal2);
+    extra_coeffs[2] = extra_data[2] * scalar_product(outer2, normal1) +
+                      extra_data[3] * scalar_product(outer2, normal2);
+
+    // rotation stiffness C_m
+    extra_coeffs[3] = extra_data[4];
+    extra_coeffs[4] = extra_data[5] * scalar_product(outer1, normal1) +
+                      extra_data[6] * scalar_product(outer1, normal2);
+    extra_coeffs[5] = extra_data[5] * scalar_product(outer2, normal1) +
+                      extra_data[6] * scalar_product(outer2, normal2);
+
+    // displacement inertia C_u
+    extra_coeffs[6] = mass / length;
+    extra_coeffs[7] = mass / length;
+    extra_coeffs[8] = mass / length;
+
+    // rotation inertia
+    extra_coeffs[9]  = density * (moment1 + moment2);
+    extra_coeffs[10] = density * (moment1 * scalar_product(outer1, normal1) +
+                                  moment2 * scalar_product(outer1, normal2));
+    extra_coeffs[11] = density * (moment1 * scalar_product(outer2, normal1) +
+                                  moment2 * scalar_product(outer2, normal2));
+
+    for (unsigned int i = 0; i < extra_coeffs.size(); i++) {
       extra_coeffs[i] = std::abs(extra_coeffs[i]);
+      hy_check(std::isfinite(extra_coeffs[i]), "get_extra finite coeffs " << extra_coeffs);
+      hy_check(extra_coeffs[i] > 0, "get_extra zero coeffs " << extra_coeffs << " mass " << mass);
+    }
+
+    // hy_check(false, "extra_coeffs " << extra_coeffs);
 
     return extra_coeffs;
   }
@@ -904,8 +949,6 @@ class TimoshenkoWave
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
-
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
     // std::cout << "  ---  set_data before" << std::endl;
@@ -1247,6 +1290,9 @@ class TimoshenkoWave
 
     coeffs = rhs / mat;
 
+    //for (unsigned int i = 0; i < coeffs.size(); i++)
+    //  hy_check(std::isfinite(coeffs[i]), "error coef? " << coeffs[i] << " coeffs " << coeffs << " rhs " << rhs << " mat " << mat);
+
     for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++) {
       hyper_edge.data.n_old[i] = coeffs[0*space_dim*n_shape_fct_+i];
       hyper_edge.data.m_old[i] = coeffs[1*space_dim*n_shape_fct_+i];
@@ -1316,46 +1362,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.); // C_n, C_m, C_u, C_r
-
-  if (hyper_edge.geometry.has_extra_data())
-  {
-    auto extra_data = hyper_edge.geometry.extra_data();
-    hy_check(extra_data.size() == 12,
-      "timowave expected 12 material coefficients, found " << extra_data.size());
-    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-    // (n_11,n_12,n_13) : normal 1
-    // (n_21,n_22,n_23) : normal 2
-    SmallVec<space_dim, lSol_float_t> normal1 =
-      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
-    SmallVec<space_dim, lSol_float_t> normal2 =
-      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
-    SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
-    SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
-
-    extra_coeffs[0] = extra_data[0];
-    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
-                      extra_data[2] * scalar_product(outer1, normal2);
-    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
-                      extra_data[2] * scalar_product(outer2, normal2);
-    extra_coeffs[3] = extra_data[3];
-    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
-                      extra_data[5] * scalar_product(outer1, normal2);
-    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
-                      extra_data[5] * scalar_product(outer2, normal2);
-
-    extra_coeffs[0] *= 1e4;
-    extra_coeffs[1] *= 1e4;
-    extra_coeffs[2] *= 1e4;
-    extra_coeffs[3] *= 1e12;
-    extra_coeffs[4] *= 1e12;
-    extra_coeffs[5] *= 1e12;
-  }
-
-  for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
-    extra_coeffs[i] = std::abs(extra_coeffs[i]);
-  // extra_coeffs[i] = 1.;
-  // hy_assert(false, extra_coeffs);
+  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs = get_extra_coeffs(hyper_edge); // C_n, C_m, C_u, C_r
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
@@ -1427,46 +1434,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.); // C_n, C_m, C_u, C_r
-
-  if (hyper_edge.geometry.has_extra_data())
-  {
-    auto extra_data = hyper_edge.geometry.extra_data();
-    hy_check(extra_data.size() == 12,
-      "timowave expected 12 material coefficients, found " << extra_data.size());
-    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-    // (n_11,n_12,n_13) : normal 1
-    // (n_21,n_22,n_23) : normal 2
-    SmallVec<space_dim, lSol_float_t> normal1 =
-      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
-    SmallVec<space_dim, lSol_float_t> normal2 =
-      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
-    SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
-    SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
-
-    extra_coeffs[0] = extra_data[0];
-    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
-                      extra_data[2] * scalar_product(outer1, normal2);
-    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
-                      extra_data[2] * scalar_product(outer2, normal2);
-    extra_coeffs[3] = extra_data[3];
-    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
-                      extra_data[5] * scalar_product(outer1, normal2);
-    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
-                      extra_data[5] * scalar_product(outer2, normal2);
-
-    extra_coeffs[0] *= 1e4;
-    extra_coeffs[1] *= 1e4;
-    extra_coeffs[2] *= 1e4;
-    extra_coeffs[3] *= 1e12;
-    extra_coeffs[4] *= 1e12;
-    extra_coeffs[5] *= 1e12;
-  }
-
-  for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
-    extra_coeffs[i] = std::abs(extra_coeffs[i]);
-  // extra_coeffs[i] = 1.;
-  // hy_assert(false, extra_coeffs);
+  SmallVec<4 * space_dim, lSol_float_t> extra_coeffs = get_extra_coeffs(hyper_edge); // C_n, C_m, C_u, C_r
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
