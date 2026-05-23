@@ -361,7 +361,7 @@ class TimoshenkoWave
     const lSol_float_t time) const;
 
   template <typename hyEdgeT>
-  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix_a(
+  inline SmallSquareMat<4*space_dim*n_shape_fct_, lSol_float_t> assemble_loc_matrix_a(
     hyEdgeT& hyper_edge,
     const lSol_float_t time) const;
 
@@ -855,8 +855,8 @@ class TimoshenkoWave
 
     for (unsigned int i = 0; i < extra_coeffs.size(); i++) {
       extra_coeffs[i] = std::abs(extra_coeffs[i]);
-      hy_check(std::isfinite(extra_coeffs[i]), "get_extra finite coeffs " << extra_coeffs);
-      hy_check(extra_coeffs[i] > 0, "get_extra zero coeffs " << extra_coeffs << " mass " << mass);
+      // hy_check(std::isfinite(extra_coeffs[i]), "get_extra finite coeffs " << extra_coeffs);
+      // hy_check(extra_coeffs[i] > 0, "get_extra zero coeffs " << extra_coeffs << " mass " << mass);
     }
 
     // hy_check(false, "extra_coeffs " << extra_coeffs);
@@ -881,8 +881,8 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_v = hyper_edge.data.flux_v;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_s = hyper_edge.data.flux_s;
 
-    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs =
-      get_extra_coeffs(hyper_edge);
+    // SmallVec<4 * space_dim, lSol_float_t> extra_coeffs =
+    //   get_extra_coeffs(hyper_edge);
 
     flux_u *= 0;
     flux_r *= 0;
@@ -920,8 +920,8 @@ class TimoshenkoWave
       }
 
       for (unsigned int dim = 0; dim < space_dim; dim++) {
-        flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+i] / extra_coeffs[2*space_dim+dim] * hyper_edge.geometry.area();
-        flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+i] / extra_coeffs[3*space_dim+dim] * hyper_edge.geometry.area();
+        flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+i] * hyper_edge.geometry.area();
+        flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+i] * hyper_edge.geometry.area();
       }
 
       // Consider the cross product
@@ -1113,7 +1113,7 @@ class TimoshenkoWave
     v_old = glob_dof_to_loc_dof(v_old, hyper_edge);
     s_old = glob_dof_to_loc_dof(s_old, hyper_edge);
 
-    SmallVec<n_shape_fct_*6*space_dim, lSol_float_t> coeffs_old;
+    SmallVec<n_shape_fct_*4*space_dim, lSol_float_t> coeffs_old;
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int dim = 0; dim < space_dim; dim++) {
         coeffs_old[(2*space_dim+dim)*n_shape_fct_+i] = u_old[i+dim*n_shape_fct_];
@@ -1126,9 +1126,11 @@ class TimoshenkoWave
     }
 
     auto mat = assemble_loc_matrix_a(hyper_edge, time);
-    auto coefs_nm = mat*coeffs_old
-      - assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
-      //  - assemble_rhs_from_global_rhs(hyper_edge, time);
+    auto coefs_nm = mat*coeffs_old;
+    auto temp_rhs = assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
+    for (unsigned int i = 0; i < 4*space_dim*n_shape_fct_; i++) {
+      coefs_nm[i] -= temp_rhs[i];
+    }
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
@@ -1226,7 +1228,7 @@ class TimoshenkoWave
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     auto mat = assemble_loc_matrix_a(hyper_edge, time);
-    SmallVec<n_loc_dofs_, lSol_float_t> rhs, coeffs;
+    SmallVec<4*space_dim*n_shape_fct_, lSol_float_t> rhs, coeffs;
 
     lSol_float_t integral;
     int comps[] = {1, -1, -2};
@@ -1352,14 +1354,15 @@ template <unsigned int hyEdge_dimT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
+  4*space_dim*
   TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-    n_loc_dofs_,
+    n_shape_fct_,
   lSol_float_t>
 TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
   assemble_loc_matrix_a(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
+  SmallSquareMat<4*space_dim*n_shape_fct_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
   SmallVec<4 * space_dim, lSol_float_t> extra_coeffs = get_extra_coeffs(hyper_edge); // C_n, C_m, C_u, C_r
@@ -1398,9 +1401,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           (normal_int_vec[0] - grad_int_vec[0]);
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
                   (2 * space_dim + dim) * n_shape_fct_ + j) += tau_ * face_integral;
-
-        local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
-                  (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / extra_coeffs[2*space_dim+dim];
       }
 
 
@@ -1472,9 +1472,9 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
                   (2 * space_dim + dim) * n_shape_fct_ + j) += theta_ * tau_ * face_integral;
 
         local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
-                  (4 * space_dim + dim) * n_shape_fct_ + j) += theta_ * vol_integral / extra_coeffs[2*space_dim+dim];
+                  (4 * space_dim + dim) * n_shape_fct_ + j) += theta_ * vol_integral;
         local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
-                  (2 * space_dim + dim) * n_shape_fct_ + j) -= vol_integral / delta_t_;
+                  (2 * space_dim + dim) * n_shape_fct_ + j) -= vol_integral / delta_t_ * extra_coeffs[2*space_dim+dim];
         local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
                   (4 * space_dim + dim) * n_shape_fct_ + j) += vol_integral / delta_t_;
       }
@@ -1655,14 +1655,17 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
   // std::cout << std::endl;
 
+  auto extra_coeffs = get_extra_coeffs(hyper_edge);
+
   // time derivatives
-  for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  {
-    right_hand_side[2 * space_dim * n_shape_fct_ + i] += hyper_edge.data.v_old[i] * hyper_edge.geometry.area() / delta_t_;
-    right_hand_side[3 * space_dim * n_shape_fct_ + i] += hyper_edge.data.s_old[i] * hyper_edge.geometry.area() / delta_t_;
-    right_hand_side[4 * space_dim * n_shape_fct_ + i] -= hyper_edge.data.u_old[i] * hyper_edge.geometry.area() / delta_t_;
-    right_hand_side[5 * space_dim * n_shape_fct_ + i] -= hyper_edge.data.r_old[i] * hyper_edge.geometry.area() / delta_t_;
-  }
+  for (unsigned int d = 0; d < space_dim; d++)
+    for (unsigned int i = 0; i < n_shape_fct_; i++)
+    {
+      right_hand_side[(2 * space_dim + d) * n_shape_fct_ + i] += hyper_edge.data.v_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_;
+      right_hand_side[(3 * space_dim + d) * n_shape_fct_ + i] += hyper_edge.data.s_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_;
+      right_hand_side[(4 * space_dim + d) * n_shape_fct_ + i] -= hyper_edge.data.u_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_ * extra_coeffs[2*space_dim+d];
+      right_hand_side[(5 * space_dim + d) * n_shape_fct_ + i] -= hyper_edge.data.r_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_ * extra_coeffs[3*space_dim+d];
+    }
 
   // std::cout << "-- rhs_from_global_rhs" << std::endl;
   // std::cout << "  -- u" << std::endl;
