@@ -101,6 +101,7 @@ int main(int argc, char **argv) {
     (void)e_rel;
 
     PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk, s_ksp;
+    PetscLogEvent e_set, e_plot, e_errors;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -140,6 +141,9 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("make_initial", &s_mk));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
+    PetscCall(PetscLogEventRegister("hdg_set", 0, &e_set));
+    PetscCall(PetscLogEventRegister("hdg_plot", 0, &e_plot));
+    PetscCall(PetscLogEventRegister("hdg_errors", 0, &e_errors));
 
     dt = T / nt;
 
@@ -272,9 +276,17 @@ int main(int argc, char **argv) {
         iterations += its;
 
         PetscCall(VecGetSpan(rhs, span));
+        PetscLogEventBegin(e_set, 0,0,0,0);
         hdg->set_data(span, ti);
-        if (*plot) hdg->plot_solution(span, ti);
+        PetscLogEventEnd(e_set, 0,0,0,0);
+        if (*plot) {
+          PetscLogEventBegin(e_plot, 0,0,0,0);
+          hdg->plot_solution(span, ti);
+          PetscLogEventEnd(e_plot, 0,0,0,0);
+        }
+        PetscLogEventBegin(e_errors, 0,0,0,0);
         error = hdg->errors(span, ti)[0];
+        PetscLogEventEnd(e_errors, 0,0,0,0);
         e_abs = PetscMax(error, e_abs);
         PetscCall(VecRestoreSpan(rhs, span));
 
