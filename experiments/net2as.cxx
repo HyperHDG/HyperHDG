@@ -290,7 +290,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(MatCreate(PETSC_COMM_WORLD, &data->adj));
   PetscCall(MatSetType(data->adj, MATMPIAIJ));
   PetscCall(MatSetSizes(data->adj, nn, nn, n, n));
-  PetscCall(MatSetOptionsPrefix(data->adj, "adj_"));
+  PetscCall(MatSetOptionsPrefix(data->adj, "net2as_adj_"));
   PetscCall(MatSetPreallocationCOO(data->adj, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(data->adj, coo.vals, INSERT_VALUES));
   PetscCall(MatCOO_Free(&coo));
@@ -808,7 +808,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
   PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
-  PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
+  PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size

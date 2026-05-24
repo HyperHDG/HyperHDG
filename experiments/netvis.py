@@ -43,23 +43,28 @@ def find_array(pipe, name):
 # Each op is a callable: pipe -> pipe. May skip and return input unchanged.
 
 class Warp:
-  def __init__(self, components=(6, 7, 8), scale=1.0, source_array="values"):
+  def __init__(self, components=(6, 7, 8), scale=1.0, source_array="values", normal=None):
     self.components = components
     self.scale = scale
     self.source_array = source_array
+    self.normal = normal
 
   def apply(self, pipe, view):
     if find_array(pipe, self.source_array) != "POINTS":
       print(f"warning: Warp: '{self.source_array}' not found, skipping",
             file=sys.stderr)
       return pipe
-    cx, cy, cz = self.components
     calc = pv.Calculator(Input=pipe)
     calc.AttributeType = "Point Data"
     calc.ResultArrayName = "displacement"
-    calc.Function = (f"{self.source_array}_{cx}*iHat + "
-                     f"{self.source_array}_{cy}*jHat + "
-                     f"{self.source_array}_{cz}*kHat")
+    if self.normal is None:
+      cx, cy, cz = self.components
+      calc.Function = (f"{self.source_array}_{cx}*iHat + "
+                       f"{self.source_array}_{cy}*jHat + "
+                       f"{self.source_array}_{cz}*kHat")
+    else:
+      cx, = self.components
+      calc.Function = (f"{self.source_array}*{self.normal}")
     calc.UpdatePipeline()
     pipe = pv.WarpByVector(Input=calc)
     pipe.Vectors = ["POINTS", "displacement"]
@@ -420,9 +425,14 @@ if __name__ == "__main__":
     if args.arrows != 0.:
       ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp_scale, offset_z=args.arrows_offset))
     if args.warp_by != "":
-      array, comps = args.warp_by.split(":")
-      comps = [int(x) for x in comps.split(",")]
-      ops.append(Warp(scale=args.warp_scale, components=comps, source_array=array))
+      temp = args.warp_by.split(":")
+      array = temp[0]
+      comps = [int(x) for x in temp[1].split(",")]
+      if len(temp) > 2:
+        normal = temp[2]
+      else:
+        normal = None
+      ops.append(Warp(scale=args.warp_scale, components=comps, source_array=array, normal=normal))
     if args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
@@ -439,6 +449,8 @@ if __name__ == "__main__":
         colors = [cmap(i / max(len(times) - 1, 1)) for i in range(len(times))]
       except ValueError:
         colors = args.frame_colors.split(",")
+    else:
+      colors = [args.fg] * len(times)
 
     ops = [ops_factory(fg) for fg in colors]
 
