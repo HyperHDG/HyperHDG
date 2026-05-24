@@ -381,8 +381,10 @@ if __name__ == "__main__":
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
   p.add_argument("--color-invert", action="store_true")
   p.add_argument("--color-categories", help="color categories e.g. '1-4,7'", default="")
-  p.add_argument("--warp", type=float, default=1.,
-                 help="warp by displacement (components 6-8 of 'values')")
+  p.add_argument("--warp-by", default="values:6,7,8",
+                 help="warp by")
+  p.add_argument("--warp-scale", type=float, default=1.,
+                 help="warp scale")
   p.add_argument("--arrows", type=float, default=1.,
                  help="place arrows (components 6-8 of 'values')")
   p.add_argument("--arrows-offset", type=float, default=0.,
@@ -416,9 +418,11 @@ if __name__ == "__main__":
     if args.ref:
       ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
     if args.arrows != 0.:
-      ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp, offset_z=args.arrows_offset))
-    if args.warp != 0.:
-      ops.append(Warp(scale=args.warp))
+      ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp_scale, offset_z=args.arrows_offset))
+    if args.warp_by != "":
+      array, comps = args.warp_by.split(":")
+      comps = [int(x) for x in comps.split(",")]
+      ops.append(Warp(scale=args.warp_scale, components=comps, source_array=array))
     if args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
