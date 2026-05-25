@@ -654,7 +654,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     for (unsigned int l = 0; l < 4; l++) {
       PetscInt col = pts[l].j * ns[0] + pts[l].i;
       PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
+      // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
     }
   }
 
