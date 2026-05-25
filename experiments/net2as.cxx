@@ -618,7 +618,6 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     ns[d] = data->p[d]+2; // coarse DoFs per dim
   }
   n_coarse = ns[0] * ns[1];
-  data->n_coarse = n_coarse;
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   n_local = (vend - vstart) / 3;
@@ -652,6 +651,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   n_active = 0;
   for (PetscInt k = 0; k < n_coarse; k++)
     if (remap[k] > 0) remap[k] = n_active++;
+  data->n_coarse = n_active;
 
   // fill coarse basis functions
   PetscCall(MatCOO_Alloc(coo, 4 * n_local));
