@@ -1,8 +1,49 @@
-#!/usr/bin/env pvpython
+#!/usr/bin/env python
+"""
+netcoarse.py — convert a PETSc matrix to a transient VTKHDF file.
+
+Each column of the input matrix becomes one time step of a scalar PointData
+field 'values' on a network of line cells (VTK_LINE) defined by the domain
+file. Useful for visualizing basis functions, eigenmodes, or column-indexed
+fields over a beam/fiber network in ParaView.
+
+Open in ParaView GUI or visualize with netvis.py via
+
+experiments/netvis.py <VTKHDF> -r <RADIUS> --view iso --warp-scale <SCALE> \
+  --arrows 0 --warp-by values:0:kHat
+
+Inputs
+------
+domain : HDF5 file with
+    /domain/points  (Np, 3) float  -- node coordinates
+    /domain/edges   (Ne, 2) int    -- point indices, one edge per cell
+matrix : PETSc binary Mat of shape (Np, Ncols). Rows index domain points,
+    columns index the fields/modes to visualize as time steps.
+
+Output
+------
+VTKHDF v2.0 UnstructuredGrid. Geometry is shared across all steps; only the
+PointData window into "values" advances Np per step.
+
+Requirements
+------------
+PETSC_DIR must be set; PetscBinaryIO is loaded from $PETSC_DIR/lib/petsc/bin.
+
+Caveats
+-------
+The matrix is densified in memory (A.todense). Will OOM for very large
+networks or column counts; rewrite with a streamed column loop if needed.
+
+Author
+------
+Joseph Holten, KIT, 2026.
+"""
+
 import h5py, numpy as np, sys, os
 sys.path.append(os.path.join(os.environ['PETSC_DIR'], "lib/petsc/bin"))
 import PetscBinaryIO
 import scipy.sparse as sp
+import argparse
 
 def main(domain_path, mat_path, out_path):
   # --- read PETSc matrix: rows = nodes, cols = basis functions
@@ -64,10 +105,12 @@ def main(domain_path, mat_path, out_path):
                        maxshape=(None,))
 
 if __name__ == "__main__":
-    import argparse
-    p = argparse.ArgumentParser()
-    p.add_argument("domain")
-    p.add_argument("matrix")
-    p.add_argument("output")
-    a = p.parse_args()
-    main(a.domain, a.matrix, a.output)
+  p = argparse.ArgumentParser(
+      description="Convert a PETSc Mat (Np x Ncols) into a transient VTKHDF "
+                  "UnstructuredGrid over a line network. Each matrix column "
+                  "becomes one time step of PointData/values.")
+  p.add_argument("domain", help="HDF5 domain file with /domain/points and /domain/edges")
+  p.add_argument("matrix", help="PETSc binary Mat; rows must match number of domain points")
+  p.add_argument("output", help="Output .vtkhdf path (HDF5, overwritten)")
+  a = p.parse_args()
+  main(a.domain, a.matrix, a.output)
