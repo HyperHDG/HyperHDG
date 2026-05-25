@@ -1,4 +1,40 @@
 #!/usr/bin/env pvpython
+
+"""
+netvis.py — render and animate VTKHDF beam/fiber networks via ParaView.
+
+Builds a ParaView pipeline from a configurable list of ops (Warp, Tubes,
+CoarseArrows, Q1Mesh, Reference, SolidColor, ArrayColor) and either opens an
+interactive view, dumps a screenshot, or saves a transient animation across
+the file's time steps. Single-file mode renders one pipeline over all time
+steps; overlay mode (--frames) renders several time steps simultaneously in
+the same view, each as its own pipeline branch shifted to t=0.
+
+Typical use is to visualize HDG basis functions / eigenmodes / displacement
+columns produced by netcoarse.py, with the 6/7/8 components of the 'values'
+array interpreted as displacement and 9/10/11 as rotation (Timoshenko DoFs).
+
+Examples
+--------
+    netvis.py field.vtkhdf -r 20 --view iso --warp-scale 1e3
+    netvis.py field.vtkhdf --color-by values:0 --warp-by none --arrows 0
+    netvis.py field.vtkhdf --frames 0.0,0.3,0.6 --frame-colors viridis
+
+Inputs
+------
+VTKHDF UnstructuredGrid of VTK_LINE cells, typically with a multi-component
+'values' PointData array and one or more time steps.
+
+Output
+------
+Interactive RenderView, single screenshot, or animation file, depending on
+--show / --output and whether the file has time steps.
+
+Author
+------
+Joseph Holten, KIT, 2026.
+"""
+
 import argparse
 import sys
 import os
@@ -349,6 +385,15 @@ class CoarseArrows:
 
 def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(1000, 1000),
            axis=True, output=None, show=True, duration=5, fps=30):
+  """Render `path` with a single pipeline, optionally animating across time steps.
+
+  Applies `ops` in order to a surface-extracted reader, configures the
+  RenderView (background, size, orientation axis, camera via `view`), then:
+    - if `show`: plays the animation in an interactive window;
+    - if `output`: saves an animation (if time steps exist) or a single
+      screenshot. Animation length is approximately `duration` seconds at
+      `fps`, snapped to the file's time steps.
+  """
   if not os.path.isfile(path):
     sys.exit(f"error: file not found: {path}")
 
@@ -396,6 +441,14 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
 def netvis_overlay(path, ops_frames, times, bg="black", view=None,
                    resolution=(1000, 1000), axis=True, output=None, show=True,
                    reference=None):
+  """Render several time steps of `path` simultaneously, each with its own ops.
+
+  For each (t, ops) pair, extracts the time step nearest `t`, shifts it to
+  t=0 via TemporalShiftScale so all branches coexist in one frame, and
+  applies `ops` to that branch. Useful for showing mode shapes side-by-side
+  or comparing snapshots of a transient field. Output is a single
+  screenshot (no animation in overlay mode).
+  """
   if not os.path.isfile(path):
     sys.exit(f"error: file not found: {path}")
 
@@ -439,37 +492,42 @@ def netvis_overlay(path, ops_frames, times, bg="black", view=None,
 # --- CLI ---------------------------------------------------------------------
 
 if __name__ == "__main__":
-  p = argparse.ArgumentParser()
+  p = argparse.ArgumentParser(
+    description="Render VTKHDF beam/fiber networks via ParaView: tubes, "
+                "warping by displacement, coarse rotation arrows, optional "
+                "Q1 background mesh, and multi-frame overlay mode.")
   p.add_argument("input", help="path to .vtkhdf file")
-  p.add_argument("--fg", default="white")
-  p.add_argument("--bg", default="black")
+  p.add_argument("--fg", default="white", help="foreground color (solid coloring + reference outline)")
+  p.add_argument("--bg", default="black", help="background color")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
-  p.add_argument("--color-invert", action="store_true")
-  p.add_argument("--color-categories", help="color categories e.g. '1-4,7'", default="")
+  p.add_argument("--color-invert", action="store_true", help="invert the Cool-to-Warm transfer function")
+  p.add_argument("--color-categories", default="",
+                 help="treat values as categorical, e.g. '1-4,7'; uses HSV-spaced colors")
   p.add_argument("--warp-by", default="values:6,7,8",
-                 help="warp by")
+                 help="warp spec 'array:c1,c2,c3' (vector) or 'array:c:axis' (scalar*axis); 'none' disables")
   p.add_argument("--warp-scale", type=float, default=1.,
-                 help="warp scale")
+                 help="scale factor applied to the warp vector")
   p.add_argument("--arrows", type=float, default=1.,
-                 help="place arrows (components 6-8 of 'values')")
+                 help="scale for coarse rotation arrows (components 9-11 of 'values'); 0 disables")
   p.add_argument("--arrows-offset", type=float, default=0.,
-                 help="arrows offset z")
-  p.add_argument("--view", choices=list(View.VIEWS), default="top")
-  p.add_argument("--resolution", default="1000x1000")
+                 help="fixed vertical offset for arrows after warping")
+  p.add_argument("--view", choices=list(View.VIEWS), default="top",
+                 help="camera preset; non-'iso' use parallel projection")
+  p.add_argument("--resolution", default="1000x1000", help="render size WxH")
   p.add_argument("-o", "--output", default=None, help="optional screenshot path")
-  p.add_argument("--show", type=int, default=1, help="skip Interact()")
+  p.add_argument("--show", type=int, default=1, help="if 1, open interactive window (Interact)")
   p.add_argument("--axis", type=int, default=1, help="display orientation axis")
   p.add_argument("-r", "--tubes-radius", type=float, default=20,
-                 help="tube radius")
-  p.add_argument("--tubes-sides", type=int, default=4)
+                 help="tube radius for beam rendering; 0 disables tubes")
+  p.add_argument("--tubes-sides", type=int, default=4, help="number of polygonal sides per tube")
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
-  p.add_argument("--ref-opacity", type=float, default=1.)
+  p.add_argument("--ref-opacity", type=float, default=1., help="opacity of reference outline")
   p.add_argument("--fps", type=int, default=30, help="target fps")
   p.add_argument("--duration", type=float, default=5, help="target duration of animation")
   p.add_argument("--frames", default=None,
                help="overlay mode: comma-separated times, e.g. '0.0,0.3,0.6'")
   p.add_argument("--frame-colors", default=None,
-               help="comma-separated colors, one per frame (default: cycle fg)")
+               help="matplotlib colormap name or comma-separated colors, one per frame")
   p.add_argument("--q1", default=None,
                help="overlay Q1 cartesian mesh: 'N' (N,N,1), 'NX,NY' (NX,NY,1), or 'NX,NY,NZ'")
   p.add_argument("--q1-color", default="black",
