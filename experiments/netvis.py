@@ -32,12 +32,14 @@ class View:
     cam.SetViewUp(*v["up"])
 
 def find_array(pipe, name):
-  for assoc, getter in (("POINTS", pipe.GetPointDataInformation),
-                        ("CELLS",  pipe.GetCellDataInformation)):
-    info = getter()
-    if any(info.GetArray(i).GetName() == name for i in range(info.GetNumberOfArrays())):
-      return assoc
-  return None
+    for assoc, getter in (("POINTS", pipe.GetPointDataInformation),
+                          ("CELLS",  pipe.GetCellDataInformation)):
+        info = getter()
+        for i in range(info.GetNumberOfArrays()):
+            arr = info.GetArray(i)
+            if arr.GetName() == name:
+                return assoc, arr
+    return None, None
 
 # --- Pipeline ops ------------------------------------------------------------
 # Each op is a callable: pipe -> pipe. May skip and return input unchanged.
@@ -50,10 +52,17 @@ class Warp:
     self.normal = normal
 
   def apply(self, pipe, view):
-    if find_array(pipe, self.source_array) != "POINTS":
+    assoc, arr = find_array(pipe, self.source_array)
+    if assoc != "POINTS":
       print(f"warning: Warp: '{self.source_array}' not found, skipping",
             file=sys.stderr)
       return pipe
+    ncomp = arr.GetNumberOfComponents()
+    needed = max(self.components) + 1
+    if ncomp < needed:
+        print(f"warning: Warp: '{self.source_array}' has {ncomp} "
+              f"components, need {needed}, skipping", file=sys.stderr)
+        return pipe
     calc = pv.Calculator(Input=pipe)
     calc.AttributeType = "Point Data"
     calc.ResultArrayName = "displacement"
@@ -185,7 +194,7 @@ class ArrayColor:
 
   def apply(self, pipe, rview):
     display = pv.Show(pipe, rview)
-    assoc = find_array(pipe, self.name)
+    assoc, arr = find_array(pipe, self.name)
     if assoc is None:
       print(f"warning: '{self.name}' not found", file=sys.stderr)
       return
@@ -240,10 +249,17 @@ class CoarseArrows:
     self.color = color
 
   def apply(self, pipe, rview):
-    if find_array(pipe, self.source_array) != "POINTS":
+    assoc, arr = find_array(pipe, self.source_array)
+    if assoc != "POINTS":
       print(f"warning: CoarseArrows: '{self.source_array}' not found, skipping",
         file=sys.stderr)
       return pipe
+    ncomp = arr.GetNumberOfComponents()
+    needed = max(*self.disp_components, *self.rot_components) + 1
+    if ncomp < needed:
+        print(f"warning: CoarseArrows: '{self.source_array}' has {ncomp} "
+              f"components, need {needed}, skipping", file=sys.stderr)
+        return pipe
 
     # build both vector fields on the (reference) input
     dx_, dy_, dz_ = self.disp_components
