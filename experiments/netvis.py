@@ -424,7 +424,7 @@ if __name__ == "__main__":
       ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
     if args.arrows != 0.:
       ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp_scale, offset_z=args.arrows_offset))
-    if args.warp_by != "":
+    if args.warp_by.lower() != "none":
       temp = args.warp_by.split(":")
       array = temp[0]
       comps = [int(x) for x in temp[1].split(",")]
