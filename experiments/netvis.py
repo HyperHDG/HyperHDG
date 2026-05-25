@@ -87,10 +87,53 @@ class Tubes:
     tube.UpdatePipeline()
     return tube
 
-class Reference:
-  def __init__(self, color="white", opacity=1.0):
+class Q1Mesh:
+  def __init__(self, dims, color="magenta", opacity=1.0, line_width=1.0):
+    self.dims = dims
     self.color = color
     self.opacity = opacity
+    self.line_width = line_width
+
+  def apply(self, pipe, rview):
+    xmin, xmax, ymin, ymax, zmin, zmax = pipe.GetDataInformation().GetBounds()
+    nx, ny, nz = self.dims
+    dz = max(zmax - zmin, max(xmax - xmin, ymax - ymin))
+    eps = 0.01 * dz
+    zmin -= eps
+    zmax += eps
+
+    # Wavelet produces an ImageData with the given extent, centered at Center
+    src = pv.Wavelet()
+    src.WholeExtent = [0, nx, 0, ny, 0, max(nz, 0)]
+    # Place origin at 0 by setting Center to half-extent
+    src.Center = [nx / 2.0, ny / 2.0, max(nz, 0) / 2.0]
+    src.UpdatePipeline()
+
+    # Scale + translate to target bounds
+    sx = (xmax - xmin) / max(nx, 1)
+    sy = (ymax - ymin) / max(ny, 1)
+    sz = (zmax - zmin) / max(nz, 1) if nz > 0 and zmax > zmin else 1.0
+
+    tf = pv.Transform(Input=src)
+    tf.Transform = "Transform"
+    tf.Transform.Scale = [sx, sy, sz]
+    tf.Transform.Translate = [xmin, ymin, zmin]
+    tf.UpdatePipeline()
+
+    display = pv.Show(tf, rview)
+    display.Representation = "Wireframe"
+    rgb = list(to_rgb(self.color))
+    display.AmbientColor = rgb
+    display.DiffuseColor = rgb
+    display.Opacity = self.opacity
+    display.LineWidth = self.line_width
+    return pipe
+
+class Reference:
+  def __init__(self, color="white", opacity=1.0, line_width=1.0):
+    self.color = color
+    self.opacity = opacity
+    self.line_width = line_width
 
   def apply(self, pipe, view):
     outline = pv.Outline(Input=pipe)
@@ -100,6 +143,7 @@ class Reference:
     display.AmbientColor = rgb
     display.DiffuseColor = rgb
     display.Opacity = self.opacity
+    display.LineWidth = self.line_width
     return pipe
 
 # --- Display config ----------------------------------------------------------
@@ -410,6 +454,11 @@ if __name__ == "__main__":
                help="overlay mode: comma-separated times, e.g. '0.0,0.3,0.6'")
   p.add_argument("--frame-colors", default=None,
                help="comma-separated colors, one per frame (default: cycle fg)")
+  p.add_argument("--q1", default=None,
+               help="overlay Q1 cartesian mesh: 'N' (N,N,1), 'NX,NY' (NX,NY,1), or 'NX,NY,NZ'")
+  p.add_argument("--q1-color", default="black",
+               help="overlay Q1 cartesian mesh color")
+  p.add_argument("--line-width", type=float, default=1, help="line width for wiremeshes")
 
   args = p.parse_args()
 
@@ -420,8 +469,19 @@ if __name__ == "__main__":
   def ops_factory(fg):
     ops = []
     # ref must go before warp
-    if args.ref:
-      ops.append(Reference(color=args.fg, opacity=args.ref_opacity))
+    if args.q1:
+      parts = [int(x) for x in args.q1.split(",")]
+      if len(parts) == 1:
+        dims = (parts[0], parts[0], 1)
+      elif len(parts) == 2:
+        dims = (parts[0], parts[1], 1)
+      elif len(parts) == 3:
+        dims = tuple(parts)
+      else:
+        parser.error("error: --q1 takes 1, 2, or 3 comma-separated ints")
+      ops.append(Q1Mesh(dims, color=args.q1_color, line_width=args.line_width))
+    if args.q1 is None and args.ref:
+      ops.append(Reference(color=args.fg, opacity=args.ref_opacity, line_width=args.line_width))
     if args.arrows != 0.:
       ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp_scale, offset_z=args.arrows_offset))
     if args.warp_by.lower() != "none":
