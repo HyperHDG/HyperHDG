@@ -409,12 +409,14 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   PetscInt p = data->n_coarse, sd_count, sd_total_size, off, start;
   PetscInt *sd2lcounts, *sd2gcounts, *sd2rank, *rank2scount, *rank2rcount, *coo2rank;
   MPI_Request *reqs;
+  PetscInt *tmp_rows, *tmp_cols;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscCalloc7(p, &sd2lcounts, p, &sd2gcounts, p, &sd2rank,
     size, &rank2scount, size, &rank2rcount, cb->nnz, &coo2rank, 4*size, &reqs));
+  PetscCall(PetscMalloc2(cb->nnz, &tmp_rows, cb->nnz, &tmp_cols));
 
   // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
 
@@ -480,8 +482,12 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   sd->nnz = off;
 
   // sort cb by ranks of subdomain indices
-  for (PetscInt i = 0; i < cb->nnz; i++) coo2rank[i] = sd2rank[cb->cols[i]];
-  PetscCall(PetscSortIntWithArrayPair(cb->nnz, coo2rank, cb->rows, cb->cols));
+  for (PetscInt i = 0; i < cb->nnz; i++) {
+    coo2rank[i] = sd2rank[cb->cols[i]];
+    tmp_rows[i] = cb->rows[i];
+    tmp_cols[i] = cb->cols[i];
+  }
+  PetscCall(PetscSortIntWithArrayPair(cb->nnz, coo2rank, tmp_rows, tmp_cols));
 
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "cb sorted by sd2rank\n"));
   // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
@@ -527,6 +533,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   if (sd_count == 0 && data->sz > 0)
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 0, NULL, PETSC_COPY_VALUES, &data->is[0]));
 
+  PetscCall(PetscFree2(tmp_rows, tmp_cols));
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
     rank2scount, rank2rcount, coo2rank, reqs));
   PetscFunctionReturn(0);
@@ -605,10 +612,8 @@ PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
 PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscReal min[2], max[2], h[2];
   PetscInt vstart, vend, ns[2];
-  const PetscInt *types;
   PetscReal *points;
-  PetscInt *remap;
-  PetscInt n_coarse, n_local, n_active;
+  PetscInt n_coarse, n_local;
   PetscFunctionBegin;
 
   for (PetscInt d = 0; d < 2; d++) {
@@ -623,40 +628,12 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   n_local = (vend - vstart) / 3;
   vstart /= 3;
 
-  PetscCall(ISGetIndices(data->types_points, &types));
   PetscCall(VecGetArray(data->points, &points));
-  PetscCall(PetscMalloc1(n_coarse, &remap));
-
-  // create (global) remapping of all coarse dofs to not-only dirichlet dofs
-  for (PetscInt k = 0; k < n_coarse; k++)
-    remap[k] = -1;
-  for (PetscInt k = 0; k < n_local; k++) {
-    if (net2as_is_dirichlet(types[k], data->wave)) continue;
-    PetscReal x = points[3*k], y = points[3*k+1];
-    PetscInt i = (x - min[0]) / h[0];
-    PetscInt j = (y - min[1]) / h[1];
-    // clamp to handle floating-point at the boundary
-    if (i > data->p[0]) i = data->p[0];
-    if (j > data->p[1]) j = data->p[1];
-    if (i < 0) i = 0;
-    if (j < 0) j = 0;
-    remap[    j*ns[0]+i  ] = 1;
-    remap[    j*ns[0]+i+1] = 1;
-    remap[(j+1)*ns[0]+i  ] = 1;
-    remap[(j+1)*ns[0]+i+1] = 1;
-  }
-  MPI_Allreduce(MPI_IN_PLACE, remap, n_coarse,
-                MPIU_INT, MPI_MAX, PETSC_COMM_WORLD);
-
-  n_active = 0;
-  for (PetscInt k = 0; k < n_coarse; k++)
-    if (remap[k] > 0) remap[k] = n_active++;
-  data->n_coarse = n_active;
+  data->n_coarse = n_coarse;
 
   // fill coarse basis functions
   PetscCall(MatCOO_Alloc(coo, 4 * n_local));
   for (PetscInt k = 0; k < n_local; k++) {
-    if (net2as_is_dirichlet(types[k], data->wave)) continue;
     PetscReal x = points[3*k], y = points[3*k+1];
     PetscInt i = (x - min[0]) / h[0];
     PetscInt j = (y - min[1]) / h[1];
@@ -675,14 +652,14 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
       {i+1, j+1,     xx*yy    },
     };
     for (unsigned int l = 0; l < 4; l++) {
-      PetscInt col = remap[pts[l].j * ns[0] + pts[l].i];
-      if (col >= 0) PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
+      PetscInt col = pts[l].j * ns[0] + pts[l].i;
+      PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
     }
   }
 
+
   PetscCall(VecRestoreArray(data->points, &points));
-  PetscCall(ISRestoreIndices(data->types_points, &types));
-  PetscCall(PetscFree(remap));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
