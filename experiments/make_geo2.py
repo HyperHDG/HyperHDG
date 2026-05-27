@@ -397,7 +397,7 @@ class Network:
 
   def write_h5(self, out, no_props=False):
     tprint(f"writing h5 file to '{out}'")
-    with h5py.File(out + ".geo.h5", "w") as f:
+    with h5py.File(out, "w") as f:
       g = f.create_group("domain")
       g.create_dataset("points", data=self.nodes, compression="gzip")
       g.create_dataset("edges", data=self.edges, compression="gzip")
@@ -452,7 +452,7 @@ class Network:
     """Add VTKHDF view to the .geo.h5 file: virtual Connectivity over /domain/edges,
     plus real Offsets, Types, and NumberOf* datasets.
     """
-    path = out + ".geo.h5"
+    path = out
     tprint(f"adding VTKHDF view to '{path}'")
     with h5py.File(path, "a") as f:
       if "VTKHDF" in f:
