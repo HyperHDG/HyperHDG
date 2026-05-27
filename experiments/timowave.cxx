@@ -47,7 +47,7 @@ PetscErrorCode PetscHDGCreate(
 
 int main(int argc, char **argv) {
     PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
-    PetscInt nt = 1, nx = 1, poly_deg = 1;
+    PetscInt nt = 1, nx = 1, poly_deg = 1, tau_s = 0;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
@@ -91,6 +91,17 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
+
+    PetscCall(PetscOptionsInt("-tau_s", "hdg penalty parameter exponent s with tau ~ h^s", NULL, tau_s, &tau_s, &is_set));
+    if (is_set) {
+      switch (tau_s) {
+      case  1: tau = 1./nx; break; // tau ~ h
+      case  0: tau = 1;    break;
+      case -1: tau = nx;   break; // tau ~ 1/h
+      default:
+        PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "tau_s expected 1,0,-1 found '%d'", tau_s);
+      }
+    }
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -116,6 +127,7 @@ int main(int argc, char **argv) {
     PRIN2IY(timowave_test);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
+    PRIN2IY(tau_s);
     PRIN2FY(theta);
     PRIN2IY(nt);
     PRIN2IY(nx);
