@@ -799,8 +799,8 @@ class TimoshenkoWave
     //  7, 8, 9    n_11,n_12,n_13,         normal 1
     // 10,11,12    n_21,n_22,n_23,         normal 2
     // 13,14       width1,width2,          widths in direction of normals
-    // 15,16       fiber_id,fiber_edge_id  indicates which fiber this beam is part of
-    //                                     -1 indicates no fiber, just virtual connection
+    // 15          fiber_id                The fiber the edge is part of (-1 if a connection)
+    // 16          fiber_edge_id           Where along the fiber the edge is (-1 if a connection)
     // material coefficients are given in the tangent,normal1,normal2 basis
     // so must be transformed into local basis chosen by HyperHDG, tangent coincides upto sign
 
