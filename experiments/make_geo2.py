@@ -13,6 +13,8 @@ def tprint(*args, **kwargs):
     print(f"[{time.strftime('%H:%M:%S')}]", *args, **kwargs)
 
 class Network:
+  QUIRKS = ["morgan-2026-01-30"]
+
   def generate_grid(self, nx, ny):
     tprint(f"generating grid graph {nx} x {ny} on unit square")
     h_x = 1.0 / (nx - 1) if nx > 1 else 0.0
@@ -128,7 +130,7 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
-  def read_morgan(self, path, rescale_props=None):
+  def read_morgan(self, path, rescale_props=None, quirk=None):
     tprint("reading nodes")
     nodes   = pandas.read_csv(path + "/nodes.csv")
     nodes   = nodes.to_numpy()[:,1:]
@@ -145,6 +147,15 @@ class Network:
       n_props = edgeProps.shape[-1]
       print(rescale_props)
       edgeProps *= rescale_props
+
+    if quirk == "morgan-2026-01-30":
+      n_edges = edges.shape[0]
+      fiber_ids = np.arange(n_edges)
+      fiber_edge_ids = np.zeros(n_edges)
+      widths = np.ones(n_edges) * 10 # 10um default width
+      edgeProps = np.column_stack([
+        edgeProps, widths, widths, fiber_ids, fiber_edge_ids,
+      ])
 
     tprint("nodes", nodes.shape)
     tprint("edges", edges.shape)
@@ -527,6 +538,8 @@ if __name__ == "__main__":
                     help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
   parser.add_argument("--rescale-props", default=None,
                     help="rescale network material properties, format '1,2,3,...'")
+  parser.add_argument("--quirk", default=None, choices=Network.QUIRKS,
+                    help="apply quirk")
   args = parser.parse_args()
 
   if args.rescale_props is not None:
@@ -554,7 +567,7 @@ if __name__ == "__main__":
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
   else:
-    network.read_morgan(args.input, rescale_props=args.rescale_props)
+    network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
     network.verify_nonzero()
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
