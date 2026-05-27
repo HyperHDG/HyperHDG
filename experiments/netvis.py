@@ -132,6 +132,125 @@ class Tubes:
     tube.UpdatePipeline()
     return tube
 
+class Beams:
+  """Build hollow rectangular beams (4 side quads per edge) from CellData normals/widths.
+
+  Reads two 3-vector normals and two scalar widths per cell from `source_array`
+  (CellData). For each VTK_LINE cell with endpoints p0, p1, places 4 corners
+  around each endpoint at p_i +/- (w1/2) n1 +/- (w2/2) n2, then emits the 4
+  side quads connecting them. Each quad inherits the source edge's CellData
+  (4 copies per edge) so per-beam coloring via --color-by works directly.
+
+  Run AFTER Warp: the centerline endpoints are already displaced by the
+  per-node displacement, so all 4 corners of a section share that displacement
+  by construction. Fixed cross-section orientation (does not rotate with the
+  beam's rotation DoF).
+  """
+  def __init__(self, source_array="properties",
+               n1_cols=(7,8,9), n2_cols=(10,11,12),
+               w1_col=13, w2_col=14, scale=1.0):
+    self.source_array = source_array
+    self.n1_cols = tuple(n1_cols)
+    self.n2_cols = tuple(n2_cols)
+    self.w1_col = w1_col
+    self.w2_col = w2_col
+    self.scale = scale
+
+  def apply(self, pipe, rview):
+    pf = pv.ProgrammableFilter(Input=pipe)
+    pf.OutputDataSetType = "vtkPolyData"
+    pf.Script = f"""
+import numpy as np
+import vtk
+from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
+
+vin  = self.GetInputDataObject(0, 0)
+vout = self.GetOutputDataObject(0)
+
+prop = vin.GetCellData().GetArray("{self.source_array}")
+if prop is None:
+    raise RuntimeError("Beams: CellData array '{self.source_array}' not found")
+prop = vtk_to_numpy(prop)
+
+pts_in = vtk_to_numpy(vin.GetPoints().GetData())
+nc = vin.GetNumberOfCells()
+
+n1 = prop[:, [{self.n1_cols[0]}, {self.n1_cols[1]}, {self.n1_cols[2]}]]
+n2 = prop[:, [{self.n2_cols[0]}, {self.n2_cols[1]}, {self.n2_cols[2]}]]
+w1 = prop[:, {self.w1_col}] * {self.scale}
+w2 = prop[:, {self.w2_col}] * {self.scale}
+
+# Vectorized read of line endpoints via the polydata Lines connectivity.
+# For a polydata of pure VTK_LINE cells, GetConnectivityArray() is a flat
+# (2*nc,) int array of [p0,p1, p0,p1, ...].
+lines = vin.GetLines()
+conn  = vtk_to_numpy(lines.GetConnectivityArray()).reshape(nc, 2)
+cell_pids = conn.astype(np.int64)
+
+p0 = pts_in[cell_pids[:, 0]]
+p1 = pts_in[cell_pids[:, 1]]
+h1 = 0.5 * w1[:, None] * n1
+h2 = 0.5 * w2[:, None] * n2
+
+# 4 corners going around: (+,+) (-,+) (-,-) (+,-)
+s1 = np.array([+1, -1, -1, +1])[None, :, None]
+s2 = np.array([+1, +1, -1, -1])[None, :, None]
+c0 = p0[:, None, :] + s1*h1[:, None, :] + s2*h2[:, None, :]   # (nc,4,3)
+c1 = p1[:, None, :] + s1*h1[:, None, :] + s2*h2[:, None, :]
+# layout: per-cell corners [0..3] at p0, [4..7] at p1
+corners = np.concatenate([c0, c1], axis=1).reshape(-1, 3)
+
+# 4 side quads per cell, winding consistently around the section
+k  = np.arange(4)
+kn = (k + 1) % 4
+base = (np.arange(nc) * 8)[:, None]
+quads = np.stack([
+    base + k[None, :],
+    base + kn[None, :],
+    base + 4 + kn[None, :],
+    base + 4 + k[None, :],
+], axis=2).reshape(-1, 4).astype(np.int64)
+nq = quads.shape[0]
+
+vpts = vtk.vtkPoints()
+vpts.SetData(numpy_to_vtk(np.ascontiguousarray(corners, dtype=np.float64), deep=1))
+vout.SetPoints(vpts)
+
+offsets      = np.arange(0, (nq + 1) * 4, 4, dtype=np.int64)
+connectivity = np.ascontiguousarray(quads.ravel(), dtype=np.int64)
+ca = vtk.vtkCellArray()
+ca.SetData(numpy_to_vtk(offsets,      deep=1, array_type=vtk.VTK_ID_TYPE),
+           numpy_to_vtk(connectivity, deep=1, array_type=vtk.VTK_ID_TYPE))
+vout.SetPolys(ca)
+
+# CellData: each output quad inherits from its source edge (4 copies per edge)
+src_cid = np.repeat(np.arange(nc), 4)
+in_cd, out_cd = vin.GetCellData(), vout.GetCellData()
+for ai in range(in_cd.GetNumberOfArrays()):
+    a = in_cd.GetArray(ai)
+    if a is None: continue
+    propagated = vtk_to_numpy(a)[src_cid]
+    va = numpy_to_vtk(np.ascontiguousarray(propagated), deep=1)
+    va.SetName(a.GetName())
+    out_cd.AddArray(va)
+
+# PointData: each corner inherits from its source centerline node
+src_pid = np.empty((nc, 8), dtype=np.int64)
+src_pid[:, :4] = cell_pids[:, 0:1]
+src_pid[:, 4:] = cell_pids[:, 1:2]
+src_pid = src_pid.ravel()
+in_pd, out_pd = vin.GetPointData(), vout.GetPointData()
+for ai in range(in_pd.GetNumberOfArrays()):
+    a = in_pd.GetArray(ai)
+    if a is None: continue
+    propagated = vtk_to_numpy(a)[src_pid]
+    va = numpy_to_vtk(np.ascontiguousarray(propagated), deep=1)
+    va.SetName(a.GetName())
+    out_pd.AddArray(va)
+"""
+    pf.UpdatePipeline()
+    return pf
+
 class Q1Mesh:
   def __init__(self, dims, color="magenta", opacity=1.0, line_width=1.0, scale=(1,1,1), eps=0.01, offset=(0,0,0)):
     self.dims = dims
@@ -533,6 +652,14 @@ if __name__ == "__main__":
   p.add_argument("-r", "--tubes-radius", type=float, default=20,
                  help="tube radius for beam rendering; 0 disables tubes")
   p.add_argument("--tubes-sides", type=int, default=4, help="number of polygonal sides per tube")
+  p.add_argument("--beams", type=int, default=0,
+                 help="if 1, render edges as hollow rectangular beams using CellData normals/widths; overrides --tubes-radius")
+  p.add_argument("--beams-array", default="properties",
+                 help="CellData array holding beam normals and widths")
+  p.add_argument("--beams-cols", default="7,8,9:10,11,12:13:14",
+                 help="column spec 'n1x,n1y,n1z:n2x,n2y,n2z:w1:w2' (0-indexed)")
+  p.add_argument("--beams-scale", type=float, default=1.0,
+                 help="scale factor applied to beam widths")
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1., help="opacity of reference outline")
   p.add_argument("--fps", type=int, default=30, help="target fps")
@@ -591,7 +718,19 @@ if __name__ == "__main__":
       else:
         normal = None
       ops.append(Warp(scale=args.warp_scale, components=comps, source_array=array, normal=normal))
-    if args.tubes_radius != 0.:
+    if args.beams:
+      parts = args.beams_cols.split(":")
+      if len(parts) != 4:
+        parser.error("--beams-cols takes 'n1x,n1y,n1z:n2x,n2y,n2z:w1:w2'")
+      n1_cols = tuple(int(x) for x in parts[0].split(","))
+      n2_cols = tuple(int(x) for x in parts[1].split(","))
+      if len(n1_cols) != 3 or len(n2_cols) != 3:
+        parser.error("--beams-cols: each normal needs 3 comma-separated cols")
+      ops.append(Beams(source_array=args.beams_array,
+                       n1_cols=n1_cols, n2_cols=n2_cols,
+                       w1_col=int(parts[2]), w2_col=int(parts[3]),
+                       scale=args.beams_scale))
+    elif args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
       ops.append(ArrayColor(args.color_by, fg=fg, invert=args.color_invert, categories=args.color_categories))
