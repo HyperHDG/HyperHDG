@@ -133,19 +133,32 @@ class Tubes:
     return tube
 
 class Q1Mesh:
-  def __init__(self, dims, color="magenta", opacity=1.0, line_width=1.0):
+  def __init__(self, dims, color="magenta", opacity=1.0, line_width=1.0, scale=(1,1,1), eps=0.01, offset=(0,0,0)):
     self.dims = dims
     self.color = color
     self.opacity = opacity
     self.line_width = line_width
+    self.scale = scale
+    self.eps = eps
+    self.offset = offset
 
   def apply(self, pipe, rview):
     xmin, xmax, ymin, ymax, zmin, zmax = pipe.GetDataInformation().GetBounds()
     nx, ny, nz = self.dims
-    dz = max(zmax - zmin, max(xmax - xmin, ymax - ymin))
-    eps = 0.01 * dz
-    zmin -= eps
-    zmax += eps
+
+    # rescale bounds by self.scale
+    # extent in any direction should be at least self.eps * max extent
+    cx, cy, cz = 0.5*(xmin+xmax), 0.5*(ymin+ymax), 0.5*(zmin+zmax)
+    hx, hy, hz = 0.5*(xmax-xmin), 0.5*(ymax-ymin), 0.5*(zmax-zmin)
+    eps = self.eps * max(hx, hy, hz)
+    hx = hx or eps
+    hy = hy or eps
+    hz = hz or eps
+    sx, sy, sz = self.scale
+    ox, oy, oz = self.offset
+    xmin, xmax = cx - sx*hx + ox, cx + sx*hx + ox
+    ymin, ymax = cy - sy*hy + oy, cy + sy*hy + oy
+    zmin, zmax = cz - sz*hz + oz, cz + sz*hz + oz
 
     # Wavelet produces an ImageData with the given extent, centered at Center
     src = pv.Wavelet()
@@ -532,6 +545,10 @@ if __name__ == "__main__":
                help="overlay Q1 cartesian mesh: 'N' (N,N,1), 'NX,NY' (NX,NY,1), or 'NX,NY,NZ'")
   p.add_argument("--q1-color", default="black",
                help="overlay Q1 cartesian mesh color")
+  p.add_argument("--q1-scale", default="1,1,1",
+               help="overlay Q1 cartesian mesh scale")
+  p.add_argument("--q1-offset", default="0,0,0",
+               help="overlay Q1 cartesian mesh offset")
   p.add_argument("--line-width", type=float, default=1, help="line width for wiremeshes")
 
   args = p.parse_args()
@@ -553,7 +570,14 @@ if __name__ == "__main__":
         dims = tuple(parts)
       else:
         parser.error("error: --q1 takes 1, 2, or 3 comma-separated ints")
-      ops.append(Q1Mesh(dims, color=args.q1_color, line_width=args.line_width))
+      scale = [float(x) for x in args.q1_scale.split(",")]
+      if len(scale) != 3:
+        parser.error("--q1-scale takes 3 comma-separated floats")
+      offset = [float(x) for x in args.q1_offset.split(",")]
+      if len(scale) != 3:
+        parser.error("--q1-scale takes 3 comma-separated floats")
+      ops.append(Q1Mesh(dims, color=args.q1_color, line_width=args.line_width,
+                        offset=offset, scale=scale))
     if args.q1 is None and args.ref:
       ops.append(Reference(color=args.fg, opacity=args.ref_opacity, line_width=args.line_width))
     if args.arrows != 0.:
