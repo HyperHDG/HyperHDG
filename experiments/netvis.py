@@ -161,7 +161,9 @@ class Beams:
     pf.OutputDataSetType = "vtkPolyData"
     pf.Script = f"""
 import numpy as np
-import vtk
+from vtkmodules.vtkCommonCore import vtkPoints
+from vtkmodules.vtkCommonDataModel import vtkCellArray
+from vtkmodules.util.vtkConstants import VTK_ID_TYPE
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 
 vin  = self.GetInputDataObject(0, 0)
@@ -212,15 +214,15 @@ quads = np.stack([
 ], axis=2).reshape(-1, 4).astype(np.int64)
 nq = quads.shape[0]
 
-vpts = vtk.vtkPoints()
+vpts = vtkPoints()
 vpts.SetData(numpy_to_vtk(np.ascontiguousarray(corners, dtype=np.float64), deep=1))
 vout.SetPoints(vpts)
 
 offsets      = np.arange(0, (nq + 1) * 4, 4, dtype=np.int64)
 connectivity = np.ascontiguousarray(quads.ravel(), dtype=np.int64)
-ca = vtk.vtkCellArray()
-ca.SetData(numpy_to_vtk(offsets,      deep=1, array_type=vtk.VTK_ID_TYPE),
-           numpy_to_vtk(connectivity, deep=1, array_type=vtk.VTK_ID_TYPE))
+ca = vtkCellArray()
+ca.SetData(numpy_to_vtk(offsets,      deep=1, array_type=VTK_ID_TYPE),
+           numpy_to_vtk(connectivity, deep=1, array_type=VTK_ID_TYPE))
 vout.SetPolys(ca)
 
 # CellData: each output quad inherits from its source edge (4 copies per edge)
