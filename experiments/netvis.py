@@ -149,7 +149,8 @@ class Beams:
   def __init__(self, source_array="properties",
                n1_cols=(7,8,9), n2_cols=(10,11,12),
                w1_col=13, w2_col=14, scale=1.0,
-               skip_col=15, skip_value=-1.0):
+               skip_col=15, skip_value=-1.0,
+               rot_array="values", rot_cols=(9,10,11), rot_scale=1.0):
     self.source_array = source_array
     self.n1_cols = tuple(n1_cols)
     self.n2_cols = tuple(n2_cols)
@@ -158,6 +159,9 @@ class Beams:
     self.scale = scale
     self.skip_col = skip_col         # column in source_array used to drop edges; None disables
     self.skip_value = skip_value     # edges where source_array[:, skip_col] == skip_value are dropped
+    self.rot_array = rot_array       # PointData array holding rotation vectors; "" disables
+    self.rot_cols = tuple(rot_cols)  # 3 columns of rot_array taken as the rotation vector
+    self.rot_scale = rot_scale       # multiplier applied to rotation vectors (visualization gain)
 
   def apply(self, pipe, rview):
     pf = pv.ProgrammableFilter(Input=pipe)
@@ -208,14 +212,49 @@ nc        = int(keep.sum())
 
 p0 = pts_in[cell_pids[:, 0]]
 p1 = pts_in[cell_pids[:, 1]]
-h1 = 0.5 * w1[:, None] * n1
-h2 = 0.5 * w2[:, None] * n2
+
+# Per-endpoint rotated normals via Rodrigues' formula on a per-node rotation vector.
+# v_rot = v cos t + (k x v) sin t + k (k . v) (1 - cos t),  with k = r/|r|, t = |r|.
+def _rodrigues(r, v):
+    t = np.linalg.norm(r, axis=1, keepdims=True)
+    safe = np.where(t > 0, t, 1.0)
+    k = r / safe
+    kxv = np.cross(k, v)
+    kdv = np.sum(k * v, axis=1, keepdims=True)
+    c, s = np.cos(t), np.sin(t)
+    return v * c + kxv * s + k * kdv * (1.0 - c)
+
+rot_name = "{self.rot_array}"
+rot = None
+if rot_name:
+    ra = vin.GetPointData().GetArray(rot_name)
+    if ra is not None:
+        rv = vtk_to_numpy(ra)
+        rot = rv[:, [{self.rot_cols[0]}, {self.rot_cols[1]}, {self.rot_cols[2]}]] * {self.rot_scale}
+    if ra is None:
+        print("Beams: rotate: '{self.rot_array}' not found, skipping")
+
+if rot is not None:
+    r0 = rot[cell_pids[:, 0]]
+    r1 = rot[cell_pids[:, 1]]
+    n1_0 = _rodrigues(r0, n1)
+    n2_0 = _rodrigues(r0, n2)
+    n1_1 = _rodrigues(r1, n1)
+    n2_1 = _rodrigues(r1, n2)
+else:
+    n1_0 = n1_1 = n1
+    n2_0 = n2_1 = n2
+
+h1_0 = 0.5 * w1[:, None] * n1_0
+h2_0 = 0.5 * w2[:, None] * n2_0
+h1_1 = 0.5 * w1[:, None] * n1_1
+h2_1 = 0.5 * w2[:, None] * n2_1
 
 # 4 corners going around: (+,+) (-,+) (-,-) (+,-)
 s1 = np.array([+1, -1, -1, +1])[None, :, None]
 s2 = np.array([+1, +1, -1, -1])[None, :, None]
-c0 = p0[:, None, :] + s1*h1[:, None, :] + s2*h2[:, None, :]   # (nc,4,3)
-c1 = p1[:, None, :] + s1*h1[:, None, :] + s2*h2[:, None, :]
+c0 = p0[:, None, :] + s1*h1_0[:, None, :] + s2*h2_0[:, None, :]   # (nc,4,3)
+c1 = p1[:, None, :] + s1*h1_1[:, None, :] + s2*h2_1[:, None, :]
 # layout: per-cell corners [0..3] at p0, [4..7] at p1
 corners = np.concatenate([c0, c1], axis=1).reshape(-1, 3)
 
@@ -681,6 +720,10 @@ if __name__ == "__main__":
                  help="scale factor applied to beam widths")
   p.add_argument("--beams-skip", default="15=-1",
                  help="drop edges where source_array[:, COL] == VAL, as 'COL=VAL'; '' disables")
+  p.add_argument("--beams-rotate", default="values:9,10,11",
+                 help="rotate beam cross-sections via Rodrigues using PointData 'ARRAY:c1,c2,c3'; '' disables")
+  p.add_argument("--beams-rot-scale", type=float, default=1.0,
+                 help="scale rotation vectors before applying")
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1., help="opacity of reference outline")
   p.add_argument("--fps", type=int, default=30, help="target fps")
@@ -755,11 +798,21 @@ if __name__ == "__main__":
         skip_value = float(skip_value)
       else:
         skip_col, skip_value = None, 0.0
+      if args.beams_rotate:
+        if ":" not in args.beams_rotate:
+          parser.error("--beams-rotate takes 'ARRAY:c1,c2,c3'")
+        rot_array, rot_cols_s = args.beams_rotate.split(":", 1)
+        rot_cols = tuple(int(x) for x in rot_cols_s.split(","))
+        if len(rot_cols) != 3:
+          parser.error("--beams-rotate: need 3 comma-separated cols")
+      else:
+        rot_array, rot_cols = "", (0, 0, 0)
       ops.append(Beams(source_array=args.beams_array,
                        n1_cols=n1_cols, n2_cols=n2_cols,
                        w1_col=int(parts[2]), w2_col=int(parts[3]),
                        scale=args.beams_scale,
-                       skip_col=skip_col, skip_value=skip_value))
+                       skip_col=skip_col, skip_value=skip_value,
+                       rot_array=rot_array, rot_cols=rot_cols, rot_scale=args.beams_rot_scale))
     elif args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
