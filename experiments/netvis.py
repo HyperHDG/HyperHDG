@@ -148,13 +148,16 @@ class Beams:
   """
   def __init__(self, source_array="properties",
                n1_cols=(7,8,9), n2_cols=(10,11,12),
-               w1_col=13, w2_col=14, scale=1.0):
+               w1_col=13, w2_col=14, scale=1.0,
+               skip_array="fiber_id", skip_value=-1):
     self.source_array = source_array
     self.n1_cols = tuple(n1_cols)
     self.n2_cols = tuple(n2_cols)
     self.w1_col = w1_col
     self.w2_col = w2_col
     self.scale = scale
+    self.skip_array = skip_array     # CellData array used to drop edges; "" disables
+    self.skip_value = skip_value     # edges where skip_array == skip_value are dropped
 
   def apply(self, pipe, rview):
     pf = pv.ProgrammableFilter(Input=pipe)
@@ -188,6 +191,21 @@ w2 = prop[:, {self.w2_col}] * {self.scale}
 lines = vin.GetLines()
 conn  = vtk_to_numpy(lines.GetConnectivityArray()).reshape(nc, 2)
 cell_pids = conn.astype(np.int64)
+
+# Drop cells where skip_array == skip_value (e.g. fiber_id == -1 connectors).
+keep = np.ones(nc, dtype=bool)
+skip_name = "{self.skip_array}"
+if skip_name:
+    skip_arr = vin.GetCellData().GetArray(skip_name)
+    if skip_arr is not None:
+        keep = vtk_to_numpy(skip_arr) != {self.skip_value}
+keep_idx  = np.flatnonzero(keep)              # original cell indices kept
+n1        = n1[keep]
+n2        = n2[keep]
+w1        = w1[keep]
+w2        = w2[keep]
+cell_pids = cell_pids[keep]
+nc        = int(keep.sum())
 
 p0 = pts_in[cell_pids[:, 0]]
 p1 = pts_in[cell_pids[:, 1]]
@@ -226,7 +244,7 @@ ca.SetData(numpy_to_vtk(offsets,      deep=1, array_type=VTK_ID_TYPE),
 vout.SetPolys(ca)
 
 # CellData: each output quad inherits from its source edge (4 copies per edge)
-src_cid = np.repeat(np.arange(nc), 4)
+src_cid = np.repeat(keep_idx, 4)
 in_cd, out_cd = vin.GetCellData(), vout.GetCellData()
 for ai in range(in_cd.GetNumberOfArrays()):
     a = in_cd.GetArray(ai)
@@ -662,6 +680,8 @@ if __name__ == "__main__":
                  help="column spec 'n1x,n1y,n1z:n2x,n2y,n2z:w1:w2' (0-indexed)")
   p.add_argument("--beams-scale", type=float, default=1.0,
                  help="scale factor applied to beam widths")
+  p.add_argument("--beams-skip", default="fiber_id=-1",
+                 help="drop edges where CellData ARRAY == VALUE, as 'ARRAY=VALUE'; '' disables")
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1., help="opacity of reference outline")
   p.add_argument("--fps", type=int, default=30, help="target fps")
@@ -728,10 +748,18 @@ if __name__ == "__main__":
       n2_cols = tuple(int(x) for x in parts[1].split(","))
       if len(n1_cols) != 3 or len(n2_cols) != 3:
         parser.error("--beams-cols: each normal needs 3 comma-separated cols")
+      if args.beams_skip:
+        if "=" not in args.beams_skip:
+          parser.error("--beams-skip takes 'ARRAY=VALUE'")
+        skip_array, skip_value = args.beams_skip.split("=", 1)
+        skip_value = int(skip_value)
+      else:
+        skip_array, skip_value = "", 0
       ops.append(Beams(source_array=args.beams_array,
                        n1_cols=n1_cols, n2_cols=n2_cols,
                        w1_col=int(parts[2]), w2_col=int(parts[3]),
-                       scale=args.beams_scale))
+                       scale=args.beams_scale,
+                       skip_array=skip_array, skip_value=skip_value))
     elif args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
