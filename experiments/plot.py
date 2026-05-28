@@ -85,6 +85,7 @@ parser.add_argument("--group0", help="group input data by plot")
 parser.add_argument("--comment", help="place some text in the bottom right corner, like the git hash, date, etc")
 parser.add_argument("--marker", help="set the marker", default="+")
 parser.add_argument("--figsize", help="figure size 'w,h' in inches", default="6,6")
+parser.add_argument("--eoc", help="plot experimental order of convergence log(y_i/y_{i-1})/log(x_i/x_{i-1}) instead of y", action="store_true")
 
 args = parser.parse_args()
 
@@ -113,7 +114,10 @@ for idx, (name0, df0) in enumerate(df.groupby(args.group0)) if args.group0 else 
     for names, group in df0.groupby(args.group_by.split(',')) if args.group_by else [("",df0)]:
         if name0 is not None: names = [name0]+list(names)
         sgroup = group[[args.x, args.y]].sort_values(args.x)
-        plot_func(tx(sgroup[args.x]), ty(sgroup[args.y]), label=fmt_names(names), marker=args.marker)
+        xs, ys = tx(sgroup[args.x].to_numpy()), ty(sgroup[args.y].to_numpy())
+        if args.eoc:
+            xs, ys = xs[1:], np.log(ys[1:]/ys[:-1]) / np.log(xs[1:]/xs[:-1])
+        plot_func(xs, ys, label=fmt_names(names), marker=args.marker)
 
     if args.ref:
         refs = args.ref.split('|')
