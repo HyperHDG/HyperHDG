@@ -152,13 +152,13 @@ class TimoshenkoWave
     /*!*********************************************************************************************
      *  \brief  Define the typename returned by function errors.
      **********************************************************************************************/
-    typedef std::array<lSol_float_t, 1U> error_t;
+    typedef std::array<lSol_float_t, 2U> error_t;
     /*!*********************************************************************************************
      *  \brief  Define how initial error is generated.
      **********************************************************************************************/
     static error_t initial_error()
     {
-      std::array<lSol_float_t, 1U> summed_error;
+      std::array<lSol_float_t, 2U> summed_error;
       summed_error.fill(0.);
       return summed_error;
     }
@@ -669,23 +669,21 @@ class TimoshenkoWave
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT>
-  std::array<lSol_float_t, 1U> errors(
+  std::array<lSol_float_t, 2U> errors(
     const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
       lambda_values,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    (void)lambda_values;
-
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t,3> comps = {1,-1,-2};
     std::array<lSol_float_t, n_shape_fct_> coeffs;
-    lSol_float_t error = 0;
+    std::array<lSol_float_t, n_shape_bdr_> bcoeffs;
+    lSol_float_t error = 0, trace = 0;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = hyper_edge.data.u_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> r_old = hyper_edge.data.r_old;
-      // loc_dof_to_glob_dof(hyper_edge.data.u_old, hyper_edge);
 
-    for (unsigned int dim = 0; dim < 3; dim++) {
+    for (unsigned int dim = 0; dim < space_dim; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = u_old[i + dim * n_shape_fct_];
       error += integrator::template integrate_vol_diffsquare_discanacomp<
@@ -694,7 +692,7 @@ class TimoshenkoWave
                                                                          hyper_edge.geometry, time);
     }
 
-    for (unsigned int dim = 0; dim < 3; dim++) {
+    for (unsigned int dim = 0; dim < space_dim; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = r_old[i + dim * n_shape_fct_];
       error += integrator::template integrate_vol_diffsquare_discanacomp<
@@ -703,9 +701,55 @@ class TimoshenkoWave
                                                                          hyper_edge.geometry, time);
     }
 
-    hy_check(std::isfinite(error), "error u_old" << u_old << " r_old " << r_old);
+    // Lambda is zeroed at dynamic-Dirichlet DOFs (see residual_flux), so for those DOFs we
+    // substitute the projected Dirichlet value here -- otherwise the trace error picks up the
+    // full analytic value at the boundary. Bit-6 faces (static-only dirichlet) keep their
+    // lambda since make_initial_from_static fills it with the projected bulk solution.
+    // For n_shape_bdr_ == 1 the projection coefficient equals dirichlet_value at the face point.
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr) {
+      const bool dyn_dirichlet = hyper_edge.node_descriptor[bdr]
+                                 && !(hyper_edge.node_descriptor[bdr] & (1u << 6));
+      for (unsigned int dim = 0; dim < space_dim; ++dim) {
+        for (unsigned int i = 0; i < bcoeffs.size(); ++i) {
+          const unsigned int dof_j = dim * n_shape_bdr_ + i;
+          if (dyn_dirichlet && (hyper_edge.node_descriptor[bdr] & (1u << dof_j)))
+            bcoeffs[i] = integrator::template integrate_bdr_phivecfunccomp<
+                Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
+                Point<hyEdge_dimT, lSol_float_t>>(i, bdr, comps[dim], hyper_edge.geometry, time);
+          else
+            bcoeffs[i] = lambda_values[bdr][i + dim * n_shape_bdr_];
+        }
+        trace += integrator::template integrate_bdr_diffsquare_discanacomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(
+            bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+      }
+    }
 
-    return std::array<lSol_float_t, 1U>({error});
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr) {
+      const bool dyn_dirichlet = hyper_edge.node_descriptor[bdr]
+                                 && !(hyper_edge.node_descriptor[bdr] & (1u << 6));
+      for (unsigned int dim = 0; dim < space_dim; ++dim) {
+        for (unsigned int i = 0; i < bcoeffs.size(); ++i) {
+          const unsigned int dof_j = (3 + dim) * n_shape_bdr_ + i;
+          if (dyn_dirichlet && (hyper_edge.node_descriptor[bdr] & (1u << dof_j)))
+            bcoeffs[i] = integrator::template integrate_bdr_phivecfunccomp<
+                Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
+                Point<hyEdge_dimT, lSol_float_t>>(i, bdr, comps[dim], hyper_edge.geometry, time);
+          else
+            bcoeffs[i] = lambda_values[bdr][i + (3+dim) * n_shape_bdr_];
+        }
+        trace += integrator::template integrate_bdr_diffsquare_discanacomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::analytic_result_phi, Point<hyEdge_dimT, lSol_float_t>>(
+            bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+      }
+    }
+
+
+    return std::array<lSol_float_t, 2U>({error, trace});
   }
 
   // Edge-local frame vector: idx == 0 → inner_normal(0),

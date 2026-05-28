@@ -77,13 +77,31 @@ PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
+    PetscInt unused;
+    char **names;
+    char **values;
+
+    PetscCall(PetscOptionsLeftGet(NULL, &unused, &names, &values));
+    if (unused == 0) goto end;
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING! There are options you set that were not used!\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "options_left:\n"));
+    for (PetscInt i = 0; i < unused; i++)
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - name: \"%s\"\n    value: \"%s\"\n", names[i], values[i]));
+end:
+    PetscCall(PetscOptionsLeftRestore(NULL, &unused, &names, &values));
+    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
+    return 0;
+}
+
 int main(int argc, char **argv) {
     PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
-    PetscInt nt = 1, nx = 1, poly_deg = 1;
+    PetscInt nt = 1, nx = 1, poly_deg = 1, tau_s = 0;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0;
+    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, e_trace = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -126,6 +144,18 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
+    PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));
+    if (is_set) {
+      PetscReal h = 1./nx;
+      switch (tau_s) {
+      case  1: tau = h;   break;
+      case  0: tau = 1;   break;
+      case -1: tau = 1/h; break;
+      default:
+        PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+                   "expected tau_s = -1,0,1 found %lld", (long long)tau_s);
+      }
+    }
     PetscOptionsEnd();
 
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
@@ -154,6 +184,7 @@ int main(int argc, char **argv) {
     PRIN2IY(timowave_test);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
+    PRIN2IY(tau_s);
     PRIN2FY(theta);
     PRIN2IY(nt);
     PRIN2IY(nx);
@@ -198,6 +229,7 @@ int main(int argc, char **argv) {
     temp2 = hdg->errors(temp, 0);
     temp3 = hdg->norms(temp, 0);
     e_abs = PetscMax(temp2[0], e_abs);
+    e_trace = PetscMax(temp2[1], e_trace);
     // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
@@ -285,9 +317,12 @@ int main(int argc, char **argv) {
           PetscLogEventEnd(e_plot, 0,0,0,0);
         }
         PetscLogEventBegin(e_errors, 0,0,0,0);
-        error = hdg->errors(span, ti)[0];
         PetscLogEventEnd(e_errors, 0,0,0,0);
+        if (*plot) hdg->plot_solution(span, ti);
+        temp2 = hdg->errors(span, ti);
+        error = temp2[0];
         e_abs = PetscMax(error, e_abs);
+        e_trace = PetscMax(temp2[1], e_trace);
         PetscCall(VecRestoreSpan(rhs, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
@@ -306,12 +341,15 @@ int main(int argc, char **argv) {
     avg_iterations = ((PetscReal)iterations) / nt;
 
     PRIN2FY(e_abs);
+    PRIN2FY(e_trace);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);
     PRIN2FY(avg_iterations);
     if (*plot)
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: output/%s.vtkhdf\n", plot));
+
+    PetscCall(PetscOptionsLeftYAML(NULL));
 
     delete hdg;
     PetscCall(KSPDestroy(&ksp));
