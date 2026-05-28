@@ -49,6 +49,7 @@ PetscErrorCode PetscHDGCreate(
   int i = poly_deg*10 + test;
   switch(i) {
   case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
+  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;

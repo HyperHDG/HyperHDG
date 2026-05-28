@@ -683,6 +683,10 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = hyper_edge.data.u_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> r_old = hyper_edge.data.r_old;
 
+    // Input lambdas are in node-frame (global). Convert to edge-frame so we can compare against
+    // analytic_result_u/phi which is evaluated against edge-local normals (comps = {1,-1,-2}).
+    auto lambda_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+
     for (unsigned int dim = 0; dim < space_dim; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
         coeffs[i] = u_old[i + dim * n_shape_fct_];
@@ -718,12 +722,13 @@ class TimoshenkoWave
                 decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
                 Point<hyEdge_dimT, lSol_float_t>>(i, bdr, comps[dim], hyper_edge.geometry, time);
           else
-            bcoeffs[i] = lambda_values[bdr][i + dim * n_shape_bdr_];
+            bcoeffs[i] = lambda_loc[bdr][i + dim * n_shape_bdr_];
         }
-        trace += integrator::template integrate_bdr_diffsquare_discanacomp<
+        lSol_float_t contrib = integrator::template integrate_bdr_diffsquare_discanacomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
           parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(
             bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+        trace += contrib;
       }
     }
 
@@ -739,15 +744,15 @@ class TimoshenkoWave
                 decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
                 Point<hyEdge_dimT, lSol_float_t>>(i, bdr, comps[dim], hyper_edge.geometry, time);
           else
-            bcoeffs[i] = lambda_values[bdr][i + (3+dim) * n_shape_bdr_];
+            bcoeffs[i] = lambda_loc[bdr][i + (3+dim) * n_shape_bdr_];
         }
-        trace += integrator::template integrate_bdr_diffsquare_discanacomp<
+        lSol_float_t contrib = integrator::template integrate_bdr_diffsquare_discanacomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
           parameters::analytic_result_phi, Point<hyEdge_dimT, lSol_float_t>>(
             bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+        trace += contrib;
       }
     }
-
 
     return std::array<lSol_float_t, 2U>({error, trace});
   }
