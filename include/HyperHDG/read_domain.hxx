@@ -519,6 +519,8 @@ read_domain_geo(const std::string& filename)
  **************************************************************************************************/
 
 bool read_domain_is_h5(const char *path) {
+  if (H5Fis_accessible(path, H5P_DEFAULT) <= 0) return false; // not an h5 file or inaccessible
+
   hid_t file = H5Fopen(path, H5F_ACC_RDONLY, H5P_DEFAULT);
   if (file < 0) return false; // error opening file or file is not h5
 
