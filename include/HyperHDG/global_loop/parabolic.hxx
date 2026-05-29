@@ -39,6 +39,10 @@ class Parabolic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(is_dirichlet, has_is_dirichlet);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
   HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).

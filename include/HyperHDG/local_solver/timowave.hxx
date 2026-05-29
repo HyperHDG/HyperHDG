@@ -612,6 +612,14 @@ class TimoshenkoWave
     return lambda_values_out;
   }
 
+  template <typename hyEdgeT>
+  bool is_dirichlet(hyEdgeT& hyper_edge, unsigned int node, unsigned int dof) const
+  {
+    if (hyper_edge.node_descriptor[node] & (1ul << 6)) return false;  // static-only flag
+    if (dof >= 2 * space_dim) return false;
+    return hyper_edge.node_descriptor[node] & (1ul << dof);
+  }
+
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
