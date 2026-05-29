@@ -1007,6 +1007,31 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
   }
 
+  // --- static CellData/properties from hyper_edge.geometry.extra_data()
+  hid_t cdata = H5Gcreate2(root, "CellData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) {
+    const unsigned int n_properties =
+      static_cast<unsigned int>(hyper_graph.hyEdge_geometry(0).extra_data().size());
+
+    std::vector<float> props_buf(static_cast<size_t>(n_cells) * n_properties, 0.f);
+    for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+      auto edge = hyper_graph.hyEdge_geometry(he);
+      const auto& props = edge.extra_data();
+      hy_check(props.size() == n_properties,
+               "all hyperedges must have the same number of properties; "
+               "edge " << he << " has " << props.size() << ", expected " << n_properties);
+      for (unsigned int c = 0; c < cells_per_edge; ++c) {
+        const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
+        for (unsigned int d = 0; d < n_properties; ++d)
+          props_buf[row + d] = static_cast<float>(props[d]);
+      }
+    }
+
+    hsize_t d[2] = {(hsize_t)n_cells, n_properties};
+    write_dset(cdata, "properties", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, props_buf.data());
+  }
+  H5Gclose(cdata);
+
   // --- Steps group + NSteps=0 attribute
   hid_t steps = H5Gcreate2(root, "Steps", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   h5_set_attr_i64(steps, "NSteps", 0);
