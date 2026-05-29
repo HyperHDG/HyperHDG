@@ -44,6 +44,7 @@ from colorsys import hsv_to_rgb
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import builtins
 
 class View:
   VIEWS = {
@@ -614,7 +615,7 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
     scene.PlayMode = "Snap To TimeSteps"
     scene.NumberOfFrames = len(times)
     if len(times) > 0:
-      scene.FramesPerTimestep = max(1, round(duration * fps / len(times)))
+      scene.FramesPerTimestep = builtins.max(1, int(round(duration * fps / len(times))))
     else:
       scene.FramesPerTimestep = 1
     scene.Play()
