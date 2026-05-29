@@ -765,6 +765,93 @@ class TimoshenkoWave
     return std::array<lSol_float_t, 2U>({error, trace});
   }
 
+  static constexpr unsigned int n_energy_components() { return 6 * space_dim; }
+
+  // Per-edge energy split into 6*space_dim components, ordered (block of size space_dim each):
+  //   0: ½ ∫ n²/C_n   1: ½ ∫ m²/C_m   2: ½ ∫ v²/C_u   3: ½ ∫ s²/C_r
+  //   4: ½ τ Σ_bdr ∫ (u-λ_u)²            5: ½ τ Σ_bdr ∫ (r-λ_r)²
+  template <class hyEdgeT>
+  std::array<lSol_float_t, n_energy_components()> energy(
+    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t /*time*/ = 0.) const
+  {
+    std::array<lSol_float_t, n_energy_components()> result;
+    result.fill(0.);
+
+    auto& n_old = hyper_edge.data.n_old;
+    auto& m_old = hyper_edge.data.m_old;
+    auto& u_old = hyper_edge.data.u_old;
+    auto& r_old = hyper_edge.data.r_old;
+    auto& v_old = hyper_edge.data.v_old;
+    auto& s_old = hyper_edge.data.s_old;
+
+    auto extra = get_extra_coeffs(hyper_edge);
+    auto lambda_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+
+    for (unsigned int d = 0; d < space_dim; ++d) {
+      const lSol_float_t Cn = extra[0 * space_dim + d];
+      const lSol_float_t Cm = extra[1 * space_dim + d];
+      const lSol_float_t Cu = extra[2 * space_dim + d];
+      const lSol_float_t Cr = extra[3 * space_dim + d];
+
+      lSol_float_t strain_n = 0, strain_m = 0, kin_v = 0, kin_s = 0;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        for (unsigned int j = 0; j < n_shape_fct_; ++j) {
+          const lSol_float_t mij =
+            integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, hyper_edge.geometry);
+          strain_n += n_old[d * n_shape_fct_ + i] * n_old[d * n_shape_fct_ + j] * mij;
+          strain_m += m_old[d * n_shape_fct_ + i] * m_old[d * n_shape_fct_ + j] * mij;
+          kin_v    += v_old[d * n_shape_fct_ + i] * v_old[d * n_shape_fct_ + j] * mij;
+          kin_s    += s_old[d * n_shape_fct_ + i] * s_old[d * n_shape_fct_ + j] * mij;
+        }
+
+      result[0 * space_dim + d] = 0.5 * strain_n / Cn;
+      result[1 * space_dim + d] = 0.5 * strain_m / Cm;
+      result[2 * space_dim + d] = 0.5 * kin_v / Cu;
+      result[3 * space_dim + d] = 0.5 * kin_s / Cr;
+
+      lSol_float_t hyb_u = 0, hyb_r = 0;
+      for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr) {
+        // (y - λ)² = y² - 2 y λ + λ² on face bdr, with y = u or r.
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          for (unsigned int j = 0; j < n_shape_fct_; ++j) {
+            const lSol_float_t mij =
+              integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+                i, j, bdr, hyper_edge.geometry);
+            hyb_u += u_old[d * n_shape_fct_ + i] * u_old[d * n_shape_fct_ + j] * mij;
+            hyb_r += r_old[d * n_shape_fct_ + i] * r_old[d * n_shape_fct_ + j] * mij;
+          }
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
+            const lSol_float_t mij =
+              integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                i, j, bdr, hyper_edge.geometry);
+            hyb_u -= 2 * u_old[d * n_shape_fct_ + i]
+                       * lambda_loc[bdr][j + d * n_shape_bdr_] * mij;
+            hyb_r -= 2 * r_old[d * n_shape_fct_ + i]
+                       * lambda_loc[bdr][j + (space_dim + d) * n_shape_bdr_] * mij;
+          }
+        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
+            const lSol_float_t mij =
+              integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
+                i, j, bdr, hyper_edge.geometry);
+            hyb_u += lambda_loc[bdr][i + d * n_shape_bdr_]
+                     * lambda_loc[bdr][j + d * n_shape_bdr_] * mij;
+            hyb_r += lambda_loc[bdr][i + (space_dim + d) * n_shape_bdr_]
+                     * lambda_loc[bdr][j + (space_dim + d) * n_shape_bdr_] * mij;
+          }
+      }
+      result[4 * space_dim + d] = 0.5 * tau_ * hyb_u;
+      result[5 * space_dim + d] = 0.5 * tau_ * hyb_r;
+    }
+
+    return result;
+  }
+
   // Edge-local frame vector: idx == 0 → inner_normal(0),
   // idx == -k (k>=1) → outer_normal(k-1).
   // Convention: nonneg → inner, neg → outer.

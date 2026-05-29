@@ -500,6 +500,48 @@ class Hyperbolic
     return {};
   }
   /*!***********************************************************************************************
+   * \brief   Number of hyperedges in the underlying hypergraph.
+   ************************************************************************************************/
+  dof_index_t n_edges() const { return hyper_graph_.n_hyEdges(); }
+  /*!***********************************************************************************************
+   * \brief   Number of energy components reported per edge by the local solver.
+   ************************************************************************************************/
+  static constexpr unsigned int n_energy_components()
+  {
+    return LocalSolverT::n_energy_components();
+  }
+  /*!***********************************************************************************************
+   * \brief   Fill caller-provided span with per-edge energy components.
+   *
+   * Does not allocate. The span must hold exactly \c n_edges() * \c n_energy_components()
+   * entries; the local solver's array for edge \c e is written into
+   * \c out[e * n_energy_components() .. (e+1) * n_energy_components()).
+   ************************************************************************************************/
+  template <typename SpanT, typename LambdaSpanT>
+  void energy(const LambdaSpanT& x_vec, SpanT out, const dof_value_t time = 0.)
+  {
+    constexpr unsigned int n_comp = n_energy_components();
+    hy_check(out.size() == static_cast<std::size_t>(n_edges()) * n_comp,
+             "energy span size mismatch: got " << out.size()
+             << " expected " << static_cast<std::size_t>(n_edges()) * n_comp);
+
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs;
+
+    const dof_index_t n_e = n_edges();
+    for (dof_index_t e = 0; e < n_e; ++e)
+    {
+      auto hyper_edge = hyper_graph_[e];
+      const auto hyNodes = hyper_edge.topology.get_hyNode_indices();
+      for (unsigned int node = 0; node < hyNodes.size(); ++node)
+        hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);
+
+      const auto local = local_solver_.energy(dofs, hyper_edge, time);
+      const std::size_t base = static_cast<std::size_t>(e) * n_comp;
+      for (unsigned int c = 0; c < n_comp; ++c)
+        out[base + c] = local[c];
+    }
+  }
+  /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.
    *
    * Function that returns the size \f$n\f$ of the \f$n \times n\f$ linear, sparse system
