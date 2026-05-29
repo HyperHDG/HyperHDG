@@ -95,7 +95,7 @@ class Warp:
             file=sys.stderr)
       return pipe
     ncomp = arr.GetNumberOfComponents()
-    needed = max(self.components) + 1
+    needed = builtins.max(self.components) + 1
     if ncomp < needed:
         print(f"warning: Warp: '{self.source_array}' has {ncomp} "
               f"components, need {needed}, skipping", file=sys.stderr)
@@ -328,7 +328,7 @@ class Q1Mesh:
     # extent in any direction should be at least self.eps * max extent
     cx, cy, cz = 0.5*(xmin+xmax), 0.5*(ymin+ymax), 0.5*(zmin+zmax)
     hx, hy, hz = 0.5*(xmax-xmin), 0.5*(ymax-ymin), 0.5*(zmax-zmin)
-    eps = self.eps * max(hx, hy, hz)
+    eps = self.eps * builtins.max(hx, hy, hz)
     hx = hx or eps
     hy = hy or eps
     hz = hz or eps
@@ -340,15 +340,15 @@ class Q1Mesh:
 
     # Wavelet produces an ImageData with the given extent, centered at Center
     src = pv.Wavelet()
-    src.WholeExtent = [0, nx, 0, ny, 0, max(nz, 0)]
+    src.WholeExtent = [0, nx, 0, ny, 0, builtins.max(nz, 0)]
     # Place origin at 0 by setting Center to half-extent
-    src.Center = [nx / 2.0, ny / 2.0, max(nz, 0) / 2.0]
+    src.Center = [nx / 2.0, ny / 2.0, builtins.max(nz, 0) / 2.0]
     src.UpdatePipeline()
 
     # Scale + translate to target bounds
-    sx = (xmax - xmin) / max(nx, 1)
-    sy = (ymax - ymin) / max(ny, 1)
-    sz = (zmax - zmin) / max(nz, 1) if nz > 0 and zmax > zmin else 1.0
+    sx = (xmax - xmin) / builtins.max(nx, 1)
+    sy = (ymax - ymin) / builtins.max(ny, 1)
+    sz = (zmax - zmin) / builtins.max(nz, 1) if nz > 0 and zmax > zmin else 1.0
 
     tf = pv.Transform(Input=src)
     tf.Transform = "Transform"
@@ -454,7 +454,7 @@ class ArrayColor:
       ctf.IndexedOpacities = [1.0] * len(cats)
     else:
       ctf.ApplyPreset("Cool to Warm", True)
-      M = max(abs(rng[0]), abs(rng[1]))
+      M = builtins.max(abs(rng[0]), abs(rng[1]))
       ctf.RescaleTransferFunction(-M, M)
       if self.invert:
         ctf.InvertTransferFunction()
@@ -482,7 +482,7 @@ class CoarseArrows:
         file=sys.stderr)
       return pipe
     ncomp = arr.GetNumberOfComponents()
-    needed = max(*self.disp_components, *self.rot_components) + 1
+    needed = builtins.max(*self.disp_components, *self.rot_components) + 1
     if ncomp < needed:
         print(f"warning: CoarseArrows: '{self.source_array}' has {ncomp} "
               f"components, need {needed}, skipping", file=sys.stderr)
@@ -514,17 +514,17 @@ class CoarseArrows:
       z = 0.5*(zmin+zmax)
       dims = [n1, n2, 1]
       bounds = [xmin, xmax, ymin, ymax, z, z]
-      ds = max((xmax-xmin)/max(n1-1,1), (ymax-ymin)/max(n2-1,1))
+      ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (ymax-ymin)/builtins.max(n2-1,1))
     elif self.plane == "xz":
       y = 0.5*(ymin+ymax)
       dims = [n1, 1, n2]
       bounds = [xmin, xmax, y, y, zmin, zmax]
-      ds = max((xmax-xmin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
     elif self.plane == "yz":
       x = 0.5*(xmin+xmax)
       dims = [1, n1, n2]
       bounds = [x, x, ymin, ymax, zmin, zmax]
-      ds = max((ymax-ymin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = builtins.max((ymax-ymin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
     else:
       raise ValueError(f"unknown plane: {self.plane}")
 
@@ -648,7 +648,7 @@ def netvis_overlay(path, ops_frames, times, bg="black", view=None,
   rview = pv.GetActiveViewOrCreate("RenderView")
 
   for t, ops in zip(times, ops_frames):
-    t_snap = min(available, key=lambda x: abs(x - t)) if available else t
+    t_snap = builtins.min(available, key=lambda x: abs(x - t)) if available else t
     idx = available.index(t_snap)
 
     extract = pv.ExtractTimeSteps(Input=reader)
@@ -827,7 +827,7 @@ if __name__ == "__main__":
     if args.frame_colors:
       try:
         cmap = plt.get_cmap(args.frame_colors)
-        colors = [cmap(i / max(len(times) - 1, 1)) for i in range(len(times))]
+        colors = [cmap(i / builtins.max(len(times) - 1, 1)) for i in range(len(times))]
       except ValueError:
         colors = args.frame_colors.split(",")
     else:
