@@ -130,6 +130,69 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
+  def generate_synthetic_properties(self, width=None):
+    """Build the 17-column edgeProps array for a synthetic network.
+
+    density = 1 (mass = 1/length), all stiffnesses = 1,
+    n_1 = (0,0,1) (or fallback if tangent is vertical),
+    n_2 = tangent x n_1 normalized, widths constant,
+    fiber_id = 0..n_edges-1, fiber_edge_id = 0.
+
+    If width is None, picks 0.1 * mean(edge length).
+    """
+    nodes = self.nodes
+    edges = self.edges
+    n_edges = edges.shape[0]
+    tprint(f"generating synthetic properties for {n_edges} edges")
+
+    p1 = nodes[edges[:, 0]]
+    p2 = nodes[edges[:, 1]]
+    tangent = p2 - p1
+    lengths = np.linalg.norm(tangent, axis=1)
+    t_hat = tangent / lengths[:, None]
+
+    # n_1 = (0,0,1), projected orthogonal to tangent.
+    # If the tangent is (nearly) parallel to z, fall back to (1,0,0).
+    z = np.array([0.0, 0.0, 1.0])
+    cos_tz = t_hat @ z
+    near_z = np.abs(cos_tz) > 0.99
+    n1 = np.tile(z, (n_edges, 1))
+    n1[near_z] = np.array([1.0, 0.0, 0.0])
+    # remove tangent component, renormalize
+    n1 -= np.einsum('ij,ij->i', n1, t_hat)[:, None] * t_hat
+    n1 /= np.linalg.norm(n1, axis=1, keepdims=True)
+    # n_2 = tangent x n_1
+    n2 = np.cross(t_hat, n1)
+    n2 /= np.linalg.norm(n2, axis=1, keepdims=True)
+
+    mass = 1.0 / lengths
+
+    EA   = np.ones(n_edges)
+    kG1A = np.ones(n_edges)
+    kG2A = np.ones(n_edges)
+    GxIx = np.ones(n_edges)
+    E1I1 = np.ones(n_edges)
+    E2I2 = np.ones(n_edges)
+
+    if width is None:
+      width = 0.1 * lengths.mean()
+    tprint(f"  using width = {width:.3e}")
+    width1 = np.full(n_edges, width)
+    width2 = np.full(n_edges, width)
+
+    fiber_id      = np.arange(n_edges, dtype=np.float64)
+    fiber_edge_id = np.zeros(n_edges)
+
+    self.edgeProps = np.column_stack([
+      mass,
+      EA, kG1A, kG2A,
+      GxIx, E1I1, E2I2,
+      n1, n2,
+      width1, width2,
+      fiber_id, fiber_edge_id,
+    ])
+    tprint("edgeProps", self.edgeProps.shape)
+
   def read_morgan(self, path, rescale_props=None, quirk=None):
     tprint("reading nodes")
     nodes   = pandas.read_csv(path + "/nodes.csv")
@@ -554,6 +617,7 @@ if __name__ == "__main__":
     else:
       parser.error("--grid takes 1 or 2 arguments")
     network.generate_grid(nx, ny)
+    network.generate_synthetic_properties(width=0.1 / max(nx, ny))
   elif args.hex is not None:
     if len(args.hex) == 1:
       nx = ny = args.hex[0]
@@ -566,6 +630,7 @@ if __name__ == "__main__":
     else:
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
+    network.generate_synthetic_properties(width=0.1 / max(nx, ny))
   else:
     network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
     network.verify_nonzero()
