@@ -48,46 +48,46 @@ class Network:
     self.edgeProps = None
 
   def generate_honeycomb(self, nx, ny, nz=1):
+    """Honeycomb lattice with exactly nx*ny flat-top hexagons.
+
+    Each row is nx hexagons in zigzag (centers alternate y by sqrt(3)/2);
+    rows are stacked by sqrt(3) along y, sharing top/bottom edges.
+    All boundary edges belong to a hexagon perimeter — no dangling stubs.
+    """
     tprint(f"generating honeycomb graph {nx} x {ny} x {nz}")
     s3 = np.sqrt(3.0)
-    basis = np.array([
-        [0.0,  0.0     ],
-        [1.0,  0.0     ],
-        [1.5,  0.5*s3  ],
-        [2.5,  0.5*s3  ],
-    ])
-    a1 = np.array([3.0, 0.0])
-    a2 = np.array([0.0, s3 ])
-    ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    origins = jj[..., None] * a1 + ii[..., None] * a2
-    pts = origins[..., None, :] + basis[None, None, :, :]
-    nodes2 = pts.reshape(-1, 2)
-    def idx(i, j, k): return (i * nx + j) * 4 + k
-    e = []
-    i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
-    e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
-    e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
-    i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
-    e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
-    i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
-    e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
-    i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
-    e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
-    edges2d = np.vstack(e).astype(np.int64)
 
-    # Drop left-boundary atom-0 and right-boundary atom-3 stubs
-    n2d = nodes2.shape[0]
-    keep = np.ones(n2d, dtype=bool)
-    i_all = np.arange(ny)
-    keep[(i_all * nx + 0) * 4 + 0] = False
-    keep[(i_all * nx + (nx-1)) * 4 + 3] = False
-    edge_keep = keep[edges2d[:,0]] & keep[edges2d[:,1]]
-    edges2d = edges2d[edge_keep]
-    remap = np.full(n2d, -1, dtype=edges2d.dtype)
-    remap[keep] = np.arange(keep.sum())
-    edges2d = remap[edges2d]
-    nodes2 = nodes2[keep]
+    # Hex center grid: row k, column m -> (1.5*m, (m%2)*s3/2 + k*s3)
+    kk, mm = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    cx = 1.5 * mm.astype(float)
+    cy = (mm % 2) * (s3 / 2) + kk.astype(float) * s3
+    centers = np.stack([cx, cy], axis=-1)  # (ny, nx, 2)
+
+    # 6 vertex offsets per flat-top hex, counterclockwise from the right vertex
+    offs = np.array([
+        [ 1.0,  0.0   ],
+        [ 0.5,  s3/2  ],
+        [-0.5,  s3/2  ],
+        [-1.0,  0.0   ],
+        [-0.5, -s3/2  ],
+        [ 0.5, -s3/2  ],
+    ])
+    raw = (centers[:, :, None, :] + offs[None, None, :, :]).reshape(-1, 2)
+
+    # Dedupe shared vertices by rounding to 1e-6 precision
+    key = np.round(raw * 1e6).astype(np.int64)
+    _, inv, counts = np.unique(key, axis=0, return_inverse=True, return_counts=True)
+    nodes2 = np.zeros((counts.shape[0], 2))
+    np.add.at(nodes2, inv, raw)
+    nodes2 /= counts[:, None]
+    vid = inv.reshape(ny, nx, 6)
+
+    # 6 perimeter edges per hex, dedupe shared edges between adjacent hexes
+    edges_raw = np.vstack([
+      np.stack([vid[:, :, v].ravel(), vid[:, :, (v + 1) % 6].ravel()], axis=1)
+      for v in range(6)
+    ])
+    edges2d = np.unique(np.sort(edges_raw, axis=1), axis=0).astype(np.int64)
 
     # Rescale 2D so x extent = 1
     nodes2 -= nodes2.min(axis=0)
