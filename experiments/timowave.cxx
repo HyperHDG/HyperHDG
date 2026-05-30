@@ -214,7 +214,8 @@ int main(int argc, char **argv) {
       PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, static_init, FILE_MODE_READ, &viewer));
       PetscCall(VecLoad(rhs, viewer));
       PetscCall(VecGetSpan(rhs, span));
-      temp = hdg->make_initial_from_static(span);
+      hdg->make_initial_from_static(span);
+      temp.assign(span.begin(), span.end());
       PetscCall(VecRestoreSpan(rhs, span));
       PetscCall(PetscViewerDestroy(&viewer));
     }
