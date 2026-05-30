@@ -834,16 +834,12 @@ class TimoshenkoWave
             hyb_r -= 2 * r_old[d * n_shape_fct_ + i]
                        * lambda_loc[bdr][j + (space_dim + d) * n_shape_bdr_] * mij;
           }
-        for (unsigned int i = 0; i < n_shape_bdr_; ++i)
-          for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
-            const lSol_float_t mij =
-              integrator::template integrate_bdr_psipsi<decltype(hyEdgeT::geometry)>(
-                i, j, bdr, hyper_edge.geometry);
-            hyb_u += lambda_loc[bdr][i + d * n_shape_bdr_]
-                     * lambda_loc[bdr][j + d * n_shape_bdr_] * mij;
-            hyb_r += lambda_loc[bdr][i + (space_dim + d) * n_shape_bdr_]
-                     * lambda_loc[bdr][j + (space_dim + d) * n_shape_bdr_] * mij;
-          }
+        // hyEdge_dimT==1 ⇒ trace is 0-dimensional, ψ≡1 ⇒ ∫_∂e λ² = λ² directly.
+        static_assert(hyEdge_dimT == 1, "trace-square shortcut only valid for hyEdge_dim==1");
+        const lSol_float_t lam_u = lambda_loc[bdr][d * n_shape_bdr_];
+        const lSol_float_t lam_r = lambda_loc[bdr][(space_dim + d) * n_shape_bdr_];
+        hyb_u += lam_u * lam_u;
+        hyb_r += lam_r * lam_r;
       }
       result[4 * space_dim + d] = 0.5 * tau_ * hyb_u;
       result[5 * space_dim + d] = 0.5 * tau_ * hyb_r;
