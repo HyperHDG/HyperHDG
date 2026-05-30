@@ -116,6 +116,12 @@ struct PlotOptions
    * \brief   Output a cell data array with the number of each edge and/or each node.
    ************************************************************************************************/
   bool numbers = false;
+  /*!***********************************************************************************************
+   * \brief   Append per-edge energy components to a CellData/energies dataset (vtkhdf only).
+   *
+   * Requires the local solver to expose \c n_energy_components() and \c energy(). Defaults to false.
+   ************************************************************************************************/
+  bool energy = false;
 };  // end of class PlotOptions
 
 /*!*************************************************************************************************
@@ -154,6 +160,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     plot_options.boundary_scale = std::stof(value);
   else if (option == "scale")
     plot_options.scale = stof(value);
+  else if (option == "energy")
+    plot_options.energy = (value == "true" || value == "1");
   // else if (option == "n_subintervals")
   //   plot_options.n_subintervals = stoi(value);
   else
@@ -180,6 +188,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     return_value = std::to_string(plot_options.scale);
   else if (option == "boundaryScale")
     return_value = std::to_string(plot_options.boundary_scale);
+  else if (option == "energy")
+    return_value = std::to_string(plot_options.energy);
   // else if (option == "n_subintervals")
   //   return_value = std::to_string(plot_options.n_subintervals);
   else
@@ -236,6 +246,14 @@ namespace PlotFunctions
  * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
 HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for energy() to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(energy, has_energy);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for n_energy_components() to exist.
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(n_energy_components, has_n_energy_components);
 /*!*************************************************************************************************
  * \brief   Turn fileType enum into string.
  **************************************************************************************************/
@@ -833,7 +851,8 @@ template <class HyperGraphT,
           typename hyEdge_index_t = unsigned int,
           typename pt_index_t = unsigned int>
 void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
-                      const PlotOptions& plot_options, unsigned int n_components)
+                      const PlotOptions& plot_options, unsigned int n_components,
+                      unsigned int n_energy_components = 0)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -1030,6 +1049,19 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     hsize_t d[2] = {(hsize_t)n_cells, n_properties};
     write_dset(cdata, "properties", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, props_buf.data());
   }
+
+  // --- empty extendable CellData/energies: (0, n_energy_components), unlimited axis 0
+  if (n_energy_components > 0) {
+    hsize_t dims[2]    = {0, n_energy_components};
+    hsize_t maxdims[2] = {H5S_UNLIMITED, n_energy_components};
+    hsize_t chunk[2]   = {std::max<hsize_t>(n_cells, 1), n_energy_components};
+    hid_t space = H5Screate_simple(2, dims, maxdims);
+    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(dcpl, 2, chunk);
+    hid_t dset = H5Dcreate2(cdata, "energies", H5T_IEEE_F32LE, space,
+                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  }
   H5Gclose(cdata);
 
   // --- Steps group + NSteps=0 attribute
@@ -1057,8 +1089,14 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
 
   hid_t pdo = H5Gcreate2(steps, "PointDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   make_empty_1d(pdo, "values", H5T_STD_I64LE);
-
   H5Gclose(pdo);
+
+  if (n_energy_components > 0) {
+    hid_t cdo = H5Gcreate2(steps, "CellDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    make_empty_1d(cdo, "energies", H5T_STD_I64LE);
+    H5Gclose(cdo);
+  }
+
   H5Gclose(steps);
   H5Gclose(pdata);
   H5Gclose(root);
@@ -1087,6 +1125,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
   constexpr unsigned int n_subpoints     = n_subdivisions + 1;
   constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+  constexpr unsigned int cells_per_edge  = Hypercube<edge_dim>::pow(n_subdivisions);
 
   SmallVec<n_subpoints, float> abscissas;
   for (unsigned int i = 0; i < n_subpoints; ++i)
@@ -1094,6 +1133,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
   const pt_index_t n_points    = static_cast<pt_index_t>(n_edges) * points_per_edge;
+  const pt_index_t n_cells     = static_cast<pt_index_t>(n_edges) * cells_per_edge;
 
   if constexpr (LocalSolverT::system_dimension() == 0) return;
 
@@ -1102,8 +1142,20 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
   std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
 
+  // Energy buffer: only populated when plot_options.energy and LocalSolverT supplies energy().
+  std::vector<float> energies_buf;
+  constexpr bool has_energy_api =
+    PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value;
+
   std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
     hyEdge_dofs;
+
+  if (plot_options.energy) {
+    if constexpr (has_energy_api)
+      energies_buf.assign(static_cast<size_t>(n_cells) * LocalSolverT::n_energy_components(), 0.f);
+    else
+      hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
+  }
 
   for (hyEdge_index_t he = 0; he < n_edges; ++he) {
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
@@ -1132,6 +1184,21 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
       const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
       for (unsigned int d = 0; d < n_components; ++d)
         values[row + d] = static_cast<float>(local_values[d][p]);
+    }
+
+    if (plot_options.energy) {
+      if constexpr (has_energy_api) {
+        constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
+        auto geometry = hyper_graph[he];
+        const auto local_e = local_solver.energy(hyEdge_dofs, geometry, time);
+        for (unsigned int c = 0; c < cells_per_edge; ++c) {
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_e_comp;
+          for (unsigned int d = 0; d < n_e_comp; ++d)
+            energies_buf[row + d] = static_cast<float>(local_e[d]);
+        }
+      } else {
+        hy_check(false, "plot_options.energy=true but LocalSolverT lacks energy()/n_energy_components()");
+      }
     }
   }
 
@@ -1166,6 +1233,23 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   int64_t off_values = step_index * static_cast<int64_t>(n_points);
   h5_append(pdo, "values", H5T_NATIVE_INT64, 1, 1, &off_values);
 
+  // --- append CellData/energies and CellDataOffsets/energies
+  if (plot_options.energy) {
+    if constexpr (has_energy_api) {
+      constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
+      hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
+      hid_t cdo   = H5Gopen2(steps, "CellDataOffsets", H5P_DEFAULT);
+      hy_check(cdata >= 0 && cdo >= 0,
+               "energies dataset missing: was plot_options.energy=true at fileNumber=0?");
+      h5_append(cdata, "energies", H5T_NATIVE_FLOAT,
+                n_cells, n_e_comp, energies_buf.data());
+      int64_t off_energies = step_index * static_cast<int64_t>(n_cells);
+      h5_append(cdo, "energies", H5T_NATIVE_INT64, 1, 1, &off_energies);
+      H5Gclose(cdo);
+      H5Gclose(cdata);
+    }
+  }
+
   // --- update NSteps
   h5_set_attr_i64(steps, "NSteps", step_index + 1);
 
@@ -1192,9 +1276,17 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const PlotOptions& plot_options,
                  const floatT time = 0.)
 {
-  if (plot_options.fileNumber == 0)
+  if (plot_options.fileNumber == 0) {
+    unsigned int n_e_comp = 0;
+    if (plot_options.energy) {
+      if constexpr (PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value)
+        n_e_comp = LocalSolverT::n_energy_components();
+      else
+        hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
+    }
     plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
-      hyper_graph, plot_options, LocalSolverT::system_dimension());
+      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp);
+  }
   plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
                    n_subdivisions, hyEdge_index_t, pt_index_t>(
     hyper_graph, local_solver, lambda, plot_options, time);
