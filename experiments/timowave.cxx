@@ -194,6 +194,7 @@ int main(int argc, char **argv) {
     hdg->plot_option("fileName", plot);
     hdg->plot_option("scale", plot_scale);
     hdg->plot_option("fileEnding", "vtkhdf");
+    hdg->plot_option("energy", "true");
 
     zero_v = hdg->zero_vector();
     N = zero_v.size();
@@ -318,9 +319,8 @@ int main(int argc, char **argv) {
           PetscLogEventEnd(e_plot, 0,0,0,0);
         }
         PetscLogEventBegin(e_errors, 0,0,0,0);
-        PetscLogEventEnd(e_errors, 0,0,0,0);
-        if (*plot) hdg->plot_solution(span, ti);
         temp2 = hdg->errors(span, ti);
+        PetscLogEventEnd(e_errors, 0,0,0,0);
         error = temp2[0];
         e_abs = PetscMax(error, e_abs);
         e_trace = PetscMax(temp2[1], e_trace);
