@@ -1478,7 +1478,14 @@ class TimoshenkoWave
 
     compute_fluxes(lambda_values, hyper_edge, time);
 
-    return lambda_values_in; // returns the input without changes
+    // write edge-local lambda back to global frame; edge_dof_to_node_dof accumulates,
+    // so zero the destination first
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      for (unsigned int j = 0; j < lambda_values_in[i].size(); ++j)
+        lambda_values_in[i][j] = 0.;
+    edge_dof_to_node_dof(lambda_values, lambda_values_in, hyper_edge);
+
+    return lambda_values_in;
   }
 };  // end of class LengtheningBernoulliBendingWave
 

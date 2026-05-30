@@ -412,6 +412,10 @@ class Hyperbolic
         else
           hy_assert(false, "Function seems not to be implemented!");
 
+        // write per-edge dofs back to the global trace vector (mirrors make_initial)
+        for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
+          hyper_graph_.hyNode_factory().set_dof_values(hyEdge_hyNodes[hyNode], x_vec,
+                                                       hyEdge_dofs[hyNode]);
       });
   }
   /*!***********************************************************************************************
