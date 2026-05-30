@@ -133,7 +133,7 @@ class Network:
   def generate_synthetic_properties(self, width=None):
     """Build the 17-column edgeProps array for a synthetic network.
 
-    density = 1 (mass = 1/length), all stiffnesses = 1,
+    density = 1 (mass = length), all stiffnesses = 1,
     n_1 = (0,0,1) (or fallback if tangent is vertical),
     n_2 = tangent x n_1 normalized, widths constant,
     fiber_id = 0..n_edges-1, fiber_edge_id = 0.
@@ -165,7 +165,7 @@ class Network:
     n2 = np.cross(t_hat, n1)
     n2 /= np.linalg.norm(n2, axis=1, keepdims=True)
 
-    mass = 1.0 / lengths
+    mass = lengths
 
     EA   = np.ones(n_edges)
     kG1A = np.ones(n_edges)
