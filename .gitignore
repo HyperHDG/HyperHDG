@@ -58,3 +58,8 @@ profile_output*
 *~
 
 CMakeUserPresets.json
+
+# the .spack-env holds a concretized view of the built dependencies
+# the spack.lock file is dependent on host compilers, so this is not portable
+.spack-env/
+spack.lock
