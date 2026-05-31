@@ -1,0 +1,15 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - intel-oneapi-mkl
+  - petsc+hdf5+metis+mumps+mkl-pardiso+suite-sparse+pastix
+  view: true
+  packages:
+    blas:   {require: intel-oneapi-mkl}
+    lapack: {require: intel-oneapi-mkl}
+  concretizer:
+    unify: true
