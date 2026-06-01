@@ -15,6 +15,7 @@ struct HDGBase {
   virtual Idx size_of_system() = 0;
   virtual Idx n_owned_dofs() = 0;
   virtual Idx n_local_dofs() = 0;
+  virtual std::vector<Idx> local_to_global_dofs() = 0;
   virtual Idx n_dofs_per_node() = 0;
   virtual Vector zero_vector() = 0;
   virtual Vector errors(const Span& x_vec, const Real time = 0.) = 0;
@@ -48,6 +49,9 @@ struct HDGWrapper : HDGBase {
   }
   Idx n_local_dofs() {
     return hdg.n_local_dofs();
+  }
+  std::vector<Idx> local_to_global_dofs() {
+    return hdg.local_to_global_dofs();
   }
   Idx n_dofs_per_node() {
     return HDG::n_dofs_per_node;

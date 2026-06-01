@@ -4,7 +4,9 @@
 #include <HyperHDG/hy_data_container.hxx>
 #include <HyperHDG/hypernodefactory.hxx>
 
+#include <array>
 #include <memory>
+#include <vector>
 
 /*!*************************************************************************************************
  * \brief   Empty class as defaultd data class.
@@ -556,6 +558,25 @@ class HDGHyperGraph
   const dof_index_t n_owned_dofs() const
   {
     return hyNode_factory_.n_owned_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Global dof index for each local dof (length \c n_local_dofs()).
+   *
+   * Entry \c l is the global degree-of-freedom index of local dof \c l (owned dofs first, then
+   * ghosts). For a non-distributed hypergraph this is the identity. Used to additively assemble a
+   * local (owned + ghost) vector into the global distributed vector.
+   ************************************************************************************************/
+  std::vector<hyEdge_index_t> local_to_global_dofs() const
+  {
+    std::vector<hyEdge_index_t> global_dofs(hyNode_factory_.n_local_dofs());
+    std::array<hyEdge_index_t, n_dofs_per_nodeT> idx;
+    for (hyEdge_index_t l = 0; l < n_hyNodes(); ++l)
+    {
+      hyNode_factory_.get_global_dof_indices(l, idx);
+      for (unsigned int d = 0; d < n_dofs_per_nodeT; ++d)
+        global_dofs[l * n_dofs_per_nodeT + d] = idx[d];
+    }
+    return global_dofs;
   }
   /*!***********************************************************************************************
    * \brief   Return the refinement level of the hypergraph.

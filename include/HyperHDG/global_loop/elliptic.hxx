@@ -344,6 +344,15 @@ class Elliptic
    ************************************************************************************************/
   dof_index_t n_owned_dofs() const { return hyper_graph_.n_owned_dofs(); }
   /*!***********************************************************************************************
+   * \brief   Global dof index for each local dof; see \c HDGHyperGraph::local_to_global_dofs().
+   *
+   * Used to additively assemble a local (owned + ghost) residual into the global vector.
+   ************************************************************************************************/
+  std::vector<dof_index_t> local_to_global_dofs() const
+  {
+    return hyper_graph_.local_to_global_dofs();
+  }
+  /*!***********************************************************************************************
    * \brief   Number of degrees of freedom held in a local vector, i.e. owned + ghost
    *          (== \c size_of_system() if serial). This is the length of \c zero_vector().
    ************************************************************************************************/
