@@ -17,7 +17,7 @@ PERF=$OUT/perf.flamegraph
 LOG=$OUT/log.yaml
 RES1=$OUT/res1.json
 RES2=$OUT/res2.json
-SOLVER="-net2as_pc_factor_mat_solver_type "
+NET="-net2as_p 1 -net2as_cb_type pu -net2as_print_local -net2as_pc_factor_mat_solver_type"
 export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
@@ -31,7 +31,7 @@ parallel --progress --bar --results $RES1 \
   "python experiments/make_geo2.py -i $INPUT --clamp-xy {1} -o $OUT/domain-{2}.geo.h5 --dirichlet xmax=68 xmin=63" ::: $(seq .1 .2 1) :::+ $(seq 5)
 echo "exit: $?"
 parallel --progress --bar --results $RES2 \
-  "$BUILD/network -domain {} -comp 2 -strain .15 -ksp_type preonly -pc_type cholesky -pc_factor_mat_solver_type {2}" ::: $OUT/domain*.geo.h5 ::: mumps
+  "$BUILD/network -domain {} -comp 2 -strain .15 $NET {2}" ::: $OUT/domain*.geo.h5 ::: mumps
 echo "exit: $?"
-yq -i '.Stdout |= from_yaml' $RES2.json
+yq -i '.Stdout |= from_yaml' $RES2
 
