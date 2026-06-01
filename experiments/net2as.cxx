@@ -1,14 +1,13 @@
 #include "net2as.hxx"
 #include "prin2.hxx"
-#include "petsc_parhip.h"
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/hashmapi.h>
 #include <petsc/private/hashseti.h>
 #include <petscviewerhdf5.h>
 
-// PROBLEMS: if we have unequal number of local problems per rank, then we need to fill is sol and scatter with dummy/ empty stuff,
-//   else we get a deadlock
-// REFACTOR: use one rank scattering context, one rank is and one rank sol, then work with subvectors
+#ifdef HYPERHDG_PARHIP
+  #include "petsc_parhip.h"
+#endif
 
 struct MatCOO {
   PetscInt *rows, *cols, nnz, cap;
@@ -681,7 +680,9 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscFunctionBegin;
 
   data->n_coarse = p;
+#ifdef HYPERHDG_PARHIP
   PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
+#endif
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vstart /= 3; vend /= 3;
