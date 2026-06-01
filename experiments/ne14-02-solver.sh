@@ -1,6 +1,10 @@
 #!/bin/bash
 set -xeo pipefail
 
+# requires
+# . venv/bin/activate
+# . spack/mkl/.spack-env/view/setvars.sh
+
 : ${BUILD:=build/openblas/experiments}
 : ${OUTDIR:=output}
 : ${INPUT:=$HOME//networks/morgan-2026-05-20/net1/sca}
@@ -22,19 +26,17 @@ export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset openblas
+cmake --build --preset openblas --target network && cmake --build --preset mkl --target network
 cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo '-dirty' >> $OUT/rev; fi
 
-. venv/bin/activate
-. spack/mkl/.spack-env/view/setvars.sh
 
 parallel --progress --bar --results $RES1 \
   "python experiments/make_geo2.py -i $INPUT --clamp-xy {1} -o $OUT/domain-{2}.geo.h5 --dirichlet xmax=68 xmin=63" ::: $(seq .1 .2 1) :::+ $(seq 5)
 echo "exit: $?"
 parallel --progress --bar --results $RES2 --colsep ' ' \
-  "echo blas: {2}; build/{2}/experiments/network -domain {1} -comp 2 -strain .15 $NET {3}" ::: $OUT/domain-1.geo.h5 :::: - <<EOF
+  "echo blas: {2}; build/{2}/experiments/network -domain {1} -comp 2 -strain .15 $NET {3}" ::: $OUT/domain*.geo.h5 :::: - <<EOF
 openblas mumps
 openblas cholmod
 mkl mumps
