@@ -511,17 +511,17 @@ class CoarseArrows:
     xmin, xmax, ymin, ymax, zmin, zmax = calc2.GetDataInformation().GetBounds()
     n1, n2 = self.resolution
     if self.plane == "xy":
-      z = 0.5*(zmin+zmax)
+      z = 1.2 * zmax
       dims = [n1, n2, 1]
       bounds = [xmin, xmax, ymin, ymax, z, z]
       ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (ymax-ymin)/builtins.max(n2-1,1))
     elif self.plane == "xz":
-      y = 0.5*(ymin+ymax)
+      y = 1.2 * ymax
       dims = [n1, 1, n2]
       bounds = [xmin, xmax, y, y, zmin, zmax]
       ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
     elif self.plane == "yz":
-      x = 0.5*(xmin+xmax)
+      x = 1.2 * xmax
       dims = [1, n1, n2]
       bounds = [x, x, ymin, ymax, zmin, zmax]
       ds = builtins.max((ymax-ymin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
