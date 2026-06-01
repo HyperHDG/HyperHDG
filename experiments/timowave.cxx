@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
       if (print_timestep)
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
         PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
