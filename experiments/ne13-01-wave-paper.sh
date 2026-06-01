@@ -16,12 +16,18 @@ IMG=$OUT/$NAME.png
 PERF=$OUT/perf.flamegraph
 LOG=$OUT/log.yaml
 NET="-pc_type net2as -net2as_p 1 -net2as_cb_type pu -net2as_pc_factor_mat_solver_type mumps"
+CUT=.4
 export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
 cmake --build --preset rel
-python experiments/make_geo2.py -i $INPUT --clamp-xy .2 -o $DOMAIN --dirichlet xmax=68 xmin=63
+cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
+git diff-index --quiet
+git rev-parse HEAD > $OUT/rev
+if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
+
+python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN --dirichlet xmax=68 xmin=63
 $BUILD/network -domain $DOMAIN  -comp 2 -strain .15 $NET \
                -trace_view hdf5:$TRACE -plot $STATIC
 $BUILD/timowave -domain $DOMAIN -comp 2 -strain .15 -nt 10 -T 1e-5 $NET \
