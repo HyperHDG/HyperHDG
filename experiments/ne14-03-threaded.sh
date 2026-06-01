@@ -1,0 +1,45 @@
+#!/bin/bash
+set -xeo pipefail
+
+# requires
+# . venv/bin/activate
+# . spack/mkl/.spack-env/view/setvars.sh
+
+: ${BUILD:=build/openblas/experiments}
+: ${OUTDIR:=output}
+: ${INPUT:=$HOME//networks/morgan-2026-05-20/net1/sca}
+NAME=$(basename -s .sh $0)
+NOW=$(date +%s)
+OUT=$OUTDIR/$NAME.$NOW
+DOMAIN=$OUT/domain.geo.h5
+TRACE=$OUT/trace.h5
+STATIC=$OUT/static.vtkhdf
+WAVE=$OUT/wave.vtkhdf
+VID=$OUT/$NAME.avi
+IMG=$OUT/$NAME.png
+PERF=$OUT/perf.flamegraph
+LOG=$OUT/log.yaml
+RES1=$OUT/res1.json
+RES2=$OUT/res2.json
+NET="-net2as_p 1 -net2as_cb_type pu -net2as_print_local -mem_max -net2as_pc_factor_mat_solver_type"
+export OMP_NUM_THREADS=1
+
+mkdir -p $OUT
+ln -sfn $NAME.$NOW $OUTDIR/$NAME
+cmake --build --preset openblas --target network && cmake --build --preset mkl --target network
+cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
+git rev-parse HEAD > $OUT/rev
+if ! git diff-index --quiet HEAD; then echo '-dirty' >> $OUT/rev; fi
+
+
+python experiments/make_geo2.py -i $INPUT -o $OUT/domain.geo.h5 --dirichlet xmax=68 xmin=63 --clamp-xy .5
+
+parallel -j 1 --progress --bar --results $RES2 --colsep ' ' \
+  "echo threads: {2}; OMP_NUM_THREADS={2} build/{3}/experiments/network -domain {1} -comp 2 -strain .15 $NET {4}" ::: $OUT/domain.geo.h5 ::: 1 2 4 8 16 32 64 :::: - <<EOF
+openblas mumps
+openblas cholmod
+mkl mkl_pardiso
+EOF
+echo "exit: $?"
+yq -i '.Stdout |= from_yaml' $RES2
+

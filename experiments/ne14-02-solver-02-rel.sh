@@ -11,8 +11,8 @@ jq -cs '
   | .[] | .t_ksp /= $b[.n|tostring].t_ksp
 ' "$OUT/res2.json" \
     | experiments/plot.py -x n -y t_ksp -g blas,type --log xy --trans 6*x,y \
-        --save "$OUT/ne14-02-solver-01-ksp.png" \
-        --xlabel 'number of DOFs' --ylabel 'matrix factorization time'
+        --save "$OUT/ne14-02-solver-02-rel.png" \
+        --xlabel 'number of DOFs' --ylabel 'matrix factorization time relative to openblas,cholmod'
 #        --ref "1.5;2e5,7e5;2e0" \
 #        --figsize '2.5,2.5' \
 #        --legend ''
