@@ -1379,6 +1379,15 @@ class TimoshenkoWave
 
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
+    // At bit-6 (static-only Dirichlet) faces the static problem assumes the trace
+    // lambda is zero. The global loop's set_dof_values write-back from a previous
+    // edge may have left a non-zero projection in x_vec at shared bit-6 junctions;
+    // zero those entries so the rhs assembly stays invariant to edge ordering.
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      if (hyper_edge.node_descriptor[face] & (1u << 6))
+        for (unsigned int d = 0; d < 2 * space_dim; ++d)
+          lambda_values[face][d] = 0;
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     auto mat = assemble_loc_matrix_a(hyper_edge, time);
     SmallVec<4*space_dim*n_shape_fct_, lSol_float_t> rhs, coeffs;
