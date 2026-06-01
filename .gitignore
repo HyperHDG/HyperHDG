@@ -63,3 +63,5 @@ CMakeUserPresets.json
 # the spack.lock file is dependent on host compilers, so this is not portable
 .spack-env/
 spack.lock
+
+venv
