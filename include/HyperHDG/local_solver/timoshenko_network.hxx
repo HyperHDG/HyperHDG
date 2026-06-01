@@ -137,6 +137,14 @@ class TimoshenkoBeam
    ************************************************************************************************/
   struct data_type
   {
+    // Cached LU factorization of assemble_loc_matrix. The matrix depends only on geometry and tau_
+    // (both constant), so it is assembled + factorized once per edge and reused across the many
+    // trace_to_flux / residual_flux applications (one per global-matrix column, plus the residual).
+    // n_loc equals n_loc_dofs_, spelled out here because that constant is declared further below.
+    static constexpr unsigned int n_loc = 4 * space_dim * Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
+    SmallSquareMat<n_loc, lSol_float_t> loc_mat_lu;
+    std::array<int, n_loc> loc_mat_ipiv;
+    bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -363,7 +371,18 @@ class TimoshenkoBeam
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      return rhs / assemble_loc_matrix(hyper_edge, time);
+
+      auto& data = hyper_edge.data;
+      if (!data.loc_mat_factorized)
+      {
+        data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
+        Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(data.loc_mat_lu.data(),
+                                                             data.loc_mat_ipiv);
+        data.loc_mat_factorized = true;
+      }
+      Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(data.loc_mat_lu.data(),
+                                                                  data.loc_mat_ipiv, rhs.data());
+      return rhs;
     }
     catch (Wrapper::LAPACKexception& exc)
     {
