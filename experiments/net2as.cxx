@@ -83,8 +83,6 @@ PetscErrorCode MatCOO_View(MatCOO *coo, PetscViewer viewer) {
 struct PC_Net2AS {
   // configuration paramters
 
-  // if true, bit 6 means "ignore other dirichlet bits"
-  PetscBool wave;
   // number of subdomains in [x,y]
   PetscInt p[2];
   // number of global coarse dofs
@@ -116,8 +114,6 @@ struct PC_Net2AS {
   char domain[PATH_MAX];
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec points;
-  // types 1 -> dirchlet boundary points
-  IS types_points;
   // boundary points
   IS boundary;
   // partition of points (only used by cb_pu), same parallel layout as points and as adj
@@ -196,7 +192,6 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", data->domain, PATH_MAX, &set));
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
 
-  PetscCall(PetscOptionsBool("-net2as_wave", "treat bit 6 as static-only dirichlet (free in wave)", NULL, data->wave, &data->wave, &set));
   PetscCall(PetscOptionsBoundedInt("-net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
   if (set) data->p[0] = data->p[1] = p;
   PetscCall(PetscOptionsBoundedInt("-net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
@@ -222,12 +217,9 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   PetscViewer viewer;
   PetscInt m, mm, n, nn, bs;
-  PetscInt is_size, is_local, dsize = 0, start, end, g_dir_sz;
-  PetscInt* dir = NULL;
-  const PetscInt *types, *ledges, *g_dir_inds;
+  PetscInt start, end;
+  const PetscInt *ledges;
   IS edges;
-  PetscHSetI hset_dir;
-  IS g_dir;
 
   PetscFunctionBeginUser;
   PetscCall(PetscViewerHDF5Open(comm, data->domain, FILE_MODE_READ, &viewer));
@@ -243,32 +235,6 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   n /= bs;
   nn = end-start;
 
-  PetscCall(ISCreate(comm, &data->types_points));
-  PetscCall(PetscObjectSetName((PetscObject)data->types_points, "types_points"));
-  PetscCall(ISLoad(data->types_points, viewer));
-  PetscCall(ISGetSize(data->types_points, &is_size));
-  PetscCall(ISGetLocalSize(data->types_points, &is_local));
-
-  PetscCheck(is_size == n, comm, PETSC_ERR_ARG_SIZ, "types_points size %d != points size %d", is_size, n);
-  PetscCheck(is_local == nn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "local sizes: types_points %d != points %d", is_local, nn);
-
-  // is_size is local
-  PetscCall(PetscMalloc1(is_local, &dir));
-  PetscCall(ISGetIndices(data->types_points, &types));
-  for (PetscInt i = 0; i < is_local; i++) {
-    if (net2as_is_dirichlet(types[i], data->wave)) dir[dsize++] = start+i;
-  }
-  PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->boundary));
-  PetscCall(ISRestoreIndices(data->types_points, &types));
-
-  PetscCall(ISAllGather(data->boundary, &g_dir));
-  PetscCall(ISGetLocalSize(g_dir, &g_dir_sz));
-  PetscCall(PetscHSetICreate(&hset_dir));
-  PetscCall(ISGetIndices(g_dir, &g_dir_inds));
-  for (PetscInt i = 0; i < g_dir_sz; i++)
-    PetscCall(PetscHSetIAdd(hset_dir, g_dir_inds[i]));
-  PetscCall(ISRestoreIndices(g_dir, &g_dir_inds));
-
   PetscCall(ISCreate(comm, &edges));
   PetscCall(PetscObjectSetName((PetscObject)edges, "edges"));
   PetscCall(ISLoad(edges, viewer));
@@ -281,10 +247,6 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(MatCOO_Alloc(&coo, 2*mm));
   PetscCall(ISGetIndices(edges, &ledges));
   for (PetscInt i = 0; i < mm; i++) {
-    PetscBool has1, has2;
-    PetscCall(PetscHSetIHas(hset_dir, ledges[2*i], &has1));
-    PetscCall(PetscHSetIHas(hset_dir, ledges[2*i+1], &has2));
-    if (has1 || has2) continue;
     PetscCall(MatCOO_Push(&coo, ledges[2*i], ledges[2*i+1], 1.));
     PetscCall(MatCOO_Push(&coo, ledges[2*i+1], ledges[2*i], 1.));
   }
@@ -672,8 +634,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   MatPartitioningType p_type;
   IS partition = data->partition, bis;
-  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts, *vtxwgt;
-  const PetscInt *inds, *types;
+  PetscInt p = data->p[0]*data->p[1], lsz_part, new_cap, vstart, vend, cut, *counts;
+  const PetscInt *inds;
   Vec rank_points;
   VecScatter sc;
   PetscReal *points;
@@ -685,15 +647,9 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vstart /= 3; vend /= 3;
-  PetscCall(PetscMalloc1(vend-vstart, &vtxwgt));
-  PetscCall(ISGetIndices(data->types_points, &types));
-  for (PetscInt i = 0; i < vend-vstart; i++)
-    vtxwgt[i] = net2as_is_dirichlet(types[i], data->wave) ? 0 : 1;
-  PetscCall(ISRestoreIndices(data->types_points, &types));
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
   PetscCall(MatPartitioningSetNParts(p_ctx, p));
-  PetscCall(MatPartitioningSetVertexWeights(p_ctx, vtxwgt));
   PetscCall(MatPartitioningSetFromOptions(p_ctx));
   PetscCall(MatPartitioningApply(p_ctx, &partition));
   PetscCall(MatPartitioningParmetisGetEdgeCut(p_ctx, &cut));
@@ -704,17 +660,14 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningDestroy(&p_ctx));
 
   PetscCall(ISGetIndices(partition, &inds));
-  PetscCall(ISGetIndices(data->types_points, &types));
   PetscCall(ISGetLocalSize(partition, &lsz_part));
   PetscCheck(vend-vstart == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_ARG_SIZ,
     "parallel layout of data->points must match that of the partition, data->points size '%d', "
     "partition size '%d'", vend-vstart, lsz_part);
   PetscCall(MatCOO_Alloc(coo, lsz_part));
   for (PetscInt i = 0; i < lsz_part; i++)
-    if (!net2as_is_dirichlet(types[i], data->wave))
-      PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
+    PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
   PetscCall(ISRestoreIndices(partition, &inds));
-  PetscCall(ISRestoreIndices(data->types_points, &types));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
 
