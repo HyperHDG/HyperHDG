@@ -238,17 +238,24 @@ class TimoshenkoWave
    *   B = {m_x, r_x, s_x}            (torsion)      size 3
    *   C = {n_z,u_z,v_z, m_y,r_y,s_y} (shear+bend)   size 6
    *   D = {n_y,u_y,v_y, m_z,r_z,s_z} (shear+bend)   size 6
-   * Factorizing these 4 blocks separately costs ~12x fewer flops than the full n_loc_dofs_ LU
-   * and is numerically identical.
+   * Level 2 (assemble_schur / solve_local_problem) further eliminates each triplet's diagonal
+   * mass blocks (sigma, wdot) explicitly, leaving only the displacement w: A,B reduce to an
+   * nw_ x nw_ system, C,D to an n2w_ x n2w_ system.
    ************************************************************************************************/
   static_assert(space_dim == 3, "Block decomposition of the local matrix assumes space_dim==3 "
                                 "(the t x n cross-product coupling is 3D-specific).");
-  static constexpr unsigned int n_comp3_ = 3 * n_shape_fct_;
-  static constexpr unsigned int n_comp6_ = 6 * n_shape_fct_;
-  static constexpr std::array<unsigned int, 3> comp_A_ = {0, 6, 12};
-  static constexpr std::array<unsigned int, 3> comp_B_ = {3, 9, 15};
-  static constexpr std::array<unsigned int, 6> comp_C_ = {2, 8, 14, 4, 10, 16};
-  static constexpr std::array<unsigned int, 6> comp_D_ = {1, 7, 13, 5, 11, 17};
+  static constexpr unsigned int nw_ = n_shape_fct_;       // single displacement block
+  static constexpr unsigned int n2w_ = 2 * n_shape_fct_;  // cross-coupled displacement pair
+  // Variable-block index (in units of n_shape_fct_) of the (sigma, w, wdot) of triplet `dim`:
+  static constexpr unsigned int sig_blk(unsigned int dim) { return dim; }
+  static constexpr unsigned int w_blk(unsigned int dim) { return 2 * space_dim + dim; }
+  static constexpr unsigned int wdot_blk(unsigned int dim) { return 4 * space_dim + dim; }
+  // Triplet dims forming the four independent components: A,B single; C,D couple a force group
+  // dim_n with a rotation group dim_r via the cross product (sign +1 for C, -1 for D).
+  static constexpr unsigned int compA_dim = 0;
+  static constexpr unsigned int compB_dim = 3;
+  static constexpr unsigned int compC_dim_n = 2, compC_dim_r = 4;
+  static constexpr unsigned int compD_dim_n = 1, compD_dim_r = 5;
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    *
@@ -287,13 +294,18 @@ class TimoshenkoWave
   struct data_type
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
-    // Cached block-LU of assemble_loc_matrix. The matrix decouples into 4 independent components
-    // (A,B of size n_comp3_, C,D of size n_comp6_; see comp_*_). It only depends on geometry and
-    // (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
-    std::array<lSol_float_t, n_comp3_ * n_comp3_> lu_A, lu_B;
-    std::array<int, n_comp3_> ipiv_A, ipiv_B;
-    std::array<lSol_float_t, n_comp6_ * n_comp6_> lu_C, lu_D;
-    std::array<int, n_comp6_> ipiv_C, ipiv_D;
+    // Cached Schur factorization of the local matrix (see assemble_schur). The matrix only depends
+    // on geometry and (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
+    // Shared per-edge integral blocks (row-major n x n, M diagonal) used in reduction/back-sub:
+    std::array<lSol_float_t, n_shape_fct_> M_inv;                       // 1 / diag(M)
+    std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> Gmat;         // G   = int (grad phi) phi
+    std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> BmG;          // B-G (boundary normal - G)
+    SmallVec<4 * space_dim, lSol_float_t> extra;                        // C_n, C_m, C_u, C_r
+    // LU factors (column-major) of the displacement Schur systems of the four components:
+    std::array<lSol_float_t, nw_ * nw_> lu_A, lu_B;
+    std::array<int, nw_> ipiv_A, ipiv_B;
+    std::array<lSol_float_t, n2w_ * n2w_> lu_C, lu_D;
+    std::array<int, n2w_> ipiv_C, ipiv_D;
     bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
@@ -528,52 +540,181 @@ class TimoshenkoWave
   }
 
   /*!***********************************************************************************************
-   * \brief   Gather the sub-block of \c full selected by \c blocks and LU-factorize it in place.
+   * \brief   Assemble and factorize the displacement Schur systems of the four components.
    *
-   * \c blocks lists the variable-blocks (each n_shape_fct_ wide) belonging to one independent
-   * component. LAPACK's dgetrf is column-major (cf. SmallMat::loc_matrix_index, "column*n_rows +
-   * row"), so we gather the sub-matrix into \c lu in the same column-major order: lu[col*sz+row].
-   * This matches the layout the working full-matrix path feeds to dgetrf, i.e. it is NOT a
-   * transpose -- important because the local matrix is non-symmetric.
+   * Builds the shared per-edge integral blocks M (diagonal), G = int (grad phi) phi, B = boundary
+   * normal flux and F = boundary mass; eliminates each triplet's sigma and wdot blocks (both pure
+   * mass) explicitly to obtain the displacement Schur operator
+   *   S(C_sig, C_u) = theta*tau*F + theta*C_sig*(B-G) M^{-1} G + (C_u/(theta*dt^2)) M.
+   * Components A,B are single triplets (nw_ x nw_); C,D couple a force group (C_sig=C_sig_n) with a
+   * rotation group via the cross product into an n2w_ x n2w_ system. M_inv, G and (B-G) are cached
+   * for the reduction / back-substitution in solve_local_problem.
    ************************************************************************************************/
-  template <std::size_t NB>
-  inline void factorize_block(const SmallSquareMat<n_loc_dofs_, lSol_float_t>& full,
-                              const std::array<unsigned int, NB>& blocks,
-                              std::array<lSol_float_t, NB * n_shape_fct_ * NB * n_shape_fct_>& lu,
-                              std::array<int, NB * n_shape_fct_>& ipiv) const
+  template <typename hyEdgeT>
+  inline void assemble_schur(hyEdgeT& hyper_edge) const
   {
-    constexpr unsigned int sz = NB * n_shape_fct_;
-    for (unsigned int cb = 0; cb < NB; ++cb)
-      for (unsigned int ci = 0; ci < n_shape_fct_; ++ci)
-        for (unsigned int rb = 0; rb < NB; ++rb)
-          for (unsigned int ri = 0; ri < n_shape_fct_; ++ri)
+    auto& data = hyper_edge.data;
+    constexpr unsigned int n = n_shape_fct_;
+    data.extra = get_extra_coeffs(hyper_edge);  // C_n, C_m, C_u, C_r
+
+    std::array<lSol_float_t, nw_> M_diag;
+    std::array<lSol_float_t, nw_ * nw_> G, Bm, F;  // row-major; Bm = B - G
+    M_diag.fill(0.);
+    G.fill(0.);
+    Bm.fill(0.);
+    F.fill(0.);
+    for (unsigned int i = 0; i < n; ++i)
+      for (unsigned int j = 0; j < n; ++j)
+      {
+        const lSol_float_t vol =
+          integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        const auto grad =
+          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                         decltype(hyEdgeT::geometry)>(
+            i, j, hyper_edge.geometry);
+        lSol_float_t face_integral = 0., normal_integral = 0.;
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        {
+          const lSol_float_t h =
+            integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+          face_integral += h;
+          normal_integral += h * hyper_edge.geometry.local_normal(face).operator[](0);
+        }
+        if (i == j)
+          M_diag[i] = vol;  // M is diagonal: orthogonal Legendre basis on affine geometry
+        G[i * n + j] = grad[0];
+        Bm[i * n + j] = normal_integral - grad[0];
+        F[i * n + j] = face_integral;
+      }
+    for (unsigned int i = 0; i < n; ++i)
+      data.M_inv[i] = 1. / M_diag[i];
+    data.Gmat = G;
+    data.BmG = Bm;
+
+    // K = (B-G) M^{-1} G  (row-major), the dense part of the Schur operator.
+    std::array<lSol_float_t, nw_ * nw_> K;
+    for (unsigned int r = 0; r < n; ++r)
+      for (unsigned int c = 0; c < n; ++c)
+      {
+        lSol_float_t acc = 0.;
+        for (unsigned int k = 0; k < n; ++k)
+          acc += Bm[r * n + k] * data.M_inv[k] * G[k * n + c];
+        K[r * n + c] = acc;
+      }
+
+    // Entry (r,c) of the single-triplet Schur operator S(C_sig, C_u).
+    auto S_entry = [&](lSol_float_t C_sig, lSol_float_t C_u, unsigned int r, unsigned int c) {
+      lSol_float_t v = theta_ * tau_ * F[r * n + c] + theta_ * C_sig * K[r * n + c];
+      if (r == c)
+        v += (C_u / (theta_ * delta_t_ * delta_t_)) * M_diag[r];
+      return v;
+    };
+
+    // Single component: factorize S directly (column-major for LAPACK).
+    auto fill_single = [&](std::array<lSol_float_t, nw_ * nw_>& lu, unsigned int dim) {
+      const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+      const lSol_float_t C_u = data.extra[w_blk(dim)];
+      for (unsigned int c = 0; c < nw_; ++c)
+        for (unsigned int r = 0; r < nw_; ++r)
+          lu[c * nw_ + r] = S_entry(C_sig, C_u, r, c);
+    };
+    fill_single(data.lu_A, compA_dim);
+    Wrapper::lapack_factorize(nw_, data.lu_A.data(), data.ipiv_A.data());
+    fill_single(data.lu_B, compB_dim);
+    Wrapper::lapack_factorize(nw_, data.lu_B.data(), data.ipiv_B.data());
+
+    // Coupled component (force group dim_n, rotation group dim_r), cross sign s:
+    //   [ S_n                 s*theta*C_sig_n*(B-G)   ]
+    //   [ s*theta*C_sig_n*G   S_r + theta*C_sig_n*M   ]
+    auto fill_coupled = [&](std::array<lSol_float_t, n2w_ * n2w_>& lu, lSol_float_t s,
+                            unsigned int dim_n, unsigned int dim_r) {
+      const lSol_float_t Csn = data.extra[sig_blk(dim_n)], Cun = data.extra[w_blk(dim_n)];
+      const lSol_float_t Csr = data.extra[sig_blk(dim_r)], Cur = data.extra[w_blk(dim_r)];
+      for (unsigned int c = 0; c < n2w_; ++c)
+        for (unsigned int r = 0; r < n2w_; ++r)
+        {
+          lSol_float_t v;
+          if (r < nw_ && c < nw_)
+            v = S_entry(Csn, Cun, r, c);
+          else if (r < nw_ && c >= nw_)
+            v = s * theta_ * Csn * Bm[r * n + (c - nw_)];
+          else if (r >= nw_ && c < nw_)
+            v = s * theta_ * Csn * G[(r - nw_) * n + c];
+          else
           {
-            const unsigned int c = cb * n_shape_fct_ + ci;
-            const unsigned int r = rb * n_shape_fct_ + ri;
-            lu[c * sz + r] =
-              full(blocks[rb] * n_shape_fct_ + ri, blocks[cb] * n_shape_fct_ + ci);
+            v = S_entry(Csr, Cur, r - nw_, c - nw_);
+            if (r == c)
+              v += theta_ * Csn * M_diag[r - nw_];
           }
-    Wrapper::lapack_factorize(sz, lu.data(), ipiv.data());
+          lu[c * n2w_ + r] = v;
+        }
+    };
+    fill_coupled(data.lu_C, +1., compC_dim_n, compC_dim_r);
+    Wrapper::lapack_factorize(n2w_, data.lu_C.data(), data.ipiv_C.data());
+    fill_coupled(data.lu_D, -1., compD_dim_n, compD_dim_r);
+    Wrapper::lapack_factorize(n2w_, data.lu_D.data(), data.ipiv_D.data());
   }
 
   /*!***********************************************************************************************
-   * \brief   Solve one component in place: gather rhs entries, triangular-solve, scatter back.
+   * \brief   Reduce triplet \c dim to its displacement right-hand side; stash mass-scaled rhs.
+   *
+   * rhs_w = b_w - theta*C_sig*(B-G) M^{-1} b_sig - (1/(theta*dt)) b_wdot. Outputs M^{-1} b_sig and
+   * M^{-1} b_wdot for the back-substitution.
    ************************************************************************************************/
-  template <std::size_t NB>
-  inline void solve_block(std::array<lSol_float_t, NB * n_shape_fct_ * NB * n_shape_fct_>& lu,
-                          std::array<int, NB * n_shape_fct_>& ipiv,
-                          const std::array<unsigned int, NB>& blocks,
-                          SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  template <typename DataT>
+  inline std::array<lSol_float_t, nw_> triplet_reduce(
+    const DataT& data, unsigned int dim, const SmallVec<n_loc_dofs_, lSol_float_t>& rhs,
+    std::array<lSol_float_t, nw_>& m_inv_bsig, std::array<lSol_float_t, nw_>& m_inv_bwdot) const
   {
-    constexpr unsigned int sz = NB * n_shape_fct_;
-    std::array<lSol_float_t, sz> sub;
-    for (unsigned int b = 0; b < NB; ++b)
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        sub[b * n_shape_fct_ + i] = rhs[blocks[b] * n_shape_fct_ + i];
-    Wrapper::lapack_solve_factored(sz, 1, lu.data(), ipiv.data(), sub.data());
-    for (unsigned int b = 0; b < NB; ++b)
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        rhs[blocks[b] * n_shape_fct_ + i] = sub[b * n_shape_fct_ + i];
+    constexpr unsigned int n = n_shape_fct_;
+    const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+    std::array<lSol_float_t, nw_> rhs_w, bw;
+    for (unsigned int k = 0; k < n; ++k)
+    {
+      m_inv_bsig[k] = data.M_inv[k] * rhs[sig_blk(dim) * n + k];
+      m_inv_bwdot[k] = data.M_inv[k] * rhs[wdot_blk(dim) * n + k];
+      bw[k] = rhs[w_blk(dim) * n + k];
+    }
+    for (unsigned int r = 0; r < n; ++r)
+    {
+      lSol_float_t bmg_x = 0.;
+      for (unsigned int c = 0; c < n; ++c)
+        bmg_x += data.BmG[r * n + c] * m_inv_bsig[c];
+      rhs_w[r] = bw[r] - theta_ * C_sig * bmg_x - rhs[wdot_blk(dim) * n + r] / (theta_ * delta_t_);
+    }
+    return rhs_w;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Recover sigma, w, wdot of triplet \c dim from the solved displacement w and scatter.
+   *
+   * sigma = C_sig (M^{-1} b_sig + M^{-1} G w + s*w_partner),  wdot = (1/theta) M^{-1} b_wdot +
+   * (C_u/(theta*dt)) w. \c s_cross is 0 for single components; for a coupled force group it is the
+   * cross sign and \c w_partner the rotation group's displacement.
+   ************************************************************************************************/
+  template <typename DataT>
+  inline void triplet_backsub(const DataT& data, unsigned int dim, lSol_float_t s_cross,
+                              const std::array<lSol_float_t, nw_>& w,
+                              const std::array<lSol_float_t, nw_>& w_partner,
+                              const std::array<lSol_float_t, nw_>& m_inv_bsig,
+                              const std::array<lSol_float_t, nw_>& m_inv_bwdot,
+                              SmallVec<n_loc_dofs_, lSol_float_t>& result) const
+  {
+    constexpr unsigned int n = n_shape_fct_;
+    const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+    const lSol_float_t C_u = data.extra[w_blk(dim)];
+    for (unsigned int k = 0; k < n; ++k)
+    {
+      lSol_float_t Gw = 0.;
+      for (unsigned int c = 0; c < n; ++c)
+        Gw += data.Gmat[k * n + c] * w[c];
+      result[sig_blk(dim) * n + k] =
+        C_sig * (m_inv_bsig[k] + data.M_inv[k] * Gw + s_cross * w_partner[k]);
+      result[w_blk(dim) * n + k] = w[k];
+      result[wdot_blk(dim) * n + k] =
+        m_inv_bwdot[k] / theta_ + (C_u / (theta_ * delta_t_)) * w[k];
+    }
   }
 
   template <typename hyEdgeT, typename SmallMatT>
@@ -592,22 +733,57 @@ class TimoshenkoWave
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      // std::cout << "-- solve_local" << std::endl;
-      // std::cout << rhs << std::endl;
+
       auto& data = hyper_edge.data;
-      if (!data.loc_mat_factorized) {
-        const auto loc_mat = assemble_loc_matrix(hyper_edge, time);
-        factorize_block(loc_mat, comp_A_, data.lu_A, data.ipiv_A);
-        factorize_block(loc_mat, comp_B_, data.lu_B, data.ipiv_B);
-        factorize_block(loc_mat, comp_C_, data.lu_C, data.ipiv_C);
-        factorize_block(loc_mat, comp_D_, data.lu_D, data.ipiv_D);
+      if (!data.loc_mat_factorized)
+      {
+        assemble_schur(hyper_edge);
         data.loc_mat_factorized = true;
       }
-      solve_block(data.lu_A, data.ipiv_A, comp_A_, rhs);
-      solve_block(data.lu_B, data.ipiv_B, comp_B_, rhs);
-      solve_block(data.lu_C, data.ipiv_C, comp_C_, rhs);
-      solve_block(data.lu_D, data.ipiv_D, comp_D_, rhs);
-      return rhs;
+
+      constexpr unsigned int n = n_shape_fct_;
+      SmallVec<n_loc_dofs_, lSol_float_t> result;
+      const std::array<lSol_float_t, nw_> dummy{};  // unused w_partner for single components
+
+      // Single components A, B.
+      auto solve_single = [&](std::array<lSol_float_t, nw_ * nw_>& lu, std::array<int, nw_>& ipiv,
+                              unsigned int dim) {
+        std::array<lSol_float_t, nw_> mis, miw;
+        auto rw = triplet_reduce(data, dim, rhs, mis, miw);
+        Wrapper::lapack_solve_factored(nw_, 1, lu.data(), ipiv.data(), rw.data());
+        triplet_backsub(data, dim, 0., rw, dummy, mis, miw, result);
+      };
+      solve_single(data.lu_A, data.ipiv_A, compA_dim);
+      solve_single(data.lu_B, data.ipiv_B, compB_dim);
+
+      // Coupled components C (s=+1), D (s=-1): force group dim_n, rotation group dim_r.
+      auto solve_coupled = [&](std::array<lSol_float_t, n2w_ * n2w_>& lu,
+                               std::array<int, n2w_>& ipiv, lSol_float_t s, unsigned int dim_n,
+                               unsigned int dim_r) {
+        std::array<lSol_float_t, nw_> mis_n, miw_n, mis_r, miw_r;
+        auto rw_n = triplet_reduce(data, dim_n, rhs, mis_n, miw_n);
+        auto rw_r = triplet_reduce(data, dim_r, rhs, mis_r, miw_r);
+        const lSol_float_t Csn = data.extra[sig_blk(dim_n)];
+        std::array<lSol_float_t, n2w_> rw;
+        for (unsigned int k = 0; k < n; ++k)
+        {
+          rw[k] = rw_n[k];
+          rw[nw_ + k] = rw_r[k] - s * theta_ * Csn * rhs[sig_blk(dim_n) * n + k];
+        }
+        Wrapper::lapack_solve_factored(n2w_, 1, lu.data(), ipiv.data(), rw.data());
+        std::array<lSol_float_t, nw_> w_n, w_r;
+        for (unsigned int k = 0; k < n; ++k)
+        {
+          w_n[k] = rw[k];
+          w_r[k] = rw[nw_ + k];
+        }
+        triplet_backsub(data, dim_n, s, w_n, w_r, mis_n, miw_n, result);  // force group: +s*w_r
+        triplet_backsub(data, dim_r, 0., w_r, dummy, mis_r, miw_r, result);  // rotation group
+      };
+      solve_coupled(data.lu_C, data.ipiv_C, +1., compC_dim_n, compC_dim_r);
+      solve_coupled(data.lu_D, data.ipiv_D, -1., compD_dim_n, compD_dim_r);
+
+      return result;
     }
     catch (Wrapper::LAPACKexception& exc)
     {
