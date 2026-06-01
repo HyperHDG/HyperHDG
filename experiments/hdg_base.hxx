@@ -13,6 +13,8 @@ struct HDGBase {
   virtual void plot_solution(const Span& lambda, const Real time = 0.) = 0;
   virtual std::string plot_option(const std::string& option, std::string value = "") = 0;
   virtual Idx size_of_system() = 0;
+  virtual Idx n_owned_dofs() = 0;
+  virtual Idx n_local_dofs() = 0;
   virtual Idx n_dofs_per_node() = 0;
   virtual Vector zero_vector() = 0;
   virtual Vector errors(const Span& x_vec, const Real time = 0.) = 0;
@@ -40,6 +42,12 @@ struct HDGWrapper : HDGBase {
   }
   Idx size_of_system() {
     return hdg.size_of_system();
+  }
+  Idx n_owned_dofs() {
+    return hdg.n_owned_dofs();
+  }
+  Idx n_local_dofs() {
+    return hdg.n_local_dofs();
   }
   Idx n_dofs_per_node() {
     return HDG::n_dofs_per_node;

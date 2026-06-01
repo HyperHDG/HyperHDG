@@ -197,7 +197,7 @@ class Elliptic
    *
    * \retval  zero            A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
-  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_local_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -337,6 +337,17 @@ class Elliptic
    * \retval  n               Size of the condensed (square) system of equations.
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom owned by this rank (== \c size_of_system() if serial).
+   *
+   * Used to set the local row count of the distributed system matrix and vectors.
+   ************************************************************************************************/
+  dof_index_t n_owned_dofs() const { return hyper_graph_.n_owned_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom held in a local vector, i.e. owned + ghost
+   *          (== \c size_of_system() if serial). This is the length of \c zero_vector().
+   ************************************************************************************************/
+  dof_index_t n_local_dofs() const { return hyper_graph_.n_local_dofs(); }
   /*!***********************************************************************************************
    * \brief   Set plot option and return old plot option.
    *

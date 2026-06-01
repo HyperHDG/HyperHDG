@@ -186,8 +186,10 @@ struct sparse_mat
     int crank, csize;                                                          \
     HYPERHDG_Comm_rank(HYPERHDG_COMM, &crank); \
     HYPERHDG_Comm_size(HYPERHDG_COMM, &csize); \
-    iedge_t estart = crank*nedges/csize; \
-    iedge_t eend = std::min((crank+1)*nedges/csize, nedges); \
+    /* When the hypergraph is distributed at the data level, each rank's hyperedges are already */ \
+    /* its owned share, so assemble all of them; otherwise split the replicated graph by rank.  */ \
+    iedge_t estart = hyper_graph_.is_distributed() ? 0 : crank*nedges/csize; \
+    iedge_t eend = hyper_graph_.is_distributed() ? nedges : std::min((crank+1)*nedges/csize, nedges); \
     \
     sparse_mat<LargeVecT> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
                                      n_dofs_per_node * n_dofs_per_node);                      \
@@ -200,7 +202,8 @@ struct sparse_mat
         auto hyper_edge = hyper_graph_[iedge];                                                \
         hyNodes = hyper_edge.topology.get_hyNode_indices();                                   \
         for (unsigned int node = 0; node < hyNodes.size(); ++node)                            \
-          hyper_graph_.hyNode_factory().get_dof_indices(hyNodes[node], dof_indices[node]);    \
+          hyper_graph_.hyNode_factory().get_global_dof_indices(hyNodes[node],                 \
+                                                               dof_indices[node]);            \
                                                                                               \
         for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      \
           for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      \

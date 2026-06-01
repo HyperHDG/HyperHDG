@@ -292,6 +292,27 @@ class HDGHyperGraph
    ************************************************************************************************/
   HyDataContainer<DataT> hyData_cont_;
 
+  /*!***********************************************************************************************
+   * \brief   Build a HyperNodeFactory, injecting distributed-memory information if available.
+   *
+   * If the topology exposes a \c domain_info() carrying a local-to-global hypernode map (i.e. the
+   * hypergraph is distributed), the factory is configured with it so that global degree-of-freedom
+   * indices can be emitted for the distributed matrix. Otherwise the factory keeps its identity
+   * (non-distributed) behaviour.
+   ************************************************************************************************/
+  static HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t> make_factory_(const TopoT& topo)
+  {
+    HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t> factory(topo.n_hyNodes());
+    if constexpr (requires(const TopoT& t) { t.domain_info().lgmap; })
+    {
+      const auto& di = topo.domain_info();
+      factory.set_distribution(
+        std::vector<hyEdge_index_t>(di.lgmap.begin(), di.lgmap.end()), di.n_owned_hyNodes,
+        di.n_global_hyNodes);
+    }
+    return factory;
+  }
+
  public:
   /*!***********************************************************************************************
    * \brief   Construct HDGHyperGraph from \c constructor_value_type.
@@ -307,7 +328,7 @@ class HDGHyperGraph
   : hyGraph_topology_(std::make_shared<TopoT>(construct_topo)),
     hyGraph_geometry_(std::make_shared<GeomT>(*hyGraph_topology_)),
     hyGraph_node_des_(std::make_shared<NodeT>(*hyGraph_topology_)),
-    hyNode_factory_(hyGraph_topology_->n_hyNodes()),
+    hyNode_factory_(make_factory_(*hyGraph_topology_)),
     hyData_cont_(hyGraph_topology_->n_hyEdges())
   {
     static_assert(TopoT::hyEdge_dim() == GeomT::hyEdge_dim(),
@@ -339,7 +360,7 @@ class HDGHyperGraph
   : hyGraph_topology_(std::make_shared<TopoT>(construct_topo)),
     hyGraph_geometry_(std::make_shared<GeomT>(construct_geom)),
     hyGraph_node_des_(std::make_shared<NodeT>(*hyGraph_topology_)),
-    hyNode_factory_(hyGraph_topology_->n_hyNodes()),
+    hyNode_factory_(make_factory_(*hyGraph_topology_)),
     hyData_cont_(hyGraph_topology_->n_hyEdges())
   {
     static_assert(TopoT::hyEdge_dim() == GeomT::hyEdge_dim(),
@@ -373,7 +394,7 @@ class HDGHyperGraph
   : hyGraph_topology_(topo),
     hyGraph_geometry_(geom),
     hyGraph_node_des_(node),
-    hyNode_factory_(hyGraph_topology_->n_hyNodes()),
+    hyNode_factory_(make_factory_(*hyGraph_topology_)),
     hyData_cont_(hyGraph_topology_->n_hyEdges())
   {
     static_assert(TopoT::hyEdge_dim() == GeomT::hyEdge_dim(),
@@ -505,6 +526,10 @@ class HDGHyperGraph
    ************************************************************************************************/
   const hyEdge_index_t n_hyNodes() const { return hyNode_factory_.n_hyNodes(); }
   /*!***********************************************************************************************
+   * \brief   Whether the hypergraph is distributed (its hyperedges are this rank's owned share).
+   ************************************************************************************************/
+  bool is_distributed() const { return hyNode_factory_.is_distributed(); }
+  /*!***********************************************************************************************
    * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
    *
    * \retval  n_global_dofs         The total amount of degreees of freedom in the considered
@@ -514,6 +539,23 @@ class HDGHyperGraph
   const dof_index_t n_global_dofs() const
   {
     return hyNode_factory_.n_global_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Degrees of freedom held in a local vector (owned + ghost). Equals \c n_global_dofs()
+   *          when not distributed.
+   ************************************************************************************************/
+  template <typename dof_index_t = unsigned int>
+  const dof_index_t n_local_dofs() const
+  {
+    return hyNode_factory_.n_local_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Degrees of freedom owned by this rank. Equals \c n_global_dofs() when not distributed.
+   ************************************************************************************************/
+  template <typename dof_index_t = unsigned int>
+  const dof_index_t n_owned_dofs() const
+  {
+    return hyNode_factory_.n_owned_dofs();
   }
   /*!***********************************************************************************************
    * \brief   Return the refinement level of the hypergraph.

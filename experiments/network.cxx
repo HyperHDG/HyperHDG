@@ -196,7 +196,11 @@ int main(int argc, char **argv) {
 
     bs = hdg->n_dofs_per_node();
     N = hdg->size_of_system();
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+    // Local row/col count = dofs owned by this rank (matches the partition's global numbering, so
+    // PETSc's contiguous ownership ranges coincide with the renumbered owned dof blocks). Equals
+    // PETSC_DECIDE behaviour for a single rank.
+    PetscInt n_owned = hdg->n_owned_dofs();
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, n_owned, n_owned, N, N, &mat));
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
     if (rank == 0) PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
@@ -240,6 +244,22 @@ int main(int argc, char **argv) {
     }
 
     PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
+
+    {
+      // Stage-1 validation: 1^T A 1 (= sum of all entries) and ||A 1|| are invariant under the
+      // symmetric renumbering, so these must match between serial and distributed assembly.
+      Vec ones, Aones;
+      PetscReal ones_sum, ones_nrm;
+      PetscCall(MatCreateVecs(mat, &ones, &Aones));
+      PetscCall(VecSet(ones, 1.0));
+      PetscCall(MatMult(mat, ones, Aones));
+      PetscCall(VecSum(Aones, &ones_sum));
+      PetscCall(VecNorm(Aones, NORM_2, &ones_nrm));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t2f_ones_sum: %.12e\n", (double)ones_sum));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t2f_ones_nrm: %.12e\n", (double)ones_nrm));
+      PetscCall(VecDestroy(&ones));
+      PetscCall(VecDestroy(&Aones));
+    }
 
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
