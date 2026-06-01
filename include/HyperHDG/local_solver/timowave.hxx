@@ -263,6 +263,11 @@ class TimoshenkoWave
   struct data_type
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
+    // Cached LU factorization of assemble_loc_matrix; matrix only depends on geometry and
+    // (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> loc_mat_lu;
+    std::array<int, n_loc_dofs_> loc_mat_ipiv;
+    bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
@@ -513,7 +518,15 @@ class TimoshenkoWave
         hy_assert(0 == 1, "This has not been implemented!");
       // std::cout << "-- solve_local" << std::endl;
       // std::cout << rhs << std::endl;
-      return rhs / assemble_loc_matrix(hyper_edge, time);
+      if (!hyper_edge.data.loc_mat_factorized) {
+        hyper_edge.data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
+        Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(
+          hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv);
+        hyper_edge.data.loc_mat_factorized = true;
+      }
+      Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(
+        hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv, rhs.data());
+      return rhs;
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -1634,6 +1647,15 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += theta_ * vol_integral;
     }
   }
+
+  // auto it = local_mat.begin();
+  // char tmp[n_loc_dofs_*n_loc_dofs_+2] = {0};
+  // for (unsigned i = 0; i < n_loc_dofs_*n_loc_dofs_; i++)
+  //   tmp[i] = *it++ < 1e-16 ? 255 : 0;
+  // FILE* f = fopen("/tmp/mat.bin", "wb");
+  // fprintf(f, "P5\n%d %d\n255\n", n_loc_dofs_, n_loc_dofs_);
+  // fwrite(tmp, 1, 2+n_loc_dofs_*n_loc_dofs_, f);
+  // fclose(f);
 
   return local_mat;
 }  // end of Diffusion::assemble_loc_matrix
