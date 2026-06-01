@@ -226,6 +226,30 @@ class TimoshenkoWave
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = 6 * space_dim * n_shape_fct_;
   /*!***********************************************************************************************
+   * \brief   Block-diagonal decomposition of the local matrix into independent components.
+   *
+   * The local matrix decouples into 4 connected components (see assemble_loc_matrix). Each
+   * variable group dim in 0..2*space_dim-1 forms a self-coupled triplet of variable-blocks
+   * {sigma, w, wdot} = {dim, 2*space_dim+dim, 4*space_dim+dim}; the only links between triplets
+   * are the t x n cross-product terms, which (for space_dim==3) couple the transverse shear
+   * force with the perpendicular bending rotation. The components are, in units of variable-
+   * blocks of width n_shape_fct_:
+   *   A = {n_x, u_x, v_x}            (axial)        size 3
+   *   B = {m_x, r_x, s_x}            (torsion)      size 3
+   *   C = {n_z,u_z,v_z, m_y,r_y,s_y} (shear+bend)   size 6
+   *   D = {n_y,u_y,v_y, m_z,r_z,s_z} (shear+bend)   size 6
+   * Factorizing these 4 blocks separately costs ~12x fewer flops than the full n_loc_dofs_ LU
+   * and is numerically identical.
+   ************************************************************************************************/
+  static_assert(space_dim == 3, "Block decomposition of the local matrix assumes space_dim==3 "
+                                "(the t x n cross-product coupling is 3D-specific).");
+  static constexpr unsigned int n_comp3_ = 3 * n_shape_fct_;
+  static constexpr unsigned int n_comp6_ = 6 * n_shape_fct_;
+  static constexpr std::array<unsigned int, 3> comp_A_ = {0, 6, 12};
+  static constexpr std::array<unsigned int, 3> comp_B_ = {3, 9, 15};
+  static constexpr std::array<unsigned int, 6> comp_C_ = {2, 8, 14, 4, 10, 16};
+  static constexpr std::array<unsigned int, 6> comp_D_ = {1, 7, 13, 5, 11, 17};
+  /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    *
    * This allows to the use of this quantity as template parameter in member functions.
@@ -263,10 +287,13 @@ class TimoshenkoWave
   struct data_type
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
-    // Cached LU factorization of assemble_loc_matrix; matrix only depends on geometry and
+    // Cached block-LU of assemble_loc_matrix. The matrix decouples into 4 independent components
+    // (A,B of size n_comp3_, C,D of size n_comp6_; see comp_*_). It only depends on geometry and
     // (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
-    SmallSquareMat<n_loc_dofs_, lSol_float_t> loc_mat_lu;
-    std::array<int, n_loc_dofs_> loc_mat_ipiv;
+    std::array<lSol_float_t, n_comp3_ * n_comp3_> lu_A, lu_B;
+    std::array<int, n_comp3_> ipiv_A, ipiv_B;
+    std::array<lSol_float_t, n_comp6_ * n_comp6_> lu_C, lu_D;
+    std::array<int, n_comp6_> ipiv_C, ipiv_D;
     bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
@@ -500,6 +527,55 @@ class TimoshenkoWave
     return glob_lambda;
   }
 
+  /*!***********************************************************************************************
+   * \brief   Gather the sub-block of \c full selected by \c blocks and LU-factorize it in place.
+   *
+   * \c blocks lists the variable-blocks (each n_shape_fct_ wide) belonging to one independent
+   * component. LAPACK's dgetrf is column-major (cf. SmallMat::loc_matrix_index, "column*n_rows +
+   * row"), so we gather the sub-matrix into \c lu in the same column-major order: lu[col*sz+row].
+   * This matches the layout the working full-matrix path feeds to dgetrf, i.e. it is NOT a
+   * transpose -- important because the local matrix is non-symmetric.
+   ************************************************************************************************/
+  template <std::size_t NB>
+  inline void factorize_block(const SmallSquareMat<n_loc_dofs_, lSol_float_t>& full,
+                              const std::array<unsigned int, NB>& blocks,
+                              std::array<lSol_float_t, NB * n_shape_fct_ * NB * n_shape_fct_>& lu,
+                              std::array<int, NB * n_shape_fct_>& ipiv) const
+  {
+    constexpr unsigned int sz = NB * n_shape_fct_;
+    for (unsigned int cb = 0; cb < NB; ++cb)
+      for (unsigned int ci = 0; ci < n_shape_fct_; ++ci)
+        for (unsigned int rb = 0; rb < NB; ++rb)
+          for (unsigned int ri = 0; ri < n_shape_fct_; ++ri)
+          {
+            const unsigned int c = cb * n_shape_fct_ + ci;
+            const unsigned int r = rb * n_shape_fct_ + ri;
+            lu[c * sz + r] =
+              full(blocks[rb] * n_shape_fct_ + ri, blocks[cb] * n_shape_fct_ + ci);
+          }
+    Wrapper::lapack_factorize(sz, lu.data(), ipiv.data());
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Solve one component in place: gather rhs entries, triangular-solve, scatter back.
+   ************************************************************************************************/
+  template <std::size_t NB>
+  inline void solve_block(std::array<lSol_float_t, NB * n_shape_fct_ * NB * n_shape_fct_>& lu,
+                          std::array<int, NB * n_shape_fct_>& ipiv,
+                          const std::array<unsigned int, NB>& blocks,
+                          SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  {
+    constexpr unsigned int sz = NB * n_shape_fct_;
+    std::array<lSol_float_t, sz> sub;
+    for (unsigned int b = 0; b < NB; ++b)
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        sub[b * n_shape_fct_ + i] = rhs[blocks[b] * n_shape_fct_ + i];
+    Wrapper::lapack_solve_factored(sz, 1, lu.data(), ipiv.data(), sub.data());
+    for (unsigned int b = 0; b < NB; ++b)
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        rhs[blocks[b] * n_shape_fct_ + i] = sub[b * n_shape_fct_ + i];
+  }
+
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
                                                                  const unsigned int solution_type,
@@ -518,14 +594,19 @@ class TimoshenkoWave
         hy_assert(0 == 1, "This has not been implemented!");
       // std::cout << "-- solve_local" << std::endl;
       // std::cout << rhs << std::endl;
-      if (!hyper_edge.data.loc_mat_factorized) {
-        hyper_edge.data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
-        Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(
-          hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv);
-        hyper_edge.data.loc_mat_factorized = true;
+      auto& data = hyper_edge.data;
+      if (!data.loc_mat_factorized) {
+        const auto loc_mat = assemble_loc_matrix(hyper_edge, time);
+        factorize_block(loc_mat, comp_A_, data.lu_A, data.ipiv_A);
+        factorize_block(loc_mat, comp_B_, data.lu_B, data.ipiv_B);
+        factorize_block(loc_mat, comp_C_, data.lu_C, data.ipiv_C);
+        factorize_block(loc_mat, comp_D_, data.lu_D, data.ipiv_D);
+        data.loc_mat_factorized = true;
       }
-      Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(
-        hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv, rhs.data());
+      solve_block(data.lu_A, data.ipiv_A, comp_A_, rhs);
+      solve_block(data.lu_B, data.ipiv_B, comp_B_, rhs);
+      solve_block(data.lu_C, data.ipiv_C, comp_C_, rhs);
+      solve_block(data.lu_D, data.ipiv_D, comp_D_, rhs);
       return rhs;
     }
     catch (Wrapper::LAPACKexception& exc)
@@ -1627,8 +1708,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
       }
 
-      //TODO: mult by theta
-
       for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
@@ -1657,6 +1736,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
   }
 
+  // // Dump sparsity pattern of the local matrix as a PGM image (debug):
+  // //   ... && magic /tmp/mat.bin mat.png && sxiv mat.png
   // auto it = local_mat.begin();
   // char tmp[n_loc_dofs_*n_loc_dofs_+2] = {0};
   // for (unsigned i = 0; i < n_loc_dofs_*n_loc_dofs_; i++)
