@@ -27,11 +27,20 @@ cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo '-dirty' >> $OUT/rev; fi
 
+. venv/bin/activate
+. spack/mkl/.spack-env/view/setvars.sh
+
 parallel --progress --bar --results $RES1 \
   "python experiments/make_geo2.py -i $INPUT --clamp-xy {1} -o $OUT/domain-{2}.geo.h5 --dirichlet xmax=68 xmin=63" ::: $(seq .1 .2 1) :::+ $(seq 5)
 echo "exit: $?"
-parallel --progress --bar --results $RES2 \
-  "$BUILD/network -domain {} -comp 2 -strain .15 $NET {2}" ::: $OUT/domain*.geo.h5 ::: mumps
+parallel --progress --bar --results $RES2 --colsep ' ' \
+  "echo blas: {2}; build/{2}/experiments/network -domain {1} -comp 2 -strain .15 $NET {3}" ::: $OUT/domain-1.geo.h5 :::: - <<EOF
+openblas mumps
+openblas cholmod
+mkl mumps
+mkl cholmod
+mkl mkl_pardiso
+EOF
 echo "exit: $?"
 yq -i '.Stdout |= from_yaml' $RES2
 
