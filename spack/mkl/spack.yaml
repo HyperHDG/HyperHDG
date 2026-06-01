@@ -1,5 +1,6 @@
 # This is a Spack Environment file.
 #
+#
 # It describes a set of packages to be installed, along with
 # configuration settings.
 spack:
@@ -10,8 +11,8 @@ spack:
   - kahip
   view: true
   packages:
-    blas:     {require: intel-oneapi-mkl}
-    lapack:   {require: intel-oneapi-mkl}
+    blas:     {require: "intel-oneapi-mkl threads=openmp"}
+    lapack:   {require: "intel-oneapi-mkl threads=openmp"}
     argtable: {require: "cflags='-std=c89'"}
   concretizer:
     unify: true

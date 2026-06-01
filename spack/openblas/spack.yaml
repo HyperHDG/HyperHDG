@@ -5,12 +5,12 @@
 spack:
   # add package specs to the `specs` list
   specs:
-  - petsc+hdf5+metis+mumps+suite-sparse+pastix
+  - petsc+hdf5+metis+mumps+suite-sparse+pastix+openmp+ptscotch
   - kahip
   view: true
   packages:
-    blas:     {require: openblas}
-    lapack:   {require: openblas}
+    blas:     {require: "openblas threads=openmp"}
+    lapack:   {require: "openblas threads=openmp"}
     argtable: {require: "cflags='-std=c89'"}
   concretizer:
     unify: true
