@@ -502,8 +502,8 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   // corresponding vertex and subdomain ids
   off = 0;
   for (PetscInt r = 0; r < size; r++) {
-    PetscCallMPI(MPI_Isend(cb->rows+off, rank2scount[r], MPIU_INT, r, tag_vid, comm, &reqs[2*(size+r)]));
-    PetscCallMPI(MPI_Isend(cb->cols+off, rank2scount[r], MPIU_INT, r, tag_sid, comm, &reqs[2*(size+r)+1]));
+    PetscCallMPI(MPI_Isend(tmp_rows+off, rank2scount[r], MPIU_INT, r, tag_vid, comm, &reqs[2*(size+r)]));
+    PetscCallMPI(MPI_Isend(tmp_cols+off, rank2scount[r], MPIU_INT, r, tag_sid, comm, &reqs[2*(size+r)+1]));
     off += rank2scount[r];
   }
 
@@ -733,6 +733,41 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     for (PetscInt i = 0; i < sz; i++) counts[inds[i]]++;
     PetscCall(ISRestoreIndices(data->local_is[s], &inds));
     new_cap += sz;
+  }
+
+  // counts so far only tallies subdomains on the local rank. With cross-rank overlap a shared node
+  // lives in subdomains on several ranks, so each rank undercounts it and the partition of unity no
+  // longer sums to 1 across the rank boundary. Reduce to the global per-node subdomain count: scatter
+  // the local counts onto a node-level global vector (ADD), then broadcast the totals back.
+  {
+    Vec gcount, lcount;
+    VecScatter sc_count;
+    PetscScalar *la;
+    PetscInt rstart, rend, nloc;
+
+    PetscCall(VecGetOwnershipRange(data->points, &rstart, &rend));
+    PetscCall(VecCreateMPI(PETSC_COMM_WORLD, (rend-rstart)/3, PETSC_DETERMINE, &gcount));
+    PetscCall(ISGetLocalSize(data->rank_is, &nloc));
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, nloc, &lcount));
+    PetscCall(VecScatterCreate(gcount, data->rank_is, lcount, NULL, &sc_count));
+
+    PetscCall(VecGetArray(lcount, &la));
+    for (PetscInt i = 0; i < nloc; i++) la[i] = (PetscScalar)counts[i];
+    PetscCall(VecRestoreArray(lcount, &la));
+
+    PetscCall(VecZeroEntries(gcount));
+    PetscCall(VecScatterBegin(sc_count, lcount, gcount, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(sc_count, lcount, gcount, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(sc_count, gcount, lcount, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(sc_count, gcount, lcount, INSERT_VALUES, SCATTER_FORWARD));
+
+    PetscCall(VecGetArray(lcount, &la));
+    for (PetscInt i = 0; i < nloc; i++) counts[i] = (PetscInt)(PetscRealPart(la[i]) + 0.5);
+    PetscCall(VecRestoreArray(lcount, &la));
+
+    PetscCall(VecScatterDestroy(&sc_count));
+    PetscCall(VecDestroy(&gcount));
+    PetscCall(VecDestroy(&lcount));
   }
 
   PetscCall(MatCOO_Free(coo));
