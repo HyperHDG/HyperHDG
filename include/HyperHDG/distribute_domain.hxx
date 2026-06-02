@@ -6,6 +6,10 @@
 
 #include <petsc.h>
 
+#ifdef HYPERHDG_PARHIP
+#include <kaHIP_interface.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -166,8 +170,44 @@ distribute_domain(const std::string& filename, MPI_Comm comm)
   const unsigned int nprop = full.n_properties;
 
   std::vector<int> part(n);
+#ifdef HYPERHDG_PARHIP
+  {
+    // Partition the network graph (vertices = hypernodes, edges = hyperedges) with sequential KaHIP,
+    // vertex-weighted by degree so each part gets a balanced share of incident-edge (assembly) work.
+    // Undirected CSR in METIS layout: each edge appears in both endpoints' adjacency lists.
+    int kn = static_cast<int>(n);
+    std::vector<int> xadj(n + 1, 0);
+    for (hyEdge_index_t e = 0; e < ne; ++e)
+    {
+      const auto& nodes = full.hyNodes_hyEdge[e];
+      ++xadj[nodes[0] + 1];
+      ++xadj[nodes[1] + 1];
+    }
+    for (hyNode_index_t v = 0; v < n; ++v)
+      xadj[v + 1] += xadj[v];
+    std::vector<int> adjncy(xadj[n]);
+    std::vector<int> cursor(xadj.begin(), xadj.end() - 1);
+    for (hyEdge_index_t e = 0; e < ne; ++e)
+    {
+      const auto& nodes = full.hyNodes_hyEdge[e];
+      adjncy[cursor[nodes[0]]++] = static_cast<int>(nodes[1]);
+      adjncy[cursor[nodes[1]]++] = static_cast<int>(nodes[0]);
+    }
+    std::vector<int> vwgt(n);
+    for (hyNode_index_t v = 0; v < n; ++v)
+      vwgt[v] = xadj[v + 1] - xadj[v];
+
+    int nparts = size, edgecut = 0;
+    double imbalance = 0.03;
+    kaffpa(&kn, vwgt.data(), xadj.data(), nullptr, adjncy.data(), &nparts, &imbalance,
+           true /*suppress_output*/, 0 /*seed*/, ECO, &edgecut, part.data());
+    PetscPrintf(PETSC_COMM_SELF, "distribute_domain:\n  partitioner: kaffpa\n  nparts: %d\n"
+                                 "  edgecut: %d\n", nparts, edgecut);
+  }
+#else
   for (hyNode_index_t v = 0; v < n; ++v)
     part[v] = compute_partition_placeholder(v, size);
+#endif
 
   // Owned-contiguous global renumbering: stable-sort node ids by part (keeps id order within part).
   std::vector<hyNode_index_t> perm(n);  // perm[k] = old node id at new global position k

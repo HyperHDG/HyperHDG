@@ -5,9 +5,6 @@ find_package(HDF5)
 # apply options privately to all following libs/exe
 add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-security -Wno-format-truncation)
 
-option(HYPERHDG_PARHIP "build HyperHDG with ParHIP" OFF)
-set(PARHIP_ROOT "" CACHE PATH "ParHIP install prefix")
-
 #######################
 
 add_library(prin2 prin2.cxx)

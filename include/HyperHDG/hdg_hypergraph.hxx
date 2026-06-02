@@ -579,6 +579,50 @@ class HDGHyperGraph
     return global_dofs;
   }
   /*!***********************************************************************************************
+   * \brief   Flat coordinates of this rank's owned hypernodes (length n_owned * space_dim).
+   *
+   * For \c hyEdge_dim == 1 a hypernode coincides with a point. The owned hypernodes are the first
+   * \c n_owned_hyNodes local points (new-global order), so the result has the same parallel layout
+   * as the owned degrees of freedom. Empty if the topology carries no \c domain_info().
+   ************************************************************************************************/
+  std::vector<double> owned_point_coords() const
+  {
+    std::vector<double> coords;
+    if constexpr (requires(const TopoT& t) { t.domain_info().points; })
+    {
+      const auto& di = hyGraph_topology_->domain_info();
+      constexpr unsigned int sd = TopoT::space_dim();
+      coords.resize(static_cast<size_t>(di.n_owned_hyNodes) * sd);
+      for (hyEdge_index_t i = 0; i < di.n_owned_hyNodes; ++i)
+        for (unsigned int d = 0; d < sd; ++d)
+          coords[static_cast<size_t>(i) * sd + d] = di.points[i][d];
+    }
+    return coords;
+  }
+  /*!***********************************************************************************************
+   * \brief   This rank's owned (coarse) hyperedges as global hypernode index pairs (length 2*n).
+   *
+   * Each owned hyperedge's local endpoints are mapped to global hypernode indices via the
+   * local-to-global map. Used to build a distributed adjacency conforming to the system matrix.
+   * Empty if the topology carries no \c domain_info(). Assumes \c hyEdge_dim == 1.
+   ************************************************************************************************/
+  std::vector<hyEdge_index_t> owned_edges_global() const
+  {
+    std::vector<hyEdge_index_t> edges;
+    if constexpr (requires(const TopoT& t) { t.domain_info().lgmap; })
+    {
+      const auto& di = hyGraph_topology_->domain_info();
+      edges.resize(static_cast<size_t>(di.n_hyEdges) * 2);
+      for (hyEdge_index_t e = 0; e < di.n_hyEdges; ++e)
+      {
+        const auto& nodes = di.hyNodes_hyEdge[e];
+        edges[2 * e + 0] = di.lgmap.empty() ? nodes[0] : di.lgmap[nodes[0]];
+        edges[2 * e + 1] = di.lgmap.empty() ? nodes[1] : di.lgmap[nodes[1]];
+      }
+    }
+    return edges;
+  }
+  /*!***********************************************************************************************
    * \brief   Return the refinement level of the hypergraph.
    ************************************************************************************************/
   unsigned int get_refinement() const { return hyGraph_topology_->get_refinement(); }

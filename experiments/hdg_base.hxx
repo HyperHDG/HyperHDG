@@ -16,6 +16,9 @@ struct HDGBase {
   virtual Idx n_owned_dofs() = 0;
   virtual Idx n_local_dofs() = 0;
   virtual std::vector<Idx> local_to_global_dofs() = 0;
+  virtual Idx n_space_dim() = 0;
+  virtual std::vector<Real> owned_point_coords() = 0;
+  virtual std::vector<Idx> owned_edges_global() = 0;
   virtual Idx n_dofs_per_node() = 0;
   virtual Vector zero_vector() = 0;
   virtual Vector errors(const Span& x_vec, const Real time = 0.) = 0;
@@ -52,6 +55,15 @@ struct HDGWrapper : HDGBase {
   }
   std::vector<Idx> local_to_global_dofs() {
     return hdg.local_to_global_dofs();
+  }
+  Idx n_space_dim() {
+    return HDG::space_dim();
+  }
+  std::vector<Real> owned_point_coords() {
+    return hdg.owned_point_coords();
+  }
+  std::vector<Idx> owned_edges_global() {
+    return hdg.owned_edges_global();
   }
   Idx n_dofs_per_node() {
     return HDG::n_dofs_per_node;

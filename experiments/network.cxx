@@ -292,6 +292,19 @@ int main(int argc, char **argv) {
 
     PetscCall(VecScale(rhs, -1.));
 
+    // Hand net2as the redistributed domain (points + edges in the partition's global numbering) so
+    // its adjacency/points conform to the system matrix layout instead of an independent file read.
+    if (0 == strcmp(pc_type, "net2as")) {
+      PetscInt node_bs = hdg->n_dofs_per_node();
+      PetscInt n_owned_nodes = hdg->n_owned_dofs() / node_bs;
+      PetscInt n_global_nodes = hdg->size_of_system() / node_bs;
+      auto coords = hdg->owned_point_coords();
+      auto edges_g = hdg->owned_edges_global();
+      PetscCall(PCNet2ASSetDomain(pc, n_owned_nodes, n_global_nodes, hdg->n_space_dim(),
+                                  coords.data(), (PetscInt)(edges_g.size() / 2),
+                                  (PetscInt*)edges_g.data()));
+    }
+
     PetscTime(&ksp_monitor_yaml_ctx.t0);
 
     PRIN2S(s_ksp);

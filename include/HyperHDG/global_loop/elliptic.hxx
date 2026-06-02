@@ -353,6 +353,20 @@ class Elliptic
     return hyper_graph_.local_to_global_dofs();
   }
   /*!***********************************************************************************************
+   * \brief   Dimension of the surrounding space.
+   ************************************************************************************************/
+  static constexpr unsigned int space_dim() { return TopologyT::space_dim(); }
+  /*!***********************************************************************************************
+   * \brief   Flat coordinates of this rank's owned hypernodes; see
+   *          \c HDGHyperGraph::owned_point_coords().
+   ************************************************************************************************/
+  std::vector<double> owned_point_coords() const { return hyper_graph_.owned_point_coords(); }
+  /*!***********************************************************************************************
+   * \brief   This rank's owned hyperedges as global hypernode index pairs; see
+   *          \c HDGHyperGraph::owned_edges_global().
+   ************************************************************************************************/
+  std::vector<dof_index_t> owned_edges_global() const { return hyper_graph_.owned_edges_global(); }
+  /*!***********************************************************************************************
    * \brief   Number of degrees of freedom held in a local vector, i.e. owned + ghost
    *          (== \c size_of_system() if serial). This is the length of \c zero_vector().
    ************************************************************************************************/
