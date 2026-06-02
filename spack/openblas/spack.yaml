@@ -5,8 +5,9 @@
 spack:
   # add package specs to the `specs` list
   specs:
-  - petsc+hdf5+metis+mumps+suite-sparse+pastix+openmp+ptscotch
+  - petsc+hdf5+metis+mumps+suite-sparse+pastix+openmp+ptscotch+X
   - kahip
+  - feh
   view: true
   packages:
     blas:     {require: "openblas threads=openmp"}
