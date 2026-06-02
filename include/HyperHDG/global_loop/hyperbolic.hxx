@@ -558,6 +558,19 @@ class Hyperbolic
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
   /*!***********************************************************************************************
+   * \brief   Distributed-memory accessors (== serial values when not distributed). See the
+   *          identically-named members of \c GlobalLoop::Elliptic for documentation.
+   ************************************************************************************************/
+  dof_index_t n_owned_dofs() const { return hyper_graph_.n_owned_dofs(); }
+  dof_index_t n_local_dofs() const { return hyper_graph_.n_local_dofs(); }
+  std::vector<dof_index_t> local_to_global_dofs() const
+  {
+    return hyper_graph_.local_to_global_dofs();
+  }
+  static constexpr unsigned int space_dim() { return TopologyT::space_dim(); }
+  std::vector<double> owned_point_coords() const { return hyper_graph_.owned_point_coords(); }
+  std::vector<dof_index_t> owned_edges_global() const { return hyper_graph_.owned_edges_global(); }
+  /*!***********************************************************************************************
    * \brief   Set plot option and return old plot option.
    *
    * Function to set and / or read the current plot option.
