@@ -997,7 +997,8 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
       std::vector<float> props_buf(static_cast<size_t>(n_cells) * n_properties, 0.f);
       for (hyEdge_index_t he = 0; he < n_edges; ++he)
       {
-        const auto& props = hyper_graph.hyEdge_geometry(he).extra_data();
+        auto edge = hyper_graph.hyEdge_geometry(he);  // keep temporary alive for extra_data() ref
+        const auto& props = edge.extra_data();
         for (unsigned int c = 0; c < cells_per_edge; ++c)
         {
           const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
