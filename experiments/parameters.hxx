@@ -1197,6 +1197,109 @@ struct TimoshenkoStiffness
 };
 
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network drumhead tap test.
+ *
+ *            Models a "drumhead tap": a single localized impulse applied at the center of a
+ *            clamped beam network. The distributed load `right_hand_side_n` is the product of a
+ *            Gaussian bump in space (centered at the domain center) and a Gaussian bump in time
+ *            (centered at `tap_time`):
+ *
+ *              f(x, t) = amplitude
+ *                        * exp(-|x - center|^2 / (2 * var_space))
+ *                        * exp(-(t - tap_time)^2 / (2 * var_time)) * e_comp
+ *
+ *            The force points in the `comp` spatial direction. The center is taken at
+ *            `length / 2` in every spatial dimension, where `length` is the domain extent shared
+ *            with TimoshenkoStiffness (i.e. a `[0, length]^dim` box is assumed).
+ *
+ *            `length`, `var_space`, `var_time`, `tap_time`, `amplitude` and `comp` are runtime-
+ *            configurable static members and must be set after loading the network, before the
+ *            solve.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoDrumhead
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. The tap is centered at `length / 2` in each
+  /// spatial dimension. Must be set at runtime after loading the network.
+  static inline Scalar length = 0;
+
+  /// Spatial variance (sigma^2) of the Gaussian force bump.
+  static inline Scalar var_space = 1;
+
+  /// Temporal variance (sigma^2) of the Gaussian force bump.
+  static inline Scalar var_time = 1;
+
+  /// Time at which the tap peaks.
+  static inline Scalar tap_time = 0;
+
+  /// Peak force amplitude of the tap.
+  static inline Scalar amplitude = 1;
+
+  /// Spatial component the tap force points in.
+  static inline unsigned int comp = 2;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    const Pt center(0.5 * length);
+    const Scalar r2 = scalar_product(point - center, point - center);
+    const Scalar space_bump = std::exp(-r2 / (2 * var_space));
+
+    const Scalar dt = time - tap_time;
+    const Scalar time_bump = std::exp(-dt * dt / (2 * var_time));
+
+    Pt force(0.);
+    force[comp] = amplitude * space_bump * time_bump;
+    return scalar_product(force, normal);
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
 
 
 
