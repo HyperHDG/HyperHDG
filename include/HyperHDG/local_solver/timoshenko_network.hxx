@@ -451,9 +451,12 @@ class TimoshenkoBeam
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
 
+    // Negate the flux so the assembled global matrix is symmetric positive definite
+    // (CHOLMOD-friendly) rather than negative definite. residual_flux is negated the same
+    // way, so the right-hand side flips sign consistently and the solution is unchanged.
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -509,9 +512,10 @@ class TimoshenkoBeam
       solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
+    // Negated to match trace_to_flux: makes the global matrix SPD; RHS flips sign consistently.
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)

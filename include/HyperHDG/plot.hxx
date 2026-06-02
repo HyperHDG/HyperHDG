@@ -798,6 +798,7 @@ void plot_vtu(HyperGraphT& hyper_graph,
 
 #ifdef HYPERHDG_PETSC
 #include <hdf5.h>
+#include <mpi.h>
 
 // Append n_new_rows to axis 0 of an existing extendable dataset, then write the data.
 // For 1D datasets pass n_cols = 1 (ignored). For 2D, axis-1 must match the dataset.
@@ -831,6 +832,20 @@ inline void h5_append(hid_t loc, const char* name,
   H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
 }
 
+// Overwrite element 0 of an existing 1D dataset (used to keep the single-part NumberOf* counts as
+// running totals while ranks append their pieces in a token ring).
+inline void h5_write_i64_elem0(hid_t loc, const char* name, int64_t value)
+{
+  hid_t dset = H5Dopen2(loc, name, H5P_DEFAULT);
+  hy_check(dset >= 0, "h5_write_i64_elem0: cannot open '" << name << "'");
+  hid_t fspace = H5Dget_space(dset);
+  hsize_t start = 0, count = 1;
+  H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, nullptr, &count, nullptr);
+  hid_t mspace = H5Screate_simple(1, &count, nullptr);
+  H5Dwrite(dset, H5T_NATIVE_INT64, mspace, fspace, H5P_DEFAULT, &value);
+  H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
+}
+
 // Update a scalar int64 attribute on a group (delete + recreate; HDF5 attrs are not extendable).
 inline void h5_set_attr_i64(hid_t loc, const char* name, int64_t value)
 {
@@ -852,7 +867,11 @@ template <class HyperGraphT,
           typename pt_index_t = unsigned int>
 void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
                       const PlotOptions& plot_options, unsigned int n_components,
-                      unsigned int n_energy_components = 0)
+                      unsigned int n_energy_components = 0,
+                      bool append = false,
+                      pt_index_t point_base = 0,
+                      pt_index_t cell_base = 0,
+                      pt_index_t conn_base = 0)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -926,6 +945,76 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
   const int64_t np  = n_points;
   const int64_t nc  = n_cells;
   const int64_t nci = n_conn;
+
+  // -----------------------------------------------------------------------
+  // Distributed append: this rank's edges are concatenated into the single VTKHDF part written by
+  // rank 0. Connectivity is shifted into this rank's point range, offsets into the running
+  // connectivity base (dropping the leading 0), and the NumberOf* counts bumped to running totals.
+  // Called in a token ring so only one rank touches the file at a time.
+  // -----------------------------------------------------------------------
+  if (append)
+  {
+    for (auto& c : connectivity)
+      c += static_cast<int64_t>(point_base);
+
+    hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+    hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
+    hid_t root = H5Gopen2(file, "VTKHDF", H5P_DEFAULT);
+
+    h5_append(root, "Points",       H5T_NATIVE_FLOAT, (hsize_t)n_points, 3, points.data());
+    h5_append(root, "Connectivity", H5T_NATIVE_INT64, (hsize_t)n_conn, 1, connectivity.data());
+    {
+      std::vector<int64_t> off_shifted(n_cells);
+      for (pt_index_t i = 0; i < n_cells; ++i)
+        off_shifted[i] = offsets[i + 1] + static_cast<int64_t>(conn_base);
+      h5_append(root, "Offsets", H5T_NATIVE_INT64, (hsize_t)n_cells, 1, off_shifted.data());
+    }
+    h5_append(root, "Types", H5T_NATIVE_UINT8, (hsize_t)n_cells, 1, types.data());
+
+    h5_write_i64_elem0(root, "NumberOfPoints",          static_cast<int64_t>(point_base) + np);
+    h5_write_i64_elem0(root, "NumberOfCells",           static_cast<int64_t>(cell_base) + nc);
+    h5_write_i64_elem0(root, "NumberOfConnectivityIds", static_cast<int64_t>(conn_base) + nci);
+
+    if constexpr (n_subdivisions == 1 && edge_dim == 1)
+    {
+      std::vector<int32_t> node_types(n_points);
+      for (hyEdge_index_t he = 0; he < n_edges; ++he)
+      {
+        auto edge = hyper_graph[he];
+        const pt_index_t base = he * points_per_edge;
+        node_types[base + 0] = static_cast<int32_t>(edge.node_descriptor[0]);
+        node_types[base + 1] = static_cast<int32_t>(edge.node_descriptor[1]);
+      }
+      hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
+      h5_append(pdata, "types_points", H5T_NATIVE_INT32, (hsize_t)n_points, 1, node_types.data());
+      H5Gclose(pdata);
+    }
+
+    if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data())
+    {
+      const unsigned int n_properties =
+        static_cast<unsigned int>(hyper_graph.hyEdge_geometry(0).extra_data().size());
+      std::vector<float> props_buf(static_cast<size_t>(n_cells) * n_properties, 0.f);
+      for (hyEdge_index_t he = 0; he < n_edges; ++he)
+      {
+        const auto& props = hyper_graph.hyEdge_geometry(he).extra_data();
+        for (unsigned int c = 0; c < cells_per_edge; ++c)
+        {
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
+          for (unsigned int d = 0; d < n_properties; ++d)
+            props_buf[row + d] = static_cast<float>(props[d]);
+        }
+      }
+      hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
+      h5_append(cdata, "properties", H5T_NATIVE_FLOAT, (hsize_t)n_cells, n_properties,
+                props_buf.data());
+      H5Gclose(cdata);
+    }
+
+    H5Gclose(root);
+    H5Fclose(file);
+    return;
+  }
 
   // -----------------------------------------------------------------------
   // Write file
@@ -1118,7 +1207,8 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
                       const LocalSolverT& local_solver,
                       const LargeVecT& lambda,
                       const PlotOptions& plot_options,
-                      const floatT time = 0.)
+                      const floatT time = 0.,
+                      bool append = false)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
@@ -1202,6 +1292,32 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
     }
   }
 
+  // --- distributed append: this rank concatenates its point values into the single VTKHDF part.
+  // Only the data rows are appended; the per-step Steps bookkeeping is owned by rank 0 (the part
+  // that created the step), so it is left untouched here.
+  if (append)
+  {
+    hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+    hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
+    hid_t root  = H5Gopen2(file, "VTKHDF", H5P_DEFAULT);
+    hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
+    h5_append(pdata, "values", H5T_NATIVE_FLOAT, n_points, n_components, values.data());
+    H5Gclose(pdata);
+    if (plot_options.energy)
+    {
+      if constexpr (has_energy_api)
+      {
+        constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
+        hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
+        h5_append(cdata, "energies", H5T_NATIVE_FLOAT, n_cells, n_e_comp, energies_buf.data());
+        H5Gclose(cdata);
+      }
+    }
+    H5Gclose(root);
+    H5Fclose(file);
+    return;
+  }
+
   // --- open file R/W
   hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
@@ -1276,6 +1392,34 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const PlotOptions& plot_options,
                  const floatT time = 0.)
 {
+  // Distributed plot: each rank holds its owned hyperedges. The plot is per-edge (no shared-node
+  // deduplication), so the ranks' pieces concatenate into one VTKHDF part. A token ring serializes
+  // file access and carries the running point/cell/connectivity bases used to shift this rank's
+  // connectivity/offsets into the concatenated part. Single rank => append=false (unchanged).
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  hy_check(size == 1 || plot_options.fileNumber == 0,
+           "distributed (multi-rank) vtkhdf plotting currently supports a single static step "
+           "(fileNumber == 0) only.");
+
+  constexpr unsigned int edge_dim        = HyperGraphT::hyEdge_dim();
+  constexpr unsigned int n_subpoints     = n_subdivisions + 1;
+  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+  constexpr unsigned int cells_per_edge  = Hypercube<edge_dim>::pow(n_subdivisions);
+  constexpr unsigned int verts_per_cell  = Hypercube<edge_dim>::n_vertices();
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const int64_t my_np  = static_cast<int64_t>(n_edges) * points_per_edge;
+  const int64_t my_nc  = static_cast<int64_t>(n_edges) * cells_per_edge;
+  const int64_t my_nci = my_nc * verts_per_cell;
+
+  const int tag = 7;
+  int64_t bases[3] = {0, 0, 0};  // running totals: point_base, cell_base, conn_base
+  if (rank > 0)
+    MPI_Recv(bases, 3, MPI_LONG_LONG, rank - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  const bool append = (rank > 0);
+
   if (plot_options.fileNumber == 0) {
     unsigned int n_e_comp = 0;
     if (plot_options.energy) {
@@ -1285,11 +1429,17 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
         hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
     }
     plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
-      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp);
+      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp, append,
+      static_cast<pt_index_t>(bases[0]), static_cast<pt_index_t>(bases[1]),
+      static_cast<pt_index_t>(bases[2]));
   }
   plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
                    n_subdivisions, hyEdge_index_t, pt_index_t>(
-    hyper_graph, local_solver, lambda, plot_options, time);
+    hyper_graph, local_solver, lambda, plot_options, time, append);
+
+  int64_t next[3] = {bases[0] + my_np, bases[1] + my_nc, bases[2] + my_nci};
+  if (rank < size - 1)
+    MPI_Send(next, 3, MPI_LONG_LONG, rank + 1, tag, MPI_COMM_WORLD);
 }
 #endif
 

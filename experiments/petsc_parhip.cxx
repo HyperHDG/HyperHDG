@@ -1,5 +1,5 @@
 #include <petsc/private/matimpl.h>
-#include <KaHIP/parallel/parallel_src/interface/parhip_interface.h>
+#include <parhip_interface.h>
 
 #define PetscArraycpyCast(dst, src, n, dsttype, srctype) \
   do { for (typeof(n) _i = 0; _i < (n); _i++) (dst)[_i] = (dsttype)((srctype*)(src))[_i]; } while (0)

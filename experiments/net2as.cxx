@@ -1,14 +1,13 @@
 #include "net2as.hxx"
 #include "prin2.hxx"
-#include "petsc_parhip.h"
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/hashmapi.h>
 #include <petsc/private/hashseti.h>
 #include <petscviewerhdf5.h>
 
-// PROBLEMS: if we have unequal number of local problems per rank, then we need to fill is sol and scatter with dummy/ empty stuff,
-//   else we get a deadlock
-// REFACTOR: use one rank scattering context, one rank is and one rank sol, then work with subvectors
+#ifdef HYPERHDG_PARHIP
+  #include "petsc_parhip.h"
+#endif
 
 struct MatCOO {
   PetscInt *rows, *cols, nnz, cap;
@@ -112,6 +111,9 @@ struct PC_Net2AS {
 
   // path to domain file
   char domain[PATH_MAX];
+  // when true, points+adj were injected via PCNet2ASSetDomain (already redistributed to match the
+  // system matrix) and the domain file is not read.
+  PetscBool domain_set;
   // flat coordinate array in row-major ordering, x0,y0,z0,x1,...
   Vec points;
   // boundary points
@@ -211,6 +213,48 @@ static inline PetscBool net2as_is_dirichlet(PetscInt type, PetscBool wave) {
   if (type == 0) return PETSC_FALSE;
   if (wave && (type & (1u << 6))) return PETSC_FALSE;  // static-only, free in wave
   return PETSC_TRUE;
+}
+
+// Inject an already-redistributed domain (points + edges in the partition's global numbering) so
+// that net2as's points/adjacency conform to the system matrix's parallel layout. Replaces reading
+// the (un-partitioned) domain file. coords: n_owned_nodes*sdim, row-major owned points in global
+// order; edges_global: 2*n_owned_edges global hypernode index pairs (this rank's owned edges).
+PetscErrorCode PCNet2ASSetDomain(PC pc,
+                                 PetscInt n_owned_nodes, PetscInt n_global_nodes, PetscInt sdim,
+                                 const PetscReal *coords,
+                                 PetscInt n_owned_edges, const PetscInt *edges_global) {
+  PC_Net2AS *data = (PC_Net2AS*)pc->data;
+  MPI_Comm comm = PetscObjectComm((PetscObject)pc);
+  PetscScalar *arr;
+  MatCOO coo;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecCreate(comm, &data->points));
+  PetscCall(PetscObjectSetName((PetscObject)data->points, "points"));
+  PetscCall(VecSetSizes(data->points, n_owned_nodes * sdim, n_global_nodes * sdim));
+  PetscCall(VecSetBlockSize(data->points, sdim));
+  PetscCall(VecSetType(data->points, VECMPI));
+  PetscCall(VecGetArray(data->points, &arr));
+  for (PetscInt i = 0; i < n_owned_nodes * sdim; i++) arr[i] = coords[i];
+  PetscCall(VecRestoreArray(data->points, &arr));
+
+  PetscCall(MatCOO_Alloc(&coo, 2 * n_owned_edges));
+  for (PetscInt i = 0; i < n_owned_edges; i++) {
+    PetscCall(MatCOO_Push(&coo, edges_global[2*i], edges_global[2*i+1], 1.));
+    PetscCall(MatCOO_Push(&coo, edges_global[2*i+1], edges_global[2*i], 1.));
+  }
+  PetscCall(MatCreate(comm, &data->adj));
+  PetscCall(MatSetType(data->adj, MATMPIAIJ));
+  PetscCall(MatSetSizes(data->adj, n_owned_nodes, n_owned_nodes, n_global_nodes, n_global_nodes));
+  PetscCall(MatSetOptionsPrefix(data->adj, "net2as_adj_"));
+  PetscCall(MatSetPreallocationCOO(data->adj, coo.nnz, coo.rows, coo.cols));
+  PetscCall(MatSetValuesCOO(data->adj, coo.vals, INSERT_VALUES));
+  PetscCall(MatCOO_Free(&coo));
+
+  data->domain_set = PETSC_TRUE;
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_domain:\n  injected: true\n  points: %"
+                        PetscInt_FMT "\n", n_global_nodes));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
@@ -643,7 +687,9 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscFunctionBegin;
 
   data->n_coarse = p;
+#ifdef HYPERHDG_PARHIP
   PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
+#endif
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vstart /= 3; vend /= 3;
@@ -758,7 +804,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
   PetscCall(PCDestroy_Net2AS(pc));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
+  if (!data->domain_set) PetscCall(PCSetup_Net2AS_ReadDomain(pc, comm));
   PetscCall(PCGetOperators(pc, &A, NULL));
   PetscCall(VecGetSize(data->points, &size));
   PetscCall(MatGetSize(A, &msize, NULL));
@@ -785,7 +831,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
-  PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
+  // The coarse basis row layout must be A's node layout (= A_local_rows / bs), NOT PETSC_DECIDE:
+  // with a graph-partitioned (uneven) distribution the even split would not conform to A in the
+  // MatPtAP below. (It only worked previously because round-robin produced an even split.)
+  PetscInt cb_local_rows;
+  PetscCall(MatGetLocalSize(A, &cb_local_rows, NULL));
+  cb_local_rows /= data->bs;
+  PetscCall(MatSetSizes(coarse_basis, cb_local_rows, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
