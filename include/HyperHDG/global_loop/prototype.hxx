@@ -2,22 +2,9 @@
 #include <span>
 #include <cmath>
 
-// HACK: the mpi communicator should be an argument to the function,
-//       but don't want to change all the global_loops
-// HACK: when compiling without mpi, simply provide trivial rank function;
-//       it is up to the call site to gather on the return
-// HACK: we should distribute the edges properly, using e.g. KaHIP for maximum performance -> minimize interprocess communication
-#ifdef HYPERHDG_MPI
-#include <mpi.h>
-#define HYPERHDG_COMM MPI_COMM_WORLD
-#define HYPERHDG_Comm_rank MPI_Comm_rank
-#define HYPERHDG_Comm_size MPI_Comm_size
-#else
-typedef int HYPERHDG_Comm;
-#define HYPERHDG_COMM 0
-int HYPERHDG_Comm_rank(HYPERHDG_Comm comm, int *rank) { *rank = 0; return 0; }
-int HYPERHDG_Comm_size(HYPERHDG_Comm comm, int *size) { *size = 1; return 0; }
-#endif
+// MPI distribution is handled at the data level (distribute_domain.hxx): each rank's hypergraph
+// holds only its owned hyperedges, so the loops below assemble all of them with no assembly-level
+// edge split.
 
 /*!*************************************************************************************************
  * \brief   Macro that allows to use an implemented a matrix--vector multpilication.
@@ -183,13 +170,10 @@ struct sparse_mat
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
     auto nedges = hyper_graph_.n_hyEdges();                                                  \
     using iedge_t = decltype(nedges); \
-    int crank, csize;                                                          \
-    HYPERHDG_Comm_rank(HYPERHDG_COMM, &crank); \
-    HYPERHDG_Comm_size(HYPERHDG_COMM, &csize); \
-    /* When the hypergraph is distributed at the data level, each rank's hyperedges are already */ \
-    /* its owned share, so assemble all of them; otherwise split the replicated graph by rank.  */ \
-    iedge_t estart = hyper_graph_.is_distributed() ? 0 : crank*nedges/csize; \
-    iedge_t eend = hyper_graph_.is_distributed() ? nedges : std::min((crank+1)*nedges/csize, nedges); \
+    /* Each rank's hypergraph holds only its owned hyperedges (data-level distribution), so */ \
+    /* assemble all of them; there is no assembly-level edge split anymore.                  */ \
+    iedge_t estart = 0; \
+    iedge_t eend = nedges; \
     \
     sparse_mat<LargeVecT> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
                                      n_dofs_per_node * n_dofs_per_node);                      \

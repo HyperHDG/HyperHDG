@@ -570,6 +570,17 @@ read_domain(std::string filename)
   hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
 #ifdef HYPERHDG_PETSC
+  {
+    // The legacy replicated assembly (assembly-level edge split) has been removed, so multi-rank
+    // runs must distribute the domain at the data level. Only the HDF5 + hyEdge_dim == 1 path does
+    // that; any other domain type read on >1 rank would (silently) assemble the full matrix on
+    // every rank, so reject it here.
+    int n_ranks = 1;
+    MPI_Comm_size(PETSC_COMM_WORLD, &n_ranks);
+    hy_check(n_ranks == 1 || read_domain_is_h5(filename.c_str()),
+             "multi-rank runs require an HDF5 (.geo.h5) domain (hyEdge_dim == 1); '"
+               << filename << "' is not HDF5.");
+  }
   if (read_domain_is_h5(filename.c_str()))
   {
     int comm_size = 1;
