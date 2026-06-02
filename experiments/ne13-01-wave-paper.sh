@@ -1,7 +1,8 @@
 #!/bin/bash
 set -xeo pipefail
 
-: ${BUILD:=build/rel/experiments}
+: ${PRESET:=openblas}
+: ${BUILD:=build/$PRESET/experiments}
 : ${OUTDIR:=output}
 : ${INPUT:=$HOME/phd/nextcloud/networks/morgan-2026-05-20/net1/sca/}
 NAME=$(basename -s .sh $0)
@@ -16,24 +17,23 @@ IMG=$OUT/$NAME.png
 PERF=$OUT/perf.flamegraph
 LOG=$OUT/log.yaml
 NET="-pc_type net2as -net2as_p 1 -net2as_cb_type pu -net2as_pc_factor_mat_solver_type mumps"
-CUT=.4
+CUT=1
 export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset rel
+cmake --build --preset $PRESET
 cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
-git diff-index --quiet
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN --dirichlet xmax=68 xmin=63
-$BUILD/network -domain $DOMAIN  -comp 2 -strain .15 $NET \
+mpirun -n 1 $BUILD/network -domain $DOMAIN  -comp 2 -strain .15 $NET \
                -trace_view hdf5:$TRACE -plot $STATIC
-$BUILD/timowave -domain $DOMAIN -comp 2 -strain .15 -nt 10 -T 1e-5 $NET \
+mpirun -n 1 $BUILD/timowave -domain $DOMAIN -comp 2 -strain .15 -nt 100 -T 1e-4 $NET \
                 -static $TRACE -plot $WAVE -deg 3 -net2as_wave -log_view :$PERF:ascii_flamegraph \
                 -print_timestep | tee $LOG
 experiments/netvis.py $WAVE --view iso -o $VID -r 1
-experiments/netvis.py $WAVE --view pside --frames 0,.5e-5,1e-5 --frame-colors tan,purple,blue \
+experiments/netvis.py $WAVE --view pside --frames 0,.5e-5,1e-4 --frame-colors tan,purple,blue \
                       -o $IMG --axis 0 --beams 1
 #ffmpeg -i $OUT/$NAME-wave.avi -c:v libx264 -c:a aac $OUT/$NAME-wave.mp4
