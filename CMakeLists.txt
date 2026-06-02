@@ -79,7 +79,7 @@ if (HYPERHDG_PARHIP)
   # Sequential KaHIP (kaffpa) used by distribute_domain.hxx to partition the network graph.
   # Same install prefix as ParHIP (spack provides both). Linked into the header-only HyperHDG
   # target so every consumer that includes read_domain.hxx gets the symbol + header + define.
-  find_library(KAHIP_LIBRARY NAMES kahip_interface HINTS ${PARHIP_ROOT}/lib REQUIRED)
+  find_library(KAHIP_LIBRARY NAMES kahip_static HINTS ${PARHIP_ROOT}/lib REQUIRED)
   find_path(KAHIP_INCLUDE_DIR kaHIP_interface.h HINTS ${PARHIP_ROOT}/include REQUIRED)
   message("FOUND KAHIP_LIBRARY=${KAHIP_LIBRARY}")
   # KaHIP is a build-time dependency only: HyperHDG is a header-only, installed/exported INTERFACE

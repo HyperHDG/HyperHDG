@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
     if (rank == 0) PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
-    PetscCallMPI(MPI_Bcast(&have_cache, 1, MPIU_BOOL, 0, PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Bcast(&have_cache, 1, MPI_C_BOOL, 0, PETSC_COMM_WORLD));
     if (have_cache) {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# loading matrix\n"));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
