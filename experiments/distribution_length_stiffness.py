@@ -23,7 +23,7 @@ args = parser.parse_args()
 with h5py.File(args.input, "r") as f:
     points = f["domain/points"][:]
     edges  = f["domain/edges"][:]
-    unit_length = f["domain"].attrs["unit_length"]
+    unit_length = f["domain"].attrs.get("unit_length", "")
     props = f["domain/properties"][:]
 
 endpoints = points[edges]
