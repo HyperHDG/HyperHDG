@@ -246,6 +246,9 @@ class Network:
     self.edgeProps = np.clip(edgeProps, 1e-10, 1e+10)
     self.info = info
 
+    # clamp to >= 1e-10
+    self.edgeProps = np.clip(self.edgeProps, 1e-10, 1e+10)
+
   def verify_nonzero(self):
     """Verify that material properties are nonzero where required.
     Reports per-column zero/near-zero counts and degenerate normal vectors.
