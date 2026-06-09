@@ -65,3 +65,4 @@ CMakeUserPresets.json
 spack.lock
 
 venv
+*.swp
