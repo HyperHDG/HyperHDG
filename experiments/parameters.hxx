@@ -1342,6 +1342,25 @@ struct TimoshenkoSinClamp
   /// Displacement strain as fraction of length
   static inline Scalar strain = 0;
 
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-timo_strain", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-timo_freq", &strain, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-timo_comp", &comp_, NULL));
+    comp = comp_;
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
   {
     return 0.;
