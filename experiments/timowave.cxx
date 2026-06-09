@@ -97,7 +97,7 @@ end:
 }
 
 int main(int argc, char **argv) {
-    PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
+    PetscBool help = false, is_set, print_timestep = PETSC_FALSE, set_mem_max = PETSC_FALSE;
     PetscInt nt = 1, nx = 1, poly_deg = 1, tau_s = 0;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
@@ -146,6 +146,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));
+    PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     if (is_set) {
       PetscReal h = 1./nx;
       switch (tau_s) {
@@ -165,6 +166,8 @@ int main(int argc, char **argv) {
       PetscFinalize();
       return 0;
     }
+
+    if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
     PetscCall(PetscLogStageRegister("t2f", &s_t2f));
     PetscCall(PetscLogStageRegister("ksp", &s_ksp));
@@ -357,6 +360,12 @@ int main(int argc, char **argv) {
     PetscCall(VecDestroy(&times));
     PetscCall(VecDestroy(&errors));
     PetscCall(VecDestroy(&rhs));
+
+    if (set_mem_max) {
+      PetscLogDouble mem_max;
+      PetscCall(PetscMemoryGetMaximumUsage(&mem_max));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mem_max: %.5e\n", mem_max));
+    }
 
     PetscCall(PetscFinalize());
     return 0;
