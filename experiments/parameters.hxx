@@ -1320,6 +1320,78 @@ struct TimoshenkoDrumhead
 };
 
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network sinusoidal displacement at clamped boundary.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoSinClamp
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction.
+  static inline Scalar length = 0;
+
+  /// Spatial component the tap force points in.
+  static inline unsigned int comp = 2;
+
+  /// Temporal frequency
+  static inline Scalar freq = 1;
+
+  /// Displacement strain as fraction of length
+  static inline Scalar strain = 0;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    Pt res(0.);
+    res[comp] = strain*length*sin(2*M_PI*freq*time);
+    return scalar_product(res, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
 
 
 

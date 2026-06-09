@@ -37,7 +37,7 @@ static PetscErrorCode InitTest(const char* path)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Axis 1: instantiate the wave solver for a fixed test problem at a runtime polynomial degree.
+//  instantiate the wave solver for a fixed test problem at a runtime polynomial degree.
 // hdg must be deallocated with `delete`.
 template<template<unsigned int, typename> typename Test>
 static PetscErrorCode CreateDeg(
@@ -58,7 +58,7 @@ static PetscErrorCode CreateDeg(
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Axis 2: select the test problem by name. hdg must be deallocated with `delete`.
+// select the test problem by name. hdg must be deallocated with `delete`.
 PetscErrorCode PetscHDGCreate(
     PetscInt poly_deg, const char* test,
     const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
@@ -66,6 +66,7 @@ PetscErrorCode PetscHDGCreate(
 ) {
   PetscFunctionBeginUser;
   if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
+  if      (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
   //else if (0 == strcmp(test, "wave1"))     PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
