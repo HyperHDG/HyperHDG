@@ -23,44 +23,53 @@ using HDGTimoWave = GlobalLoop::Hyperbolic<
   LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, Test, PetscReal>
 >;
 
-// hdg must be deallocated with `delete`
-PetscErrorCode PetscHDGCreate(
-    PetscInt poly_deg, PetscInt test,
-    const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
-    HDGBase **hdg
+// A test problem opts into runtime parameter setup by defining a static Init(path).
+template<typename T>
+concept HasInit = requires(const char* path) { T::Init(path); };
+
+// Run a test problem's static-parameter setup if it provides Init(path); no-op otherwise.
+template<template<unsigned int, typename> typename Test>
+static PetscErrorCode InitTest(const char* path)
+{
+  PetscFunctionBeginUser;
+  if constexpr (HasInit<Test<3, PetscReal>>)
+    PetscCall(Test<3, PetscReal>::Init(path));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Axis 1: instantiate the wave solver for a fixed test problem at a runtime polynomial degree.
+// hdg must be deallocated with `delete`.
+template<template<unsigned int, typename> typename Test>
+static PetscErrorCode CreateDeg(
+    PetscInt poly_deg, const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
+    HDGBase** hdg
 ) {
-  if (test == 0) {
-    PetscViewer viewer;
-    PetscReal size[3];
-    PetscReal strain = .15;
-    PetscInt  comp = 2;
-    PetscBool is_set;
-
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp, &is_set));
-    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
-    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
-    PetscCall(PetscViewerDestroy(&viewer));
-    TimoshenkoStiffness<3>::length = size[0];
-    TimoshenkoStiffness<3>::strain = strain;
-    TimoshenkoStiffness<3>::comp = comp;
-  }
-
-  int i = poly_deg*10 + test;
-  switch(i) {
-  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
-  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
-  case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-  case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-  case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;
-  case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
-  case 64: *hdg = new HDGWrapper(HDGTimoWave<6,TestTimoWave4>(path, {tau, theta, dt})); return 0;
+  PetscFunctionBeginUser;
+  PetscCall(InitTest<Test>(path));
+  switch (poly_deg) {
+  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, {tau, theta, dt})); break;
+  case 2: *hdg = new HDGWrapper(HDGTimoWave<2,Test>(path, {tau, theta, dt})); break;
+  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,Test>(path, {tau, theta, dt})); break;
+  case 6: *hdg = new HDGWrapper(HDGTimoWave<6,Test>(path, {tau, theta, dt})); break;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-               "unsupported: poly_deg = %d, test = %d", poly_deg, test);
+               "unsupported poly_deg = %d", (int)poly_deg);
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  return 0;
+// Axis 2: select the test problem by name. hdg must be deallocated with `delete`.
+PetscErrorCode PetscHDGCreate(
+    PetscInt poly_deg, const char* test,
+    const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
+    HDGBase** hdg
+) {
+  PetscFunctionBeginUser;
+  if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "wave1"))     PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
+  else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
@@ -112,7 +121,7 @@ int main(int argc, char **argv) {
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
     char static_init[PATH_MAX] = {0};
-    PetscInt timowave_test = 0;
+    char timowave_test[256] = "stiffness";
     const char *pc_type;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
@@ -143,7 +152,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
-    PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
+    PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, wave1, wave4", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
@@ -185,7 +194,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, theta, dt, &hdg));
     hdg->set_refinement(nx);
 
-    PRIN2IY(timowave_test);
+    PRIN2SY(timowave_test);
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2IY(tau_s);

@@ -2,6 +2,8 @@
 #define PARAMETERS_H
 
 #include <array>
+#include <petsc.h>
+#include <petscviewerhdf5.h>
 #include <HyperHDG/dense_la.hxx>
 
 template <unsigned int space_dimT, typename param_float_t = double>
@@ -1143,10 +1145,28 @@ struct TimoshenkoStiffness
   static inline Scalar length = 0;
 
   /// Applied tensile strain (dimensionless)
-  static inline Scalar strain = 0;
+  static inline Scalar strain = .15;
 
   /// Strain normal component
-  static inline unsigned int comp = 0;
+  static inline unsigned int comp = 2;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
+    comp = comp_;
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
