@@ -858,7 +858,7 @@ class TimoshenkoWave
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -924,7 +924,7 @@ class TimoshenkoWave
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
