@@ -243,7 +243,7 @@ class Network:
 
     self.nodes = nodes
     self.edges = edges
-    self.edgeProps = edgeProps
+    self.edgeProps = np.clip(edgeProps, 1e-10, 1e+10)
     self.info = info
 
   def verify_nonzero(self):
