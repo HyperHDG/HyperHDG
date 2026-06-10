@@ -1331,16 +1331,16 @@ struct TimoshenkoSinClamp
   using Pt = Point<dim, Scalar>;
 
   /// Global extent of the domain in x-direction.
-  static inline Scalar length = 0;
+  static inline Scalar length = 1;
 
-  /// Spatial component the tap force points in.
+  /// Spatial component the displacement is prescribed in.
   static inline unsigned int comp = 2;
 
   /// Temporal frequency
   static inline Scalar freq = 1;
 
   /// Displacement strain as fraction of length
-  static inline Scalar strain = 0;
+  static inline Scalar strain = .10;
 
   /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
   /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
