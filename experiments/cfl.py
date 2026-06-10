@@ -15,9 +15,8 @@ def tprint(*args, **kwargs):
 parser = argparse.ArgumentParser(description="histogram by Joseph Holten")
 parser.add_argument("-i", "--input", help="input domain file", required=True)
 parser.add_argument("-o", "--output", help="output file", default="histogram.png")
-parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, default=10)
+parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, default=100)
 parser.add_argument("--title", default="")
-parser.add_argument("--cdf", action="store_true", help="plot cumulative density instead of mass density")
 parser.add_argument("--csv", action="store_true", help="emit histogram as CSV on stdout (pipe into plot.py) instead of plotting")
 args = parser.parse_args()
 
@@ -31,16 +30,18 @@ endpoints = points[edges]
 
 he = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
 virtual = props[:, 0] == 0.
+print("fraction massless edges: ", sum(virtual)/len(he))
 
 bins = np.logspace(np.log10(he.min()), np.log10(he.max()), args.bins)
 nv, v = he[~virtual], he[virtual]
-plt.hist(nv, bins=bins, label=r"$m_e>0$", weights=np.ones(len(nv))/len(nv),
-         histtype="step", linewidth=2)
-plt.hist(v,  bins=bins, label=r"$m_e=0$", weights=np.ones(len(v))/len(v),
-         histtype="step", linewidth=2)
+N = len(he)  # total edges, so the two classes are normalized to the same denominator
+plt.hist(nv, bins=bins, label=r"$m_e>0$", weights=np.ones(len(nv))/N,
+         histtype="step", linewidth=2, cumulative=True)
+plt.hist(v,  bins=bins, label=r"$m_e=0$", weights=np.ones(len(v))/N,
+         histtype="step", linewidth=2, cumulative=True)
 plt.xscale("log")
 plt.yscale("log")
-plt.title("distribution of edge lenghts")
+plt.title("cumulative density of edge lengths")
 plt.xlabel("$h_e$")
 plt.ylabel("density")
 plt.legend()
@@ -68,18 +69,16 @@ bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
 
 if args.csv:
     counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts))
-    if args.cdf: counts = np.cumsum(counts)
     centers = np.sqrt(edges[:-1] * edges[1:])  # geometric centers of log bins
     mode = centers[np.argmax(counts)]
-    col = "cdf" if args.cdf else "density"
     sys.stdout.write(f"# min={ts.min():.6g} median={np.median(ts):.6g} mode={mode:.6g} max={ts.max():.6g}\n")
     pandas.DataFrame({"ts": centers, col: counts}).to_csv(sys.stdout, index=False)
     sys.exit(0)
 
 counts, edges, _ = plt.hist(ts, bins=bins,
-                            weights=np.ones(len(ts))/len(ts), cumulative=args.cdf)
+                            weights=np.ones(len(ts))/len(ts))
 plt.xscale("log")
-if not args.cdf: plt.yscale("log")
+plt.yscale("log")
 
 mode = np.sqrt(edges[np.argmax(counts)] * edges[np.argmax(counts) + 1])  # geometric center of tallest bin
 stats = {
@@ -93,7 +92,7 @@ for label, (val, color) in stats.items():
 plt.legend()
 
 plt.xlabel("timestep ts")
-plt.ylabel("cumulative density" if args.cdf else "density")
+plt.ylabel("density")
 if args.title: plt.title(args.title)
 if args.output: plt.savefig(args.output)
 plt.show()
