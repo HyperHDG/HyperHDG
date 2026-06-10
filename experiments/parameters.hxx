@@ -1350,9 +1350,9 @@ struct TimoshenkoSinClamp
     PetscReal size[3];
     PetscInt comp_ = comp;
     PetscFunctionBeginUser;
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-timo_strain", &strain, NULL));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-timo_freq", &strain, NULL));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-timo_comp", &comp_, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-freq", &strain, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
     comp = comp_;
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
