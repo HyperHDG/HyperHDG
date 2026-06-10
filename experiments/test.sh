@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xeo pipefail
 
-: ${BUILD:=build/rel/experiments}
+: ${BUILD:=build/openblas/experiments}
 : ${OUTDIR:=output}
 : ${INPUT:=$HOME/phd/nextcloud/networks/morgan-2026-05-20/net1/sca/}
 NAME=$(basename -s .sh $0)
@@ -21,7 +21,7 @@ export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset rel --target network
+cmake --build --preset openblas --target network
 cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo '-dirty' >> $OUT/rev; fi
