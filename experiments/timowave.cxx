@@ -66,7 +66,7 @@ PetscErrorCode PetscHDGCreate(
 ) {
   PetscFunctionBeginUser;
   if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
-  if      (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
   //else if (0 == strcmp(test, "wave1"))     PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
     char static_init[PATH_MAX] = {0};
-    char timowave_test[256] = "stiffness";
+    char timowave_test[256] = {0};
     const char *pc_type;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
@@ -359,8 +359,6 @@ int main(int argc, char **argv) {
     PRIN2FY(rnorm);
     PRIN2SY(creason);
     PRIN2FY(avg_iterations);
-    if (*plot)
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: output/%s.vtkhdf\n", plot));
 
     PetscCall(PetscOptionsLeftYAML(NULL));
 
