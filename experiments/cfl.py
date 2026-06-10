@@ -31,6 +31,7 @@ endpoints = points[edges]
 
 he = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
 virtual = props[:, 0] == 0.
+moment2 = w1*w2**3/12
 Cq = props[:, 1:7]
 cz = props[:, 0]
 nz = ~virtual                      # cz != 0
