@@ -33,8 +33,8 @@ Cq = props[:, 1:7]
 cz = props[:, 0]
 nz = ~virtual                      # cz != 0
 ce = np.full(len(props), np.nan)   # or np.nan, your choice for virtual edges
-ce[nz] = np.max(np.sqrt(Cq[nz] / cz[nz, None]), axis=1)
-ts = he[nz] / ce[nz]                       # virtual -> 0 if ce=inf, nan if ce=nan
+ce = np.max(np.sqrt(Cq), axis=1)
+ts = he / ce                       # virtual -> 0 if ce=inf, nan if ce=nan
 
 # TODO
 counts, edges, _ = plt.hist(ts, bins=np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins),
