@@ -243,11 +243,11 @@ class Network:
 
     self.nodes = nodes
     self.edges = edges
-    self.edgeProps = np.clip(edgeProps, 1e-10, 1e+10)
+    self.edgeProps = edgeProps
     self.info = info
 
     # clamp to >= 1e-10
-    self.edgeProps = np.clip(self.edgeProps, 1e-10, 1e+10)
+    #self.edgeProps = np.clip(self.edgeProps, 1e-10, 1e+10)
 
   def verify_nonzero(self):
     """Verify that material properties are nonzero where required.
