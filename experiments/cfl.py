@@ -28,10 +28,13 @@ with h5py.File(args.input, "r") as f:
 endpoints = points[edges]
 
 he = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
+virtual = props[:, 0] == 0.
 Cq = props[:, 1:7]
 cz = props[:, 0]
-ce = np.max(np.sqrt(Cq / cz[:, None]), axis=1)
-ts = he / ce
+nz = ~virtual                      # cz != 0
+ce = np.full(len(props), np.nan)   # or np.nan, your choice for virtual edges
+ce[nz] = np.max(np.sqrt(Cq[nz] / cz[nz, None]), axis=1)
+ts = he[nz] / ce[nz]                       # virtual -> 0 if ce=inf, nan if ce=nan
 
 # TODO
 counts, edges, _ = plt.hist(ts, bins=np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins),
