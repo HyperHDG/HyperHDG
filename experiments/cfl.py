@@ -31,13 +31,38 @@ endpoints = points[edges]
 
 he = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
 virtual = props[:, 0] == 0.
+
+bins = np.logspace(np.log10(he.min()), np.log10(he.max()), args.bins)
+nv, v = he[~virtual], he[virtual]
+plt.hist(nv, bins=bins, label=r"$m_e>0$", weights=np.ones(len(nv))/len(nv),
+         histtype="step", linewidth=2)
+plt.hist(v,  bins=bins, label=r"$m_e=0$", weights=np.ones(len(v))/len(v),
+         histtype="step", linewidth=2)
+plt.xscale("log")
+plt.yscale("log")
+plt.title("distribution of edge lenghts")
+plt.xlabel("$h_e$")
+plt.ylabel("density")
+plt.legend()
+plt.show()
+
+props = props[~virtual, :]
+he = he[~virtual]
+
+mass = props[:, 0]
+w1 = props[:, 13]
+w2 = props[:, 14]
+
+moment1 = w1**3*w2/12
 moment2 = w1*w2**3/12
+
+density = mass/(w1*w2*he)
+
 Cq = props[:, 1:7]
-cz = props[:, 0]
-nz = ~virtual                      # cz != 0
-ce = np.full(len(props), np.nan)   # or np.nan, your choice for virtual edges
+Cz = np.stack((mass/he, mass/he, mass/he,
+                density * (moment1+moment2), density*moment1, density*moment2), axis=1)
 ce = np.max(np.sqrt(Cq), axis=1)
-ts = he / ce                       # virtual -> 0 if ce=inf, nan if ce=nan
+ts = he / ce
 
 bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
 
