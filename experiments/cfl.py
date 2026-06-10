@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 import time
 import argparse
 import pandas
@@ -17,6 +18,7 @@ parser.add_argument("-o", "--output", help="output file", default="histogram.png
 parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, default=10)
 parser.add_argument("--title", default="")
 parser.add_argument("--cdf", action="store_true", help="plot cumulative density instead of mass density")
+parser.add_argument("--csv", action="store_true", help="emit histogram as CSV on stdout (pipe into plot.py) instead of plotting")
 args = parser.parse_args()
 
 with h5py.File(args.input, "r") as f:
@@ -36,8 +38,19 @@ ce = np.full(len(props), np.nan)   # or np.nan, your choice for virtual edges
 ce = np.max(np.sqrt(Cq), axis=1)
 ts = he / ce                       # virtual -> 0 if ce=inf, nan if ce=nan
 
-# TODO
-counts, edges, _ = plt.hist(ts, bins=np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins),
+bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
+
+if args.csv:
+    counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts))
+    if args.cdf: counts = np.cumsum(counts)
+    centers = np.sqrt(edges[:-1] * edges[1:])  # geometric centers of log bins
+    mode = centers[np.argmax(counts)]
+    col = "cdf" if args.cdf else "density"
+    sys.stdout.write(f"# min={ts.min():.6g} median={np.median(ts):.6g} mode={mode:.6g} max={ts.max():.6g}\n")
+    pandas.DataFrame({"ts": centers, col: counts}).to_csv(sys.stdout, index=False)
+    sys.exit(0)
+
+counts, edges, _ = plt.hist(ts, bins=bins,
                             weights=np.ones(len(ts))/len(ts), cumulative=args.cdf)
 plt.xscale("log")
 if not args.cdf: plt.yscale("log")
