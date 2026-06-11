@@ -1351,7 +1351,7 @@ struct TimoshenkoSinClamp
     PetscInt comp_ = comp;
     PetscFunctionBeginUser;
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-freq", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-freq", &freq, NULL));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
     comp = comp_;
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
