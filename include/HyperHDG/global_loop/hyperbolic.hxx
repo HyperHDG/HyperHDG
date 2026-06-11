@@ -164,7 +164,7 @@ class Hyperbolic
    *
    * \retval  zero          A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
-  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_local_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *

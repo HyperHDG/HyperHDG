@@ -135,9 +135,10 @@ int main(int argc, char **argv) {
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
     sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, errors, times;
+    Vec rhs = NULL, sol_local = NULL, errors = NULL;
+    VecScatter scatter = NULL;
     Mat mat;
-    KSP ksp;
+    KSP ksp = NULL;
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
@@ -193,7 +194,19 @@ int main(int argc, char **argv) {
 
     HDGBase *hdg = NULL;
     PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, theta, dt, &hdg));
-    hdg->set_refinement(nx);
+    // set_refinement rebuilds the hypernode factory and drops the distributed (owned/global) dof
+    // numbering, so only refine when actually requested; nx==1 is the construction default and a
+    // no-op for hyEdge_dim==1. Refinement is not yet supported together with the distributed
+    // assembly path, so reject that combination instead of silently producing a wrong system.
+    {
+      PetscMPIInt comm_size;
+      PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
+      PetscCheck(nx == 1 || comm_size == 1, PETSC_COMM_WORLD, PETSC_ERR_SUP,
+                 "refinement (-nx %" PetscInt_FMT ") is not supported on %d ranks; run with one rank",
+                 nx, comm_size);
+      if (nx != 1)
+        hdg->set_refinement(nx);
+    }
 
     PRIN2SY(timowave_test);
     PRIN2IY(poly_deg);
@@ -209,45 +222,80 @@ int main(int argc, char **argv) {
     hdg->plot_option("fileEnding", "vtkhdf");
     hdg->plot_option("energy", "true");
 
-    zero_v = hdg->zero_vector();
-    N = zero_v.size();
+    zero_v = hdg->zero_vector();              // local (owned + ghost), all zeros
+    PetscInt bs = hdg->n_dofs_per_node();
+    N = hdg->size_of_system();                // global system size
+    PetscInt n_owned = hdg->n_owned_dofs();   // dofs owned by this rank
+    PetscInt n_local = zero_v.size();         // n_local_dofs(): owned + ghost
 
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", hdg->n_dofs_per_node(), PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
-    PetscCall(VecSetBlockSize(rhs, hdg->n_dofs_per_node()));
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
-    PetscCall(PetscObjectSetName((PetscObject)times, "times"));
+    // Distributed system matrix (owned rows per rank) and matching distributed rhs. The KSP solves in
+    // the global numbering from distribute_domain; per-edge local work happens in sol_local.
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, n_owned, n_owned, N, N, &mat));
+    PetscCall(MatCreateVecs(mat, NULL, &rhs));
     PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
 
-    PRIN2S(s_mk);
-    if (*static_init) {
-      PetscViewer viewer;
-      std::span<PetscReal> span;
-      PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, static_init, FILE_MODE_READ, &viewer));
-      PetscCall(VecLoad(rhs, viewer));
-      PetscCall(VecGetSpan(rhs, span));
-      hdg->make_initial_from_static(span);
-      temp.assign(span.begin(), span.end());
-      PetscCall(VecRestoreSpan(rhs, span));
-      PetscCall(PetscViewerDestroy(&viewer));
+    // Per-rank local vector (owned + ghost) plus a scatter between it and the global rhs:
+    //  - SCATTER_FORWARD (INSERT): pull global dof values into sol_local for the per-edge operations
+    //    (make_initial_from_static / set_data / plot / errors), which read ghost endpoints.
+    //  - SCATTER_REVERSE (ADD): push locally-computed residual contributions to their owning rank.
+    {
+      auto gidx = hdg->local_to_global_dofs();   // global index of each local dof (length n_local)
+      IS is_global;
+      PetscCall(VecCreateSeq(PETSC_COMM_SELF, n_local, &sol_local));
+      PetscCall(VecSetBlockSize(sol_local, bs));
+      PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, n_local, (PetscInt*)gidx.data(),
+                                PETSC_COPY_VALUES, &is_global));
+      PetscCall(VecScatterCreate(rhs, is_global, sol_local, NULL, &scatter));
+      PetscCall(ISDestroy(&is_global));
     }
-    else {
-      temp = hdg->make_initial(zero_v);
+
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
+
+    // Combine a per-rank error (each rank L2-postprocesses over its owned edges: sqrt of a sum of
+    // squares) into the global error sqrt(sum_r local_r^2) via an all-reduce of the squared parts.
+    auto global_errors = [&](std::vector<PetscReal> e) {
+      for (auto& v : e) v *= v;
+      MPI_Allreduce(MPI_IN_PLACE, e.data(), (PetscMPIInt)e.size(), MPIU_REAL, MPI_SUM,
+                    PETSC_COMM_WORLD);
+      for (auto& v : e) v = PetscSqrtReal(v);
+      return e;
+    };
+
+    // Initial trace at t=0, built into the local vector sol_local (owned + ghost). For -static, the
+    // file holds the global static trace written by `network` in the same global numbering: load it
+    // into the distributed rhs, then scatter-forward so each rank has its full local part *including
+    // ghost dofs* before make_initial_from_static reads per-edge (ghost-referencing) values.
+    PRIN2S(s_mk);
+    {
+      std::span<PetscReal> span;
+      if (*static_init) {
+        PetscViewer viewer;
+        PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, static_init, FILE_MODE_READ, &viewer));
+        PetscCall(VecLoad(rhs, viewer));
+        PetscCall(PetscViewerDestroy(&viewer));
+        PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecGetSpan(sol_local, span));
+        hdg->make_initial_from_static(span);
+      }
+      else {
+        temp = hdg->make_initial(zero_v);
+        PetscCall(VecGetSpan(sol_local, span));
+        for (size_t k = 0; k < span.size(); ++k) span[k] = temp[k];
+      }
+      if (*plot)
+        hdg->plot_solution(span, 0.);
+      temp2 = global_errors(hdg->errors(span, 0));
+      // temp3 = hdg->norms(...);  // per-rank only; would need an all-reduce for e_rel
+      PetscCall(VecRestoreSpan(sol_local, span));
     }
     PRIN2SP();
 
-    if (*plot)
-      hdg->plot_solution(temp, 0.);
-
-    temp2 = hdg->errors(temp, 0);
-    temp3 = hdg->norms(temp, 0);
     e_abs = PetscMax(temp2[0], e_abs);
     e_trace = PetscMax(temp2[1], e_trace);
     // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
-    PetscCall(VecSetValue(times,  0, 0, INSERT_VALUES));
 
     PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
     if (have_cache) {
@@ -287,7 +335,7 @@ int main(int argc, char **argv) {
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
-    PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
+    PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
     PetscCall(KSPSetOperators(ksp, mat, mat));
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
@@ -297,6 +345,20 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetFromOptions(ksp));
     PetscCall(PCGetType(pc, &pc_type));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
+
+    // Hand net2as the redistributed domain (points + edges in the partition's global numbering) so
+    // its adjacency/points conform to the distributed system matrix instead of an independent file
+    // read (which would use a different numbering).
+    if (0 == strcmp(pc_type, "net2as")) {
+      PetscInt node_bs = hdg->n_dofs_per_node();
+      PetscInt n_owned_nodes = hdg->n_owned_dofs() / node_bs;
+      PetscInt n_global_nodes = hdg->size_of_system() / node_bs;
+      auto coords = hdg->owned_point_coords();
+      auto edges_g = hdg->owned_edges_global();
+      PetscCall(PCNet2ASSetDomain(pc, n_owned_nodes, n_global_nodes, hdg->n_space_dim(),
+                                  coords.data(), (PetscInt)(edges_g.size() / 2),
+                                  (PetscInt*)edges_g.data()));
+    }
 
     PetscTime(&ksp_monitor_yaml_ctx.t0);
     PRIN2S(s_ksp);
@@ -308,14 +370,21 @@ int main(int argc, char **argv) {
       if (print_timestep)
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0;
-        PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
         std::span<PetscReal> span;
-        PetscCall(VecGetSpan(rhs, span));
+
+        // Residual built from local parts: each rank evaluates the residual over its owned edges into
+        // the local (owned + ghost) vector, then scatter-reverse with ADD pushes the ghost-row
+        // contributions to their owning rank, assembling the distributed rhs.
+        PetscCall(VecGetSpan(sol_local, span));
         PetscLogStagePush(s_rf);
         hdg->residual_flux2(std::span{zero_v}, span, ti);
         PetscLogStagePop();
-        PetscCall(VecRestoreSpan(rhs, span));
+        PetscCall(VecRestoreSpan(sol_local, span));
+
+        PetscCall(VecZeroEntries(rhs));
+        PetscCall(VecScatterBegin(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
+        PetscCall(VecScatterEnd(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
 
         PetscCall(VecScale(rhs, -1.));
         PetscCall(KSPSolve(ksp, rhs, rhs));
@@ -323,7 +392,12 @@ int main(int argc, char **argv) {
         PetscCall(KSPGetIterationNumber(ksp, &its));
         iterations += its;
 
-        PetscCall(VecGetSpan(rhs, span));
+        // Pull the distributed solution into the local vector (owned + ghost) so the per-edge
+        // operations below see full data on each rank's ghost endpoints.
+        PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+
+        PetscCall(VecGetSpan(sol_local, span));
         PetscLogEventBegin(e_set, 0,0,0,0);
         hdg->set_data(span, ti);
         PetscLogEventEnd(e_set, 0,0,0,0);
@@ -333,19 +407,16 @@ int main(int argc, char **argv) {
           PetscLogEventEnd(e_plot, 0,0,0,0);
         }
         PetscLogEventBegin(e_errors, 0,0,0,0);
-        temp2 = hdg->errors(span, ti);
+        temp2 = global_errors(hdg->errors(span, ti));
         PetscLogEventEnd(e_errors, 0,0,0,0);
         error = temp2[0];
         e_abs = PetscMax(error, e_abs);
         e_trace = PetscMax(temp2[1], e_trace);
-        PetscCall(VecRestoreSpan(rhs, span));
+        PetscCall(VecRestoreSpan(sol_local, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
     }
     PRIN2SP();
-
-    PetscCall(VecAssemblyBegin(times));
-    PetscCall(VecAssemblyEnd(times));
 
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
@@ -368,9 +439,10 @@ end:
     delete hdg;
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
-    PetscCall(VecDestroy(&times));
     PetscCall(VecDestroy(&errors));
     PetscCall(VecDestroy(&rhs));
+    PetscCall(VecDestroy(&sol_local));
+    PetscCall(VecScatterDestroy(&scatter));
 
     if (set_mem_max) {
       PetscLogDouble mem_max;

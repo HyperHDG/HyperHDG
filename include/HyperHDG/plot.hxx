@@ -800,50 +800,87 @@ void plot_vtu(HyperGraphT& hyper_graph,
 #include <hdf5.h>
 #include <mpi.h>
 
-// Append n_new_rows to axis 0 of an existing extendable dataset, then write the data.
-// For 1D datasets pass n_cols = 1 (ignored). For 2D, axis-1 must match the dataset.
-inline void h5_append(hid_t loc, const char* name,
-                      hid_t mem_type,
-                      hsize_t n_new_rows, hsize_t n_cols,
-                      const void* data)
+// --- Parallel (MPI-IO) HDF5 helpers ------------------------------------------------------------
+// The vtkhdf plot is written collectively: every rank contributes its owned hyperedges as one
+// contiguous slab of the single VTKHDF part, placed at a global offset obtained from an exclusive
+// prefix sum (MPI_Exscan). All ranks open the file with the MPI-IO driver and all dataset
+// create/extent/close calls are collective; only the data hyperslabs differ per rank. This removes
+// the serial token-ring entirely and supports an arbitrary number of time steps.
+
+// File-access property list bound to MPI-IO over MPI_COMM_WORLD (caller closes).
+inline hid_t h5p_fapl_mpio()
 {
-  hid_t dset = H5Dopen2(loc, name, H5P_DEFAULT);
-  hy_check(dset >= 0, "h5_append: cannot open '" << name << "'");
-
-  hid_t fspace = H5Dget_space(dset);
-  int rank = H5Sget_simple_extent_ndims(fspace);
-  hsize_t cur[2] = {0, 0};
-  H5Sget_simple_extent_dims(fspace, cur, nullptr);
-  H5Sclose(fspace);
-
-  hsize_t new_dims[2] = {cur[0] + n_new_rows, (rank == 2 ? n_cols : 0)};
-  H5Dset_extent(dset, new_dims);
-
-  fspace = H5Dget_space(dset);
-  hsize_t start[2] = {cur[0], 0};
-  hsize_t count[2] = {n_new_rows, (rank == 2 ? n_cols : 0)};
-  H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, nullptr, count, nullptr);
-
-  hsize_t mem_dims[2] = {n_new_rows, (rank == 2 ? n_cols : 0)};
-  hid_t mspace = H5Screate_simple(rank, mem_dims, nullptr);
-
-  H5Dwrite(dset, mem_type, mspace, fspace, H5P_DEFAULT, data);
-
-  H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, MPI_INFO_NULL);
+  return fapl;
 }
 
-// Overwrite element 0 of an existing 1D dataset (used to keep the single-part NumberOf* counts as
-// running totals while ranks append their pieces in a token ring).
-inline void h5_write_i64_elem0(hid_t loc, const char* name, int64_t value)
+// Collectively create a chunked dataset whose axis 0 is unlimited (extendable). gdims holds the
+// GLOBAL extents; chunk0 is the axis-0 chunk length. Returns the open dataset (caller closes).
+inline hid_t h5p_create(hid_t loc, const char* name, hid_t file_type,
+                        int ndim, const hsize_t* gdims, hsize_t chunk0)
+{
+  hsize_t maxdims[2], chunk[2];
+  for (int i = 0; i < ndim; ++i) maxdims[i] = gdims[i];
+  maxdims[0] = H5S_UNLIMITED;
+  chunk[0]   = std::max<hsize_t>(chunk0, 1);
+  for (int i = 1; i < ndim; ++i) chunk[i] = std::max<hsize_t>(gdims[i], 1);
+  hid_t space = H5Screate_simple(ndim, gdims, maxdims);
+  hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(dcpl, ndim, chunk);
+  hid_t dset = H5Dcreate2(loc, name, file_type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+  H5Pclose(dcpl); H5Sclose(space);
+  return dset;
+}
+
+// Collective hyperslab write of n_rows rows (n_cols columns, ignored for 1D datasets) starting at
+// file row row_start. Ranks with n_rows == 0 participate with an empty selection.
+inline void h5p_write_rows(hid_t dset, hid_t mem_type, hsize_t row_start,
+                           hsize_t n_rows, hsize_t n_cols, const void* data)
+{
+  hid_t fspace = H5Dget_space(dset);
+  int ndim = H5Sget_simple_extent_ndims(fspace);
+  hsize_t start[2] = {row_start, 0};
+  hsize_t count[2] = {n_rows, n_cols};
+  hsize_t mdims[2] = {n_rows, n_cols};
+  hid_t mspace = H5Screate_simple(ndim, mdims, nullptr);
+  if (n_rows == 0) { H5Sselect_none(fspace); H5Sselect_none(mspace); }
+  else H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, nullptr, count, nullptr);
+  hid_t dxpl = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+  H5Dwrite(dset, mem_type, mspace, fspace, dxpl, data);
+  H5Pclose(dxpl); H5Sclose(mspace); H5Sclose(fspace);
+}
+
+// Collectively grow an open dataset's axis-0 extent to new_rows (other extents unchanged).
+inline void h5p_set_rows(hid_t dset, hsize_t new_rows)
+{
+  hid_t fspace = H5Dget_space(dset);
+  hsize_t dims[2] = {0, 0};
+  H5Sget_simple_extent_dims(fspace, dims, nullptr);
+  H5Sclose(fspace);
+  dims[0] = new_rows;
+  H5Dset_extent(dset, dims);
+}
+
+// Collectively append one scalar at index `step` to an extendable 1D dataset; all ranks perform the
+// (collective) extent, only rank 0 writes the value.
+inline void h5p_append1(hid_t loc, const char* name, hid_t mem_type,
+                        int64_t step, const void* val, int rank)
 {
   hid_t dset = H5Dopen2(loc, name, H5P_DEFAULT);
-  hy_check(dset >= 0, "h5_write_i64_elem0: cannot open '" << name << "'");
+  hy_check(dset >= 0, "h5p_append1: cannot open '" << name << "'");
+  hsize_t newsize = static_cast<hsize_t>(step + 1);
+  H5Dset_extent(dset, &newsize);
   hid_t fspace = H5Dget_space(dset);
-  hsize_t start = 0, count = 1;
-  H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, nullptr, &count, nullptr);
+  hsize_t start = static_cast<hsize_t>(step), count = 1;
   hid_t mspace = H5Screate_simple(1, &count, nullptr);
-  H5Dwrite(dset, H5T_NATIVE_INT64, mspace, fspace, H5P_DEFAULT, &value);
-  H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
+  if (rank == 0) H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, nullptr, &count, nullptr);
+  else { H5Sselect_none(fspace); H5Sselect_none(mspace); }
+  hid_t dxpl = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+  H5Dwrite(dset, mem_type, mspace, fspace, dxpl, val);
+  H5Pclose(dxpl); H5Sclose(mspace); H5Sclose(fspace); H5Dclose(dset);
 }
 
 // Update a scalar int64 attribute on a group (delete + recreate; HDF5 attrs are not extendable).
@@ -867,11 +904,7 @@ template <class HyperGraphT,
           typename pt_index_t = unsigned int>
 void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
                       const PlotOptions& plot_options, unsigned int n_components,
-                      unsigned int n_energy_components = 0,
-                      bool append = false,
-                      pt_index_t point_base = 0,
-                      pt_index_t cell_base = 0,
-                      pt_index_t conn_base = 0)
+                      unsigned int n_energy_components = 0)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   constexpr unsigned int space_dim = HyperGraphT::space_dim();
@@ -933,96 +966,52 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
       hy_check(edge_dim == 1, "expected edge_dim == 1 found edge_dim == " << edge_dim);
   }
 
-  // Offsets: length n_cells + 1, starts at 0, ends at n_conn (VTKHDF convention)
-  std::vector<int64_t> offsets(n_cells + 1);
-  for (pt_index_t i = 0; i <= n_cells; ++i)
-    offsets[i] = static_cast<int64_t>(i * verts_per_cell);
-
-  // Types: one per cell
+  // Types: one per cell. Offsets (VTKHDF convention, length n_cells+1) are written analytically in
+  // the collective section below, so no buffer is built here.
   std::vector<uint8_t> types(n_cells, element_id);
 
-  // Per-piece counts (single piece = length-1 arrays)
+  // This rank's owned counts (concatenated into the single VTKHDF part further below).
   const int64_t np  = n_points;
   const int64_t nc  = n_cells;
   const int64_t nci = n_conn;
 
   // -----------------------------------------------------------------------
-  // Distributed append: this rank's edges are concatenated into the single VTKHDF part written by
-  // rank 0. Connectivity is shifted into this rank's point range, offsets into the running
-  // connectivity base (dropping the leading 0), and the NumberOf* counts bumped to running totals.
-  // Called in a token ring so only one rank touches the file at a time.
+  // Collective layout: every rank contributes its owned edges as one slab of the single VTKHDF part.
+  // Global totals (Allreduce) size the datasets; exclusive prefix sums (Exscan) give this rank's
+  // starting point/cell/connectivity row. Connectivity is shifted into this rank's global point
+  // range. Runtime-dependent CellData/properties presence is reduced so all ranks create the same
+  // datasets even when some own zero edges.
   // -----------------------------------------------------------------------
-  if (append)
-  {
-    for (auto& c : connectivity)
-      c += static_cast<int64_t>(point_base);
+  int mpi_rank = 0, mpi_size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
-    hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-    hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
-    hid_t root = H5Gopen2(file, "VTKHDF", H5P_DEFAULT);
+  long long mine[3] = {np, nc, nci};   // {points, cells, connectivity ids} owned by this rank
+  long long off[3]  = {0, 0, 0};       // exclusive prefix sums (this rank's first row)
+  long long tot[3]  = {0, 0, 0};       // global totals
+  MPI_Exscan(mine, off, 3, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(mine, tot, 3, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (mpi_rank == 0) { off[0] = off[1] = off[2] = 0; }
 
-    h5_append(root, "Points",       H5T_NATIVE_FLOAT, (hsize_t)n_points, 3, points.data());
-    h5_append(root, "Connectivity", H5T_NATIVE_INT64, (hsize_t)n_conn, 1, connectivity.data());
-    {
-      std::vector<int64_t> off_shifted(n_cells);
-      for (pt_index_t i = 0; i < n_cells; ++i)
-        off_shifted[i] = offsets[i + 1] + static_cast<int64_t>(conn_base);
-      h5_append(root, "Offsets", H5T_NATIVE_INT64, (hsize_t)n_cells, 1, off_shifted.data());
-    }
-    h5_append(root, "Types", H5T_NATIVE_UINT8, (hsize_t)n_cells, 1, types.data());
+  for (auto& c : connectivity)
+    c += static_cast<int64_t>(off[0]);
 
-    h5_write_i64_elem0(root, "NumberOfPoints",          static_cast<int64_t>(point_base) + np);
-    h5_write_i64_elem0(root, "NumberOfCells",           static_cast<int64_t>(cell_base) + nc);
-    h5_write_i64_elem0(root, "NumberOfConnectivityIds", static_cast<int64_t>(conn_base) + nci);
-
-    if constexpr (n_subdivisions == 1 && edge_dim == 1)
-    {
-      std::vector<int32_t> node_types(n_points);
-      for (hyEdge_index_t he = 0; he < n_edges; ++he)
-      {
-        auto edge = hyper_graph[he];
-        const pt_index_t base = he * points_per_edge;
-        node_types[base + 0] = static_cast<int32_t>(edge.node_descriptor[0]);
-        node_types[base + 1] = static_cast<int32_t>(edge.node_descriptor[1]);
-      }
-      hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
-      h5_append(pdata, "types_points", H5T_NATIVE_INT32, (hsize_t)n_points, 1, node_types.data());
-      H5Gclose(pdata);
-    }
-
-    if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data())
-    {
-      const unsigned int n_properties =
-        static_cast<unsigned int>(hyper_graph.hyEdge_geometry(0).extra_data().size());
-      std::vector<float> props_buf(static_cast<size_t>(n_cells) * n_properties, 0.f);
-      for (hyEdge_index_t he = 0; he < n_edges; ++he)
-      {
-        const auto& geom = hyper_graph.hyEdge_geometry(he);
-        const auto& props = geom.extra_data();
-        for (unsigned int c = 0; c < cells_per_edge; ++c)
-        {
-          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
-          for (unsigned int d = 0; d < n_properties; ++d)
-            props_buf[row + d] = static_cast<float>(props[d]);
-        }
-      }
-      hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
-      h5_append(cdata, "properties", H5T_NATIVE_FLOAT, (hsize_t)n_cells, n_properties,
-                props_buf.data());
-      H5Gclose(cdata);
-    }
-
-    H5Gclose(root);
-    H5Fclose(file);
-    return;
-  }
+  int has_props_l = (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) ? 1 : 0;
+  int n_props_l   = has_props_l
+                      ? static_cast<int>(hyper_graph.hyEdge_geometry(0).extra_data().size()) : 0;
+  int has_props = 0, n_properties = 0;
+  MPI_Allreduce(&has_props_l, &has_props,     1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_props_l,   &n_properties,  1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
   // -----------------------------------------------------------------------
   // Write file
   // -----------------------------------------------------------------------
 
-  // H5F_ACC_TRUNC - truncate+R/W, i.e. discard all file contents before writing
-  hid_t file = H5Fcreate(plot_options.fileName.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  // H5F_ACC_TRUNC - truncate; opened collectively via the MPI-IO driver so every rank writes its
+  // slab into the shared file.
+  hid_t fapl = h5p_fapl_mpio();
+  hid_t file = H5Fcreate(plot_options.fileName.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+  H5Pclose(fapl);
   hy_check(file >= 0, "failed to create HDF5 file '" << plot_options.fileName << "'");
 
   hid_t root = H5Gcreate2(file, "VTKHDF", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -1049,45 +1038,43 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     H5Aclose(attr); H5Sclose(space); H5Tclose(stype);
   }
 
-  // --- helper to write a chunked + unlimited dataset (whole buffer)
-  auto write_dset = [&](hid_t loc, const char* name,
-                        hid_t file_type, hid_t mem_type,
-                        int rank, const hsize_t* dims, const void* data)
-  {
-    std::vector<hsize_t> maxdims(rank), chunk(rank);
-    for (int i = 0; i < rank; ++i)
-    {
-      maxdims[i] = (i == 0) ? H5S_UNLIMITED : dims[i];
-      chunk[i]   = (i == 0) ? std::max<hsize_t>(dims[i], 1) : dims[i];
-    }
-    hid_t space = H5Screate_simple(rank, dims, maxdims.data());
-    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dcpl, rank, chunk.data());
-    hid_t dset = H5Dcreate2(loc, name, file_type, space,
-                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    H5Dwrite(dset, mem_type, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
-    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+  // --- geometry: each rank writes its slab into globally-sized datasets
+  { hsize_t gd[2] = {(hsize_t)tot[0], 3};
+    hid_t ds = h5p_create(root, "Points", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[0]);
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[0], (hsize_t)np, 3, points.data());
+    H5Dclose(ds); }
+  { hsize_t gd = (hsize_t)tot[2];
+    hid_t ds = h5p_create(root, "Connectivity", H5T_STD_I64LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, (hsize_t)off[2], (hsize_t)nci, 1, connectivity.data());
+    H5Dclose(ds); }
+  // Offsets has tot_cells+1 entries (VTKHDF convention, leading 0). Offsets[i] = i*verts_per_cell.
+  // Rank 0 writes its cells plus the leading 0; other ranks write only their cells' running ends.
+  { hsize_t gd = (hsize_t)(tot[1] + 1);
+    hid_t ds = h5p_create(root, "Offsets", H5T_STD_I64LE, 1, &gd, gd);
+    const hsize_t ostart = (mpi_rank == 0) ? 0 : (hsize_t)(off[1] + 1);
+    const hsize_t ocount = (mpi_rank == 0) ? (hsize_t)(nc + 1) : (hsize_t)nc;
+    std::vector<int64_t> obuf(ocount);
+    for (hsize_t i = 0; i < ocount; ++i)
+      obuf[i] = static_cast<int64_t>((ostart + i) * verts_per_cell);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, ostart, ocount, 1, obuf.data());
+    H5Dclose(ds); }
+  { hsize_t gd = (hsize_t)tot[1];
+    hid_t ds = h5p_create(root, "Types", H5T_STD_U8LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_UINT8, (hsize_t)off[1], (hsize_t)nc, 1, types.data());
+    H5Dclose(ds); }
+
+  // --- per-piece counts (single concatenated piece → length 1, written by rank 0)
+  auto write_count = [&](const char* name, int64_t total) {
+    hsize_t gd = 1;
+    hid_t ds = h5p_create(root, name, H5T_STD_I64LE, 1, &gd, 1);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, 0, (mpi_rank == 0 ? 1 : 0), 1, &total);
+    H5Dclose(ds);
   };
+  write_count("NumberOfPoints",          tot[0]);
+  write_count("NumberOfCells",           tot[1]);
+  write_count("NumberOfConnectivityIds", tot[2]);
 
-  // --- geometry
-  { hsize_t d[2] = {(hsize_t)n_points, 3};
-    write_dset(root, "Points", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, points.data()); }
-  { hsize_t d = (hsize_t)n_conn;
-    write_dset(root, "Connectivity", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, connectivity.data()); }
-  { hsize_t d = (hsize_t)offsets.size();
-    write_dset(root, "Offsets", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, offsets.data()); }
-  { hsize_t d = (hsize_t)n_cells;
-    write_dset(root, "Types", H5T_STD_U8LE, H5T_NATIVE_UINT8, 1, &d, types.data()); }
-
-  // --- per-piece counts (single piece → length 1)
-  { hsize_t d = 1;
-    write_dset(root, "NumberOfPoints",          H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &np); }
-  { hsize_t d = 1;
-    write_dset(root, "NumberOfCells",           H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nc); }
-  { hsize_t d = 1;
-    write_dset(root, "NumberOfConnectivityIds", H5T_STD_I64LE, H5T_NATIVE_INT64, 1, &d, &nci); }
-
-  // --- point data  group
+  // --- point data group
   hid_t pdata = H5Gcreate2(root, "PointData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
   // --- types points
@@ -1095,62 +1082,56 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     std::vector<int32_t> node_types(n_points);
     for (hyEdge_index_t he = 0; he < n_edges; ++he) {
       auto edge = hyper_graph[he];
-      const pt_index_t base = he * points_per_edge;
-      node_types[base+0] = static_cast<int32_t>(edge.node_descriptor[0]);
-      node_types[base+1] = static_cast<int32_t>(edge.node_descriptor[1]);
+      const pt_index_t b = he * points_per_edge;
+      node_types[b+0] = static_cast<int32_t>(edge.node_descriptor[0]);
+      node_types[b+1] = static_cast<int32_t>(edge.node_descriptor[1]);
     }
-    hsize_t d = (hsize_t)n_points;
-    write_dset(pdata, "types_points", H5T_STD_I32LE, H5T_NATIVE_INT32, 1, &d, node_types.data());
+    hsize_t gd = (hsize_t)tot[0];
+    hid_t ds = h5p_create(pdata, "types_points", H5T_STD_I32LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_INT32, (hsize_t)off[0], (hsize_t)n_points, 1, node_types.data());
+    H5Dclose(ds);
   }
 
-  // --- empty extendable PointData/values: (0, n_components), unlimited axis 0
+  // --- empty extendable PointData/values: (0, n_components); one time step occupies tot_points rows
   {
-    hsize_t dims[2]    = {0, n_components};
-    hsize_t maxdims[2] = {H5S_UNLIMITED, n_components};
-    hsize_t chunk[2]   = {std::max<hsize_t>(n_points, 1), n_components};
-    hid_t space = H5Screate_simple(2, dims, maxdims);
-    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dcpl, 2, chunk);
-    hid_t dset = H5Dcreate2(pdata, "values", H5T_IEEE_F32LE, space,
-                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+    hsize_t gd[2] = {0, n_components};
+    hid_t ds = h5p_create(pdata, "values", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[0]);
+    H5Dclose(ds);
   }
 
-  // --- static CellData/properties from hyper_edge.geometry.extra_data()
+  // --- static CellData/properties from hyper_edge.geometry.extra_data() (collective if any rank has)
   hid_t cdata = H5Gcreate2(root, "CellData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) {
-    const unsigned int n_properties =
-      static_cast<unsigned int>(hyper_graph.hyEdge_geometry(0).extra_data().size());
-
-    std::vector<float> props_buf(static_cast<size_t>(n_cells) * n_properties, 0.f);
-    for (hyEdge_index_t he = 0; he < n_edges; ++he) {
-      auto edge = hyper_graph.hyEdge_geometry(he);
-      const auto& props = edge.extra_data();
-      hy_check(props.size() == n_properties,
-               "all hyperedges must have the same number of properties; "
-               "edge " << he << " has " << props.size() << ", expected " << n_properties);
-      for (unsigned int c = 0; c < cells_per_edge; ++c) {
-        const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
-        for (unsigned int d = 0; d < n_properties; ++d)
-          props_buf[row + d] = static_cast<float>(props[d]);
+  if (has_props) {
+    std::vector<float> props_buf;
+    hsize_t myrows = 0;
+    if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) {
+      props_buf.assign(static_cast<size_t>(n_cells) * n_properties, 0.f);
+      myrows = (hsize_t)n_cells;
+      for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+        auto geom = hyper_graph.hyEdge_geometry(he);
+        const auto& props = geom.extra_data();
+        hy_check((int)props.size() == n_properties,
+                 "all hyperedges must have the same number of properties; "
+                 "edge " << he << " has " << props.size() << ", expected " << n_properties);
+        for (unsigned int c = 0; c < cells_per_edge; ++c) {
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
+          for (int d = 0; d < n_properties; ++d)
+            props_buf[row + d] = static_cast<float>(props[d]);
+        }
       }
     }
-
-    hsize_t d[2] = {(hsize_t)n_cells, n_properties};
-    write_dset(cdata, "properties", H5T_IEEE_F32LE, H5T_NATIVE_FLOAT, 2, d, props_buf.data());
+    hsize_t gd[2] = {(hsize_t)tot[1], (hsize_t)n_properties};
+    hid_t ds = h5p_create(cdata, "properties", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[1]);
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[1], myrows, (hsize_t)n_properties,
+                   props_buf.data());
+    H5Dclose(ds);
   }
 
-  // --- empty extendable CellData/energies: (0, n_energy_components), unlimited axis 0
+  // --- empty extendable CellData/energies: (0, n_energy_components); one step = tot_cells rows
   if (n_energy_components > 0) {
-    hsize_t dims[2]    = {0, n_energy_components};
-    hsize_t maxdims[2] = {H5S_UNLIMITED, n_energy_components};
-    hsize_t chunk[2]   = {std::max<hsize_t>(n_cells, 1), n_energy_components};
-    hid_t space = H5Screate_simple(2, dims, maxdims);
-    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dcpl, 2, chunk);
-    hid_t dset = H5Dcreate2(cdata, "energies", H5T_IEEE_F32LE, space,
-                            H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+    hsize_t gd[2] = {0, n_energy_components};
+    hid_t ds = h5p_create(cdata, "energies", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[1]);
+    H5Dclose(ds);
   }
   H5Gclose(cdata);
 
@@ -1158,16 +1139,10 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
   hid_t steps = H5Gcreate2(root, "Steps", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   h5_set_attr_i64(steps, "NSteps", 0);
 
-  // helper for empty 1D extendable datasets
   auto make_empty_1d = [&](hid_t loc, const char* name, hid_t file_type) {
-    hsize_t dims    = 0;
-    hsize_t maxdims = H5S_UNLIMITED;
-    hsize_t chunk   = 1;
-    hid_t space = H5Screate_simple(1, &dims, &maxdims);
-    hid_t dcpl  = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dcpl, 1, &chunk);
-    hid_t dset = H5Dcreate2(loc, name, file_type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    H5Dclose(dset); H5Pclose(dcpl); H5Sclose(space);
+    hsize_t gd = 0;
+    hid_t ds = h5p_create(loc, name, file_type, 1, &gd, 1);
+    H5Dclose(ds);
   };
 
   make_empty_1d(steps, "Values",                H5T_IEEE_F64LE);
@@ -1208,8 +1183,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
                       const LocalSolverT& local_solver,
                       const LargeVecT& lambda,
                       const PlotOptions& plot_options,
-                      const floatT time = 0.,
-                      bool append = false)
+                      const floatT time = 0.)
 {
   constexpr unsigned int edge_dim  = HyperGraphT::hyEdge_dim();
   static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
@@ -1293,34 +1267,25 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
     }
   }
 
-  // --- distributed append: this rank concatenates its point values into the single VTKHDF part.
-  // Only the data rows are appended; the per-step Steps bookkeeping is owned by rank 0 (the part
-  // that created the step), so it is left untouched here.
-  if (append)
-  {
-    hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-    hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
-    hid_t root  = H5Gopen2(file, "VTKHDF", H5P_DEFAULT);
-    hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
-    h5_append(pdata, "values", H5T_NATIVE_FLOAT, n_points, n_components, values.data());
-    H5Gclose(pdata);
-    if (plot_options.energy)
-    {
-      if constexpr (has_energy_api)
-      {
-        constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
-        hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
-        h5_append(cdata, "energies", H5T_NATIVE_FLOAT, n_cells, n_e_comp, energies_buf.data());
-        H5Gclose(cdata);
-      }
-    }
-    H5Gclose(root);
-    H5Fclose(file);
-    return;
-  }
+  // --- collective temporal append. Every rank adds its slab of this step's point values to the end
+  // of the (static-mesh) PointData/values dataset; the per-step Steps bookkeeping is written once by
+  // rank 0. Global totals/offsets come from the same Allreduce/Exscan as the mesh layout.
+  int mpi_rank = 0, mpi_size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
-  // --- open file R/W
-  hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  long long mine[2] = {(long long)n_points, (long long)n_cells};
+  long long off[2]  = {0, 0};   // exclusive prefix (this rank's first row within the step)
+  long long tot[2]  = {0, 0};   // global rows per step
+  MPI_Exscan(mine, off, 2, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(mine, tot, 2, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (mpi_rank == 0) { off[0] = off[1] = 0; }
+
+  const int64_t step = static_cast<int64_t>(plot_options.fileNumber);
+
+  hid_t fapl = h5p_fapl_mpio();
+  hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, fapl);
+  H5Pclose(fapl);
   hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
 
   hid_t root  = H5Gopen2(file, "VTKHDF",   H5P_DEFAULT);
@@ -1328,47 +1293,47 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   hid_t steps = H5Gopen2(root, "Steps",     H5P_DEFAULT);
   hid_t pdo   = H5Gopen2(steps, "PointDataOffsets", H5P_DEFAULT);
 
-  const int64_t step_index = static_cast<int64_t>(plot_options.fileNumber);
+  // --- PointData/values: grow to (step+1)*tot_points rows, write this rank's slab for this step
+  {
+    hid_t ds = H5Dopen2(pdata, "values", H5P_DEFAULT);
+    h5p_set_rows(ds, static_cast<hsize_t>((step + 1) * tot[0]));
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, static_cast<hsize_t>(step * tot[0] + off[0]),
+                   (hsize_t)n_points, n_components, values.data());
+    H5Dclose(ds);
+  }
 
-  // --- append PointData/values: n_points new rows
-  h5_append(pdata, "values", H5T_NATIVE_FLOAT,
-                           n_points, n_components, values.data());
-
-  // --- append Steps/Values: one timestamp
-  double t = static_cast<double>(time);
-  h5_append(steps, "Values", H5T_NATIVE_DOUBLE, 1, 1, &t);
-
-  // --- append Steps offset entries (all zeros for single-part static mesh)
-  int64_t zero = 0, one = 1;
-  h5_append(steps, "PartOffsets",           H5T_NATIVE_INT64, 1, 1, &zero);
-  h5_append(steps, "PointOffsets",          H5T_NATIVE_INT64, 1, 1, &zero);
-  h5_append(steps, "CellOffsets",           H5T_NATIVE_INT64, 1, 1, &zero);
-  h5_append(steps, "ConnectivityIdOffsets", H5T_NATIVE_INT64, 1, 1, &zero);
-  h5_append(steps, "NumberOfParts",         H5T_NATIVE_INT64, 1, 1, &one);
-
-  // --- append PointDataOffsets entries
-  int64_t off_values = step_index * static_cast<int64_t>(n_points);
-  h5_append(pdo, "values", H5T_NATIVE_INT64, 1, 1, &off_values);
-
-  // --- append CellData/energies and CellDataOffsets/energies
+  // --- CellData/energies (same scheme) + CellDataOffsets/energies
   if (plot_options.energy) {
     if constexpr (has_energy_api) {
       constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
       hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
-      hid_t cdo   = H5Gopen2(steps, "CellDataOffsets", H5P_DEFAULT);
-      hy_check(cdata >= 0 && cdo >= 0,
-               "energies dataset missing: was plot_options.energy=true at fileNumber=0?");
-      h5_append(cdata, "energies", H5T_NATIVE_FLOAT,
-                n_cells, n_e_comp, energies_buf.data());
-      int64_t off_energies = step_index * static_cast<int64_t>(n_cells);
-      h5_append(cdo, "energies", H5T_NATIVE_INT64, 1, 1, &off_energies);
+      hid_t ds = H5Dopen2(cdata, "energies", H5P_DEFAULT);
+      hy_check(ds >= 0, "energies dataset missing: was plot_options.energy=true at fileNumber=0?");
+      h5p_set_rows(ds, static_cast<hsize_t>((step + 1) * tot[1]));
+      h5p_write_rows(ds, H5T_NATIVE_FLOAT, static_cast<hsize_t>(step * tot[1] + off[1]),
+                     (hsize_t)n_cells, n_e_comp, energies_buf.data());
+      H5Dclose(ds);
+      hid_t cdo = H5Gopen2(steps, "CellDataOffsets", H5P_DEFAULT);
+      int64_t off_energies = step * tot[1];
+      h5p_append1(cdo, "energies", H5T_NATIVE_INT64, step, &off_energies, mpi_rank);
       H5Gclose(cdo);
       H5Gclose(cdata);
     }
   }
 
+  // --- Steps bookkeeping (single concatenated part): rank 0 writes the values, all ranks extend
+  double t = static_cast<double>(time);
+  int64_t zero = 0, one = 1, off_values = step * tot[0];
+  h5p_append1(steps, "Values",                H5T_NATIVE_DOUBLE, step, &t,    mpi_rank);
+  h5p_append1(steps, "PartOffsets",           H5T_NATIVE_INT64,  step, &zero, mpi_rank);
+  h5p_append1(steps, "PointOffsets",          H5T_NATIVE_INT64,  step, &zero, mpi_rank);
+  h5p_append1(steps, "CellOffsets",           H5T_NATIVE_INT64,  step, &zero, mpi_rank);
+  h5p_append1(steps, "ConnectivityIdOffsets", H5T_NATIVE_INT64,  step, &zero, mpi_rank);
+  h5p_append1(steps, "NumberOfParts",         H5T_NATIVE_INT64,  step, &one,  mpi_rank);
+  h5p_append1(pdo,   "values",                H5T_NATIVE_INT64,  step, &off_values, mpi_rank);
+
   // --- update NSteps
-  h5_set_attr_i64(steps, "NSteps", step_index + 1);
+  h5_set_attr_i64(steps, "NSteps", step + 1);
 
   H5Gclose(pdo);
   H5Gclose(steps);
@@ -1394,33 +1359,10 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
                  const floatT time = 0.)
 {
   // Distributed plot: each rank holds its owned hyperedges. The plot is per-edge (no shared-node
-  // deduplication), so the ranks' pieces concatenate into one VTKHDF part. A token ring serializes
-  // file access and carries the running point/cell/connectivity bases used to shift this rank's
-  // connectivity/offsets into the concatenated part. Single rank => append=false (unchanged).
-  int rank = 0, size = 1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  hy_check(size == 1 || plot_options.fileNumber == 0,
-           "distributed (multi-rank) vtkhdf plotting currently supports a single static step "
-           "(fileNumber == 0) only.");
-
-  constexpr unsigned int edge_dim        = HyperGraphT::hyEdge_dim();
-  constexpr unsigned int n_subpoints     = n_subdivisions + 1;
-  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
-  constexpr unsigned int cells_per_edge  = Hypercube<edge_dim>::pow(n_subdivisions);
-  constexpr unsigned int verts_per_cell  = Hypercube<edge_dim>::n_vertices();
-  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
-  const int64_t my_np  = static_cast<int64_t>(n_edges) * points_per_edge;
-  const int64_t my_nc  = static_cast<int64_t>(n_edges) * cells_per_edge;
-  const int64_t my_nci = my_nc * verts_per_cell;
-
-  const int tag = 7;
-  int64_t bases[3] = {0, 0, 0};  // running totals: point_base, cell_base, conn_base
-  if (rank > 0)
-    MPI_Recv(bases, 3, MPI_LONG_LONG, rank - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  const bool append = (rank > 0);
-
+  // deduplication), so the ranks' slabs concatenate into one VTKHDF part. The mesh (static) is
+  // written once at fileNumber == 0; each step appends a block of point/cell data. The writers open
+  // the file collectively (MPI-IO) and place each rank's slab at a global offset, so any number of
+  // ranks and time steps is supported with no serial token ring.
   if (plot_options.fileNumber == 0) {
     unsigned int n_e_comp = 0;
     if (plot_options.energy) {
@@ -1430,17 +1372,11 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
         hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
     }
     plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
-      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp, append,
-      static_cast<pt_index_t>(bases[0]), static_cast<pt_index_t>(bases[1]),
-      static_cast<pt_index_t>(bases[2]));
+      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp);
   }
   plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT,
                    n_subdivisions, hyEdge_index_t, pt_index_t>(
-    hyper_graph, local_solver, lambda, plot_options, time, append);
-
-  int64_t next[3] = {bases[0] + my_np, bases[1] + my_nc, bases[2] + my_nci};
-  if (rank < size - 1)
-    MPI_Send(next, 3, MPI_LONG_LONG, rank + 1, tag, MPI_COMM_WORLD);
+    hyper_graph, local_solver, lambda, plot_options, time);
 }
 #endif
 

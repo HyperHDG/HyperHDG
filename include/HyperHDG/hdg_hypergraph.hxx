@@ -634,6 +634,10 @@ class HDGHyperGraph
     hyGraph_topology_->set_refinement(level);
     hyGraph_geometry_->set_refinement(level);
     hyGraph_node_des_->set_refinement(level);
+    // NOTE: this rebuilds the factory with the non-distributed constructor, so it resets
+    // n_owned/n_global hyNodes to the local count and clears the local->global map. A distributed
+    // hypergraph (distribute_domain) therefore loses its distribution here; callers must not refine
+    // a distributed graph (see experiments/timowave.cxx).
     hyNode_factory_ =
       HyperNodeFactory<n_dofs_per_nodeT, hyEdge_index_t>(hyGraph_topology_->n_hyNodes());
     hyData_cont_ = HyDataContainer<DataT>(hyGraph_topology_->n_hyEdges());
