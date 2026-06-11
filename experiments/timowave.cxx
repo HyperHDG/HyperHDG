@@ -67,7 +67,7 @@ PetscErrorCode PetscHDGCreate(
   PetscFunctionBeginUser;
   if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
-  //else if (0 == strcmp(test, "wave1"))     PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
     char static_init[PATH_MAX] = {0};
     char timowave_test[256] = {0};
     const char *pc_type;
-    PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
+    PetscBool mat_only = PETSC_FALSE;
 
     (void)e_rel;
 
@@ -152,9 +152,9 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, wave1, wave4", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
+    PetscCall(PetscOptionsBool("-mat_only", "only compute matrix", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     if (is_set) {
@@ -282,6 +282,8 @@ int main(int argc, char **argv) {
 
     PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
 
+    if (mat_only) goto end;
+
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
@@ -360,6 +362,7 @@ int main(int argc, char **argv) {
     PRIN2SY(creason);
     PRIN2FY(avg_iterations);
 
+end:
     PetscCall(PetscOptionsLeftYAML(NULL));
 
     delete hdg;

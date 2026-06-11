@@ -1260,6 +1260,9 @@ struct TimoshenkoDrumhead
   /// Peak force amplitude of the tap.
   static inline Scalar amplitude = 1;
 
+  /// Integral of the Gaussian force bump over time and space.
+  static inline Scalar energy = 1;
+
   /// Spatial component the tap force points in.
   static inline unsigned int comp = 2;
 
@@ -1274,9 +1277,11 @@ struct TimoshenkoDrumhead
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_x", &std_x, NULL));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_t", &std_t, NULL));
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-tap_time", &tap_time, NULL));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-amplitude", &amplitude, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-energy", &energy, NULL));
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
     comp = comp_;
+
+    amplitude = energy / (std_x*std_x*std_t);
 
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
