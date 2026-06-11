@@ -431,8 +431,6 @@ class ArrayColor:
       target = (assoc, self.name, self.comp)
     pv.ColorBy(display, target)
     ctf = pv.GetColorTransferFunction(self.name)
-    comp = self.comp if self.comp is not None else 0
-    rng = display.GetArrayInformationForColorArray().GetComponentRange(comp)
     ctf.ApplyPreset("Cool to Warm", True)
     if len(self.categories) != 0:
       ctf.InterpretValuesAsCategories = 1
@@ -453,8 +451,16 @@ class ArrayColor:
       ctf.IndexedColors = colors
       ctf.IndexedOpacities = [1.0] * len(cats)
     else:
+      # "Rescale to Data Range Over All Timesteps": ParaView sweeps every
+      # registered time step in C++ and rescales the LUT to the global range
+      # of the colored component. The per-display array info only sees the
+      # current step, so without this the colors jump every frame.
+      display.RescaleTransferFunctionToDataRangeOverTime()
+      # symmetrize the diverging scale around 0 (RGBPoints is a flat
+      # [scalar, r, g, b, ...] list, so [0] / [-4] are the rescaled min / max)
+      pts = ctf.RGBPoints
+      M = builtins.max(abs(pts[0]), abs(pts[-4]))
       ctf.ApplyPreset("Cool to Warm", True)
-      M = builtins.max(abs(rng[0]), abs(rng[1]))
       ctf.RescaleTransferFunction(-M, M)
       if self.invert:
         ctf.InvertTransferFunction()
