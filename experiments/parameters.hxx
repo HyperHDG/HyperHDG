@@ -1249,10 +1249,10 @@ struct TimoshenkoDrumhead
   static inline Scalar length = 0;
 
   /// Spatial variance (sigma^2) of the Gaussian force bump.
-  static inline Scalar var_space = 1;
+  static inline Scalar std_x = 1;
 
   /// Temporal variance (sigma^2) of the Gaussian force bump.
-  static inline Scalar var_time = 1;
+  static inline Scalar std_t = 1;
 
   /// Time at which the tap peaks.
   static inline Scalar tap_time = 0;
@@ -1263,14 +1263,36 @@ struct TimoshenkoDrumhead
   /// Spatial component the tap force points in.
   static inline unsigned int comp = 2;
 
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_x", &std_x, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_t", &std_t, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-tap_time", &tap_time, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-amplitude", &amplitude, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
+    comp = comp_;
+
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
   {
     const Pt center(0.5 * length);
     const Scalar r2 = scalar_product(point - center, point - center);
-    const Scalar space_bump = std::exp(-r2 / (2 * var_space));
+    const Scalar space_bump = std::exp(-r2 / (2 * std_x*std_x));
 
     const Scalar dt = time - tap_time;
-    const Scalar time_bump = std::exp(-dt * dt / (2 * var_time));
+    const Scalar time_bump = std::exp(-dt * dt / (2 * std_t*std_t));
 
     Pt force(0.);
     force[comp] = amplitude * space_bump * time_bump;
