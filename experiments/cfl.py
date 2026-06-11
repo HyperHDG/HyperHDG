@@ -48,6 +48,23 @@ plt.ylabel("density")
 plt.legend()
 plt.show()
 
+# 2d spatial distribution of areal mass density: each edge's mass sits at its
+# midpoint, summed per xy-bin and divided by the bin area -> mass per area
+mid = endpoints.mean(axis=1)            # (N, space_dim) edge midpoints
+mass_per_bin, xe, ye = np.histogram2d(mid[:, 0], mid[:, 1], bins=args.bins, weights=props[:, 0])
+bin_area = np.diff(xe)[:, None] * np.diff(ye)[None, :]
+areal_density = mass_per_bin / bin_area
+rel = areal_density / areal_density.mean() - 1  # fractional deviation from mean (gsm factor cancels)
+lim = np.abs(rel).max()
+# .T: histogram2d is [x, y]-indexed, pcolormesh wants [row=y, col=x]
+plt.pcolormesh(xe, ye, 100 * rel.T, cmap="RdBu_r", vmin=-100 * lim, vmax=100 * lim)
+plt.colorbar(label="areal weight rel. to mean [%]")
+plt.gca().set_aspect("equal")
+plt.title(f"areal mass density, mean = {areal_density.mean()*1e15:.2f} gsm")
+plt.xlabel(f"x {unit_length}")
+plt.ylabel(f"y {unit_length}")
+plt.show()
+
 props = props[~virtual, :]
 he = he[~virtual]
 
