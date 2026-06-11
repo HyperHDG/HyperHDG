@@ -28,7 +28,7 @@ git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN --dirichlet xmin=63 xmax=68
-$BUILD/network -domain $DOMAIN -strain .15 -pc_type cholesky -ksp_type preonly -pc_factor_mat_solver_type cholmod \
+mpirun -n 2 $BUILD/network -domain $DOMAIN -strain .15 -pc_type cholesky -ksp_type preonly -pc_factor_mat_solver_type mumps \
                 -plot $STATIC -log_view :$PERF:ascii_flamegraph \
                 | tee $LOG.1
 $BUILD/timowave -domain $DOMAIN -domain $DOMAIN -mat_only -test stiffness | tee $LOG.2
