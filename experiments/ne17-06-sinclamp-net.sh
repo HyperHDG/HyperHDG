@@ -30,8 +30,8 @@ git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i $INPUT --clamp $CUT -o $DOMAIN --dirichlet xmin=63 -t 1e-1
-mpirun -n 8 $BUILD/timowave -domain $DOMAIN -strain .03 -freq 3e6 -T 1e-6 -nt 100 $NET \
-                -plot $WAVE -deg 3 -log_view :$PERF:ascii_flamegraph -tau 1e5 \
+mpirun -n 8 $BUILD/timowave -domain $DOMAIN -strain 1e-2 -freq 3e6 -T 1e-6 -nt 60 $NET \
+                -plot $WAVE -deg 6 -log_view :$PERF:ascii_flamegraph -tau 1e0 \
                 -print_timestep -test sinclamp | tee $LOG
-experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI
+experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI --color-by values:8
 ffmpeg -i $AVI -c:v libx264 -c:a aac $VID
