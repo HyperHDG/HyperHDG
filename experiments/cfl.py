@@ -66,6 +66,15 @@ Cz = np.stack((mass/he, mass/he, mass/he,
 ce = np.max(np.sqrt(Cq), axis=1)
 ts = he / ce
 
+bins = np.logspace(np.log10(ce.min()), np.log10(ce.max()), args.bins)
+plt.hist(ce, bins=bins, label=r"$c_e$", weights=np.ones(len(ce))/len(ce),
+         histtype="step", linewidth=2)
+plt.title("density of wavespeed $c_e$ across varying edges $e$")
+plt.ylabel("density")
+plt.xlabel("$c_e$")
+plt.yscale("log")
+plt.show()
+
 bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
 
 if args.csv:
