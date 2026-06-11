@@ -33,7 +33,7 @@ VID=$OUT/$NAME.mp4
 IMG=$OUT/$NAME.png
 PERF=$OUT/perf.flamegraph
 LOG=$OUT/log.yaml
-CUT=.4
+CUT=.2
 MUMPS="-pc_type cholesky -ksp_type preonly -pc_factor_mat_solver_type mumps"
 NET="-pc_type net2as -net2as_p 1 -net2as_cb_type pu -net2as_pc_factor_mat_solver_type cholmod"
 export OMP_NUM_THREADS=1
@@ -47,9 +47,10 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i $INPUT --clamp $CUT -o $DOMAIN --dirichlet xmin=63 xmax=63 ymin=63 ymax=63 -t 1e-1
 mpirun -n 8 $BUILD/timowave -domain $DOMAIN -test drumhead \
-                -std_x 1e2 -std_t 5e-8 -energy 3e-2 -tap_time 1.5e-7 -T 1e-6 -nt 60 $NET \
+                -std_x 3e1 -std_t 8e-8 -energy 3e1 -tap_time 2e-7 -T 2e-6 -nt 60 $NET \
                 -plot $WAVE -deg 6 -log_view :$PERF:ascii_flamegraph -tau 1e0 \
                 -print_timestep | tee $LOG
-experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI --color-by values:8
-ffmpeg -i $AVI -c:v libx264 -c:a aac $VID
+experiments/nethist.py $WAVE
+#experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI --color-by values:8
+#ffmpeg -i $AVI -c:v libx264 -c:a aac $VID
 #experiments/nethist.py $WAVE --bins 100
