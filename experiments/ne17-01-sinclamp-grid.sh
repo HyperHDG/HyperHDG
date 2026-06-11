@@ -22,13 +22,13 @@ export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset $PRESET
+cmake --build --preset $PRESET --target timowave
 cp $BUILD/{network,timowave} experiments/{make_geo2,netvis}.py $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py --grid 20 -o $DOMAIN --dirichlet xmin=63
-$BUILD/timowave -domain $DOMAIN -strain .15 -nt 10 -pc_type lu -ksp_type preonly \
+$BUILD/timowave -domain $DOMAIN -strain .03 -freq 3 -nt 30 -pc_type lu -ksp_type preonly \
                 -plot $WAVE -deg 2 -log_view :$PERF:ascii_flamegraph \
                 -print_timestep -test sinclamp | tee $LOG
 experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI
