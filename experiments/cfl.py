@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(description="histogram by Joseph Holten")
 parser.add_argument("-i", "--input", help="input domain file", required=True)
 parser.add_argument("-o", "--output", help="output file", default="histogram.png")
 parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, default=100)
+parser.add_argument("--cdf", help="make timestep histogram cdf", action="store_true")
 parser.add_argument("--title", default="")
 parser.add_argument("--csv", action="store_true", help="emit histogram as CSV on stdout (pipe into plot.py) instead of plotting")
 args = parser.parse_args()
@@ -68,7 +69,7 @@ ts = he / ce
 bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
 
 if args.csv:
-    counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts))
+    counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts), cumulative=args.cdf)
     centers = np.sqrt(edges[:-1] * edges[1:])  # geometric centers of log bins
     mode = centers[np.argmax(counts)]
     sys.stdout.write(f"# min={ts.min():.6g} median={np.median(ts):.6g} mode={mode:.6g} max={ts.max():.6g}\n")
@@ -76,7 +77,7 @@ if args.csv:
     sys.exit(0)
 
 counts, edges, _ = plt.hist(ts, bins=bins,
-                            weights=np.ones(len(ts))/len(ts))
+                            weights=np.ones(len(ts))/len(ts), cumulative=args.cdf)
 plt.xscale("log")
 plt.yscale("log")
 
@@ -92,7 +93,7 @@ for label, (val, color) in stats.items():
 plt.legend()
 
 plt.xlabel("timestep ts")
-plt.ylabel("density")
+plt.ylabel(("cumulative " if args.cdf else "") + "density")
 if args.title: plt.title(args.title)
 if args.output: plt.savefig(args.output)
 plt.show()
