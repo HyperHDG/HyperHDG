@@ -136,12 +136,12 @@ if __name__ == "__main__":
   fig.colorbar(im, ax=ax, label=f"{args.color_by}")
   ax.set_xlabel("x")
   ax.set_ylabel("y")
-  title = ax.set_title(f"{name}:{comp}" + (f"   t = {steps[0]:.3f}" if steps[0] is not None else ""))
+  title = ax.set_title(f"{name}:{comp}" + (f"   t = {steps[0]:.3e}" if steps[0] is not None else ""))
 
   if len(frames) > 1:
     def update(i):
       im.set_data(frames[i])
-      title.set_text(f"{name}:{comp}   t = {steps[i]:.3f}")
+      title.set_text(f"{name}:{comp}   t = {steps[i]:.3e}")
       return im, title
     anim = animation.FuncAnimation(fig, update, frames=len(frames),
                                    interval=1000 / args.fps, blit=False)
