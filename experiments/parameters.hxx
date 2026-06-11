@@ -1292,7 +1292,11 @@ struct TimoshenkoDrumhead
 
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
   {
-    const Pt center(0.5 * length);
+    // Tap center: in-plane at the domain mid-point. The grid lies in the z=0 plane, so the
+    // out-of-plane coordinate must be 0 -- a scalar 0.5*length broadcast would sit 0.5 out of
+    // plane and the bump exp(-0.25/(2 std_x^2)) would vanish for any sharp std_x.
+    Pt center(0.5 * length);
+    center[dim - 1] = 0;
     const Scalar r2 = scalar_product(point - center, point - center);
     const Scalar space_bump = std::exp(-r2 / (2 * std_x*std_x));
 
