@@ -170,7 +170,9 @@ class Nonlinear
    * \retval  y_vec         A vector containing the product \f$y = Ax\f$.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT trace_to_flux(const LargeVecT& x_vec, const LargeVecT& dir_vec, const dof_value_t time = 0.)
+  LargeVecT trace_to_flux(const LargeVecT& x_vec,
+                          const LargeVecT& dir_vec,
+                          const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -214,7 +216,8 @@ class Nonlinear
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * TopologyT::hyEdge_dim()>&,
               decltype(hyper_edge)&, dof_value_t)>::value)
-          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_dir, hyEdge_dofs_new, hyper_edge, time);
+          local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_dir, hyEdge_dofs_new, hyper_edge,
+                                      time);
         else
           hy_assert(false, "Function seems not to be implemented!");
 
@@ -226,62 +229,62 @@ class Nonlinear
 
     return vec_Ax;
   }
-  
+
   template <typename hyNode_index_t = dof_index_t>
   sparse_mat<LargeVecT> trace_to_flux_mat(const LargeVecT& x_vec, const dof_value_t time = 0.)
-  {                                                                                          
-    sparse_mat<LargeVecT> result_mat(hyper_graph_.n_hyEdges() * 4 * hyEdge_dim * hyEdge_dim * 
-                                     n_dofs_per_node * n_dofs_per_node);                      
-                                                                                              
-    auto value_it = result_mat.value_vec.begin();                                             
-    auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();            
-                                                                                              
-    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                        
-    std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;        
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_dir, dofs_new;  
-                                                                                              
-    std::for_each(                                                                            
-      hyper_graph_.begin(), hyper_graph_.end(),                                               
-      [&](auto hyper_edge)                                                                    
-      {                                                                                       
-        hyNodes = hyper_edge.topology.get_hyNode_indices();                                   
+  {
+    sparse_mat<LargeVecT> result_mat(hyper_graph_.n_hyEdges() * 4 * hyEdge_dim * hyEdge_dim *
+                                     n_dofs_per_node * n_dofs_per_node);
+
+    auto value_it = result_mat.value_vec.begin();
+    auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();
+
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;
+    std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;
+    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_dir,
+      dofs_new;
+
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyNodes = hyper_edge.topology.get_hyNode_indices();
         for (unsigned int node = 0; node < hyNodes.size(); ++node)
         {
           hyper_graph_.hyNode_factory().get_dof_indices(hyNodes[node], dof_indices[node]);
           hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs_old[node]);
-	      }
-                                                                                              
-        for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      
-          for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      
-          {                                                                                   
-            for (unsigned int node = 0; node < hyNodes.size(); ++node)                        
-            {                                                                                 
-              dofs_dir[node].fill(0.);                                                        
-              dofs_new[node].fill(0.);                                                        
-            }                                                                                 
-            dofs_dir[node_j][dof_j] = 1.;                                                     
-            if constexpr (                                                               
-              has_trace_to_flux<                                                                   
-                LocalSolverT,                                                                 
-                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(        
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,
-                  decltype(hyper_edge)&, dof_value_t)>::value)                                
-              local_solver_.trace_to_flux(dofs_old, dofs_dir, dofs_new, hyper_edge, time);                   
-            else                                                                              
-              hy_assert(false, "Function seems not to be implemented!");                      
-                                                                                              
-            for (unsigned int node_i = 0; node_i < hyNodes.size(); ++node_i)                  
-              for (unsigned int dof_i = 0; dof_i < n_dofs_per_node; ++dof_i)                  
-              {                                                                               
-                *(row_it++) = dof_indices[node_i][dof_i];                                     
-                *(col_it++) = dof_indices[node_j][dof_j];                                     
-                *(value_it++) = dofs_new[node_i][dof_i];                                      
-              }                                                                               
-          }                                                                                   
-      });                                                                                     
-                                                                                              
+        }
+
+        for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)
+          for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)
+          {
+            for (unsigned int node = 0; node < hyNodes.size(); ++node)
+            {
+              dofs_dir[node].fill(0.);
+              dofs_new[node].fill(0.);
+            }
+            dofs_dir[node_j][dof_j] = 1.;
+            if constexpr (has_trace_to_flux<
+                            LocalSolverT,
+                            std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(
+                              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,
+                              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,
+                              std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,
+                              decltype(hyper_edge)&, dof_value_t)>::value)
+              local_solver_.trace_to_flux(dofs_old, dofs_dir, dofs_new, hyper_edge, time);
+            else
+              hy_assert(false, "Function seems not to be implemented!");
+
+            for (unsigned int node_i = 0; node_i < hyNodes.size(); ++node_i)
+              for (unsigned int dof_i = 0; dof_i < n_dofs_per_node; ++dof_i)
+              {
+                *(row_it++) = dof_indices[node_i][dof_i];
+                *(col_it++) = dof_indices[node_j][dof_j];
+                *(value_it++) = dofs_new[node_i][dof_i];
+              }
+          }
+      });
+
     return result_mat;
   }
   /*!***********************************************************************************************
