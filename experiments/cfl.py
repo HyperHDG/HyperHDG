@@ -17,6 +17,7 @@ parser.add_argument("-i", "--input", help="input domain file", required=True)
 parser.add_argument("-o", "--output", help="output file", default="histogram.png")
 parser.add_argument("-b", "--bins", help="number of histogram bins", type=int, default=100)
 parser.add_argument("--cdf", help="make timestep histogram cdf", action="store_true")
+parser.add_argument("--noshow", action="store_true")
 parser.add_argument("--title", default="")
 parser.add_argument("--csv", action="store_true", help="emit histogram as CSV on stdout (pipe into plot.py) instead of plotting")
 args = parser.parse_args()
@@ -31,7 +32,7 @@ endpoints = points[edges]
 
 he = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
 virtual = props[:, 0] == 0.
-print("fraction massless edges: ", sum(virtual)/len(he))
+print("# fraction massless edges: ", sum(virtual)/len(he))
 
 bins = np.logspace(np.log10(he.min()), np.log10(he.max()), args.bins)
 nv, v = he[~virtual], he[virtual]
@@ -46,7 +47,7 @@ plt.title("cumulative density of edge lengths")
 plt.xlabel("$h_e$")
 plt.ylabel("density")
 plt.legend()
-plt.show()
+if not args.noshow: plt.show()
 
 # 2d spatial distribution of areal mass density: each edge's mass sits at its
 # midpoint, summed per xy-bin and divided by the bin area -> mass per area
@@ -63,7 +64,7 @@ plt.gca().set_aspect("equal")
 plt.title(f"areal mass density, mean = {areal_density.mean()*1e15:.2f} gsm")
 plt.xlabel(f"x {unit_length}")
 plt.ylabel(f"y {unit_length}")
-plt.show()
+if not args.noshow: plt.show()
 
 props = props[~virtual, :]
 he = he[~virtual]
@@ -90,14 +91,17 @@ plt.title("density of wavespeed $c_e$ across varying edges $e$")
 plt.ylabel("density")
 plt.xlabel("$c_e$")
 plt.yscale("log")
-plt.show()
+if not args.noshow: plt.show()
 
 bins = np.logspace(np.log10(ts.min()), np.log10(ts.max()), args.bins)
 
 if args.csv:
-    counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts), cumulative=args.cdf)
+    counts, edges = np.histogram(ts, bins=bins, weights=np.ones(len(ts))/len(ts))
+    if args.cdf:
+        counts = np.cumsum(counts)  # np.histogram has no cumulative flag; prefix-sum the counts
     centers = np.sqrt(edges[:-1] * edges[1:])  # geometric centers of log bins
     mode = centers[np.argmax(counts)]
+    col = "cdf" if args.cdf else "density"
     sys.stdout.write(f"# min={ts.min():.6g} median={np.median(ts):.6g} mode={mode:.6g} max={ts.max():.6g}\n")
     pandas.DataFrame({"ts": centers, col: counts}).to_csv(sys.stdout, index=False)
     sys.exit(0)
@@ -122,4 +126,4 @@ plt.xlabel("timestep ts")
 plt.ylabel(("cumulative " if args.cdf else "") + "density")
 if args.title: plt.title(args.title)
 if args.output: plt.savefig(args.output)
-plt.show()
+if not args.noshow: plt.show()
