@@ -81,7 +81,7 @@ density = mass/(w1*w2*he)
 Cq = props[:, 1:7]
 Cz = np.stack((mass/he, mass/he, mass/he,
                 density * (moment1+moment2), density*moment1, density*moment2), axis=1)
-ce = np.max(np.sqrt(Cq), axis=1)
+ce = np.max(np.sqrt(Cq/Cz), axis=1)
 ts = he / ce
 
 bins = np.logspace(np.log10(ce.min()), np.log10(ce.max()), args.bins)
