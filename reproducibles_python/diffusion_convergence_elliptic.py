@@ -46,7 +46,7 @@ def diffusion_test(poly_degree, dimension, iteration, debug_mode=False):
   col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
   A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
-  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, tol=1e-13)
+  [vectorSolution, num_iter] = sp_lin_alg.cg(A, vectorRHS, rtol=1e-13)
   if num_iter != 0:
     print("CG solver failed with a total number of ", num_iter, "iterations.")
     [vectorSolution, num_iter] = sp_lin_alg.gmres(A, vectorRHS, tol=1e-13)

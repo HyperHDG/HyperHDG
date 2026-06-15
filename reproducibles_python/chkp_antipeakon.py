@@ -27,9 +27,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
   os.system("mkdir -p output")
   
   h = 1. / iteration
-  start_time  = 2.0001
-  goal_time   = 3.0001
-  time_steps  = 100
+  start_time  = 0.00000
+  goal_time   = 0.00001
+  time_steps  = 1
 
   delta_time  = (goal_time - start_time) / time_steps
   
@@ -165,6 +165,8 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
       except (ValueError, RuntimeWarning, np.linalg.LinAlgError) as e:
         print("Try fallback Newton instead: ", e)
         vectorSolution = np.copy(vs)
+        A, M, keep_cols, keep_rows, vectorSolution = fallback_newton(vectorSolution, time)
+        '''
         try:
           A, M, keep_cols, keep_rows, vectorSolution = fallback_newton(vectorSolution, time)
         except ValueError as e:
@@ -180,20 +182,21 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
           assert len(keep_cols) == len(keep_rows), "Error in removing zero rows and columns!"
           sA_iLU = sp.linalg.spilu(A)
           M = sp.linalg.LinearOperator((len(keep_rows),len(keep_rows)), sA_iLU.solve)
+          '''
 
 
 
       
       
       
-    if ((time_step - 1) % 20 == 0):
+    if ((time_step - 1) % 200 == 0):
       A, M, keep_cols, keep_rows, vectorSolution = fallback_newton_step(vectorSolution, time)
 
     time = round(time, 8)
     
     res = np.linalg.norm(HDG_wrapper.residual_flux(vectorSolution, time))
-    if (time_step+1) % 10 == 0:
-      HDG_wrapper.plot_option( "fileName" , "antipeakon_pc" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
+    if (time_step+1) % 1 == 0:
+      HDG_wrapper.plot_option( "fileName" , "antipeakon_v" + str(poly_degree) + "-" + str(iteration) + "-" + str(time) )
       HDG_wrapper.plot_option( "printFileNumber" , "false" )
       HDG_wrapper.plot_option( "scale" , "1.0" )
       HDG_wrapper.plot_solution(vectorSolution, time)
@@ -203,7 +206,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     errors = HDG_wrapper.errors(vectorSolution, time)
     u_error = errors[0]
     q_error = errors[1]
-    if ((time_step+1) % 1 == 0 and abs(time - 2.5) < 0.5) or (time_step + 1) % 1 == 0 or time_step == 0:
+    if ((time_step+1) % 100 == 0 and abs(time - 2.5) < 0.5) or (time_step + 1) % 100 == 0 or time_step == 0:
       print(datetime.now(), f'Time: {time:.6f}    Errors: {u_error:.2e} in u, {q_error:.2e} in q    Residual: {res}')
       sys.stdout.flush()
     
@@ -215,9 +218,9 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 # Function main.
 # --------------------------------------------------------------------------------------------------
 def main(debug_mode):
-  for poly_degree in [1]:
+  for poly_degree in [2]:
     print("\nPolynomial degree is set to be ", poly_degree, "\n")
-    for iteration in [48]:
+    for iteration in [32]:
       print("\n\n Grid size is set to be ", iteration)
       try:
         diffusion_test(poly_degree, iteration, debug_mode)
