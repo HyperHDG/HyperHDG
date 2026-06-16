@@ -329,6 +329,53 @@ class Network:
       tprint("verify_nonzero: FAILED — see above")
 
 
+  def prop_cutoff(self, percent):
+    """Floor each stiffness component (edgeProps cols 1..6) at its `percent`-th percentile,
+    shrinking the coefficient contrast (max/min) while raising at most ~`percent`% of fibers per
+    component. For each component prints a per-decade log histogram, a few reference percentile
+    thresholds for context, and the applied floor. Mutates edgeProps in place.
+    """
+    if self.edgeProps is None:
+      tprint("prop_cutoff: no edgeProps loaded, skipping")
+      return
+
+    labels = ["mass", "EA", "kG_1A", "kG_2A", "G_xI_x", "E_1I_1", "E_2I_2"]
+    props = self.edgeProps
+    n = props.shape[0]
+    if n == 0:
+      tprint("prop_cutoff: 0 fibers, skipping")
+      return
+    ref = [0.5, 1, 2, 5]
+    tprint(f"prop_cutoff: flooring cols 1..6 at the {percent:g}-th percentile, {n} fibers")
+
+    for c in range(1, 7):
+      col = props[:, c]
+      cmin, cmax = col.min(), col.max()
+      contrast = cmax / cmin if cmin > 0 else np.inf
+      tprint(f"  col {c} ({labels[c]}): min={cmin:.3e} max={cmax:.3e} "
+             f"contrast={contrast:.3e} nonpos={(col <= 0).sum()}")
+
+      pos = col[col > 0]
+      if pos.size:
+        lo_e = int(np.floor(np.log10(pos.min())))
+        hi_e = int(np.ceil(np.log10(pos.max())))
+        edges = 10.0 ** np.arange(lo_e, hi_e + 1)
+        hist, _ = np.histogram(pos, bins=edges)
+        bars = " ".join(f"1e{lo_e+i:+03d}:{hist[i]}" for i in range(len(hist)))
+        tprint(f"    log-hist (#fibers per decade): {bars}")
+
+      refs = " ".join(f"p{p:g}={np.percentile(col, p):.3e}" for p in ref)
+      tprint(f"    ref thresholds: {refs}")
+
+      # apply the floor at the requested percentile
+      t = np.percentile(col, percent)
+      n_below = int((col < t).sum())
+      props[:, c] = np.clip(col, t, None)
+      contrast_after = cmax / t if t > 0 else np.inf
+      tprint(f"    floored at p{percent:g}={t:.3e}: raised {n_below} fibers "
+             f"({100*n_below/n:.3g}%), contrast {contrast:.3e} -> {contrast_after:.3e}")
+
+
   def node_edge_dedupe(self, merge_tol):
     nodes = self.nodes
     edges = self.edges
@@ -614,6 +661,12 @@ if __name__ == "__main__":
                     help="rescale network material properties, format '1,2,3,...'")
   parser.add_argument("--quirk", default=None, choices=Network.QUIRKS,
                     help="apply quirk")
+  parser.add_argument("--prop-cutoff", type=float, metavar="PCT", default=None,
+                    help="floor each stiffness component (edgeProps cols 1..6) at its PCT-th "
+                         "percentile to shrink coefficient contrast, raising at most ~PCT%% of "
+                         "fibers per component. Prints a per-decade log histogram, reference "
+                         "thresholds, and the applied floor, then writes the clipped network. "
+                         "Applied to the final (post-clamp) fibers.")
   args = parser.parse_args()
 
   if args.rescale_props is not None:
@@ -655,6 +708,8 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
+  if args.prop_cutoff is not None:
+    network.prop_cutoff(args.prop_cutoff)
   if args.rescale_bbox:
     network.rescale_bbox()
   network.compute_types(args.dirichlet_tol)
