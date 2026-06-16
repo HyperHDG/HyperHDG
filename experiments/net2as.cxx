@@ -106,6 +106,8 @@ struct PC_Net2AS {
   // rr - naive round robin load balancing
   // gr - simplest greedy load balancing
   char load_type[10];
+  // apply no coarse correction
+  PetscBool nocoarse;
 
   // network information
 
@@ -205,6 +207,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsInt("-net2as_pux_dim", "number of dimension to extend the pu by", NULL, data->pux_dim, &data->pux_dim, &set));
   PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
+  PetscCall(PetscOptionsBool("-net2as_nocoarse", "apply no coarse correction", NULL, data->nocoarse, &data->nocoarse, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -944,9 +947,16 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PetscCall(VecScatterBegin(data->rank_sc, x, data->rank_sol, INSERT_VALUES, SCATTER_FORWARD));
 
   // coarse
-  PetscCall(MatMultTranspose(data->cb, x, data->csol));
-  PetscCall(KSPSolve(data->cksp, data->csol, data->csol));
-  PetscCall(MatMult(data->cb, data->csol, y));
+  if (!data->nocoarse) {
+    PetscCall(MatMultTranspose(data->cb, x, data->csol));
+    PetscCall(KSPSolve(data->cksp, data->csol, data->csol));
+    PetscCall(MatMult(data->cb, data->csol, y));
+  } else {
+    // y is only otherwise initialized by the coarse MatMult above; the local correction is added
+    // into it via the reverse scatter below. With no coarse correction we must zero it ourselves,
+    // since PETSc does not zero the PCApply output vector on entry.
+    PetscCall(VecZeroEntries(y));
+  }
 
   PetscCall(VecScatterEnd(data->rank_sc, x, data->rank_sol, INSERT_VALUES, SCATTER_FORWARD));
 
