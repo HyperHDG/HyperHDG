@@ -49,13 +49,12 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 python experiments/make_geo2.py -i $INPUT --clamp $CUT -o $DOMAIN \
        --dirichlet xmin=63 xmax=63 ymin=63 ymax=63 center=68 -t $BUMP
 #experiments/netvis.py $DOMAIN --beams 1 --color-by types_points --color-categories 63,68
-mpirun -n 8 $BUILD/network -domain $DOMAIN -test gaussian -strain $BUMP -std_x $BUMP $DIRECT -plot $STATIC -trace hdf5:$TRACE
-experiments/netvis.py $STATIC --beams 1 --color-by values:8 --view iso
-#mpirun -n 8 $BUILD/timowave -domain $DOMAIN -test stiffness -strain 0 \
-#       -static $TRACE -T 2e-6 -nt 60 $NET \
-#                -plot $WAVE -deg 6 -log_view :$PERF:ascii_flamegraph -tau 1e0 \
-#                -print_timestep | tee $LOG
+mpirun -n 8 $BUILD/network -domain $DOMAIN -test gaussian -strain $BUMP -std_x $BUMP $DIRECT -plot $STATIC -trace_view hdf5:$TRACE
+#experiments/netvis.py $STATIC --beams 1 --color-by values:8 --view iso
+mpirun -n 8 $BUILD/timowave -domain $DOMAIN -test gaussian -strain $BUMP -std_x $BUMP \
+       -static $TRACE -T 1.2e-6 -nt 60 $DIRECT \
+                -plot $WAVE -deg 6 -log_view :$PERF:ascii_flamegraph -tau 1e0 \
+                -print_timestep | tee $LOG
 #experiments/nethist.py $WAVE
-#experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI --color-by values:8
-#ffmpeg -i $AVI -c:v libx264 -c:a aac $VID
-#experiments/nethist.py $WAVE --bins 100
+experiments/netvis.py $WAVE --view iso --beams 1 -o $AVI --color-by values:8
+ffmpeg -i $AVI -c:v libx264 -c:a aac $VID
