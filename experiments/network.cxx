@@ -14,33 +14,29 @@
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
-template <unsigned int dim, typename Scalar = double>
-using TB_Params = TimoshenkoStiffness<dim, Scalar>;
-template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
-template<unsigned int poly_deg>
-using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
-
-template<unsigned int poly_deg, template<unsigned int> typename LSol>
-using HDGNetwork = GlobalLoop::Elliptic<
+template<unsigned int deg, template<unsigned int, typename> typename Params>
+using HDGElliptic = GlobalLoop::Elliptic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
-  LSol<poly_deg>
+  LocalSolver::TimoshenkoBeam<1,3,deg,2*deg, Params>
 >;
 
 // hdg must be deallocated with `delete`
-PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal tau, HDGBase **hdg) {
+PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal tau, HDGBase **hdg) {
   PetscFunctionBeginUser;
 
-  if (0 == strcmp(lsol, "timo")) {
-    PetscCall(TB_Params<3>::Init(domain));
-    *hdg = new HDGWrapper(HDGNetwork<3,TB_LSol>(domain, tau)); return 0;
-  } else if (0 == strcmp(lsol, "diff")) {
-    *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
-  } else {
+  if (0 == strcmp(test, "stiffness")) {
+    PetscCall(TimoshenkoStiffness<>::Init(domain));
+    *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoStiffness>(domain, tau)); return 0;
+  }
+  else if (0 == strcmp(test, "gaussian")) {
+    PetscCall(TimoshenkoGaussian<>::Init(domain));
+    *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoGaussian>(domain, tau)); return 0;
+  }
+  else {
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG,
-      "unsupported lsol = %s", lsol);
+      "unsupported test = '%s'", test);
   }
 
   return 0;
@@ -111,7 +107,7 @@ int main(int argc, char **argv) {
     PetscBool mat_only = PETSC_FALSE;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     std::span<PetscReal> span;
-    char lsol[10] = "timo";
+    char test[10] = "stiffness";
     HDGBase* hdg = NULL;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
     const char *pc_type;
@@ -122,7 +118,7 @@ int main(int argc, char **argv) {
     PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
     PetscCallMPI(MPI_Get_processor_name(proc_name, &proc_name_len));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
-    PetscCall(PetscOptionsString("-lsol", "local solver type: (timo|diff)", NULL, lsol, lsol, sizeof(lsol), &is_set));
+    PetscCall(PetscOptionsString("-test", "test: (stiffness|gaussian)", NULL, test, test, sizeof(test), &is_set));
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot_path, plot_path, PATH_MAX, &is_set));
@@ -166,7 +162,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("t2f", &s_t2f));
     PetscCall(PetscLogStageRegister("prealloc", &s_pa));
 
-    PetscCall(PetscHDGCreate(lsol, domain_filepath, tau, &hdg));
+    PetscCall(PetscHDGCreate(test, domain_filepath, tau, &hdg));
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 

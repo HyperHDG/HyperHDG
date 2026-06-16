@@ -1136,7 +1136,7 @@ struct TestTimoWave8
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  * \authors   Joseph Holten, KIT, 2026--
  **************************************************************************************************/
-template <unsigned int dim, typename Scalar = double>
+template <unsigned int dim = 3, typename Scalar = double>
 struct TimoshenkoStiffness
 {
   using Pt = Point<dim, Scalar>;
@@ -1191,6 +1191,101 @@ struct TimoshenkoStiffness
   static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return strain * point[0] * (point[0] > .5 * length) * normal[comp];
+  }
+
+  // stub
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network gaussian stiffness experiment.
+ *
+ *            Applies a prescribed gaussian strain to the Dirichlet boundary
+ *            of a clamped beam network.
+ *
+ *            Both `length` and `strain` are runtime-configurable static members
+ *            and must be set after loading the mesh, before the solve.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoGaussian
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
+  static inline Scalar length = 0;
+
+  /// Applied tensile strain (dimensionless)
+  static inline Scalar strain = .15;
+
+  /// Spatial variance (sigma^2) of the Gaussian bump relative to length
+  static inline Scalar std_x = 1;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_x", &std_x, NULL));
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    Pt center(length*.5);
+    Pt r = point - center;
+    r[2] = 0;
+    Scalar r2 = scalar_product(r,r);
+    Scalar s = std_x * length;
+    return strain * length * exp(-r2/(2*s*s)) * normal[2];
   }
 
   // stub
