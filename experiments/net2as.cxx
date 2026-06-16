@@ -886,6 +886,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_type: %s\n", data->cb_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_type: %s\n", data->load_type));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  nocoarse: %s\n", data->nocoarse ? "true" : "false"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
