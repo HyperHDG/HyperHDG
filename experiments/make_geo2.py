@@ -410,12 +410,19 @@ class Network:
     maxs = nodes.max(axis=0)
     dims = maxs - mins
 
+    # small circle of nodes around the (xy) domain center
+    center = (mins[:2] + maxs[:2]) / 2
+    radius = args.center_radius * max(dims[0], dims[1])
+    dist = np.linalg.norm(nodes[:, :2] - center, axis=1)
+
     sides = {
       "xmin": nodes[:,0] - mins[0] <= tol * dims[0],
       "xmax": maxs[0] - nodes[:,0] <= tol * dims[0],
       "ymin": nodes[:,1] - mins[1] <= tol * dims[1],
-      "ymax": maxs[1] - nodes[:,1] <= tol * dims[1]
+      "ymax": maxs[1] - nodes[:,1] <= tol * dims[1],
+      "center": dist <= radius,
     }
+    tprint(f"center circle: c={center}, r={radius:.3e}, {sides['center'].sum()} nodes")
 
     dir_side = np.array([sides[x.split('=')[0]]  for x in args.dirichlet])
     dir_desc = np.array([int(x.split('=')[1], 0) for x in args.dirichlet], dtype=np.int32)
@@ -588,6 +595,7 @@ if __name__ == "__main__":
   parser.add_argument("-i", "--input", help="input", default=".")
   parser.add_argument("-o", "--output", help="output", default="graph")
   parser.add_argument("-t", "--dirichlet-tol", help="tolerance to the edge", type=float, default=2e-2)
+  parser.add_argument("--center-radius", help="radius of the 'center' dirichlet circle, relative to max xy extent", type=float, default=5e-2)
   parser.add_argument("--merge-tol", help="merge nodes tolerance", type=float, default=1e-6)
   parser.add_argument("--dirichlet", help="borders to clamp as dirichlet",
                       nargs="+", default=["xmin=0b111111","xmax=0b111111"])
