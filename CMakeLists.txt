@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+option(HYPERHDG_PETSC "build with PETSc" OFF)
+option(HYPERHDG_MPI "build with MPI" OFF)
+
 # the compilers must be set before project() is called
 if (HYPERHDG_PETSC)
   set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
@@ -13,9 +16,6 @@ if (HYPERHDG_PETSC)
 endif()
 
 project(HyperHDG LANGUAGES CXX)
-
-option(HYPERHDG_PETSC "build with PETSc" OFF)
-option(HYPERHDG_MPI "build with MPI" OFF)
 
 # Include the submodule projects
 add_subdirectory(submodules)
