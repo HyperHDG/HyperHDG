@@ -4,6 +4,9 @@ name: macOS
 
 on: [push]
 
+env:
+  PYTHON: cython numpy scipy matplotlib pandas joblib
+
 
 jobs:
   # ============ Test code on the latest macOS using Apple Clang and the Accelerate ============
@@ -28,7 +31,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python3 -m pip install --upgrade pip
-        python3 -m pip install cython numpy scipy
+        python3 -m pip install ${{ env.PYTHON }}
     - name: Configure
       run: >
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
