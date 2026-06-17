@@ -1,14 +1,14 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
-#include <HyperHDG/compile_time_tricks.hxx>
 
 #include <algorithm>
-#include <tuple>
 #include <iostream>
+#include <tuple>
 
 namespace LocalSolver
 {
@@ -302,7 +302,8 @@ class DiffusionWave2
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
    ************************************************************************************************/
-  struct ufb_type {
+  struct ufb_type
+  {
     SmallVec<n_shape_fct_, lSol_float_t> u, flux;
     SmallMat<n_shape_bdr_, 2 * hyEdge_dimT, lSol_float_t> boundary_flux;
   };
@@ -400,9 +401,9 @@ class DiffusionWave2
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     //// DOESN'T WORK FOR PLOT
-    //for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
-    //  if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-    //    lambda_values_in[i].fill(0.);
+    // for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+    //   if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+    //     lambda_values_in[i].fill(0.);
 
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
       solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
@@ -462,7 +463,6 @@ class DiffusionWave2
     std::array<lSol_float_t, n_loc_dofs_> coeffs =
       solve_local_problem(lambda_values_in, 1U, hyper_edge, time);
 
-
     // std::cout << "residual_flux time=" << time << std::endl;
     // std::cout << "res_flux coeffs=" << SmallVec<n_loc_dofs_, lSol_float_t>(coeffs) << std::endl;
     // std::cout << "res_flux lambda values in =" << std::endl;
@@ -471,7 +471,6 @@ class DiffusionWave2
     //     std::cout << lambda_values_in[i][j] << " ";
     //   std::cout << std::endl;
     // }
-
 
     std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
@@ -549,29 +548,31 @@ class DiffusionWave2
           hyper_edge.data[0].flux[i] += q_components[dim][j] * grad_int_vec[dim];
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         {
-            helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
-              i, j, face, hyper_edge.geometry);
-            for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-              hyper_edge.data[0].flux[i] -= q_components[dim][j] *
-                hyper_edge.geometry.local_normal(face).operator[](dim) *
-                helper;
-            hyper_edge.data[0].flux[i] -= tau_ * hyper_edge.data[0].u[j] * helper;
+          helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+            i, j, face, hyper_edge.geometry);
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+            hyper_edge.data[0].flux[i] -= q_components[dim][j] *
+                                          hyper_edge.geometry.local_normal(face).operator[](dim) *
+                                          helper;
+          hyper_edge.data[0].flux[i] -= tau_ * hyper_edge.data[0].u[j] * helper;
         }
       }
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
         for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face])) {
+          if (!is_dirichlet<parameters>(hyper_edge.node_descriptor[face]))
+          {
             hyper_edge.data[0].flux[i] +=
-                tau_ * lambda_values[face][j] *
-                integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+              tau_ * lambda_values[face][j] *
+              integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
                 i, j, face, hyper_edge.geometry);
-          } else {
-            hyper_edge.data[0].flux[i] += tau_ *
-              integrator::template integrate_bdr_phifunc<
-                Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-                decltype(hyEdgeT::geometry), parameters::dirichlet_value,
-                Point<hyEdge_dimT, lSol_float_t>
-              >(i, face, hyper_edge.geometry, time);
+          }
+          else
+          {
+            hyper_edge.data[0].flux[i] +=
+              tau_ * integrator::template integrate_bdr_phifunc<
+                       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                       decltype(hyEdgeT::geometry), parameters::dirichlet_value,
+                       Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, time);
           }
     }
 
@@ -596,7 +597,6 @@ class DiffusionWave2
     // std::cout << "u[1] = " << hyper_edge.data[1].u << std::endl;
     // std::cout << "flux[0] = " << hyper_edge.data[0].flux << std::endl;
     // std::cout << "flux[1] = " << hyper_edge.data[1].flux << std::endl;
-
   }
   /*!***********************************************************************************************
    * \brief   L2 project initial data to skeletal and fill data container.
@@ -615,132 +615,128 @@ class DiffusionWave2
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
 
+    auto fill_data = [&](ufb_type& ufb, lSol_float_t t)
+    {
+      // Set skeltal variable!
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      {
+        if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            lambda_values[i][j] = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
+              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+              decltype(hyEdgeT::geometry), parameters::initial>(j, i, hyper_edge.geometry, t);
+      }
 
-    auto fill_data = [&](ufb_type& ufb, lSol_float_t t) {
-    // Set skeltal variable!
+      // Define primary as L^2 projection!
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        ufb.u[i] = integrator::template integrate_volUni_phifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::initial>(i, hyper_edge.geometry, t);
+
+      std::array<SmallVec<n_shape_fct_, lSol_float_t>, hyEdge_dimT> q_components;
+      for (size_t i = 0; i < hyEdge_dimT; i++)
+        q_components[i] = SmallVec<n_shape_fct_, lSol_float_t>(0.);
+
+      // Define dual as H^{1/2} projection!
+      SmallSquareMat<n_shape_fct_, lSol_float_t> mass_flux;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        for (unsigned int j = 0; j < n_shape_fct_; ++j)
+          mass_flux(i, j) = integrator::template integrate_vol_phiphifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff>(
+            i, j, hyper_edge.geometry, t);
+      const SmallSquareMat<n_shape_fct_, lSol_float_t>& mass_mat = mass_flux;
+
+      SmallVec<n_shape_fct_, lSol_float_t> local_rhs;
+
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+      {
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        {
+          local_rhs[i] = integrator::template integrate_vol_derphifunc<
+            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+            decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
+            i, dim, hyper_edge.geometry, t);
+          for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+            local_rhs[i] -= integrator::template integrate_bdr_phifunc<
+                              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+                              decltype(hyEdgeT::geometry), parameters::initial,
+                              Point<hyEdge_dimT, lSol_float_t> >(i, face, hyper_edge.geometry, t) *
+                            hyper_edge.geometry.local_normal(face).operator[](dim);
+        }
+        q_components[dim] = local_rhs / mass_mat;
+      }
+
+      // Fill flux_old!
+      lSol_float_t helper;
+      SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      {
+        ufb.flux[i] = integrator::template integrate_vol_phifunc<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::right_hand_side,
+          Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, t);
+        for (unsigned int j = 0; j < n_shape_fct_; ++j)
+        {
+          grad_int_vec =
+            integrator::template integrate_vol_nablaphiphi<Point<hyEdge_dimT, lSol_float_t>,
+                                                           decltype(hyEdgeT::geometry)>(
+              i, j, hyper_edge.geometry);
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+            ufb.flux[i] += q_components[dim][j] * grad_int_vec[dim];
+          for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+          {
+            helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+            for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+              ufb.flux[i] -= q_components[dim][j] *
+                             hyper_edge.geometry.local_normal(face).operator[](dim) * helper;
+            ufb.flux[i] -= tau_ * ufb.u[j] * helper;
+          }
+        }
+        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+          for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+            ufb.flux[i] += tau_ * lambda_values[face][j] *
+                           integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                             i, j, face, hyper_edge.geometry);
+      }
+
+      std::array<lSol_float_t, n_loc_dofs_> coeffs;
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          coeffs[dim * n_shape_fct_ + i] = q_components[dim][i];
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        coeffs[hyEdge_dimT * n_shape_fct_ + i] = ufb.u[i];
+      std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
+        primal_at_boundary(coeffs, hyper_edge)),
+        duals(dual_at_boundary(coeffs, hyper_edge));
+
+      for (unsigned int i = 0; i < lambda_values.size(); ++i)
+      {
+        if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            ufb.boundary_flux(j, i) = 0.;
+        else
+          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
+            ufb.boundary_flux(j, i) = duals[i][j] + tau_ * primals[i][j] -
+                                      tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
+      }
+    };
+
+    fill_data(hyper_edge.data[0], time);
+    fill_data(
+      hyper_edge.data[1],
+      time - delta_t_);  // HACK: data[1].u could be filled by using initial dt, but how could q?
+
     for (unsigned int i = 0; i < lambda_values.size(); ++i)
     {
       if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] = 0.;
       else
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
-            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-            decltype(hyEdgeT::geometry), parameters::initial>(j, i, hyper_edge.geometry, t);
-    }
-
-    // Define primary as L^2 projection!
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      ufb.u[i] = integrator::template integrate_volUni_phifunc<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::initial>(i, hyper_edge.geometry, t);
-
-    std::array<SmallVec<n_shape_fct_, lSol_float_t>, hyEdge_dimT> q_components;
-    for (size_t i = 0; i < hyEdge_dimT; i++)
-      q_components[i] = SmallVec<n_shape_fct_, lSol_float_t>(0.);
-
-    // Define dual as H^{1/2} projection!
-    SmallSquareMat<n_shape_fct_, lSol_float_t> mass_flux;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      for (unsigned int j = 0; j < n_shape_fct_; ++j)
-        mass_flux(i, j) = integrator::template integrate_vol_phiphifunc<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::inverse_diffusion_coeff>(
-          i, j, hyper_edge.geometry, t);
-    const SmallSquareMat<n_shape_fct_, lSol_float_t>& mass_mat = mass_flux;
-
-    SmallVec<n_shape_fct_, lSol_float_t> local_rhs;
-
-    for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-    {
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      {
-        local_rhs[i] = integrator::template integrate_vol_derphifunc<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
-          i, dim, hyper_edge.geometry, t);
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          local_rhs[i] -=
-            integrator::template integrate_bdr_phifunc<
-              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-              decltype(hyEdgeT::geometry), parameters::initial, Point<hyEdge_dimT, lSol_float_t> >(
-              i, face, hyper_edge.geometry, t) *
-            hyper_edge.geometry.local_normal(face).operator[](dim);
-      }
-      q_components[dim] = local_rhs / mass_mat;
-    }
-
-
-    // Fill flux_old!
-    lSol_float_t helper;
-    SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)
-    {
-      ufb.flux[i] = integrator::template integrate_vol_phifunc<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
-                                                                        t);
-      for (unsigned int j = 0; j < n_shape_fct_; ++j)
-      {
-        grad_int_vec =
-          integrator::template integrate_vol_nablaphiphi<Point<hyEdge_dimT, lSol_float_t>,
-                                                         decltype(hyEdgeT::geometry)>(
-            i, j, hyper_edge.geometry);
-        for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          ufb.flux[i] += q_components[dim][j] * grad_int_vec[dim];
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        {
-          helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
-            i, j, face, hyper_edge.geometry);
-          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-            ufb.flux[i] -= q_components[dim][j] *
-                                           hyper_edge.geometry.local_normal(face).operator[](dim) *
-                                           helper;
-          ufb.flux[i] -= tau_ * ufb.u[j] * helper;
-        }
-      }
-      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-          ufb.flux[i] +=
-            tau_ * lambda_values[face][j] *
-            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-              i, j, face, hyper_edge.geometry);
-    }
-
-    std::array<lSol_float_t, n_loc_dofs_> coeffs;
-    for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-      for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        coeffs[dim * n_shape_fct_ + i] = q_components[dim][i];
-    for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      coeffs[hyEdge_dimT * n_shape_fct_ + i] = ufb.u[i];
-    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> primals(
-      primal_at_boundary(coeffs, hyper_edge)),
-      duals(dual_at_boundary(coeffs, hyper_edge));
-
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-    {
-      if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          ufb.boundary_flux(j, i) = 0.;
-      else
-        for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-          ufb.boundary_flux(j, i) =
-            duals[i][j] + tau_ * primals[i][j] -
-            tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
-    }
-
-    };
-
-    fill_data(hyper_edge.data[0], time);
-    fill_data(hyper_edge.data[1], time-delta_t_); // HACK: data[1].u could be filled by using initial dt, but how could q?
-
-    for (unsigned int i = 0; i < lambda_values.size(); ++i)
-    {
-        if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
-          for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
-            lambda_values[i][j] = 0.;
-        else
         for (unsigned int j = 0; j < lambda_values[i].size(); ++j)
           lambda_values[i][j] = integrator::template integrate_bdrUni_psifunc<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
@@ -797,19 +793,16 @@ class DiffusionWave2
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  std::array<lSol_float_t, 1U> norms(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>,
-    2 * hyEdge_dimT>& UNUSED(lambda_values),
-    hyEdgeT& hy_edge,
-    const lSol_float_t time = 0.
-  ) const {
-    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
-      decltype(hyEdgeT::geometry), n_shape_fct_, lSol_float_t>(
-        hy_edge.data[0].u.data(), hy_edge.data[0].u.data(), hy_edge.geometry
-    )});
+  std::array<lSol_float_t, 1U> norms(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                      2 * hyEdge_dimT>& UNUSED(lambda_values),
+                                     hyEdgeT& hy_edge,
+                                     const lSol_float_t time = 0.) const
+  {
+    return std::array<lSol_float_t, 1U>(
+      {integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry), n_shape_fct_,
+                                                 lSol_float_t>(
+        hy_edge.data[0].u.data(), hy_edge.data[0].u.data(), hy_edge.geometry)});
   }
-
-
 
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -855,8 +848,7 @@ class DiffusionWave2
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -903,7 +895,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
 
       // u v over boundary
       local_mat(hyEdge_dimT * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) +=
-        tau * theta_ * delta_t_*delta_t_ * face_integral;
+        tau * theta_ * delta_t_ * delta_t_ * face_integral;
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
       {
         // q cdot p
@@ -912,10 +904,10 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
         local_mat(dim * n_shape_fct_ + i, hyEdge_dimT * n_shape_fct_ + j) -= grad_int_vec[dim];
         // q nabla v
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) -=
-          theta_ * delta_t_*delta_t_ * grad_int_vec[dim];
+          theta_ * delta_t_ * delta_t_ * grad_int_vec[dim];
         // q normal
         local_mat(hyEdge_dimT * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
-          theta_ * delta_t_*delta_t_ * normal_int_vec[dim];
+          theta_ * delta_t_ * delta_t_ * normal_int_vec[dim];
       }
 
       // u v over volume
@@ -937,8 +929,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
@@ -963,7 +954,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-          tau_ * theta_ * delta_t_*delta_t_ * lambda_values[face][j] * integral;
+          tau_ * theta_ * delta_t_ * delta_t_ * lambda_values[face][j] * integral;
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
@@ -980,8 +971,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -998,7 +988,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] =
-      theta_ * delta_t_*delta_t_ *
+      theta_ * delta_t_ * delta_t_ *
       integrator::template integrate_vol_phifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry,
@@ -1014,7 +1004,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
                                                                         hyper_edge.geometry, time);
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        tau_ * theta_ * delta_t_*delta_t_ * integral;
+        tau_ * theta_ * delta_t_ * delta_t_ * integral;
 
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
@@ -1024,10 +1014,10 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-      + 2 * hyper_edge.data[0].u[i] * hyper_edge.geometry.area()
-      - hyper_edge.data[1].u[i] * hyper_edge.geometry.area()
-      + delta_t_*delta_t_ * (1. - 2*theta_) * hyper_edge.data[0].flux[i] // letzte
-      + delta_t_*delta_t_ * theta_ * hyper_edge.data[1].flux[i]; // vorletztes
+      +2 * hyper_edge.data[0].u[i] * hyper_edge.geometry.area() -
+      hyper_edge.data[1].u[i] * hyper_edge.geometry.area() +
+      delta_t_ * delta_t_ * (1. - 2 * theta_) * hyper_edge.data[0].flux[i]  // letzte
+      + delta_t_ * delta_t_ * theta_ * hyper_edge.data[1].flux[i];          // vorletztes
 
   // std::cout << "global_rhs= " << right_hand_side << std::endl;
 
@@ -1041,8 +1031,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -1073,8 +1062,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -1109,8 +1097,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::prim
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -1149,8 +1136,7 @@ DiffusionWave2<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,

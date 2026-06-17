@@ -52,11 +52,11 @@ class Parabolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
-   /*!***********************************************************************************************
+  /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(norms, has_norms);
- /*!***********************************************************************************************
+  /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(set_data, has_set_data);
@@ -230,19 +230,18 @@ class Parabolic
     return vec_Ax;
   }
 
-
   template <typename hyNode_index_t = dof_index_t>
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
   {
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
- 
+
   template <typename hyNode_index_t = dof_index_t, typename SpanT>
-  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.) {
+  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.)
+  {
     hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
     prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
   }
-
 
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
@@ -478,7 +477,7 @@ class Parabolic
    * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  template<typename SpanT>
+  template <typename SpanT>
   void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

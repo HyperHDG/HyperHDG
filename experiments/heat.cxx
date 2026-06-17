@@ -1,161 +1,169 @@
-#include <stdio.h>
 #include <petsc.h>
+#include <stdio.h>
 
-#include <HyperHDG/topology/cubic.hxx>
 #include <HyperHDG/geometry/unit_cube.hxx>
-#include <HyperHDG/node_descriptor/cubic.hxx>
-#include <HyperHDG/local_solver/diffusion_parab_ldgh.hxx>
 #include <HyperHDG/global_loop/parabolic.hxx>
-#include "parameters.hxx"
+#include <HyperHDG/local_solver/diffusion_parab_ldgh.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/topology/cubic.hxx>
 #include "../reproducibles_python/parameters/diffusion.hxx"
+#include "parameters.hxx"
 #include "prin2.hxx"
 
 static const char help[] = "experiments regarding the heat equation\n";
 
-int main(int argc, char **argv) {
-    constexpr int space_dim = 1;
-    constexpr int poly_deg = 3;
-    using Top = Topology::Cubic<space_dim,space_dim>;
-    using Geo = Geometry::UnitCube<space_dim,space_dim,PetscReal>;
-    using NDes = NodeDescriptor::Cubic<space_dim,space_dim>;
-    using LSol = LocalSolver::DiffusionParab<space_dim,poly_deg,2*poly_deg,TestParametersSinParab,PetscReal>;
-    using HDG = GlobalLoop::Parabolic<Top,Geo,NDes,LSol>;
+int main(int argc, char** argv)
+{
+  constexpr int space_dim = 1;
+  constexpr int poly_deg = 3;
+  using Top = Topology::Cubic<space_dim, space_dim>;
+  using Geo = Geometry::UnitCube<space_dim, space_dim, PetscReal>;
+  using NDes = NodeDescriptor::Cubic<space_dim, space_dim>;
+  using LSol = LocalSolver::DiffusionParab<space_dim, poly_deg, 2 * poly_deg,
+                                           TestParametersSinParab, PetscReal>;
+  using HDG = GlobalLoop::Parabolic<Top, Geo, NDes, LSol>;
 
-    PetscReal tau = 1; // HDG penalty
-    PetscReal theta = .5; // one-step theta method
-    PetscInt  nx = 2;
-    PetscInt  nt = 100;
-    PetscReal T  = 1;
-    PetscReal dt, h;
-    PetscReal rtol = 1e-13;
+  PetscReal tau = 1;     // HDG penalty
+  PetscReal theta = .5;  // one-step theta method
+  PetscInt nx = 2;
+  PetscInt nt = 100;
+  PetscReal T = 1;
+  PetscReal dt, h;
+  PetscReal rtol = 1e-13;
 
-    char output_directory[PATH_MAX] = "output";
-    char output_filename[PATH_MAX] = "heat";
+  char output_directory[PATH_MAX] = "output";
+  char output_filename[PATH_MAX] = "heat";
 
-    PetscLogStage s_as, s_ts, s_rf, s_hdg;
+  PetscLogStage s_as, s_ts, s_rf, s_hdg;
 
-    PetscBool is_set, plot = true;
-    PetscInt N;
-    PetscInt iterations = 0, its = 0;
-    PetscReal avg_iterations = 0, e_abs = 0, e_rel = 0;
+  PetscBool is_set, plot = true;
+  PetscInt N;
+  PetscInt iterations = 0, its = 0;
+  PetscReal avg_iterations = 0, e_abs = 0, e_rel = 0;
 
-    std::vector<PetscReal> temp, temp2, temp3, zero_v;
-    std::vector<PetscInt> itemp;
-    sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, sol;
-    Mat mat;
-    KSP ksp;
-    PC pc;
+  std::vector<PetscReal> temp, temp2, temp3, zero_v;
+  std::vector<PetscInt> itemp;
+  sparse_mat<std::vector<PetscReal>> mat_coo;
+  Vec rhs, sol;
+  Mat mat;
+  KSP ksp;
+  PC pc;
 
-    PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "# initialization...\n"));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-nx", &nx, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-nt", &nt, &is_set));
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &T, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsGetBool(NULL, NULL, "-plot", &plot, &is_set));
-    PetscCall(PetscLogStageRegister("assembly", &s_as));
-    PetscCall(PetscLogStageRegister("timestepping", &s_ts));
-    PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
-    PetscCall(PetscLogStageRegister("hdg_init", &s_hdg));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "# initialization...\n"));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-theta", &theta, &is_set));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-nx", &nx, &is_set));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-nt", &nt, &is_set));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-T", &T, &is_set));
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-o", output_filename, PATH_MAX, &is_set));
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-od", output_directory, PATH_MAX, &is_set));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-plot", &plot, &is_set));
+  PetscCall(PetscLogStageRegister("assembly", &s_as));
+  PetscCall(PetscLogStageRegister("timestepping", &s_ts));
+  PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
+  PetscCall(PetscLogStageRegister("hdg_init", &s_hdg));
 
-    dt = T / nt;
-    h  = 1. / nx;
+  dt = T / nt;
+  h = 1. / nx;
 
-    PRIN2IY(space_dim);
-    PRIN2IY(poly_deg);
-    PRIN2FY(tau);
-    PRIN2FY(theta);
-    PRIN2IY(tau);
-    PRIN2FY(dt);
-    PRIN2FY(h);
-    PRIN2IY(nt);
-    PRIN2IY(nx);
-    PRIN2FY(T);
+  PRIN2IY(space_dim);
+  PRIN2IY(poly_deg);
+  PRIN2FY(tau);
+  PRIN2FY(theta);
+  PRIN2IY(tau);
+  PRIN2FY(dt);
+  PRIN2FY(h);
+  PRIN2IY(nt);
+  PRIN2IY(nx);
+  PRIN2FY(T);
 
-    PRIN2S(s_hdg);
-    HDG hdg(nx, {tau, theta, dt});
-    hdg.plot_option("fileName", output_filename);
-    hdg.plot_option("outputDir", output_directory);
-    hdg.plot_option("printFileNumber", "true");
-    hdg.plot_option("scale", "0.95");
+  PRIN2S(s_hdg);
+  HDG hdg(nx, {tau, theta, dt});
+  hdg.plot_option("fileName", output_filename);
+  hdg.plot_option("outputDir", output_directory);
+  hdg.plot_option("printFileNumber", "true");
+  hdg.plot_option("scale", "0.95");
 
-    zero_v = hdg.zero_vector();
-    temp = hdg.make_initial(zero_v);
-    N = temp.size();
-    if (plot) hdg.plot_solution(temp, 0.); // needs petsc
-    PRIN2SP();
+  zero_v = hdg.zero_vector();
+  temp = hdg.make_initial(zero_v);
+  N = temp.size();
+  if (plot)
+    hdg.plot_solution(temp, 0.);  // needs petsc
+  PRIN2SP();
 
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
-    PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &sol));
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
 
-    PRIN2S(s_as);
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", 1, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
-    mat_coo = hdg.trace_to_flux_mat(0.);
-    PetscCall(MatSetPreallocationCOO(mat, mat_coo.row_vec.size(), (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
-    PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
-    PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
+  PRIN2S(s_as);
+  PetscCall(
+    MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", 1, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+  mat_coo = hdg.trace_to_flux_mat(0.);
+  PetscCall(MatSetPreallocationCOO(mat, mat_coo.row_vec.size(), (PetscInt*)mat_coo.row_vec.data(),
+                                   (PetscInt*)mat_coo.col_vec.data()));
+  PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+  PetscCall(MatEliminateZeros(mat, /* keep = */ PETSC_FALSE));
 
-    PRIN2SP();
+  PRIN2SP();
 
-    PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
-    PetscCall(KSPSetOperators(ksp, mat, mat));
-    PetscCall(KSPSetType(ksp, KSPCG));
-    PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PCSetType(pc, PCNONE)); // no diagonal preconditioning
-    PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
-    PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
+  PetscCall(KSPSetOperators(ksp, mat, mat));
+  PetscCall(KSPSetType(ksp, KSPCG));
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCNONE));  // no diagonal preconditioning
+  PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+  PetscCall(KSPSetFromOptions(ksp));
 
-    Vec errors;
-    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
+  Vec errors;
+  PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt + 1, nt + 1, &errors));
 
-    PRIN2S(s_ts);
-    for (PetscInt i = 0; i < nt; i++) {
-        std::span<PetscReal> rhs_span;
-        std::span<PetscReal> sol_span;
-        PetscCall(VecGetSpan(rhs, rhs_span));
-        PetscCall(VecGetSpan(sol, sol_span));
+  PRIN2S(s_ts);
+  for (PetscInt i = 0; i < nt; i++)
+  {
+    std::span<PetscReal> rhs_span;
+    std::span<PetscReal> sol_span;
+    PetscCall(VecGetSpan(rhs, rhs_span));
+    PetscCall(VecGetSpan(sol, sol_span));
 
-        PetscLogStagePush(s_rf);
-        hdg.residual_flux2(std::span{zero_v}, rhs_span, (i+1)*dt);
-        PetscLogStagePop();
-        PetscCall(VecScale(rhs, -1.));
-        PetscCall(KSPSolve(ksp, rhs, sol));
+    PetscLogStagePush(s_rf);
+    hdg.residual_flux2(std::span{zero_v}, rhs_span, (i + 1) * dt);
+    PetscLogStagePop();
+    PetscCall(VecScale(rhs, -1.));
+    PetscCall(KSPSolve(ksp, rhs, sol));
 
-        PetscCall(KSPGetIterationNumber(ksp, &its));
-        iterations += its;
+    PetscCall(KSPGetIterationNumber(ksp, &its));
+    iterations += its;
 
-        hdg.set_data(sol_span, (i+1)*dt);
-        if (plot) hdg.plot_solution(sol_span, (i+1)*dt);
+    hdg.set_data(sol_span, (i + 1) * dt);
+    if (plot)
+      hdg.plot_solution(sol_span, (i + 1) * dt);
 
-        temp2 = hdg.errors(temp, (i+1)*dt);
-        temp3 = hdg.norms(temp, (i+1)*dt);
-        e_abs = PetscMax(temp2[0], e_abs);
-        e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
-        PetscCall(VecSetValue(errors, i, temp2[0]/temp3[0], INSERT_VALUES));
+    temp2 = hdg.errors(temp, (i + 1) * dt);
+    temp3 = hdg.norms(temp, (i + 1) * dt);
+    e_abs = PetscMax(temp2[0], e_abs);
+    e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+    PetscCall(VecSetValue(errors, i, temp2[0] / temp3[0], INSERT_VALUES));
 
-        PetscCall(VecRestoreSpan(rhs, rhs_span));
-        PetscCall(VecRestoreSpan(sol, sol_span));
-    }
-    PRIN2SP();
+    PetscCall(VecRestoreSpan(rhs, rhs_span));
+    PetscCall(VecRestoreSpan(sol, sol_span));
+  }
+  PRIN2SP();
 
-    PetscCall(VecAssemblyBegin(errors));
-    PetscCall(VecAssemblyEnd(errors));
+  PetscCall(VecAssemblyBegin(errors));
+  PetscCall(VecAssemblyEnd(errors));
 
-    avg_iterations = ((PetscReal)iterations) / nt;
+  avg_iterations = ((PetscReal)iterations) / nt;
 
-    PRIN2FY(e_abs);
-    PRIN2FY(e_rel);
-    PRIN2IY(iterations);
-    PRIN2FY(avg_iterations);
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: '%s/%s.*.vtu'\n", output_directory, output_filename));
+  PRIN2FY(e_abs);
+  PRIN2FY(e_rel);
+  PRIN2IY(iterations);
+  PRIN2FY(avg_iterations);
+  PetscCall(
+    PetscPrintf(PETSC_COMM_SELF, "output: '%s/%s.*.vtu'\n", output_directory, output_filename));
 
-    PetscCall(KSPDestroy(&ksp));
-    PetscCall(MatDestroy(&mat));
-    PetscCall(VecDestroy(&sol));
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(MatDestroy(&mat));
+  PetscCall(VecDestroy(&sol));
 
-    PetscCall(PetscFinalize());
-    return 0;
+  PetscCall(PetscFinalize());
+  return 0;
 }

@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vector>
 #include <span>
 #include <string>
+#include <vector>
 
-struct HDGBase {
+struct HDGBase
+{
   using Real = double;
   using Idx = unsigned int;
   using Vector = std::vector<Real>;
@@ -32,51 +33,29 @@ struct HDGBase {
   virtual ~HDGBase() = default;
 };
 
-template<typename HDG>
-struct HDGWrapper : HDGBase {
+template <typename HDG>
+struct HDGWrapper : HDGBase
+{
   HDG hdg;
 
   HDGWrapper(HDG&& h) : hdg(std::move(h)) {}
 
-  void plot_solution(const Span& lambda, const Real time = 0.) {
-    hdg.plot_solution(lambda, time);
-  }
-  std::string plot_option(const std::string& option, std::string value = "") {
+  void plot_solution(const Span& lambda, const Real time = 0.) { hdg.plot_solution(lambda, time); }
+  std::string plot_option(const std::string& option, std::string value = "")
+  {
     return hdg.plot_option(option, value);
   }
-  Idx size_of_system() {
-    return hdg.size_of_system();
-  }
-  Idx n_owned_dofs() {
-    return hdg.n_owned_dofs();
-  }
-  Idx n_local_dofs() {
-    return hdg.n_local_dofs();
-  }
-  std::vector<Idx> local_to_global_dofs() {
-    return hdg.local_to_global_dofs();
-  }
-  Idx n_space_dim() {
-    return HDG::space_dim();
-  }
-  std::vector<Real> owned_point_coords() {
-    return hdg.owned_point_coords();
-  }
-  std::vector<Idx> owned_edges_global() {
-    return hdg.owned_edges_global();
-  }
-  Idx n_dofs_per_node() {
-    return HDG::n_dofs_per_node;
-  }
-  Vector zero_vector() {
-    return hdg.zero_vector();
-  }
-  Vector errors(const Span& x_vec, const Real time = 0.) {
-    return hdg.errors(x_vec, time);
-  }
-  Vector norms(const Vector& x_vec, const Real time = 0.) {
-    return hdg.norms(x_vec, time);
-  }
+  Idx size_of_system() { return hdg.size_of_system(); }
+  Idx n_owned_dofs() { return hdg.n_owned_dofs(); }
+  Idx n_local_dofs() { return hdg.n_local_dofs(); }
+  std::vector<Idx> local_to_global_dofs() { return hdg.local_to_global_dofs(); }
+  Idx n_space_dim() { return HDG::space_dim(); }
+  std::vector<Real> owned_point_coords() { return hdg.owned_point_coords(); }
+  std::vector<Idx> owned_edges_global() { return hdg.owned_edges_global(); }
+  Idx n_dofs_per_node() { return HDG::n_dofs_per_node; }
+  Vector zero_vector() { return hdg.zero_vector(); }
+  Vector errors(const Span& x_vec, const Real time = 0.) { return hdg.errors(x_vec, time); }
+  Vector norms(const Vector& x_vec, const Real time = 0.) { return hdg.norms(x_vec, time); }
   Vector make_initial(const Vector& x_vec, const Real time = 0.)
   {
     return hdg.make_initial(x_vec, time);
@@ -85,17 +64,11 @@ struct HDGWrapper : HDGBase {
   {
     return hdg.make_initial_from_static(x_vec, time);
   }
-  sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
-    return hdg.trace_to_flux_mat(time);
-  }
-  void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) {
+  sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) { return hdg.trace_to_flux_mat(time); }
+  void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.)
+  {
     hdg.residual_flux2(x_vec, vec_Ax, time);
   }
-  void set_data(Span x_vec, const Real time = 0.) {
-    hdg.set_data(x_vec, time);
-  }
-  void set_refinement(unsigned int i) {
-    hdg.set_refinement(i);
-  }
+  void set_data(Span x_vec, const Real time = 0.) { hdg.set_data(x_vec, time); }
+  void set_refinement(unsigned int i) { hdg.set_refinement(i); }
 };
-

@@ -308,9 +308,8 @@ class HDGHyperGraph
     if constexpr (requires(const TopoT& t) { t.domain_info().lgmap; })
     {
       const auto& di = topo.domain_info();
-      factory.set_distribution(
-        std::vector<hyEdge_index_t>(di.lgmap.begin(), di.lgmap.end()), di.n_owned_hyNodes,
-        di.n_global_hyNodes);
+      factory.set_distribution(std::vector<hyEdge_index_t>(di.lgmap.begin(), di.lgmap.end()),
+                               di.n_owned_hyNodes, di.n_global_hyNodes);
     }
     return factory;
   }

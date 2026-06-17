@@ -52,6 +52,7 @@ class Elliptic
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
   HAS_MEMBER_FUNCTION(norms, has_norms);
+
  public:
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
@@ -152,11 +153,18 @@ class Elliptic
 
   // stub
   template <typename hyNode_index_t = dof_index_t>
-  LargeVecT make_initial(const LargeVecT& x_vec, const dof_index_t time = 0.) { return {}; }
+  LargeVecT make_initial(const LargeVecT& x_vec, const dof_index_t time = 0.)
+  {
+    return {};
+  }
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
-  void set_data(const SpanT& x_vec, const dof_value_t time = 0.) {}
+  void set_data(const SpanT& x_vec, const dof_value_t time = 0.)
+  {
+  }
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
-  void make_initial_from_static(const SpanT& x_vec, const dof_index_t time = 0.) {}
+  void make_initial_from_static(const SpanT& x_vec, const dof_index_t time = 0.)
+  {
+  }
 
   /*!***********************************************************************************************
    * \brief   Read indices of Dirichlet type hypernodes/faces.
@@ -249,8 +257,10 @@ class Elliptic
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
 
-  template<typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_submat(const std::vector<unsigned int>& nj, const dof_value_t time = 0.) {
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_submat(const std::vector<unsigned int>& nj,
+                                             const dof_value_t time = 0.)
+  {
     return {};
   }
 
@@ -399,7 +409,7 @@ class Elliptic
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }
 
-  template<typename SpanT>
+  template <typename SpanT>
   void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

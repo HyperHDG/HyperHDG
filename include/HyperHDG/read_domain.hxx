@@ -1,17 +1,17 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/epsilon_neighborhood_graph.hxx>
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/epsilon_neighborhood_graph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <sstream>
-#include <cstring>
-#include <cstdint>
-#include <format>
 
 /*!*************************************************************************************************
  * \brief   Check whether a \c std::vector does not contain duplicate entries.
@@ -54,8 +54,7 @@ bool is_unique(const vectorT& vec)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename...>
-          typename vectorT,
+          template <typename...> typename vectorT,
           typename pointT,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
@@ -211,8 +210,8 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   Vec points, props;
   IS edges, types_faces;
   PetscInt n_points, n_edges, n_props, sdim, hydim, propdim;
-  const PetscReal *ra;
-  const PetscInt *ia;
+  const PetscReal* ra;
+  const PetscInt* ia;
   PetscBool has_props;
   // NOTE: HACK: world needs to be equal to HYPERHDG_COMM in prototype.hxx
   MPI_Comm comm = PETSC_COMM_SELF, world = PETSC_COMM_WORLD;
@@ -224,7 +223,8 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   MPI_Comm_size(world, &size);
   // Serialize concurrent reads when every rank reads the whole file (token ring). When only rank 0
   // reads (distributed path), serialize must be false to avoid a deadlock on the unmatched send.
-  if (serialize && rank != 0) MPI_Recv(NULL, 0, MPI_INT, rank-1, 0, world, MPI_STATUS_IGNORE);
+  if (serialize && rank != 0)
+    MPI_Recv(NULL, 0, MPI_INT, rank - 1, 0, world, MPI_STATUS_IGNORE);
 
   PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
   PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
@@ -243,7 +243,8 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   PetscCallAbort(comm, ISLoad(edges, viewer));
   PetscCallAbort(comm, ISLoad(types_faces, viewer));
 
-  if (serialize && rank != size-1) MPI_Send(NULL, 0, MPI_INT, rank+1, 0, world);
+  if (serialize && rank != size - 1)
+    MPI_Send(NULL, 0, MPI_INT, rank + 1, 0, world);
 
   PetscCallAbort(comm, ISGetSize(edges, &n_edges));
   PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
@@ -257,21 +258,22 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
     domain_info(n_points, n_edges, n_points, n_points);
 
   PetscCallAbort(comm, VecGetArrayRead(points, &ra));
-  memcpy((void*)domain_info.points.data(), ra, n_points*sdim*sizeof(PetscReal));
+  memcpy((void*)domain_info.points.data(), ra, n_points * sdim * sizeof(PetscReal));
   PetscCallAbort(comm, VecRestoreArrayRead(points, &ra));
 
   PetscCallAbort(comm, ISGetIndices(edges, &ia));
-  memcpy((void*)domain_info.hyNodes_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
-  memcpy((void*)domain_info.points_hyEdge.data(),  ia, n_edges*hydim*sizeof(PetscInt));
+  memcpy((void*)domain_info.hyNodes_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
+  memcpy((void*)domain_info.points_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
   PetscCallAbort(comm, ISRestoreIndices(edges, &ia));
 
   PetscCallAbort(comm, ISGetIndices(types_faces, &ia));
-  memcpy((void*)domain_info.hyFaces_hyEdge.data(), ia, n_edges*hydim*sizeof(PetscInt));
+  memcpy((void*)domain_info.hyFaces_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
   PetscCallAbort(comm, ISRestoreIndices(types_faces, &ia));
 
   // props
   PetscCallAbort(comm, PetscViewerHDF5HasDataset(viewer, "properties", &has_props));
-  if (!has_props) goto end;
+  if (!has_props)
+    goto end;
 
   PetscCallAbort(comm, VecLoad(props, viewer));
   PetscCallAbort(comm, VecGetSize(props, &n_props));
@@ -282,11 +284,10 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   domain_info.hyEdge_properties.resize(n_props);
   domain_info.n_properties = propdim;
   PetscCallAbort(comm, VecGetArrayRead(props, &ra));
-  for (PetscInt i = 0; i < n_props; i++) {
+  for (PetscInt i = 0; i < n_props; i++)
+  {
     domain_info.hyEdge_properties[i].resize(propdim);
-    memcpy(domain_info.hyEdge_properties[i].data(),
-              ra + i*propdim,
-              propdim*sizeof(PetscReal));
+    memcpy(domain_info.hyEdge_properties[i].data(), ra + i * propdim, propdim * sizeof(PetscReal));
   }
   PetscCallAbort(comm, VecRestoreArrayRead(props, &ra));
 
@@ -298,7 +299,6 @@ end:
   return domain_info;
 }
 #endif
-
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -544,14 +544,18 @@ read_domain_geo(const std::string& filename)
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
-bool read_domain_is_h5(const char *path) {
-  if (H5Fis_accessible(path, H5P_DEFAULT) <= 0) return false; // not an h5 file or inaccessible
+bool read_domain_is_h5(const char* path)
+{
+  if (H5Fis_accessible(path, H5P_DEFAULT) <= 0)
+    return false;  // not an h5 file or inaccessible
 
   hid_t file = H5Fopen(path, H5F_ACC_RDONLY, H5P_DEFAULT);
-  if (file < 0) return false; // error opening file or file is not h5
+  if (file < 0)
+    return false;  // error opening file or file is not h5
 
   htri_t has_domain = H5Lexists(file, "/domain", H5P_DEFAULT);
-  if (has_domain <= 0) return false; // error or no such path
+  if (has_domain <= 0)
+    return false;  // error or no such path
 
   H5Fclose(file);
   return true;
@@ -600,7 +604,7 @@ read_domain(std::string filename)
         hy_check(false, "distributed domain reading is only supported for hyEdge_dim == 1.");
     }
     auto domain_info = read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
-                              hyNode_index_t, pt_index_t>(filename);
+                                        hyNode_index_t, pt_index_t>(filename);
     hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");
     return domain_info;
   }

@@ -1,7 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
 #include <deque>

@@ -53,14 +53,15 @@ class Hyperbolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
-   /*!***********************************************************************************************
+  /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(norms, has_norms);
- /*!***********************************************************************************************
+  /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(set_data, has_set_data);
+
  public:
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
@@ -107,8 +108,8 @@ class Hyperbolic
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
   Hyperbolic(const typename TopologyT::constructor_value_type& construct_topo,
-            const typename GeometryT::constructor_value_type& construct_geom,
-            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+             const typename GeometryT::constructor_value_type& construct_geom,
+             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -128,7 +129,7 @@ class Hyperbolic
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
   Hyperbolic(const typename TopologyT::constructor_value_type& construct_topo,
-            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -232,20 +233,19 @@ class Hyperbolic
     return vec_Ax;
   }
 
-
   template <typename hyNode_index_t = dof_index_t>
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
   {
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
- 
+
   template <typename hyNode_index_t = dof_index_t, typename SpanT>
-  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.) {
+  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.)
+  {
     hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
     // std::cout << "TESTTTTT time="  << time << std::endl;
     prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
   }
-
 
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
@@ -391,21 +391,21 @@ class Hyperbolic
             hyEdge_dofs[hyNode][d] = x_vec[hyEdge_hyNodes[hyNode] * n_dofs_per_node + d];
 
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr (has_make_initial_from_static<LocalSolverT,
-                                       std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                  2 * TopologyT::hyEdge_dim()>&(
-                                         std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                    2 * TopologyT::hyEdge_dim()>&,
-                                         dof_value_t)>::value)
+        if constexpr (has_make_initial_from_static<
+                        LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                 2 * TopologyT::hyEdge_dim()>&(
+                                        std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                   2 * TopologyT::hyEdge_dim()>&,
+                                        dof_value_t)>::value)
         {
           local_solver_.make_initial_from_static(hyEdge_dofs, time);
         }
-        else if constexpr (has_make_initial_from_static<LocalSolverT,
-                                            std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                       2 * TopologyT::hyEdge_dim()>&(
-                                              std::array<std::array<dof_value_t, n_dofs_per_node>,
-                                                         2 * TopologyT::hyEdge_dim()>&,
-                                              decltype(hyper_edge)&, dof_value_t)>::value)
+        else if constexpr (has_make_initial_from_static<
+                             LocalSolverT, std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                      2 * TopologyT::hyEdge_dim()>&(
+                                             std::array<std::array<dof_value_t, n_dofs_per_node>,
+                                                        2 * TopologyT::hyEdge_dim()>&,
+                                             decltype(hyper_edge)&, dof_value_t)>::value)
         {
           local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, time);
         }
@@ -526,8 +526,8 @@ class Hyperbolic
   {
     constexpr unsigned int n_comp = n_energy_components();
     hy_check(out.size() == static_cast<std::size_t>(n_edges()) * n_comp,
-             "energy span size mismatch: got " << out.size()
-             << " expected " << static_cast<std::size_t>(n_edges()) * n_comp);
+             "energy span size mismatch: got " << out.size() << " expected "
+                                               << static_cast<std::size_t>(n_edges()) * n_comp);
 
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs;
 
@@ -603,7 +603,7 @@ class Hyperbolic
    * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  template<typename SpanT>
+  template <typename SpanT>
   void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

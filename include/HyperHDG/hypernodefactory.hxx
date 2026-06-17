@@ -85,9 +85,10 @@ class HyperNodeFactory
     {
       n_owned_hyNodes_ = n_owned_hyNodes;
       n_global_hyNodes_ = n_global_hyNodes;
-      hy_assert(lgmap_.size() == n_hyNodes_,
-                "The local-to-global map has " << lgmap_.size() << " entries, but should have one "
-                  << "per local hypernode, i.e., " << n_hyNodes_ << ".");
+      hy_assert(lgmap_.size() == n_hyNodes_, "The local-to-global map has "
+                                               << lgmap_.size() << " entries, but should have one "
+                                               << "per local hypernode, i.e., " << n_hyNodes_
+                                               << ".");
     }
   }
   /*!***********************************************************************************************

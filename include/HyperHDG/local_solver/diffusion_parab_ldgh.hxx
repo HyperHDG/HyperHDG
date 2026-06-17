@@ -1,10 +1,10 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
-#include <HyperHDG/compile_time_tricks.hxx>
 
 #include <algorithm>
 #include <tuple>
@@ -780,19 +780,16 @@ class DiffusionParab
    * \retval  err               Local squared L2 error.
    ************************************************************************************************/
   template <class hyEdgeT>
-  std::array<lSol_float_t, 1U> norms(
-    const std::array<std::array<lSol_float_t, n_shape_bdr_>,
-    2 * hyEdge_dimT>& UNUSED(lambda_values),
-    hyEdgeT& hy_edge,
-    const lSol_float_t time = 0.
-  ) const {
-    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_phiphi<
-      decltype(hyEdgeT::geometry), hy_edge.data.u_old.size(), lSol_float_t>(
-        hy_edge.data.u_old.data(), hy_edge.data.u_old.data(), hy_edge.geometry
-    )});
+  std::array<lSol_float_t, 1U> norms(const std::array<std::array<lSol_float_t, n_shape_bdr_>,
+                                                      2 * hyEdge_dimT>& UNUSED(lambda_values),
+                                     hyEdgeT& hy_edge,
+                                     const lSol_float_t time = 0.) const
+  {
+    return std::array<lSol_float_t, 1U>(
+      {integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry),
+                                                 hy_edge.data.u_old.size(), lSol_float_t>(
+        hy_edge.data.u_old.data(), hy_edge.data.u_old.data(), hy_edge.geometry)});
   }
-
-
 
   /*!***********************************************************************************************
    * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
@@ -838,8 +835,7 @@ class DiffusionParab
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -910,8 +906,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::asse
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
@@ -953,8 +948,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -1012,8 +1006,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -1044,8 +1037,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -1080,8 +1072,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::prim
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -1120,8 +1111,7 @@ DiffusionParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,

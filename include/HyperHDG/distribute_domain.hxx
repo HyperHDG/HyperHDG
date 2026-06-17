@@ -70,8 +70,8 @@ distribute_domain(const std::string& filename, MPI_Comm comm)
                 "HyperHDG index type must have the same size as PetscInt, as matrix COO indices "
                 "are passed to PETSc by reinterpretation.");
 
-  using DI = DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t,
-                        pt_index_t>;
+  using DI =
+    DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>;
   using node_pair_t = std::array<hyNode_index_t, 2 * hyEdge_dim>;  // == array<.,2>
   using point_pair_t = std::array<pt_index_t, 1 << hyEdge_dim>;    // == array<.,2>
   using value_t = typename pointT::value_type;
@@ -172,9 +172,10 @@ distribute_domain(const std::string& filename, MPI_Comm comm)
   std::vector<int> part(n);
 #ifdef HYPERHDG_PARHIP
   {
-    // Partition the network graph (vertices = hypernodes, edges = hyperedges) with sequential KaHIP,
-    // vertex-weighted by degree so each part gets a balanced share of incident-edge (assembly) work.
-    // Undirected CSR in METIS layout: each edge appears in both endpoints' adjacency lists.
+    // Partition the network graph (vertices = hypernodes, edges = hyperedges) with sequential
+    // KaHIP, vertex-weighted by degree so each part gets a balanced share of incident-edge
+    // (assembly) work. Undirected CSR in METIS layout: each edge appears in both endpoints'
+    // adjacency lists.
     int kn = static_cast<int>(n);
     std::vector<int> xadj(n + 1, 0);
     for (hyEdge_index_t e = 0; e < ne; ++e)
@@ -201,8 +202,10 @@ distribute_domain(const std::string& filename, MPI_Comm comm)
     double imbalance = 0.03;
     kaffpa(&kn, vwgt.data(), xadj.data(), nullptr, adjncy.data(), &nparts, &imbalance,
            true /*suppress_output*/, 0 /*seed*/, ECO, &edgecut, part.data());
-    PetscPrintf(PETSC_COMM_SELF, "distribute_domain:\n  partitioner: kaffpa\n  nparts: %d\n"
-                                 "  edgecut: %d\n", nparts, edgecut);
+    PetscPrintf(PETSC_COMM_SELF,
+                "distribute_domain:\n  partitioner: kaffpa\n  nparts: %d\n"
+                "  edgecut: %d\n",
+                nparts, edgecut);
   }
 #else
   for (hyNode_index_t v = 0; v < n; ++v)
@@ -281,8 +284,8 @@ distribute_domain(const std::string& filename, MPI_Comm comm)
     for (hyEdge_index_t i = 0; i < c.n_oe; ++i)
     {
       const hyEdge_index_t e = myedges[i];
-      c.edges[i] = node_pair_t{local_of(full.hyNodes_hyEdge[e][0]),
-                               local_of(full.hyNodes_hyEdge[e][1])};
+      c.edges[i] =
+        node_pair_t{local_of(full.hyNodes_hyEdge[e][0]), local_of(full.hyNodes_hyEdge[e][1])};
       c.types[i] = full.hyFaces_hyEdge[e];
       for (unsigned int p = 0; p < nprop; ++p)
         c.props[(size_t)i * nprop + p] = full.hyEdge_properties[e][p];

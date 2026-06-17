@@ -3,10 +3,10 @@
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <cstdio>
+#include <iostream>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
-#include <iostream>
-#include <cstdio>
 
 #include <tuple>
 
@@ -115,7 +115,6 @@ struct TimoschenkoBeamParametersDefault
   }
 };  // end of struct DiffusionParametersDefault
 
-
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.
@@ -213,11 +212,11 @@ class TimoshenkoBeam
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
    ************************************************************************************************/
-  static constexpr unsigned int system_dimension() { return 4*space_dim; }
+  static constexpr unsigned int system_dimension() { return 4 * space_dim; }
   /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return 4*space_dim; }
+  static constexpr unsigned int node_system_dimension() { return 4 * space_dim; }
 
  private:
   // -----------------------------------------------------------------------------------------------
@@ -381,7 +380,7 @@ class TimoshenkoBeam
         data.loc_mat_factorized = true;
       }
       Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(data.loc_mat_lu.data(),
-                                                                  data.loc_mat_ipiv, rhs.data());
+                                                                   data.loc_mat_ipiv, rhs.data());
       return rhs;
     }
     catch (Wrapper::LAPACKexception& exc)
@@ -435,8 +434,8 @@ class TimoshenkoBeam
     SmallMatInT lambda_in = lambda_values_in;
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
+      for (unsigned int j = 0; j < 2 * space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1 << j))
           lambda_in[i][j] = 0.;
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
@@ -471,8 +470,8 @@ class TimoshenkoBeam
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
+      for (unsigned int j = 0; j < 2 * space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1 << j))
           lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
@@ -481,7 +480,8 @@ class TimoshenkoBeam
   template <typename hyEdgeT>
   bool is_dirichlet(hyEdgeT& hyper_edge, unsigned int node, unsigned int dof) const
   {
-    if (dof >= 2 * space_dim) return false;
+    if (dof >= 2 * space_dim)
+      return false;
     return hyper_edge.node_descriptor[node] & (1ul << dof);
   }
 
@@ -502,8 +502,8 @@ class TimoshenkoBeam
     SmallMatInT lambda_in = lambda_values_in;
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
+      for (unsigned int j = 0; j < 2 * space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1 << j))
           lambda_in[i][j] = 0.;
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
@@ -519,8 +519,8 @@ class TimoshenkoBeam
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
+      for (unsigned int j = 0; j < 2 * space_dim; j++)
+        if (hyper_edge.node_descriptor[i] & (1 << j))
           lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
@@ -586,8 +586,7 @@ class TimoshenkoBeam
   // idx == -k (k>=1) → outer_normal(k-1).
   // Convention: nonneg → inner, neg → outer.
   template <class hyEdgeT, typename float_t>
-  Point<space_dim, float_t>
-  edge_frame_vector(hyEdgeT& hyper_edge, int idx) const
+  Point<space_dim, float_t> edge_frame_vector(hyEdgeT& hyper_edge, int idx) const
   {
     if (idx >= 0)
       return (Point<space_dim, float_t>)hyper_edge.geometry.inner_normal(idx);
@@ -602,7 +601,7 @@ class TimoshenkoBeam
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const
   {
-    constexpr unsigned int n_pts    = Hypercube<hyEdge_dimT>::pow(sizeT);
+    constexpr unsigned int n_pts = Hypercube<hyEdge_dimT>::pow(sizeT);
     constexpr unsigned int n_fields = 4;  // n, m, u, r
 
     input_array_t lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
@@ -617,13 +616,13 @@ class TimoshenkoBeam
     std::array<std::array<std::array<lSol_float_t, n_pts>, space_dim>, n_fields> point_vals{};
 
     for (unsigned int c = 0; c < n_fields; ++c)
-      for (unsigned int dim = 0; dim < space_dim; ++dim) {
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+      {
         for (unsigned int i = 0; i < coeffs.size(); ++i)
           coeffs[i] = coefficients[(c * space_dim + dim) * n_shape_fct_ + i];
         for (unsigned int pt = 0; pt < n_pts; ++pt)
           point_vals[c][dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
-            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper)
-          );
+            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
       }
 
     std::array<std::array<lSol_float_t, n_pts>, system_dimension()> result{};
@@ -638,7 +637,8 @@ class TimoshenkoBeam
 
     // fields u r should be in global frame -> need to transform
     for (unsigned int c = 2; c < n_fields; ++c)
-      for (unsigned int local = 0; local < space_dim; ++local) {
+      for (unsigned int local = 0; local < space_dim; ++local)
+      {
         const int idx = -static_cast<int>(local);  // 0, -1, -2
         Point<space_dim, lSol_float_t> nv =
           edge_frame_vector<hyEdgeT, lSol_float_t>(hyper_edge, idx);
@@ -660,8 +660,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -686,7 +685,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     // (n_21,n_22,n_23) : normal 2
     // (width1,width2)
     // (fiber_id,fiber_edge_id)
-    lSol_float_t* extra_data = extra_data_.data() + 1; // ignore mass
+    lSol_float_t* extra_data = extra_data_.data() + 1;  // ignore mass
     SmallVec<space_dim, lSol_float_t> normal1 =
       std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
     SmallVec<space_dim, lSol_float_t> normal2 =
@@ -762,8 +761,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
@@ -817,8 +815,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int space_dim,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -836,23 +833,26 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    for (unsigned int c = 0; c < space_dim; c++) {
-      right_hand_side[(2 * space_dim + c)* n_shape_fct_ + i] =
+    for (unsigned int c = 0; c < space_dim; c++)
+    {
+      right_hand_side[(2 * space_dim + c) * n_shape_fct_ + i] =
         integrator::template integrate_vol_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-          parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>
-        >(i, comps[c], hyper_edge.geometry, 0.);
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::right_hand_side_n,
+          Point<hyEdge_dimT, lSol_float_t>>(i, comps[c], hyper_edge.geometry, 0.);
 
-      right_hand_side[(3 * space_dim + c)* n_shape_fct_ + i] =
+      right_hand_side[(3 * space_dim + c) * n_shape_fct_ + i] =
         integrator::template integrate_vol_phivecfunccomp<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-          parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
-        >(i, comps[c], hyper_edge.geometry, 0.);
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::right_hand_side_m,
+          Point<hyEdge_dimT, lSol_float_t>>(i, comps[c], hyper_edge.geometry, 0.);
     }
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
-      for (unsigned int c = 0; c < space_dim; c++) {
-        if (hyper_edge.node_descriptor[face]) { // HACK: this only works if dirichlet_value_* returns zero in non-constrained directions
+      for (unsigned int c = 0; c < space_dim; c++)
+      {
+        if (hyper_edge.node_descriptor[face])
+        {  // HACK: this only works if dirichlet_value_* returns zero in non-constrained directions
           integral = integrator::template integrate_bdr_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
             decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
