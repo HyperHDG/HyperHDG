@@ -15,6 +15,11 @@ import os, sys
 from .import_cxx.config import config
 from .import_cxx.include import include
 
+# Keep the legacy SciPy ``tol`` keyword of the iterative solvers working on SciPy >= 1.14 (where
+# it was renamed to ``rtol``); a no-op on older SciPy versions. See HyperHDG.scipy_compat.
+from . import scipy_compat
+scipy_compat.patch()
+
 try:
   import fiber_network
 except (ImportError, ModuleNotFoundError) as error:
