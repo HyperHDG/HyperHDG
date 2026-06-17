@@ -544,6 +544,7 @@ read_domain_geo(const std::string& filename)
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
+#ifdef HYPERHDG_HDF5
 bool read_domain_is_h5(const char* path)
 {
   if (H5Fis_accessible(path, H5P_DEFAULT) <= 0)
@@ -560,6 +561,7 @@ bool read_domain_is_h5(const char* path)
   H5Fclose(file);
   return true;
 }
+#endif
 
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
@@ -573,7 +575,15 @@ read_domain(std::string filename)
 {
   hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
-#ifdef HYPERHDG_PETSC
+  // NOTE: the following requires both hdf5 and mpi
+  //       only hdf5 without mpi and mpi without hdf5 is not supported
+  // TODO: support only mpi: rank0 reads .geo text file,
+  //       then scatters to other ranks and distributes
+  //       support only hdf5: just read_domain_hdf5
+  // TODO: the distribute domain should work on a DomainInfo
+  //       and hence should not care whether that was constructed
+  //       from a .h5 binary file or .geo text file
+#if defined(HYPERHDG_HDF5) && defined(HYPERHDG_MPI)
   {
     // The legacy replicated assembly (assembly-level edge split) has been removed, so multi-rank
     // runs must distribute the domain at the data level. Only the HDF5 + hyEdge_dim == 1 path does

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 option(HYPERHDG_PETSC "build with PETSc" OFF)
 option(HYPERHDG_MPI "build with MPI" OFF)
+option(HYPERHDG_HDF5 "build with HDF5" OFF)
 
 # the compilers must be set before project() is called
 if (HYPERHDG_PETSC)
@@ -21,11 +22,11 @@ project(HyperHDG LANGUAGES CXX)
 add_subdirectory(submodules)
 include_directories(submodules)
 
-if(HYPERHDG_PETSC)
+if(HYPERHDG_PETSC AND HYPERHDG_HDF5)
   add_subdirectory(reproducibles_petsc)
   find_package(HDF5)
 else()
-  message("--- NO PETSC")
+  message("--- NOT BUILDING reproducibles_petsc as it requires HYPERHDG_PETSC AND HYPERHDG_HDF5")
 endif()
 
 ## Check whether appropriate compiler version is used
