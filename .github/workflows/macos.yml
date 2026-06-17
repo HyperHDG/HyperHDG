@@ -1,0 +1,36 @@
+# Author: Andreas Rupp, Heidelberg University, 2021.
+
+name: macOS
+
+on: [push]
+
+
+jobs:
+  # ============ Test code on the latest macOS using Apple Clang and the Accelerate ============
+  # ============ framework (BLAS/LAPACK). Python dependencies are installed via pip.  ============
+  build_and_test_macos:
+    strategy:
+      matrix:
+        osys: [ macos-latest ]
+
+    name: Test code with Apple Clang on ${{ matrix.osys }}
+    runs-on: ${{ matrix.osys }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install cython numpy scipy
+    - name: Conduct cmake test
+      uses: HyperHDG/actions@cmake
+      with:
+        c_compiler: clang
+        cxx_compiler: clang++
