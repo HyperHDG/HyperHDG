@@ -9,19 +9,19 @@ env:
 
 
 jobs:
-  # =============== Test code on Ubuntu 24.04 with all currently available compilers ===============
-  build_and_test_ubuntu_24-04:
+  # ============== Test code on the latest Ubuntu with the latest available compilers =============
+  build_and_test_ubuntu:
     strategy:
       matrix:
         osys: [ ubuntu-24.04 ]
-        comp: [ {cxx: clang++-18}, {cxx: clang++-19}, {cxx: g++-13},  {cxx: g++-14}]
+        comp: [ {cxx: g++-14}, {cxx: clang++-19} ]
 
     name: Test code with ${{ matrix.comp.cxx }} on ${{ matrix.osys }}
     runs-on: ${{ matrix.osys }}
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
        submodules: recursive
     - name: Install Python and CXX compiler

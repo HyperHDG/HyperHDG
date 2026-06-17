@@ -66,3 +66,6 @@ spack.lock
 
 venv
 *.swp
+
+# macOS Finder metadata
+.DS_Store

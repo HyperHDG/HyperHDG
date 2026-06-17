@@ -49,9 +49,23 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 ## Find packages that might become necessary.
+# On macOS prefer Apple's Accelerate framework, which bundles BLAS/LAPACK, so no external
+# (e.g. keg-only Homebrew) libraries are required. On Linux this branch is skipped and the
+# usual system LAPACK is discovered as before.
+if(APPLE AND NOT DEFINED BLA_VENDOR)
+  set(BLA_VENDOR Apple)
+endif()
 find_package (LAPACK REQUIRED)
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
-find_program (CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
+
+# Locate Cython. Searching $PATH alone misses installations inside a virtual environment or a
+# Homebrew Python, so additionally hint the directory of the interpreter CMake selected, and fall
+# back to invoking it as a module ("python -m cython") if no executable is found.
+get_filename_component (_python_bindir "${Python3_EXECUTABLE}" DIRECTORY)
+find_program (CYTHON_EXECUTABLE NAMES cython cython3 cython.bat HINTS "${_python_bindir}")
+if(NOT CYTHON_EXECUTABLE)
+  set(CYTHON_EXECUTABLE "${Python3_EXECUTABLE} -m cython")
+endif()
 
 ## Create a target that transports all the necessary information to downstream projects
 add_library(HyperHDG INTERFACE)
@@ -141,9 +155,25 @@ install(
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+## On macOS the Cython compile/link step invokes the compiler directly (see
+## import/HyperHDG/import_cxx/compile_prep.py) rather than through CMake, so it does not inherit
+## the SDK sysroot that CMake passes to its own targets. Without it, system headers such as
+## <assert.h> are not found. Forward CMake's detected sysroot so the manual invocation matches.
+## On Linux this variable stays empty and the generated config is unchanged.
+if(APPLE AND CMAKE_OSX_SYSROOT)
+  set(MACOS_SYSROOT_FLAG "-isysroot ${CMAKE_OSX_SYSROOT}")
+endif()
+
 ## Prepare nice output for linked libraries.
 foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
-  string(APPEND LINKED_STRING ${linked_lib} " ")
+  # On macOS, find_package(LAPACK) reports Accelerate as a path to the .framework directory, which
+  # the linker cannot consume directly. Translate such entries into the proper "-framework <name>"
+  # flag. Regular library paths (the Linux case) are passed through unchanged.
+  if(linked_lib MATCHES "/([^/]+)\\.framework/?$")
+    string(APPEND LINKED_STRING "-framework " ${CMAKE_MATCH_1} " ")
+  else()
+    string(APPEND LINKED_STRING ${linked_lib} " ")
+  endif()
 endforeach()
 
 ## Write a configuration file for Cython
