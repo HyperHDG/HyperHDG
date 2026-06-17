@@ -5,11 +5,7 @@
 #include <petscviewerhdf5.h>
 #include "prin2.hxx"
 
-#ifdef HYPERHDG_PARHIP
-#include "petsc_parhip.h"
-#endif
-
-struct MatCOO
+struct kMatCOO
 {
   PetscInt *rows, *cols, nnz, cap;
   PetscReal* vals;
@@ -788,9 +784,6 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS* data, MatCOO* coo, MatCOO* sd)
   PetscFunctionBegin;
 
   data->n_coarse = p;
-#ifdef HYPERHDG_PARHIP
-  PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
-#endif
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   vstart /= 3;

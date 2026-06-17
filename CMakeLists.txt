@@ -88,22 +88,6 @@ target_link_libraries(
   $<$<BOOL:${HDF5_FOUND}>:HDF5::HDF5>
 )
 
-if (HYPERHDG_PARHIP)
-  # Sequential KaHIP (kaffpa) used by distribute_domain.hxx to partition the network graph.
-  # Same install prefix as ParHIP (spack provides both). Linked into the header-only HyperHDG
-  # target so every consumer that includes read_domain.hxx gets the symbol + header + define.
-  find_library(KAHIP_LIBRARY NAMES kahip_static HINTS ${PARHIP_ROOT}/lib REQUIRED)
-  find_path(KAHIP_INCLUDE_DIR kaHIP_interface.h HINTS ${PARHIP_ROOT}/include REQUIRED)
-  message("FOUND KAHIP_LIBRARY=${KAHIP_LIBRARY}")
-  # KaHIP is a build-time dependency only: HyperHDG is a header-only, installed/exported INTERFACE
-  # target, so its public install interface must not carry the (here source-tree-prefixed) kahip
-  # paths. $<BUILD_INTERFACE:...> applies these to in-tree consumers (our executables) but drops
-  # them from the install export.
-  target_link_libraries(HyperHDG INTERFACE $<BUILD_INTERFACE:${KAHIP_LIBRARY}>)
-  target_include_directories(HyperHDG INTERFACE $<BUILD_INTERFACE:${KAHIP_INCLUDE_DIR}>)
-  target_compile_definitions(HyperHDG INTERFACE $<BUILD_INTERFACE:HYPERHDG_PARHIP>)
-endif()
-
 ## Add the necessary C++ standard requirement
 target_compile_features(
   HyperHDG
