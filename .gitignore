@@ -46,3 +46,6 @@ prog
 
 # Ignore files that have been created from other input
 *.pts.geo
+
+# macOS Finder metadata
+.DS_Store
