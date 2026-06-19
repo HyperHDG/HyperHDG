@@ -1237,9 +1237,8 @@ struct TimoshenkoClampedConstant
 
   /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
   /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
-  static PetscErrorCode Init(const char* path)
+  static PetscErrorCode Init()
   {
-    PetscViewer viewer;
     PetscFunctionBeginUser;
     PetscCall(PetscOptionsGetReal(NULL, NULL, "-force", &force, NULL));
     PetscFunctionReturn(PETSC_SUCCESS);

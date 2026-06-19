@@ -30,6 +30,12 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN \
        --dirichlet xmax=63 xmin=63 ymin=63 ymax=63
-mpirun -n 8 $BUILD/network -test constant -domain $DOMAIN -force 1 $DIRECT -plot $STATIC \
-               | yq -o json -I0 >> $LOG
-experiments/nethist.py $STATIC
+#mpirun -n 8 $BUILD/network -test constant -domain $DOMAIN -force 1 -plot $STATIC \
+#               $NET -net2as_p 3 -net2as_cb_trim -ksp_monitor_yaml | yq -o json -I0 >> $LOG
+#experiments/nethist.py $STATIC
+#for nc in "" "-net2as_nocoarse" "-net2as_cb_trim"; do
+for p in 1 2 3 4 5; do
+  mpirun -n 8 $BUILD/network -test constant -domain $DOMAIN -force 1 \
+               $NET -net2as_p $p -net2as_cb_trim | yq -o json -I0 >> $LOG
+done
+#done

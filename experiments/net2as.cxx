@@ -108,6 +108,8 @@ struct PC_Net2AS {
   char load_type[10];
   // apply no coarse correction
   PetscBool nocoarse;
+  // (cb_q1 only) trim the coarse DoFs that peak on the domain boundary
+  PetscBool cb_trim;
 
   // network information
 
@@ -208,6 +210,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscCall(PetscOptionsBool("-net2as_nocoarse", "apply no coarse correction", NULL, data->nocoarse, &data->nocoarse, &set));
+  PetscCall(PetscOptionsBool("-net2as_cb_trim", "trim the cb_q1 coarse DoFs that peak on the domain boundary", NULL, data->cb_trim, &data->cb_trim, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -633,6 +636,22 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   }
   n_coarse = ns[0] * ns[1];
 
+  // Optionally trim the coarse DoFs that peak on the domain boundary: the outer ring of the
+  // tensor-product Q1 grid (i in {0, ns[0]-1} or j in {0, ns[1]-1}). These basis functions peak on
+  // the Dirichlet boundary where the solution is fixed, so they add little to the coarse space.
+  // col_remap maps each old coarse column to its compacted index, or -1 if trimmed.
+  PetscInt *col_remap = NULL;
+  if (data->cb_trim) {
+    PetscInt kept = 0;
+    PetscCall(PetscMalloc1(n_coarse, &col_remap));
+    for (PetscInt j = 0; j < ns[1]; j++)
+      for (PetscInt i = 0; i < ns[0]; i++) {
+        PetscBool bdry = (PetscBool)(i == 0 || i == ns[0]-1 || j == 0 || j == ns[1]-1);
+        col_remap[j*ns[0]+i] = bdry ? -1 : kept++;
+      }
+    n_coarse = kept;
+  }
+
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
   n_local = (vend - vstart) / 3;
   vstart /= 3;
@@ -662,11 +681,16 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     };
     for (unsigned int l = 0; l < 4; l++) {
       PetscInt col = pts[l].j * ns[0] + pts[l].i;
+      if (col_remap) {
+        col = col_remap[col];
+        if (col < 0) continue; // trimmed boundary coarse DoF
+      }
       PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
       // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
     }
   }
 
+  PetscCall(PetscFree(col_remap));
 
   PetscCall(VecRestoreArray(data->points, &points));
 
@@ -885,6 +909,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->cmat));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_type: %s\n", data->cb_type));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_trim: %s\n", data->cb_trim ? "true" : "false"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_type: %s\n", data->load_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  nocoarse: %s\n", data->nocoarse ? "true" : "false"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
