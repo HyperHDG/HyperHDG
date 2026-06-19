@@ -29,6 +29,12 @@ else()
   message("NO PETSC - no experiments")
 endif()
 
+if(HYPERHDG_MPI)
+  find_package(MPI REQUIRED)
+else()
+  message("NO MPI")
+endif()
+
 ## Check whether appropriate compiler version is used
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
@@ -72,6 +78,7 @@ target_link_libraries(
   HyperHDG::tpcc
   ${LAPACK_LIBRARIES}
   $<$<BOOL:${HYPERHDG_PETSC}>:PkgConfig::PETSC>
+  $<$<BOOL:${HYPERHDG_MPI}>:MPI::MPI_CXX>
   $<$<BOOL:${HDF5_FOUND}>:HDF5::HDF5>
 )
 

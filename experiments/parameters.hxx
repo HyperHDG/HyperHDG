@@ -1216,6 +1216,84 @@ struct TimoshenkoStiffness
   }
 };
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network gaussian stiffness experiment.
+ *
+ *            Applies a prescribed gaussian strain to the Dirichlet boundary
+ *            of a clamped beam network.
+ *
+ *            Both `length` and `strain` are runtime-configurable static members
+ *            and must be set after loading the mesh, before the solve.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoClampedConstant
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Applied force
+  static inline Scalar force = 1;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-force", &force, NULL));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return force;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  // stub
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
 
 /*!*************************************************************************************************
  * \brief     Timoschenko Network gaussian stiffness experiment.
