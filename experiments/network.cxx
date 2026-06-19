@@ -35,8 +35,7 @@ PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal ta
     *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoGaussian>(domain, tau)); return 0;
   }
   else if (0 == strcmp(test, "constant")) {
-    PetscCall(TimoshenkoClampedConstant<>::Init());
-    *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoClampedConstant>(domain, tau)); return 0;
+    *hdg = new HDGWrapper(HDGElliptic<3, LocalSolver::TimoshenkoClampedConstant>(domain, tau)); return 0;
   }
   else {
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG,

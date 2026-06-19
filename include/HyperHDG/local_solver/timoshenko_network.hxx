@@ -116,6 +116,54 @@ struct TimoschenkoBeamParametersDefault
 };  // end of struct DiffusionParametersDefault
 
 
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network constant force experiment.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoClampedConstant
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Applied force
+  static inline Scalar force = 1;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return force;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+};
+
+
+
+
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.

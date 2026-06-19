@@ -18,7 +18,8 @@ PERF=$OUT/perf.flamegraph
 LOG=$OUT/log.json
 DIRECT="-pc_type cholesky -ksp_type preonly -pc_factor_mat_solver_type mumps"
 NET="-pc_type net2as -net2as_cb_type q1 -net2as_pc_factor_mat_solver_type mumps"
-CUT=.4
+CUT=.8
+MAT=$OUT/mat.bin
 export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
@@ -33,9 +34,9 @@ python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN \
 #mpirun -n 8 $BUILD/network -test constant -domain $DOMAIN -force 1 -plot $STATIC \
 #               $NET -net2as_p 3 -net2as_cb_trim -ksp_monitor_yaml | yq -o json -I0 >> $LOG
 #experiments/nethist.py $STATIC
-#for nc in "" "-net2as_nocoarse" "-net2as_cb_trim"; do
-for p in 1 2 4 8 16; do
-  mpirun -n 8 $BUILD/network -test constant -domain $DOMAIN -force 1 \
+for nc in "" "-net2as_nocoarse" "-net2as_cb_trim"; do
+for p in 1 2 4 8 16 32 64; do
+  mpirun -n 8 $BUILD/network -mat_cache $MAT -test constant -domain $DOMAIN -force 1 \
                $NET -net2as_p $p -net2as_cb_trim | yq -o json -I0 >> $LOG
 done
-#done
+done
