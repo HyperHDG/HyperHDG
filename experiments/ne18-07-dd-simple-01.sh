@@ -7,5 +7,6 @@ LOG=$OUT/log.json
 IMG=$OUT/ne18-07-dd-simple-01-p-cond.png
 
 jq -cs 'sort_by(.net2as.nocoarse, .net2as.p[0]) | .[]
-       | {p: .net2as.p[0], nocoarse: .net2as.nocoarse, iters: .iterations, cond, creason}' $LOG \
-  | experiments/plot.py -x p -y cond -g nocoarse --save $IMG --log xy
+       | {p: .net2as.p[0], coarse: (.coarse | if . == "" then "none" else . end),
+          iters: .iterations, cond, creason}' $LOG \
+  | experiments/plot.py -x p -y cond -g coarse --save $IMG --log xy --xbase 2
