@@ -544,6 +544,7 @@ read_domain_geo(const std::string& filename)
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
+#ifdef HYPERHDG_PETSC
 bool read_domain_is_h5(const char *path) {
   if (H5Fis_accessible(path, H5P_DEFAULT) <= 0) return false; // not an h5 file or inaccessible
 
@@ -556,6 +557,7 @@ bool read_domain_is_h5(const char *path) {
   H5Fclose(file);
   return true;
 }
+#endif
 
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,

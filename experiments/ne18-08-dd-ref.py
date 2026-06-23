@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from datetime import datetime
 
 import os, sys
+import argparse
 
 # --------------------------------------------------------------------------------------------------
 # THIS SECTION CAN BE CHANGED:
@@ -22,9 +23,11 @@ parser = argparse.ArgumentParser(
   prog='ne18-08-dd-ref',
   description='solve fiber network with the reference implementation',
 )
-parse.add_argument("domain")
+parser.add_argument("--domain")
+parser.add_argument("--points")
+parser.add_argument("--subdomains", type=int)
 args = parser.parse_args()
-domain = args["domain"]
+domain = args.domain
 
 start_time = datetime.now()
 print("Starting time is", start_time)
@@ -35,10 +38,10 @@ try:
 except (ImportError, ModuleNotFoundError) as error:
   sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
   import HyperHDG
-  
+
 const                 = HyperHDG.config()
 const.global_loop     = "Elliptic"
-const.local_solver    = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoschenkoBeamParametersClamped>"
+const.local_solver    = "TimoshenkoBeam<1,3,5,10,LocalSolver::TimoshenkoClampedConstant>"
 const.topology        = "File<1,3>"
 const.geometry        = "File<1,3>"
 const.node_descriptor = "File<1,3>"
@@ -46,7 +49,7 @@ const.cython_replacements = ["string", "string"]
 const.debug_mode      = False
 
 PyDP = HyperHDG.include(const)
-HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/" + domain + ".geo" )
+HDG_wrapper = PyDP(domain)
 
 vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
 
@@ -59,8 +62,8 @@ A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
 
 print("A setup", datetime.now())
 
-points = np.loadtxt("domains/" + domain + "_points.txt")
-helper = HyperHDG.fiber_network.precond(points, [2**3, 2**3], repeat=6)
+points = np.loadtxt(args.points)
+helper = HyperHDG.fiber_network.precond(points, [args.subdomains, args.subdomains], repeat=6)
 def precond_mult( vec_x ):
   return helper.precond(A, vec_x)
 B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
