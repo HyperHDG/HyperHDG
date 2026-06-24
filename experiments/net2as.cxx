@@ -100,8 +100,13 @@ struct PC_Net2AS {
   PetscReal overlap_frac;
   // absolute overlap distance override in edge-length units; if > 0, used instead of overlap_frac*diam
   PetscReal overlap_abs;
-  // the number of dimension to extend the PU to
+  // the number of dimension to extend the PU to (linear enrichment x, y[, z])
   PetscInt pux_dim;
+  // (cb_pu only) add the bilinear cross term xy to the coarse space, i.e. reproduce {1,x,y,xy} like
+  // q1 rather than only the linear {1,x,y}; not the full quadratic (no x^2, y^2)
+  PetscBool pu_xy;
+  // number of coarse basis functions per subdomain (1 constant + pux_dim linear + pu_xy cross)
+  PetscInt cb_ncomp;
   // cb_type one of "q1", "pu"
   char cb_type[10];
   // load_type one of "rr", "gr"
@@ -210,6 +215,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsReal("-net2as_overlap_frac", "overlap distance as a fraction of the weighted graph diameter", NULL, data->overlap_frac, &data->overlap_frac, &set));
   PetscCall(PetscOptionsReal("-net2as_overlap_abs", "absolute overlap distance in edge-length units; overrides overlap_frac when > 0", NULL, data->overlap_abs, &data->overlap_abs, &set));
   PetscCall(PetscOptionsInt("-net2as_pux_dim", "number of dimension to extend the pu by", NULL, data->pux_dim, &data->pux_dim, &set));
+  PetscCall(PetscOptionsBool("-net2as_pu_xy", "add the bilinear cross term xy to the pu coarse space ({1,x,y,xy} like q1)", NULL, data->pu_xy, &data->pu_xy, &set));
   PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscCall(PetscOptionsBool("-net2as_nocoarse", "apply no coarse correction", NULL, data->nocoarse, &data->nocoarse, &set));
@@ -661,6 +667,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(VecGetArray(data->points, &points));
   data->n_coarse = n_coarse;
+  data->cb_ncomp = 1; // q1 has no per-subdomain enrichment
 
   // fill coarse basis functions
   PetscCall(MatCOO_Alloc(coo, 4 * n_local));
@@ -897,6 +904,7 @@ PetscErrorCode net2as_graph_diameter(Net2AS_WGraph *g, PetscReal *diam) {
 PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   MatPartitioning p_ctx;
   MatPartitioningType p_type;
+  char ptype[64];
   IS partition;
   PetscInt p = data->p[0]*data->p[1], lsz_part, vstart, vend, cut, nmemb, ncb;
   const PetscInt *inds;
@@ -907,6 +915,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscFunctionBegin;
 
   data->n_coarse = p;
+  data->cb_ncomp = data->pux_dim + 1 + (data->pu_xy ? 1 : 0);
 #ifdef HYPERHDG_PARHIP
   PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
 #endif
@@ -920,6 +929,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningApply(p_ctx, &partition));
   PetscCall(MatPartitioningParmetisGetEdgeCut(p_ctx, &cut));
   PetscCall(MatPartitioningGetType(p_ctx, &p_type));
+  PetscCall(PetscStrncpy(ptype, p_type, sizeof(ptype))); // p_type points into p_ctx; copy before destroy
   PetscCall(MatPartitioningDestroy(&p_ctx));
   data->partition = partition; // kept for PCDestroy_Net2AS
 
@@ -931,8 +941,10 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cut: %" PetscInt_FMT "\n", cut));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", p_type));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  part_type: %s\n", ptype));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pux_dim: %" PetscInt_FMT "\n", data->pux_dim));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pu_xy: %s\n", data->pu_xy ? "true" : "false"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_ncomp: %" PetscInt_FMT "\n", data->cb_ncomp));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  diam: %.5e\n", (double)diam));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  overlap_frac: %.5e\n", (double)data->overlap_frac));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta: %.5e\n", (double)delta));
@@ -968,7 +980,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   // optional linear enrichment needs each subdomain's centroid and axis extent over its overlapping
   // support; reduce them globally since the support spans ranks.
-  if (data->pux_dim > 0) {
+  if (data->pux_dim > 0 || data->pu_xy) {
     PetscReal *csum, *cmin, *cmax, *gsum, *gmin, *gmax;
     PetscInt  *ccnt, *gcnt;
     PetscCall(PetscCalloc4(p*3, &csum, p, &ccnt, p*3, &cmin, p*3, &cmax));
@@ -1003,7 +1015,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   // ramp(d) = 1 - d/delta (1 at the core, 0 at the overlap edge). Bounded gradient ~1/delta keeps the
   // coarse operator well scaled. Built entirely from owned rows (no cross-rank assembly needed since
   // each node knows its distance to every subdomain). Optional enrichment columns reuse the same phi.
-  ncb = nmemb * (data->pux_dim + 1);
+  ncb = nmemb * data->cb_ncomp;
   PetscCall(MatCOO_Alloc(coo, ncb));
   for (PetscInt i = 0; i < lsz_part; i++) {
     PetscReal sumr = 0;
@@ -1013,17 +1025,22 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     for (PetscInt s = 0; s < p; s++) {
       if (Dloc[i*p + s] > delta) continue;
       PetscReal phi = (1. - Dloc[i*p + s] / delta) / sumr;
-      PetscInt cb_idx = (data->pux_dim + 1) * s;
-      PetscCall(MatCOO_Push(coo, vstart+i, cb_idx, phi));
-      for (PetscInt d = 0; d < data->pux_dim; d++) {
-        PetscReal e = ext[s*3 + d];
-        PetscReal val = e > data->eps ? (g.coords[3*i + d] - cen[s*3 + d]) / e * phi : 0;
-        PetscCall(MatCOO_Push(coo, vstart+i, cb_idx + d + 1, val));
+      PetscInt cb_idx = data->cb_ncomp * s;
+      PetscCall(MatCOO_Push(coo, vstart+i, cb_idx, phi));                       // constant (always)
+      if (cen) { // enrichment: cen/ext are allocated only when pux_dim>0 || pu_xy
+        // normalized local coordinates in [-~1/2, ~1/2] (0 if the subdomain is flat along that axis)
+        PetscReal nc[3];
+        for (PetscInt d = 0; d < 3; d++)
+          nc[d] = ext[s*3 + d] > data->eps ? (g.coords[3*i + d] - cen[s*3 + d]) / ext[s*3 + d] : 0;
+        for (PetscInt d = 0; d < data->pux_dim; d++)                            // linear x, y[, z]
+          PetscCall(MatCOO_Push(coo, vstart+i, cb_idx + d + 1, nc[d] * phi));
+        if (data->pu_xy)                                                        // bilinear cross xy
+          PetscCall(MatCOO_Push(coo, vstart+i, cb_idx + data->pux_dim + 1, nc[0] * nc[1] * phi));
       }
     }
   }
 
-  if (data->pux_dim > 0) PetscCall(PetscFree2(cen, ext));
+  if (data->pux_dim > 0 || data->pu_xy) PetscCall(PetscFree2(cen, ext));
   PetscCall(PetscFree(Dloc));
   PetscCall(net2as_wgraph_destroy(&g));
 
@@ -1079,7 +1096,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscInt cb_local_rows;
   PetscCall(MatGetLocalSize(A, &cb_local_rows, NULL));
   cb_local_rows /= data->bs;
-  PetscCall(MatSetSizes(coarse_basis, cb_local_rows, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
+  PetscCall(MatSetSizes(coarse_basis, cb_local_rows, PETSC_DECIDE, size, n_cols*data->cb_ncomp));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
@@ -1146,8 +1163,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
 
 PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
-  static int dbg_count = 0; // DBG: one-shot coarse-correction magnitude probe
-  PetscReal dbg_nx = 0, dbg_nrhs = 0, dbg_ncsol = 0, dbg_ncoarse = 0, dbg_ntotal = 0;
+  // DBG probe (coarse-correction magnitude): commented out — it must NOT print mid-solve, because with
+  // -ksp_norm_type unpreconditioned the first apply lands between ksp_monitor it=0 and it=1 and would
+  // corrupt the YAML. Re-enable all four DBG blocks together to inspect ||A0^-1 cb^T x|| etc.
+  // static int dbg_count = 0;
+  // PetscReal dbg_nx = 0, dbg_nrhs = 0, dbg_ncsol = 0, dbg_ncoarse = 0, dbg_ntotal = 0;
 
   PetscFunctionBegin;
   if (!data->ksp) PetscCall(PCSetup_Net2AS(pc));
@@ -1157,14 +1177,14 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   // coarse
   if (!data->nocoarse) {
     PetscCall(MatMultTranspose(data->cb, x, data->csol));
-    if (dbg_count < 1) PetscCall(VecNorm(data->csol, NORM_2, &dbg_nrhs)); // DBG: ||cb^T x||
+    // if (dbg_count < 1) PetscCall(VecNorm(data->csol, NORM_2, &dbg_nrhs)); // DBG: ||cb^T x||
     PetscCall(KSPSolve(data->cksp, data->csol, data->csol));
-    if (dbg_count < 1) PetscCall(VecNorm(data->csol, NORM_2, &dbg_ncsol)); // DBG: ||A0^-1 cb^T x||
+    // if (dbg_count < 1) PetscCall(VecNorm(data->csol, NORM_2, &dbg_ncsol)); // DBG: ||A0^-1 cb^T x||
     PetscCall(MatMult(data->cb, data->csol, y));
-    if (dbg_count < 1) { // DBG: ||coarse correction|| and ||x||
-      PetscCall(VecNorm(y, NORM_2, &dbg_ncoarse));
-      PetscCall(VecNorm(x, NORM_2, &dbg_nx));
-    }
+    // if (dbg_count < 1) { // DBG: ||coarse correction|| and ||x||
+    //   PetscCall(VecNorm(y, NORM_2, &dbg_ncoarse));
+    //   PetscCall(VecNorm(x, NORM_2, &dbg_nx));
+    // }
   } else {
     // y is only otherwise initialized by the coarse MatMult above; the local correction is added
     // into it via the reverse scatter below. With no coarse correction we must zero it ourselves,
@@ -1192,13 +1212,13 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   PetscCall(VecScatterBegin(data->rank_sc, data->rank_sol, y, ADD_VALUES, SCATTER_REVERSE));
   PetscCall(VecScatterEnd(data->rank_sc, data->rank_sol, y, ADD_VALUES, SCATTER_REVERSE));
 
-  if (dbg_count < 1 && !data->nocoarse) { // DBG: report coarse-correction magnitude on first apply
-    PetscCall(VecNorm(y, NORM_2, &dbg_ntotal));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-      "net2as_dbg:\n  nx: %.5e\n  n_cb_t_x: %.5e\n  n_csol: %.5e\n  n_coarse_y: %.5e\n  n_total_y: %.5e\n  coarse_frac: %.5e\n",
-      dbg_nx, dbg_nrhs, dbg_ncsol, dbg_ncoarse, dbg_ntotal, dbg_ntotal > 0 ? dbg_ncoarse/dbg_ntotal : 0));
-    dbg_count++;
-  }
+  // if (dbg_count < 1 && !data->nocoarse) { // DBG: report coarse-correction magnitude on first apply
+  //   PetscCall(VecNorm(y, NORM_2, &dbg_ntotal));
+  //   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+  //     "net2as_dbg:\n  nx: %.5e\n  n_cb_t_x: %.5e\n  n_csol: %.5e\n  n_coarse_y: %.5e\n  n_total_y: %.5e\n  coarse_frac: %.5e\n",
+  //     dbg_nx, dbg_nrhs, dbg_ncsol, dbg_ncoarse, dbg_ntotal, dbg_ntotal > 0 ? dbg_ncoarse/dbg_ntotal : 0));
+  //   dbg_count++;
+  // }
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1242,6 +1262,8 @@ PetscErrorCode PCCreate_Net2AS(PC pc) {
   data->overlap_frac = 0.1;
   data->overlap_abs = 0.;
   data->pux_dim = 0;
+  data->pu_xy = PETSC_FALSE;
+  data->cb_ncomp = 1;
   memcpy(data->cb_type, part, strlen(part)+1);
   memcpy(data->load_type, load, strlen(load)+1);
 
