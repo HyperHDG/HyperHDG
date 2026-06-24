@@ -861,43 +861,87 @@ PetscErrorCode net2as_sssp(Net2AS_WGraph *g, PetscInt nsrc, PetscReal delta_cap,
   PetscFunctionReturn(0);
 }
 
-// global id of a farthest (finite) node from the single distance field D, and its distance
-static PetscErrorCode net2as_argmax_dist(Net2AS_WGraph *g, const PetscReal *D, PetscInt *gid, PetscReal *dist) {
-  PetscReal lmax = -1, gmax;
-  PetscInt largmax = PETSC_MAX_INT, lgid;
+// Single-field weighted shortest path restricted to within-core edges: distances propagate only
+// between nodes of the same partition (core). rowpart[i] = partition of owned node i; leafpart[c] =
+// partition of local column c (owned + ghost, filled via SF). Caller seeds D (0 at sources, BIG else).
+PetscErrorCode net2as_sssp_core(Net2AS_WGraph *g, const PetscInt *rowpart, const PetscInt *leafpart, PetscReal *D) {
+  PetscReal *leafD;
+  PetscInt iter = 0;
 
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < g->n_rows; i++)
-    if (D[i] < NET2AS_BIG/2 && D[i] > lmax) { lmax = D[i]; largmax = g->vstart + i; }
-  PetscCallMPI(MPI_Allreduce(&lmax, &gmax, 1, MPIU_REAL, MPI_MAX, PETSC_COMM_WORLD));
-  lgid = (lmax == gmax) ? largmax : PETSC_MAX_INT;
-  PetscCallMPI(MPI_Allreduce(&lgid, gid, 1, MPIU_INT, MPI_MIN, PETSC_COMM_WORLD));
-  *dist = gmax;
+  PetscCall(PetscMalloc1(g->n_cols, &leafD));
+  while (1) {
+    PetscInt changed = 0, gchanged;
+
+    PetscCall(PetscSFBcastBegin(g->sf, MPIU_REAL, D, leafD, MPI_REPLACE));
+    PetscCall(PetscSFBcastEnd(g->sf, MPIU_REAL, D, leafD, MPI_REPLACE));
+    for (PetscInt i = 0; i < g->n_rows; i++) {
+      PetscInt si = rowpart[i];
+      for (PetscInt k = g->ia[i]; k < g->ia[i+1]; k++) {
+        PetscInt j = g->ja[k];
+        if (leafpart[j] != si) continue;          // stay inside the core
+        PetscReal cand = leafD[j] + g->w[k];
+        if (cand < D[i]) { D[i] = cand; changed = 1; }
+      }
+    }
+    PetscCallMPI(MPI_Allreduce(&changed, &gchanged, 1, MPIU_INT, MPI_LOR, PETSC_COMM_WORLD));
+    if (!gchanged) break;
+    if (++iter > g->nglobal + 2) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "WARNING: net2as_sssp_core safeguard\n")); break; }
+  }
+  PetscCall(PetscFree(leafD));
   PetscFunctionReturn(0);
 }
 
-// Estimate the weighted graph diameter via the standard double-sweep heuristic: SSSP from an
-// arbitrary node to its farthest node b, then SSSP from b; the largest distance approximates the
-// diameter (exact on trees, a good lower bound otherwise).
-PetscErrorCode net2as_graph_diameter(Net2AS_WGraph *g, PetscReal *diam) {
-  PetscReal *D, dist;
-  PetscInt gid;
+// Per-core weighted diameter via a double-sweep restricted to within-core edges: seed each core at
+// its lowest-global-id node -> farthest node b_s -> diameter_s = max distance from b_s. diam[p] filled
+// (>= 0; 0 for a singleton/empty core). rowpart = owned partition, leafpart = column partition (SF).
+PetscErrorCode net2as_subdomain_diameters(Net2AS_WGraph *g, const PetscInt *rowpart,
+                                          const PetscInt *leafpart, PetscInt p, PetscReal *diam) {
+  PetscReal *D, *lmaxd, *gmaxd;
+  PetscInt *seed, *lseed, *bnode, *lbnode;
 
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(g->n_rows, &D));
+  PetscCall(PetscMalloc4(p, &seed, p, &lseed, p, &bnode, p, &lbnode));
+  PetscCall(PetscMalloc2(p, &lmaxd, p, &gmaxd));
 
-  for (PetscInt i = 0; i < g->n_rows; i++) D[i] = NET2AS_BIG;
-  if (g->vstart == 0 && g->n_rows > 0) D[0] = 0; // seed global node 0
-  PetscCall(net2as_sssp(g, 1, PETSC_MAX_REAL, D));
-  PetscCall(net2as_argmax_dist(g, D, &gid, &dist));
+  // seed_s = min global id in core s
+  for (PetscInt s = 0; s < p; s++) lseed[s] = PETSC_MAX_INT;
+  for (PetscInt i = 0; i < g->n_rows; i++) {
+    PetscInt s = rowpart[i], gid = g->vstart + i;
+    if (gid < lseed[s]) lseed[s] = gid;
+  }
+  PetscCallMPI(MPI_Allreduce(lseed, seed, p, MPIU_INT, MPI_MIN, PETSC_COMM_WORLD));
 
-  for (PetscInt i = 0; i < g->n_rows; i++) D[i] = NET2AS_BIG;
-  if (gid >= g->vstart && gid < g->vstart + g->n_rows) D[gid - g->vstart] = 0;
-  PetscCall(net2as_sssp(g, 1, PETSC_MAX_REAL, D));
-  PetscCall(net2as_argmax_dist(g, D, &gid, &dist));
+  // sweep 1 from seeds, then per-core argmax (max dist, min gid tie-break) = farthest node b_s
+  for (PetscInt i = 0; i < g->n_rows; i++) D[i] = (g->vstart + i == seed[rowpart[i]]) ? 0 : NET2AS_BIG;
+  PetscCall(net2as_sssp_core(g, rowpart, leafpart, D));
+  for (PetscInt s = 0; s < p; s++) lmaxd[s] = -1;
+  for (PetscInt i = 0; i < g->n_rows; i++) {
+    PetscInt s = rowpart[i];
+    if (D[i] < NET2AS_BIG/2 && D[i] > lmaxd[s]) lmaxd[s] = D[i];
+  }
+  PetscCallMPI(MPI_Allreduce(lmaxd, gmaxd, p, MPIU_REAL, MPI_MAX, PETSC_COMM_WORLD));
+  for (PetscInt s = 0; s < p; s++) lbnode[s] = PETSC_MAX_INT;
+  for (PetscInt i = 0; i < g->n_rows; i++) {
+    PetscInt s = rowpart[i];
+    if (D[i] < NET2AS_BIG/2 && D[i] == gmaxd[s] && g->vstart + i < lbnode[s]) lbnode[s] = g->vstart + i;
+  }
+  PetscCallMPI(MPI_Allreduce(lbnode, bnode, p, MPIU_INT, MPI_MIN, PETSC_COMM_WORLD));
 
-  *diam = dist;
+  // sweep 2 from b_s, diameter_s = max distance
+  for (PetscInt i = 0; i < g->n_rows; i++) D[i] = (g->vstart + i == bnode[rowpart[i]]) ? 0 : NET2AS_BIG;
+  PetscCall(net2as_sssp_core(g, rowpart, leafpart, D));
+  for (PetscInt s = 0; s < p; s++) lmaxd[s] = 0;
+  for (PetscInt i = 0; i < g->n_rows; i++) {
+    PetscInt s = rowpart[i];
+    if (D[i] < NET2AS_BIG/2 && D[i] > lmaxd[s]) lmaxd[s] = D[i];
+  }
+  PetscCallMPI(MPI_Allreduce(lmaxd, diam, p, MPIU_REAL, MPI_MAX, PETSC_COMM_WORLD));
+
   PetscCall(PetscFree(D));
+  PetscCall(PetscFree4(seed, lseed, bnode, lbnode));
+  PetscCall(PetscFree2(lmaxd, gmaxd));
   PetscFunctionReturn(0);
 }
 
@@ -907,9 +951,11 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   char ptype[64];
   IS partition;
   PetscInt p = data->p[0]*data->p[1], lsz_part, vstart, vend, cut, nmemb, ncb;
-  const PetscInt *inds;
+  const PetscInt *part_owned;
+  PetscInt *leafpart;
   Net2AS_WGraph g;
-  PetscReal diam, delta, *Dloc, *cen = NULL, *ext = NULL;
+  PetscReal *diam_s, *delta_s, cap = 0, *Dloc, *cen = NULL, *ext = NULL;
+  PetscReal dmin = PETSC_MAX_REAL, dmax = 0, dsum = 0;
   MatCOO memb;
 
   PetscFunctionBegin;
@@ -933,11 +979,33 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(MatPartitioningDestroy(&p_ctx));
   data->partition = partition; // kept for PCDestroy_Net2AS
 
-  // build the weighted graph (edge lengths from node coordinates) and estimate its diameter;
-  // the overlap distance delta is a fraction of that diameter (or an absolute override)
+  // build the weighted graph (edge lengths from node coordinates)
   PetscCall(net2as_wgraph_create(data->adj, data->points, &g));
-  PetscCall(net2as_graph_diameter(&g, &diam));
-  delta = data->overlap_abs > 0 ? data->overlap_abs : data->overlap_frac * diam;
+
+  PetscCall(ISGetLocalSize(partition, &lsz_part));
+  PetscCheck(vend-vstart == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_ARG_SIZ,
+    "parallel layout of data->points must match that of the partition, data->points size '%d', "
+    "partition size '%d'", vend-vstart, lsz_part);
+  PetscCheck(g.n_rows == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
+    "weighted graph owns %" PetscInt_FMT " rows, partition owns %" PetscInt_FMT, g.n_rows, lsz_part);
+  PetscCall(ISGetIndices(partition, &part_owned));
+
+  // partition of each local column (owned + ghost), used for within-core distance computations
+  PetscCall(PetscMalloc1(g.n_cols, &leafpart));
+  PetscCall(PetscSFBcastBegin(g.sf, MPIU_INT, part_owned, leafpart, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(g.sf, MPIU_INT, part_owned, leafpart, MPI_REPLACE));
+
+  // overlap distance is a fixed fraction of EACH subdomain's own weighted graph diameter (so the
+  // condition-number bound ~1+H/delta stays constant as the subdomain count changes), not of the
+  // global diameter. cap = max delta_s bounds the (shared) overlap SSSP.
+  PetscCall(PetscMalloc2(p, &diam_s, p, &delta_s));
+  PetscCall(net2as_subdomain_diameters(&g, part_owned, leafpart, p, diam_s));
+  for (PetscInt s = 0; s < p; s++) {
+    delta_s[s] = data->overlap_abs > 0 ? data->overlap_abs : data->overlap_frac * diam_s[s];
+    if (delta_s[s] <= 0) delta_s[s] = PETSC_SMALL; // degenerate (singleton) core: core only, no overlap
+    cap = PetscMax(cap, delta_s[s]);
+    dmin = PetscMin(dmin, diam_s[s]); dmax = PetscMax(dmax, diam_s[s]); dsum += diam_s[s];
+  }
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "net2as_cb_pu:\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cut: %" PetscInt_FMT "\n", cut));
@@ -945,32 +1013,28 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pux_dim: %" PetscInt_FMT "\n", data->pux_dim));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  pu_xy: %s\n", data->pu_xy ? "true" : "false"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_ncomp: %" PetscInt_FMT "\n", data->cb_ncomp));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  diam: %.5e\n", (double)diam));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  overlap_frac: %.5e\n", (double)data->overlap_frac));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta: %.5e\n", (double)delta));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  diam_subdomain: {min: %.5e, mean: %.5e, max: %.5e}\n",
+                        (double)dmin, (double)(dsum / p), (double)dmax));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta_max: %.5e\n", (double)cap));
 
-  // weighted shortest path from every node to each subdomain core, capped at delta. Dloc[i*p + s]
-  // is owned node i's distance to core s; node i belongs to overlapping subdomain s iff <= delta.
-  PetscCall(ISGetLocalSize(partition, &lsz_part));
-  PetscCheck(vend-vstart == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_ARG_SIZ,
-    "parallel layout of data->points must match that of the partition, data->points size '%d', "
-    "partition size '%d'", vend-vstart, lsz_part);
-  PetscCheck(g.n_rows == lsz_part, PETSC_COMM_WORLD, PETSC_ERR_PLIB,
-    "weighted graph owns %" PetscInt_FMT " rows, partition owns %" PetscInt_FMT, g.n_rows, lsz_part);
+  // weighted shortest path from every node to each subdomain core, capped at the largest delta_s.
+  // Dloc[i*p+s] = owned node i's distance to core s; node i is in subdomain s iff <= delta_s[s].
   PetscCall(PetscMalloc1(lsz_part * p, &Dloc));
   for (PetscInt i = 0; i < lsz_part * p; i++) Dloc[i] = NET2AS_BIG;
-  PetscCall(ISGetIndices(partition, &inds));
-  for (PetscInt i = 0; i < lsz_part; i++) Dloc[i*p + inds[i]] = 0;
-  PetscCall(ISRestoreIndices(partition, &inds));
-  PetscCall(net2as_sssp(&g, p, delta, Dloc));
+  for (PetscInt i = 0; i < lsz_part; i++) Dloc[i*p + part_owned[i]] = 0;
+  PetscCall(net2as_sssp(&g, p, cap, Dloc));
+  PetscCall(ISRestoreIndices(partition, &part_owned));
 
   // membership matrix (owned vertex, subdomain) defines the overlapping subdomains; distribute it
   nmemb = 0;
-  for (PetscInt i = 0; i < lsz_part * p; i++) if (Dloc[i] <= delta) nmemb++;
+  for (PetscInt i = 0; i < lsz_part; i++)
+    for (PetscInt s = 0; s < p; s++)
+      if (Dloc[i*p + s] <= delta_s[s]) nmemb++;
   PetscCall(MatCOO_Alloc(&memb, nmemb));
   for (PetscInt i = 0; i < lsz_part; i++)
     for (PetscInt s = 0; s < p; s++)
-      if (Dloc[i*p + s] <= delta) PetscCall(MatCOO_Push(&memb, vstart+i, s, 1.));
+      if (Dloc[i*p + s] <= delta_s[s]) PetscCall(MatCOO_Push(&memb, vstart+i, s, 1.));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, &memb, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
@@ -988,7 +1052,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     for (PetscInt i = 0; i < p*3; i++) { cmin[i] = PETSC_MAX_REAL; cmax[i] = PETSC_MIN_REAL; }
     for (PetscInt i = 0; i < lsz_part; i++)
       for (PetscInt s = 0; s < p; s++)
-        if (Dloc[i*p + s] <= delta) {
+        if (Dloc[i*p + s] <= delta_s[s]) {
           ccnt[s]++;
           for (PetscInt d = 0; d < 3; d++) {
             PetscReal r = g.coords[3*i + d];
@@ -1020,11 +1084,11 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   for (PetscInt i = 0; i < lsz_part; i++) {
     PetscReal sumr = 0;
     for (PetscInt s = 0; s < p; s++)
-      if (Dloc[i*p + s] <= delta) sumr += 1. - Dloc[i*p + s] / delta;
+      if (Dloc[i*p + s] <= delta_s[s]) sumr += 1. - Dloc[i*p + s] / delta_s[s];
     if (sumr <= 0) continue; // unreachable from any core (own core has d=0, so normally impossible)
     for (PetscInt s = 0; s < p; s++) {
-      if (Dloc[i*p + s] > delta) continue;
-      PetscReal phi = (1. - Dloc[i*p + s] / delta) / sumr;
+      if (Dloc[i*p + s] > delta_s[s]) continue;
+      PetscReal phi = (1. - Dloc[i*p + s] / delta_s[s]) / sumr;
       PetscInt cb_idx = data->cb_ncomp * s;
       PetscCall(MatCOO_Push(coo, vstart+i, cb_idx, phi));                       // constant (always)
       if (cen) { // enrichment: cen/ext are allocated only when pux_dim>0 || pu_xy
@@ -1042,6 +1106,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   if (data->pux_dim > 0 || data->pu_xy) PetscCall(PetscFree2(cen, ext));
   PetscCall(PetscFree(Dloc));
+  PetscCall(PetscFree2(diam_s, delta_s));
+  PetscCall(PetscFree(leafpart));
   PetscCall(net2as_wgraph_destroy(&g));
 
   PetscFunctionReturn(0);

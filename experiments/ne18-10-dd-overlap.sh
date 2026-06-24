@@ -13,7 +13,7 @@ set -xeo pipefail
 : ${INPUT:=$HOME/phd/nextcloud/networks/morgan-2026-05-20/net1/sca/}
 : ${NP:=8}                              # MPI ranks (mat_cache is np-specific, keep fixed in a sweep)
 : ${P:=4}                               # subdomains per axis -> p*p subdomains
-: ${FRACS:="0.04 0.05 0.075 0.10 0.15"} # overlap distance / graph diameter
+: ${FRACS:="0.1 0.2 0.3 0.45 0.6"}      # overlap distance / per-subdomain weighted diameter
 NAME=$(basename -s .sh $0)
 NOW=$(date +%s)
 OUT=$OUTDIR/$NAME.$NOW
@@ -37,26 +37,36 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN \
        --dirichlet xmax=63 xmin=63 ymin=63 ymax=63
 
-# run <config-label> <extra net2as args...>; appends one json line per residual-history point.
-# t = ksp_monitor wall-clock time, which already includes the factorization (logged at iteration 0).
+# run <config-label> <extra net2as args...>; archives raw json in $OUT and appends one json line per
+# residual-history point. t = ksp_monitor wall clock (already includes the factorization at it=0).
 run() {
   label="$1"; shift
   mpirun -n $NP $BUILD/network -mat_cache $MAT -test constant -domain $DOMAIN $NET \
          -net2as_p $P -net2as_print_local -ksp_monitor_yaml "$@" 2>/dev/null \
-    | yq -o json -I0 \
-    | jq -c --arg cfg "$label" '
-        .iterations as $its |
-        .ksp_monitor[] | {config: $cfg, t: .time, rnorm: .rnorm, iters: $its}'
+    | yq -o json -I0 > "$OUT/$label.json"
+  jq -c --arg cfg "$label" '
+      .iterations as $its |
+      .ksp_monitor[] | {config: $cfg, t: .time, rnorm: .rnorm, iters: $its}' "$OUT/$label.json" >> $LOG
 }
 
 : > $LOG
-run "q1trim" -net2as_cb_type q1 -net2as_cb_trim >> $LOG
+LABELS="q1trim"
+run "q1trim" -net2as_cb_type q1 -net2as_cb_trim
 for f in $FRACS; do
-  run "f=$f" -net2as_cb_type pu -net2as_overlap_frac $f >> $LOG
+  run "f=$f" -net2as_cb_type pu -net2as_overlap_frac $f
+  LABELS="$LABELS f=$f"
 done
 
-echo "config | iters | wall_end[s] (fac+iter)"
-jq -rs 'group_by(.config)[] | "\(.[0].config) | \(.[0].iters) | \(([.[].t] | max * 1000 | round / 1000))"' $LOG
+# total/max subdomain factorization nnz and summed factor time show the small-subdomain advantage
+echo "config   | iters | wall_end[s] | sum_fac_nz | max_fac_nz | sum_fac_t[s]"
+for l in $LABELS; do
+  printf "%-8s | %5s | %11s | %10s | %10s | %s\n" "$l" \
+    "$(jq -r '.iterations' "$OUT/$l.json")" \
+    "$(jq -r '.ksp_monitor[-1].time' "$OUT/$l.json")" \
+    "$(jq -r '[.net2as.local[].nz_fac]|add' "$OUT/$l.json")" \
+    "$(jq -r '[.net2as.local[].nz_fac]|max' "$OUT/$l.json")" \
+    "$(jq -r '[.net2as.local[].time]|add' "$OUT/$l.json")"
+done
 
 python experiments/plot.py -x t -y rnorm -g config --log y --marker "" \
        --xlabel "wall clock [s] (incl. factorization)" --ylabel "residual" \
