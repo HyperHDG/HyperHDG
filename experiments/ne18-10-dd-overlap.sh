@@ -11,9 +11,9 @@ set -xeo pipefail
 : ${BUILD:=build/$PRESET/experiments}
 : ${OUTDIR:=output}
 : ${INPUT:=$HOME/phd/nextcloud/networks/morgan-2026-05-20/net1/sca/}
-: ${NP:=8}                              # MPI ranks (mat_cache is np-specific, keep fixed in a sweep)
+: ${NP:=1}                              # MPI ranks (mat_cache is np-specific, keep fixed in a sweep)
 : ${P:=4}                               # subdomains per axis -> p*p subdomains
-: ${FRACS:="0.1 0.2 0.3 0.45 0.6"}      # overlap distance / per-subdomain weighted diameter
+: ${FRACS:="0.1 0.2 0.3"}      # overlap distance / per-subdomain weighted diameter
 NAME=$(basename -s .sh $0)
 NOW=$(date +%s)
 OUT=$OUTDIR/$NAME.$NOW
