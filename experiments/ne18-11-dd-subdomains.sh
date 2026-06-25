@@ -17,7 +17,7 @@ NOW=$(date +%s)
 OUT=$OUTDIR/$NAME.$NOW
 DOMAIN=$OUT/domain.geo.h5
 MAT=$OUT/mat.bin
-LOG=$OUT/data.jsonl
+LOG=$OUT/data.json
 PLOT=$OUT/$NAME.png
 CUT=.4
 # unpreconditioned norm so every config converges in the same true residual ||b-Ax|| (the
@@ -35,33 +35,17 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 python experiments/make_geo2.py -i $INPUT --clamp-xy $CUT -o $DOMAIN \
        --dirichlet xmax=63 xmin=63 ymin=63 ymax=63
 
-# run <label> <extra net2as args...>; archives raw json in $OUT and appends one json line per
-# residual-history point. t = ksp_monitor wall clock (already includes the factorization at it=0).
-run() {
-  label="$1"; shift
-  mpirun -n $NP $BUILD/network -mat_cache $MAT -test constant -domain $DOMAIN $NET \
-         -net2as_cb_type pu -net2as_overlap_frac $FRAC -net2as_print_local -ksp_monitor_yaml "$@" 2>/dev/null \
-    | yq -o json -I0 > "$OUT/$label.json"
-  jq -c --arg cfg "$label" '
-      .iterations as $its |
-      .ksp_monitor[] | {config: $cfg, t: .time, rnorm: .rnorm, iters: $its}' "$OUT/$label.json" >> $LOG
+cmd() {
+  echo "$BUILD/network -mat_cache $MAT -test constant -domain $DOMAIN $NET \
+         -net2as_print_local -ksp_monitor_yaml -mem_max $@"
 }
 
-: > $LOG
-for p in $PS; do run "p$p" -net2as_p $p; done
+Q1="-net2as_cb_type q1 -net2as_cb_trim"
+PU="-net2as_cb_type pu -net2as_overlap_frac .1"
+for p in 1 2 4 8 16 32 64; do
+  cmd $Q1 -net2as_p $p
+  cmd $PU -net2as_p $p
+done | parallel -j 1 --progress --bar --results $LOG
 
-echo "config | nsub | iters | wall_end[s] | sum_fac_nz | max_fac_nz | sum_fac_t[s]"
-for p in $PS; do
-  printf "p=%-3s | %4s | %5s | %11s | %10s | %10s | %s\n" "$p" "$((p*p))" \
-    "$(jq -r '.iterations' "$OUT/p$p.json")" \
-    "$(jq -r '.ksp_monitor[-1].time' "$OUT/p$p.json")" \
-    "$(jq -r '[.net2as.local[].nz_fac]|add' "$OUT/p$p.json")" \
-    "$(jq -r '[.net2as.local[].nz_fac]|max' "$OUT/p$p.json")" \
-    "$(jq -r '[.net2as.local[].time]|add' "$OUT/p$p.json")"
-done
-
-python experiments/plot.py -x t -y rnorm -g config --log y --marker "" \
-       --xlabel "wall clock [s] (incl. factorization)" --ylabel "residual" \
-       --title "$NAME: convergence vs #subdomains (overlap frac=$FRAC)" \
-       --comment "$(git rev-parse --short HEAD)" --nshow --save $PLOT < $LOG
-sxiv $PLOT
+yq -io json '.Stdout |= from_yaml' $LOG
+jq '.Stdout | {mem_max, t_ksp, t_iteration, iterations, label, p: .net2as.sz}' $LOG
