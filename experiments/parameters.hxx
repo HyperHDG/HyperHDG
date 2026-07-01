@@ -607,8 +607,9 @@ struct TestTimoWave4
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -omega*(sin(omega*point[1]))*cos(omega*time); // NOTE: again! opposite sign as mathematica
-    res[1] = -omega*(sin(omega*point[0]))*cos(omega*time);
+    // Right-handed QR frame (det(Q)=+1 on every edge) => g is uniformly -g_mathematica.
+    res[0] = -omega*(sin(omega*point[1]))*cos(omega*time);
+    res[1] =  omega*(sin(omega*point[0]))*cos(omega*time);
     return scalar_product(res, normal);
   }
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
