@@ -825,9 +825,9 @@ class TimoshenkoWave
         flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+i] / extra_coeffs[3*space_dim+dim] * hyper_edge.geometry.area();
       }
 
-      // Consider the cross product
-      flux_r[2 * n_shape_fct_ + i] -= n_old[1 * n_shape_fct_ + i] * hyper_edge.geometry.area();
-      flux_r[1 * n_shape_fct_ + i] += n_old[2 * n_shape_fct_ + i] * hyper_edge.geometry.area();
+      // Consider the cross product (textbook orientation: + i x n)
+      flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + i] * hyper_edge.geometry.area();
+      flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + i] * hyper_edge.geometry.area();
 
       for (unsigned int dim = 0; dim < space_dim; ++dim)
       {
@@ -1220,11 +1220,11 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       }
 
 
-      // Consider the cross product
-      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
-      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
-      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= theta_ * vol_integral;
-      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += theta_ * vol_integral;
+      // Consider the cross product (textbook orientation: + i x r and + i x n)
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) += vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) -= vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) += theta_ * vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= theta_ * vol_integral;
     }
   }
 
@@ -1334,11 +1334,11 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       }
 
 
-      // Consider the cross product
-      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) -= vol_integral;
-      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) += vol_integral;
-      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) -= theta_ * vol_integral;
-      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) += theta_ * vol_integral;
+      // Consider the cross product (textbook orientation: + i x r and + i x n)
+      local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) += vol_integral;
+      local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) -= vol_integral;
+      local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) += theta_ * vol_integral;
+      local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= theta_ * vol_integral;
     }
   }
 
