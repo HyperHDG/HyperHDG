@@ -593,24 +593,33 @@ struct TestTimoWave4
 
   static constexpr param_float_t omega = 2*M_PI;
 
-  // f
+  // f = d^2u/dt^2 + dn/ds, per arm (derived in experiments/timowave4.m)
   static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
+    // u = {1,2,3} cos(w sigma) cos(w t), r = 0  =>  f = d^2u/dt^2 - d^2u/ds^2 = 0
     SmallVec<space_dimT, param_float_t> res(0.);
     return scalar_product(res, normal);
   }
-  // g
+  // g = d^2r/dt^2 + dm/ds + i x n, per arm (derived in experiments/timowave4.m)
   static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
+    // r = 0  =>  g = i x n,  n = -du/ds,  u = {1,2,3} cos(w sigma) cos(w t)
     SmallVec<space_dimT, param_float_t> res(0.);
-    // g = +g_mathematica (textbook +i x n coupling, right-handed QR frame): matches the
-    // Mathematica script directly -- x-edge g=(0,-w sin(wx) cos(wt),0), y-edge g=(w sin(wy) cos(wt),0,0).
-    res[0] =  omega*(sin(omega*point[1]))*cos(omega*time);
-    res[1] = -omega*(sin(omega*point[0]))*cos(omega*time);
+    const param_float_t cs = omega*cos(omega*time);
+    if (point[0] != 0) {         // x-arm
+      res[1] = -3*cs*sin(omega*point[0]);
+      res[2] =  2*cs*sin(omega*point[0]);
+    } else if (point[1] != 0) {  // y-arm
+      res[0] =  3*cs*sin(omega*point[1]);
+      res[2] =   -cs*sin(omega*point[1]);
+    } else if (point[2] != 0) {  // z-arm
+      res[0] = -2*cs*sin(omega*point[2]);
+      res[1] =    cs*sin(omega*point[2]);
+    }
     return scalar_product(res, normal);
   }
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
@@ -642,23 +651,25 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[2] = cos(omega*(point[0]+point[1]+point[2]))*cos(omega*time);
+    const param_float_t cc = cos(omega*(point[0]+point[1]+point[2]))*cos(omega*time);
+    res[0] = 1*cc; res[1] = 2*cc; res[2] = 3*cc;
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0);
-    res[2] = -omega*cos(omega*(point[0]+point[1]+point[2]))*sin(omega*time);
+    SmallVec<space_dimT, param_float_t> res(0.);
+    const param_float_t cs = -omega*cos(omega*(point[0]+point[1]+point[2]))*sin(omega*time);
+    res[0] = 1*cs; res[1] = 2*cs; res[2] = 3*cs;
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
+    SmallVec<space_dimT, param_float_t> res(0.);  // r = 0  =>  s = dr/dt = 0
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
+    SmallVec<space_dimT, param_float_t> res(0.);  // r = 0
     return res;
   }
 };
