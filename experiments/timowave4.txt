@@ -1,0 +1,28 @@
+----u,r,n,m,v,s,f,g
+{0, 0, Cos[2 Pi t] Cos[2 Pi x]}
+{0, 0, 0}
+{0, 0, 2 Pi Cos[2 Pi t] Sin[2 Pi x]}
+{0, 0, 0}
+{0, 0, -2 Pi Cos[2 Pi x] Sin[2 Pi t]}
+{0, 0, 0}
+{0, 0, 0}
+{0, -2 Pi Cos[2 Pi t] Sin[2 Pi x], 0}
+----u,r,n,m,v,s,f,g
+{0, 0, Cos[2 Pi t] Cos[2 Pi y]}
+{0, 0, 0}
+{0, 0, 2 Pi Cos[2 Pi t] Sin[2 Pi y]}
+{0, 0, 0}
+{0, 0, -2 Pi Cos[2 Pi y] Sin[2 Pi t]}
+{0, 0, 0}
+{0, 0, 0}
+{2 Pi Cos[2 Pi t] Sin[2 Pi y], 0, 0}
+----u,r,n,m,v,s,f,g
+{0, 0, Cos[2 Pi t] Cos[2 Pi z]}
+{0, 0, 0}
+{0, 0, 2 Pi Cos[2 Pi t] Sin[2 Pi z]}
+{0, 0, 0}
+{0, 0, -2 Pi Cos[2 Pi z] Sin[2 Pi t]}
+{0, 0, 0}
+{0, 0, 0}
+{0, 0, 0}
+
