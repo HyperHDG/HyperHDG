@@ -1222,29 +1222,35 @@ struct TestTimoWave9
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
 
   static constexpr param_float_t omega = 2*M_PI;
+
+  // u = 0, r = {5,7,11} cos(w t) cos(w x), beam along x (single1.geo);
+  // derived in experiments/timowave9.m
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  // f
+  // f = {0, -11 w, 7 w} cos(w t) sin(w x)
   static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
+    const param_float_t cs = omega*cos(omega*time)*sin(omega*point[0]);
+    res[1] = -11*cs;
+    res[2] =   7*cs;
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
-  // g
+  // g = {0, 7, 11} cos(w t) cos(w x)
   static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -5*omega*omega*cos(omega*time);
-    res[1] = 7*cos(omega*time)-7*omega*omega*cos(omega*time);
-    res[2] = 11*cos(omega*time)-11*omega*omega*cos(omega*time);
+    const param_float_t cc = cos(omega*time)*cos(omega*point[0]);
+    res[1] =  7*cc;
+    res[2] = 11*cc;
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1301,7 +1307,7 @@ struct TestTimoWave9
     res[0] = 5;
     res[1] = 7;
     res[2] = 11;
-    res *= -omega * sin(omega*time);
+    res *= -omega * sin(omega*time) * cos(omega*point[0]);
     return res;
   }
 
@@ -1310,7 +1316,7 @@ struct TestTimoWave9
     res[0] = 5;
     res[1] = 7;
     res[2] = 11;
-    res *= cos(omega*time);
+    res *= cos(omega*time) * cos(omega*point[0]);
     return res;
   }
 
