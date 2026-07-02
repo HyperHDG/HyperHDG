@@ -34,6 +34,7 @@ PetscErrorCode PetscHDGCreate(
   case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
+  case 33: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave3>(path, {tau, theta, dt})); return 0;
   case 34: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 30: *hdg = new HDGWrapper(HDGTimoWave<3,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
   case 64: *hdg = new HDGWrapper(HDGTimoWave<6,TestTimoWave4>(path, {tau, theta, dt})); return 0;
