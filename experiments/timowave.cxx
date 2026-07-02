@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0;
+    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -67,14 +67,12 @@ int main(int argc, char **argv) {
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
 
-    (void)e_rel;
-
     PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk, s_ksp;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
     sparse_mat<std::vector<PetscReal>> mat_coo;
-    Vec rhs, errors, times;
+    Vec rhs, errors, norms, times;
     Mat mat;
     KSP ksp;
     PC pc;
@@ -146,6 +144,7 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &rhs));
     PetscCall(VecSetBlockSize(rhs, hdg->n_dofs_per_node()));
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "err_", 1, nt+1, nt+1, &errors));
+    PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "norm_", 1, nt+1, nt+1, &norms));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
     PetscCall(PetscObjectSetName((PetscObject)times, "times"));
 
@@ -159,9 +158,10 @@ int main(int argc, char **argv) {
     temp2 = hdg->errors(temp, 0);
     temp3 = hdg->norms(temp, 0);
     e_abs = PetscMax(temp2[0], e_abs);
-    // e_rel = PetscMax(temp2[0] / temp3[0], e_rel);
+    n_abs = PetscMax(temp3[0], n_abs);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
+    PetscCall(VecSetValue(norms,  0, temp3[0], INSERT_VALUES));
     PetscCall(VecSetValue(times,  0, 0, INSERT_VALUES));
 
     PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
     for (PetscInt i = 1; i <= nt; i++) {
       if (print_timestep)
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "------------ TIMESTEP %d -------\n", i));
-      PetscReal ti = i*dt, error = 0;
+      PetscReal ti = i*dt, error = 0, norm = 0;
         PetscCall(VecSetValue(times, i, ti, INSERT_VALUES));
 
         std::span<PetscReal> span;
@@ -237,10 +237,13 @@ int main(int argc, char **argv) {
         hdg->set_data(span, ti);
         if (*plot) hdg->plot_solution(span, ti);
         error = hdg->errors(span, ti)[0];
+        norm = hdg->norms(span, ti)[0];
         e_abs = PetscMax(error, e_abs);
+        n_abs = PetscMax(norm, n_abs);
         PetscCall(VecRestoreSpan(rhs, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
+        PetscCall(VecSetValue(norms, i, norm, INSERT_VALUES));
     }
     PRIN2SP();
 
@@ -253,9 +256,15 @@ int main(int argc, char **argv) {
     PetscCall(VecAssemblyBegin(errors));
     PetscCall(VecAssemblyEnd(errors));
 
+    PetscCall(VecAssemblyBegin(norms));
+    PetscCall(VecAssemblyEnd(norms));
+
     avg_iterations = ((PetscReal)iterations) / nt;
+    e_rel = e_abs / n_abs;
 
     PRIN2FY(e_abs);
+    PRIN2FY(n_abs);
+    PRIN2FY(e_rel);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);
@@ -268,6 +277,7 @@ int main(int argc, char **argv) {
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&times));
     PetscCall(VecDestroy(&errors));
+    PetscCall(VecDestroy(&norms));
     PetscCall(VecDestroy(&rhs));
 
     PetscCall(PetscFinalize());
