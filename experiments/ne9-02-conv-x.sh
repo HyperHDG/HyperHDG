@@ -12,7 +12,7 @@ export OMP_NUM_THREADS=1
 
 parallel --progress --bar --results $OUT.json \
   "$BIN_DIR/timowave $DOMAIN -deg {2} -nx {1} -theta .5 -test 4 -nt {3} -pc_type none" \
-  ::: 2 4 8 16 32 64 ::: 1 2 3 :::+ 500 1000 15000
+  ::: 2 4 8 16 32 64 ::: 1 2 3 :::+ 500 1000 25000
 echo "gen exit: $?"
 yq -i '.Stdout |= from_yaml' $OUT.json
 cp $OUT.json{,.$(date +%s)}
