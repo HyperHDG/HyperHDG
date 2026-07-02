@@ -1062,10 +1062,11 @@ class TimoshenkoWave
       }
     }
 
-    // TODO: maybe -1?
+    // constitutive residuals equal -(M n) and -(M m): negate both blocks to recover n, m
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int d = 0; d < space_dim; ++d) {
         coefs_nm[i+(0*space_dim+d)*n_shape_fct_] *= -1; // TODO: missing extra coefs -> function
+        coefs_nm[i+(1*space_dim+d)*n_shape_fct_] *= -1;
       }
     }
 
@@ -1202,8 +1203,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
       }
 
-      //TODO: mult by theta
-
       for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
       {
         local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
@@ -1311,8 +1310,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         face_integral += helper;
         normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
       }
-
-      //TODO: mult by theta
 
       for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
       {
