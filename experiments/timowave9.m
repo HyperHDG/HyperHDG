@@ -3,7 +3,7 @@ omega := 2*Pi
 i:= {1, 0, 0}
 
 u[x_,y_,z_,t_] := {0,0,0}
-r[x_,y_,z_,t_] := {t^2 x^3,0,0}
+r[x_,y_,z_,t_] := {1,0,0} Cos[omega t]
 
 v[x_,y_,z_,t_] =  D[u[x,y,z,t],t]
 s[x_,y_,z_,t_] =  D[r[x,y,z,t],t]

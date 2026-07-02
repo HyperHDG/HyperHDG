@@ -1220,6 +1220,8 @@ struct TestTimoWave9
    * \brief   Array containing hypernode types corresponding to Neumann boundary.
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+
+  static constexpr param_float_t omega = 2*M_PI;
   /*!***********************************************************************************************
    * \brief   Right-hand side in PDE as analytic function.
    ************************************************************************************************/
@@ -1240,7 +1242,7 @@ struct TestTimoWave9
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -6*time*time*point[0] + 2*point[0]*point[0]*point[0];
+    res[0] = -omega*omega*cos(omega*time);
     res[1] = 0;
     res[2] = 0;
     return scalar_product(res, normal);
@@ -1296,13 +1298,13 @@ struct TestTimoWave9
 
   static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = 2*time*point[0]*point[0]*point[0];
+    res[0] = -omega * sin(omega*time);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = time*time*point[0]*point[0]*point[0];
+    res[0] = cos(omega*time);
     return res;
   }
 
