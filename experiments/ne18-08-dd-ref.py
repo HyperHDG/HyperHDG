@@ -10,6 +10,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from datetime import datetime
+import time
 
 import os, sys
 import argparse
@@ -70,14 +71,25 @@ B = sp.linalg.LinearOperator( (system_size,system_size), matvec= precond_mult )
 
 print("B setup", datetime.now())
 
+# Emit the same YAML block as the C++ solvers' -ksp_monitor_yaml (KSPMonitorYAML
+# in prin2.cxx): one "- it/time/rnorm" entry per iteration, rnorm the absolute
+# unpreconditioned residual ||b - A x||_2 (matching -ksp_norm_type unpreconditioned),
+# time in seconds since the start of the solve.
 iters = 0
+ksp_t0 = 0.
 def nonlocal_iterate(vec_x):
   global iters
   iters += 1
-  print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
-        "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
+  print("  - it: %3d" % iters)
+  print("    time: %.16e" % (time.perf_counter() - ksp_t0))
+  print("    rnorm: %.16e" % np.linalg.norm(vectorRHS - A.dot(vec_x)))
 
-print(np.linalg.norm(vectorRHS))
+print("ksp_monitor:")
+ksp_t0 = time.perf_counter()
+# it 0: zero initial guess -> r0 = b, so rnorm = ||b||
+print("  - it: %3d" % 0)
+print("    time: %.16e" % (time.perf_counter() - ksp_t0))
+print("    rnorm: %.16e" % np.linalg.norm(vectorRHS))
 
 vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
 if num_iter != 0:
