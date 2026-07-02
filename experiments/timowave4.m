@@ -1,72 +1,43 @@
 omega := 2*Pi
 
-(* Manufactured Timoshenko-beam solution for the planar cross (cross2.geo).
-   Global fields (functions of sigma = x+y+z, restricting to the arm coordinate on
-   each arm):
-       u = {1,2,3} Cos[omega sigma] Cos[omega t]   (all components, nonzero at center)
-       r = 0
-   Convention (matches experiments/timowave.hxx):
+(* Manufactured Timoshenko-beam solution for the 3d cross (cross2.geo, arms +-x, +-y, +-z).
+   Global fields, sigma = signed axis coordinate of the arm:
+       u_k = A_k Cos[omega sigma] Cos[omega t + a_k]
+       r_k = B_k Cos[omega sigma] Cos[omega t + b_k]
+   Convention (matches include/HyperHDG/local_solver/timowave.hxx):
      n = -du/ds - i x r,   m = -dr/ds,   f = dv/dt + dn/ds,   g = ds/dt + dm/ds + i x n.
-   NB: a nonzero rotation r cannot be manufactured on this cross -- it makes n(0) = -i x r(0)
-   arm-direction dependent, which cannot balance at the interior node (no nodal force), and
-   the solver's rotational coupling is currently only 1st-order accurate in time (WIP). *)
+   Nodal force balance at the center needs the arms in +-pairs: n(0) = -i x r(0) flips sign
+   with the arm direction i, so opposite arms cancel and unpaired arms would not balance.
+   Written with the signed global coordinate and the positive axis vector i = e_ax, the same
+   f, g formulas hold on both arms of a pair (i and sin both flip sign; cos terms are even). *)
+
+A = {1, 2, 3};  a = {a1, a2, a3};   (* u amplitudes and per-component time phases *)
+B = {5, 7, 11}; b = {b1, b2, b3};   (* r amplitudes and per-component time phases *)
+
+Uvec[t_] := Table[A[[k]] Cos[omega t + a[[k]]], {k, 3}]
+Rvec[t_] := Table[B[[k]] Cos[omega t + b[[k]]], {k, 3}]
 
 emit[lab_, vec_] := (
-  Print["-- CForm ", lab, " --"];
-  Do[Print["res[", k - 1, "] = ", CForm[Simplify[vec[[k]]]], ";"], {k, 1, 3}]);
+  Print["-- ", lab, " --"];
+  Do[Print["res[", k - 1, "] = ", Simplify[vec[[k]]], ";"], {k, 1, 3}]);
 
-(* ============================= x-arm: i = e_x ============================= *)
-i := {1, 0, 0}
-u[x_, y_, z_, t_] := {1, 2, 3} Cos[omega x] Cos[omega t]
-r[x_, y_, z_, t_] := {0, 0, 0}
+Do[
+  i = IdentityMatrix[3][[ax]];
+  u[w_, t_] := Uvec[t] Cos[omega w];
+  r[w_, t_] := Rvec[t] Cos[omega w];
+  v[w_, t_] =  D[u[w, t], t];
+  s[w_, t_] =  D[r[w, t], t];
+  n[w_, t_] = -D[u[w, t], w] - Cross[i, r[w, t]];
+  m[w_, t_] = -D[r[w, t], w];
+  f[w_, t_] =  D[v[w, t], t] + D[n[w, t], w];
+  g[w_, t_] =  D[s[w, t], t] + D[m[w, t], w] + Cross[i, n[w, t]];
+  Print["==== arm axis e_", ax, " (w = point[", ax - 1, "]) ===="];
+  emit["n", n[w, t]]; emit["m", m[w, t]];
+  emit["f", f[w, t]]; emit["g", g[w, t]],
+  {ax, 1, 3}]
 
-v[x_, y_, z_, t_] =  D[u[x, y, z, t], t]
-s[x_, y_, z_, t_] =  D[r[x, y, z, t], t]
-n[x_, y_, z_, t_] = -D[u[x, y, z, t], x] - Cross[i, r[x, y, z, t]]
-m[x_, y_, z_, t_] = -D[r[x, y, z, t], x]
-f[x_, y_, z_, t_] =  D[v[x, y, z, t], t] + D[n[x, y, z, t], x]
-g[x_, y_, z_, t_] =  D[s[x, y, z, t], t] + D[m[x, y, z, t], x] + Cross[i, n[x, y, z, t]]
-
-Print["==== x-arm  u,r,n,m,v,s,f,g ===="]
-Print[u[x, y, z, t]]; Print[r[x, y, z, t]]; Print[n[x, y, z, t]]; Print[m[x, y, z, t]]
-Print[v[x, y, z, t]]; Print[s[x, y, z, t]]; Print[f[x, y, z, t]]; Print[g[x, y, z, t]]
-emit["g x-arm (s=point[0])", g[x, y, z, t]]
-
-(* ============================= y-arm: i = e_y ============================= *)
-i := {0, 1, 0}
-u[x_, y_, z_, t_] := {1, 2, 3} Cos[omega y] Cos[omega t]
-r[x_, y_, z_, t_] := {0, 0, 0}
-
-v[x_, y_, z_, t_] =  D[u[x, y, z, t], t]
-s[x_, y_, z_, t_] =  D[r[x, y, z, t], t]
-n[x_, y_, z_, t_] = -D[u[x, y, z, t], y] - Cross[i, r[x, y, z, t]]
-m[x_, y_, z_, t_] = -D[r[x, y, z, t], y]
-f[x_, y_, z_, t_] =  D[v[x, y, z, t], t] + D[n[x, y, z, t], y]
-g[x_, y_, z_, t_] =  D[s[x, y, z, t], t] + D[m[x, y, z, t], y] + Cross[i, n[x, y, z, t]]
-
-Print["==== y-arm  u,r,n,m,v,s,f,g ===="]
-Print[u[x, y, z, t]]; Print[r[x, y, z, t]]; Print[n[x, y, z, t]]; Print[m[x, y, z, t]]
-Print[v[x, y, z, t]]; Print[s[x, y, z, t]]; Print[f[x, y, z, t]]; Print[g[x, y, z, t]]
-emit["g y-arm (s=point[1])", g[x, y, z, t]]
-
-(* ============================= z-arm: i = e_z ============================= *)
-i := {0, 0, 1}
-u[x_, y_, z_, t_] := {1, 2, 3} Cos[omega z] Cos[omega t]
-r[x_, y_, z_, t_] := {0, 0, 0}
-
-v[x_, y_, z_, t_] =  D[u[x, y, z, t], t]
-s[x_, y_, z_, t_] =  D[r[x, y, z, t], t]
-n[x_, y_, z_, t_] = -D[u[x, y, z, t], z] - Cross[i, r[x, y, z, t]]
-m[x_, y_, z_, t_] = -D[r[x, y, z, t], z]
-f[x_, y_, z_, t_] =  D[v[x, y, z, t], t] + D[n[x, y, z, t], z]
-g[x_, y_, z_, t_] =  D[s[x, y, z, t], t] + D[m[x, y, z, t], z] + Cross[i, n[x, y, z, t]]
-
-Print["==== z-arm  u,r,n,m,v,s,f,g ===="]
-Print[u[x, y, z, t]]; Print[r[x, y, z, t]]; Print[n[x, y, z, t]]; Print[m[x, y, z, t]]
-Print[v[x, y, z, t]]; Print[s[x, y, z, t]]; Print[f[x, y, z, t]]; Print[g[x, y, z, t]]
-emit["g z-arm (s=point[2])", g[x, y, z, t]]
-
-(* ================= global primaries (sigma = x+y+z) ================= *)
-uu[sig_, t_] := {1, 2, 3} Cos[omega sig] Cos[omega t]
-emit["initial_u (sig=point[0]+point[1]+point[2])", uu[sig, t]]
-emit["initial_v (dU/dt)", D[uu[sig, t], t]]
+Print["==== initial data (sig = point[0]+point[1]+point[2]) ===="]
+emit["initial_u", Uvec[t] Cos[omega sig]]
+emit["initial_v", D[Uvec[t] Cos[omega sig], t]]
+emit["initial_r", Rvec[t] Cos[omega sig]]
+emit["initial_s", D[Rvec[t] Cos[omega sig], t]]
