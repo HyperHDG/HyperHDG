@@ -1242,9 +1242,9 @@ struct TestTimoWave9
                                          const param_float_t time = 0.)
   {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -omega*omega*cos(omega*time);
-    res[1] = 0;
-    res[2] = 0;
+    res[0] = -5*omega*omega*cos(omega*time);
+    res[1] = 7*cos(omega*time)-7*omega*omega*cos(omega*time);
+    res[2] = 11*cos(omega*time)-11*omega*omega*cos(omega*time);
     return scalar_product(res, normal);
   }
   /*!***********************************************************************************************
@@ -1297,14 +1297,20 @@ struct TestTimoWave9
   }
 
   static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = -omega * sin(omega*time);
+    SmallVec<space_dimT, param_float_t> res;
+    res[0] = 5;
+    res[1] = 7;
+    res[2] = 11;
+    res *= -omega * sin(omega*time);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
-    SmallVec<space_dimT, param_float_t> res(0.);
-    res[0] = cos(omega*time);
+    SmallVec<space_dimT, param_float_t> res;
+    res[0] = 5;
+    res[1] = 7;
+    res[2] = 11;
+    res *= cos(omega*time);
     return res;
   }
 
