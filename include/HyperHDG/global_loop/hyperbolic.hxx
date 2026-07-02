@@ -429,19 +429,17 @@ class Hyperbolic
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
-   * \brief   Calculate L2 norm.
+   * \brief   Calculate L2 norm of the analytic solution.
    *
    * \param   x_vec         A vector containing the input vector \f$x\f$.
    * \param   time          Time at which norm is evaluated.
-   * \retval  error         L2 error.
+   * \retval  norm          L2 norm of the analytic solution.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> norms(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> norms(const SpanT& x_vec, const dof_value_t time = 0.)
   {
-    // TODO: relative
-    // auto result = prototype_errors(norms, has_norms);
-    // return std::vector<dof_value_t>(result.begin(), result.end());
-    return {};
+    auto result = prototype_errors(norms, has_norms);
+    return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.
