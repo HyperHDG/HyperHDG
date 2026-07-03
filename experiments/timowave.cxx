@@ -348,6 +348,7 @@ int main(int argc, char **argv) {
 
     avg_iterations = ((PetscReal)iterations) / nt;
     e_rel = e_abs / n_abs;
+    e_trace = e_trace / n_abs;
 
     PRIN2FY(e_abs);
     PRIN2FY(n_abs);
