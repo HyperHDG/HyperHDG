@@ -717,6 +717,10 @@ struct TestTimoWave4
 };
 
 
+
+
+
+
 // timowave
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TimoWaveClamped
@@ -1378,6 +1382,82 @@ struct TestTimoWave9
   */
 };
 
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network tensile stiffness experiment.
+ *
+ *            Applies a prescribed tensile strain to the right Dirichlet boundary
+ *            of a clamped beam network. The displacement is computed as
+ *            `strain * length` and applied in the x-direction.
+ *
+ *            Both `length` and `strain` are runtime-configurable static members
+ *            and must be set after loading the mesh, before the solve.
+ *
+ * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
+ * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoStiffness
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
+  static inline Scalar length = 0;
+
+  /// Applied tensile strain (dimensionless)
+  static inline Scalar strain = 0;
+
+  /// Strain normal component
+  static inline unsigned int comp = 0;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return strain * point[0] * (point[0] > .5 * length) * normal[comp];
+  }
+
+  // stub
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
 
 
 

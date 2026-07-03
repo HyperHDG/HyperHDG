@@ -115,65 +115,6 @@ struct TimoschenkoBeamParametersDefault
   }
 };  // end of struct DiffusionParametersDefault
 
-/*!*************************************************************************************************
- * \brief     Timoschenko Network tensile stiffness experiment.
- *
- *            Applies a prescribed tensile strain to the right Dirichlet boundary
- *            of a clamped beam network. The displacement is computed as
- *            `strain * length` and applied in the x-direction.
- *
- *            Both `length` and `strain` are runtime-configurable static members
- *            and must be set after loading the mesh, before the solve.
- *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- * \authors   Joseph Holten, KIT, 2026--
- **************************************************************************************************/
-template <unsigned int dim, typename Scalar = double>
-struct TimoshenkoStiffness
-{
-  using Pt = Point<dim, Scalar>;
-
-  /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
-  static inline Scalar length = 0;
-
-  /// Applied tensile strain (dimensionless)
-  static inline Scalar strain = 0;
-
-  /// Strain normal component
-  static inline unsigned int comp = 0;
-
-  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return 0;
-  }
-
-  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return 0.;
-  }
-
-  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return analytic_result_u(point, normal);
-  }
-
-  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return analytic_result_phi(point, normal);
-  }
-
-  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return strain * point[0] * (point[0] > .5 * length) * normal[comp];
-  }
-
-  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
-  {
-    return 0.;
-  }
-};
-
 
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
@@ -708,10 +649,14 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   if (hyper_edge.geometry.has_extra_data())
   {
-    auto extra_data = hyper_edge.geometry.extra_data();
+    auto extra_data_ = hyper_edge.geometry.extra_data();
+    // (mass) -> need to ignore this
     // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
     // (n_11,n_12,n_13) : normal 1
     // (n_21,n_22,n_23) : normal 2
+    // (width1,width2)
+    // (fiber_id,fiber_edge_id)
+    lSol_float_t* extra_data = extra_data_.data() + 1; // ignore mass
     SmallVec<space_dim, lSol_float_t> normal1 =
       std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
     SmallVec<space_dim, lSol_float_t> normal2 =
@@ -729,19 +674,10 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
                       extra_data[5] * scalar_product(outer1, normal2);
     extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
                       extra_data[5] * scalar_product(outer2, normal2);
-
-    extra_coeffs[0] *= 1e4;
-    extra_coeffs[1] *= 1e4;
-    extra_coeffs[2] *= 1e4;
-    extra_coeffs[3] *= 1e12;
-    extra_coeffs[4] *= 1e12;
-    extra_coeffs[5] *= 1e12;
   }
 
   for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
     extra_coeffs[i] = std::abs(extra_coeffs[i]);
-  // extra_coeffs[i] = 1.;
-  // hy_assert(false, extra_coeffs);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {

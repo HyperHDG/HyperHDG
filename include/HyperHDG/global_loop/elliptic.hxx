@@ -151,6 +151,8 @@ class Elliptic
   LargeVecT make_initial(const LargeVecT& x_vec, const dof_index_t time = 0.) { return {}; }
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
   void set_data(const SpanT& x_vec, const dof_value_t time = 0.) {}
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void make_initial_from_static(const SpanT& x_vec, const dof_index_t time = 0.) {}
 
   /*!***********************************************************************************************
    * \brief   Read indices of Dirichlet type hypernodes/faces.

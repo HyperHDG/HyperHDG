@@ -517,6 +517,20 @@ read_domain_geo(const std::string& filename)
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
+
+bool read_domain_is_h5(const char *path) {
+  if (H5Fis_accessible(path, H5P_DEFAULT) <= 0) return false; // not an h5 file or inaccessible
+
+  hid_t file = H5Fopen(path, H5F_ACC_RDONLY, H5P_DEFAULT);
+  if (file < 0) return false; // error opening file or file is not h5
+
+  htri_t has_domain = H5Lexists(file, "/domain", H5P_DEFAULT);
+  if (has_domain <= 0) return false; // error or no such path
+
+  H5Fclose(file);
+  return true;
+}
+
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
           template <typename...> typename vectorT = std::vector,
@@ -529,14 +543,8 @@ read_domain(std::string filename)
 {
   hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
-  if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
-  {
-    hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
-    make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
-  }
-
 #ifdef HYPERHDG_PETSC
-  if (filename.ends_with(".geo.h5"))
+  if (read_domain_is_h5(filename.c_str()))
   {
     auto domain_info = read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
                               hyNode_index_t, pt_index_t>(filename);
@@ -545,19 +553,20 @@ read_domain(std::string filename)
   }
 #endif
 
-  hy_check(filename.substr(filename.size() - 4, filename.size()) == ".geo",
-            "The given file needs to be a .geo file, since no other input file types are currently"
-              << " implemented.");
+  // takes .pts and writes .geo file
+  if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
+  {
+    hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
+    make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
+  }
 
-  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-    domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
-                                  hyNode_index_t, pt_index_t>(filename);
+  if (filename.substr(filename.size() - 4, filename.size()) == ".geo")
+  {
+    auto domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                                       hyNode_index_t, pt_index_t>(filename);
+    hy_assert(domain_info.check_consistency(), "read_domain_geo: inconsistent result");
+    return domain_info;
+  }
 
-  hy_assert(domain_info.check_consistency(),
-            "Domain info appears to be inconsistent!"
-              << std::endl
-              << "This assertion is never to be thrown since it can only be caused by internal "
-              << "assertions of DomainInfo.check_consistency()!");
-
-  return domain_info;
+  hy_check(false, "unrecognized domain file: " << filename);
 }  // end of read_domain

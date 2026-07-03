@@ -29,9 +29,27 @@ PetscErrorCode PetscHDGCreate(
     const char *path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase **hdg
 ) {
+  if (test == 0) {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscReal strain = .15;
+    PetscInt  comp = 2;
+    PetscBool is_set;
+
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp, &is_set));
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    TimoshenkoStiffness<3>::length = size[0];
+    TimoshenkoStiffness<3>::strain = strain;
+    TimoshenkoStiffness<3>::comp = comp;
+  }
+
   int i = poly_deg*10 + test;
   switch(i) {
-  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoWaveClamped>(path, {tau, theta, dt})); return 0;
+  case 10: *hdg = new HDGWrapper(HDGTimoWave<1,TimoshenkoStiffness>(path, {tau, theta, dt})); return 0;
+  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave1>(path, {tau, theta, dt})); return 0;
   case 14: *hdg = new HDGWrapper(HDGTimoWave<1,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 24: *hdg = new HDGWrapper(HDGTimoWave<2,TestTimoWave4>(path, {tau, theta, dt})); return 0;
   case 33: *hdg = new HDGWrapper(HDGTimoWave<3,TestTimoWave3>(path, {tau, theta, dt})); return 0;
@@ -47,13 +65,46 @@ PetscErrorCode PetscHDGCreate(
   return 0;
 }
 
+PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
+  Mat AT, D;
+  PetscReal nrm, nrm_a;
+
+  PetscFunctionBeginUser;
+  MatTranspose(mat, MAT_INITIAL_MATRIX, &AT);
+  MatDuplicate(mat, MAT_COPY_VALUES, &D);
+  MatAXPY(D, -1.0, AT, DIFFERENT_NONZERO_PATTERN);
+  MatNorm(D, NORM_FROBENIUS, &nrm);
+  MatNorm(mat, NORM_FROBENIUS, &nrm_a);
+  PetscPrintf(PETSC_COMM_WORLD, "%s: %g\n", msg, (double)(nrm/nrm_a));
+  MatDestroy(&AT); MatDestroy(&D);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
+    PetscInt unused;
+    char **names;
+    char **values;
+
+    PetscCall(PetscOptionsLeftGet(NULL, &unused, &names, &values));
+    if (unused == 0) goto end;
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING! There are options you set that were not used!\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "options_left:\n"));
+    for (PetscInt i = 0; i < unused; i++)
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - name: \"%s\"\n    value: \"%s\"\n", names[i], values[i]));
+end:
+    PetscCall(PetscOptionsLeftRestore(NULL, &unused, &names, &values));
+    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
+    return 0;
+}
+
 int main(int argc, char **argv) {
     PetscBool help = false, is_set, print_timestep = PETSC_FALSE;
     PetscInt nt = 1, nx = 1, poly_deg = 1, tau_s = 0;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0;
+    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0, e_trace = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -62,12 +113,14 @@ int main(int argc, char **argv) {
     char plot_scale[PATH_MAX] = "1";
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
+    char static_init[PATH_MAX] = {0};
     PetscInt timowave_test = 0;
     const char *pc_type;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
 
     PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk, s_ksp;
+    PetscLogEvent e_set, e_plot, e_errors;
 
     std::vector<PetscReal> temp, temp2, temp3, zero_v;
     std::vector<PetscInt> itemp;
@@ -87,6 +140,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot, plot, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
     PetscCall(PetscOptionsInt("-test", "timowave test", NULL, timowave_test, &timowave_test, &is_set));
@@ -117,6 +171,9 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("make_initial", &s_mk));
     PetscCall(PetscLogStageRegister("Timestepping", &s_ts));
     PetscCall(PetscLogStageRegister("residual_flux", &s_rf));
+    PetscCall(PetscLogEventRegister("hdg_set", 0, &e_set));
+    PetscCall(PetscLogEventRegister("hdg_plot", 0, &e_plot));
+    PetscCall(PetscLogEventRegister("hdg_errors", 0, &e_errors));
 
     dt = T / nt;
 
@@ -147,9 +204,24 @@ int main(int argc, char **argv) {
     PetscCall(VecCreateFromOptions(PETSC_COMM_SELF, "norm_", 1, nt+1, nt+1, &norms));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, nt+1, &times));
     PetscCall(PetscObjectSetName((PetscObject)times, "times"));
+    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
 
     PRIN2S(s_mk);
-    temp = hdg->make_initial(zero_v);
+    if (*static_init) {
+      PetscViewer viewer;
+      std::span<PetscReal> span;
+      PetscCall(PetscViewerHDF5Open(PETSC_COMM_SELF, static_init, FILE_MODE_READ, &viewer));
+      PetscCall(VecLoad(rhs, viewer));
+      PetscCall(VecGetSpan(rhs, span));
+      hdg->make_initial_from_static(span);
+      temp.resize(span.size());
+      std::copy(span.begin(), span.end(), temp.begin());
+      PetscCall(VecRestoreSpan(rhs, span));
+      PetscCall(PetscViewerDestroy(&viewer));
+    }
+    else {
+      temp = hdg->make_initial(zero_v);
+    }
     PRIN2SP();
 
     if (*plot)
@@ -159,6 +231,7 @@ int main(int argc, char **argv) {
     temp3 = hdg->norms(temp, 0);
     e_abs = PetscMax(temp2[0], e_abs);
     n_abs = PetscMax(temp3[0], n_abs);
+    e_trace = PetscMax(temp2[1], e_trace);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
     PetscCall(VecSetValue(norms,  0, temp3[0], INSERT_VALUES));
@@ -193,6 +266,9 @@ int main(int argc, char **argv) {
       PetscCall(MatView(mat, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
     }
+
+
+    PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
 
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
@@ -234,12 +310,23 @@ int main(int argc, char **argv) {
         iterations += its;
 
         PetscCall(VecGetSpan(rhs, span));
+        PetscLogEventBegin(e_set, 0,0,0,0);
         hdg->set_data(span, ti);
+        PetscLogEventEnd(e_set, 0,0,0,0);
+        if (*plot) {
+          PetscLogEventBegin(e_plot, 0,0,0,0);
+          hdg->plot_solution(span, ti);
+          PetscLogEventEnd(e_plot, 0,0,0,0);
+        }
+        PetscLogEventBegin(e_errors, 0,0,0,0);
+        PetscLogEventEnd(e_errors, 0,0,0,0);
         if (*plot) hdg->plot_solution(span, ti);
-        error = hdg->errors(span, ti)[0];
+        temp2 = hdg->errors(span, ti);
+        error = temp2[0];
         norm = hdg->norms(span, ti)[0];
         e_abs = PetscMax(error, e_abs);
         n_abs = PetscMax(norm, n_abs);
+        e_trace = PetscMax(temp2[1], e_trace);
         PetscCall(VecRestoreSpan(rhs, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
@@ -265,12 +352,15 @@ int main(int argc, char **argv) {
     PRIN2FY(e_abs);
     PRIN2FY(n_abs);
     PRIN2FY(e_rel);
+    PRIN2FY(e_trace);
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2SY(creason);
     PRIN2FY(avg_iterations);
     if (*plot)
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "output: output/%s.vtkhdf\n", plot));
+
+    PetscCall(PetscOptionsLeftYAML(NULL));
 
     delete hdg;
     PetscCall(KSPDestroy(&ksp));

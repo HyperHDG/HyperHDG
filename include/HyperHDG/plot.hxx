@@ -912,13 +912,9 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
   // Write file
   // -----------------------------------------------------------------------
 
-  std::string filename = plot_options.outputDir + "/" + plot_options.fileName
-    + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
-  if (std::filesystem::create_directory(plot_options.outputDir))
-    std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
-
-  hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  hy_check(file >= 0, "failed to create HDF5 file '" << filename << "'");
+  // H5F_ACC_TRUNC - truncate+R/W, i.e. discard all file contents before writing
+  hid_t file = H5Fcreate(plot_options.fileName.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  hy_check(file >= 0, "failed to create HDF5 file '" << plot_options.fileName << "'");
 
   hid_t root = H5Gcreate2(file, "VTKHDF", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -1115,10 +1111,8 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   }
 
   // --- open file R/W
-  std::string filename = plot_options.outputDir + "/" + plot_options.fileName
-    + "." + PlotFunctions::fileType_to_string(plot_options.fileEnding);
-  hid_t file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-  hy_check(file >= 0, "failed to open HDF5 file '" << filename << "'");
+  hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
 
   hid_t root  = H5Gopen2(file, "VTKHDF",   H5P_DEFAULT);
   hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);

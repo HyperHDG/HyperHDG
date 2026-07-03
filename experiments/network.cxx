@@ -15,7 +15,7 @@
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
 template <unsigned int dim, typename Scalar = double>
-using TB_Params = LocalSolver::TimoshenkoStiffness<dim, Scalar>;
+using TB_Params = TimoshenkoStiffness<dim, Scalar>;
 template<unsigned int poly_deg>
 using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
 template<unsigned int poly_deg>
@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
     PetscReal tau = 1;
     PetscInt iterations;
     PetscInt bs = 1;
+    PetscReal emin, emax, cond;
 
     VecScatter scatter;
     Vec rhs, rhs0;
@@ -186,6 +187,7 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetType(ksp, KSPCG));
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PCSetType(pc, "net2as"));
+    PetscCall(KSPSetComputeSingularValues(ksp, PETSC_TRUE));
     PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
     PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", &ksp_monitor_yaml_ctx));
     PetscCall(KSPSetFromOptions(ksp));
@@ -266,11 +268,14 @@ int main(int argc, char **argv) {
     PetscCall(KSPSolve(ksp, rhs, rhs));
     PRIN2SP();
 
+    PetscCall(KSPComputeExtremeSingularValues(ksp, &emax, &emin));
+    cond = emax/emin;
     PetscCall(KSPGetIterationNumber(ksp, &iterations));
     PetscCall(KSPGetConvergedReasonString(ksp, &creason));
     PetscCall(KSPGetResidualNorm(ksp, &rnorm));
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
+    PRIN2FY(cond);
     PRIN2SY(creason);
 
     if (*plot_path) {
@@ -283,6 +288,9 @@ int main(int argc, char **argv) {
       hdg->plot_solution(span);
       PetscCall(VecRestoreSpan(rhs0, span));
     }
+
+    PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
+    PetscCall(VecViewFromOptions(rhs, NULL, "-trace_view"));
 
 end:
     if (set_mem_max) {

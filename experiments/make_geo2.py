@@ -13,10 +13,12 @@ def tprint(*args, **kwargs):
     print(f"[{time.strftime('%H:%M:%S')}]", *args, **kwargs)
 
 class Network:
+  QUIRKS = ["morgan-2026-01-30"]
+
   def generate_grid(self, nx, ny):
     tprint(f"generating grid graph {nx} x {ny} on unit square")
-    h_x = 1.0 / (nx - 1)
-    h_y = 1.0 / (ny - 1)
+    h_x = 1.0 / (nx - 1) if nx > 1 else 0.0
+    h_y = 1.0 / (ny - 1) if ny > 1 else 0.0
 
     n_nodes = nx * ny
     nodes = np.zeros((n_nodes, 3))
@@ -45,8 +47,90 @@ class Network:
     self.info = {"size": np.array([1.0, 1.0, 0.0])}
     self.edgeProps = None
 
+  def generate_honeycomb(self, nx, ny, nz=1):
+    tprint(f"generating honeycomb graph {nx} x {ny} x {nz}")
+    s3 = np.sqrt(3.0)
+    basis = np.array([
+        [0.0,  0.0     ],
+        [1.0,  0.0     ],
+        [1.5,  0.5*s3  ],
+        [2.5,  0.5*s3  ],
+    ])
+    a1 = np.array([3.0, 0.0])
+    a2 = np.array([0.0, s3 ])
+    ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    origins = jj[..., None] * a1 + ii[..., None] * a2
+    pts = origins[..., None, :] + basis[None, None, :, :]
+    nodes2 = pts.reshape(-1, 2)
+    def idx(i, j, k): return (i * nx + j) * 4 + k
+    e = []
+    i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
+    e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
+    e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
+    i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
+    e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
+    i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
+    e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
+    i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
+    e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
+    edges2d = np.vstack(e).astype(np.int64)
 
-  def read_morgan(self, path):
+    # Drop left-boundary atom-0 and right-boundary atom-3 stubs
+    n2d = nodes2.shape[0]
+    keep = np.ones(n2d, dtype=bool)
+    i_all = np.arange(ny)
+    keep[(i_all * nx + 0) * 4 + 0] = False
+    keep[(i_all * nx + (nx-1)) * 4 + 3] = False
+    edge_keep = keep[edges2d[:,0]] & keep[edges2d[:,1]]
+    edges2d = edges2d[edge_keep]
+    remap = np.full(n2d, -1, dtype=edges2d.dtype)
+    remap[keep] = np.arange(keep.sum())
+    edges2d = remap[edges2d]
+    nodes2 = nodes2[keep]
+
+    # Rescale 2D so x extent = 1
+    nodes2 -= nodes2.min(axis=0)
+    scale = 1.0 / nodes2[:, 0].max()
+    nodes2 *= scale
+
+    # Layer spacing: typical bond length in-plane after scaling.
+    # All in-plane edges have length 1*scale (= s in original units), so dz = scale.
+    dz = scale
+
+    n_per_layer = nodes2.shape[0]
+    n_nodes = n_per_layer * nz
+    nodes = np.zeros((n_nodes, 3))
+    layer_ids = np.arange(nz)
+    # tile xy across layers
+    nodes[:, :2] = np.tile(nodes2, (nz, 1))
+    nodes[:, 2]  = np.repeat(layer_ids * dz, n_per_layer)
+
+    # In-plane edges, replicated per layer with offset
+    offsets = (np.arange(nz) * n_per_layer)[:, None, None]   # (nz,1,1)
+    in_plane = edges2d[None, :, :] + offsets                 # (nz, n_e2d, 2)
+    in_plane = in_plane.reshape(-1, 2)
+
+    # Vertical edges between consecutive layers
+    base = np.arange(n_per_layer)
+    if nz > 1:
+      base = np.arange(n_per_layer)
+      v_src = np.concatenate([base + k*n_per_layer     for k in range(nz-1)])
+      v_dst = np.concatenate([base + (k+1)*n_per_layer for k in range(nz-1)])
+      vert = np.column_stack([v_src, v_dst])
+    else:
+      vert = np.empty((0, 2), dtype=np.int64)
+    edges = np.vstack([in_plane, vert]).astype(np.int64)
+
+    tprint("nodes", nodes.shape)
+    tprint("edges", edges.shape)
+    self.nodes = nodes
+    self.edges = edges
+    size = nodes.max(axis=0) - nodes.min(axis=0)
+    self.info = {"size": size}
+    self.edgeProps = None
+
+  def read_morgan(self, path, rescale_props=None, quirk=None):
     tprint("reading nodes")
     nodes   = pandas.read_csv(path + "/nodes.csv")
     nodes   = nodes.to_numpy()[:,1:]
@@ -55,10 +139,23 @@ class Network:
     edges   = pandas.read_csv(path + '/edges.csv')
     edges   = edges.to_numpy()[:,1:]
 
-
     tprint("reading edgeProps")
     edgeProps   = pandas.read_csv(path + '/edgeProperties.csv')
-    edgeProps   = edgeProps.to_numpy()[:,2:]
+    edgeProps   = edgeProps.to_numpy()[:,1:]
+
+    if rescale_props is not None:
+      n_props = edgeProps.shape[-1]
+      print(rescale_props)
+      edgeProps *= rescale_props
+
+    if quirk == "morgan-2026-01-30":
+      n_edges = edges.shape[0]
+      fiber_ids = np.arange(n_edges)
+      fiber_edge_ids = np.zeros(n_edges)
+      widths = np.ones(n_edges) * 10 # 10um default width
+      edgeProps = np.column_stack([
+        edgeProps, widths, widths, fiber_ids, fiber_edge_ids,
+      ])
 
     tprint("nodes", nodes.shape)
     tprint("edges", edges.shape)
@@ -72,11 +169,7 @@ class Network:
 
     try:
       with open(path + '/units.txt') as f:
-        for unit, value in zip(
-            ["length", "time", "weight"],
-            f.readlines()
-        ):
-          info["unit_"+unit] = value.strip()
+        info["units"] = f.read()
     except FileNotFoundError:
       pass
 
@@ -89,6 +182,85 @@ class Network:
     self.edges = edges
     self.edgeProps = edgeProps
     self.info = info
+
+  def verify_nonzero(self):
+    """Verify that material properties are nonzero where required.
+    Reports per-column zero/near-zero counts and degenerate normal vectors.
+    """
+    if self.edgeProps is None:
+      tprint("verify_nonzero: no edgeProps loaded, skipping")
+      return
+
+    eps = 1e-30
+    props = self.edgeProps
+    n = props.shape[0]
+    tprint(f"verify_nonzero: checking {n} fibers")
+
+    # column groups: (indices, label)
+    groups = [
+      ([0],              "mass"),
+      ([1, 2, 3],        "displacement stiffness (EA, kG_1A, kG_2A)"),
+      ([4, 5, 6],        "rotation stiffness (G_xI_x, E_1I_1, E_2I_2)"),
+      ([13, 14],         "widths (width1, width2)"),
+    ]
+
+    all_ok = True
+    for cols, label in groups:
+      for c in cols:
+        col = props[:, c]
+        n_zero  = (col == 0).sum()
+        n_small = ((np.abs(col) < eps) & (col != 0)).sum()
+        n_neg   = (col < 0).sum()
+        if n_zero or n_small or n_neg:
+          all_ok = False
+          tprint(f"  col {c:2d} ({label}): "
+                 f"zero={n_zero} subnormal={n_small} negative={n_neg} "
+                 f"min={col.min():.3e} max={col.max():.3e}")
+        else:
+          tprint(f"  col {c:2d} ({label}): ok "
+                 f"min={col.min():.3e} max={col.max():.3e}")
+
+    # normal vector lengths
+    n1 = props[:, 7:10]
+    n2 = props[:, 10:13]
+    len1 = np.linalg.norm(n1, axis=1)
+    len2 = np.linalg.norm(n2, axis=1)
+    for vec_name, lens in [("normal 1", len1), ("normal 2", len2)]:
+      n_zero  = (lens < eps).sum()
+      n_nonunit = (np.abs(lens - 1.0) > 1e-6).sum()
+      if n_zero or n_nonunit:
+        all_ok = False
+        tprint(f"  {vec_name} length: zero={n_zero} non-unit={n_nonunit} "
+               f"min={lens.min():.3e} max={lens.max():.3e}")
+      else:
+        tprint(f"  {vec_name} length: ok (all unit)")
+
+    fiber_id = props[:, 15].astype(np.int64)
+    virtual = (fiber_id == -1)
+    real    = ~virtual
+
+    n_virt_zero_mass = (virtual & (props[:, 0] == 0)).sum()
+    n_real_zero_mass = (real    & (props[:, 0] == 0)).sum()
+    n_virt_total     = virtual.sum()
+    n_real_total     = real.sum()
+
+    tprint(f"virtual fibers (id=-1): {n_virt_total}, of which zero-mass: {n_virt_zero_mass}")
+    tprint(f"real fibers:            {n_real_total}, of which zero-mass: {n_real_zero_mass}")
+
+    # orthogonality of n1 and n2 (cheap bonus check)
+    dots = np.einsum('ij,ij->i', n1, n2)
+    n_nonorth = (np.abs(dots) > 1e-6).sum()
+    if n_nonorth:
+      all_ok = False
+      tprint(f"  normal1 · normal2: non-orthogonal pairs={n_nonorth} "
+               f"max|dot|={np.abs(dots).max():.3e}")
+    else:
+      tprint(f"  normal1 · normal2: ok (all orthogonal)")
+
+    if all_ok:
+      tprint("verify_nonzero: all checks passed")
+    else:
+      tprint("verify_nonzero: FAILED — see above")
 
 
   def node_edge_dedupe(self, merge_tol):
@@ -158,7 +330,6 @@ class Network:
     tprint(f"after dedup: {n_edges} edges")
 
     assert(n_edges == n_edgeProps)
-    assert(edgeProps_dim == 12)
 
     self.nodes = nodes
     self.edges = edges
@@ -235,13 +406,13 @@ class Network:
     tprint(f"after pruning: {n_nodes} nodes, {n_edges} edges")
 
 
-  def write_h5(self, out):
+  def write_h5(self, out, no_props=False):
     tprint(f"writing h5 file to '{out}'")
-    with h5py.File(out + ".geo.h5", "w") as f:
+    with h5py.File(out, "w") as f:
       g = f.create_group("domain")
       g.create_dataset("points", data=self.nodes, compression="gzip")
       g.create_dataset("edges", data=self.edges, compression="gzip")
-      if hasattr(self, "edgeProps") and self.edgeProps is not None:
+      if hasattr(self, "edgeProps") and self.edgeProps is not None and not no_props:
         g.create_dataset("properties", data=self.edgeProps, compression="gzip")
       g.create_dataset("types_points", data=self.types_points, compression="gzip")
       g.create_dataset("types_faces", data=self.types_faces, compression="gzip")
@@ -292,7 +463,7 @@ class Network:
     """Add VTKHDF view to the .geo.h5 file: virtual Connectivity over /domain/edges,
     plus real Offsets, Types, and NumberOf* datasets.
     """
-    path = out + ".geo.h5"
+    path = out
     tprint(f"adding VTKHDF view to '{path}'")
     with h5py.File(path, "a") as f:
       if "VTKHDF" in f:
@@ -332,6 +503,19 @@ class Network:
       if "domain/types_points" in f:
         pd = root.create_group("PointData")
         pd["types_points"] = h5py.SoftLink("/domain/types_points")
+      if "domain/properties" in f:
+        cd = root.create_group("CellData")
+        cd["properties"] = h5py.SoftLink("/domain/properties")
+
+
+  def rescale_bbox(self):
+    mins = self.nodes.min(axis=0)
+    maxs = self.nodes.max(axis=0)
+    dims = maxs - mins
+    scale = 1.0 / max(dims[0], dims[1])
+    tprint(f"rescaling by {scale:.3e} (bbox was {dims})")
+    self.nodes = (self.nodes - mins) * scale
+    self.info["size"] = (maxs - mins) * scale
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
@@ -344,9 +528,22 @@ if __name__ == "__main__":
   parser.add_argument("--min-comp-size", type=int, default=10)
   parser.add_argument("--grid", type=int, nargs="+", metavar="N",
     help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
+  parser.add_argument("--hex", type=int, nargs="+", metavar="N",
+    help="generate hexagonal honeycomb graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
+  parser.add_argument("--no-props", action="store_true",
+                    help="do not write per-edge properties to h5")
+  parser.add_argument("--rescale-bbox", action="store_true",
+                    help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
+  parser.add_argument("--rescale-props", default=None,
+                    help="rescale network material properties, format '1,2,3,...'")
+  parser.add_argument("--quirk", default=None, choices=Network.QUIRKS,
+                    help="apply quirk")
   args = parser.parse_args()
+
+  if args.rescale_props is not None:
+    rescale_props = np.array(list(map(float, args.rescale_props.split(","))))
 
   network = Network()
   if args.grid is not None:
@@ -357,8 +554,21 @@ if __name__ == "__main__":
     else:
       parser.error("--grid takes 1 or 2 arguments")
     network.generate_grid(nx, ny)
+  elif args.hex is not None:
+    if len(args.hex) == 1:
+      nx = ny = args.hex[0]
+      nz = 1
+    elif len(args.hex) == 2:
+      nx, ny = args.hex
+      nz = 1
+    elif len(args.hex) == 3:
+      nx, ny, nz = args.hex
+    else:
+      parser.error("--hex takes 1 or 2 arguments")
+    network.generate_honeycomb(nx, ny, nz)
   else:
-    network.read_morgan(args.input)
+    network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
+    network.verify_nonzero()
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
         fx = fy = args.clamp_xy[0]
@@ -369,8 +579,10 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
+  if args.rescale_bbox:
+    network.rescale_bbox()
   network.compute_types(args.dirichlet_tol)
-  if args.grid is None:
+  if args.grid is None and args.hex is None:
     network.drop_floating_and_small_components(args.min_comp_size)
-  network.write_h5(args.output)
+  network.write_h5(args.output, no_props=args.no_props)
   network.write_vtkhdf_view(args.output)

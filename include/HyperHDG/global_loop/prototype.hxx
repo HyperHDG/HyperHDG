@@ -205,6 +205,13 @@ struct sparse_mat
         for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      \
           for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      \
           {                                                                                   \
+            if (hyper_edge.node_descriptor[node_j] & (1ul<<dof_j))                            \
+            {                                                                                 \
+              *(row_it++) = dof_indices[node_j][dof_j];                                       \
+              *(col_it++) = dof_indices[node_j][dof_j];                                       \
+              *(value_it++) = 1;                                                              \
+              continue;                                                                       \
+            }                                                                                 \
             for (unsigned int node = 0; node < hyNodes.size(); ++node)                        \
             {                                                                                 \
               dofs_old[node].fill(0.);                                                        \

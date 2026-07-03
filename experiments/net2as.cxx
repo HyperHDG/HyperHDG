@@ -83,9 +83,13 @@ PetscErrorCode MatCOO_View(MatCOO *coo, PetscViewer viewer) {
 struct PC_Net2AS {
   // configuration paramters
 
+  // if true, bit 6 means "ignore other dirichlet bits"
+  PetscBool wave;
   // number of subdomains in [x,y]
   PetscInt p[2];
-  // number of local data structures (should be prod(p))
+  // number of global coarse dofs
+  PetscInt n_coarse;
+  // number of local data structures
   PetscInt sz;
   // block size (number of dofs per node)
   PetscInt bs;
@@ -192,6 +196,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsGetString(NULL, NULL, "-domain", data->domain, PATH_MAX, &set));
   PetscOptionsHeadBegin(PetscOptionsObject, "Net2AS options");
 
+  PetscCall(PetscOptionsBool("-net2as_wave", "treat bit 6 as static-only dirichlet (free in wave)", NULL, data->wave, &data->wave, &set));
   PetscCall(PetscOptionsBoundedInt("-net2as_p", "number of subdomains per axis", NULL, p, &p, &set, p_lb));
   if (set) data->p[0] = data->p[1] = p;
   PetscCall(PetscOptionsBoundedInt("-net2as_px", "number of subdomains", NULL, data->p[0], &data->p[0], &set, p_lb));
@@ -205,6 +210,12 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscBool net2as_is_dirichlet(PetscInt type, PetscBool wave) {
+  if (type == 0) return PETSC_FALSE;
+  if (wave && (type & (1u << 6))) return PETSC_FALSE;  // static-only, free in wave
+  return PETSC_TRUE;
 }
 
 PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
@@ -245,7 +256,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(PetscMalloc1(is_local, &dir));
   PetscCall(ISGetIndices(data->types_points, &types));
   for (PetscInt i = 0; i < is_local; i++) {
-    if (types[i] != 0) dir[dsize++] = start+i;
+    if (net2as_is_dirichlet(types[i], data->wave)) dir[dsize++] = start+i;
   }
   PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, dsize, dir, PETSC_OWN_POINTER, &data->boundary));
   PetscCall(ISRestoreIndices(data->types_points, &types));
@@ -281,7 +292,7 @@ PetscErrorCode PCSetup_Net2AS_ReadDomain(PC pc, MPI_Comm comm) {
   PetscCall(MatCreate(PETSC_COMM_WORLD, &data->adj));
   PetscCall(MatSetType(data->adj, MATMPIAIJ));
   PetscCall(MatSetSizes(data->adj, nn, nn, n, n));
-  PetscCall(MatSetOptionsPrefix(data->adj, "adj_"));
+  PetscCall(MatSetOptionsPrefix(data->adj, "net2as_adj_"));
   PetscCall(MatSetPreallocationCOO(data->adj, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(data->adj, coo.vals, INSERT_VALUES));
   PetscCall(MatCOO_Free(&coo));
@@ -395,15 +406,17 @@ PetscErrorCode net2as_loadbalance_round_robin(MPI_Comm comm, PetscInt *weights, 
 //   will be allocated, must be freed
 PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatCOO *cb, MatCOO *sd) {
   int rank, size, tag_vid = 0, tag_sid = 1;
-  PetscInt p = data->p[0]*data->p[1], sd_count, sd_total_size, off, start;
+  PetscInt p = data->n_coarse, sd_count, sd_total_size, off, start;
   PetscInt *sd2lcounts, *sd2gcounts, *sd2rank, *rank2scount, *rank2rcount, *coo2rank;
   MPI_Request *reqs;
+  PetscInt *tmp_rows, *tmp_cols;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscCalloc7(p, &sd2lcounts, p, &sd2gcounts, p, &sd2rank,
     size, &rank2scount, size, &rank2rcount, cb->nnz, &coo2rank, 4*size, &reqs));
+  PetscCall(PetscMalloc2(cb->nnz, &tmp_rows, cb->nnz, &tmp_cols));
 
   // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
 
@@ -469,8 +482,12 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   sd->nnz = off;
 
   // sort cb by ranks of subdomain indices
-  for (PetscInt i = 0; i < cb->nnz; i++) coo2rank[i] = sd2rank[cb->cols[i]];
-  PetscCall(PetscSortIntWithArrayPair(cb->nnz, coo2rank, cb->rows, cb->cols));
+  for (PetscInt i = 0; i < cb->nnz; i++) {
+    coo2rank[i] = sd2rank[cb->cols[i]];
+    tmp_rows[i] = cb->rows[i];
+    tmp_cols[i] = cb->cols[i];
+  }
+  PetscCall(PetscSortIntWithArrayPair(cb->nnz, coo2rank, tmp_rows, tmp_cols));
 
   // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "cb sorted by sd2rank\n"));
   // PetscCall(MatCOO_View(cb, PETSC_VIEWER_STDOUT_WORLD));
@@ -516,6 +533,7 @@ PetscErrorCode net2as_distribute_subdomains(MPI_Comm comm, PC_Net2AS *data, MatC
   if (sd_count == 0 && data->sz > 0)
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 0, NULL, PETSC_COPY_VALUES, &data->is[0]));
 
+  PetscCall(PetscFree2(tmp_rows, tmp_cols));
   PetscCall(PetscFree7(sd2lcounts, sd2gcounts, sd2rank,
     rank2scount, rank2rcount, coo2rank, reqs));
   PetscFunctionReturn(0);
@@ -592,48 +610,61 @@ PetscErrorCode net2as_make_is_local(PC_Net2AS *data, MatCOO *sd) {
 }
 
 PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
-  PetscReal h[2], min[2], max[2], eps = data->eps;
-  PetscInt vstart, vend, size;
-  const PetscInt *types;
-  std::span<PetscReal> vspan;
-
+  PetscReal min[2], max[2], h[2];
+  PetscInt vstart, vend, ns[2];
+  PetscReal *points;
+  PetscInt n_coarse, n_local;
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < 2; i++) {
-    PetscCall(VecStrideMin(data->points, i, NULL, min+i));
-    PetscCall(VecStrideMax(data->points, i, NULL, max+i));
-    h[i] = (max[i]-min[i])/(data->p[i]+1);
-  }
 
-  PetscCall(ISGetIndices(data->types_points, &types));
+  for (PetscInt d = 0; d < 2; d++) {
+    PetscCall(VecStrideMin(data->points, d, NULL, min+d));
+    PetscCall(VecStrideMax(data->points, d, NULL, max+d));
+    h[d] = (max[d]-min[d]) / (data->p[d]+1);
+    ns[d] = data->p[d]+2; // coarse DoFs per dim
+  }
+  n_coarse = ns[0] * ns[1];
+
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
-  vend /= 3;
+  n_local = (vend - vstart) / 3;
   vstart /= 3;
-  size = vend-vstart;
-  PetscCall(MatCOO_Alloc(coo, 4zu * size));
-  PetscCall(VecGetSpan(data->points, vspan));
-  for (PetscInt n = 0; n < size; n++) {
-    PetscReal x = vspan[3*n],            y = vspan[3*n+1];
-    PetscInt  i = (x-min[0])/h[0], j = (y-min[1])/h[1];
-    // map to reference element
-    PetscReal xx = (x-(i*h[0]+min[0]))/h[0], yy = (y-(j*h[1]+min[1]))/h[1];
 
-    if (i>data->p[0] || j>data->p[1] || types[n] != 0) continue;
-    if (i>0 && j>0 && (1-xx)*(1-yy) > eps)
-      PetscCall(MatCOO_Push(coo, vstart+n, (j-1)*data->p[0]+(i-1), (1-xx)*(1-yy)));
-    if (i < data->p[0] && j > 0 && PetscAbs(xx*(1-yy)) > eps)
-      PetscCall(MatCOO_Push(coo, vstart+n, (j-1)*data->p[0]+i, xx*(1-yy)));
-    if (i > 0 && j < data->p[1] && PetscAbs((1-xx)*yy) > eps)
-      PetscCall(MatCOO_Push(coo, vstart+n, j*data->p[0]+(i-1), (1-xx)*yy));
-    if (i < data->p[0] && j < data->p[1] && PetscAbs(xx*yy) > eps)
-      PetscCall(MatCOO_Push(coo, vstart+n, j*data->p[0]+i, xx*yy));
+  PetscCall(VecGetArray(data->points, &points));
+  data->n_coarse = n_coarse;
+
+  // fill coarse basis functions
+  PetscCall(MatCOO_Alloc(coo, 4 * n_local));
+  for (PetscInt k = 0; k < n_local; k++) {
+    PetscReal x = points[3*k], y = points[3*k+1];
+    PetscInt i = (x - min[0]) / h[0];
+    PetscInt j = (y - min[1]) / h[1];
+    if (i > data->p[0]) i = data->p[0];
+    if (j > data->p[1]) j = data->p[1];
+    if (i < 0) i = 0;
+    if (j < 0) j = 0;
+    PetscReal xx = (x - (i*h[0] + min[0])) / h[0];
+    PetscReal yy = (y - (j*h[1] + min[1])) / h[1];
+
+    PetscInt row = vstart + k;
+    struct { PetscInt i, j; PetscReal w; } pts[4] = {
+      {i,   j,   (1-xx)*(1-yy)},
+      {i+1, j,       xx*(1-yy)},
+      {i,   j+1, (1-xx)*yy    },
+      {i+1, j+1,     xx*yy    },
+    };
+    for (unsigned int l = 0; l < 4; l++) {
+      PetscInt col = pts[l].j * ns[0] + pts[l].i;
+      PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
+      // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
+    }
   }
-  PetscCall(VecRestoreSpan(data->points, vspan));
+
+
+  PetscCall(VecRestoreArray(data->points, &points));
 
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
   PetscCall(net2as_make_is_local(data, sd));
   PetscCall(net2as_make_is_blocked(data));
-
   PetscFunctionReturn(0);
 }
 
@@ -649,6 +680,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   PetscFunctionBegin;
 
+  data->n_coarse = p;
   PetscCall(MatPartitioningRegister("parhip", MatPartitioningCreate_ParHIP));
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
@@ -656,7 +688,7 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   PetscCall(PetscMalloc1(vend-vstart, &vtxwgt));
   PetscCall(ISGetIndices(data->types_points, &types));
   for (PetscInt i = 0; i < vend-vstart; i++)
-    vtxwgt[i] = types[i] == 0 ? 1 : 0;
+    vtxwgt[i] = net2as_is_dirichlet(types[i], data->wave) ? 0 : 1;
   PetscCall(ISRestoreIndices(data->types_points, &types));
   PetscCall(MatPartitioningCreate(PETSC_COMM_WORLD, &p_ctx));
   PetscCall(MatPartitioningSetAdjacency(p_ctx, data->adj));
@@ -679,7 +711,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     "partition size '%d'", vend-vstart, lsz_part);
   PetscCall(MatCOO_Alloc(coo, lsz_part));
   for (PetscInt i = 0; i < lsz_part; i++)
-    if (types[i] == 0) PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
+    if (!net2as_is_dirichlet(types[i], data->wave))
+      PetscCall(MatCOO_Push(coo, vstart+i, inds[i], 1.));
   PetscCall(ISRestoreIndices(partition, &inds));
   PetscCall(ISRestoreIndices(data->types_points, &types));
 
@@ -760,7 +793,7 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PC_Net2AS *data = (PC_Net2AS*)pc->data;
   Vec gtemp;
   MPI_Comm comm = PetscObjectComm((PetscObject)pc);
-  PetscInt size, msize, n_cols = data->p[0] * data->p[1], n, m;
+  PetscInt size, msize, n_cols, n, m;
   Mat coarse_basis, A;
   MatType type;
   MatCOO coo, sd;
@@ -793,12 +826,14 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   else
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "unsupported type '%s', muse be one of 'q1', 'pu'", data->cb_type);
 
+  n_cols = data->n_coarse;
+
   // setup coarse basis
   PetscCall(MatGetType(A, &type));
   PetscCall(MatCreate(comm, &coarse_basis));
   PetscCall(MatSetType(coarse_basis, type));
   PetscCall(MatSetSizes(coarse_basis, PETSC_DECIDE, PETSC_DECIDE, size, n_cols*(data->pux_dim+1)));
-  PetscCall(MatSetOptionsPrefix(coarse_basis, "coarse_"));
+  PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
