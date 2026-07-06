@@ -130,17 +130,34 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
-  def generate_mikado(self, mass, r=0.05, seed=0):
+  def generate_mikado(self, mass, r=0.05, seed=0, min_edge=None):
     """Random mikado-style fiber network on the unit square (gortz.pdf, sec. 6.1).
 
     Fibers of fixed length r are placed with midpoints uniform in
     [-r/2, 1+r/2]^2 and uniformly random rotation, clipped to the unit
     square, until the total fiber length reaches `mass`. Every pairwise
     fiber intersection becomes a node splitting both fibers, nodes closer
-    than r*1e-4 are merged, and only the largest connected component is
-    kept, so the result is a single connected graph.
+    than min_edge (default r*1e-4) are merged, and only the largest
+    connected component is kept, so the result is a single connected graph.
     """
     tprint(f"generating mikado graph: mass={mass:g}, fiber length r={r:g}, seed={seed}")
+
+    # continuum percolation of 2D sticks: two isotropic sticks of length r cross
+    # iff their midpoint offset lies in a parallelogram of area r^2*sin(theta),
+    # so the mean crossings per stick is k = n * <r^2 sin> = (2/pi)*n*r^2 with
+    # stick density n = mass/r per unit area. A giant (domain-spanning) component
+    # emerges above the numerically known threshold n*r^2 = mass*r ~ 5.64
+    # (i.e. k ~ 3.59), Mertens & Moore, Phys. Rev. E 86, 061109 (2012).
+    density = mass * r
+    k_mean = 2.0 / np.pi * density
+    tprint(f"stick density n*r^2 = mass*r = {density:.3g} = {density / 5.6373:.2g} x threshold 5.64, "
+           f"~{k_mean:.3g} crossings per fiber")
+    if density < 5.6373:
+      tprint("  below percolation threshold: NO giant component expected, "
+             "the largest component will only be a small local cluster")
+    else:
+      tprint("  above percolation threshold: giant component expected")
+
     rng = np.random.default_rng(seed)
 
     # place fibers (batched) until the clipped total length reaches `mass`
@@ -207,16 +224,24 @@ class Network:
     adj = fo[:-1] == fo[1:]
     edges = np.column_stack([no[:-1][adj], no[1:][adj]]).astype(np.int64)
 
-    # merge nodes closer than r*1e-4, setting a lower bound on edge lengths
-    merge_tol = r * 1e-4
+    # merge close nodes, setting a lower bound on edge lengths; iterate since
+    # merged centroids can again end up closer than the tolerance
+    merge_tol = r * 1e-4 if min_edge is None else min_edge
     n_raw = raw_nodes.shape[0]
-    close = cKDTree(raw_nodes).query_pairs(merge_tol, output_type='ndarray')
-    g = sp.csr_matrix((np.ones(len(close)), (close[:, 0], close[:, 1])), shape=(n_raw, n_raw))
-    n_merged, labels = sp.csgraph.connected_components(g, directed=False)
-    merged = np.zeros((n_merged, 2))
-    np.add.at(merged, labels, raw_nodes)
-    merged /= np.bincount(labels)[:, None]
-    edges = labels[edges]
+    merged = raw_nodes
+    while True:
+      close = cKDTree(merged).query_pairs(merge_tol, output_type='ndarray')
+      if len(close) == 0:
+        break
+      n_cur = merged.shape[0]
+      g = sp.csr_matrix((np.ones(len(close)), (close[:, 0], close[:, 1])), shape=(n_cur, n_cur))
+      n_groups, labels = sp.csgraph.connected_components(g, directed=False)
+      centroids = np.zeros((n_groups, 2))
+      np.add.at(centroids, labels, merged)
+      centroids /= np.bincount(labels)[:, None]
+      edges = labels[edges]
+      merged = centroids
+    n_merged = merged.shape[0]
     tprint(f"merged {n_raw - n_merged} nodes closer than {merge_tol:.1e}")
 
     # drop self-loops and duplicate edges
@@ -770,6 +795,9 @@ if __name__ == "__main__":
          "1 arg: MASS (total fiber length), 2 args: MASS R (fiber length, default 0.05)")
   parser.add_argument("--seed", type=int, default=0,
     help="random seed for --mikado")
+  parser.add_argument("--min-edge", type=float, default=None, metavar="LEN",
+    help="minimum edge length for --mikado: nodes closer than LEN are merged "
+         "(default: r*1e-4)")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   parser.add_argument("--no-props", action="store_true",
@@ -821,7 +849,7 @@ if __name__ == "__main__":
       mass, r = args.mikado
     else:
       parser.error("--mikado takes 1 or 2 arguments")
-    network.generate_mikado(mass, r=r, seed=args.seed)
+    network.generate_mikado(mass, r=r, seed=args.seed, min_edge=args.min_edge)
     network.generate_synthetic_properties(width=1/mass)
   else:
     network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
