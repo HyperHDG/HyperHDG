@@ -130,6 +130,120 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
+  def generate_mikado(self, mass, r=0.05, seed=0):
+    """Random mikado-style fiber network on the unit square (gortz.pdf, sec. 6.1).
+
+    Fibers of fixed length r are placed with midpoints uniform in
+    [-r/2, 1+r/2]^2 and uniformly random rotation, clipped to the unit
+    square, until the total fiber length reaches `mass`. Every pairwise
+    fiber intersection becomes a node splitting both fibers, nodes closer
+    than r*1e-4 are merged, and only the largest connected component is
+    kept, so the result is a single connected graph.
+    """
+    tprint(f"generating mikado graph: mass={mass:g}, fiber length r={r:g}, seed={seed}")
+    rng = np.random.default_rng(seed)
+
+    # place fibers (batched) until the clipped total length reaches `mass`
+    seg_a, seg_b, seg_len = [], [], []
+    total = 0.0
+    while total < mass:
+      n_batch = max(1024, int(1.2 * (mass - total) / r))
+      mid = rng.uniform(-0.5 * r, 1.0 + 0.5 * r, size=(n_batch, 2))
+      ang = rng.uniform(0.0, np.pi, size=n_batch)
+      half = 0.5 * r * np.column_stack([np.cos(ang), np.sin(ang)])
+      p0, p1 = mid - half, mid + half
+
+      # Liang-Barsky clip to [0,1]^2: keep param t in [t0,t1] with p*t <= q per side
+      t0, t1 = np.zeros(n_batch), np.ones(n_batch)
+      keep = np.ones(n_batch, dtype=bool)
+      for dim in range(2):
+        d = p1[:, dim] - p0[:, dim]
+        for p, q in ((-d, p0[:, dim]), (d, 1.0 - p0[:, dim])):
+          with np.errstate(divide='ignore', invalid='ignore'):
+            tq = q / p
+          t0 = np.where(p < 0, np.maximum(t0, tq), t0)
+          t1 = np.where(p > 0, np.minimum(t1, tq), t1)
+          keep &= ~((p == 0) & (q < 0))
+      keep &= t0 < t1
+      a = (p0 + t0[:, None] * (p1 - p0))[keep]
+      b = (p0 + t1[:, None] * (p1 - p0))[keep]
+      l = np.linalg.norm(b - a, axis=1)
+      seg_a.append(a); seg_b.append(b); seg_len.append(l)
+      total += l.sum()
+
+    a, b = np.vstack(seg_a), np.vstack(seg_b)
+    lengths = np.concatenate(seg_len)
+    n_fib = min(np.searchsorted(np.cumsum(lengths), mass) + 1, len(lengths))
+    a, b = a[:n_fib], b[:n_fib]
+    tprint(f"placed {n_fib} fibers, total length {lengths[:n_fib].sum():.6g}")
+
+    # candidate pairs: fibers of length <= r can only meet if midpoints are within r
+    tree = cKDTree(0.5 * (a + b))
+    cand = tree.query_pairs(r, output_type='ndarray')
+    i, j = cand[:, 0], cand[:, 1]
+    di, dj, w = b[i] - a[i], b[j] - a[j], a[j] - a[i]
+    cross2d = lambda u, v: u[:, 0] * v[:, 1] - u[:, 1] * v[:, 0]
+    denom = cross2d(di, dj)
+    ok = np.abs(denom) > 1e-12  # exactly parallel fibers (probability zero) are skipped
+    with np.errstate(divide='ignore', invalid='ignore'):
+      s = cross2d(w, dj) / denom
+      t = cross2d(w, di) / denom
+    ok &= (s >= 0) & (s <= 1) & (t >= 0) & (t <= 1)
+    i, j, s, t = i[ok], j[ok], s[ok], t[ok]
+    pts = a[i] + s[:, None] * (b[i] - a[i])
+    n_x = len(pts)
+    tprint(f"{n_x} fiber-fiber intersections ({len(cand)} candidate pairs)")
+
+    # nodes: fiber endpoints then intersection points; split each fiber into
+    # edges between consecutive parameters along it
+    raw_nodes = np.vstack([a, b, pts])
+    fiber = np.concatenate([np.arange(n_fib), np.arange(n_fib), i, j])
+    param = np.concatenate([np.zeros(n_fib), np.ones(n_fib), s, t])
+    node  = np.concatenate([np.arange(2 * n_fib),
+                            2 * n_fib + np.arange(n_x),
+                            2 * n_fib + np.arange(n_x)])
+    order = np.lexsort((param, fiber))
+    fo, no = fiber[order], node[order]
+    adj = fo[:-1] == fo[1:]
+    edges = np.column_stack([no[:-1][adj], no[1:][adj]]).astype(np.int64)
+
+    # merge nodes closer than r*1e-4, setting a lower bound on edge lengths
+    merge_tol = r * 1e-4
+    n_raw = raw_nodes.shape[0]
+    close = cKDTree(raw_nodes).query_pairs(merge_tol, output_type='ndarray')
+    g = sp.csr_matrix((np.ones(len(close)), (close[:, 0], close[:, 1])), shape=(n_raw, n_raw))
+    n_merged, labels = sp.csgraph.connected_components(g, directed=False)
+    merged = np.zeros((n_merged, 2))
+    np.add.at(merged, labels, raw_nodes)
+    merged /= np.bincount(labels)[:, None]
+    edges = labels[edges]
+    tprint(f"merged {n_raw - n_merged} nodes closer than {merge_tol:.1e}")
+
+    # drop self-loops and duplicate edges
+    edges = np.sort(edges, axis=1)
+    edges = np.unique(edges[edges[:, 0] != edges[:, 1]], axis=0)
+
+    # keep only the largest connected component
+    A = sp.csr_matrix((np.ones(len(edges)), (edges[:, 0], edges[:, 1])), shape=(n_merged, n_merged))
+    n_comp, comp = sp.csgraph.connected_components(A, directed=False)
+    keep_node = comp == np.bincount(comp).argmax()
+    remap = np.full(n_merged, -1, dtype=np.int64)
+    remap[keep_node] = np.arange(keep_node.sum())
+    edges = remap[edges[keep_node[edges[:, 0]]]]
+    tprint(f"{n_comp} components, keeping largest with {keep_node.sum()} nodes")
+
+    nodes = np.zeros((keep_node.sum(), 3))
+    nodes[:, :2] = merged[keep_node]
+
+    final_mass = np.linalg.norm(nodes[edges[:, 0]] - nodes[edges[:, 1]], axis=1).sum()
+    tprint(f"final mass (total edge length): {final_mass:.6g}")
+    tprint("nodes", nodes.shape)
+    tprint("edges", edges.shape)
+    self.nodes = nodes
+    self.edges = edges
+    self.info = {"size": np.array([1.0, 1.0, 0.0])}
+    self.edgeProps = None
+
   def generate_synthetic_properties(self, width=None):
     """Build the 17-column edgeProps array for a synthetic network.
 
@@ -651,6 +765,11 @@ if __name__ == "__main__":
     help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--hex", type=int, nargs="+", metavar="N",
     help="generate hexagonal honeycomb graph, 1 arg: NxN, 2 args: NXxNY")
+  parser.add_argument("--mikado", type=float, nargs="+", metavar="X",
+    help="generate random mikado fiber graph on the unit square, "
+         "1 arg: MASS (total fiber length), 2 args: MASS R (fiber length, default 0.05)")
+  parser.add_argument("--seed", type=int, default=0,
+    help="random seed for --mikado")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   parser.add_argument("--no-props", action="store_true",
@@ -695,6 +814,15 @@ if __name__ == "__main__":
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
     network.generate_synthetic_properties(width=0.1 / max(nx, ny))
+  elif args.mikado is not None:
+    if len(args.mikado) == 1:
+      mass, r = args.mikado[0], 0.05
+    elif len(args.mikado) == 2:
+      mass, r = args.mikado
+    else:
+      parser.error("--mikado takes 1 or 2 arguments")
+    network.generate_mikado(mass, r=r, seed=args.seed)
+    network.generate_synthetic_properties(width=1/mass)
   else:
     network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
     network.verify_nonzero()
@@ -713,7 +841,7 @@ if __name__ == "__main__":
   if args.rescale_bbox:
     network.rescale_bbox()
   network.compute_types(args.dirichlet_tol)
-  if args.grid is None and args.hex is None:
+  if args.grid is None and args.hex is None and args.mikado is None:
     network.drop_floating_and_small_components(args.min_comp_size)
   network.write_h5(args.output, no_props=args.no_props)
   network.write_vtkhdf_view(args.output)
