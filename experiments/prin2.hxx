@@ -19,6 +19,13 @@ PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span);
 PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span);
 
 struct KSPMonitorYAML_Ctx {
-  PetscLogDouble t0;
+  // monitor fires on every KSPSolve once installed; quiet suppresses it during the
+  // reference solve in KSPMonitorYAML_Setup
+  PetscBool quiet = PETSC_FALSE;
+  PetscBool enorm = PETSC_FALSE;
+  Mat mat = NULL;
+  Vec u_ref = NULL, e = NULL, Ke = NULL;
+  PetscLogDouble t0 = 0;
 };
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf);
+PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx);
