@@ -22,6 +22,14 @@ using HDGElliptic = GlobalLoop::Elliptic<
   LocalSolver::TimoshenkoBeam<1,3,deg,2*deg, Params>
 >;
 
+template<unsigned int deg, template<unsigned int, typename> typename Params>
+using HDGDiffusion = GlobalLoop::Elliptic<
+  Topology::File<1,3>,
+  Geometry::File<1,3>,
+  NodeDescriptor::File<1,3>,
+  Diffusion<1,deg,2*deg, Params>
+>;
+
 // hdg must be deallocated with `delete`
 PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal tau, HDGBase **hdg) {
   PetscFunctionBeginUser;
@@ -36,6 +44,9 @@ PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal ta
   }
   else if (0 == strcmp(test, "constant")) {
     *hdg = new HDGWrapper(HDGElliptic<3, LocalSolver::TimoshenkoClampedConstant>(domain, tau)); return 0;
+  }
+  else if (0 == strcmp(test, "diffusion")) {
+    *hdg = new HDGWrapper(HDGDiffusion<1, ConstantDiffusionParameters>(domain, tau)); return 0;
   }
   else {
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG,
@@ -63,6 +74,34 @@ end:
     return 0;
 }
 
+
+typedef struct {
+  Mat mat;
+  Vec u_ref, e, Ke;
+  PetscLogDouble t0;
+} KSPMonitorErrK_Ctx;
+
+// Per-iteration energy-norm error |u_ref - u^(it)|_K against a converged reference solution
+// (gortz.pdf fig. 8). Attached by -err_monitor after a tight-tolerance reference solve.
+PetscErrorCode KSPMonitorErrK(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx_) {
+  KSPMonitorErrK_Ctx *ctx = (KSPMonitorErrK_Ctx*)ctx_;
+  Vec sol;
+  PetscReal dot;
+  PetscLogDouble t1;
+
+  PetscFunctionBeginUser;
+  if (it == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "ksp_err_monitor:\n"));
+  PetscCall(KSPBuildSolution(ksp, NULL, &sol));
+  PetscCall(VecWAXPY(ctx->e, -1.0, sol, ctx->u_ref));
+  PetscCall(MatMult(ctx->mat, ctx->e, ctx->Ke));
+  PetscCall(VecDot(ctx->e, ctx->Ke, &dot));
+  PetscCall(PetscTime(&t1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - it: %3" PetscInt_FMT "\n", it));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.16e\n", (double)(t1 - ctx->t0)));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    rnorm: %.16e\n", (double)rnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    enorm: %.16e\n", (double)PetscSqrtReal(PetscMax(dot, 0.))));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
   Mat AT, D;
@@ -114,6 +153,9 @@ int main(int argc, char **argv) {
     HDGBase* hdg = NULL;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
     const char *pc_type;
+    PetscBool err_monitor = PETSC_FALSE;
+    Vec sol_ref = NULL;
+    KSPMonitorErrK_Ctx errk_ctx = {};
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# ------- " __FILE__ " -------\n"));
@@ -121,7 +163,7 @@ int main(int argc, char **argv) {
     PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
     PetscCallMPI(MPI_Get_processor_name(proc_name, &proc_name_len));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
-    PetscCall(PetscOptionsString("-test", "test: (stiffness|gaussian)", NULL, test, test, sizeof(test), &is_set));
+    PetscCall(PetscOptionsString("-test", "test: (stiffness|gaussian|constant|diffusion)", NULL, test, test, sizeof(test), &is_set));
     PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot_path, plot_path, PATH_MAX, &is_set));
@@ -131,6 +173,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
     PetscCall(PetscOptionsBool("-mat_coo_off_proc", "print memory stats in yaml", NULL, mat_coo_off_proc, &mat_coo_off_proc, &is_set));
     PetscCall(PetscOptionsBool("-ksp_monitor_yaml", "set yaml ksp monitor", NULL, ksp_monitor_yaml, &ksp_monitor_yaml, &is_set));
+    PetscCall(PetscOptionsBool("-err_monitor", "record per-iteration K-norm error vs a converged reference solve (gortz fig. 8)", NULL, err_monitor, &err_monitor, &is_set));
     PetscOptionsEnd();
 
     PetscCall(PetscPrin2Options());
@@ -297,6 +340,26 @@ int main(int argc, char **argv) {
     PetscCall(KSPSetUp(ksp));
     PRIN2SP();
 
+    if (err_monitor) {
+      // Reference solve at tight tolerance for the "true" solution, then re-solve from a zero
+      // initial guess with the K-norm error monitor attached.
+      PetscReal rtol_user;
+      PetscInt ref_its;
+      PetscCall(KSPGetTolerances(ksp, &rtol_user, NULL, NULL, NULL));
+      PetscCall(VecDuplicate(rhs, &sol_ref));
+      PetscCall(KSPSetTolerances(ksp, 1e-14, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+      PetscCall(KSPSolve(ksp, rhs, sol_ref));
+      PetscCall(KSPGetIterationNumber(ksp, &ref_its));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "ref_its: %" PetscInt_FMT "\n", ref_its));
+      PetscCall(KSPSetTolerances(ksp, rtol_user, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+      errk_ctx.mat = mat;
+      errk_ctx.u_ref = sol_ref;
+      PetscCall(VecDuplicate(rhs, &errk_ctx.e));
+      PetscCall(VecDuplicate(rhs, &errk_ctx.Ke));
+      PetscCall(PetscTime(&errk_ctx.t0));
+      PetscCall(KSPMonitorSet(ksp, KSPMonitorErrK, &errk_ctx, NULL));
+    }
+
     PRIN2S(s_it);
     PetscCall(KSPSolve(ksp, rhs, rhs));
     PRIN2SP();
@@ -309,6 +372,8 @@ int main(int argc, char **argv) {
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2FY(cond);
+    PRIN2FY(emin);
+    PRIN2FY(emax);
     PRIN2SY(creason);
 
     {
@@ -346,6 +411,9 @@ end:
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&rhs));
     PetscCall(VecDestroy(&sol_local));
+    PetscCall(VecDestroy(&sol_ref));
+    PetscCall(VecDestroy(&errk_ctx.e));
+    PetscCall(VecDestroy(&errk_ctx.Ke));
     PetscCall(VecScatterDestroy(&scatter));
 
     PetscCall(PetscFinalize());

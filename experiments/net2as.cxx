@@ -219,7 +219,7 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsString("-net2as_cb_type", "subdomain partition type", NULL, data->cb_type, data->cb_type, sizeof(data->cb_type), &set));
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscCall(PetscOptionsBool("-net2as_nocoarse", "apply no coarse correction", NULL, data->nocoarse, &data->nocoarse, &set));
-  PetscCall(PetscOptionsBool("-net2as_cb_trim", "trim the cb_q1 coarse DoFs that peak on the domain boundary", NULL, data->cb_trim, &data->cb_trim, &set));
+  PetscCall(PetscOptionsBool("-net2as_cb_trim", "trim the cb_q1 coarse DoFs that peak on the domain boundary (coarse space only, BC-conforming; the subdomain cover keeps the boundary patches)", NULL, data->cb_trim, &data->cb_trim, &set));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -647,18 +647,22 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
 
   // Optionally trim the coarse DoFs that peak on the domain boundary: the outer ring of the
   // tensor-product Q1 grid (i in {0, ns[0]-1} or j in {0, ns[1]-1}). These basis functions peak on
-  // the Dirichlet boundary where the solution is fixed, so they add little to the coarse space.
+  // the Dirichlet boundary where the solution is fixed; dropping them makes the coarse space
+  // conform to the homogeneous boundary condition (gortz.pdf's V_0: for an aligned coarse grid the
+  // remaining interior hats vanish on the boundary). The trim applies to the COARSE SPACE only —
+  // the subdomain cover below keeps the boundary patches, matching the paper's decomposition
+  // (all partition-of-unity patches, coarse space in V).
   // col_remap maps each old coarse column to its compacted index, or -1 if trimmed.
   PetscInt *col_remap = NULL;
+  PetscInt n_coarse_kept = n_coarse;
   if (data->cb_trim) {
-    PetscInt kept = 0;
+    n_coarse_kept = 0;
     PetscCall(PetscMalloc1(n_coarse, &col_remap));
     for (PetscInt j = 0; j < ns[1]; j++)
       for (PetscInt i = 0; i < ns[0]; i++) {
         PetscBool bdry = (PetscBool)(i == 0 || i == ns[0]-1 || j == 0 || j == ns[1]-1);
-        col_remap[j*ns[0]+i] = bdry ? -1 : kept++;
+        col_remap[j*ns[0]+i] = bdry ? -1 : n_coarse_kept++;
       }
-    n_coarse = kept;
   }
 
   PetscCall(VecGetOwnershipRange(data->points, &vstart, &vend));
@@ -691,23 +695,42 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     };
     for (unsigned int l = 0; l < 4; l++) {
       PetscInt col = pts[l].j * ns[0] + pts[l].i;
-      if (col_remap) {
-        col = col_remap[col];
-        if (col < 0) continue; // trimmed boundary coarse DoF
-      }
+      // Skip exact-zero weights: they would put nodes lying exactly on a patch boundary into
+      // the far-side subdomains (closed instead of open hat supports). On coarse meshes aligned
+      // with a regular grid network that couples same-color patches and raises lambda_max of the
+      // preconditioned operator from 4 to 6-9; gortz.pdf's Table 2 grid rates are only
+      // reproduced with open supports.
+      if (pts[l].w == 0) continue;
       PetscCall(MatCOO_Push(coo, row, col, pts[l].w));
       // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%.2e, %.2e, %d, %d, | %d, %d, %.2e\n", x, y, i, j , row, col, pts[l].w));
     }
   }
 
-  PetscCall(PetscFree(col_remap));
-
   PetscCall(VecRestoreArray(data->points, &points));
 
+  // subdomains = supports of ALL hats (including the boundary-peaked ones), so the cover has no
+  // thin spots along the boundary even when the coarse space is trimmed
   PetscCall(net2as_distribute_subdomains(PETSC_COMM_WORLD, data, coo, sd));
   PetscCall(net2as_make_rank_is(data->is, data->sz, data->bs, &data->rank_is));
   PetscCall(net2as_make_is_local(data, sd));
   PetscCall(net2as_make_is_blocked(data));
+
+  // cb_trim: now restrict the coarse basis to the kept interior hats
+  if (data->cb_trim) {
+    PetscInt nnz = 0;
+    for (PetscInt t = 0; t < coo->nnz; t++) {
+      PetscInt col = col_remap[coo->cols[t]];
+      if (col < 0) continue; // trimmed boundary coarse DoF
+      coo->rows[nnz] = coo->rows[t];
+      coo->cols[nnz] = col;
+      coo->vals[nnz] = coo->vals[t];
+      nnz++;
+    }
+    coo->nnz = nnz;
+    data->n_coarse = n_coarse_kept;
+  }
+
+  PetscCall(PetscFree(col_remap));
   PetscFunctionReturn(0);
 }
 

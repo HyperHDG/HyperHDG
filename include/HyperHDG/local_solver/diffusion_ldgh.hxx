@@ -471,6 +471,16 @@ class Diffusion
    ************************************************************************************************/
   Diffusion(const constructor_value_type& tau = 1.) : tau_(tau) {}
   /*!***********************************************************************************************
+   * \brief   Report Dirichlet trace dofs to the global loop, which pins them to identity rows in
+   *          the condensed system (cf. prototype_mat_generate in global_loop/prototype.hxx).
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  bool is_dirichlet(hyEdgeT& hyper_edge, unsigned int node, unsigned int) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    return is_dirichlet<parameters>(hyper_edge.node_descriptor[node]);
+  }
+  /*!***********************************************************************************************
    * \brief   Evaluate local contribution to matrix--vector multiplication.
    *
    * Execute matrix--vector multiplication y = A * x, where x represents the vector containing the
@@ -517,8 +527,8 @@ class Diffusion
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] =
-            duals(i, j) + tau_ * primals(i, j) -
-            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
+            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i)
+            - tau_ * primals(i, j) - duals(i, j);
 
     return lambda_values_out;
   }
@@ -582,8 +592,8 @@ class Diffusion
       else
         for (unsigned int j = 0; j < lambda_values_out[i].size(); ++j)
           lambda_values_out[i][j] =
-            duals(i, j) + tau_ * primals(i, j) -
-            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i);
+            tau_ * lambda_values_in[i][j] * hyper_edge.geometry.face_area(i)
+            - tau_ * primals(i, j) - duals(i, j);
     }
 
     return lambda_values_out;
