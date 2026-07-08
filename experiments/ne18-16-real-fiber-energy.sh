@@ -13,6 +13,8 @@ IMG=$OUT/$NAME.png
 N=513
 NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod"
 KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-10"
+NP=$(nproc)
+MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
 export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
@@ -23,10 +25,10 @@ git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 python experiments/make_geo2.py -i 'domains/fiber-2026-05-20/net1/sca' -o $DOM \
-  --dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 2e-2
+  --dirichlet xmin=1 xmax=1 ymin=1 ymax=1 --dirichlet-tol 2e-2
 
 parallel --results $LOG --progress --bar -j1 \
-  "echo H: 1/{=2 \$_+=1 =}; mpirun -n 8 $BUILD/network -test constant -domain {1} $KSP $NET -net2as_p {2}" \
+  "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test diffusion -domain {1} $KSP $NET -net2as_p {2}" \
   ::: $DOM ::: 3 7 15 31
 echo "parallel exitcode: $?"
 
