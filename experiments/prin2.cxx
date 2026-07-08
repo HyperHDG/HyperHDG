@@ -107,7 +107,7 @@ PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span) {
 PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx_) {
   KSPMonitorYAML_Ctx *ctx = (KSPMonitorYAML_Ctx*)ctx_;
   PetscBool is_set;
-  PetscReal rtol_user, t0, t_ref;
+  PetscReal rtol_user, t0, t_ref, rtol_ref = 1e-14;
   PetscInt ref_its;
   const char* ref_creason;
   Mat mat;
@@ -117,6 +117,7 @@ PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx_) {
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "KSPMonitorYAML Options", NULL);
   PetscCall(PetscOptionsBool("-ksp_monitor_yaml_enorm", "compute energy norm error", NULL, ctx->enorm, &ctx->enorm, &is_set));
+  PetscCall(PetscOptionsReal("-ksp_monitor_yaml_enorm_rtol_ref", "residual tolerance for reference solution used in energy error", NULL, rtol_ref, &rtol_ref, &is_set));
   PetscOptionsEnd();
 
   if (!ctx->enorm) goto end;
@@ -125,7 +126,7 @@ PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx_) {
   PetscCall(KSPGetOperators(ksp, &mat, &mat));
   PetscCall(KSPGetTolerances(ksp, &rtol_user, NULL, NULL, NULL));
   PetscCall(MatCreateVecs(mat, &sol_ref, NULL));
-  PetscCall(KSPSetTolerances(ksp, 1e-14, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
+  PetscCall(KSPSetTolerances(ksp, rtol_ref, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
   PetscCall(PetscTime(&t0));
   PetscCall(KSPSolve(ksp, rhs, sol_ref));
   PetscCall(PetscTime(&t_ref));
@@ -143,8 +144,51 @@ PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx_) {
   PetscCall(VecDuplicate(sol_ref, &ctx->Ke));
   ctx->quiet = PETSC_FALSE;
 
+  // installed only now so the reference solve above still uses the default residual test
+  PetscCall(KSPSetConvergenceTest(ksp, KSPConvergedEnorm, ctx, NULL));
+
 end:
   return 0;
+}
+
+// |u_ref - u^(it)|_K for the current iterate; caches the value in ctx so the convergence test can
+// reuse the monitor's computation within the same iteration
+static PetscErrorCode KSPEnormCompute(KSP ksp, PetscInt it, KSPMonitorYAML_Ctx *ctx, PetscReal *enorm) {
+  Vec sol;
+  PetscReal dot;
+
+  PetscFunctionBeginUser;
+  PetscCall(KSPBuildSolution(ksp, NULL, &sol));
+  PetscCall(VecWAXPY(ctx->e, -1.0, sol, ctx->u_ref));
+  PetscCall(MatMult(ctx->mat, ctx->e, ctx->Ke));
+  PetscCall(VecDot(ctx->e, ctx->Ke, &dot));
+  *enorm = PetscSqrtReal(PetscMax(dot, 0.));
+  ctx->enorm_it = it;
+  ctx->enorm_val = *enorm;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Energy-error convergence test: stop when |u_ref - u^(it)|_K <= rtol * |u_ref - u^(0)|_K
+// (KSPConvergedDefault semantics with the energy error in place of the residual norm). Needs the
+// reference solution from KSPMonitorYAML_Setup; enabled with -ksp_converged_enorm.
+PetscErrorCode KSPConvergedEnorm(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx_) {
+  KSPMonitorYAML_Ctx *ctx = (KSPMonitorYAML_Ctx*)ctx_;
+  PetscReal enorm, rtol, abstol, dtol;
+
+  PetscFunctionBeginUser;
+  (void)rnorm;
+  *reason = KSP_CONVERGED_ITERATING;
+  if (ctx->enorm_it == it) enorm = ctx->enorm_val;
+  else PetscCall(KSPEnormCompute(ksp, it, ctx, &enorm));
+  // consume the cache so a later solve restarting at the same it cannot reuse a stale value
+  ctx->enorm_it = -1;
+  if (it == 0) ctx->enorm0 = enorm;
+  PetscCall(KSPGetTolerances(ksp, &rtol, &abstol, &dtol, NULL));
+  if (PetscIsInfOrNanReal(enorm)) *reason = KSP_DIVERGED_NANORINF;
+  else if (enorm <= rtol * ctx->enorm0) *reason = KSP_CONVERGED_RTOL;
+  else if (enorm <= abstol) *reason = KSP_CONVERGED_ATOL;
+  else if (enorm > dtol * ctx->enorm0) *reason = KSP_DIVERGED_DTOL;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 // Per-iteration energy-norm error |u_ref - u^(it)|_K against a converged reference solution
@@ -152,25 +196,19 @@ end:
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf) {
   // KSPMonitorSetFromOptions stashes the user ctx in vf->data
   KSPMonitorYAML_Ctx *ctx = (KSPMonitorYAML_Ctx*)vf->data;
-  Vec sol;
-  PetscReal dot;
+  PetscReal enorm;
   PetscLogDouble t1;
 
   PetscFunctionBeginUser;
   if (ctx->quiet) PetscFunctionReturn(PETSC_SUCCESS);
   if (it == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "ksp_monitor:\n"));
-  if (ctx->enorm) {
-    PetscCall(KSPBuildSolution(ksp, NULL, &sol));
-    PetscCall(VecWAXPY(ctx->e, -1.0, sol, ctx->u_ref));
-    PetscCall(MatMult(ctx->mat, ctx->e, ctx->Ke));
-    PetscCall(VecDot(ctx->e, ctx->Ke, &dot));
-  }
+  if (ctx->enorm) PetscCall(KSPEnormCompute(ksp, it, ctx, &enorm));
   PetscCall(PetscTime(&t1));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - it: %3" PetscInt_FMT "\n", it));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.16e\n", (double)(t1 - ctx->t0)));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    rnorm: %.16e\n", (double)rnorm));
   if (ctx->enorm)
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    enorm: %.16e\n", (double)PetscSqrtReal(PetscMax(dot, 0.))));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    enorm: %.16e\n", (double)enorm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

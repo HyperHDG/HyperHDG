@@ -1,5 +1,5 @@
 #!/bin/bash
-set -xo pipefail
+set -xeo pipefail
 
 : ${PRESET:=openblas}
 : ${BUILD:=build/$PRESET/experiments}
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=1
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset $PRESET
+cmake --build --preset $PRESET --target network
 cp $BUILD/network experiments/make_geo2.py experiments/ne18-14-fig8-plot.sh experiments/plot.py $0 $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi

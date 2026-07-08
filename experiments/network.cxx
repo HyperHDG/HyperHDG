@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
 
     char proc_name[MPI_MAX_PROCESSOR_NAME];
     char plot_path[PATH_MAX] = {0};
-    char domain_filepath[PATH_MAX] = "domains/grid3.geo.bin";
+    char domain[PATH_MAX] = "domains/grid3.geo.bin";
     char viscoarse[PATH_MAX] = {0};
     char mat_cache[PATH_MAX] = {0};
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     PetscCallMPI(MPI_Get_processor_name(proc_name, &proc_name_len));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
     PetscCall(PetscOptionsString("-test", "test: (stiffness|gaussian|constant|diffusion)", NULL, test, test, sizeof(test), &is_set));
-    PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain, domain, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot_path, plot_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
@@ -167,6 +167,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%s, ", proc_name));
     PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
+    PRIN2SY(domain);
 
     if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
@@ -177,7 +178,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("t2f", &s_t2f));
     PetscCall(PetscLogStageRegister("prealloc", &s_pa));
 
-    PetscCall(PetscHDGCreate(test, domain_filepath, tau, &hdg));
+    PetscCall(PetscHDGCreate(test, domain, tau, &hdg));
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 

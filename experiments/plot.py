@@ -59,7 +59,6 @@ def collect_plots(df, args, tx, ty):
         series = []
         inner = df0.groupby(args.group_by.split(',')) if args.group_by else [("", df0)]
         for names, group in inner:
-            if name0 is not None: names = [name0] + list(names)
             sgroup = group[[args.x, args.y]].sort_values(args.x)
             xs, ys = tx(sgroup[args.x].to_numpy()), ty(sgroup[args.y].to_numpy())
             if args.eoc:
@@ -106,6 +105,8 @@ def render_matplotlib(idx, name0, series, refs, args, plot_func):
         if "y" in args.log: plt.yscale("log", base=args.ybase)
     plt.xlabel(args.xlabel or args.x)
     plt.ylabel(args.ylabel or args.y)
+    if name0 != None:
+        args.title += f" ({args.group0}={name0})"
     plt.title(args.title)
     if args.group_by and args.legend:
         lbbox = args.legend.split(';')

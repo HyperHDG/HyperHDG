@@ -117,6 +117,8 @@ struct PC_Net2AS {
   PetscBool nocoarse;
   // (cb_q1 only) trim the coarse DoFs that peak on the domain boundary
   PetscBool cb_trim;
+  // (non-overlapping) subdomain diameter
+  PetscReal H;
 
   // network information
 
@@ -644,6 +646,9 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
     ns[d] = data->p[d]+2; // coarse DoFs per dim
   }
   n_coarse = ns[0] * ns[1];
+  data->H = PetscMax(h[0], h[1]);
+  data->overlap_abs = data->H;
+  data->overlap_frac = 1;
 
   // Optionally trim the coarse DoFs that peak on the domain boundary: the outer ring of the
   // tensor-product Q1 grid (i in {0, ns[0]-1} or j in {0, ns[1]-1}). These basis functions peak on
@@ -1041,6 +1046,8 @@ PetscErrorCode net2as_cb_pu(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
                         (double)dmin, (double)(dsum / p), (double)dmax));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta_max: %.5e\n", (double)cap));
 
+  data->H = dsum/p;
+
   // weighted shortest path from every node to each subdomain core, capped at the largest delta_s.
   // Dloc[i*p+s] = owned node i's distance to core s; node i is in subdomain s iff <= delta_s[s].
   PetscCall(PetscMalloc1(lsz_part * p, &Dloc));
@@ -1198,8 +1205,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_trim: %s\n", data->cb_trim ? "true" : "false"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_type: %s\n", data->load_type));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  nocoarse: %s\n", data->nocoarse ? "true" : "false"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  p: [%" PetscInt_FMT ", %" PetscInt_FMT "]\n", data->p[0], data->p[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  H: %.5e\n", data->H));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta: %.5e\n", data->overlap_abs));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta_rel: %.5e\n", data->overlap_frac));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   PetscCall(MatGetSize(A, &m, &n));
   PetscCall(MatGetInfo(A, MAT_GLOBAL_SUM, &mat_info));
