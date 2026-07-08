@@ -208,7 +208,7 @@ PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewer
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.16e\n", (double)(t1 - ctx->t0)));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    rnorm: %.16e\n", (double)rnorm));
   if (ctx->enorm)
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    enorm: %.16e\n", (double)enorm/enorm0));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    enorm: %.16e\n", (double)enorm/ctx->enorm0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
