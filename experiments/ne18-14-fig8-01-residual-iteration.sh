@@ -4,11 +4,12 @@ set -eo pipefail
 
 NAME=$(basename -s .sh $0)
 LOG=$1
-IMG=${2:-$NAME.png}
+DIR=$(dirname $LOG)
+IMG=${2:-$DIR/$NAME.png}
 
 ### one flat record per iteration, normalizing the old -err_monitor key names
-jq -c '.Stdout | .H as $H | .ksp_monitor[] | {it, enorm, H: $H}' $LOG \
+jq -c '.Stdout | {H,domain} + (.ksp_monitor[] | {it, enorm})' $LOG \
   | python $(dirname $0)/plot.py -x it -y enorm -g H --log y --marker "" \
       --xlabel "iteration" --ylabel '$\|u - u^{(\ell)}\|_{\text{E}}$' \
-      --nshow --save $IMG
-echo wrote $IMG
+      --nshow --save $IMG --group0 domain
+echo wrote ${IMG%.png}_domain*.png
