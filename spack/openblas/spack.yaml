@@ -8,6 +8,13 @@ spack:
   - petsc+hdf5+metis+mumps+suite-sparse+pastix+openmp+ptscotch+X
   - kahip
   - feh
+  - py-numpy
+  - py-pandas
+  - py-h5py
+  - py-matplotlib
+  - py-scipy
+  - py-pyyaml
+  - py-numpy
   view: true
   packages:
     blas:     {require: "openblas threads=openmp"}
