@@ -130,6 +130,12 @@ struct TimoshenkoClampedConstant
   /// Applied force
   static inline Scalar force = 1;
 
+  /// Body loads act on material only: edges with properties mass == 0 (virtual weld /
+  /// connector edges, fiber_id -1 in the morgan datasets) receive no volume RHS. Without
+  /// this the constant force on near-free weld chains produces huge localized
+  /// displacements (see ne18-20 solution inspection, 2026-07-09).
+  static constexpr bool massless_unloaded = true;
+
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
     return force;
@@ -882,9 +888,16 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   int comps[] = {1, -1, -2};
   static_assert(space_dim <= 3);
 
+  // parameters may opt in (massless_unloaded = true) to body loads acting on material
+  // only: massless edges (properties mass == 0, virtual welds) get no volume RHS
+  bool loaded = true;
+  if constexpr (requires { parameters::massless_unloaded; })
+    if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+      loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    for (unsigned int c = 0; c < space_dim; c++) {
+    for (unsigned int c = 0; loaded && c < space_dim; c++) {
       right_hand_side[(2 * space_dim + c)* n_shape_fct_ + i] =
         integrator::template integrate_vol_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
