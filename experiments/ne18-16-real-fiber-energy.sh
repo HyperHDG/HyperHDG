@@ -17,9 +17,10 @@ LOGG=$OUT/make_geo.log
 IMG=$OUT/$NAME.png
 N=513
 NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod"
-KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-10"
+KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-9"
 NP=$(nproc)
 MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
+GORTZ=$OUT/gortz.txt
 
 export OMP_NUM_THREADS=1
 
@@ -31,15 +32,19 @@ git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 2e-2"
+SUB="--subdivide 64"
+PROP="--prop-cutoff 5"
 
-python experiments/make_geo2.py --grid $((2**9+1)) -o $GRID $DIR --dirichlet-tol 1e-3 >> $LOGG
-python experiments/make_geo2.py --mikado 1000 -o $MIKADO $DIR >> $LOGG
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR >> $LOGG
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR >> $LOGG
+#python experiments/make_geo2.py --grid $((2**9+1)) -o $GRID $DIR --dirichlet-tol 1e-3 >> $LOGG
+#python experiments/make_geo2.py --mikado 1000 -o $MIKADO $DIR >> $LOGG
+python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB $PROP | tee $LOGG
+#python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR >> $LOGG
+
+experiments/gortz_constants.py $FIBER1 --mu | tee $GORTZ
 
 parallel --results $LOG --progress --bar -j1 \
   "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test {3} -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}" \
-  ::: grid mikado fiber1 fiber2 ::: 3 7 15 31 ::: constant
+  ::: fiber1 ::: 3 7 15 31 ::: constant
 echo "parallel exitcode: $?"
 
 yq -io json -I0 '.Stdout |= from_yaml' $LOG

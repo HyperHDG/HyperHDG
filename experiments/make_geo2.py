@@ -388,6 +388,93 @@ class Network:
     # clamp to >= 1e-10
     #self.edgeProps = np.clip(self.edgeProps, 1e-10, 1e+10)
 
+  def subdivide_long_edges(self, p):
+    """Subdivide edges longer than (xy extent)/p into equal-length pieces.
+
+    Motivation: for a p x p domain-decomposition grid the subdomain side is
+    R = (xy extent)/p.  Where the longest edge exceeds R -- the network length
+    scale R0 of Goertz et al. (Assumption 3.5.3, longest-edge / locality bound)
+    -- subdomains slice through single fibers, the homogeneity constant sigma
+    blows up and the two-level Schwarz condition number re-accelerates.  Refining
+    the long edges below R keeps R > R0 so the flat coarse space stays effective.
+    On a unit-bbox network (see --rescale-bbox) the threshold R equals 1/p.
+
+    An edge of length L is split into k = ceil(L / R) equal segments by inserting
+    k-1 evenly spaced interior nodes.  Per-edge properties are copied to every
+    segment except the mass (column 0), which is extensive and is divided by k so
+    total mass is conserved; the intensive stiffnesses, normals, widths and
+    fiber_id / fiber_edge_id are copied unchanged (all segments are the same
+    fiber).  This leaves types_points/_faces stale -- recompute compute_types
+    afterwards to type the new nodes and rebuild the face types.
+    """
+    nodes = self.nodes
+    edges = self.edges
+    props = self.edgeProps
+    n_nodes_old, n_edges_old = nodes.shape[0], edges.shape[0]
+
+    ext = nodes[:, :2].max(0) - nodes[:, :2].min(0)
+    R = float(ext.max()) / p
+
+    p0 = nodes[edges[:, 0]]
+    p1 = nodes[edges[:, 1]]
+    lengths = np.linalg.norm(p1 - p0, axis=1)
+    nseg = np.maximum(np.ceil(lengths / R).astype(np.int64), 1)
+    long_mask = nseg > 1
+    n_long = int(long_mask.sum())
+
+    tprint(f"subdivide: xy extent {ext[0]:.4g} x {ext[1]:.4g}, "
+           f"threshold R = ext/{p} = {R:.4g}")
+    tprint(f"  longest edge {lengths.max():.4g} ({lengths.max()/R:.2f} x R), "
+           f"edges over R: {n_long}/{n_edges_old}")
+    if n_long == 0:
+      tprint("  nothing to subdivide")
+      return
+
+    split_edges = edges[long_mask]
+    split_nseg  = nseg[long_mask]
+    split_p0    = p0[long_mask]
+    split_p1    = p1[long_mask]
+    S = split_edges.shape[0]
+
+    # interior nodes: k-1 per split edge, evenly interpolated along the edge
+    n_int  = split_nseg - 1
+    starts = np.cumsum(n_int) - n_int            # 0-based offset into the new block
+    M = int(n_int.sum())
+    edge_of_int = np.repeat(np.arange(S), n_int)
+    within = np.arange(M) - np.repeat(starts, n_int)          # 0 .. k-2 within edge
+    t = (within + 1) / split_nseg[edge_of_int]
+    int_coords = (split_p0[edge_of_int]
+                  + t[:, None] * (split_p1[edge_of_int] - split_p0[edge_of_int]))
+
+    # segment edges: k per split edge, chaining a - I0 - .. - I(k-2) - b
+    T = int(split_nseg.sum())
+    seg_starts = np.cumsum(split_nseg) - split_nseg
+    seg_edge = np.repeat(np.arange(S), split_nseg)
+    q = np.arange(T) - np.repeat(seg_starts, split_nseg)      # 0 .. k-1 within edge
+    nseg_seg = split_nseg[seg_edge]
+    base = n_nodes_old + starts[seg_edge]        # global id of the edge's first interior node
+    a = split_edges[seg_edge, 0]
+    b = split_edges[seg_edge, 1]
+    left  = np.where(q == 0,            a, base + q - 1)
+    right = np.where(q == nseg_seg - 1, b, base + q)
+    seg_edges = np.column_stack([left, right]).astype(edges.dtype)
+
+    self.nodes = np.vstack([nodes, int_coords])
+    self.edges = np.vstack([edges[~long_mask], seg_edges]).astype(edges.dtype)
+    if props is not None:
+      seg_props = props[long_mask][seg_edge].copy()
+      seg_props[:, 0] = seg_props[:, 0] / nseg_seg           # split extensive mass
+      self.edgeProps = np.vstack([props[~long_mask], seg_props])
+
+    new_len_max = np.linalg.norm(
+        self.nodes[self.edges[:, 1]] - self.nodes[self.edges[:, 0]], axis=1).max()
+    tprint(f"  added {M} nodes, {T - S} net edges "
+           f"({n_nodes_old}->{self.nodes.shape[0]} nodes, "
+           f"{n_edges_old}->{self.edges.shape[0]} edges)")
+    tprint(f"  longest edge now {new_len_max:.4g} ({new_len_max/R:.2f} x R)")
+
+
+
   def verify_nonzero(self):
     """Verify that material properties are nonzero where required.
     Reports per-column zero/near-zero counts and degenerate normal vectors.
@@ -814,6 +901,11 @@ if __name__ == "__main__":
                          "fibers per component. Prints a per-decade log histogram, reference "
                          "thresholds, and the applied floor, then writes the clipped network. "
                          "Applied to the final (post-clamp) fibers.")
+  parser.add_argument("--subdivide", type=int, default=None, metavar="P",
+                    help="subdivide edges longer than (xy extent)/P into equal "
+                         "pieces, so no edge exceeds the P x P subdomain scale "
+                         "(= 1/P on a unit-bbox network); mass (property col 0) "
+                         "is split evenly, other properties copied")
   args = parser.parse_args()
 
   if args.rescale_props is not None:
@@ -864,6 +956,8 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
+  if args.subdivide is not None:
+    network.subdivide_long_edges(args.subdivide)
   if args.prop_cutoff is not None:
     network.prop_cutoff(args.prop_cutoff)
   if args.rescale_bbox:
