@@ -10,7 +10,7 @@ TIKZ=${IMG%%.png}
 
 ### one flat record per iteration, normalizing the old -err_monitor key names
 jq -c '.Stdout | {H,domain} + (.ksp_monitor[] | {it, enorm})' $LOG \
-  | python $(dirname $0)/plot.py -x it -y enorm -g H --log y --marker "" \
+  | ${PYTHON:-python} $(dirname $0)/plot.py -x it -y enorm -g H --log y --marker "" \
       --xlabel "iteration" --ylabel '$\|u - u^{(\ell)}\|_{\text{E}}$' \
       --nshow --save $IMG --group0 domain --tikz $TIKZ
 echo wrote ${IMG%.png}_domain*.png

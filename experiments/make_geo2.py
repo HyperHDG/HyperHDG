@@ -863,6 +863,12 @@ class Network:
     self.nodes = (self.nodes - mins) * scale
     self.info["size"] = (maxs - mins) * scale
 
+  def scale(self, s):
+    tprint(f"scaling coordinates by {s:g}")
+    self.nodes = self.nodes * s
+    if "size" in self.info:
+      self.info["size"] = np.asarray(self.info["size"], dtype=float) * s
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
   parser.add_argument("-i", "--input", help="input", default=".")
@@ -891,6 +897,10 @@ if __name__ == "__main__":
                     help="do not write per-edge properties to h5")
   parser.add_argument("--rescale-bbox", action="store_true",
                     help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
+  parser.add_argument("--scale", type=float, default=None,
+                    help="multiply all coordinates by SCALE (applied after --rescale-bbox); "
+                         "with fixed material properties this moves H/l_c, i.e. selects the "
+                         "Timoshenko shear- vs bending-dominated regime")
   parser.add_argument("--rescale-props", default=None,
                     help="rescale network material properties, format '1,2,3,...'")
   parser.add_argument("--quirk", default=None, choices=Network.QUIRKS,
@@ -963,6 +973,8 @@ if __name__ == "__main__":
     network.prop_cutoff(args.prop_cutoff)
   if args.rescale_bbox:
     network.rescale_bbox()
+  if args.scale is not None:
+    network.scale(args.scale)
   network.compute_types(args.dirichlet_tol)
   if args.grid is None and args.hex is None and args.mikado is None:
     network.drop_floating_and_small_components(args.min_comp_size)

@@ -17,6 +17,13 @@ NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_so
 KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-9"
 NP=$(nproc)
 MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
+[ -x "$MPIRUN" ] || MPIRUN=mpirun
+# spack env python when usable (working matplotlib on the pde cluster), else system python
+if [ -z "${PYTHON:-}" ]; then
+  PYTHON=spack/$PRESET/.spack-env/view/bin/python
+  $PYTHON -c 'import numpy, h5py, pandas, matplotlib' >/dev/null 2>&1 || PYTHON=python
+fi
+export PYTHON
 
 export OMP_NUM_THREADS=1
 
@@ -24,7 +31,7 @@ mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
 cmake --build --preset $PRESET --target network
 cp $BUILD/network experiments/make_geo2.py experiments/gortz_constants.py \
-   experiments/ne18-14-fig8-plot.sh experiments/plot.py $0 $OUT
+   experiments/ne18-14-fig8-01-residual-iteration.sh experiments/plot.py $0 $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
@@ -45,11 +52,11 @@ SUB="--subdivide 128"
 CUT="--prop-cutoff 5"
 REG="--rescale-props 1,1,1,1,1e6,1e6,1e6,1,1,1,1,1,1,1,1,1,1"
 
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2P $DIR $SUB $CUT | tee $LOGG
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2REG $DIR $SUB $CUT $REG | tee -a $LOGG
+$PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2P $DIR $SUB $CUT | tee $LOGG
+$PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2REG $DIR $SUB $CUT $REG | tee -a $LOGG
 
-python experiments/gortz_constants.py $FIBER2P --cells 3 4 8 12 14 | tee $OUT/gortz-fiber2p.txt
-python experiments/gortz_constants.py $FIBER2REG --cells 3 4 8 12 14 | tee $OUT/gortz-fiber2reg.txt
+$PYTHON experiments/gortz_constants.py $FIBER2P --cells 3 4 8 12 14 | tee $OUT/gortz-fiber2p.txt
+$PYTHON experiments/gortz_constants.py $FIBER2REG --cells 3 4 8 12 14 | tee $OUT/gortz-fiber2reg.txt
 
 parallel --results $LOG --progress --bar -j1 \
   "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test {3} -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}" \
