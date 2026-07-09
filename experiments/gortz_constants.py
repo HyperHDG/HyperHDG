@@ -50,6 +50,7 @@ Usage:
 import argparse
 import os
 import time
+import sys
 
 # force single-threaded BLAS/OpenMP before numpy loads: Arch's OpenBLAS is
 # OpenMP-built and libgomp is not fork-safe -- once the parent has run any
@@ -333,8 +334,6 @@ def estimate_mu(points, edges, m_edge, lengths, R0, n, max_nodes=200000, jobs=1)
             for k, rec in enumerate(pool.imap_unordered(_mu_cell, cells,
                                                         chunksize=1), 1):
                 recs.append(rec)
-                if k % step == 0:
-                    tprint(f"  mu n={n}: {k}/{len(cells)} cells")
     else:
         recs = [_mu_cell(c) for c in cells]
 
