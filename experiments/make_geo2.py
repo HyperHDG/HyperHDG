@@ -908,6 +908,7 @@ if __name__ == "__main__":
                          "is split evenly, other properties copied")
   args = parser.parse_args()
 
+  rescale_props = None
   if args.rescale_props is not None:
     rescale_props = np.array(list(map(float, args.rescale_props.split(","))))
 
@@ -944,7 +945,7 @@ if __name__ == "__main__":
     network.generate_mikado(mass, r=r, seed=args.seed, min_edge=args.min_edge)
     network.generate_synthetic_properties(width=1/mass)
   else:
-    network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
+    network.read_morgan(args.input, rescale_props=rescale_props, quirk=args.quirk)
     network.verify_nonzero()
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
