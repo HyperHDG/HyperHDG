@@ -32,12 +32,12 @@ git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 2e-2"
-SUB="--subdivide 64"
+SUB="--subdivide 128"
 PROP="--prop-cutoff 5"
 
 #python experiments/make_geo2.py --grid $((2**9+1)) -o $GRID $DIR --dirichlet-tol 1e-3 >> $LOGG
 #python experiments/make_geo2.py --mikado 1000 -o $MIKADO $DIR >> $LOGG
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB $PROP | tee $LOGG
+python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB --no-props | tee $LOGG
 #python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR >> $LOGG
 
 experiments/gortz_constants.py $FIBER1 --mu | tee $GORTZ
