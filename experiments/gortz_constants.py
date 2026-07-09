@@ -44,11 +44,19 @@ Usage:
     python gortz_constants.py domain.geo.h5
     python gortz_constants.py domain.geo.h5 --cells 2 4 8 16 32
     python gortz_constants.py domain.geo.h5 --use-properties-mass
-    python gortz_constants.py domain.geo.h5 --mu --cells 4 8 16
+    python gortz_constants.py domain.geo.h5 --mu --cells 4 8 16 --jobs 16
 """
 
 import argparse
+import os
 import time
+
+# force single-threaded BLAS/OpenMP before numpy loads: Arch's OpenBLAS is
+# OpenMP-built and libgomp is not fork-safe -- once the parent has run any
+# threaded kernel, eigsh in a fork()ed mu worker deadlocks.  Parallelism is
+# over cells (--jobs), not inside the eigensolves, so nothing is lost.
+for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ[_v] = "1"
 
 import h5py
 import numpy as np
@@ -160,7 +168,99 @@ def sigma_grid(points, edges, m_edge, n):
                 mean=float(cell_mass.mean()), n_cells=n * n, n_empty=n_empty)
 
 
-def estimate_mu(points, edges, m_edge, lengths, R0, n, max_nodes=200000):
+_MU = None   # read-only per-call state, inherited copy-on-write by fork()ed workers
+
+
+def _mu_cell(ij):
+    """Evaluate one grid cell (i, j) of the mu estimate (see estimate_mu).
+
+    Reads the shared state in _MU.  Returns None for cells without a usable
+    subgraph, else (i, j, coverage, skipped, mu_cell, 1/lambda_2) where the
+    last two are None when the eigenproblem was not solved."""
+    from scipy.sparse.linalg import eigsh
+
+    g = _MU
+    i, j = ij
+    xy, R0 = g["xy"], g["R0"]
+    x0, x1 = g["lo"][0] + i * g["hx"], g["lo"][0] + (i + 1) * g["hx"]
+    y0, y1 = g["lo"][1] + j * g["hy"], g["lo"][1] + (j + 1) * g["hy"]
+
+    # nodes of the R0-enlarged cell: x-band from the presorted x-coordinates
+    # (two searchsorted calls instead of a full-array mask), y test on the band
+    a = np.searchsorted(g["xs"], x0 - R0, side="left")
+    b = np.searchsorted(g["xs"], x1 + R0, side="right")
+    cand = g["xorder"][a:b]
+    yc = xy[cand, 1]
+    idx = cand[(yc >= y0 - R0) & (yc <= y1 + R0)]
+    if idx.size < 3:
+        return None
+    idx.sort()
+
+    sel = np.zeros(g["n_points"], dtype=bool)
+    sel[idx] = True
+
+    # candidate edges from the same x-band trick: an edge with both endpoints
+    # selected has its min endpoint x inside [x0-R0, x1+R0]
+    ea = np.searchsorted(g["exs"], x0 - R0, side="left")
+    eb = np.searchsorted(g["exs"], x1 + R0, side="right")
+    ec = g["edges_x"][ea:eb]
+    emask = sel[ec[:, 0]] & sel[ec[:, 1]]
+    if not emask.any():
+        return None
+    se = np.searchsorted(idx, ec[emask])    # global -> local node ids
+    we = g["w_x"][ea:eb][emask]
+    me = g["m_x"][ea:eb][emask]
+
+    A = sp.csr_matrix((we, (se[:, 0], se[:, 1])), shape=(idx.size, idx.size))
+    n_comp, labels = sp.csgraph.connected_components(A, directed=False)
+
+    # component covering the core cell
+    core = ((xy[idx, 0] >= x0) & (xy[idx, 0] <= x1) &
+            (xy[idx, 1] >= y0) & (xy[idx, 1] <= y1))
+    if not core.any():
+        return None
+    core_labels = labels[core]
+    dominant = np.bincount(core_labels).argmax()
+    cov = float((core_labels == dominant).mean())
+
+    keep = labels == dominant
+    n_sub = int(keep.sum())
+    if n_sub > g["max_nodes"]:
+        return (i, j, cov, True, None, None)
+    if n_sub < 3:
+        return (i, j, cov, False, None, None)
+    sub = -np.ones(idx.size, dtype=np.int64)
+    sub[keep] = np.arange(n_sub)
+    gmask = keep[se[:, 0]]              # edges stay within one component
+    ge, gw, gm = sub[se[gmask]], we[gmask], me[gmask]
+
+    # weighted Laplacian L = D - W, mass Mbar lumped from own edges
+    W = sp.coo_matrix((gw, (ge[:, 0], ge[:, 1])), shape=(n_sub, n_sub))
+    W = (W + W.T)
+    L = sp.diags(np.asarray(W.sum(1)).ravel()) - W
+    node_mass = np.zeros(n_sub)
+    np.add.at(node_mass, ge[:, 0], gm / 2.0)
+    np.add.at(node_mass, ge[:, 1], gm / 2.0)
+    if node_mass.min() <= 0:
+        return (i, j, cov, False, None, None)   # ill-defined Mbar
+    M = sp.diags(node_mass)
+
+    try:
+        # smallest two eigenvalues of the SPD pencil; shift just below 0
+        vals = eigsh(L.tocsc(), k=2, M=M.tocsc(),
+                     sigma=-1e-12 * gw.sum(), which="LM",
+                     return_eigenvectors=False)
+        lam2 = float(np.sort(vals)[1])
+    except Exception:
+        return (i, j, cov, False, None, None)
+    if lam2 <= 0:
+        return (i, j, cov, False, None, None)
+
+    mu_cell = lam2 ** -0.5 / (2 * g["R"])
+    return (i, j, cov, False, mu_cell, 1.0 / lam2)
+
+
+def estimate_mu(points, edges, m_edge, lengths, R0, n, max_nodes=200000, jobs=1):
     """Connectivity constant mu of Lemma 3.6, Neumann case, per cell.
 
     For each grid cell B_R(x) (a box of side 2R) we take the subgraph induced
@@ -183,8 +283,12 @@ def estimate_mu(points, edges, m_edge, lengths, R0, n, max_nodes=200000):
     the box radius would double every value.  The average lambda_2^-1 is
     also returned for comparison with the paper's Figure 6.
 
-    Cells whose component exceeds max_nodes are skipped (reported)."""
-    from scipy.sparse.linalg import eigsh
+    Cells whose component exceeds max_nodes are skipped (reported).
+
+    Cells are independent and evaluated by a fork()ed process pool of `jobs`
+    workers (largest cells first, so a big straggler doesn't hold the tail);
+    the shared arrays are inherited copy-on-write via the module global _MU."""
+    global _MU
 
     xy = points[:, :2]
     lo = xy.min(0)
@@ -193,88 +297,66 @@ def estimate_mu(points, edges, m_edge, lengths, R0, n, max_nodes=200000):
     hx, hy = ext / n
     R = float(ext.max() / (2 * n))          # box radius: cells have side 2R
 
-    w = 1.0 / lengths                       # Laplacian edge weights
+    # presort nodes and edges by x so each cell extracts its x-band with two
+    # searchsorted calls instead of scanning all points/edges
+    xorder = np.argsort(xy[:, 0])
+    exlo = np.minimum(xy[edges[:, 0], 0], xy[edges[:, 1], 0])
+    eorder = np.argsort(exlo)
+    _MU = dict(xy=xy, n_points=len(points), R0=R0, lo=lo, hx=hx, hy=hy, R=R,
+               max_nodes=max_nodes, xorder=xorder, xs=xy[xorder, 0],
+               exs=exlo[eorder], edges_x=edges[eorder],
+               w_x=(1.0 / lengths)[eorder],     # Laplacian edge weights
+               m_x=m_edge[eorder])
 
+    # schedule the expensive cells first: node count of the R0-enlarged box
+    # from a summed-area table of the per-cell node counts
+    ix = np.clip(((xy[:, 0] - lo[0]) / ext[0] * n).astype(int), 0, n - 1)
+    iy = np.clip(((xy[:, 1] - lo[1]) / ext[1] * n).astype(int), 0, n - 1)
+    cnt = np.bincount(ix * n + iy, minlength=n * n).reshape(n, n)
+    P = np.zeros((n + 1, n + 1))
+    P[1:, 1:] = cnt.cumsum(0).cumsum(1)
+    kx, ky = int(np.ceil(R0 / hx)), int(np.ceil(R0 / hy))
+
+    def box_count(ij):
+        i0, i1 = max(ij[0] - kx, 0), min(ij[0] + kx + 1, n)
+        j0, j1 = max(ij[1] - ky, 0), min(ij[1] + ky + 1, n)
+        return P[i1, j1] - P[i0, j1] - P[i1, j0] + P[i0, j0]
+
+    cells = sorted(((i, j) for i in range(n) for j in range(n)),
+                   key=box_count, reverse=True)
+
+    if jobs > 1:
+        import multiprocessing
+        recs = []
+        step = max(1, len(cells) // 10)
+        with multiprocessing.get_context("fork").Pool(jobs) as pool:
+            for k, rec in enumerate(pool.imap_unordered(_mu_cell, cells,
+                                                        chunksize=1), 1):
+                recs.append(rec)
+                if k % step == 0:
+                    tprint(f"  mu n={n}: {k}/{len(cells)} cells")
+    else:
+        recs = [_mu_cell(c) for c in cells]
+
+    # reduce in (i, j) order so the result is independent of completion order
     mu_max, worst_cell = 0.0, None
     mus, invlam2 = [], []
     n_skip, n_viol, n_eval = 0, 0, 0
     min_cov = 1.0
-    for i in range(n):
-        for j in range(n):
-            x0, x1 = lo[0] + i * hx, lo[0] + (i + 1) * hx
-            y0, y1 = lo[1] + j * hy, lo[1] + (j + 1) * hy
-            # nodes of the R0-enlarged cell
-            sel = ((xy[:, 0] >= x0 - R0) & (xy[:, 0] <= x1 + R0) &
-                   (xy[:, 1] >= y0 - R0) & (xy[:, 1] <= y1 + R0))
-            idx = np.nonzero(sel)[0]
-            if idx.size < 3:
-                continue
-
-            remap = -np.ones(len(points), dtype=np.int64)
-            remap[idx] = np.arange(idx.size)
-            emask = sel[edges[:, 0]] & sel[edges[:, 1]]
-            se = remap[edges[emask]]
-            if se.size == 0:
-                continue
-            we = w[emask]
-            me = m_edge[emask]
-
-            A = sp.csr_matrix((we, (se[:, 0], se[:, 1])),
-                              shape=(idx.size, idx.size))
-            n_comp, labels = sp.csgraph.connected_components(A, directed=False)
-
-            # component covering the core cell
-            core = ((xy[idx, 0] >= x0) & (xy[idx, 0] <= x1) &
-                    (xy[idx, 1] >= y0) & (xy[idx, 1] <= y1))
-            if not core.any():
-                continue
-            core_labels = labels[core]
-            dominant = np.bincount(core_labels).argmax()
-            cov = float((core_labels == dominant).mean())
-            if cov < 1.0:                   # core split across components:
-                n_viol += 1                 # connectivity assumption violated
-                min_cov = min(min_cov, cov)
-
-            keep = labels == dominant
-            n_sub = int(keep.sum())
-            if n_sub > max_nodes:
-                n_skip += 1
-                continue
-            if n_sub < 3:
-                continue
-            sub = -np.ones(idx.size, dtype=np.int64)
-            sub[keep] = np.arange(n_sub)
-            gmask = keep[se[:, 0]]          # edges stay within one component
-            ge, gw, gm = sub[se[gmask]], we[gmask], me[gmask]
-
-            # weighted Laplacian L = D - W, mass Mbar lumped from own edges
-            W = sp.coo_matrix((gw, (ge[:, 0], ge[:, 1])), shape=(n_sub, n_sub))
-            W = (W + W.T)
-            L = sp.diags(np.asarray(W.sum(1)).ravel()) - W
-            node_mass = np.zeros(n_sub)
-            np.add.at(node_mass, ge[:, 0], gm / 2.0)
-            np.add.at(node_mass, ge[:, 1], gm / 2.0)
-            if node_mass.min() <= 0:
-                continue                    # ill-defined Mbar
-            M = sp.diags(node_mass)
-
-            try:
-                # smallest two eigenvalues of the SPD pencil; shift just below 0
-                vals = eigsh(L.tocsc(), k=2, M=M.tocsc(),
-                             sigma=-1e-12 * gw.sum(), which="LM",
-                             return_eigenvectors=False)
-                lam2 = float(np.sort(vals)[1])
-            except Exception:
-                continue
-            if lam2 <= 0:
-                continue
-
-            n_eval += 1
-            mu_cell = lam2 ** -0.5 / (2 * R)
-            mus.append(mu_cell)
-            invlam2.append(1.0 / lam2)
-            if mu_cell > mu_max:
-                mu_max, worst_cell = mu_cell, (i, j)
+    for i, j, cov, skipped, mu_cell, il2 in sorted(r for r in recs
+                                                   if r is not None):
+        if cov < 1.0:                       # core split across components:
+            n_viol += 1                     # connectivity assumption violated
+            min_cov = min(min_cov, cov)
+        if skipped:
+            n_skip += 1
+        if mu_cell is None:
+            continue
+        n_eval += 1
+        mus.append(mu_cell)
+        invlam2.append(il2)
+        if mu_cell > mu_max:
+            mu_max, worst_cell = mu_cell, (i, j)
 
     return dict(n=n, R=R, mu=mu_max,
                 mu_mean=float(np.mean(mus)) if mus else 0.0,
@@ -303,6 +385,9 @@ def main():
     ap.add_argument("--mu-max-nodes", type=int, default=200000,
                     help="skip cells whose connected component exceeds this "
                          "many nodes in the mu estimate (default 200000)")
+    ap.add_argument("--jobs", type=int, default=os.cpu_count(),
+                    help="worker processes for the mu estimate "
+                         "(default: all cores)")
     args = ap.parse_args()
 
     dom = load_domain(args.domain)
@@ -357,7 +442,7 @@ def main():
               f"{'avg lam2^-1':>12} {'eval':>6} {'viol':>6} {'skip':>6}")
         for n in args.cells:
             m = estimate_mu(dom["points"], dom["edges"], m_edge, lengths, R0_mu, n,
-                            max_nodes=args.mu_max_nodes)
+                            max_nodes=args.mu_max_nodes, jobs=args.jobs)
             print(f"  {m['n']:>5} {m['R']:>12.4g} {1.0 / m['R']:>8.4g} {m['mu']:>10.4g} "
                   f"{m['mu_mean']:>10.4g} {m['avg_invlam2']:>12.4g} "
                   f"{m['n_eval']:>6} {m['n_violation']:>6} {m['n_skip']:>6}")
