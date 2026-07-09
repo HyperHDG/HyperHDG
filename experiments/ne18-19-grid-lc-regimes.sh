@@ -68,11 +68,13 @@ done
 LOGAB=$OUT/log-ab.json
 LOGC=$OUT/log-c.json
 parallel --results $LOGAB --progress --bar -j1 \
-  "echo Hinv: {=4 \$_+=1 =}; echo domain: {1}; echo mode: {2}; $MPIRUN -n $NP $BUILD/network -test constant -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {4} {3}" \
+  "echo Hinv: {=4 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test constant -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {4} {3}; echo domain: {1}; echo mode: {2}" \
   ::: s1 s8000 ::: coarse nocoarse :::+ '' '-net2as_nocoarse' ::: 3 7 15 31
-# arm C: graph refinement does not change the regime
+# arm C: graph refinement does not change the regime.  NB the domain/mode echoes must
+# come AFTER the run: the network binary itself prints a domain: key (the file path)
+# which would otherwise win the YAML key collision.
 parallel --results $LOGC --progress --bar -j1 \
-  "echo Hinv: {=2 \$_+=1 =}; echo domain: {1}; echo mode: coarse; $MPIRUN -n $NP $BUILD/network -test constant -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}" \
+  "echo Hinv: {=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test constant -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}; echo mode: coarse" \
   ::: g17 g17s ::: 3 7
 echo "parallel exitcode: $?"
 
