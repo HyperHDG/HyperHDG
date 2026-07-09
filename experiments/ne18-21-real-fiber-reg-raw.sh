@@ -12,7 +12,12 @@ FIBER2RAW=$DOMAIN-fiber2raw.geo.h5
 LOG=$OUT/log.json
 LOGG=$OUT/make_geo.log
 IMG=$OUT/$NAME.png
-NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod"
+# coarse LU (not the default Cholesky): at p=31 the coarse matrix Z^T A Z is numerically
+# indefinite in double precision (entries span ~1e12+ between soft welds and the x1e6
+# rotation rigidities; narrow 4-edge hats) — MUMPS Cholesky factors it without complaint
+# but the factor emits Inf on the first solve (both ne18-20 and the first ne18-21 attempt
+# died with DIVERGED_NANORINF at it 0). LU pivoting absorbs it; verified on pde12.
+NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
 KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-9"
 NP=$(nproc)
 MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
