@@ -37,14 +37,14 @@ PROP="--prop-cutoff 5"
 
 #python experiments/make_geo2.py --grid $((2**9+1)) -o $GRID $DIR --dirichlet-tol 1e-3 >> $LOGG
 #python experiments/make_geo2.py --mikado 1000 -o $MIKADO $DIR >> $LOGG
-python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB --no-props | tee $LOGG
-#python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR >> $LOGG
+#python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB --no-props | tee $LOGG
+python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR $SUB --no-props | tee $LOGG
 
-python experiments/gortz_constants.py $FIBER1 --mu | tee $GORTZ
+python experiments/gortz_constants.py $FIBER2 --mu --cells 3 4 8 10 12 14 | tee $GORTZ
 
 parallel --results $LOG --progress --bar -j1 \
   "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test {3} -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}" \
-  ::: fiber1 ::: 2 3 7 11 15 ::: constant
+  ::: fiber2 ::: 2 3 7 11 13 ::: constant
 echo "parallel exitcode: $?"
 
 yq -io json -I0 '.Stdout |= from_yaml' $LOG
