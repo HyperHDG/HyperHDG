@@ -76,15 +76,22 @@ def load_domain(path):
         g = f["domain"]
         points = g["points"][:].astype(float)
         edges = g["edges"][:].astype(np.int64)
-        mass = g["properties"][:, 0].astype(float) if "properties" in g else None
+        mass = stiff = fiber_id = None
+        if "properties" in g:
+            P = g["properties"][:]
+            mass = P[:, 0].astype(float)
+            if P.shape[1] >= 7:  # [mass, EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2, ...]
+                stiff = P[:, 1:7].astype(float)
+            if P.shape[1] >= 16:
+                fiber_id = P[:, 15].astype(np.int64)
         types_points = None
         if "types_points" in g:
             types_points = np.asarray(g["types_points"][:]).reshape(-1)
         size = np.array(g.attrs["size"]) if "size" in g.attrs else None
     tprint(f"loaded '{path}': {len(points)} nodes, {len(edges)} edges, "
            f"properties={'yes' if mass is not None else 'no'}")
-    return dict(points=points, edges=edges, mass=mass,
-                types_points=types_points, size=size)
+    return dict(points=points, edges=edges, mass=mass, stiff=stiff,
+                fiber_id=fiber_id, types_points=types_points, size=size)
 
 
 def edge_lengths(points, edges):
@@ -107,6 +114,34 @@ def edge_mass(dom, use_properties_mass, lengths):
                    f"count as empty for sigma")
         return m
     return lengths
+
+
+def compute_lc(stiff, fiber_id=None):
+    """Per-fiber Timoshenko bending length l_c = sqrt(EI/GA), the crossover
+    span between shear- and bending-dominated transverse response.  The shear
+    term GA |u' - r x t|^2 is the only coupling between the trace fields u and
+    r; over a span R it penalizes a componentwise-interpolated (u, r) pair by
+    ~ GA (amp/R)^2 * mass, while the low-energy bending mode it has to
+    approximate only costs ~ EI (amp/R^2)^2 * mass, smaller by (l_c/R)^2.  A
+    coarse space that interpolates u and r independently per component
+    (net2as q1/pu) therefore loses the stable-decomposition property by the
+    factor (R/l_c)^2: for R >> l_c the coarse level is inert and the method
+    behaves one-level (kappa ~ R^-2, its ~ R^-1; measured on fiber2 in
+    ne18-16..18).  Robust gortz-style behaviour needs R <~ l_c, so a regime
+    window exists iff l_c >= R0.  stiff columns: [EA, kG_1A, kG_2A, G_xI_x,
+    E_1I_1, E_2I_2]; l_c is a cross-section property, constant along a fiber,
+    so percentiles are taken over unique fibers when fiber_id is present."""
+    if fiber_id is not None:
+        _, first = np.unique(fiber_id, return_index=True)
+        stiff = stiff[first]
+    ga1, ga2, ei1, ei2 = stiff[:, 1], stiff[:, 2], stiff[:, 4], stiff[:, 5]
+    valid = (ga1 > 0) & (ga2 > 0) & (ei1 > 0) & (ei2 > 0)
+    lc1 = np.sqrt(ei1[valid] / ga1[valid])
+    lc2 = np.sqrt(ei2[valid] / ga2[valid])
+    lc_min = np.minimum(lc1, lc2)
+    pct = lambda v: {p: np.percentile(v, p) for p in (2, 50, 98)}
+    return dict(lc1=pct(lc1), lc2=pct(lc2), lc_min=pct(lc_min),
+                n_fibers=len(lc_min), n_invalid=int((~valid).sum()))
 
 
 def compute_R0(points, edges, types_points, lengths):
@@ -415,6 +450,38 @@ def main():
     print(f"  --> R0 = {R0:.4g}   (set by {r0i['R0_from']})")
     print(f"      relative to xy extent: R0 / max_extent = {R0 / xy_ext.max():.4g}"
           f"   (i.e. R0^-1 ~ {xy_ext.max() / R0:.1f})")
+
+    # ---- l_c (Timoshenko bending length; not a constant of gortz.pdf) -----
+    print()
+    print("=== l_c  (Timoshenko bending length sqrt(EI/GA); componentwise "
+          "coarse-space regime) ===")
+    if dom["stiff"] is None:
+        print("  no stiffness properties in file: solver defaults to unit "
+              "stiffnesses => l_c = 1 (coordinate units)")
+        lc = {p: 1.0 for p in (2, 50, 98)}
+    else:
+        lci = compute_lc(dom["stiff"], dom["fiber_id"])
+        lc = lci["lc_min"]
+        for nm, v in (("l_c1 (dir 1)", lci["lc1"]), ("l_c2 (dir 2)", lci["lc2"]),
+                      ("min(l_c1,l_c2)", lci["lc_min"])):
+            print(f"  {nm:<15}: p2={v[2]:.4g}  p50={v[50]:.4g}  p98={v[98]:.4g}"
+                  f"   ({lci['n_fibers']} fibers"
+                  + (f", {lci['n_invalid']} nonpos skipped" if lci["n_invalid"]
+                     else "") + ")")
+    ok = "yes" if lc[50] >= R0 else "NO"
+    print(f"  regime window l_c >= R0: {ok}   (l_c p50 = {lc[50]:.4g}, "
+          f"R0 = {R0:.4g})")
+    print(f"  {'n':>5} {'R=ext/2n':>12} {'R/lc_p50':>10} {'(R/lc_p50)^2':>13} "
+          f"{'R/lc_p2':>10} {'(R/lc_p2)^2':>12}")
+    for n in args.cells:
+        R = xy_ext.max() / (2 * n)
+        print(f"  {n:>5} {R:>12.4g} {R / lc[50]:>10.4g} {(R / lc[50])**2:>13.4g} "
+              f"{R / lc[2]:>10.4g} {(R / lc[2])**2:>12.4g}")
+    print("  note: (R/l_c)^2 multiplies the stable-decomposition bound of a "
+          "coarse space\n        that interpolates u and r componentwise "
+          "(net2as q1/pu).  R >> l_c =>\n        coarse level inert, one-level "
+          "behaviour (kappa ~ R^-2).  Flat\n        gortz-style curves need "
+          "R <~ l_c on every subdomain.")
 
     # ---- sigma -----------------------------------------------------------
     massname = "properties col 0" if args.use_properties_mass else "edge length"
