@@ -40,11 +40,11 @@ PROP="--prop-cutoff 5"
 python experiments/make_geo2.py -i domains/fiber-2026-05-20/net1/sca -o $FIBER1 $DIR $SUB --no-props | tee $LOGG
 #python experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2 $DIR >> $LOGG
 
-experiments/gortz_constants.py $FIBER1 --mu | tee $GORTZ
+python experiments/gortz_constants.py $FIBER1 --mu | tee $GORTZ
 
 parallel --results $LOG --progress --bar -j1 \
   "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test {3} -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}" \
-  ::: fiber1 ::: 3 7 15 31 ::: constant
+  ::: fiber1 ::: 2 3 7 11 15 ::: constant
 echo "parallel exitcode: $?"
 
 yq -io json -I0 '.Stdout |= from_yaml' $LOG
