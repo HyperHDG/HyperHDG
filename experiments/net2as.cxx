@@ -117,6 +117,19 @@ struct PC_Net2AS {
   PetscBool nocoarse;
   // (cb_q1 only) trim the coarse DoFs that peak on the domain boundary
   PetscBool cb_trim;
+  // (cb_q1 only) per-component coarse polynomial degree: tensor-Lagrange Q_d on the same coarse
+  // cell grid, degree cb_degs[c] for trace component c. Default (unset / all 1) reproduces the
+  // plain q1 hats replicated per component. Only the SPAN of the coarse basis enters the additive
+  // Schwarz coarse correction, so separated per-component columns are equivalent to explicitly
+  // coupled basis functions: for TimoshenkoBeam (bs=6, [u_x,u_y,u_z,r_x,r_y,r_z]) degs
+  // 1,1,3,3,3,1 makes the span contain every C^1 bicubic Euler-Bernoulli plate pair
+  // (w, r = e_z x grad w) and every rigid rotation, which the componentwise q1 space misses
+  // (the (H/l_c)^2 stable-decomposition penalty, cf. gortz_constants' l_c check). One value
+  // broadcasts to all components; missing trailing values default to 1.
+  PetscInt cb_degs[8];
+  PetscInt cb_ndegs;
+  // set during setup when any cb_degs > 1: coarse basis built per component at dof level (no MAIJ)
+  PetscBool cb_percomp;
   // (non-overlapping) subdomain diameter
   PetscReal H;
 
@@ -222,6 +235,9 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   PetscCall(PetscOptionsString("-net2as_load_type", "subdomain load balancing type", NULL, data->load_type, data->load_type, sizeof(data->load_type), &set));
   PetscCall(PetscOptionsBool("-net2as_nocoarse", "apply no coarse correction", NULL, data->nocoarse, &data->nocoarse, &set));
   PetscCall(PetscOptionsBool("-net2as_cb_trim", "trim the cb_q1 coarse DoFs that peak on the domain boundary (coarse space only, BC-conforming; the subdomain cover keeps the boundary patches)", NULL, data->cb_trim, &data->cb_trim, &set));
+  data->cb_ndegs = 8;
+  PetscCall(PetscOptionsIntArray("-net2as_cb_degs", "per-component coarse polynomial degree (cb_q1 only; one value broadcasts, missing trailing values are 1; e.g. 1,1,3,3,3,1 adds the Euler-Bernoulli plate pairs for TimoshenkoBeam)", NULL, data->cb_degs, &data->cb_ndegs, &set));
+  if (!set) data->cb_ndegs = 0;
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -736,6 +752,84 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   }
 
   PetscCall(PetscFree(col_remap));
+
+  // Per-component higher-degree coarse space (-net2as_cb_degs): replace the node-level hat basis
+  // (which MatCreateMAIJ would replicate identically across all bs components) by a dof-level
+  // tensor-Lagrange basis of per-component degree on the SAME coarse cell grid. The subdomain
+  // cover above (hat supports) and the overlap are unchanged; only the coarse basis is rebuilt.
+  // Degree-d Lagrange nodes subdivide each coarse cell d times per axis; as with the hats, basis
+  // functions of Lagrange nodes on the domain boundary are trimmed under cb_trim (all interior
+  // shapes vanish on the boundary, so the trimmed space stays BC-conforming).
+  {
+    PetscInt deg[8], deg_max = 1;
+    for (PetscInt c = 0; c < data->bs; c++) {
+      deg[c] = data->cb_ndegs == 0 ? 1
+             : data->cb_ndegs == 1 ? data->cb_degs[0]
+             : c < data->cb_ndegs  ? data->cb_degs[c] : 1;
+      PetscCheck(deg[c] >= 1 && deg[c] <= 7, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+        "-net2as_cb_degs entries must be in [1,7], got %" PetscInt_FMT, deg[c]);
+      deg_max = PetscMax(deg_max, deg[c]);
+    }
+    data->cb_percomp = (PetscBool)(deg_max > 1);
+    if (data->cb_percomp) {
+      PetscCheck(data->bs <= 8, PETSC_COMM_WORLD, PETSC_ERR_SUP, "-net2as_cb_degs supports bs <= 8");
+      MatCOO dcoo;
+      PetscInt cells[2] = {data->p[0] + 1, data->p[1] + 1};
+      PetscInt nnz_per_node = 0, off[8 + 1];
+      off[0] = 0;
+      for (PetscInt c = 0; c < data->bs; c++) {
+        PetscInt n1x = cells[0] * deg[c] + 1, n1y = cells[1] * deg[c] + 1;
+        PetscInt kept = data->cb_trim ? (n1x - 2) * (n1y - 2) : n1x * n1y;
+        off[c + 1] = off[c] + kept;
+        nnz_per_node += (deg[c] + 1) * (deg[c] + 1);
+      }
+      PetscCall(MatCOO_Alloc(&dcoo, nnz_per_node * n_local));
+      PetscCall(VecGetArray(data->points, &points));
+      for (PetscInt k = 0; k < n_local; k++) {
+        PetscReal x = points[3*k], y = points[3*k+1];
+        PetscInt i = (x - min[0]) / h[0];
+        PetscInt j = (y - min[1]) / h[1];
+        if (i > data->p[0]) i = data->p[0];
+        if (j > data->p[1]) j = data->p[1];
+        if (i < 0) i = 0;
+        if (j < 0) j = 0;
+        PetscReal xx = (x - (i*h[0] + min[0])) / h[0];
+        PetscReal yy = (y - (j*h[1] + min[1])) / h[1];
+
+        for (PetscInt c = 0; c < data->bs; c++) {
+          PetscInt d = deg[c];
+          PetscInt n1x = cells[0] * d + 1, n1y = cells[1] * d + 1;
+          PetscReal Lx[8], Ly[8];
+          for (PetscInt a = 0; a <= d; a++) {
+            Lx[a] = Ly[a] = 1;
+            for (PetscInt b = 0; b <= d; b++) {
+              if (b == a) continue;
+              Lx[a] *= (xx * d - b) / (PetscReal)(a - b);
+              Ly[a] *= (yy * d - b) / (PetscReal)(a - b);
+            }
+          }
+          PetscInt row = (vstart + k) * data->bs + c;
+          for (PetscInt bj = 0; bj <= d; bj++)
+            for (PetscInt ai = 0; ai <= d; ai++) {
+              PetscReal w = Lx[ai] * Ly[bj];
+              if (w == 0) continue; // open supports, same reasoning as for the hats above
+              PetscInt gx = i * d + ai, gy = j * d + bj;
+              if (data->cb_trim) {
+                if (gx == 0 || gx == n1x - 1 || gy == 0 || gy == n1y - 1) continue;
+                PetscCall(MatCOO_Push(&dcoo, row, off[c] + (gy - 1) * (n1x - 2) + (gx - 1), w));
+              } else {
+                PetscCall(MatCOO_Push(&dcoo, row, off[c] + gy * n1x + gx, w));
+              }
+            }
+        }
+      }
+      PetscCall(VecRestoreArray(data->points, &points));
+      PetscCall(MatCOO_Free(coo));
+      *coo = dcoo;
+      data->n_coarse = off[data->bs];
+    }
+  }
+
   PetscFunctionReturn(0);
 }
 
@@ -1191,12 +1285,24 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   // MatPtAP below. (It only worked previously because round-robin produced an even split.)
   PetscInt cb_local_rows;
   PetscCall(MatGetLocalSize(A, &cb_local_rows, NULL));
+  if (data->cb_percomp) {
+    // per-component (-net2as_cb_degs) coarse basis lives at dof level: rows are A's dof rows
+    // (node-blocked, node*bs + component) and the columns already enumerate every component's
+    // Lagrange dofs, so no MAIJ expansion is applied.
+    PetscCall(MatSetSizes(coarse_basis, cb_local_rows, PETSC_DECIDE, msize, n_cols));
+    PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
+    PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
+    PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
+    data->cb = coarse_basis;
+    coarse_basis = NULL;
+  } else {
   cb_local_rows /= data->bs;
   PetscCall(MatSetSizes(coarse_basis, cb_local_rows, PETSC_DECIDE, size, n_cols*data->cb_ncomp));
   PetscCall(MatSetOptionsPrefix(coarse_basis, "net2as_coarse_"));
   PetscCall(MatSetPreallocationCOO(coarse_basis, coo.nnz, coo.rows, coo.cols));
   PetscCall(MatSetValuesCOO(coarse_basis, coo.vals, INSERT_VALUES));
   PetscCall(MatCreateMAIJ(coarse_basis, data->bs, &data->cb)); // expanded by block size
+  }
 
   // setup coarse global data structures
   PetscCall(MatPtAP(A, data->cb, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &data->cmat));
@@ -1210,6 +1316,13 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta: %.5e\n", data->overlap_abs));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  delta_rel: %.5e\n", data->overlap_frac));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  bs: %" PetscInt_FMT "\n", data->bs));
+  if (data->cb_percomp) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_degs: ["));
+    for (PetscInt c = 0; c < data->bs; c++)
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s%" PetscInt_FMT,  c ? ", " : "",
+        data->cb_ndegs == 1 ? data->cb_degs[0] : c < data->cb_ndegs ? data->cb_degs[c] : 1));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
+  }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
   PetscCall(MatGetSize(A, &m, &n));
   PetscCall(MatGetInfo(A, MAT_GLOBAL_SUM, &mat_info));
