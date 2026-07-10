@@ -164,9 +164,13 @@ def render_tikz(idx, name0, series, refs, args):
     if args.title: axis_opts.append(f"title={{{args.title}}}")
     if args.group_by and args.legend:
         axis_opts.append(f"legend pos={legend_pos}")
-        axis_opts.append(f"legend style={{title={{{tex_escape(legend_title(args))}}}, legend cell align=left}}")
+        axis_opts.append("legend style={legend cell align=left}")
+        # pgfplots has no legend title key ('title' inside legend style sets the
+        # axis title instead); emulate one with an empty-image first legend row,
+        # pulled left by the legend image width so it aligns with the images.
         entries = ",\n    ".join("{" + tex_escape(lbl) + "}" for _, _, lbl in series)
-        axis_opts.append(f"legend entries={{\n    {entries}\n  }}")
+        title_entry = "{\\hspace{-.6cm}" + tex_escape(legend_title(args)) + "}"
+        axis_opts.append(f"legend entries={{\n    {title_entry},\n    {entries}\n  }}")
 
     L.extend([
         "\\begin{axis}[",
@@ -175,6 +179,8 @@ def render_tikz(idx, name0, series, refs, args):
     ])
 
     csv_name = csv_path.name
+    if args.group_by and args.legend:
+        L.append("\\addlegendimage{empty legend}")
     L.extend([
         f"\\foreach \\i in {{0,...,{len(series)-1}}}{{",
         f"  \\addplot+[",
