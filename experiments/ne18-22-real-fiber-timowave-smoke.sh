@@ -41,7 +41,7 @@ NRG=$OUT/$NAME-energy.png
 # indefinite coarse matrix under the x1e6 rotation rigidities at high p)
 NET="-pc_type net2as -net2as_p 7 -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
 KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-9"
-NP=$(nproc)
+: ${NP:=$(nproc)}
 MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
 [ -x "$MPIRUN" ] || MPIRUN=mpirun
 # spack env python when usable (working matplotlib on the pde cluster), else system python

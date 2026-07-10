@@ -397,6 +397,14 @@ int main(int argc, char **argv) {
         PetscCall(VecScatterEnd(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
 
         PetscCall(VecScale(rhs, -1.));
+
+        // enorm monitoring (-ksp_monitor_yaml_enorm): the reference solve needs the
+        // assembled rhs, so it happens here rather than next to KSPSetUp. The reference
+        // is this first step's solution -- enorm is only meaningful with -nt 1
+        // (single-step conditioning studies, ne18-24); later steps reuse a stale u_ref.
+        if (i == 1)
+          PetscCall(KSPMonitorYAML_Setup(ksp, rhs, &ksp_monitor_yaml_ctx));
+
         PetscCall(KSPSolve(ksp, rhs, rhs));
 
         PetscCall(KSPGetIterationNumber(ksp, &its));
