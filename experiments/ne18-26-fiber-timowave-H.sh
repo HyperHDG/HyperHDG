@@ -19,6 +19,11 @@ IMG=$OUT/$NAME.png
 # mass shift is minimal (ne18-25: it buys only ~-14% by T1/32), so expectation is
 # stationary-like its growth with H^-1; the p=15 rung must reproduce ne18-25's
 # T1/2 run (64 its) exactly.
+# Second arm: the STATIONARY sweep (network, same test/domain/rungs) -- ne18-21's H
+# labels are relative to the FULL 8 mm domain, so its rungs are physically 4x larger
+# than the quarter's; comparing across domains conflates "wave vs stationary" with
+# "H vs R0" (the quarter's H = 1/32 is 62.5 um = R0).  Same-domain arms separate the
+# two: wave-vs-stat at matched rung isolates the mass term.
 : ${THETA:=0.5}
 : ${DEG:=3}
 T1=2.0e-6
@@ -40,8 +45,8 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset $PRESET --target timowave
-cp $BUILD/timowave experiments/make_geo2.py experiments/gortz_constants.py \
+cmake --build --preset $PRESET --target timowave --target network
+cp $BUILD/timowave $BUILD/network experiments/make_geo2.py experiments/gortz_constants.py \
    experiments/plot.py $0 $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
@@ -56,16 +61,19 @@ $PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2
   $DIR $SUB $REG $CLAMP | tee $LOGG
 
 for p in 3 7 15 31; do
-  { echo "H: 1/$((p+1))";
+  { echo "H: 1/$((p+1))"; echo "solver: wave";
     $MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAWQ -deg $DEG \
       -theta $THETA -nt 1 -T $DT $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
+  { echo "H: 1/$((p+1))"; echo "solver: stat";
+    $MPIRUN -n $NP $BUILD/network -test constant -domain $FIBER2RAWQ \
+      $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
 done
 
-# summary: iterations of the single implicit solve per coarse scale
-jq -r '[.H, .iterations, .ref_its] | @tsv' $LOG | column -t
+# summary: iterations of the single implicit solve per coarse scale and arm
+jq -r '[.H, .solver, .iterations, .ref_its] | @tsv' $LOG | column -t
 
-# fig8-style energy-error curves, one per H
-jq -c '{H, dt} + (.ksp_monitor[] | {it, enorm})' $LOG \
-  | $PYTHON experiments/plot.py -x it -y enorm -g H --log y --marker "" \
+# fig8-style energy-error curves, one per H; one figure per arm (wave / stat)
+jq -c '{H, solver} + (.ksp_monitor[] | {it, enorm})' $LOG \
+  | $PYTHON experiments/plot.py -x it -y enorm -g H --group0 solver --log y --marker "" \
       --xlabel "iteration" --ylabel '$\|u - u^{(\ell)}\|_{\text{E}}$' \
       --nshow --save $IMG --tikz ${IMG%.png}
