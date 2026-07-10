@@ -68,4 +68,4 @@ jq -r '[.dtfrac, .dt, .iterations, .ref_its] | @tsv' $LOG | column -t
 jq -c '{dtfrac, dt} + (.ksp_monitor[] | {it, enorm})' $LOG \
   | $PYTHON experiments/plot.py -x it -y enorm -g dtfrac --log y --marker "" \
       --xlabel "iteration" --ylabel '$\|u - u^{(\ell)}\|_{\text{E}}$' \
-      --nshow --save $IMG
+      --nshow --save $IMG --tikz ${IMG%.png}
