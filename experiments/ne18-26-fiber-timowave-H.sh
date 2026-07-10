@@ -21,8 +21,9 @@ IMG=$OUT/$NAME.png
 # dispersion estimate at the full-domain k has l_c*k ~ 0.95, i.e. the x1e6
 # regularisation puts the crossover right at the domain scale (T1 ~ 9.6e-6) -- the
 # factor is immaterial for its (ne18-25: -14% over a factor 16 in dt).
-# Second arm: the STATIONARY sweep (network, same test/domain/rungs) = ne18-21
-# reproduced in-run, for an apples-to-apples wave-vs-stationary comparison.
+# Stationary reference: ne18-21 (same domain build) = 33/51/63/69 its; a two-arm run
+# on the quarter already showed wave(T1/2) == stationary within 1 it at every rung
+# (32/46/64/112 vs 32/47/65/113), so no stationary arm here.
 : ${THETA:=0.5}
 : ${DEG:=3}
 T1=8.0e-6
@@ -44,8 +45,8 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
-cmake --build --preset $PRESET --target timowave --target network
-cp $BUILD/timowave $BUILD/network experiments/make_geo2.py experiments/gortz_constants.py \
+cmake --build --preset $PRESET --target timowave
+cp $BUILD/timowave experiments/make_geo2.py experiments/gortz_constants.py \
    experiments/plot.py $0 $OUT
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
@@ -58,20 +59,20 @@ REG="--rescale-props 1,1,1,1,1e6,1e6,1e6,1,1,1,1,1,1,1,1,1,1"
 $PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2RAW \
   $DIR $SUB $REG | tee $LOGG
 
+$PYTHON experiments/gortz_constants.py $FIBER2RAW --mu --cells 4 8 16 32 \
+  --csv $OUT/gortz-fiber2raw.csv | tee $OUT/gortz-fiber2raw.txt
+
 for p in 3 7 15 31; do
-  { echo "H: 1/$((p+1))"; echo "solver: wave";
+  { echo "H: 1/$((p+1))";
     $MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAW -deg $DEG \
       -theta $THETA -nt 1 -T $DT $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
-  { echo "H: 1/$((p+1))"; echo "solver: stat";
-    $MPIRUN -n $NP $BUILD/network -test constant -domain $FIBER2RAW \
-      $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
 done
 
-# summary: iterations of the single implicit solve per coarse scale and arm
-jq -r '[.H, .solver, .iterations, .ref_its] | @tsv' $LOG | column -t
+# summary: iterations of the single implicit solve per coarse scale
+jq -r '[.H, .iterations, .ref_its] | @tsv' $LOG | column -t
 
-# fig8-style energy-error curves, one per H; one figure per arm (wave / stat)
-jq -c '{H, solver} + (.ksp_monitor[] | {it, enorm})' $LOG \
-  | $PYTHON experiments/plot.py -x it -y enorm -g H --group0 solver --log y --marker "" \
+# fig8-style energy-error curves, one per H
+jq -c '{H, dt} + (.ksp_monitor[] | {it, enorm})' $LOG \
+  | $PYTHON experiments/plot.py -x it -y enorm -g H --log y --marker "" \
       --xlabel "iteration" --ylabel '$\|u - u^{(\ell)}\|_{\text{E}}$' \
       --nshow --save $IMG --tikz ${IMG%.png}

@@ -54,6 +54,9 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 1e-3"
 $PYTHON experiments/make_geo2.py --grid 129 $DIR -o $GRID | tee $LOGG
 
+$PYTHON experiments/gortz_constants.py $GRID --mu --cells 4 8 16 \
+  --csv $OUT/gortz-grid.csv | tee $OUT/gortz-grid.txt
+
 for f in 2 4 8 16 32; do
   DT=$($PYTHON -c "print($T1/$f)")
   { echo "dtfrac: T1/$f";

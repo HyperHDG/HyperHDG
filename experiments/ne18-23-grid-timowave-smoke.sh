@@ -58,7 +58,7 @@ DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 1e-3"
 
 $PYTHON experiments/make_geo2.py --grid 129 $DIR -o $GRID | tee $LOGG
 
-$PYTHON experiments/gortz_constants.py $GRID --cells 4 8 16 \
+$PYTHON experiments/gortz_constants.py $GRID --mu --cells 4 8 16 \
   --csv $OUT/gortz-grid.csv | tee $OUT/gortz-grid.txt
 
 stdbuf -oL $MPIRUN -n $NP $BUILD/timowave -test constant -domain $GRID -deg $DEG \

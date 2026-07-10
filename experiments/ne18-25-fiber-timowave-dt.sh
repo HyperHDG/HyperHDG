@@ -59,6 +59,9 @@ CLAMP="--clamp-xy .25"
 $PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2RAWQ \
   $DIR $SUB $REG $CLAMP | tee $LOGG
 
+$PYTHON experiments/gortz_constants.py $FIBER2RAWQ --mu --cells 4 8 16 \
+  --csv $OUT/gortz-fiber2rawq.csv | tee $OUT/gortz-fiber2rawq.txt
+
 for f in 2 4 8 16 32; do
   DT=$($PYTHON -c "print($T1/$f)")
   { echo "dtfrac: T1/$f";
