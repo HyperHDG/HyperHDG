@@ -28,9 +28,11 @@ NRG=$OUT/$NAME-energy.png
 # theta: weight on the new time level of the one-step theta scheme; stiff modes amplify
 # by -(1-theta)/theta per step, so theta < 0.5 blows up (theta 0.25 grew x3/step here,
 # on the tiny grid, everywhere -- the old "0.25 = CN" help text was wrong).  0.5 = CN.
-# deg: the deg-1 static limit came out ~11x softer than the network (deg 3) static
-# solve (max|u| 8.90 vs 0.754 um, relaxation vs elliptic); hybrid energy >> physical
-# says trace and bulk barely agree at deg 1.  Run the smoke at deg 3.
+# deg: the deg-1 static limit is ~11x softer than the true one on these props (max|u|
+# 8.90 um relaxed vs 0.754 static; hybrid energy >> physical = trace and bulk barely
+# agree).  At deg 3 the timowave relaxation reproduces the network static solve to all
+# digits (0.7540 / -0.3084), on the unit-props grid already at 1e-8.  Smoke at deg 3;
+# measured sag-mode period there ~2.8e-6 s.
 : ${NT:=20}
 : ${T:=5e-6}
 : ${THETA:=0.5}
@@ -87,10 +89,10 @@ rmdir $(dirname $WAVE_SCRATCH)
 # energy exchange over time: kinetic <-> strain shows the oscillation quantitatively
 $PYTHON experiments/energy.py $WAVE -o $NRG || echo "energy plot failed (non-fatal)"
 
-# renders (need pvpython): max dynamic |u| ~ 1.5 um on the 2000 um probe, warp x100 for
-# a ~8% visible deflection.  Still: 4 overlaid steps ~ 0, T1/2 (max sag), T1, 3T1/2.
-experiments/netvis.py $WAVE --beams 1 --view iso --warp-scale 100 --show 0 -o $VID \
+# renders (need pvpython): max dynamic |u| ~ 1.5 um on the 2000 um probe, warp x200 for
+# a ~15% visible deflection.  Still: 4 overlaid steps ~ 0, T1/2 (max sag), T1, 3T1/2.
+experiments/netvis.py $WAVE --beams 1 --view iso --warp-scale 200 --show 0 -o $VID \
   || echo "netvis animation failed (non-fatal, e.g. no pvpython)"
-experiments/netvis.py $WAVE --beams 1 --view pside --warp-scale 100 --show 0 --axis 0 \
+experiments/netvis.py $WAVE --beams 1 --view pside --warp-scale 200 --show 0 --axis 0 \
   --frames 0,1.25e-6,2.5e-6,3.75e-6 --frame-colors viridis -o $IMG \
   || echo "netvis still failed (non-fatal, e.g. no pvpython)"
