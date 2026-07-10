@@ -69,6 +69,7 @@ PetscErrorCode PetscHDGCreate(
   else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, theta, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -153,7 +154,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, wave1, wave4", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
+    PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only compute matrix", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));

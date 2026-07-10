@@ -1537,8 +1537,82 @@ struct TimoshenkoSinClamp
 };
 
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network constant force wave test.
+ *
+ *            timowave counterpart of TimoshenkoClampedConstant (network -test constant,
+ *            timoshenko_network.hxx): the same constant body force is switched on at t = 0
+ *            with the network at rest, so it sags towards the static solution and
+ *            oscillates about it with amplitude ~ the static sag.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoConstant
+{
+  using Pt = Point<dim, Scalar>;
 
+  /// Applied force (constant in space and time)
+  static inline Scalar force = 1;
 
+  /// Body loads act on material only: virtual weld edges (properties mass == 0) receive no
+  /// volume RHS, matching TimoshenkoClampedConstant (see ne18-20 solution inspection).
+  static constexpr bool massless_unloaded = true;
+
+  /// Read `force` from PETSc options (falling back to the static default above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-force", &force, NULL));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return force;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
 
 
 #endif // PARAMETERS_H

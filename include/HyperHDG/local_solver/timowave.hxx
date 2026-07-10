@@ -1653,6 +1653,13 @@ class TimoshenkoWave
     int comps[] = {1, -1, -2};
     static_assert(space_dim <= 3);
 
+    // same massless_unloaded opt-in as assemble_rhs_from_global_rhs: the static problem
+    // this reconstructs must match the network solver's (unloaded weld) RHS
+    bool loaded = true;
+    if constexpr (requires { parameters::massless_unloaded; })
+      if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+        loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
     // from lambda
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
@@ -1672,7 +1679,7 @@ class TimoshenkoWave
 
     // from global
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int c = 0; c < space_dim; c++) {
+      for (unsigned int c = 0; loaded && c < space_dim; c++) {
         rhs[(2 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
@@ -2006,26 +2013,37 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   std::array<lSol_float_t, 3> integrals;
 
+  // parameters may opt in (massless_unloaded = true) to body loads acting on material
+  // only: massless edges (properties mass == 0, virtual welds) get no volume RHS
+  // (cf. TimoshenkoBeam::assemble_rhs_from_global_rhs in timoshenko_network.hxx)
+  bool loaded = true;
+  if constexpr (requires { parameters::massless_unloaded; })
+    if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+      loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     // NOTE: it should probably not be *(space+dim) but *spac + dim???
 
     // distributed loads
-    // f
-    integrals = integrate_vol_phivecfunccomp_beam_avg<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n
-      >(i, {1, -1, -2}, hyper_edge.geometry, time);
-    for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+    if (loaded)
+    {
+      // f
+      integrals = integrate_vol_phivecfunccomp_beam_avg<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_n
+        >(i, {1, -1, -2}, hyper_edge.geometry, time);
+      for (unsigned int comp = 0; comp < 3; comp++)
+        right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
 
-    // g
-    integrals = integrate_vol_phivecfunccomp_beam_avg<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m
-      >(i, {1, -1, -2}, hyper_edge.geometry, time);
-    for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+      // g
+      integrals = integrate_vol_phivecfunccomp_beam_avg<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_m
+        >(i, {1, -1, -2}, hyper_edge.geometry, time);
+      for (unsigned int comp = 0; comp < 3; comp++)
+        right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+    }
 
     // NOTE: sign??
     // NOTE: think it should be subtracted here

@@ -144,6 +144,22 @@ def compute_lc(stiff, fiber_id=None):
                 n_fibers=len(lc_min), n_invalid=int((~valid).sum()))
 
 
+def compute_wave_speeds(mass, stiff, lengths):
+    """Per-edge Timoshenko wave speeds c = sqrt(stiffness / (mass/length)):
+    longitudinal c_l = sqrt(EA / mu) and shear c_s = sqrt(min(kG_1A, kG_2A) / mu)
+    with mu = properties mass / edge length (the physical line density, NOT the
+    paper's density-1 convention).  Material edges only (mass > 0): virtual weld
+    edges are massless, respond quasi-statically and carry no waves of their
+    own.  stiff columns: [EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2]."""
+    mu = mass / lengths
+    valid = mu > 0
+    cl = np.sqrt(stiff[valid, 0] / mu[valid])
+    cs = np.sqrt(np.minimum(stiff[valid, 1], stiff[valid, 2]) / mu[valid])
+    pct = lambda v: {p: float(np.percentile(v, p)) for p in (2, 50, 98)}
+    return dict(cl=pct(cl), cs=pct(cs),
+                n_edges=int(valid.sum()), n_massless=int((~valid).sum()))
+
+
 def compute_R0(points, edges, types_points, lengths):
     """Geometric length scale R0 (Assumption 3.5.3-4).
 
@@ -499,6 +515,34 @@ def main():
           "(net2as q1/pu).  R >> l_c =>\n        coarse level inert, one-level "
           "behaviour (kappa ~ R^-2).  Flat\n        gortz-style curves need "
           "R <~ l_c on every subdomain.")
+
+    # ---- wave speeds / time scale (not a constant of gortz.pdf) -----------
+    print()
+    print("=== wave speeds / domain time scale (dataset units, morgan: kg-um-s) ===")
+    if dom["stiff"] is None or dom["mass"] is None:
+        print("  no mass/stiffness properties in file: skipped")
+    else:
+        ws = compute_wave_speeds(dom["mass"], dom["stiff"], lengths)
+        for nm, v in (("c_long = sqrt(EA/(m/l))", ws["cl"]),
+                      ("c_shear = sqrt(kGA/(m/l))", ws["cs"])):
+            print(f"  {nm:<26}: p2={v[2]:.4g}  p50={v[50]:.4g}  p98={v[98]:.4g}"
+                  f"   ({ws['n_edges']} material edges"
+                  + (f", {ws['n_massless']} massless skipped" if ws["n_massless"]
+                     else "") + ")")
+        cs, cl = ws["cs"][50], ws["cl"][50]
+        t_cross = xy_ext.max() / cs
+        T1 = 2 * xy_ext.max() / cs
+        print(f"  domain crossing extent/c_shear_p50   : {t_cross:.4g}")
+        print(f"  fundamental period T1 ~ 2*extent/c_s : {T1:.4g}")
+        print("  note: T1 is the half-wavelength standing-wave estimate for the "
+              "transverse\n        (shear-regime) fundamental across the clamped "
+              "extent; an SDOF estimate\n        from static sag under constant "
+              "load agrees to O(1).  Rotation-rigidity\n        rescaling "
+              "(--rescale-props on G_xI_x, E_iI_i) does not enter c_long/c_shear.")
+        csv_scalars["c_long_p50"] = cl
+        csv_scalars["c_shear_p50"] = cs
+        csv_scalars["t_cross"] = t_cross
+        csv_scalars["T1_est"] = T1
 
     # ---- sigma -----------------------------------------------------------
     massname = "properties col 0" if args.use_properties_mass else "edge length"
