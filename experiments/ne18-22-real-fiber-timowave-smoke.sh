@@ -10,6 +10,10 @@ OUT=$OUTDIR/$NAME.$NOW
 DOMAIN=$OUT/domain
 FIBER2RAWQ=$DOMAIN-fiber2rawq.geo.h5
 WAVE=$OUT/wave.vtkhdf
+# the collective (MPI-IO) vtkhdf write deadlocks on NFS byte-range locking (ranks stuck
+# in nlmclnt_wait on pde12's NFS home) - write to node-local scratch, then move to $OUT.
+# Fine on a single node; multi-node runs need a real parallel FS here instead.
+WAVE_SCRATCH=$(mktemp -d ${TMPDIR:-/tmp}/$NAME.XXXXXX)/wave.vtkhdf
 LOG=$OUT/log.yaml
 LOGG=$OUT/make_geo.log
 VID=$OUT/$NAME.avi
@@ -40,6 +44,9 @@ fi
 export PYTHON
 
 export OMP_NUM_THREADS=1
+# HDF5's own flock on NFS (h5py readers, serial writes); the MPI-IO locking above is
+# ROMIO's and needs the scratch redirect regardless
+export HDF5_USE_FILE_LOCKING=FALSE
 
 mkdir -p $OUT
 ln -sfn $NAME.$NOW $OUTDIR/$NAME
@@ -65,8 +72,11 @@ $PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2
 $PYTHON experiments/gortz_constants.py $FIBER2RAWQ --cells 4 8 16 \
   --csv $OUT/gortz-fiber2rawq.csv | tee $OUT/gortz-fiber2rawq.txt
 
-$MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAWQ -deg $DEG \
-  -theta $THETA -nt $NT -T $T $KSP $NET -plot $WAVE -print_timestep | tee $LOG
+# stdbuf: keep PetscPrintf progress line-buffered through the tee pipe
+stdbuf -oL $MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAWQ -deg $DEG \
+  -theta $THETA -nt $NT -T $T $KSP $NET -plot $WAVE_SCRATCH -print_timestep | tee $LOG
+mv $WAVE_SCRATCH $WAVE
+rmdir $(dirname $WAVE_SCRATCH)
 
 # energy exchange over time: kinetic <-> strain shows the oscillation quantitatively
 $PYTHON experiments/energy.py $WAVE -o $NRG || echo "energy plot failed (non-fatal)"
