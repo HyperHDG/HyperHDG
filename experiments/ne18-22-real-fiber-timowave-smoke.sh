@@ -21,14 +21,20 @@ IMG=$OUT/$NAME.png
 NRG=$OUT/$NAME-energy.png
 # time horizon: the quarter probe has xy extent ~2000 um and transverse (shear-regime)
 # speed c_s = sqrt(kGA/(m/l)) ~ 1.7e9 um/s (gortz_constants wave-speed section), so the
-# fundamental period is T1 ~ 2*extent/c_s ~ 2.3e-6 s -- microseconds, not milliseconds.
-# Default: ~2 periods in 20 steps (~9 steps/period), enough to see the network sag under
-# the constant force and swing back.  theta is timowave's Newmark-beta-like weight
-# (mass term ~ C_u/(theta dt^2)); 0.25 = trapezoidal/CN, energy-conserving.
+# fundamental period is T1 ~ 2*extent/c_s ~ 2.3e-6 s -- microseconds, not milliseconds
+# (measured at deg 1: global z-sag half-period ~4.7e-6, but deg 1 is ~11x too soft, see
+# below).  Default: ~2 periods in 20 steps, enough to see the network sag under the
+# constant force and swing back.
+# theta: weight on the new time level of the one-step theta scheme; stiff modes amplify
+# by -(1-theta)/theta per step, so theta < 0.5 blows up (theta 0.25 grew x3/step here,
+# on the tiny grid, everywhere -- the old "0.25 = CN" help text was wrong).  0.5 = CN.
+# deg: the deg-1 static limit came out ~11x softer than the network (deg 3) static
+# solve (max|u| 8.90 vs 0.754 um, relaxation vs elliptic); hybrid energy >> physical
+# says trace and bulk barely agree at deg 1.  Run the smoke at deg 3.
 : ${NT:=20}
 : ${T:=5e-6}
-: ${THETA:=0.25}
-: ${DEG:=1}
+: ${THETA:=0.5}
+: ${DEG:=3}
 # coarse LU instead of the default Cholesky, same reason as ne18-21 (numerically
 # indefinite coarse matrix under the x1e6 rotation rigidities at high p)
 NET="-pc_type net2as -net2as_p 7 -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
