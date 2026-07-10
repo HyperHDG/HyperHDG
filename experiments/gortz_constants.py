@@ -531,17 +531,32 @@ def main():
                      else "") + ")")
         cs, cl = ws["cs"][50], ws["cl"][50]
         t_cross = xy_ext.max() / cs
-        T1 = 2 * xy_ext.max() / cs
+        # transverse fundamental of the clamped extent from the Timoshenko dispersion:
+        # shear branch om_s = c_s k, bending branch om_b = sqrt(EI/mu) k^2 = c_s l_c k^2
+        # (l_c = sqrt(EI/GA) from the section above -- so this IS sensitive to
+        # --rescale-props on the rotation rigidities, unlike c_shear itself); the
+        # compliances add in series, 1/om^2 = 1/om_s^2 + 1/om_b^2.  k = pi sqrt(2)/L
+        # for the doubly clamped square.  Regime: shear iff l_c k >= 1.
+        k1 = np.pi * np.sqrt(2.0) / xy_ext.max()
+        om_s = cs * k1
+        om_b = cs * lc[50] * k1 * k1
+        om1 = (om_s**-2 + om_b**-2) ** -0.5
+        T1 = 2 * np.pi / om1
+        regime = "shear" if lc[50] * k1 >= 1 else "bending"
         print(f"  domain crossing extent/c_shear_p50   : {t_cross:.4g}")
-        print(f"  fundamental period T1 ~ 2*extent/c_s : {T1:.4g}")
-        print("  note: T1 is the half-wavelength standing-wave estimate for the "
-              "transverse\n        (shear-regime) fundamental across the clamped "
-              "extent; an SDOF estimate\n        from static sag under constant "
-              "load agrees to O(1).  Rotation-rigidity\n        rescaling "
-              "(--rescale-props on G_xI_x, E_iI_i) does not enter c_long/c_shear.")
+        print(f"  fundamental (k = pi*sqrt2/extent)    : T_shear={2*np.pi/om_s:.4g}  "
+              f"T_bend={2*np.pi/om_b:.4g}  -> T1 = {T1:.4g}  ({regime}-dominated, "
+              f"l_c*k = {lc[50]*k1:.3g})")
+        print("  note: ne18-22 measured T1 = 2.0e-6 on the reg-x1e6 quarter vs 1.7e-6 "
+              "here.  In the\n        bending regime the domain-scale beam estimate "
+              "ignores network truss action\n        (off-axis fibers carry transverse "
+              "load axially), so T_bend is an UPPER\n        estimate; segment-scale "
+              "bending in series with shear can be much faster.")
         csv_scalars["c_long_p50"] = cl
         csv_scalars["c_shear_p50"] = cs
         csv_scalars["t_cross"] = t_cross
+        csv_scalars["T1_shear"] = 2 * np.pi / om_s
+        csv_scalars["T1_bend"] = 2 * np.pi / om_b
         csv_scalars["T1_est"] = T1
 
     # ---- sigma -----------------------------------------------------------
