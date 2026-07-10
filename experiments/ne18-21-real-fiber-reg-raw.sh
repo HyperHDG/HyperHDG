@@ -58,7 +58,8 @@ REG="--rescale-props 1,1,1,1,1e6,1e6,1e6,1,1,1,1,1,1,1,1,1,1"
 
 $PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2RAW $DIR $SUB $REG | tee $LOGG
 
-$PYTHON experiments/gortz_constants.py $FIBER2RAW --cells 4 8 16 32 | tee $OUT/gortz-fiber2raw.txt
+$PYTHON experiments/gortz_constants.py $FIBER2RAW --mu --cells 4 8 16 32 \
+  --csv $OUT/gortz-fiber2raw.csv | tee $OUT/gortz-fiber2raw.txt
 
 parallel --results $LOG --progress --bar -j1 \
   "echo H: 1/{=2 \$_+=1 =}; $MPIRUN -n $NP $BUILD/network -test {3} -domain $DOMAIN-{1}.geo.h5 $KSP $NET -net2as_p {2}; echo domain: {1}" \

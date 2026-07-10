@@ -422,7 +422,16 @@ def main():
     ap.add_argument("--jobs", type=int, default=os.cpu_count(),
                     help="worker processes for the mu estimate "
                          "(default: all cores)")
+    ap.add_argument("--csv", metavar="PATH", default=None,
+                    help="additionally write the per-n table (n, R, sigma, R/l_c, mu when "
+                         "--mu) as CSV; scalars (extent, R0, l_c percentiles) go into "
+                         "'# key = value' header comment lines (pandas: comment='#', "
+                         "pgfplotstable: comment chars=#)")
     args = ap.parse_args()
+
+    # per-n rows and scalar header for --csv, filled alongside the printed sections
+    csv_rows = {n: dict(n=n) for n in args.cells}
+    csv_scalars = {}
 
     dom = load_domain(args.domain)
     lengths = edge_lengths(dom["points"], dom["edges"])
@@ -430,6 +439,8 @@ def main():
 
     xy_ext = (dom["points"][:, :2].max(0) - dom["points"][:, :2].min(0))
     tprint(f"xy bounding box extent: {xy_ext[0]:.4g} x {xy_ext[1]:.4g}")
+    csv_scalars["extent_x"] = xy_ext[0]
+    csv_scalars["extent_y"] = xy_ext[1]
 
     # ---- R0 --------------------------------------------------------------
     R0, r0i = compute_R0(dom["points"], dom["edges"], dom["types_points"], lengths)
@@ -450,6 +461,7 @@ def main():
     print(f"  --> R0 = {R0:.4g}   (set by {r0i['R0_from']})")
     print(f"      relative to xy extent: R0 / max_extent = {R0 / xy_ext.max():.4g}"
           f"   (i.e. R0^-1 ~ {xy_ext.max() / R0:.1f})")
+    csv_scalars["R0"] = R0
 
     # ---- l_c (Timoshenko bending length; not a constant of gortz.pdf) -----
     print()
@@ -471,12 +483,17 @@ def main():
     ok = "yes" if lc[50] >= R0 else "NO"
     print(f"  regime window l_c >= R0: {ok}   (l_c p50 = {lc[50]:.4g}, "
           f"R0 = {R0:.4g})")
+    for p in (2, 50, 98):
+        csv_scalars[f"lc_min_p{p}"] = lc[p]
     print(f"  {'n':>5} {'R=ext/2n':>12} {'R/lc_p50':>10} {'(R/lc_p50)^2':>13} "
           f"{'R/lc_p2':>10} {'(R/lc_p2)^2':>12}")
     for n in args.cells:
         R = xy_ext.max() / (2 * n)
         print(f"  {n:>5} {R:>12.4g} {R / lc[50]:>10.4g} {(R / lc[50])**2:>13.4g} "
               f"{R / lc[2]:>10.4g} {(R / lc[2])**2:>12.4g}")
+        csv_rows[n].update(R=R, Rinv=1.0 / R, R_over_lc_p50=R / lc[50],
+                           R_over_lc_p50_sq=(R / lc[50])**2,
+                           R_over_lc_p2=R / lc[2], R_over_lc_p2_sq=(R / lc[2])**2)
     print("  note: (R/l_c)^2 multiplies the stable-decomposition bound of a "
           "coarse space\n        that interpolates u and r componentwise "
           "(net2as q1/pu).  R >> l_c =>\n        coarse level inert, one-level "
@@ -495,6 +512,8 @@ def main():
         print(f"  {s['n']:>5} {s['R']:>12.4g} {1.0 / s['R']:>8.4g} {s['sigma']:>12.4g} "
               f"{s['cmin']:>12.4g} {s['cmax']:>12.4g} "
               f"{s['n_empty']:>4}/{s['n_cells']}{flag}")
+        csv_rows[n].update(sigma=s["sigma"], cell_min=s["cmin"], cell_max=s["cmax"],
+                           cells_empty=s["n_empty"], cells_total=s["n_cells"])
     print("  note: sigma at R < R0 is below the microstructure scale and only "
           "reflects\n        discretization; the assumption is stated for R >= R0.")
 
@@ -512,11 +531,32 @@ def main():
             print(f"  {m['n']:>5} {m['R']:>12.4g} {1.0 / m['R']:>8.4g} {m['mu']:>10.4g} "
                   f"{m['mu_mean']:>10.4g} {m['avg_invlam2']:>12.4g} "
                   f"{m['n_eval']:>6} {m['n_violation']:>6} {m['n_skip']:>6}")
+            csv_rows[n].update(mu=m["mu"], mu_mean=m["mu_mean"],
+                               avg_invlam2=m["avg_invlam2"], mu_eval=m["n_eval"],
+                               mu_viol=m["n_violation"], mu_skip=m["n_skip"])
         print("  note: lambda_2 on the connected component covering B_R(x) of the "
               "subgraph\n        induced on the R0-enlarged box; mu = lambda_2^-1/2 "
               "/ (2R), the side\n        normalization that reproduces the paper's "
               "Table 1.  viol = cells whose\n        core nodes span several "
               "components (connectivity violated there).")
+
+    # ---- csv (optional) ----------------------------------------------------
+    if args.csv:
+        import csv as csv_mod
+        order = ["n", "R", "Rinv", "sigma", "cell_min", "cell_max", "cells_empty",
+                 "cells_total", "R_over_lc_p50", "R_over_lc_p50_sq", "R_over_lc_p2",
+                 "R_over_lc_p2_sq", "mu", "mu_mean", "avg_invlam2", "mu_eval",
+                 "mu_viol", "mu_skip"]
+        present = set().union(*(row.keys() for row in csv_rows.values()))
+        fields = [c for c in order if c in present]
+        with open(args.csv, "w", newline="") as fh:
+            for k, v in csv_scalars.items():
+                fh.write(f"# {k} = {v:.6g}\n")
+            w = csv_mod.DictWriter(fh, fieldnames=fields, restval="")
+            w.writeheader()
+            for n in args.cells:
+                w.writerow({k: v for k, v in csv_rows[n].items() if k in fields})
+        tprint(f"wrote {args.csv}")
 
 
 if __name__ == "__main__":
