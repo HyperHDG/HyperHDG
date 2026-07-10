@@ -629,6 +629,11 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
   if output:
     if len(times) > 0:
       print("saving animation...")
+      # headless (--show 0): the scene setup above was skipped, do it here
+      scene = pv.GetAnimationScene()
+      scene.UpdateAnimationUsingDataTimeSteps()
+      scene.PlayMode = "Snap To TimeSteps"
+      scene.NumberOfFrames = len(times)
       scene.FramesPerTimestep = 1
       pv.SaveAnimation(output, rview, FrameRate=fps)
     else:
