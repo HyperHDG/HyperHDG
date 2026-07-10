@@ -8,26 +8,25 @@ NAME=$(basename -s .sh $0)
 NOW=$(date +%s)
 OUT=$OUTDIR/$NAME.$NOW
 DOMAIN=$OUT/domain
-FIBER2RAWQ=$DOMAIN-fiber2rawq.geo.h5
+FIBER2RAW=$DOMAIN-fiber2raw.geo.h5
 LOG=$OUT/log.json
 LOGG=$OUT/make_geo.log
 IMG=$OUT/$NAME.png
-# the H-sweep companion to ne18-25's dt ladder: ONE implicit timowave step at the
-# longest physical timestep dt = T1/2 (T1 = 2.0e-6, the sag period measured by
-# ne18-22 at deg 3), subdomain count p = 3 7 15 31 i.e. H^-1 = 4 8 16 32 -- the wave
-# analogue of the ne18-21 stationary sweep on the quarter probe.  At dt = T1/2 the
-# mass shift is minimal (ne18-25: it buys only ~-14% by T1/32), so expectation is
-# stationary-like its growth with H^-1; the p=15 rung must reproduce ne18-25's
-# T1/2 run (64 its) exactly.
-# Second arm: the STATIONARY sweep (network, same test/domain/rungs) -- ne18-21's H
-# labels are relative to the FULL 8 mm domain, so its rungs are physically 4x larger
-# than the quarter's; comparing across domains conflates "wave vs stationary" with
-# "H vs R0" (the quarter's H = 1/32 is 62.5 um = R0).  Same-domain arms separate the
-# two: wave-vs-stat at matched rung isolates the mass term.
+# the H-sweep companion to ne18-25's dt ladder, on the FULL fiber2 domain (ne18-21's
+# canonical config) so every rung H = 8000/(p+1) = 2000..250 um stays well above
+# R0 = 62.5 um and the Goertz constants do not degrade (a quarter-domain attempt put
+# H(p=31) = R0 exactly and its blew up to 112 -- scale effect, not the wave operator).
+# ONE implicit timowave step at the longest physical timestep dt = T1/2.  T1 = 8.0e-6 s:
+# 4x the sag period measured on the quarter (ne18-22, shear regime T ~ L/c_s); the
+# dispersion estimate at the full-domain k has l_c*k ~ 0.95, i.e. the x1e6
+# regularisation puts the crossover right at the domain scale (T1 ~ 9.6e-6) -- the
+# factor is immaterial for its (ne18-25: -14% over a factor 16 in dt).
+# Second arm: the STATIONARY sweep (network, same test/domain/rungs) = ne18-21
+# reproduced in-run, for an apples-to-apples wave-vs-stationary comparison.
 : ${THETA:=0.5}
 : ${DEG:=3}
-T1=2.0e-6
-DT=$(python -c "print($T1/2)" 2>/dev/null || echo 1.0e-6)
+T1=8.0e-6
+DT=$(python -c "print($T1/2)" 2>/dev/null || echo 4.0e-6)
 NET="-pc_type net2as -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
 KSP="-ksp_monitor_yaml -ksp_monitor_yaml_enorm -ksp_rtol 1e-9"
 : ${NP:=$(nproc)}
@@ -51,21 +50,20 @@ cp $BUILD/timowave $BUILD/network experiments/make_geo2.py experiments/gortz_con
 git rev-parse HEAD > $OUT/rev
 if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
-# ne18-22's domain build (= ne18-21 cut to the quarter probe)
+# ne18-21's full-domain build
 DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 2e-2"
 SUB="--subdivide 128"
 REG="--rescale-props 1,1,1,1,1e6,1e6,1e6,1,1,1,1,1,1,1,1,1,1"
-CLAMP="--clamp-xy .25"
 
-$PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2RAWQ \
-  $DIR $SUB $REG $CLAMP | tee $LOGG
+$PYTHON experiments/make_geo2.py -i domains/fiber-2026-05-20/net2/sca -o $FIBER2RAW \
+  $DIR $SUB $REG | tee $LOGG
 
 for p in 3 7 15 31; do
   { echo "H: 1/$((p+1))"; echo "solver: wave";
-    $MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAWQ -deg $DEG \
+    $MPIRUN -n $NP $BUILD/timowave -test constant -domain $FIBER2RAW -deg $DEG \
       -theta $THETA -nt 1 -T $DT $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
   { echo "H: 1/$((p+1))"; echo "solver: stat";
-    $MPIRUN -n $NP $BUILD/network -test constant -domain $FIBER2RAWQ \
+    $MPIRUN -n $NP $BUILD/network -test constant -domain $FIBER2RAW \
       $KSP $NET -net2as_p $p; } | yq -o json -I0 >> $LOG
 done
 
