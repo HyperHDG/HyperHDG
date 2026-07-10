@@ -635,7 +635,10 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
       scene.PlayMode = "Snap To TimeSteps"
       scene.NumberOfFrames = len(times)
       scene.FramesPerTimestep = 1
-      pv.SaveAnimation(output, rview, FrameRate=fps)
+      # one frame per time step; stretch playback to ~duration via the file fps
+      # (30 fps for 21 steps = 0.7 s of video, unwatchable)
+      rate = builtins.max(1, int(round(len(times) / duration)))
+      pv.SaveAnimation(output, rview, FrameRate=rate)
     else:
       pv.SaveScreenshot(output, rview, TransparentBackground=1)
 
