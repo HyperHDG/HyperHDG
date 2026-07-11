@@ -15,6 +15,8 @@ spack:
   - py-scipy
   - py-pyyaml
   - py-numpy
+  # pandas read_csv(engine="pyarrow") needs pyarrow.csv; spack's default arrow is ~csv
+  - py-pyarrow ^arrow+csv
   view: true
   packages:
     blas:     {require: "openblas threads=openmp"}

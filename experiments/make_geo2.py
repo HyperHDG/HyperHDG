@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+import os
 import time
 import argparse
 import pandas
@@ -333,21 +334,44 @@ class Network:
     tprint("edgeProps", self.edgeProps.shape)
 
   def read_morgan(self, path, rescale_props=None, quirk=None):
-    tprint("reading nodes")
-    nodes   = pandas.read_csv(path + "/nodes.csv")
-    nodes   = nodes.to_numpy()[:,1:]
+    # sidecar cache of the parsed CSVs: parsing ~17 GB of text (100M-edge nets) costs
+    # minutes even multi-threaded, re-reading the arrays from HDF5 costs seconds.
+    # The raw arrays are cached (before --rescale-props / quirks, which vary per run).
+    cache = os.path.join(path, "cache.h5")
+    csvs = [os.path.join(path, n + ".csv") for n in ("nodes", "edges", "edgeProperties")]
+    if os.path.exists(cache) and os.path.getmtime(cache) >= max(map(os.path.getmtime, csvs)):
+      tprint(f"reading parsed-CSV cache '{cache}'")
+      with h5py.File(cache) as f:
+        nodes, edges, edgeProps = f["nodes"][:], f["edges"][:], f["edgeProps"][:]
+    else:
+      try:
+        # probe the csv module, not just pyarrow: spack's default arrow is built ~csv
+        import pyarrow.csv  # noqa: F401 -- multi-threaded CSV parser backend
+        engine = "pyarrow"
+      except ImportError:
+        tprint("pyarrow not installed: falling back to the single-threaded CSV parser")
+        engine = "c"
 
-    tprint("reading edges")
-    edges   = pandas.read_csv(path + '/edges.csv')
-    edges   = edges.to_numpy()[:,1:]
+      tprint("reading nodes")
+      nodes = pandas.read_csv(csvs[0], engine=engine).to_numpy()[:,1:]
 
-    tprint("reading edgeProps")
-    edgeProps   = pandas.read_csv(path + '/edgeProperties.csv')
-    edgeProps   = edgeProps.to_numpy()[:,1:]
+      tprint("reading edges")
+      edges = pandas.read_csv(csvs[1], engine=engine).to_numpy()[:,1:]
+
+      tprint("reading edgeProps")
+      edgeProps = pandas.read_csv(csvs[2], engine=engine).to_numpy()[:,1:]
+
+      tprint(f"writing parsed-CSV cache '{cache}'")
+      try:
+        with h5py.File(cache, "w") as f:
+          for k, v in (("nodes", nodes), ("edges", edges), ("edgeProps", edgeProps)):
+            f.create_dataset(k, data=v, compression="gzip", compression_opts=1)
+      except OSError as e:
+        tprint(f"  cache write failed (non-fatal): {e}")
 
     if rescale_props is not None:
       n_props = edgeProps.shape[-1]
-      print(rescale_props)
+      tprint("rescale_props", rescale_props)
       edgeProps *= rescale_props
 
     if quirk == "morgan-2026-01-30":
@@ -612,18 +636,24 @@ class Network:
     n_edgeProps = edgeProps.shape[0]
     edgeProps_dim = edgeProps.shape[1]
 
-    _, inv, counts = np.unique(nodes, axis=0, return_inverse=True, return_counts=True)
-    n_dup = (counts > 1).sum()
-    tprint(f"nodes: bit exact duplicates: {n_dup}")
+    # sorting a scalar int64 key is much faster than np.unique(..., axis=0)'s row lexsort
+    assert n_nodes < 3_000_000_000, "edge int64-key encoding would overflow"
 
-    canon = np.sort(edges, axis=1)
-    unique_edges, edge_inv, edge_counts = np.unique(canon, axis=0, return_inverse=True, return_counts=True)
-    n_dup_edges = (edge_counts > 1).sum()
-    tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {(edges[:,0] == edges[:,1]).sum()}")
+    if args.check_dups:
+      # bit-exact duplicates are distance-0 pairs, subsumed by the KD-tree merge below;
+      # only worth the extra full sorts as an explicit diagnostic
+      _, counts = np.unique(nodes, axis=0, return_counts=True)
+      n_dup = (counts > 1).sum()
+      tprint(f"nodes: bit exact duplicates: {n_dup}")
+
+      canon = np.sort(edges, axis=1).astype(np.int64)
+      _, edge_counts = np.unique(canon[:,0] * n_nodes + canon[:,1], return_counts=True)
+      n_dup_edges = (edge_counts > 1).sum()
+      tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {(edges[:,0] == edges[:,1]).sum()}")
 
     tprint("build KD tree")
     tree = cKDTree(nodes)
-    d, _ = tree.query(nodes, k=2)   # k=1 is self → distance 0
+    d, _ = tree.query(nodes, k=2, workers=-1)   # k=1 is self → distance 0
     nn = d[:, 1]                     # nearest non-self distance
 
     tprint("nearest neighbor distance")
@@ -654,8 +684,10 @@ class Network:
     tprint("edges", edges.shape)
     tprint("edgeProps", edgeProps.shape)
 
-    canon = np.sort(edges, axis=1)
-    unique_edges, idx, edge_inv, edge_counts = np.unique(canon, axis=0, return_index=True, return_inverse=True, return_counts=True)
+    canon = np.sort(edges, axis=1).astype(np.int64)
+    _, idx, edge_counts = np.unique(canon[:,0] * n_nodes + canon[:,1],
+                                    return_index=True, return_counts=True)
+    unique_edges = canon[idx]
     n_dup_edges = (edge_counts > 1).sum()
     n_loops = (unique_edges[:,0] == unique_edges[:,1]).sum()
     tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {n_loops}")
@@ -717,14 +749,15 @@ class Network:
 
     A = sp.csr_matrix((np.ones(len(edges)), (edges[:,0], edges[:,1])), shape=(n_nodes, n_nodes))
     n_comp, labels = sp.csgraph.connected_components(A, directed=False)
-    free = sum(1 for c in range(n_comp) if types_points[labels == c].sum() == 0)
-    tprint(f"{n_comp} components, {free} without any Dirichlet node")
+    # one bincount pass instead of an O(n_comp * n_nodes) per-component scan
+    free_mask = np.bincount(labels[types_points != 0], minlength=n_comp) == 0
+    tprint(f"{n_comp} components, {free_mask.sum()} without any Dirichlet node")
 
     sizes = np.bincount(labels)
     order = np.argsort(sizes)[::-1]
-    tprint(f"component sizes: {sizes[order].tolist()}")
+    tprint(f"component sizes{f' (top 20 of {n_comp})' if n_comp > 20 else ''}: "
+           f"{sizes[order[:20]].tolist()}")
 
-    free_mask = np.array([types_points[labels == c].sum() == 0 for c in range(n_comp)])
     free_sizes = sizes[free_mask]
     if len(free_sizes):
         tprint(f"floating: count={len(free_sizes)} total_nodes={free_sizes.sum()} "
@@ -742,26 +775,26 @@ class Network:
 
     self.nodes        = nodes[keep_node]
     self.types_points = types_points[keep_node]
-    n_nodes      = len(nodes)
 
     keep_edge = keep_node[edges[:,0]] & keep_node[edges[:,1]]
     self.edges     = remap[edges[keep_edge]]
     self.edgeProps = edgeProps[keep_edge]
     self.types_faces  = types_faces[keep_edge]
-    n_edges   = len(edges)
-    tprint(f"after pruning: {n_nodes} nodes, {n_edges} edges")
+    tprint(f"after pruning: {self.nodes.shape[0]} nodes, {self.edges.shape[0]} edges")
 
 
   def write_h5(self, out, no_props=False):
+    # gzip level 1: on real fiber props level 4 compresses only ~4% smaller but writes
+    # ~25% slower; shuffle actively hurts (breaks the exact-value repetition gzip finds)
     tprint(f"writing h5 file to '{out}'")
     with h5py.File(out, "w") as f:
       g = f.create_group("domain")
-      g.create_dataset("points", data=self.nodes, compression="gzip")
-      g.create_dataset("edges", data=self.edges, compression="gzip")
+      g.create_dataset("points", data=self.nodes, compression="gzip", compression_opts=1)
+      g.create_dataset("edges", data=self.edges, compression="gzip", compression_opts=1)
       if hasattr(self, "edgeProps") and self.edgeProps is not None and not no_props:
-        g.create_dataset("properties", data=self.edgeProps, compression="gzip")
-      g.create_dataset("types_points", data=self.types_points, compression="gzip")
-      g.create_dataset("types_faces", data=self.types_faces, compression="gzip")
+        g.create_dataset("properties", data=self.edgeProps, compression="gzip", compression_opts=1)
+      g.create_dataset("types_points", data=self.types_points, compression="gzip", compression_opts=1)
+      g.create_dataset("types_faces", data=self.types_faces, compression="gzip", compression_opts=1)
       for k, v in self.info.items():
         g.attrs[k] = v
 
@@ -833,13 +866,13 @@ class Network:
       root.create_dataset(
           "Offsets",
           data=np.arange(0, n_conn + 2, 2, dtype=np.int64),
-          compression="gzip",
+          compression="gzip", compression_opts=1,
       )
 
       root.create_dataset(
         "Types",
         data=np.full(n_cells, 3, dtype=np.uint8),
-        compression="gzip",
+        compression="gzip", compression_opts=1,
       )
 
       root.create_dataset("NumberOfPoints",          data=np.array([n_points], dtype=np.int64))
@@ -879,6 +912,9 @@ if __name__ == "__main__":
   parser.add_argument("--dirichlet", help="borders to clamp as dirichlet",
                       nargs="+", default=["xmin=0b111111","xmax=0b111111"])
   parser.add_argument("--min-comp-size", type=int, default=10)
+  parser.add_argument("--check-dups", action="store_true",
+    help="report bit-exact duplicate nodes/edges before merging (diagnostic only: "
+         "duplicates are subsumed by the KD-tree merge; costs extra full sorts)")
   parser.add_argument("--grid", type=int, nargs="+", metavar="N",
     help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--hex", type=int, nargs="+", metavar="N",
