@@ -563,15 +563,17 @@ def main():
     massname = "properties col 0" if args.use_properties_mass else "edge length"
     print()
     print(f"=== sigma  (homogeneity, Assumption 3.5.1);  mass = {massname} ===")
-    print(f"  {'n':>5} {'R=ext/2n':>12} {'R^-1':>8} {'sigma':>12} {'min cell':>12} "
-          f"{'max cell':>12} {'empty':>8}")
+    print(f"  {'n':>5} {'R=ext/2n':>12} {'R^-1':>8} {'sigma':>12} {'sqrt(sigma)':>12} "
+          f"{'min cell':>12} {'max cell':>12} {'empty':>8}")
     for n in args.cells:
         s = sigma_grid(dom["points"], dom["edges"], m_edge, n)
         flag = "" if s["R"] >= R0 else "  (R < R0!)"
         print(f"  {s['n']:>5} {s['R']:>12.4g} {1.0 / s['R']:>8.4g} {s['sigma']:>12.4g} "
+              f"{s['sigma'] ** 0.5:>12.4g} "
               f"{s['cmin']:>12.4g} {s['cmax']:>12.4g} "
               f"{s['n_empty']:>4}/{s['n_cells']}{flag}")
-        csv_rows[n].update(sigma=s["sigma"], cell_min=s["cmin"], cell_max=s["cmax"],
+        csv_rows[n].update(sigma=s["sigma"], sigma_sqrt=s["sigma"] ** 0.5,
+                           cell_min=s["cmin"], cell_max=s["cmax"],
                            cells_empty=s["n_empty"], cells_total=s["n_cells"])
     print("  note: sigma at R < R0 is below the microstructure scale and only "
           "reflects\n        discretization; the assumption is stated for R >= R0.")
@@ -602,7 +604,7 @@ def main():
     # ---- csv (optional) ----------------------------------------------------
     if args.csv:
         import csv as csv_mod
-        order = ["n", "R", "Rinv", "sigma", "cell_min", "cell_max", "cells_empty",
+        order = ["n", "R", "Rinv", "sigma", "sigma_sqrt", "cell_min", "cell_max", "cells_empty",
                  "cells_total", "R_over_lc_p50", "R_over_lc_p50_sq", "R_over_lc_p2",
                  "R_over_lc_p2_sq", "mu", "mu_mean", "avg_invlam2", "mu_eval",
                  "mu_viol", "mu_skip"]
