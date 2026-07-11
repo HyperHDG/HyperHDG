@@ -90,9 +90,9 @@ rmdir $(dirname $WAVE_SCRATCH)
 $PYTHON experiments/energy.py $WAVE -o $NRG || echo "energy plot failed (non-fatal)"
 
 # renders (need pvpython): max dynamic |u| ~ 1.5 um on the 2000 um probe, warp x200 for
-# a ~15% visible deflection.  Still: 4 overlaid steps ~ 0, T1/2 (max sag), T1, 3T1/2.
+# a ~15% visible deflection.  Still: 2 overlaid steps ~ 0, T1/2 (max sag).
 experiments/netvis.py $WAVE --beams 1 --view iso --warp-scale 200 --show 0 -o $VID \
   || echo "netvis animation failed (non-fatal, e.g. no pvpython)"
 experiments/netvis.py $WAVE --beams 1 --view pside --warp-scale 200 --show 0 --axis 0 \
-  --frames 0,1.25e-6,2.5e-6,3.75e-6 --frame-colors viridis -o $IMG \
+  --frames 0,1.25e-6 --frame-colors viridis -o $IMG \
   || echo "netvis still failed (non-fatal, e.g. no pvpython)"
