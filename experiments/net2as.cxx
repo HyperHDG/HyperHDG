@@ -1348,50 +1348,58 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    time: %.5e\n", info.time));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "    factor_type: %s\n", info.factor_type));
 
-  // setup local subdom mats using the still global is
-  PetscCall(MatCreateSubMatrices(A, data->sz, data->is, data->is, MAT_INITIAL_MATRIX, &data->mat));
-
   // setup local rank data structures -> makes is local
   PetscCall(ISGetLocalSize(data->rank_is, &size));
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, size, &data->rank_sol));
   PetscCall(VecScatterCreate(gtemp, data->rank_is, data->rank_sol, NULL, &data->rank_sc));
 
-  // setup local subdom ksp and scatters
+  // setup local subdom factors and scatters: gather -> factor -> discard, one subdomain
+  // per round, so the assembled overlapped copies never coexist with all the factors
+  // (peak memory: copies are ~1x overlapped nnz, ~250 GB at net3 scale). The gather is
+  // collective on A and ranks own different subdomain counts, so every rank joins
+  // max_rounds calls, passing n=0 once it runs out of subdomains.
   if (data->print_local) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  local:\n"));
-  for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, "", &data->ksp[i], &data->mat[i], &data->sol[i], &info));
-    PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
-    t_loc += info.time;
-    if (data->print_local) {
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", info.size));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", info.fill));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", info.time));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      factor_type: %s\n", info.factor_type));
+  PetscInt max_rounds = 0;
+  PetscCallMPI(MPI_Allreduce(&data->sz, &max_rounds, 1, MPIU_INT, MPI_MAX, PETSC_COMM_WORLD));
+  for (PetscInt i = 0; i < max_rounds; i++) {
+    Mat *sub = NULL;
+    KSP subksp = NULL;
+    const PetscInt n = i < data->sz ? 1 : 0;
+    PetscCall(MatCreateSubMatrices(A, n, n ? &data->is[i] : NULL, n ? &data->is[i] : NULL,
+                                   MAT_INITIAL_MATRIX, &sub));
+    if (n) {
+      PetscCall(net2as_setup_ds(pc, PETSC_COMM_SELF, "", &subksp, &sub[0], &data->sol[i], &info));
+      PetscCall(VecScatterCreate(data->rank_sol, data->local_is[i], data->sol[i], NULL, &data->sc[i]));
+      t_loc += info.time;
+      if (data->print_local) {
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "    - size: %" PetscInt_FMT "\n", info.size));
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_mat: %" PetscInt_FMT "\n", info.nz_mat));
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      nz_fac: %" PetscInt_FMT "\n", info.nz_fac));
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      fill: %.5e\n", info.fill));
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", info.time));
+        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      factor_type: %s\n", info.factor_type));
+      }
+      // keep only the factor: the apply is a pure MatSolve, and the KSP wrapper's PC
+      // pins references to the assembled subdomain matrix (re-setup guard included)
+      {
+        PC spc;
+        PetscCall(MatDestroy(&data->fac[i]));
+        PetscCall(VecDestroy(&data->work[i]));
+        PetscCall(KSPGetPC(subksp, &spc));
+        PetscCall(PCFactorGetMatrix(spc, &data->fac[i]));
+        PetscCall(PetscObjectReference((PetscObject)data->fac[i]));
+        PetscCall(KSPDestroy(&subksp));
+        PetscCall(VecDuplicate(data->sol[i], &data->work[i]));
+      }
+      data->ksp[i] = NULL;
     }
-    // keep only the factor: the apply is a pure MatSolve, and the KSP wrapper's PC
-    // pins references to the assembled subdomain matrix (with re-setup guard)
-    {
-      PC spc;
-      PetscCall(MatDestroy(&data->fac[i]));
-      PetscCall(VecDestroy(&data->work[i]));
-      PetscCall(KSPGetPC(data->ksp[i], &spc));
-      PetscCall(PCFactorGetMatrix(spc, &data->fac[i]));
-      PetscCall(PetscObjectReference((PetscObject)data->fac[i]));
-      PetscCall(KSPDestroy(&data->ksp[i]));
-      PetscCall(VecDuplicate(data->sol[i], &data->work[i]));
-    }
+    PetscCall(MatDestroySubMatrices(n, &sub));
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   PetscCallMPI(MPI_Reduce(&t_loc, &t_max, 1, MPIU_REAL, MPI_MAX, 0, PETSC_COMM_WORLD));
   PetscCallMPI(MPI_Reduce(&t_loc, &t_sum, 1, MPIU_REAL, MPI_SUM, 0, PETSC_COMM_WORLD));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_bal:\n    est: %.5e\n    mes: %.5e\n", (double)data->bal_est, (double)t_max / t_sum * size));
-
-  // the factors hold everything the apply needs; drop the assembled subdomain copies
-  // (~1x the overlapped nnz: 10 GB at net2, ~250 GB at net3)
-  PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
 
   PetscCall(MatCOO_Free(&coo));
   PetscCall(MatDestroy(&coarse_basis));
