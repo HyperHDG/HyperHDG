@@ -38,7 +38,7 @@ T=$(python3 -c "print($NT*$DT)")
 : ${PLOT_VALUES:=disp}
 : ${PLOT_PROPS:=none}
 
-NET="-pc_type net2as -net2as_p 7 -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
+NET="-pc_type net2as -net2as_p 8 -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
 KSP="-ksp_monitor_yaml -ksp_rtol 1e-9"
 : ${NP:=$(nproc)}
 MPIRUN=spack/$PRESET/.spack-env/view/bin/mpirun
