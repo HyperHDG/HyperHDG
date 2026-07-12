@@ -37,6 +37,12 @@ def read_energies(path):
         E = f["/VTKHDF/CellData/energies"][...]              # (n_steps*n_cells, n_comps)
         t = f["/VTKHDF/Steps/Values"][...]                   # (n_steps,)
         off = f["/VTKHDF/Steps/CellDataOffsets/energies"][...]  # (n_steps,) row offsets
+    # files written before the timowave energy() guard carry NaN kinetic entries on
+    # massless welds (0/0); physically their energy is zero
+    n_bad = np.isnan(E).sum() + np.isinf(E).sum()
+    if n_bad:
+        print(f"note: {n_bad} NaN/Inf energy entries (massless welds) treated as 0")
+        E = np.nan_to_num(E, nan=0.0, posinf=0.0, neginf=0.0)
     n_steps = t.shape[0]
     n_comps = E.shape[1]
     assert n_comps % 6 == 0, f"expected n_comps divisible by 6, got {n_comps}"
@@ -93,6 +99,13 @@ def main():
     if args.save:
         Path(args.save).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(args.save, bbox_inches="tight", pad_inches=0.05)
+        # pgfplots-ready sidecar with the reduced data (tikz versions read this csv)
+        base = args.save.rsplit(".", 1)[0]
+        cols = np.column_stack([t, grouped, physical, hybrid, total])
+        np.savetxt(base + ".csv", cols, delimiter=",", comments="",
+                   header="t,axial_strain,bending_strain,trans_kinetic,rot_kinetic,"
+                          "hybrid_trans,hybrid_rot,physical,hybrid,total")
+        print(f"wrote {base}.csv")
         print(f"wrote {args.save}", file=sys.stderr)
     else:
         plt.show()
