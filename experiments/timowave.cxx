@@ -68,6 +68,7 @@ PetscErrorCode PetscHDGCreate(
   if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, theta, dt, hdg));
+  else if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
   else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, theta, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
@@ -120,6 +121,10 @@ int main(int argc, char **argv) {
     PetscBool have_cache = PETSC_FALSE;
     char plot[PATH_MAX] = {0};
     char plot_scale[PATH_MAX] = "1";
+    char plot_values[64] = "all";
+    char plot_props[64] = "all";
+    PetscInt plot_stride = 1;
+    PetscBool plot_energy = PETSC_TRUE;
     char domain_path[PATH_MAX] = "domains/single1.geo";
     char mat_cache[PATH_MAX] = {0};
     char static_init[PATH_MAX] = {0};
@@ -151,10 +156,14 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, nt, &nt, &is_set));
     PetscCall(PetscOptionsReal("-T", "end time", NULL, T, &T, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot, plot, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsInt("-plot_stride", "write plot fields every k-th timestep only (t=0 and the final step are always written); Steps/Values keeps the true times", NULL, plot_stride, &plot_stride, &is_set));
+    PetscCall(PetscOptionsString("-plot_values", "PointData/values selection: all|disp|z|mag|none, or raw 'i,j,k' / 'mag:i,j,k' (Timoshenko layout: displacement = components 6,7,8)", NULL, plot_values, plot_values, sizeof(plot_values), &is_set));
+    PetscCall(PetscOptionsString("-plot_props", "CellData/properties columns: all|beams|none or raw 'i,j,k'; beams = 7..15 = normals+widths+fiber_id (render with netvis --beams-cols 0,1,2:3,4,5:6:7 --beams-skip 8=-1)", NULL, plot_props, plot_props, sizeof(plot_props), &is_set));
+    PetscCall(PetscOptionsBool("-plot_energy", "write per-cell CellData/energies at each plotted step", NULL, plot_energy, &plot_energy, &is_set));
     PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
-    PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
+    PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, drumhead, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only compute matrix", NULL, mat_only, &mat_only, &is_set));
     PetscCall(PetscOptionsInt("-tau_s", "set tau~h^s", NULL, tau_s, &tau_s, &is_set));
@@ -230,7 +239,14 @@ int main(int argc, char **argv) {
     hdg->plot_option("fileName", plot);
     hdg->plot_option("scale", plot_scale);
     hdg->plot_option("fileEnding", "vtkhdf");
-    hdg->plot_option("energy", "true");
+    hdg->plot_option("energy", plot_energy ? "true" : "false");
+    // presets for the 18-component Timoshenko values layout (netvis: disp = 6,7,8)
+    if      (0 == strcmp(plot_values, "disp")) hdg->plot_option("valuesSelect", "6,7,8");
+    else if (0 == strcmp(plot_values, "z"))    hdg->plot_option("valuesSelect", "8");
+    else if (0 == strcmp(plot_values, "mag"))  hdg->plot_option("valuesSelect", "mag:6,7,8");
+    else                                       hdg->plot_option("valuesSelect", plot_values);
+    if      (0 == strcmp(plot_props, "beams")) hdg->plot_option("propertiesSelect", "7,8,9,10,11,12,13,14,15");
+    else                                       hdg->plot_option("propertiesSelect", plot_props);
 
     zero_v = hdg->zero_vector();              // local (owned + ghost), all zeros
     PetscInt bs = hdg->n_dofs_per_node();
@@ -419,7 +435,7 @@ int main(int argc, char **argv) {
         PetscLogEventBegin(e_set, 0,0,0,0);
         hdg->set_data(span, ti);
         PetscLogEventEnd(e_set, 0,0,0,0);
-        if (*plot) {
+        if (*plot && (i % plot_stride == 0 || i == nt)) {
           PetscLogEventBegin(e_plot, 0,0,0,0);
           hdg->plot_solution(span, ti);
           PetscLogEventEnd(e_plot, 0,0,0,0);

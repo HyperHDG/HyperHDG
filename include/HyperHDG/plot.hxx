@@ -5,12 +5,14 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <tuple>
 #include <cstring>
+#include <vector>
 
 /*!*************************************************************************************************
  * \brief   A class storing options for plotting.
@@ -122,7 +124,69 @@ struct PlotOptions
    * Requires the local solver to expose \c n_energy_components() and \c energy(). Defaults to false.
    ************************************************************************************************/
   bool energy = false;
+  /*!***********************************************************************************************
+   * \brief   Component selection for PointData/values (vtkhdf only).
+   *
+   * "all", "none", "i,j,k" (keep the listed components, in that order) or "mag:i,j,k" (a single
+   * column holding the euclidean norm of the listed components). The per-step values block is the
+   * dominant payload for large networks, so restricting it (e.g. to the displacement components)
+   * scales the file size by n_selected / n_components. Defaults to "all".
+   ************************************************************************************************/
+  std::string values_select = "all";
+  /*!***********************************************************************************************
+   * \brief   Column selection for the static CellData/properties (vtkhdf only).
+   *
+   * "all", "none" or "i,j,k". Columns are written in the listed order, so readers must address
+   * positions within the filtered dataset (e.g. netvis --beams-cols). Defaults to "all".
+   ************************************************************************************************/
+  std::string properties_select = "all";
 };  // end of class PlotOptions
+
+/*!*************************************************************************************************
+ * \brief   Parsed component selection ("all" | "none" | "i,j,k" | "mag:i,j,k"), see PlotOptions.
+ **************************************************************************************************/
+struct ComponentSelect
+{
+  bool all = true;                  ///< keep every component
+  bool mag = false;                 ///< single euclidean-norm column over #comps
+  std::vector<unsigned int> comps;  ///< selected source components (empty for "all"/"none")
+
+  static ComponentSelect parse(const std::string& spec)
+  {
+    ComponentSelect sel;
+    if (spec.empty() || spec == "all")
+      return sel;
+    sel.all = false;
+    if (spec == "none")
+      return sel;
+    std::string list = spec;
+    if (spec.rfind("mag:", 0) == 0)
+    {
+      sel.mag = true;
+      list = spec.substr(4);
+    }
+    size_t pos = 0;
+    while (pos < list.size())
+    {
+      size_t next = list.find(',', pos);
+      if (next == std::string::npos)
+        next = list.size();
+      sel.comps.push_back(std::stoul(list.substr(pos, next - pos)));
+      pos = next + 1;
+    }
+    hy_check(!sel.comps.empty(), "empty component list in select spec '" << spec << "'");
+    return sel;
+  }
+
+  unsigned int n_out(unsigned int n_full) const
+  {
+    if (all)
+      return n_full;
+    if (mag)
+      return 1;
+    return comps.size();
+  }
+};  // end of struct ComponentSelect
 
 /*!*************************************************************************************************
  * \brief Set a plot option and return the new value of this option as std::string.
@@ -162,6 +226,10 @@ std::string set_plot_option(PlotOptions& plot_options,
     plot_options.scale = stof(value);
   else if (option == "energy")
     plot_options.energy = (value == "true" || value == "1");
+  else if (option == "valuesSelect")
+    plot_options.values_select = value;
+  else if (option == "propertiesSelect")
+    plot_options.properties_select = value;
   // else if (option == "n_subintervals")
   //   plot_options.n_subintervals = stoi(value);
   else
@@ -190,6 +258,10 @@ std::string set_plot_option(PlotOptions& plot_options,
     return_value = std::to_string(plot_options.boundary_scale);
   else if (option == "energy")
     return_value = std::to_string(plot_options.energy);
+  else if (option == "valuesSelect")
+    return_value = plot_options.values_select;
+  else if (option == "propertiesSelect")
+    return_value = plot_options.properties_select;
   // else if (option == "n_subintervals")
   //   return_value = std::to_string(plot_options.n_subintervals);
   else
@@ -1092,20 +1164,31 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
     H5Dclose(ds);
   }
 
-  // --- empty extendable PointData/values: (0, n_components); one time step occupies tot_points rows
+  // --- empty extendable PointData/values: (0, n_values_out); one time step occupies tot_points
+  // rows. valuesSelect == "none" drops the dataset (and its Steps offsets) entirely.
+  const unsigned int n_values_out =
+    ComponentSelect::parse(plot_options.values_select).n_out(n_components);
+  if (n_values_out > 0)
   {
-    hsize_t gd[2] = {0, n_components};
+    hsize_t gd[2] = {0, n_values_out};
     hid_t ds = h5p_create(pdata, "values", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[0]);
     H5Dclose(ds);
   }
 
-  // --- static CellData/properties from hyper_edge.geometry.extra_data() (collective if any rank has)
+  // --- static CellData/properties from hyper_edge.geometry.extra_data() (collective if any rank
+  // has). propertiesSelect filters/reorders columns; "none" skips the dataset.
   hid_t cdata = H5Gcreate2(root, "CellData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  if (has_props) {
+  const ComponentSelect props_sel = ComponentSelect::parse(plot_options.properties_select);
+  hy_check(!props_sel.mag, "'mag:' is not meaningful for propertiesSelect");
+  const unsigned int n_props_out = has_props ? props_sel.n_out(n_properties) : 0;
+  if (has_props && n_props_out > 0) {
+    for (unsigned int c : props_sel.comps)
+      hy_check((int)c < n_properties,
+               "propertiesSelect column " << c << " out of range (" << n_properties << ")");
     std::vector<float> props_buf;
     hsize_t myrows = 0;
     if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) {
-      props_buf.assign(static_cast<size_t>(n_cells) * n_properties, 0.f);
+      props_buf.assign(static_cast<size_t>(n_cells) * n_props_out, 0.f);
       myrows = (hsize_t)n_cells;
       for (hyEdge_index_t he = 0; he < n_edges; ++he) {
         auto geom = hyper_graph.hyEdge_geometry(he);
@@ -1114,15 +1197,15 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
                  "all hyperedges must have the same number of properties; "
                  "edge " << he << " has " << props.size() << ", expected " << n_properties);
         for (unsigned int c = 0; c < cells_per_edge; ++c) {
-          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
-          for (int d = 0; d < n_properties; ++d)
-            props_buf[row + d] = static_cast<float>(props[d]);
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_props_out;
+          for (unsigned int d = 0; d < n_props_out; ++d)
+            props_buf[row + d] = static_cast<float>(props[props_sel.all ? d : props_sel.comps[d]]);
         }
       }
     }
-    hsize_t gd[2] = {(hsize_t)tot[1], (hsize_t)n_properties};
+    hsize_t gd[2] = {(hsize_t)tot[1], (hsize_t)n_props_out};
     hid_t ds = h5p_create(cdata, "properties", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[1]);
-    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[1], myrows, (hsize_t)n_properties,
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[1], myrows, (hsize_t)n_props_out,
                    props_buf.data());
     H5Dclose(ds);
   }
@@ -1153,7 +1236,8 @@ void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
   make_empty_1d(steps, "NumberOfParts",         H5T_STD_I64LE);
 
   hid_t pdo = H5Gcreate2(steps, "PointDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  make_empty_1d(pdo, "values", H5T_STD_I64LE);
+  if (n_values_out > 0)
+    make_empty_1d(pdo, "values", H5T_STD_I64LE);
   H5Gclose(pdo);
 
   if (n_energy_components > 0) {
@@ -1205,7 +1289,13 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   using dof_value_t = typename LargeVecT::value_type;
   constexpr unsigned int n_components = LocalSolverT::system_dimension();
 
-  std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
+  const ComponentSelect values_sel = ComponentSelect::parse(plot_options.values_select);
+  const unsigned int n_values_out = values_sel.n_out(n_components);
+  for (unsigned int c : values_sel.comps)
+    hy_check(c < n_components,
+             "valuesSelect component " << c << " out of range (" << n_components << ")");
+
+  std::vector<float> values(static_cast<size_t>(n_points) * n_values_out, 0.f);
 
   // Energy buffer: only populated when plot_options.energy and LocalSolverT supplies energy().
   std::vector<float> energies_buf;
@@ -1223,6 +1313,9 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   }
 
   for (hyEdge_index_t he = 0; he < n_edges; ++he) {
+    if (n_values_out == 0 && !plot_options.energy)
+      break;  // only Steps bookkeeping left to write
+
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
         hyper_graph, he, lambda);
 
@@ -1234,21 +1327,33 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
       decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
       decltype(hyper_graph[he])&, decltype(time));
 
-    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
-      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
-    }
-    else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
-      auto geometry = hyper_graph[he];
-      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
-    }
-    else {
-      hy_check(false, "bulk_values overload not found on LocalSolverT");
-    }
+    if (n_values_out > 0) {
+      if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
+        local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
+      }
+      else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
+        auto geometry = hyper_graph[he];
+        local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+      }
+      else {
+        hy_check(false, "bulk_values overload not found on LocalSolverT");
+      }
 
-    for (unsigned int p = 0; p < points_per_edge; ++p) {
-      const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
-      for (unsigned int d = 0; d < n_components; ++d)
-        values[row + d] = static_cast<float>(local_values[d][p]);
+      for (unsigned int p = 0; p < points_per_edge; ++p) {
+        const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_values_out;
+        if (values_sel.all)
+          for (unsigned int d = 0; d < n_components; ++d)
+            values[row + d] = static_cast<float>(local_values[d][p]);
+        else if (values_sel.mag) {
+          dof_value_t sq = 0;
+          for (unsigned int c : values_sel.comps)
+            sq += local_values[c][p] * local_values[c][p];
+          values[row] = static_cast<float>(std::sqrt(sq));
+        }
+        else
+          for (unsigned int d = 0; d < n_values_out; ++d)
+            values[row + d] = static_cast<float>(local_values[values_sel.comps[d]][p]);
+      }
     }
 
     if (plot_options.energy) {
@@ -1294,11 +1399,12 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   hid_t pdo   = H5Gopen2(steps, "PointDataOffsets", H5P_DEFAULT);
 
   // --- PointData/values: grow to (step+1)*tot_points rows, write this rank's slab for this step
+  if (n_values_out > 0)
   {
     hid_t ds = H5Dopen2(pdata, "values", H5P_DEFAULT);
     h5p_set_rows(ds, static_cast<hsize_t>((step + 1) * tot[0]));
     h5p_write_rows(ds, H5T_NATIVE_FLOAT, static_cast<hsize_t>(step * tot[0] + off[0]),
-                   (hsize_t)n_points, n_components, values.data());
+                   (hsize_t)n_points, n_values_out, values.data());
     H5Dclose(ds);
   }
 
@@ -1330,7 +1436,8 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   h5p_append1(steps, "CellOffsets",           H5T_NATIVE_INT64,  step, &zero, mpi_rank);
   h5p_append1(steps, "ConnectivityIdOffsets", H5T_NATIVE_INT64,  step, &zero, mpi_rank);
   h5p_append1(steps, "NumberOfParts",         H5T_NATIVE_INT64,  step, &one,  mpi_rank);
-  h5p_append1(pdo,   "values",                H5T_NATIVE_INT64,  step, &off_values, mpi_rank);
+  if (n_values_out > 0)
+    h5p_append1(pdo,   "values",              H5T_NATIVE_INT64,  step, &off_values, mpi_rank);
 
   // --- update NSteps
   h5_set_attr_i64(steps, "NSteps", step + 1);
