@@ -128,7 +128,16 @@ struct PC_Net2AS {
   // broadcasts to all components; missing trailing values default to 1.
   PetscInt cb_degs[8];
   PetscInt cb_ndegs;
-  // set during setup when any cb_degs > 1: coarse basis built per component at dof level (no MAIJ)
+  // (cb_q1 only) tilt-aware ADDITIONAL z-weighted blocks: for component c with
+  // cb_zdegs[c] = d > 0, append Q_d columns whose entries are multiplied by the node's
+  // centered/scaled z. With w = u_z at Q3 and zdegs 2,2,0,0,0,0 the span contains the
+  // full Kirchhoff-Love triple u = (-z dx w, -z dy w, w) that the ~100um slab z-tilt
+  // needs (planar plate pairs alone are inert on fiber2, cf. 8fc400fa). Degenerate on
+  // flat nets (z == const): the blocks are skipped with a warning.
+  PetscInt cb_zdegs[8];
+  PetscInt cb_nzdegs;
+  // set during setup when any cb_degs > 1 or cb_zdegs > 0: coarse basis built per
+  // component at dof level (no MAIJ)
   PetscBool cb_percomp;
   // (non-overlapping) subdomain diameter
   PetscReal H;
@@ -247,6 +256,9 @@ PetscErrorCode PCSetFromOptions_Net2AS(PC pc, PetscOptionItems PetscOptionsObjec
   data->cb_ndegs = 8;
   PetscCall(PetscOptionsIntArray("-net2as_cb_degs", "per-component coarse polynomial degree (cb_q1 only; one value broadcasts, missing trailing values are 1; e.g. 1,1,3,3,3,1 adds the Euler-Bernoulli plate pairs for TimoshenkoBeam)", NULL, data->cb_degs, &data->cb_ndegs, &set));
   if (!set) data->cb_ndegs = 0;
+  data->cb_nzdegs = 8;
+  PetscCall(PetscOptionsIntArray("-net2as_cb_zdegs", "per-component degree of ADDITIONAL z-weighted coarse blocks (cb_q1 only; missing trailing values are 0; e.g. 2,2,0,0,0,0 adds the Kirchhoff -z*grad(w) in-plane fields for tilted slabs)", NULL, data->cb_zdegs, &data->cb_nzdegs, &set));
+  if (!set) data->cb_nzdegs = 0;
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -770,7 +782,7 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
   // functions of Lagrange nodes on the domain boundary are trimmed under cb_trim (all interior
   // shapes vanish on the boundary, so the trimmed space stays BC-conforming).
   {
-    PetscInt deg[8], deg_max = 1;
+    PetscInt deg[8], zdeg[8], deg_max = 1, zdeg_max = 0;
     for (PetscInt c = 0; c < data->bs; c++) {
       deg[c] = data->cb_ndegs == 0 ? 1
              : data->cb_ndegs == 1 ? data->cb_degs[0]
@@ -778,18 +790,56 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
       PetscCheck(deg[c] >= 1 && deg[c] <= 7, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
         "-net2as_cb_degs entries must be in [1,7], got %" PetscInt_FMT, deg[c]);
       deg_max = PetscMax(deg_max, deg[c]);
+      zdeg[c] = c < data->cb_nzdegs ? data->cb_zdegs[c] : 0;
+      PetscCheck(zdeg[c] >= 0 && zdeg[c] <= 7, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+        "-net2as_cb_zdegs entries must be in [0,7], got %" PetscInt_FMT, zdeg[c]);
+      zdeg_max = PetscMax(zdeg_max, zdeg[c]);
     }
-    data->cb_percomp = (PetscBool)(deg_max > 1);
+    // z-weighted blocks are identically zero on flat nets -> singular coarse Gram; the
+    // centering/scale needs the global z extent either way
+    PetscReal zc = 0, zs = 1;
+    if (zdeg_max > 0) {
+      PetscReal zmm[2] = {PETSC_MAX_REAL, PETSC_MAX_REAL}; // {min z, -max z} for one MIN reduce
+      PetscCall(VecGetArray(data->points, &points));
+      for (PetscInt k = 0; k < n_local; k++) {
+        zmm[0] = PetscMin(zmm[0], points[3*k+2]);
+        zmm[1] = PetscMin(zmm[1], -points[3*k+2]);
+      }
+      PetscCall(VecRestoreArray(data->points, &points));
+      PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, zmm, 2, MPIU_REAL, MPI_MIN, PETSC_COMM_WORLD));
+      const PetscReal zmin = zmm[0], zmax = -zmm[1];
+      const PetscReal xyext = PetscMax(h[0] * (data->p[0] + 1), h[1] * (data->p[1] + 1));
+      if (zmax - zmin <= 1e-12 * xyext) {
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+          "  cb_zdegs: net is flat (z extent %.3e), skipping the z-weighted blocks\n",
+          (double)(zmax - zmin)));
+        for (PetscInt c = 0; c < data->bs; c++) zdeg[c] = 0;
+        zdeg_max = 0;
+      } else {
+        zc = 0.5 * (zmin + zmax);
+        zs = 0.5 * (zmax - zmin);
+      }
+    }
+    data->cb_percomp = (PetscBool)(deg_max > 1 || zdeg_max > 0);
     if (data->cb_percomp) {
       PetscCheck(data->bs <= 8, PETSC_COMM_WORLD, PETSC_ERR_SUP, "-net2as_cb_degs supports bs <= 8");
       MatCOO dcoo;
       PetscInt cells[2] = {data->p[0] + 1, data->p[1] + 1};
-      PetscInt nnz_per_node = 0, off[8 + 1];
+      // column layout per component: main Q_deg block, then (if zdeg > 0) the z-weighted
+      // Q_zdeg block; zoff[c] = column start of component c's z block (== moff end)
+      PetscInt nnz_per_node = 0, off[8 + 1], zoff[8];
       off[0] = 0;
       for (PetscInt c = 0; c < data->bs; c++) {
         PetscInt n1x = cells[0] * deg[c] + 1, n1y = cells[1] * deg[c] + 1;
         PetscInt kept = data->cb_trim ? (n1x - 2) * (n1y - 2) : n1x * n1y;
-        off[c + 1] = off[c] + kept;
+        zoff[c] = off[c] + kept;
+        PetscInt zkept = 0;
+        if (zdeg[c] > 0) {
+          PetscInt zn1x = cells[0] * zdeg[c] + 1, zn1y = cells[1] * zdeg[c] + 1;
+          zkept = data->cb_trim ? (zn1x - 2) * (zn1y - 2) : zn1x * zn1y;
+          nnz_per_node += (zdeg[c] + 1) * (zdeg[c] + 1);
+        }
+        off[c + 1] = zoff[c] + zkept;
         nnz_per_node += (deg[c] + 1) * (deg[c] + 1);
       }
       PetscCall(MatCOO_Alloc(&dcoo, nnz_per_node * n_local));
@@ -830,6 +880,35 @@ PetscErrorCode net2as_cb_q1(PC_Net2AS *data, MatCOO *coo, MatCOO *sd) {
                 PetscCall(MatCOO_Push(&dcoo, row, off[c] + gy * n1x + gx, w));
               }
             }
+
+          // additional z-weighted block: same tensor-Lagrange hats at degree zdeg[c],
+          // entries multiplied by the centered/scaled z of the node
+          if (zdeg[c] > 0) {
+            const PetscInt zd = zdeg[c];
+            const PetscInt zn1x = cells[0] * zd + 1, zn1y = cells[1] * zd + 1;
+            const PetscReal zhat = (points[3*k+2] - zc) / zs;
+            PetscReal Zx[8], Zy[8];
+            for (PetscInt a = 0; a <= zd; a++) {
+              Zx[a] = Zy[a] = 1;
+              for (PetscInt b = 0; b <= zd; b++) {
+                if (b == a) continue;
+                Zx[a] *= (xx * zd - b) / (PetscReal)(a - b);
+                Zy[a] *= (yy * zd - b) / (PetscReal)(a - b);
+              }
+            }
+            for (PetscInt bj = 0; bj <= zd; bj++)
+              for (PetscInt ai = 0; ai <= zd; ai++) {
+                PetscReal w = Zx[ai] * Zy[bj] * zhat;
+                if (w == 0) continue;
+                PetscInt gx = i * zd + ai, gy = j * zd + bj;
+                if (data->cb_trim) {
+                  if (gx == 0 || gx == zn1x - 1 || gy == 0 || gy == zn1y - 1) continue;
+                  PetscCall(MatCOO_Push(&dcoo, row, zoff[c] + (gy - 1) * (zn1x - 2) + (gx - 1), w));
+                } else {
+                  PetscCall(MatCOO_Push(&dcoo, row, zoff[c] + gy * zn1x + gx, w));
+                }
+              }
+          }
         }
       }
       PetscCall(VecRestoreArray(data->points, &points));
@@ -1330,6 +1409,11 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
     for (PetscInt c = 0; c < data->bs; c++)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s%" PetscInt_FMT,  c ? ", " : "",
         data->cb_ndegs == 1 ? data->cb_degs[0] : c < data->cb_ndegs ? data->cb_degs[c] : 1));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  cb_zdegs: ["));
+    for (PetscInt c = 0; c < data->bs; c++)
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s%" PetscInt_FMT,  c ? ", " : "",
+        c < data->cb_nzdegs ? data->cb_zdegs[c] : 0));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  sz: %" PetscInt_FMT "\n", n_cols));
