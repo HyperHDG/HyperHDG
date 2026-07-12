@@ -27,8 +27,15 @@ from matplotlib.colors import LogNorm
 import numpy as np
 
 
-def read_cell_energies(path, all_groups=False):
-    """Return (t, centers, E_cell) with E_cell of shape (n_steps, n_cells)."""
+def read_cell_energies(path, all_groups=False, comps=None):
+    """Return (t, centers, E_cell) with E_cell of shape (n_steps, n_cells).
+
+    comps selects raw energy columns (component = group * space_dim + direction, so for
+    space_dim 3: 0 = axial strain n_0, 1,2 = shear strain n_1,2, 3-5 = bending, 6 = axial
+    kinetic v_0, 7,8 = transverse kinetic, 9-11 = rotational kinetic, 12-17 hybrid) --
+    this separates the wave BRANCHES, e.g. axial precursor = 0,6 vs shear/bending
+    = 1,2,3,4,5,7,8,9,10,11. Default: all physical groups summed (all_groups adds hybrid).
+    """
     with h5py.File(path, "r") as f:
         r = f["VTKHDF"]
         E = r["CellData/energies"][...]
@@ -51,7 +58,10 @@ def read_cell_energies(path, all_groups=False):
     n_cells = int(bounds[1] - bounds[0])
 
     # physical energy per cell: sum selected groups over local directions
-    sel = E[:, : n_groups * space_dim].sum(axis=1)
+    if comps is not None:
+        sel = E[:, comps].sum(axis=1)
+    else:
+        sel = E[:, : n_groups * space_dim].sum(axis=1)
     E_cell = np.zeros((n_steps, n_cells))
     for s in range(n_steps):
         E_cell[s] = sel[bounds[s]:bounds[s + 1]]
@@ -70,12 +80,17 @@ def main():
     ap.add_argument("--nr", type=int, default=128, help="number of radial bins")
     ap.add_argument("--all-groups", action="store_true",
                     help="include the hybrid penalty groups 4,5 in the energy")
+    ap.add_argument("--comps", default=None, metavar="I,J,...",
+                    help="select raw energy columns (group*space_dim + direction) to "
+                         "separate wave branches: axial = '0,6', shear/bending = "
+                         "'1,2,3,4,5,7,8,9,10,11' (see read_cell_energies)")
     ap.add_argument("--front-quantile", type=float, default=0.9,
                     help="energy quantile defining the front radius")
     ap.add_argument("--linear", action="store_true", help="linear instead of log color scale")
     args = ap.parse_args()
 
-    t, centers, E_cell = read_cell_energies(args.file, args.all_groups)
+    comps = [int(c) for c in args.comps.split(",")] if args.comps else None
+    t, centers, E_cell = read_cell_energies(args.file, args.all_groups, comps)
 
     if args.center is None:
         lo, hi = centers[:, :2].min(axis=0), centers[:, :2].max(axis=0)
@@ -114,7 +129,7 @@ def main():
              label=f"$r_{{{args.front_quantile:g}}}(t)$ front")
     fig.colorbar(pc, ax=ax1, label="energy per radial bin")
     ax1.set_xlabel("t"); ax1.set_ylabel("r"); ax1.legend(loc="upper left")
-    ax1.set_title("E(r, t)")
+    ax1.set_title(f"E(r, t)" + (f", comps {args.comps}" if args.comps else ""))
 
     m = tot > 0
     ax2.loglog(t[m], msr[m], label=r"$\langle r^2\rangle(t)$")
