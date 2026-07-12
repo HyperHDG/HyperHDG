@@ -1078,10 +1078,11 @@ class TimoshenkoWave
           kin_s    += s_old[d * n_shape_fct_ + i] * s_old[d * n_shape_fct_ + j] * mij;
         }
 
-      result[0 * space_dim + d] = 0.5 * strain_n / Cn;
-      result[1 * space_dim + d] = 0.5 * strain_m / Cm;
-      result[2 * space_dim + d] = 0.5 * kin_v / Cu;
-      result[3 * space_dim + d] = 0.5 * kin_s / Cr;
+      // massless welds have C == 0 -> 0/0 = NaN; zero mass carries zero energy
+      result[0 * space_dim + d] = Cn > 0. ? 0.5 * strain_n / Cn : 0.;
+      result[1 * space_dim + d] = Cm > 0. ? 0.5 * strain_m / Cm : 0.;
+      result[2 * space_dim + d] = Cu > 0. ? 0.5 * kin_v / Cu : 0.;
+      result[3 * space_dim + d] = Cr > 0. ? 0.5 * kin_s / Cr : 0.;
 
       lSol_float_t hyb_u = 0, hyb_r = 0;
       for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr) {
