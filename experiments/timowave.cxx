@@ -340,6 +340,10 @@ int main(int argc, char **argv) {
 
       PRIN2S(s_pa);
       PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      // PETSc copies the index arrays into its own COO mapping, and MatSetValuesCOO only
+      // needs the values -- free the indices here (~2/3 of the COO staging, 68 GB at net3)
+      { auto drop_i = std::move(mat_coo.row_vec); }
+      { auto drop_j = std::move(mat_coo.col_vec); }
       PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
       PRIN2SP();
     }
