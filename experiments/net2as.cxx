@@ -169,6 +169,11 @@ struct PC_Net2AS {
   IS* local_is;
   Vec* sol;
   VecScatter* sc;
+  // cholmod factors + MatSolve work vectors: the assembled subdomain matrices and the
+  // KSP wrappers are discarded right after factorization (the apply is a pure MatSolve;
+  // keeping the copies costs ~1x the overlapped subdomain nnz, ~250 GB at net3 scale)
+  Mat* fac;
+  Vec* work;
 
   PetscReal bal_est;
 };
@@ -178,6 +183,7 @@ PetscErrorCode net2as_alloc_ds(PC_Net2AS *data, PetscInt sz) {
   PetscFunctionBegin;
   PetscCall(PetscMalloc6(min_sz, &data->ksp, min_sz, &data->is, min_sz,
     &data->sol, min_sz, &data->sc, min_sz, &data->sd_gids, min_sz, &data->local_is));
+  PetscCall(PetscCalloc2(min_sz, &data->fac, min_sz, &data->work));
   data->sz = min_sz;
   PetscFunctionReturn(0);
 }
@@ -203,9 +209,12 @@ PetscErrorCode PCDestroy_Net2AS(PC pc) {
     PetscCall(VecDestroy(data->sol+i));
     PetscCall(ISDestroy(data->is+i));
     PetscCall(ISDestroy(data->local_is+i));
+    if (data->fac) PetscCall(MatDestroy(data->fac+i));
+    if (data->work) PetscCall(VecDestroy(data->work+i));
   }
-  PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
+  if (data->mat) PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
   PetscCall(PetscFree6(data->ksp, data->is, data->sol, data->sc, data->sd_gids, data->local_is));
+  PetscCall(PetscFree2(data->fac, data->work));
   PetscCall(ISDestroy(&data->partition));
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1361,12 +1370,28 @@ PetscErrorCode PCSetup_Net2AS(PC pc) {
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      time: %.5e\n", info.time));
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "      factor_type: %s\n", info.factor_type));
     }
+    // keep only the factor: the apply is a pure MatSolve, and the KSP wrapper's PC
+    // pins references to the assembled subdomain matrix (with re-setup guard)
+    {
+      PC spc;
+      PetscCall(MatDestroy(&data->fac[i]));
+      PetscCall(VecDestroy(&data->work[i]));
+      PetscCall(KSPGetPC(data->ksp[i], &spc));
+      PetscCall(PCFactorGetMatrix(spc, &data->fac[i]));
+      PetscCall(PetscObjectReference((PetscObject)data->fac[i]));
+      PetscCall(KSPDestroy(&data->ksp[i]));
+      PetscCall(VecDuplicate(data->sol[i], &data->work[i]));
+    }
   }
   PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   PetscCallMPI(MPI_Reduce(&t_loc, &t_max, 1, MPIU_REAL, MPI_MAX, 0, PETSC_COMM_WORLD));
   PetscCallMPI(MPI_Reduce(&t_loc, &t_sum, 1, MPIU_REAL, MPI_SUM, 0, PETSC_COMM_WORLD));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  load_bal:\n    est: %.5e\n    mes: %.5e\n", (double)data->bal_est, (double)t_max / t_sum * size));
+
+  // the factors hold everything the apply needs; drop the assembled subdomain copies
+  // (~1x the overlapped nnz: 10 GB at net2, ~250 GB at net3)
+  PetscCall(MatDestroySubMatrices(data->sz, &data->mat));
 
   PetscCall(MatCOO_Free(&coo));
   PetscCall(MatDestroy(&coarse_basis));
@@ -1414,10 +1439,10 @@ PetscErrorCode PCApply_Net2AS(PC pc, Vec x, Vec y) {
   }
   PetscCall(VecZeroEntries(data->rank_sol));
   for (PetscInt i = 0; i < data->sz; i++)
-    PetscCall(KSPSolve(data->ksp[i], data->sol[i], data->sol[i]));
+    PetscCall(MatSolve(data->fac[i], data->sol[i], data->work[i]));
   for (PetscInt i = 0; i < data->sz; i++) {
-    PetscCall(VecScatterBegin(data->sc[i], data->sol[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
-    PetscCall(VecScatterEnd(data->sc[i], data->sol[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(data->sc[i], data->work[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(data->sc[i], data->work[i], data->rank_sol, ADD_VALUES, SCATTER_REVERSE));
   }
 
   // rank -> global
@@ -1450,8 +1475,9 @@ PetscErrorCode PCView_Net2AS(PC pc, PetscViewer viewer) {
 
   for (PetscInt i = 0; i < data->sz; i++) {
    PetscCall(PetscViewerASCIIPrintf(viewer, "--- SUB %d ---\n", i));
-   PetscCall(MatView(data->mat[i], viewer));
-   PetscCall(KSPView(data->ksp[i], viewer));
+   // assembled subdomain matrices and KSPs are discarded post-factorization;
+   // the cholmod factor is what the apply actually uses
+   PetscCall(MatView(data->fac[i], viewer));
   }
 
 end:
