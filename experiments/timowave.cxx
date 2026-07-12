@@ -345,6 +345,17 @@ int main(int argc, char **argv) {
       { auto drop_i = std::move(mat_coo.row_vec); }
       { auto drop_j = std::move(mat_coo.col_vec); }
       PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+
+      // PETSc retains internal COO mapping arrays on the matrix for repeated
+      // MatSetValuesCOO calls that never come (the operator is time-constant), and
+      // 3.24 has no API to drop them (~16-32 B per staged entry, 150-270 GB at net3).
+      // Swap into a clean duplicate instead; transient cost is one extra matrix.
+      {
+        Mat mat_clean;
+        PetscCall(MatDuplicate(mat, MAT_COPY_VALUES, &mat_clean));
+        PetscCall(MatDestroy(&mat));
+        mat = mat_clean;
+      }
       PRIN2SP();
     }
 
