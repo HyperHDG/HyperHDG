@@ -13,7 +13,7 @@ export OMP_NUM_THREADS=1
 cmake --build --preset rel --target timowave
 
 parallel --progress --bar --results $OUT.json \
-  "$BIN_DIR/timowave $DOMAIN -deg 6 -nx 20 -theta {2} -test 4 -nt {1} -pc_type none" \
+  "$BIN_DIR/timowave $DOMAIN -deg 6 -nx 20 -theta {2} -test wave4 -nt {1} -pc_type none" \
   ::: 1 2 4 8 16 32 64 128 ::: 1 0.5
 echo "gen exit: $?"
 yq -i '.Stdout |= from_yaml' $OUT.json

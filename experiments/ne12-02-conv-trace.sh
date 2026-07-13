@@ -31,7 +31,7 @@ joblist() {
 }
 
 parallel --progress --bar --results $OUT.json --colsep ' ' \
-  "$BIN_DIR/timowave $DOMAIN -deg {2} -nx {1} -theta .5 -test 4 -nt {3} -ksp_type preonly -pc_type lu -tau_s {4}" \
+  "$BIN_DIR/timowave $DOMAIN -deg {2} -nx {1} -theta .5 -test wave4 -nt {3} -ksp_type preonly -pc_type lu -tau_s {4}" \
   :::: <(joblist) ::: 1 0 -1
 echo "gen exit: $?"
 yq -i '.Stdout |= from_yaml' $OUT.json
