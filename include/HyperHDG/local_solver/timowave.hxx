@@ -624,9 +624,11 @@ class TimoshenkoWave
     fill_single(data.lu_B, compB_dim);
     Wrapper::lapack_factorize(nw_, data.lu_B.data(), data.ipiv_B.data());
 
-    // Coupled component (force group dim_n, rotation group dim_r), cross sign s:
-    //   [ S_n                 s*theta*C_sig_n*(B-G)   ]
-    //   [ s*theta*C_sig_n*G   S_r + theta*C_sig_n*M   ]
+    // Coupled component (force group dim_n, rotation group dim_r), cross sign s as it appears in
+    // the full matrix (sigma_n row: +s*M*w_r; w_r row: -s*theta*M*sigma_n). Eliminating sigma_n =
+    // C_sn*(M^{-1}b + M^{-1}G w_n - s*w_r) puts -s on both off-diagonal Schur blocks:
+    //   [ S_n                  -s*theta*C_sig_n*(B-G) ]
+    //   [ -s*theta*C_sig_n*G   S_r + theta*C_sig_n*M  ]
     auto fill_coupled = [&](std::array<lSol_float_t, n2w_ * n2w_>& lu, lSol_float_t s,
                             unsigned int dim_n, unsigned int dim_r) {
       const lSol_float_t Csn = data.extra[sig_blk(dim_n)], Cun = data.extra[w_blk(dim_n)];
@@ -638,9 +640,9 @@ class TimoshenkoWave
           if (r < nw_ && c < nw_)
             v = S_entry(Csn, Cun, r, c);
           else if (r < nw_ && c >= nw_)
-            v = s * theta_ * Csn * Bm[r * n + (c - nw_)];
+            v = -s * theta_ * Csn * Bm[r * n + (c - nw_)];
           else if (r >= nw_ && c < nw_)
-            v = s * theta_ * Csn * G[(r - nw_) * n + c];
+            v = -s * theta_ * Csn * G[(r - nw_) * n + c];
           else
           {
             v = S_entry(Csr, Cur, r - nw_, c - nw_);
@@ -689,9 +691,10 @@ class TimoshenkoWave
   /*!***********************************************************************************************
    * \brief   Recover sigma, w, wdot of triplet \c dim from the solved displacement w and scatter.
    *
-   * sigma = C_sig (M^{-1} b_sig + M^{-1} G w + s*w_partner),  wdot = (1/theta) M^{-1} b_wdot +
+   * sigma = C_sig (M^{-1} b_sig + M^{-1} G w - s*w_partner),  wdot = (1/theta) M^{-1} b_wdot +
    * (C_u/(theta*dt)) w. \c s_cross is 0 for single components; for a coupled force group it is the
-   * cross sign and \c w_partner the rotation group's displacement.
+   * cross sign of the full matrix (+s*M*w_partner on the sigma row) and \c w_partner the rotation
+   * group's displacement.
    ************************************************************************************************/
   template <typename DataT>
   inline void triplet_backsub(const DataT& data, unsigned int dim, lSol_float_t s_cross,
@@ -710,7 +713,7 @@ class TimoshenkoWave
       for (unsigned int c = 0; c < n; ++c)
         Gw += data.Gmat[k * n + c] * w[c];
       result[sig_blk(dim) * n + k] =
-        C_sig * (m_inv_bsig[k] + data.M_inv[k] * Gw + s_cross * w_partner[k]);
+        C_sig * (m_inv_bsig[k] + data.M_inv[k] * Gw - s_cross * w_partner[k]);
       result[w_blk(dim) * n + k] = w[k];
       result[wdot_blk(dim) * n + k] =
         m_inv_bwdot[k] / theta_ + (C_u / (theta_ * delta_t_)) * w[k];
@@ -768,7 +771,7 @@ class TimoshenkoWave
         for (unsigned int k = 0; k < n; ++k)
         {
           rw[k] = rw_n[k];
-          rw[nw_ + k] = rw_r[k] - s * theta_ * Csn * rhs[sig_blk(dim_n) * n + k];
+          rw[nw_ + k] = rw_r[k] + s * theta_ * Csn * rhs[sig_blk(dim_n) * n + k];
         }
         Wrapper::lapack_solve_factored(n2w_, 1, lu.data(), ipiv.data(), rw.data());
         std::array<lSol_float_t, nw_> w_n, w_r;
