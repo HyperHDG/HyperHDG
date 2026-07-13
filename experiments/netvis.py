@@ -764,11 +764,20 @@ def netvis_overlay(path, ops_frames, times, bg="black", view=None,
   available = list(reader.TimestepValues)
   rview = pv.GetActiveViewOrCreate("RenderView")
 
+  # same MPI story as netvis(): without redistribution every rank drags the
+  # full part through each branch's filters (61 GB files hang for hours here)
+  src = reader
+  from paraview import servermanager
+  nranks = servermanager.vtkProcessModule.GetProcessModule().GetNumberOfLocalPartitions()
+  if nranks > 1:
+    print(f"MPI: redistributing data over {nranks} ranks")
+    src = pv.RedistributeDataSet(Input=reader)
+
   for t, ops in zip(times, ops_frames):
     t_snap = builtins.min(available, key=lambda x: abs(x - t)) if available else t
     idx = available.index(t_snap)
 
-    extract = pv.ExtractTimeSteps(Input=reader)
+    extract = pv.ExtractTimeSteps(Input=src)
     extract.TimeStepIndices = [idx]
     extract.UpdatePipeline()
 
@@ -809,10 +818,12 @@ if __name__ == "__main__":
   p.add_argument("--bg", default="black", help="background color")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
   p.add_argument("--color-invert", action="store_true", help="invert the Cool-to-Warm transfer function")
-  p.add_argument("--color-rescale", choices=["time", "frame"], default="time",
-                 help="color range over all timesteps (default; comparable frames) or "
-                      "per frame (keeps the decaying wave front visible in animations, "
-                      "but the colorbar changes meaning between frames)")
+  p.add_argument("--color-rescale", choices=["time", "frame"], default=None,
+                 help="color range over all timesteps (animation default; comparable "
+                      "frames) or per frame (overlay default; keeps the decaying wave "
+                      "front visible, but the colorbar changes meaning between frames). "
+                      "'time' sweeps every stored step -- avoid it for one-off stills "
+                      "of large files.")
   p.add_argument("--color-categories", default="",
                  help="treat values as categorical, e.g. '1-4,7'; uses HSV-spaced colors")
   p.add_argument("--warp-by", default="values:6,7,8",
@@ -954,6 +965,11 @@ if __name__ == "__main__":
     else:
       ops.append(SolidColor(fg))
     return ops
+
+  # over-time rescale in overlay mode re-reads every stored step just for the
+  # LUT range (hung ne18-33 for 5h on a 61 GB file); default per mode instead
+  if args.color_rescale is None:
+    args.color_rescale = "frame" if args.frames else "time"
 
   if args.frames:
     times = [float(s) for s in args.frames.split(",")]
