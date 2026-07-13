@@ -122,7 +122,8 @@ int main(int argc, char **argv) {
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
     PetscReal theta = .5;  // one-step theta method
-    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0, e_trace = 0;
+    PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0, e_trace = 0,
+              n_trace = 0;
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
@@ -327,6 +328,7 @@ int main(int argc, char **argv) {
     e_abs = PetscMax(temp2[0], e_abs);
     n_abs = PetscMax(temp3[0], n_abs);
     e_trace = PetscMax(temp2[1], e_trace);
+    n_trace = PetscMax(temp3[1], n_trace);
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "e_abs0: %.5e\n", e_abs));
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
     PetscCall(VecSetValue(norms,  0, temp3[0], INSERT_VALUES));
@@ -467,10 +469,12 @@ int main(int argc, char **argv) {
         temp2 = global_errors(hdg->errors(span, ti));
         PetscLogEventEnd(e_errors, 0,0,0,0);
         error = temp2[0];
-        norm = global_errors(hdg->norms(span, ti))[0];
+        temp3 = global_errors(hdg->norms(span, ti));
+        norm = temp3[0];
         e_abs = PetscMax(error, e_abs);
         n_abs = PetscMax(norm, n_abs);
         e_trace = PetscMax(temp2[1], e_trace);
+        n_trace = PetscMax(temp3[1], n_trace);
         PetscCall(VecRestoreSpan(sol_local, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
@@ -489,10 +493,13 @@ int main(int argc, char **argv) {
 
     avg_iterations = ((PetscReal)iterations) / nt;
     e_rel = e_abs / n_abs;
-    e_trace = e_trace / n_abs;
+    // relative error in the length-weighted skeleton norm (analytic trace norm from norms()[1]);
+    // tests without an analytic solution (n_trace == 0) keep the absolute value
+    e_trace = n_trace > 0 ? e_trace / n_trace : e_trace;
 
     PRIN2FY(e_abs);
     PRIN2FY(n_abs);
+    PRIN2FY(n_trace);
     PRIN2FY(e_rel);
     PRIN2FY(e_trace);
     PRIN2IY(iterations);

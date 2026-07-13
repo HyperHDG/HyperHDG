@@ -985,6 +985,11 @@ class TimoshenkoWave
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     std::array<lSol_float_t, n_shape_bdr_> bcoeffs;
     lSol_float_t error = 0, trace = 0;
+    // Weight each endpoint contribution by this edge's length: summed over all edges this
+    // accumulates w_v = sum_{e per v} l_e at every node, i.e. the HDG skeleton norm
+    // sum_e l_e ||.||^2_{de} -- a function-space (lumped L2) norm instead of a bare nodal
+    // l2 sum whose value scales with the node count.
+    const lSol_float_t len = hyper_edge.geometry.area();
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old = hyper_edge.data.u_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> r_old = hyper_edge.data.r_old;
 
@@ -1033,7 +1038,7 @@ class TimoshenkoWave
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
           parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(
             bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
-        trace += contrib;
+        trace += len * contrib;
       }
     }
 
@@ -1055,7 +1060,7 @@ class TimoshenkoWave
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
           parameters::analytic_result_phi, Point<hyEdge_dimT, lSol_float_t>>(
             bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
-        trace += contrib;
+        trace += len * contrib;
       }
     }
 
@@ -1104,8 +1109,26 @@ class TimoshenkoWave
                                                                          hyper_edge.geometry, time);
     }
 
-    // error_t is 2 components since the trace error was added; there is no trace norm (yet)
-    return std::array<lSol_float_t, 2U>({norm, 0.});
+    // trace norm of the analytic solution in the same edge-length-weighted skeleton norm as
+    // the trace error in errors(): zero boundary coefficients turn the diff-square integral
+    // into the square of the analytic value at the endpoints
+    std::array<lSol_float_t, n_shape_bdr_> bcoeffs;
+    bcoeffs.fill(0.);
+    const lSol_float_t len = hyper_edge.geometry.area();
+    lSol_float_t trace = 0;
+    for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr)
+      for (unsigned int dim = 0; dim < space_dim; ++dim) {
+        trace += len * integrator::template integrate_bdr_diffsquare_discanacomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(
+            bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+        trace += len * integrator::template integrate_bdr_diffsquare_discanacomp<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::analytic_result_phi, Point<hyEdge_dimT, lSol_float_t>>(
+            bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
+      }
+
+    return std::array<lSol_float_t, 2U>({norm, trace});
   }
 
   static constexpr unsigned int n_energy_components() { return 6 * space_dim; }
