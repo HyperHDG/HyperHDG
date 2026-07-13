@@ -44,13 +44,17 @@ static PetscErrorCode CreateDeg(
     PetscInt poly_deg, const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase** hdg
 ) {
+  PetscBool loc_lu_full = PETSC_FALSE;
+
   PetscFunctionBeginUser;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_lu_full", &loc_lu_full, NULL));
+  const std::vector<double> vals = {tau, theta, dt, (double)loc_lu_full};
   PetscCall(InitTest<Test>(path));
   switch (poly_deg) {
-  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, {tau, theta, dt})); break;
-  case 2: *hdg = new HDGWrapper(HDGTimoWave<2,Test>(path, {tau, theta, dt})); break;
-  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,Test>(path, {tau, theta, dt})); break;
-  case 6: *hdg = new HDGWrapper(HDGTimoWave<6,Test>(path, {tau, theta, dt})); break;
+  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, vals)); break;
+  case 2: *hdg = new HDGWrapper(HDGTimoWave<2,Test>(path, vals)); break;
+  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,Test>(path, vals)); break;
+  case 6: *hdg = new HDGWrapper(HDGTimoWave<6,Test>(path, vals)); break;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
                "unsupported poly_deg = %d", (int)poly_deg);

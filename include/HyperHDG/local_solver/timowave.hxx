@@ -269,6 +269,7 @@ class TimoshenkoWave
   const lSol_float_t tau_;
   const lSol_float_t theta_;
   const lSol_float_t delta_t_;
+  const bool full_lu_ = false;  // solve local problems via full-matrix LU instead of Schur
 
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
@@ -307,15 +308,23 @@ class TimoshenkoWave
     std::array<lSol_float_t, n2w_ * n2w_> lu_C, lu_D;
     std::array<int, n2w_> ipiv_C, ipiv_D;
     bool loc_mat_factorized = false;
+    // Cached LU of the FULL local matrix (full_lu_ mode). Forming the displacement Schur
+    // complement explicitly sums (C_u/(theta*dt^2))*M with the O(1) stiffness terms, so for very
+    // small dt the stiffness drowns in round-off (e_trace floors ~1e-7 at dt~2e-5). The pivoted
+    // full-matrix LU keeps the scales in separate entries and reaches ~1e-9; use it (option
+    // -loc_lu_full) for deep convergence studies, the Schur path for production runs.
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> full_lu;
+    std::array<int, n_loc_dofs_> full_ipiv;
+    bool full_lu_factorized = false;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  // NOTE: tau, theta, delta_t
+  // NOTE: tau, theta, delta_t, [full_lu]
   TimoshenkoWave(const constructor_value_type& vals = std::vector(3, 1.)) : tau_(vals[0]),
-    theta_(vals[1]), delta_t_(vals[2]) {}
+    theta_(vals[1]), delta_t_(vals[2]), full_lu_(vals.size() > 3 && vals[3] != 0.) {}
 
   template <typename point_t, typename geom_t,
             lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
@@ -738,6 +747,21 @@ class TimoshenkoWave
         hy_assert(0 == 1, "This has not been implemented!");
 
       auto& data = hyper_edge.data;
+
+      if (full_lu_)
+      {
+        if (!data.full_lu_factorized)
+        {
+          data.full_lu = assemble_loc_matrix(hyper_edge, time);
+          Wrapper::lapack_factorize(n_loc_dofs_, data.full_lu.data().data(),
+                                    data.full_ipiv.data());
+          data.full_lu_factorized = true;
+        }
+        Wrapper::lapack_solve_factored(n_loc_dofs_, 1, data.full_lu.data().data(),
+                                       data.full_ipiv.data(), rhs.data().data());
+        return rhs;
+      }
+
       if (!data.loc_mat_factorized)
       {
         assemble_schur(hyper_edge);
