@@ -14,46 +14,43 @@
 
 static const char help_msg[] = "experiments regarding timoshenko networks\n";
 
-template <unsigned int dim, typename Scalar = double>
-using TB_Params = TimoshenkoStiffness<dim, Scalar>;
-template<unsigned int poly_deg>
-using TB_LSol = LocalSolver::TimoshenkoBeam<1,3,poly_deg,2*poly_deg, TB_Params>;
-template<unsigned int poly_deg>
-using DF_LSol = LocalSolver::Diffusion<1,poly_deg,2*poly_deg,ConstantDiffusionParameters>;
-
-template<unsigned int poly_deg, template<unsigned int> typename LSol>
-using HDGNetwork = GlobalLoop::Elliptic<
+template<unsigned int deg, template<unsigned int, typename> typename Params>
+using HDGElliptic = GlobalLoop::Elliptic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
-  LSol<poly_deg>
+  LocalSolver::TimoshenkoBeam<1,3,deg,2*deg, Params>
+>;
+
+template<unsigned int deg, template<unsigned int, typename> typename Params>
+using HDGDiffusion = GlobalLoop::Elliptic<
+  Topology::File<1,3>,
+  Geometry::File<1,3>,
+  NodeDescriptor::File<1,3>,
+  LocalSolver::Diffusion<1,deg,2*deg, Params>
 >;
 
 // hdg must be deallocated with `delete`
-PetscErrorCode PetscHDGCreate(const char* lsol, const char* domain, PetscReal tau, HDGBase **hdg) {
-  PetscViewer viewer;
-  PetscReal size[3];
-  PetscReal strain = .1;
-  PetscInt  comp = 0;
-  PetscBool is_set;
-
+PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal tau, HDGBase **hdg) {
   PetscFunctionBeginUser;
 
-  if (0 == strcmp(lsol, "timo")) {
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, &is_set));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp, &is_set));
-    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, domain, FILE_MODE_READ, &viewer));
-    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
-    PetscCall(PetscViewerDestroy(&viewer));
-    TB_Params<3>::length = size[0];
-    TB_Params<3>::strain = strain;
-    TB_Params<3>::comp = comp;
-    *hdg = new HDGWrapper(HDGNetwork<3,TB_LSol>(domain, tau)); return 0;
-  } else if (0 == strcmp(lsol, "diff")) {
-    *hdg = new HDGWrapper(HDGNetwork<3,DF_LSol>(domain, tau)); return 0;
-  } else {
+  if (0 == strcmp(test, "stiffness")) {
+    PetscCall(TimoshenkoStiffness<>::Init(domain));
+    *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoStiffness>(domain, tau)); return 0;
+  }
+  else if (0 == strcmp(test, "gaussian")) {
+    PetscCall(TimoshenkoGaussian<>::Init(domain));
+    *hdg = new HDGWrapper(HDGElliptic<3, TimoshenkoGaussian>(domain, tau)); return 0;
+  }
+  else if (0 == strcmp(test, "constant")) {
+    *hdg = new HDGWrapper(HDGElliptic<3, LocalSolver::TimoshenkoClampedConstant>(domain, tau)); return 0;
+  }
+  else if (0 == strcmp(test, "diffusion")) {
+    *hdg = new HDGWrapper(HDGDiffusion<1, ConstantDiffusionParameters>(domain, tau)); return 0;
+  }
+  else {
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG,
-      "unsupported lsol = %s", lsol);
+      "unsupported test = '%s'", test);
   }
 
   return 0;
@@ -99,7 +96,7 @@ int main(int argc, char **argv) {
 
     char proc_name[MPI_MAX_PROCESSOR_NAME];
     char plot_path[PATH_MAX] = {0};
-    char domain_filepath[PATH_MAX] = "domains/grid3.geo.bin";
+    char domain[PATH_MAX] = "domains/grid3.geo.bin";
     char viscoarse[PATH_MAX] = {0};
     char mat_cache[PATH_MAX] = {0};
 
@@ -112,8 +109,8 @@ int main(int argc, char **argv) {
     PetscInt bs = 1;
     PetscReal emin, emax, cond;
 
-    VecScatter scatter;
-    Vec rhs, rhs0;
+    VecScatter scatter = NULL;
+    Vec rhs = NULL, sol_local = NULL;
     Mat mat;
     KSP ksp;
     PC pc;
@@ -124,10 +121,11 @@ int main(int argc, char **argv) {
     PetscBool mat_only = PETSC_FALSE;
     PetscBool ksp_monitor_yaml = PETSC_FALSE;
     std::span<PetscReal> span;
-    char lsol[10] = "timo";
+    char test[10] = "stiffness";
     HDGBase* hdg = NULL;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
     const char *pc_type;
+    Vec sol_ref = NULL;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# ------- " __FILE__ " -------\n"));
@@ -135,8 +133,8 @@ int main(int argc, char **argv) {
     PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
     PetscCallMPI(MPI_Get_processor_name(proc_name, &proc_name_len));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Network Options", NULL);
-    PetscCall(PetscOptionsString("-lsol", "local solver type: (timo|diff)", NULL, lsol, lsol, sizeof(lsol), &is_set));
-    PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain_filepath, domain_filepath, PATH_MAX, &is_set));
+    PetscCall(PetscOptionsString("-test", "test: (stiffness|gaussian|constant|diffusion)", NULL, test, test, sizeof(test), &is_set));
+    PetscCall(PetscOptionsString("-domain", "input network domain", NULL, domain, domain, PATH_MAX, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsString("-plot", "plot solution using HyperHGD", NULL, plot_path, plot_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-viscoarse", "output name for visualization of coarse system", NULL, viscoarse, viscoarse, PATH_MAX, &is_set));
@@ -169,6 +167,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%s, ", proc_name));
     PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "]\n"));
+    PRIN2SY(domain);
 
     if (set_mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
 
@@ -179,7 +178,7 @@ int main(int argc, char **argv) {
     PetscCall(PetscLogStageRegister("t2f", &s_t2f));
     PetscCall(PetscLogStageRegister("prealloc", &s_pa));
 
-    PetscCall(PetscHDGCreate(lsol, domain_filepath, tau, &hdg));
+    PetscCall(PetscHDGCreate(test, domain, tau, &hdg));
     PetscCall(PCRegister("net2as", PCCreate_Net2AS));
     PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
@@ -196,11 +195,15 @@ int main(int argc, char **argv) {
 
     bs = hdg->n_dofs_per_node();
     N = hdg->size_of_system();
-    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, PETSC_DECIDE, PETSC_DECIDE, N, N, &mat));
+    // Local row/col count = dofs owned by this rank (matches the partition's global numbering, so
+    // PETSc's contiguous ownership ranges coincide with the renumbered owned dof blocks). Equals
+    // PETSC_DECIDE behaviour for a single rank.
+    PetscInt n_owned = hdg->n_owned_dofs();
+    PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, n_owned, n_owned, N, N, &mat));
     PetscCall(KSPSetOperators(ksp, mat, mat));
 
     if (rank == 0) PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
-    PetscCallMPI(MPI_Bcast(&have_cache, 1, MPIU_BOOL, 0, PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Bcast(&have_cache, 1, MPI_C_BOOL, 0, PETSC_COMM_WORLD));
     if (have_cache) {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# loading matrix\n"));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
@@ -241,28 +244,73 @@ int main(int argc, char **argv) {
 
     PetscCall(MatPrintSymmetry("t2f_symmetry", mat));
 
+    {
+      // Stage-1 validation: 1^T A 1 (= sum of all entries) and ||A 1|| are invariant under the
+      // symmetric renumbering, so these must match between serial and distributed assembly.
+      Vec ones, Aones;
+      PetscReal ones_sum, ones_nrm;
+      PetscCall(MatCreateVecs(mat, &ones, &Aones));
+      PetscCall(VecSet(ones, 1.0));
+      PetscCall(MatMult(mat, ones, Aones));
+      PetscCall(VecSum(Aones, &ones_sum));
+      PetscCall(VecNorm(Aones, NORM_2, &ones_nrm));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t2f_ones_sum: %.12e\n", (double)ones_sum));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t2f_ones_nrm: %.12e\n", (double)ones_nrm));
+      PetscCall(VecDestroy(&ones));
+      PetscCall(VecDestroy(&Aones));
+    }
+
     if (mat_only) goto end;
     PetscCall(MatCreateVecs(mat, NULL, &rhs));
 
-    PetscCall(VecScatterCreateToZero(rhs, &scatter, &rhs0));
-    if (rank == 0) {
+    {
+      // Map each local dof (owned then ghost) to its global index, and build a scatter that pulls
+      // global dof values into a per-rank local vector (owned + ghost). Used to plot each rank's
+      // owned edges (which reference ghost endpoints) from the distributed solution.
+      auto gidx = hdg->local_to_global_dofs();
+      PetscInt n_local = (PetscInt)gidx.size();
+      IS is_global;
+      PetscCall(VecCreateSeq(PETSC_COMM_SELF, n_local, &sol_local));
+      PetscCall(ISCreateGeneral(PETSC_COMM_WORLD, n_local, (PetscInt*)gidx.data(), PETSC_COPY_VALUES,
+                                &is_global));
+      PetscCall(VecScatterCreate(rhs, is_global, sol_local, NULL, &scatter));
+      PetscCall(ISDestroy(&is_global));
+
+      // Distributed residual: each rank computes the residual over its owned edges into a local
+      // (owned + ghost) vector, then additively assembles into the global rhs by global dof index.
+      // Off-process (ghost) rows are routed to their owners and summed by VecAssembly.
       PRIN2S(s_rf);
-      PetscCall(VecGetSpan(rhs0, span));
       auto zero = hdg->zero_vector();
-      hdg->residual_flux2(zero, span, 0.);
-      PetscCall(VecRestoreSpan(rhs0, span));
+      auto res_local = hdg->zero_vector();
+      hdg->residual_flux2(zero, res_local, 0.);
+      PetscCall(VecSetValues(rhs, n_local, (PetscInt*)gidx.data(), res_local.data(), ADD_VALUES));
+      PetscCall(VecAssemblyBegin(rhs));
+      PetscCall(VecAssemblyEnd(rhs));
       PRIN2SP();
     }
-    PetscCall(VecScatterBegin(scatter, rhs0, rhs, INSERT_VALUES, SCATTER_REVERSE));
-    PetscCall(VecScatterEnd(scatter, rhs0, rhs, INSERT_VALUES, SCATTER_REVERSE));
 
     PetscCall(VecScale(rhs, -1.));
+
+    // Hand net2as the redistributed domain (points + edges in the partition's global numbering) so
+    // its adjacency/points conform to the system matrix layout instead of an independent file read.
+    if (0 == strcmp(pc_type, "net2as")) {
+      PetscInt node_bs = hdg->n_dofs_per_node();
+      PetscInt n_owned_nodes = hdg->n_owned_dofs() / node_bs;
+      PetscInt n_global_nodes = hdg->size_of_system() / node_bs;
+      auto coords = hdg->owned_point_coords();
+      auto edges_g = hdg->owned_edges_global();
+      PetscCall(PCNet2ASSetDomain(pc, n_owned_nodes, n_global_nodes, hdg->n_space_dim(),
+                                  coords.data(), (PetscInt)(edges_g.size() / 2),
+                                  (PetscInt*)edges_g.data()));
+    }
 
     PetscTime(&ksp_monitor_yaml_ctx.t0);
 
     PRIN2S(s_ksp);
     PetscCall(KSPSetUp(ksp));
     PRIN2SP();
+
+    PetscCall(KSPMonitorYAML_Setup(ksp, rhs, &ksp_monitor_yaml_ctx));
 
     PRIN2S(s_it);
     PetscCall(KSPSolve(ksp, rhs, rhs));
@@ -276,17 +324,27 @@ int main(int argc, char **argv) {
     PRIN2IY(iterations);
     PRIN2FY(rnorm);
     PRIN2FY(cond);
+    PRIN2FY(emin);
+    PRIN2FY(emax);
     PRIN2SY(creason);
+
+    {
+      // ||x|| is invariant under the symmetric renumbering, so it must match between serial and
+      // distributed solves of the same physical problem.
+      PetscReal solnorm;
+      PetscCall(VecNorm(rhs, NORM_2, &solnorm));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "solnorm: %.12e\n", (double)solnorm));
+    }
 
     if (*plot_path) {
       hdg->plot_option("fileName", plot_path);
       hdg->plot_option("fileNumber", "0");
       hdg->plot_option("fileEnding", "vtkhdf");
-      PetscCall(VecScatterBegin(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecScatterEnd(scatter, rhs, rhs0, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecGetSpan(rhs0, span));
+      PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecGetSpan(sol_local, span));
       hdg->plot_solution(span);
-      PetscCall(VecRestoreSpan(rhs0, span));
+      PetscCall(VecRestoreSpan(sol_local, span));
     }
 
     PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
@@ -304,7 +362,8 @@ end:
     PetscCall(KSPDestroy(&ksp));
     PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&rhs));
-    PetscCall(VecDestroy(&rhs0));
+    PetscCall(VecDestroy(&sol_local));
+    PetscCall(VecDestroy(&sol_ref));
     PetscCall(VecScatterDestroy(&scatter));
 
     PetscCall(PetscFinalize());

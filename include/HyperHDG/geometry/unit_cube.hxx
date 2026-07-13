@@ -377,6 +377,14 @@ class UnitCube
       }
       return map_ref_to_phys(pt);
     }
+
+    bool has_extra_data() const { return false; }
+
+    const std::vector<pt_coord_t>& extra_data() const
+    {
+      static const std::vector<pt_coord_t> empty;
+      return empty;
+    }
   };  // end of class hyEdge
 
  public:

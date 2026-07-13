@@ -289,7 +289,7 @@ class File
       return hyGraph_geometry_.domain_info_.hyEdge_properties.size() > 0;
     }
 
-    const auto& extra_data()
+    const auto& extra_data() const
     {
       return hyGraph_geometry_.domain_info_
         .hyEdge_properties[index_ / hyGraph_geometry_.n_loc_ref_elem];

@@ -42,6 +42,10 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(is_dirichlet, has_is_dirichlet);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
   HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
@@ -193,7 +197,7 @@ class Elliptic
    *
    * \retval  zero            A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
-  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_local_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -333,6 +337,40 @@ class Elliptic
    * \retval  n               Size of the condensed (square) system of equations.
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom owned by this rank (== \c size_of_system() if serial).
+   *
+   * Used to set the local row count of the distributed system matrix and vectors.
+   ************************************************************************************************/
+  dof_index_t n_owned_dofs() const { return hyper_graph_.n_owned_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Global dof index for each local dof; see \c HDGHyperGraph::local_to_global_dofs().
+   *
+   * Used to additively assemble a local (owned + ghost) residual into the global vector.
+   ************************************************************************************************/
+  std::vector<dof_index_t> local_to_global_dofs() const
+  {
+    return hyper_graph_.local_to_global_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Dimension of the surrounding space.
+   ************************************************************************************************/
+  static constexpr unsigned int space_dim() { return TopologyT::space_dim(); }
+  /*!***********************************************************************************************
+   * \brief   Flat coordinates of this rank's owned hypernodes; see
+   *          \c HDGHyperGraph::owned_point_coords().
+   ************************************************************************************************/
+  std::vector<double> owned_point_coords() const { return hyper_graph_.owned_point_coords(); }
+  /*!***********************************************************************************************
+   * \brief   This rank's owned hyperedges as global hypernode index pairs; see
+   *          \c HDGHyperGraph::owned_edges_global().
+   ************************************************************************************************/
+  std::vector<dof_index_t> owned_edges_global() const { return hyper_graph_.owned_edges_global(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom held in a local vector, i.e. owned + ghost
+   *          (== \c size_of_system() if serial). This is the length of \c zero_vector().
+   ************************************************************************************************/
+  dof_index_t n_local_dofs() const { return hyper_graph_.n_local_dofs(); }
   /*!***********************************************************************************************
    * \brief   Set plot option and return old plot option.
    *

@@ -116,6 +116,60 @@ struct TimoschenkoBeamParametersDefault
 };  // end of struct DiffusionParametersDefault
 
 
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network constant force experiment.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoClampedConstant
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Applied force
+  static inline Scalar force = 1;
+
+  /// Body loads act on material only: edges with properties mass == 0 (virtual weld /
+  /// connector edges, fiber_id -1 in the morgan datasets) receive no volume RHS. Without
+  /// this the constant force on near-free weld chains produces huge localized
+  /// displacements (see ne18-20 solution inspection, 2026-07-09).
+  static constexpr bool massless_unloaded = true;
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return force;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+};
+
+
+
+
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.
@@ -137,6 +191,14 @@ class TimoshenkoBeam
    ************************************************************************************************/
   struct data_type
   {
+    // Cached LU factorization of assemble_loc_matrix. The matrix depends only on geometry and tau_
+    // (both constant), so it is assembled + factorized once per edge and reused across the many
+    // trace_to_flux / residual_flux applications (one per global-matrix column, plus the residual).
+    // n_loc equals n_loc_dofs_, spelled out here because that constant is declared further below.
+    static constexpr unsigned int n_loc = 4 * space_dim * Hypercube<hyEdge_dimT>::pow(poly_deg + 1);
+    SmallSquareMat<n_loc, lSol_float_t> loc_mat_lu;
+    std::array<int, n_loc> loc_mat_ipiv;
+    bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
    *  \brief  Define type of node elements, especially with respect to nodal shape functions.
@@ -363,7 +425,18 @@ class TimoshenkoBeam
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      return rhs / assemble_loc_matrix(hyper_edge, time);
+
+      auto& data = hyper_edge.data;
+      if (!data.loc_mat_factorized)
+      {
+        data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
+        Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(data.loc_mat_lu.data(),
+                                                             data.loc_mat_ipiv);
+        data.loc_mat_factorized = true;
+      }
+      Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(data.loc_mat_lu.data(),
+                                                                  data.loc_mat_ipiv, rhs.data());
+      return rhs;
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -432,9 +505,12 @@ class TimoshenkoBeam
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
 
+    // Negate the flux so the assembled global matrix is symmetric positive definite
+    // (CHOLMOD-friendly) rather than negative definite. residual_flux is negated the same
+    // way, so the right-hand side flips sign consistently and the solution is unchanged.
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -454,6 +530,13 @@ class TimoshenkoBeam
           lambda_values_out[i][j] = 0.;
 
     return lambda_values_out;
+  }
+
+  template <typename hyEdgeT>
+  bool is_dirichlet(hyEdgeT& hyper_edge, unsigned int node, unsigned int dof) const
+  {
+    if (dof >= 2 * space_dim) return false;
+    return hyper_edge.node_descriptor[node] & (1ul << dof);
   }
 
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
@@ -483,9 +566,10 @@ class TimoshenkoBeam
       solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
+    // Negated to match trace_to_flux: makes the global matrix SPD; RHS flips sign consistently.
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
@@ -804,9 +888,16 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   int comps[] = {1, -1, -2};
   static_assert(space_dim <= 3);
 
+  // parameters may opt in (massless_unloaded = true) to body loads acting on material
+  // only: massless edges (properties mass == 0, virtual welds) get no volume RHS
+  bool loaded = true;
+  if constexpr (requires { parameters::massless_unloaded; })
+    if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+      loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    for (unsigned int c = 0; c < space_dim; c++) {
+    for (unsigned int c = 0; loaded && c < space_dim; c++) {
       right_hand_side[(2 * space_dim + c)* n_shape_fct_ + i] =
         integrator::template integrate_vol_phivecfunccomp<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),

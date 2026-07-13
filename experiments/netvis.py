@@ -38,12 +38,28 @@ Joseph Holten, KIT, 2026.
 import argparse
 import sys
 import os
+# use every core for VTK's SMP-parallel filters (must be set before VTK loads);
+# respects an externally set value
+os.environ.setdefault("VTK_SMP_MAX_THREADS", str(os.cpu_count() or 1))
 import paraview.simple as pv
-from matplotlib.colors import to_rgb
+try:
+  from matplotlib.colors import to_rgb
+except ImportError:  # ParaView-bundled pythons ship without matplotlib
+  _NAMED = {"white": (1., 1., 1.), "black": (0., 0., 0.), "red": (1., 0., 0.),
+            "green": (0., .5, 0.), "blue": (0., 0., 1.), "gray": (.5, .5, .5),
+            "grey": (.5, .5, .5)}
+  def to_rgb(c):
+    if isinstance(c, (tuple, list)):
+      return tuple(float(x) for x in c[:3])
+    if isinstance(c, str) and c.startswith("#") and len(c) == 7:
+      return tuple(int(c[i:i + 2], 16) / 255. for i in (1, 3, 5))
+    if isinstance(c, str) and c.lower() in _NAMED:
+      return _NAMED[c.lower()]
+    raise ValueError(f"color '{c}' needs matplotlib (or use #rrggbb)")
 from colorsys import hsv_to_rgb
 import math
 import numpy as np
-import matplotlib.pyplot as plt
+import builtins
 
 class View:
   VIEWS = {
@@ -94,7 +110,7 @@ class Warp:
             file=sys.stderr)
       return pipe
     ncomp = arr.GetNumberOfComponents()
-    needed = max(self.components) + 1
+    needed = builtins.max(self.components) + 1
     if ncomp < needed:
         print(f"warning: Warp: '{self.source_array}' has {ncomp} "
               f"components, need {needed}, skipping", file=sys.stderr)
@@ -116,6 +132,29 @@ class Warp:
     pipe.ScaleFactor = self.scale
     pipe.UpdatePipeline()
     return pipe
+
+class Surface:
+  """Triangulate the (already warped) points into a filled 2D surface.
+
+  The right rendering for planar networks whose edges are denser than pixels (fine
+  grids alias into moire as lines/tubes): only the surface texture and the global
+  displacement trend are visible anyway, so fill them in. Merges the per-edge
+  duplicate endpoints first (the plot writes each node once per adjacent edge), then
+  Delaunay-triangulates the xy projection. alpha > 0 bounds the triangle
+  circumradius so concave regions/holes are not bridged (use ~2x the mean edge
+  length for disordered nets; 0 = fill to the convex hull, fine for grids).
+  """
+  def __init__(self, alpha=0.0):
+    self.alpha = alpha
+
+  def apply(self, pipe, view):
+    clean = pv.Clean(Input=pipe)
+    clean.UpdatePipeline()
+    tri = pv.Delaunay2D(Input=clean)
+    if self.alpha > 0:
+      tri.Alpha = self.alpha
+    tri.UpdatePipeline()
+    return tri
 
 class Tubes:
   def __init__(self, radius=None, sides=4):
@@ -327,7 +366,7 @@ class Q1Mesh:
     # extent in any direction should be at least self.eps * max extent
     cx, cy, cz = 0.5*(xmin+xmax), 0.5*(ymin+ymax), 0.5*(zmin+zmax)
     hx, hy, hz = 0.5*(xmax-xmin), 0.5*(ymax-ymin), 0.5*(zmax-zmin)
-    eps = self.eps * max(hx, hy, hz)
+    eps = self.eps * builtins.max(hx, hy, hz)
     hx = hx or eps
     hy = hy or eps
     hz = hz or eps
@@ -339,15 +378,15 @@ class Q1Mesh:
 
     # Wavelet produces an ImageData with the given extent, centered at Center
     src = pv.Wavelet()
-    src.WholeExtent = [0, nx, 0, ny, 0, max(nz, 0)]
+    src.WholeExtent = [0, nx, 0, ny, 0, builtins.max(nz, 0)]
     # Place origin at 0 by setting Center to half-extent
-    src.Center = [nx / 2.0, ny / 2.0, max(nz, 0) / 2.0]
+    src.Center = [nx / 2.0, ny / 2.0, builtins.max(nz, 0) / 2.0]
     src.UpdatePipeline()
 
     # Scale + translate to target bounds
-    sx = (xmax - xmin) / max(nx, 1)
-    sy = (ymax - ymin) / max(ny, 1)
-    sz = (zmax - zmin) / max(nz, 1) if nz > 0 and zmax > zmin else 1.0
+    sx = (xmax - xmin) / builtins.max(nx, 1)
+    sy = (ymax - ymin) / builtins.max(ny, 1)
+    sz = (zmax - zmin) / builtins.max(nz, 1) if nz > 0 and zmax > zmin else 1.0
 
     tf = pv.Transform(Input=src)
     tf.Transform = "Transform"
@@ -396,11 +435,18 @@ class SolidColor:
     display.DiffuseColor = rgb
 
 
+# (display, ctf) pairs whose transfer function must be rescaled per animation frame
+# (ArrayColor rescale="frame"); consumed by the frame loop in netvis()
+FRAME_RESCALE = []
+
 class ArrayColor:
-  def __init__(self, spec, fg="white", invert=False, categories=""):
+  def __init__(self, spec, fg="white", invert=False, categories="", bg="black",
+               rescale="time"):
     """'name' or 'name:N' -> (name, component_or_None)."""
     self.invert = invert
     self.fg = fg
+    self.bg = bg
+    self.rescale = rescale
 
     self.categories = []
     items = categories.split(",")
@@ -430,8 +476,6 @@ class ArrayColor:
       target = (assoc, self.name, self.comp)
     pv.ColorBy(display, target)
     ctf = pv.GetColorTransferFunction(self.name)
-    comp = self.comp if self.comp is not None else 0
-    rng = display.GetArrayInformationForColorArray().GetComponentRange(comp)
     ctf.ApplyPreset("Cool to Warm", True)
     if len(self.categories) != 0:
       ctf.InterpretValuesAsCategories = 1
@@ -452,12 +496,35 @@ class ArrayColor:
       ctf.IndexedColors = colors
       ctf.IndexedOpacities = [1.0] * len(cats)
     else:
+      if self.rescale == "frame":
+        # rescale to the CURRENT step now and register for the animation loop:
+        # as the wave spreads, the amplitude drops and a global range hides the
+        # front in later frames; the trade-off is that the colorbar changes
+        # meaning between frames.
+        display.RescaleTransferFunctionToDataRange(False, True)
+        FRAME_RESCALE.append((display, ctf, self.name))
+      else:
+        # "Rescale to Data Range Over All Timesteps": ParaView sweeps every
+        # registered time step in C++ and rescales the LUT to the global range
+        # of the colored component. The per-display array info only sees the
+        # current step, so without this the colors jump every frame.
+        display.RescaleTransferFunctionToDataRangeOverTime()
+      # symmetrize the diverging scale around 0 (RGBPoints is a flat
+      # [scalar, r, g, b, ...] list, so [0] / [-4] are the rescaled min / max)
+      pts = ctf.RGBPoints
+      M = builtins.max(abs(pts[0]), abs(pts[-4]))
       ctf.ApplyPreset("Cool to Warm", True)
-      M = max(abs(rng[0]), abs(rng[1]))
       ctf.RescaleTransferFunction(-M, M)
       if self.invert:
         ctf.InvertTransferFunction()
     display.SetScalarBarVisibility(pv.GetActiveView(), True)
+    # black scalebar text on light backgrounds (and transparent stills viewed on
+    # white); the default white text is invisible there
+    lum = sum(to_rgb(self.bg)[:3]) / 3.
+    txt = [0., 0., 0.] if lum > 0.5 else [1., 1., 1.]
+    sb = pv.GetScalarBar(ctf, rview)
+    sb.TitleColor = txt
+    sb.LabelColor = txt
 
 class CoarseArrows:
   def __init__(self, disp_components=(6, 7, 8), rot_components=(9, 10, 11),
@@ -481,7 +548,7 @@ class CoarseArrows:
         file=sys.stderr)
       return pipe
     ncomp = arr.GetNumberOfComponents()
-    needed = max(*self.disp_components, *self.rot_components) + 1
+    needed = builtins.max(*self.disp_components, *self.rot_components) + 1
     if ncomp < needed:
         print(f"warning: CoarseArrows: '{self.source_array}' has {ncomp} "
               f"components, need {needed}, skipping", file=sys.stderr)
@@ -510,20 +577,20 @@ class CoarseArrows:
     xmin, xmax, ymin, ymax, zmin, zmax = calc2.GetDataInformation().GetBounds()
     n1, n2 = self.resolution
     if self.plane == "xy":
-      z = 0.5*(zmin+zmax)
+      z = 1.2 * zmax
       dims = [n1, n2, 1]
       bounds = [xmin, xmax, ymin, ymax, z, z]
-      ds = max((xmax-xmin)/max(n1-1,1), (ymax-ymin)/max(n2-1,1))
+      ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (ymax-ymin)/builtins.max(n2-1,1))
     elif self.plane == "xz":
-      y = 0.5*(ymin+ymax)
+      y = 1.2 * ymax
       dims = [n1, 1, n2]
       bounds = [xmin, xmax, y, y, zmin, zmax]
-      ds = max((xmax-xmin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = builtins.max((xmax-xmin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
     elif self.plane == "yz":
-      x = 0.5*(xmin+xmax)
+      x = 1.2 * xmax
       dims = [1, n1, n2]
       bounds = [x, x, ymin, ymax, zmin, zmax]
-      ds = max((ymax-ymin)/max(n1-1,1), (zmax-zmin)/max(n2-1,1))
+      ds = builtins.max((ymax-ymin)/builtins.max(n1-1,1), (zmax-zmin)/builtins.max(n2-1,1))
     else:
       raise ValueError(f"unknown plane: {self.plane}")
 
@@ -592,6 +659,16 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
 
   pipe = reader
   pipe.UpdatePipeline()
+  # under MPI (mpirun -np N pvbatch netvis.py ...) the reader loads a single part;
+  # RedistributeDataSet partitions it once so every downstream filter runs N-way
+  # data-parallel with IceT compositing the render. Serial pvpython is unaffected.
+  # Caveat: --surface triangulates per rank, so partition-boundary seams can appear.
+  from paraview import servermanager
+  nranks = servermanager.vtkProcessModule.GetProcessModule().GetNumberOfLocalPartitions()
+  if nranks > 1:
+    print(f"MPI: redistributing data over {nranks} ranks")
+    pipe = pv.RedistributeDataSet(Input=pipe)
+    pipe.UpdatePipeline()
   pipe = pv.ExtractSurface(Input=pipe)
   pipe.UpdatePipeline()
   rview = pv.GetActiveViewOrCreate("RenderView")
@@ -614,16 +691,57 @@ def netvis(path, ops=(SolidColor("white")), bg="black", view="iso", resolution=(
     scene.PlayMode = "Snap To TimeSteps"
     scene.NumberOfFrames = len(times)
     if len(times) > 0:
-      scene.FramesPerTimestep = max(1, round(duration * fps / len(times)))
+      scene.FramesPerTimestep = builtins.max(1, int(round(duration * fps / len(times))))
     else:
       scene.FramesPerTimestep = 1
     scene.Play()
     pv.Interact()
   if output:
     if len(times) > 0:
-      print("saving animation...")
+      # headless (--show 0): the scene setup above was skipped, do it here
+      scene = pv.GetAnimationScene()
+      scene.UpdateAnimationUsingDataTimeSteps()
+      scene.PlayMode = "Snap To TimeSteps"
+      scene.NumberOfFrames = len(times)
       scene.FramesPerTimestep = 1
-      pv.SaveAnimation(output, rview, FrameRate=fps)
+      # one frame per time step; stretch playback to ~duration via the file fps
+      # (30 fps for 21 steps = 0.7 s of video, unwatchable)
+      rate = builtins.max(1, int(round(len(times) / duration)))
+      if FRAME_RESCALE:
+        # dynamic LUT inside SaveAnimation: a PythonAnimationCue ticks once per
+        # frame, rescaling each registered transfer function to the CURRENT step's
+        # range re-symmetrized about 0. (The built-in AutomaticRescaleRangeMode
+        # "Clamp and update every timestep" also rescales per frame but cannot keep
+        # the diverging map centered on zero.) The extra Render() in tick forces the
+        # pipeline update so the data range belongs to this frame, not the previous.
+        names = sorted({name for _, _, name in FRAME_RESCALE})
+        cue = pv.PythonAnimationCue()
+        cue.Script = f'''
+def start_cue(self): pass
+
+def tick(self):
+    import paraview.simple as pv
+    pv.Render()
+    view = pv.GetActiveView()
+    for rep in view.Representations:
+        an = getattr(rep, "ColorArrayName", None)
+        if an is None or an[1] not in {names!r} or not getattr(rep, "Visibility", 0):
+            continue
+        rep.RescaleTransferFunctionToDataRange(False, True)
+        ctf = pv.GetColorTransferFunction(an[1])
+        pts = ctf.RGBPoints
+        M = max(abs(pts[0]), abs(pts[-4]), 1e-300)   # t=0 is all-zero: avoid a 0-width range
+        ctf.RescaleTransferFunction(-M, M)
+
+def end_cue(self): pass
+'''
+        scene.Cues.append(cue)
+        print("saving animation (per-frame color rescale via animation cue)...")
+        pv.SaveAnimation(output, rview, FrameRate=rate)
+        scene.Cues.remove(cue)
+      else:
+        print("saving animation...")
+        pv.SaveAnimation(output, rview, FrameRate=rate)
     else:
       pv.SaveScreenshot(output, rview, TransparentBackground=1)
 
@@ -647,7 +765,7 @@ def netvis_overlay(path, ops_frames, times, bg="black", view=None,
   rview = pv.GetActiveViewOrCreate("RenderView")
 
   for t, ops in zip(times, ops_frames):
-    t_snap = min(available, key=lambda x: abs(x - t)) if available else t
+    t_snap = builtins.min(available, key=lambda x: abs(x - t)) if available else t
     idx = available.index(t_snap)
 
     extract = pv.ExtractTimeSteps(Input=reader)
@@ -691,6 +809,10 @@ if __name__ == "__main__":
   p.add_argument("--bg", default="black", help="background color")
   p.add_argument("--color-by", default=None, help="color by array 'name' or 'name:N'")
   p.add_argument("--color-invert", action="store_true", help="invert the Cool-to-Warm transfer function")
+  p.add_argument("--color-rescale", choices=["time", "frame"], default="time",
+                 help="color range over all timesteps (default; comparable frames) or "
+                      "per frame (keeps the decaying wave front visible in animations, "
+                      "but the colorbar changes meaning between frames)")
   p.add_argument("--color-categories", default="",
                  help="treat values as categorical, e.g. '1-4,7'; uses HSV-spaced colors")
   p.add_argument("--warp-by", default="values:6,7,8",
@@ -710,6 +832,14 @@ if __name__ == "__main__":
   p.add_argument("-r", "--tubes-radius", type=float, default=20,
                  help="tube radius for beam rendering; 0 disables tubes")
   p.add_argument("--tubes-sides", type=int, default=4, help="number of polygonal sides per tube")
+  p.add_argument("--surface", action="store_true",
+                 help="render the network as a filled Delaunay surface of its (warped) "
+                      "points instead of tubes/beams; for planar nets finer than pixels "
+                      "(fine grids moire as lines)")
+  p.add_argument("--surface-alpha", type=float, default=0.,
+                 help="Delaunay alpha radius for --surface: triangles above this "
+                      "circumradius are dropped (~2x mean edge length keeps holes open "
+                      "in disordered nets); 0 fills to the convex hull")
   p.add_argument("--beams", type=int, default=0,
                  help="if 1, render edges as hollow rectangular beams using CellData normals/widths; overrides --tubes-radius")
   p.add_argument("--beams-array", default="properties",
@@ -782,7 +912,9 @@ if __name__ == "__main__":
       else:
         normal = None
       ops.append(Warp(scale=args.warp_scale, components=comps, source_array=array, normal=normal))
-    if args.beams:
+    if args.surface:
+      ops.append(Surface(alpha=args.surface_alpha))
+    elif args.beams:
       parts = args.beams_cols.split(":")
       if len(parts) != 4:
         parser.error("--beams-cols takes 'n1x,n1y,n1z:n2x,n2y,n2z:w1:w2'")
@@ -816,7 +948,9 @@ if __name__ == "__main__":
     elif args.tubes_radius != 0.:
       ops.append(Tubes(radius=args.tubes_radius, sides=args.tubes_sides))
     if args.color_by:
-      ops.append(ArrayColor(args.color_by, fg=fg, invert=args.color_invert, categories=args.color_categories))
+      ops.append(ArrayColor(args.color_by, fg=fg, invert=args.color_invert,
+                            categories=args.color_categories, bg=args.bg,
+                            rescale=args.color_rescale))
     else:
       ops.append(SolidColor(fg))
     return ops
@@ -825,9 +959,10 @@ if __name__ == "__main__":
     times = [float(s) for s in args.frames.split(",")]
     if args.frame_colors:
       try:
+        import matplotlib.pyplot as plt  # optional: only for --frame-colors colormaps
         cmap = plt.get_cmap(args.frame_colors)
-        colors = [cmap(i / max(len(times) - 1, 1)) for i in range(len(times))]
-      except ValueError:
+        colors = [cmap(i / builtins.max(len(times) - 1, 1)) for i in range(len(times))]
+      except (ValueError, ImportError):
         colors = args.frame_colors.split(",")
     else:
       colors = [args.fg] * len(times)

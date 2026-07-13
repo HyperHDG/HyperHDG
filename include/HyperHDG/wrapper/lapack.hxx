@@ -61,42 +61,6 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
   std::array<lapack_float_t, system_size * system_size>& dense_mat,
   std::array<lapack_float_t, system_size * n_rhs_cols>& rhs);
 /*!*************************************************************************************************
- * \brief   Compute LU factorization of a square matrix (in place).
- *
- * The matrix is overwritten by its LU factorization as computed by LAPACK's \c getrf, and \c ipiv
- * is filled with the pivot indices. The pair (\c dense_mat, \c ipiv) can afterwards be passed to
- * \c lapack_lu_solve arbitrarily often to solve systems with the factorized matrix.
- *
- * \tparam  system_size Size of the system of equations.
- * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
- *                      \c double are supported.
- * \param   dense_mat   Array comprising the matrix. Overwritten by its LU factorization.
- * \param   ipiv        Array that is filled with the pivot indices of the factorization.
- **************************************************************************************************/
-template <unsigned int system_size, typename lapack_float_t>
-void lapack_lu_factor(std::array<lapack_float_t, system_size * system_size>& dense_mat,
-                      std::array<int, system_size>& ipiv);
-/*!*************************************************************************************************
- * \brief   Solve system of equations from LU factorization computed by \c lapack_lu_factor.
- *
- * Unlike \c lapack_solve, the factorization is not recomputed, so repeated solves with the same
- * matrix only pay for forward/backward substitution.
- *
- * \tparam  system_size Size of the system of equations.
- * \tparam  n_rhs_cols  Number of columns of the right hand side matrix. Defaults to 1.
- * \tparam  float_t     Floating type which this function should be executed with. Only \c float and
- *                      \c double are supported.
- * \param   lu          LU factorization as produced by \c lapack_lu_factor.
- * \param   ipiv        Pivot indices as produced by \c lapack_lu_factor.
- * \param   rhs         Array comprising the right-hand side of the system.
- * \retval  rhs         Array comprising the solution of the system of equations.
- **************************************************************************************************/
-template <unsigned int system_size, unsigned int n_rhs_cols = 1, typename lapack_float_t>
-std::array<lapack_float_t, system_size * n_rhs_cols> lapack_lu_solve(
-  const std::array<lapack_float_t, system_size * system_size>& lu,
-  const std::array<int, system_size>& ipiv,
-  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs);
-/*!*************************************************************************************************
  * \brief   Determinant of a rectangular system.
  *
  * Calculate the generalized determinant of a rectangular matrix. If the matrix is square, this is
@@ -329,6 +293,56 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double* mat_a, double*
     throw LAPACKexception();
 }
 /*!*************************************************************************************************
+ * \brief   LU factorization of dense square matrix --- DO NOT USE.
+ *
+ * Caller provides storage for both the matrix (overwritten with the LU factors) and the pivot
+ * array. No heap allocation is performed.
+ **************************************************************************************************/
+inline void lapack_factorize(int system_size, double* mat_a, int* ipiv)
+{
+  int info = -1;
+  dgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_factorize(int system_size, float* mat_a, int* ipiv)
+{
+  int info = -1;
+  sgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
+ * \brief   Solve using LU factors produced by \c lapack_factorize --- DO NOT USE.
+ *
+ * The factored matrix \c mat_a and \c ipiv must come from a previous \c lapack_factorize call.
+ * \c rhs_b holds the right-hand side on entry and the solution on exit.
+ **************************************************************************************************/
+inline void lapack_solve_factored(int system_size,
+                                  int n_rhs_cols,
+                                  double* mat_a,
+                                  int* ipiv,
+                                  double* rhs_b)
+{
+  int info = -1;
+  char trans = 'N';
+  dgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_solve_factored(int system_size,
+                                  int n_rhs_cols,
+                                  float* mat_a,
+                                  int* ipiv,
+                                  float* rhs_b)
+{
+  int info = -1;
+  char trans = 'N';
+  sgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
  * \brief   Solve local system of equations with \c float floating point numbers --- DO NOT USE.
  *
  * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
@@ -352,48 +366,6 @@ inline void lapack_solve(int system_size, int n_rhs_cols, float* mat_a, float* r
   int* ipiv = new int[system_size];
   sgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   delete[] ipiv;
-  if (info != 0)
-    throw LAPACKexception();
-}
-/*!*************************************************************************************************
- * \brief   LU factorization in \c double floating point arithmetic --- DO NOT USE.
- **************************************************************************************************/
-inline void lapack_lu_factor(int system_size, double* mat_a, int* ipiv)
-{
-  int info = -1;
-  dgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
-  if (info != 0)
-    throw LAPACKexception();
-}
-/*!*************************************************************************************************
- * \brief   LU factorization in \c float floating point arithmetic --- DO NOT USE.
- **************************************************************************************************/
-inline void lapack_lu_factor(int system_size, float* mat_a, int* ipiv)
-{
-  int info = -1;
-  sgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
-  if (info != 0)
-    throw LAPACKexception();
-}
-/*!*************************************************************************************************
- * \brief   Solve from LU factorization in \c double floating point arithmetic --- DO NOT USE.
- **************************************************************************************************/
-inline void lapack_lu_solve(int system_size, int n_rhs_cols, double* lu, int* ipiv, double* rhs_b)
-{
-  int info = -1;
-  char trans = 'N';
-  dgetrs_(&trans, &system_size, &n_rhs_cols, lu, &system_size, ipiv, rhs_b, &system_size, &info);
-  if (info != 0)
-    throw LAPACKexception();
-}
-/*!*************************************************************************************************
- * \brief   Solve from LU factorization in \c float floating point arithmetic --- DO NOT USE.
- **************************************************************************************************/
-inline void lapack_lu_solve(int system_size, int n_rhs_cols, float* lu, int* ipiv, float* rhs_b)
-{
-  int info = -1;
-  char trans = 'N';
-  sgetrs_(&trans, &system_size, &n_rhs_cols, lu, &system_size, ipiv, rhs_b, &system_size, &info);
   if (info != 0)
     throw LAPACKexception();
 }
@@ -465,26 +437,22 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
 }
 
 // -------------------------------------------------------------------------------------------------
-// lapack_lu_factor / lapack_lu_solve
+// lapack_factorize / lapack_solve_factored
 // -------------------------------------------------------------------------------------------------
 
 template <unsigned int system_size, typename lapack_float_t>
-void lapack_lu_factor(std::array<lapack_float_t, system_size * system_size>& dense_mat,
+void lapack_factorize(std::array<lapack_float_t, system_size * system_size>& dense_mat,
                       std::array<int, system_size>& ipiv)
 {
-  lapack_lu_factor(system_size, dense_mat.data(), ipiv.data());
+  lapack_factorize(system_size, dense_mat.data(), ipiv.data());
 }
 
 template <unsigned int system_size, unsigned int n_rhs_cols, typename lapack_float_t>
-std::array<lapack_float_t, system_size * n_rhs_cols> lapack_lu_solve(
-  const std::array<lapack_float_t, system_size * system_size>& lu,
-  const std::array<int, system_size>& ipiv,
-  std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
+void lapack_solve_factored(std::array<lapack_float_t, system_size * system_size>& dense_mat,
+                           std::array<int, system_size>& ipiv,
+                           std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
 {
-  // getrs does not modify the factorization or the pivots, hence the const_casts are safe.
-  lapack_lu_solve(system_size, n_rhs_cols, const_cast<lapack_float_t*>(lu.data()),
-                  const_cast<int*>(ipiv.data()), rhs.data());
-  return rhs;
+  lapack_solve_factored(system_size, n_rhs_cols, dense_mat.data(), ipiv.data(), rhs.data());
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -2,6 +2,8 @@
 #define PARAMETERS_H
 
 #include <array>
+#include <petsc.h>
+#include <petscviewerhdf5.h>
 #include <HyperHDG/dense_la.hxx>
 
 template <unsigned int space_dimT, typename param_float_t = double>
@@ -1397,7 +1399,7 @@ struct TestTimoWave9
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
  * \authors   Joseph Holten, KIT, 2026--
  **************************************************************************************************/
-template <unsigned int dim, typename Scalar = double>
+template <unsigned int dim = 3, typename Scalar = double>
 struct TimoshenkoStiffness
 {
   using Pt = Point<dim, Scalar>;
@@ -1406,10 +1408,28 @@ struct TimoshenkoStiffness
   static inline Scalar length = 0;
 
   /// Applied tensile strain (dimensionless)
-  static inline Scalar strain = 0;
+  static inline Scalar strain = .15;
 
   /// Strain normal component
-  static inline unsigned int comp = 0;
+  static inline unsigned int comp = 2;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
+    comp = comp_;
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
   {
@@ -1460,8 +1480,402 @@ struct TimoshenkoStiffness
 };
 
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network gaussian stiffness experiment.
+ *
+ *            Applies a prescribed gaussian strain to the Dirichlet boundary
+ *            of a clamped beam network.
+ *
+ *            Both `length` and `strain` are runtime-configurable static members
+ *            and must be set after loading the mesh, before the solve.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoGaussian
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. Must be set at runtime after loading the network.
+  static inline Scalar length = 0;
+
+  /// Applied tensile strain (dimensionless)
+  static inline Scalar strain = .15;
+
+  /// Spatial variance (sigma^2) of the Gaussian bump relative to length
+  static inline Scalar std_x = 1;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_x", &std_x, NULL));
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_u(point, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return analytic_result_phi(point, normal);
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    Pt center(length*.5);
+    Pt r = point - center;
+    r[2] = 0;
+    Scalar r2 = scalar_product(r,r);
+    Scalar s = std_x * length;
+    return strain * length * exp(-r2/(2*s*s)) * normal[2];
+  }
+
+  // stub
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
 
 
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network drumhead tap test.
+ *
+ *            Models a "drumhead tap": a single localized impulse applied at the center of a
+ *            clamped beam network. The distributed load `right_hand_side_n` is the product of a
+ *            Gaussian bump in space (centered at the domain center) and a Gaussian bump in time
+ *            (centered at `tap_time`):
+ *
+ *              f(x, t) = amplitude
+ *                        * exp(-|x - center|^2 / (2 * var_space))
+ *                        * exp(-(t - tap_time)^2 / (2 * var_time)) * e_comp
+ *
+ *            The force points in the `comp` spatial direction. The center is taken at
+ *            `length / 2` in every spatial dimension, where `length` is the domain extent shared
+ *            with TimoshenkoStiffness (i.e. a `[0, length]^dim` box is assumed).
+ *
+ *            `length`, `var_space`, `var_time`, `tap_time`, `amplitude` and `comp` are runtime-
+ *            configurable static members and must be set after loading the network, before the
+ *            solve.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoDrumhead
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction. The tap is centered at `length / 2` in each
+  /// spatial dimension. Must be set at runtime after loading the network.
+  static inline Scalar length = 0;
+
+  /// Spatial variance (sigma^2) of the Gaussian force bump.
+  static inline Scalar std_x = 1;
+
+  /// Temporal variance (sigma^2) of the Gaussian force bump.
+  static inline Scalar std_t = 1;
+
+  /// Time at which the tap peaks.
+  static inline Scalar tap_time = 0;
+
+  /// Peak force amplitude of the tap.
+  static inline Scalar amplitude = 1;
+
+  /// Integral of the Gaussian force bump over time and space.
+  static inline Scalar energy = 1;
+
+  /// Spatial component the tap force points in.
+  static inline unsigned int comp = 2;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_x", &std_x, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-std_t", &std_t, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-tap_time", &tap_time, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-energy", &energy, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
+    comp = comp_;
+
+    amplitude = energy / (std_x*std_x*std_t);
+
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    // Tap center: in-plane at the domain mid-point. The grid lies in the z=0 plane, so the
+    // out-of-plane coordinate must be 0 -- a scalar 0.5*length broadcast would sit 0.5 out of
+    // plane and the bump exp(-0.25/(2 std_x^2)) would vanish for any sharp std_x.
+    Pt center(0.5 * length);
+    center[dim - 1] = 0;
+    const Scalar r2 = scalar_product(point - center, point - center);
+    const Scalar space_bump = std::exp(-r2 / (2 * std_x*std_x));
+
+    const Scalar dt = time - tap_time;
+    const Scalar time_bump = std::exp(-dt * dt / (2 * std_t*std_t));
+
+    Pt force(0.);
+    force[comp] = amplitude * space_bump * time_bump;
+    return scalar_product(force, normal);
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network sinusoidal displacement at clamped boundary.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim, typename Scalar = double>
+struct TimoshenkoSinClamp
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Global extent of the domain in x-direction.
+  static inline Scalar length = 1;
+
+  /// Spatial component the displacement is prescribed in.
+  static inline unsigned int comp = 2;
+
+  /// Temporal frequency
+  static inline Scalar freq = 1;
+
+  /// Displacement strain as fraction of length
+  static inline Scalar strain = .10;
+
+  /// Read runtime parameters: domain extent from the mesh file's "/domain" "size" attribute, and
+  /// `strain`/`comp` from PETSc options (each falling back to the static defaults above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscViewer viewer;
+    PetscReal size[3];
+    PetscInt comp_ = comp;
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-strain", &strain, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-freq", &freq, NULL));
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-comp", &comp_, NULL));
+    comp = comp_;
+    PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, path, FILE_MODE_READ, &viewer));
+    PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/domain", "size", PETSC_DOUBLE, NULL, size));
+    PetscCall(PetscViewerDestroy(&viewer));
+    length = size[0];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar time = 0.)
+  {
+    Pt res(0.);
+    res[comp] = strain*length*sin(2*M_PI*freq*time);
+    return scalar_product(res, normal);
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
+
+
+/*!*************************************************************************************************
+ * \brief     Timoschenko Network constant force wave test.
+ *
+ *            timowave counterpart of TimoshenkoClampedConstant (network -test constant,
+ *            timoshenko_network.hxx): the same constant body force is switched on at t = 0
+ *            with the network at rest, so it sags towards the static solution and
+ *            oscillates about it with amplitude ~ the static sag.
+ *
+ * \authors   Joseph Holten, KIT, 2026--
+ **************************************************************************************************/
+template <unsigned int dim = 3, typename Scalar = double>
+struct TimoshenkoConstant
+{
+  using Pt = Point<dim, Scalar>;
+
+  /// Applied force (constant in space and time)
+  static inline Scalar force = 1;
+
+  /// Body loads act on material only: virtual weld edges (properties mass == 0) receive no
+  /// volume RHS, matching TimoshenkoClampedConstant (see ne18-20 solution inspection).
+  static constexpr bool massless_unloaded = true;
+
+  /// Read `force` from PETSc options (falling back to the static default above).
+  static PetscErrorCode Init(const char* path)
+  {
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-force", &force, NULL));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static Scalar right_hand_side_n(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return force;
+  }
+
+  static Scalar right_hand_side_m(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar dirichlet_value_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_u(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Scalar analytic_result_phi(const Pt& point, const Pt& normal, const Scalar = 0.)
+  {
+    return 0.;
+  }
+
+  static Pt initial_u(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_v(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_s(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+
+  static Pt initial_r(const Pt& point, const Scalar time = 0.) {
+    return {};
+  }
+};
 
 
 #endif // PARAMETERS_H

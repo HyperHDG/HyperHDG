@@ -77,6 +77,24 @@ struct DomainInfo
 
   unsigned int n_properties;
   /*!***********************************************************************************************
+   * \brief   Number of hypernodes owned by this rank (== n_hyNodes when not distributed).
+   *
+   * For a distributed hypergraph the local hypernodes are numbered owned-first: indices
+   * [0, n_owned_hyNodes) are owned by this rank, [n_owned_hyNodes, n_hyNodes) are ghosts.
+   ************************************************************************************************/
+  hyNode_index_t n_owned_hyNodes;
+  /*!***********************************************************************************************
+   * \brief   Total number of hypernodes across all ranks (== n_hyNodes when not distributed).
+   ************************************************************************************************/
+  hyNode_index_t n_global_hyNodes;
+  /*!***********************************************************************************************
+   * \brief   Local-to-global hypernode map (empty == identity, i.e. not distributed).
+   *
+   * lgmap[local_hyNode] is the global hypernode index. Used to emit global degree-of-freedom
+   * indices for the distributed matrix while all vector/span access stays in local indexing.
+   ************************************************************************************************/
+  vectorT<hyNode_index_t> lgmap;
+  /*!***********************************************************************************************
    * \brief   Vector containing points.
    ************************************************************************************************/
   vectorT<pointT> points;
@@ -103,6 +121,8 @@ struct DomainInfo
     n_hyNodes(n_hyNode),
     n_points(n_point),
     n_properties(0),
+    n_owned_hyNodes(n_hyNode),
+    n_global_hyNodes(n_hyNode),
     points(n_points),
     hyNodes_hyEdge(n_hyEdges),
     hyFaces_hyEdge(n_hyEdges),
@@ -185,7 +205,7 @@ template <unsigned int hyEdge_dim,
           typename hyNode_index_t = hyEdge_index_t,
           typename pt_index_t = hyNode_index_t>
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-read_domain_hdf5(const std::string& filename)
+read_domain_hdf5(const std::string& filename, bool serialize = true)
 {
   PetscViewer viewer;
   Vec points, props;
@@ -202,7 +222,9 @@ read_domain_hdf5(const std::string& filename)
 
   MPI_Comm_rank(world, &rank);
   MPI_Comm_size(world, &size);
-  if (rank != 0) MPI_Recv(NULL, 0, MPI_INT, rank-1, 0, world, MPI_STATUS_IGNORE);
+  // Serialize concurrent reads when every rank reads the whole file (token ring). When only rank 0
+  // reads (distributed path), serialize must be false to avoid a deadlock on the unmatched send.
+  if (serialize && rank != 0) MPI_Recv(NULL, 0, MPI_INT, rank-1, 0, world, MPI_STATUS_IGNORE);
 
   PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
   PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
@@ -221,7 +243,7 @@ read_domain_hdf5(const std::string& filename)
   PetscCallAbort(comm, ISLoad(edges, viewer));
   PetscCallAbort(comm, ISLoad(types_faces, viewer));
 
-  if (rank != size-1) MPI_Send(NULL, 0, MPI_INT, rank+1, 0, world);
+  if (serialize && rank != size-1) MPI_Send(NULL, 0, MPI_INT, rank+1, 0, world);
 
   PetscCallAbort(comm, ISGetSize(edges, &n_edges));
   PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
@@ -497,6 +519,10 @@ read_domain_geo(const std::string& filename)
   return domain_info;
 }  // end of read_domain_geo
 
+#ifdef HYPERHDG_PETSC
+#include <HyperHDG/distribute_domain.hxx>
+#endif
+
 /*!*************************************************************************************************
  * \brief   General Function to read domain from input file.
  *
@@ -518,6 +544,7 @@ read_domain_geo(const std::string& filename)
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
 
+#ifdef HYPERHDG_PETSC
 bool read_domain_is_h5(const char *path) {
   if (H5Fis_accessible(path, H5P_DEFAULT) <= 0) return false; // not an h5 file or inaccessible
 
@@ -530,6 +557,7 @@ bool read_domain_is_h5(const char *path) {
   H5Fclose(file);
   return true;
 }
+#endif
 
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
@@ -544,8 +572,35 @@ read_domain(std::string filename)
   hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
 #ifdef HYPERHDG_PETSC
+  {
+    // The legacy replicated assembly (assembly-level edge split) has been removed, so multi-rank
+    // runs must distribute the domain at the data level. Only the HDF5 + hyEdge_dim == 1 path does
+    // that; any other domain type read on >1 rank would (silently) assemble the full matrix on
+    // every rank, so reject it here.
+    int n_ranks = 1;
+    MPI_Comm_size(PETSC_COMM_WORLD, &n_ranks);
+    hy_check(n_ranks == 1 || read_domain_is_h5(filename.c_str()),
+             "multi-rank runs require an HDF5 (.geo.h5) domain (hyEdge_dim == 1); '"
+               << filename << "' is not HDF5.");
+  }
   if (read_domain_is_h5(filename.c_str()))
   {
+    int comm_size = 1;
+    MPI_Comm_size(PETSC_COMM_WORLD, &comm_size);
+    if (comm_size > 1)
+    {
+      // Distributed: rank 0 reads, partitions and scatters owned chunks (hyEdge_dim == 1 only).
+      if constexpr (hyEdge_dim == 1)
+      {
+        auto domain_info =
+          distribute_domain<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t,
+                            pt_index_t>(filename, PETSC_COMM_WORLD);
+        hy_assert(domain_info.check_consistency(), "distribute_domain: inconsistent result");
+        return domain_info;
+      }
+      else
+        hy_check(false, "distributed domain reading is only supported for hyEdge_dim == 1.");
+    }
     auto domain_info = read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
                               hyNode_index_t, pt_index_t>(filename);
     hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");

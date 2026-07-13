@@ -19,6 +19,21 @@ PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span);
 PetscErrorCode VecRestoreSpan(Vec x, std::span<PetscScalar>& span);
 
 struct KSPMonitorYAML_Ctx {
-  PetscLogDouble t0;
+  // monitor fires on every KSPSolve once installed; quiet suppresses it during the
+  // reference solve in KSPMonitorYAML_Setup
+  PetscBool quiet = PETSC_FALSE;
+  PetscBool enorm = PETSC_FALSE;
+  Mat mat = NULL;
+  Vec u_ref = NULL, e = NULL, Ke = NULL;
+  // initial timepoint relative to which the iteration times are measured
+  PetscLogDouble t0 = 0;
+  // |u_ref - u^(0)|_K, fixed by KSPConvergedEnorm at it 0 of the main solve
+  PetscReal enorm0 = 0;
+  // energy error the monitor computed this iteration; the convergence test (which runs after the
+  // monitor within an iteration) reuses it to avoid a second MatMult (-1 = no valid entry)
+  PetscInt enorm_it = -1;
+  PetscReal enorm_val = 0;
 };
 PetscErrorCode KSPMonitorYAML(KSP ksp, PetscInt it, PetscReal rnorm, PetscViewerAndFormat *vf);
+PetscErrorCode KSPConvergedEnorm(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx);
+PetscErrorCode KSPMonitorYAML_Setup(KSP ksp, Vec rhs, void *ctx);

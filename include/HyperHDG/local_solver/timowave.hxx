@@ -226,6 +226,37 @@ class TimoshenkoWave
    ************************************************************************************************/
   static constexpr unsigned int n_loc_dofs_ = 6 * space_dim * n_shape_fct_;
   /*!***********************************************************************************************
+   * \brief   Block-diagonal decomposition of the local matrix into independent components.
+   *
+   * The local matrix decouples into 4 connected components (see assemble_loc_matrix). Each
+   * variable group dim in 0..2*space_dim-1 forms a self-coupled triplet of variable-blocks
+   * {sigma, w, wdot} = {dim, 2*space_dim+dim, 4*space_dim+dim}; the only links between triplets
+   * are the t x n cross-product terms, which (for space_dim==3) couple the transverse shear
+   * force with the perpendicular bending rotation. The components are, in units of variable-
+   * blocks of width n_shape_fct_:
+   *   A = {n_x, u_x, v_x}            (axial)        size 3
+   *   B = {m_x, r_x, s_x}            (torsion)      size 3
+   *   C = {n_z,u_z,v_z, m_y,r_y,s_y} (shear+bend)   size 6
+   *   D = {n_y,u_y,v_y, m_z,r_z,s_z} (shear+bend)   size 6
+   * Level 2 (assemble_schur / solve_local_problem) further eliminates each triplet's diagonal
+   * mass blocks (sigma, wdot) explicitly, leaving only the displacement w: A,B reduce to an
+   * nw_ x nw_ system, C,D to an n2w_ x n2w_ system.
+   ************************************************************************************************/
+  static_assert(space_dim == 3, "Block decomposition of the local matrix assumes space_dim==3 "
+                                "(the t x n cross-product coupling is 3D-specific).");
+  static constexpr unsigned int nw_ = n_shape_fct_;       // single displacement block
+  static constexpr unsigned int n2w_ = 2 * n_shape_fct_;  // cross-coupled displacement pair
+  // Variable-block index (in units of n_shape_fct_) of the (sigma, w, wdot) of triplet `dim`:
+  static constexpr unsigned int sig_blk(unsigned int dim) { return dim; }
+  static constexpr unsigned int w_blk(unsigned int dim) { return 2 * space_dim + dim; }
+  static constexpr unsigned int wdot_blk(unsigned int dim) { return 4 * space_dim + dim; }
+  // Triplet dims forming the four independent components: A,B single; C,D couple a force group
+  // dim_n with a rotation group dim_r via the cross product (sign +1 for C, -1 for D).
+  static constexpr unsigned int compA_dim = 0;
+  static constexpr unsigned int compB_dim = 3;
+  static constexpr unsigned int compC_dim_n = 2, compC_dim_r = 4;
+  static constexpr unsigned int compD_dim_n = 1, compD_dim_r = 5;
+  /*!***********************************************************************************************
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    *
    * This allows to the use of this quantity as template parameter in member functions.
@@ -263,12 +294,19 @@ class TimoshenkoWave
   struct data_type
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
-    // Cached LU factorization of the local matrix. The matrix is time-independent (cf.
-    // assemble_loc_matrix, which ignores its time argument), so it is factorized once per edge
-    // and reused in every solve_local_problem call.
-    SmallSquareMat<n_loc_dofs_, lSol_float_t> loc_mat_lu;
-    std::array<int, n_loc_dofs_> loc_mat_ipiv;
-    bool loc_mat_factored = false;
+    // Cached Schur factorization of the local matrix (see assemble_schur). The matrix only depends
+    // on geometry and (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
+    // Shared per-edge integral blocks (row-major n x n, M diagonal) used in reduction/back-sub:
+    std::array<lSol_float_t, n_shape_fct_> M_inv;                       // 1 / diag(M)
+    std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> Gmat;         // G   = int (grad phi) phi
+    std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> BmG;          // B-G (boundary normal - G)
+    SmallVec<4 * space_dim, lSol_float_t> extra;                        // C_n, C_m, C_u, C_r
+    // LU factors (column-major) of the displacement Schur systems of the four components:
+    std::array<lSol_float_t, nw_ * nw_> lu_A, lu_B;
+    std::array<int, nw_> ipiv_A, ipiv_B;
+    std::array<lSol_float_t, n2w_ * n2w_> lu_C, lu_D;
+    std::array<int, n2w_> ipiv_C, ipiv_D;
+    bool loc_mat_factorized = false;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
@@ -501,6 +539,184 @@ class TimoshenkoWave
     return glob_lambda;
   }
 
+  /*!***********************************************************************************************
+   * \brief   Assemble and factorize the displacement Schur systems of the four components.
+   *
+   * Builds the shared per-edge integral blocks M (diagonal), G = int (grad phi) phi, B = boundary
+   * normal flux and F = boundary mass; eliminates each triplet's sigma and wdot blocks (both pure
+   * mass) explicitly to obtain the displacement Schur operator
+   *   S(C_sig, C_u) = theta*tau*F + theta*C_sig*(B-G) M^{-1} G + (C_u/(theta*dt^2)) M.
+   * Components A,B are single triplets (nw_ x nw_); C,D couple a force group (C_sig=C_sig_n) with a
+   * rotation group via the cross product into an n2w_ x n2w_ system. M_inv, G and (B-G) are cached
+   * for the reduction / back-substitution in solve_local_problem.
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  inline void assemble_schur(hyEdgeT& hyper_edge) const
+  {
+    auto& data = hyper_edge.data;
+    constexpr unsigned int n = n_shape_fct_;
+    data.extra = get_extra_coeffs(hyper_edge);  // C_n, C_m, C_u, C_r
+
+    std::array<lSol_float_t, nw_> M_diag;
+    std::array<lSol_float_t, nw_ * nw_> G, Bm, F;  // row-major; Bm = B - G
+    M_diag.fill(0.);
+    G.fill(0.);
+    Bm.fill(0.);
+    F.fill(0.);
+    for (unsigned int i = 0; i < n; ++i)
+      for (unsigned int j = 0; j < n; ++j)
+      {
+        const lSol_float_t vol =
+          integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        const auto grad =
+          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                         decltype(hyEdgeT::geometry)>(
+            i, j, hyper_edge.geometry);
+        lSol_float_t face_integral = 0., normal_integral = 0.;
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        {
+          const lSol_float_t h =
+            integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+          face_integral += h;
+          normal_integral += h * hyper_edge.geometry.local_normal(face).operator[](0);
+        }
+        if (i == j)
+          M_diag[i] = vol;  // M is diagonal: orthogonal Legendre basis on affine geometry
+        G[i * n + j] = grad[0];
+        Bm[i * n + j] = normal_integral - grad[0];
+        F[i * n + j] = face_integral;
+      }
+    for (unsigned int i = 0; i < n; ++i)
+      data.M_inv[i] = 1. / M_diag[i];
+    data.Gmat = G;
+    data.BmG = Bm;
+
+    // K = (B-G) M^{-1} G  (row-major), the dense part of the Schur operator.
+    std::array<lSol_float_t, nw_ * nw_> K;
+    for (unsigned int r = 0; r < n; ++r)
+      for (unsigned int c = 0; c < n; ++c)
+      {
+        lSol_float_t acc = 0.;
+        for (unsigned int k = 0; k < n; ++k)
+          acc += Bm[r * n + k] * data.M_inv[k] * G[k * n + c];
+        K[r * n + c] = acc;
+      }
+
+    // Entry (r,c) of the single-triplet Schur operator S(C_sig, C_u).
+    auto S_entry = [&](lSol_float_t C_sig, lSol_float_t C_u, unsigned int r, unsigned int c) {
+      lSol_float_t v = theta_ * tau_ * F[r * n + c] + theta_ * C_sig * K[r * n + c];
+      if (r == c)
+        v += (C_u / (theta_ * delta_t_ * delta_t_)) * M_diag[r];
+      return v;
+    };
+
+    // Single component: factorize S directly (column-major for LAPACK).
+    auto fill_single = [&](std::array<lSol_float_t, nw_ * nw_>& lu, unsigned int dim) {
+      const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+      const lSol_float_t C_u = data.extra[w_blk(dim)];
+      for (unsigned int c = 0; c < nw_; ++c)
+        for (unsigned int r = 0; r < nw_; ++r)
+          lu[c * nw_ + r] = S_entry(C_sig, C_u, r, c);
+    };
+    fill_single(data.lu_A, compA_dim);
+    Wrapper::lapack_factorize(nw_, data.lu_A.data(), data.ipiv_A.data());
+    fill_single(data.lu_B, compB_dim);
+    Wrapper::lapack_factorize(nw_, data.lu_B.data(), data.ipiv_B.data());
+
+    // Coupled component (force group dim_n, rotation group dim_r), cross sign s:
+    //   [ S_n                 s*theta*C_sig_n*(B-G)   ]
+    //   [ s*theta*C_sig_n*G   S_r + theta*C_sig_n*M   ]
+    auto fill_coupled = [&](std::array<lSol_float_t, n2w_ * n2w_>& lu, lSol_float_t s,
+                            unsigned int dim_n, unsigned int dim_r) {
+      const lSol_float_t Csn = data.extra[sig_blk(dim_n)], Cun = data.extra[w_blk(dim_n)];
+      const lSol_float_t Csr = data.extra[sig_blk(dim_r)], Cur = data.extra[w_blk(dim_r)];
+      for (unsigned int c = 0; c < n2w_; ++c)
+        for (unsigned int r = 0; r < n2w_; ++r)
+        {
+          lSol_float_t v;
+          if (r < nw_ && c < nw_)
+            v = S_entry(Csn, Cun, r, c);
+          else if (r < nw_ && c >= nw_)
+            v = s * theta_ * Csn * Bm[r * n + (c - nw_)];
+          else if (r >= nw_ && c < nw_)
+            v = s * theta_ * Csn * G[(r - nw_) * n + c];
+          else
+          {
+            v = S_entry(Csr, Cur, r - nw_, c - nw_);
+            if (r == c)
+              v += theta_ * Csn * M_diag[r - nw_];
+          }
+          lu[c * n2w_ + r] = v;
+        }
+    };
+    fill_coupled(data.lu_C, +1., compC_dim_n, compC_dim_r);
+    Wrapper::lapack_factorize(n2w_, data.lu_C.data(), data.ipiv_C.data());
+    fill_coupled(data.lu_D, -1., compD_dim_n, compD_dim_r);
+    Wrapper::lapack_factorize(n2w_, data.lu_D.data(), data.ipiv_D.data());
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Reduce triplet \c dim to its displacement right-hand side; stash mass-scaled rhs.
+   *
+   * rhs_w = b_w - theta*C_sig*(B-G) M^{-1} b_sig - (1/(theta*dt)) b_wdot. Outputs M^{-1} b_sig and
+   * M^{-1} b_wdot for the back-substitution.
+   ************************************************************************************************/
+  template <typename DataT>
+  inline std::array<lSol_float_t, nw_> triplet_reduce(
+    const DataT& data, unsigned int dim, const SmallVec<n_loc_dofs_, lSol_float_t>& rhs,
+    std::array<lSol_float_t, nw_>& m_inv_bsig, std::array<lSol_float_t, nw_>& m_inv_bwdot) const
+  {
+    constexpr unsigned int n = n_shape_fct_;
+    const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+    std::array<lSol_float_t, nw_> rhs_w, bw;
+    for (unsigned int k = 0; k < n; ++k)
+    {
+      m_inv_bsig[k] = data.M_inv[k] * rhs[sig_blk(dim) * n + k];
+      m_inv_bwdot[k] = data.M_inv[k] * rhs[wdot_blk(dim) * n + k];
+      bw[k] = rhs[w_blk(dim) * n + k];
+    }
+    for (unsigned int r = 0; r < n; ++r)
+    {
+      lSol_float_t bmg_x = 0.;
+      for (unsigned int c = 0; c < n; ++c)
+        bmg_x += data.BmG[r * n + c] * m_inv_bsig[c];
+      rhs_w[r] = bw[r] - theta_ * C_sig * bmg_x - rhs[wdot_blk(dim) * n + r] / (theta_ * delta_t_);
+    }
+    return rhs_w;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Recover sigma, w, wdot of triplet \c dim from the solved displacement w and scatter.
+   *
+   * sigma = C_sig (M^{-1} b_sig + M^{-1} G w + s*w_partner),  wdot = (1/theta) M^{-1} b_wdot +
+   * (C_u/(theta*dt)) w. \c s_cross is 0 for single components; for a coupled force group it is the
+   * cross sign and \c w_partner the rotation group's displacement.
+   ************************************************************************************************/
+  template <typename DataT>
+  inline void triplet_backsub(const DataT& data, unsigned int dim, lSol_float_t s_cross,
+                              const std::array<lSol_float_t, nw_>& w,
+                              const std::array<lSol_float_t, nw_>& w_partner,
+                              const std::array<lSol_float_t, nw_>& m_inv_bsig,
+                              const std::array<lSol_float_t, nw_>& m_inv_bwdot,
+                              SmallVec<n_loc_dofs_, lSol_float_t>& result) const
+  {
+    constexpr unsigned int n = n_shape_fct_;
+    const lSol_float_t C_sig = data.extra[sig_blk(dim)];
+    const lSol_float_t C_u = data.extra[w_blk(dim)];
+    for (unsigned int k = 0; k < n; ++k)
+    {
+      lSol_float_t Gw = 0.;
+      for (unsigned int c = 0; c < n; ++c)
+        Gw += data.Gmat[k * n + c] * w[c];
+      result[sig_blk(dim) * n + k] =
+        C_sig * (m_inv_bsig[k] + data.M_inv[k] * Gw + s_cross * w_partner[k]);
+      result[w_blk(dim) * n + k] = w[k];
+      result[wdot_blk(dim) * n + k] =
+        m_inv_bwdot[k] / theta_ + (C_u / (theta_ * delta_t_)) * w[k];
+    }
+  }
+
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
                                                                  const unsigned int solution_type,
@@ -517,17 +733,57 @@ class TimoshenkoWave
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-      // std::cout << "-- solve_local" << std::endl;
-      // std::cout << rhs << std::endl;
-      if (!hyper_edge.data.loc_mat_factored)
+
+      auto& data = hyper_edge.data;
+      if (!data.loc_mat_factorized)
       {
-        hyper_edge.data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
-        Wrapper::lapack_lu_factor<n_loc_dofs_, lSol_float_t>(hyper_edge.data.loc_mat_lu.data(),
-                                                             hyper_edge.data.loc_mat_ipiv);
-        hyper_edge.data.loc_mat_factored = true;
+        assemble_schur(hyper_edge);
+        data.loc_mat_factorized = true;
       }
-      return Wrapper::lapack_lu_solve<n_loc_dofs_, 1U, lSol_float_t>(
-        hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv, rhs.data());
+
+      constexpr unsigned int n = n_shape_fct_;
+      SmallVec<n_loc_dofs_, lSol_float_t> result;
+      const std::array<lSol_float_t, nw_> dummy{};  // unused w_partner for single components
+
+      // Single components A, B.
+      auto solve_single = [&](std::array<lSol_float_t, nw_ * nw_>& lu, std::array<int, nw_>& ipiv,
+                              unsigned int dim) {
+        std::array<lSol_float_t, nw_> mis, miw;
+        auto rw = triplet_reduce(data, dim, rhs, mis, miw);
+        Wrapper::lapack_solve_factored(nw_, 1, lu.data(), ipiv.data(), rw.data());
+        triplet_backsub(data, dim, 0., rw, dummy, mis, miw, result);
+      };
+      solve_single(data.lu_A, data.ipiv_A, compA_dim);
+      solve_single(data.lu_B, data.ipiv_B, compB_dim);
+
+      // Coupled components C (s=+1), D (s=-1): force group dim_n, rotation group dim_r.
+      auto solve_coupled = [&](std::array<lSol_float_t, n2w_ * n2w_>& lu,
+                               std::array<int, n2w_>& ipiv, lSol_float_t s, unsigned int dim_n,
+                               unsigned int dim_r) {
+        std::array<lSol_float_t, nw_> mis_n, miw_n, mis_r, miw_r;
+        auto rw_n = triplet_reduce(data, dim_n, rhs, mis_n, miw_n);
+        auto rw_r = triplet_reduce(data, dim_r, rhs, mis_r, miw_r);
+        const lSol_float_t Csn = data.extra[sig_blk(dim_n)];
+        std::array<lSol_float_t, n2w_> rw;
+        for (unsigned int k = 0; k < n; ++k)
+        {
+          rw[k] = rw_n[k];
+          rw[nw_ + k] = rw_r[k] - s * theta_ * Csn * rhs[sig_blk(dim_n) * n + k];
+        }
+        Wrapper::lapack_solve_factored(n2w_, 1, lu.data(), ipiv.data(), rw.data());
+        std::array<lSol_float_t, nw_> w_n, w_r;
+        for (unsigned int k = 0; k < n; ++k)
+        {
+          w_n[k] = rw[k];
+          w_r[k] = rw[nw_ + k];
+        }
+        triplet_backsub(data, dim_n, s, w_n, w_r, mis_n, miw_n, result);  // force group: +s*w_r
+        triplet_backsub(data, dim_r, 0., w_r, dummy, mis_r, miw_r, result);  // rotation group
+      };
+      solve_coupled(data.lu_C, data.ipiv_C, +1., compC_dim_n, compC_dim_r);
+      solve_coupled(data.lu_D, data.ipiv_D, -1., compD_dim_n, compD_dim_r);
+
+      return result;
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -602,7 +858,7 @@ class TimoshenkoWave
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -624,6 +880,14 @@ class TimoshenkoWave
     }
 
     return lambda_values_out;
+  }
+
+  template <typename hyEdgeT>
+  bool is_dirichlet(hyEdgeT& hyper_edge, unsigned int node, unsigned int dof) const
+  {
+    if (hyper_edge.node_descriptor[node] & (1ul << 6)) return false;  // static-only flag
+    if (dof >= 2 * space_dim) return false;
+    return hyper_edge.node_descriptor[node] & (1ul << dof);
   }
 
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
@@ -660,7 +924,7 @@ class TimoshenkoWave
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
@@ -815,6 +1079,90 @@ class TimoshenkoWave
 
     // error_t is 2 components since the trace error was added; there is no trace norm (yet)
     return std::array<lSol_float_t, 2U>({norm, 0.});
+  }
+
+  static constexpr unsigned int n_energy_components() { return 6 * space_dim; }
+
+  // Per-edge energy split into 6*space_dim components, ordered (block of size space_dim each):
+  //   0: ½ ∫ n²/C_n   1: ½ ∫ m²/C_m   2: ½ ∫ v²/C_u   3: ½ ∫ s²/C_r
+  //   4: ½ τ Σ_bdr ∫ (u-λ_u)²            5: ½ τ Σ_bdr ∫ (r-λ_r)²
+  template <class hyEdgeT>
+  std::array<lSol_float_t, n_energy_components()> energy(
+    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t /*time*/ = 0.) const
+  {
+    std::array<lSol_float_t, n_energy_components()> result;
+    result.fill(0.);
+
+    auto& n_old = hyper_edge.data.n_old;
+    auto& m_old = hyper_edge.data.m_old;
+    auto& u_old = hyper_edge.data.u_old;
+    auto& r_old = hyper_edge.data.r_old;
+    auto& v_old = hyper_edge.data.v_old;
+    auto& s_old = hyper_edge.data.s_old;
+
+    auto extra = get_extra_coeffs(hyper_edge);
+    auto lambda_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+
+    for (unsigned int d = 0; d < space_dim; ++d) {
+      const lSol_float_t Cn = extra[0 * space_dim + d];
+      const lSol_float_t Cm = extra[1 * space_dim + d];
+      const lSol_float_t Cu = extra[2 * space_dim + d];
+      const lSol_float_t Cr = extra[3 * space_dim + d];
+
+      lSol_float_t strain_n = 0, strain_m = 0, kin_v = 0, kin_s = 0;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        for (unsigned int j = 0; j < n_shape_fct_; ++j) {
+          const lSol_float_t mij =
+            integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, hyper_edge.geometry);
+          strain_n += n_old[d * n_shape_fct_ + i] * n_old[d * n_shape_fct_ + j] * mij;
+          strain_m += m_old[d * n_shape_fct_ + i] * m_old[d * n_shape_fct_ + j] * mij;
+          kin_v    += v_old[d * n_shape_fct_ + i] * v_old[d * n_shape_fct_ + j] * mij;
+          kin_s    += s_old[d * n_shape_fct_ + i] * s_old[d * n_shape_fct_ + j] * mij;
+        }
+
+      // massless welds have C == 0 -> 0/0 = NaN; zero mass carries zero energy
+      result[0 * space_dim + d] = Cn > 0. ? 0.5 * strain_n / Cn : 0.;
+      result[1 * space_dim + d] = Cm > 0. ? 0.5 * strain_m / Cm : 0.;
+      result[2 * space_dim + d] = Cu > 0. ? 0.5 * kin_v / Cu : 0.;
+      result[3 * space_dim + d] = Cr > 0. ? 0.5 * kin_s / Cr : 0.;
+
+      lSol_float_t hyb_u = 0, hyb_r = 0;
+      for (unsigned int bdr = 0; bdr < 2 * hyEdge_dimT; ++bdr) {
+        // (y - λ)² = y² - 2 y λ + λ² on face bdr, with y = u or r.
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          for (unsigned int j = 0; j < n_shape_fct_; ++j) {
+            const lSol_float_t mij =
+              integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+                i, j, bdr, hyper_edge.geometry);
+            hyb_u += u_old[d * n_shape_fct_ + i] * u_old[d * n_shape_fct_ + j] * mij;
+            hyb_r += r_old[d * n_shape_fct_ + i] * r_old[d * n_shape_fct_ + j] * mij;
+          }
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j) {
+            const lSol_float_t mij =
+              integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+                i, j, bdr, hyper_edge.geometry);
+            hyb_u -= 2 * u_old[d * n_shape_fct_ + i]
+                       * lambda_loc[bdr][j + d * n_shape_bdr_] * mij;
+            hyb_r -= 2 * r_old[d * n_shape_fct_ + i]
+                       * lambda_loc[bdr][j + (space_dim + d) * n_shape_bdr_] * mij;
+          }
+        // hyEdge_dimT==1 ⇒ trace is 0-dimensional, ψ≡1 ⇒ ∫_∂e λ² = λ² directly.
+        static_assert(hyEdge_dimT == 1, "trace-square shortcut only valid for hyEdge_dim==1");
+        const lSol_float_t lam_u = lambda_loc[bdr][d * n_shape_bdr_];
+        const lSol_float_t lam_r = lambda_loc[bdr][(space_dim + d) * n_shape_bdr_];
+        hyb_u += lam_u * lam_u;
+        hyb_r += lam_r * lam_r;
+      }
+      result[4 * space_dim + d] = 0.5 * tau_ * hyb_u;
+      result[5 * space_dim + d] = 0.5 * tau_ * hyb_r;
+    }
+
+    return result;
   }
 
   // Edge-local frame vector: idx == 0 → inner_normal(0),
@@ -1335,6 +1683,15 @@ class TimoshenkoWave
 
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
+    // At bit-6 (static-only Dirichlet) faces the static problem assumes the trace
+    // lambda is zero. The global loop's set_dof_values write-back from a previous
+    // edge may have left a non-zero projection in x_vec at shared bit-6 junctions;
+    // zero those entries so the rhs assembly stays invariant to edge ordering.
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      if (hyper_edge.node_descriptor[face] & (1u << 6))
+        for (unsigned int d = 0; d < 2 * space_dim; ++d)
+          lambda_values[face][d] = 0;
+
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     auto mat = assemble_loc_matrix_a(hyper_edge, time);
     SmallVec<4*space_dim*n_shape_fct_, lSol_float_t> rhs, coeffs;
@@ -1342,6 +1699,13 @@ class TimoshenkoWave
     lSol_float_t integral;
     int comps[] = {1, -1, -2};
     static_assert(space_dim <= 3);
+
+    // same massless_unloaded opt-in as assemble_rhs_from_global_rhs: the static problem
+    // this reconstructs must match the network solver's (unloaded weld) RHS
+    bool loaded = true;
+    if constexpr (requires { parameters::massless_unloaded; })
+      if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+        loaded = hyper_edge.geometry.extra_data()[0] > 0;
 
     // from lambda
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1362,7 +1726,7 @@ class TimoshenkoWave
 
     // from global
     for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int c = 0; c < space_dim; c++) {
+      for (unsigned int c = 0; loaded && c < space_dim; c++) {
         rhs[(2 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
@@ -1447,7 +1811,14 @@ class TimoshenkoWave
 
     compute_fluxes(lambda_values, hyper_edge, time);
 
-    return lambda_values_in; // returns the input without changes
+    // write edge-local lambda back to global frame; edge_dof_to_node_dof accumulates,
+    // so zero the destination first
+    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
+      for (unsigned int j = 0; j < lambda_values_in[i].size(); ++j)
+        lambda_values_in[i][j] = 0.;
+    edge_dof_to_node_dof(lambda_values, lambda_values_in, hyper_edge);
+
+    return lambda_values_in;
   }
 };  // end of class LengtheningBernoulliBendingWave
 
@@ -1593,6 +1964,17 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
   }
 
+  // // Dump sparsity pattern of the local matrix as a PGM image (debug):
+  // //   ... && magic /tmp/mat.bin mat.png && sxiv mat.png
+  // auto it = local_mat.begin();
+  // char tmp[n_loc_dofs_*n_loc_dofs_+2] = {0};
+  // for (unsigned i = 0; i < n_loc_dofs_*n_loc_dofs_; i++)
+  //   tmp[i] = *it++ < 1e-16 ? 255 : 0;
+  // FILE* f = fopen("/tmp/mat.bin", "wb");
+  // fprintf(f, "P5\n%d %d\n255\n", n_loc_dofs_, n_loc_dofs_);
+  // fwrite(tmp, 1, 2+n_loc_dofs_*n_loc_dofs_, f);
+  // fclose(f);
+
   return local_mat;
 }  // end of Diffusion::assemble_loc_matrix
 
@@ -1676,26 +2058,37 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   std::array<lSol_float_t, 3> integrals;
 
+  // parameters may opt in (massless_unloaded = true) to body loads acting on material
+  // only: massless edges (properties mass == 0, virtual welds) get no volume RHS
+  // (cf. TimoshenkoBeam::assemble_rhs_from_global_rhs in timoshenko_network.hxx)
+  bool loaded = true;
+  if constexpr (requires { parameters::massless_unloaded; })
+    if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+      loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
     // NOTE: it should probably not be *(space+dim) but *spac + dim???
 
     // distributed loads
-    // f
-    integrals = integrate_vol_phivecfunccomp_beam_avg<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_n
-      >(i, {1, -1, -2}, hyper_edge.geometry, time);
-    for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+    if (loaded)
+    {
+      // f
+      integrals = integrate_vol_phivecfunccomp_beam_avg<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_n
+        >(i, {1, -1, -2}, hyper_edge.geometry, time);
+      for (unsigned int comp = 0; comp < 3; comp++)
+        right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
 
-    // g
-    integrals = integrate_vol_phivecfunccomp_beam_avg<
-        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-        parameters::right_hand_side_m
-      >(i, {1, -1, -2}, hyper_edge.geometry, time);
-    for (unsigned int comp = 0; comp < 3; comp++)
-      right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+      // g
+      integrals = integrate_vol_phivecfunccomp_beam_avg<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+          parameters::right_hand_side_m
+        >(i, {1, -1, -2}, hyper_edge.geometry, time);
+      for (unsigned int comp = 0; comp < 3; comp++)
+        right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
+    }
 
     // NOTE: sign??
     // NOTE: think it should be subtracted here

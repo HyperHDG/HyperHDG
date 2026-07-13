@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+import os
 import time
 import argparse
 import pandas
@@ -48,46 +49,46 @@ class Network:
     self.edgeProps = None
 
   def generate_honeycomb(self, nx, ny, nz=1):
+    """Honeycomb lattice with exactly nx*ny flat-top hexagons.
+
+    Each row is nx hexagons in zigzag (centers alternate y by sqrt(3)/2);
+    rows are stacked by sqrt(3) along y, sharing top/bottom edges.
+    All boundary edges belong to a hexagon perimeter — no dangling stubs.
+    """
     tprint(f"generating honeycomb graph {nx} x {ny} x {nz}")
     s3 = np.sqrt(3.0)
-    basis = np.array([
-        [0.0,  0.0     ],
-        [1.0,  0.0     ],
-        [1.5,  0.5*s3  ],
-        [2.5,  0.5*s3  ],
-    ])
-    a1 = np.array([3.0, 0.0])
-    a2 = np.array([0.0, s3 ])
-    ii, jj = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    origins = jj[..., None] * a1 + ii[..., None] * a2
-    pts = origins[..., None, :] + basis[None, None, :, :]
-    nodes2 = pts.reshape(-1, 2)
-    def idx(i, j, k): return (i * nx + j) * 4 + k
-    e = []
-    i, j = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-    e.append(np.stack([idx(i,j,0).ravel(), idx(i,j,1).ravel()], 1))
-    e.append(np.stack([idx(i,j,1).ravel(), idx(i,j,2).ravel()], 1))
-    e.append(np.stack([idx(i,j,2).ravel(), idx(i,j,3).ravel()], 1))
-    i, j = np.meshgrid(np.arange(ny), np.arange(nx-1), indexing='ij')
-    e.append(np.stack([idx(i,j,3).ravel(), idx(i,j+1,0).ravel()], 1))
-    i, j = np.meshgrid(np.arange(ny-1), np.arange(nx), indexing='ij')
-    e.append(np.stack([idx(i,j,2).ravel(), idx(i+1,j,1).ravel()], 1))
-    i, j = np.meshgrid(np.arange(1, ny), np.arange(1, nx), indexing='ij')
-    e.append(np.stack([idx(i,j,0).ravel(), idx(i-1,j-1,3).ravel()], 1))
-    edges2d = np.vstack(e).astype(np.int64)
 
-    # Drop left-boundary atom-0 and right-boundary atom-3 stubs
-    n2d = nodes2.shape[0]
-    keep = np.ones(n2d, dtype=bool)
-    i_all = np.arange(ny)
-    keep[(i_all * nx + 0) * 4 + 0] = False
-    keep[(i_all * nx + (nx-1)) * 4 + 3] = False
-    edge_keep = keep[edges2d[:,0]] & keep[edges2d[:,1]]
-    edges2d = edges2d[edge_keep]
-    remap = np.full(n2d, -1, dtype=edges2d.dtype)
-    remap[keep] = np.arange(keep.sum())
-    edges2d = remap[edges2d]
-    nodes2 = nodes2[keep]
+    # Hex center grid: row k, column m -> (1.5*m, (m%2)*s3/2 + k*s3)
+    kk, mm = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+    cx = 1.5 * mm.astype(float)
+    cy = (mm % 2) * (s3 / 2) + kk.astype(float) * s3
+    centers = np.stack([cx, cy], axis=-1)  # (ny, nx, 2)
+
+    # 6 vertex offsets per flat-top hex, counterclockwise from the right vertex
+    offs = np.array([
+        [ 1.0,  0.0   ],
+        [ 0.5,  s3/2  ],
+        [-0.5,  s3/2  ],
+        [-1.0,  0.0   ],
+        [-0.5, -s3/2  ],
+        [ 0.5, -s3/2  ],
+    ])
+    raw = (centers[:, :, None, :] + offs[None, None, :, :]).reshape(-1, 2)
+
+    # Dedupe shared vertices by rounding to 1e-6 precision
+    key = np.round(raw * 1e6).astype(np.int64)
+    _, inv, counts = np.unique(key, axis=0, return_inverse=True, return_counts=True)
+    nodes2 = np.zeros((counts.shape[0], 2))
+    np.add.at(nodes2, inv, raw)
+    nodes2 /= counts[:, None]
+    vid = inv.reshape(ny, nx, 6)
+
+    # 6 perimeter edges per hex, dedupe shared edges between adjacent hexes
+    edges_raw = np.vstack([
+      np.stack([vid[:, :, v].ravel(), vid[:, :, (v + 1) % 6].ravel()], axis=1)
+      for v in range(6)
+    ])
+    edges2d = np.unique(np.sort(edges_raw, axis=1), axis=0).astype(np.int64)
 
     # Rescale 2D so x extent = 1
     nodes2 -= nodes2.min(axis=0)
@@ -130,22 +131,247 @@ class Network:
     self.info = {"size": size}
     self.edgeProps = None
 
+  def generate_mikado(self, mass, r=0.05, seed=0, min_edge=None):
+    """Random mikado-style fiber network on the unit square (gortz.pdf, sec. 6.1).
+
+    Fibers of fixed length r are placed with midpoints uniform in
+    [-r/2, 1+r/2]^2 and uniformly random rotation, clipped to the unit
+    square, until the total fiber length reaches `mass`. Every pairwise
+    fiber intersection becomes a node splitting both fibers, nodes closer
+    than min_edge (default r*1e-4) are merged, and only the largest
+    connected component is kept, so the result is a single connected graph.
+    """
+    tprint(f"generating mikado graph: mass={mass:g}, fiber length r={r:g}, seed={seed}")
+
+    # continuum percolation of 2D sticks: two isotropic sticks of length r cross
+    # iff their midpoint offset lies in a parallelogram of area r^2*sin(theta),
+    # so the mean crossings per stick is k = n * <r^2 sin> = (2/pi)*n*r^2 with
+    # stick density n = mass/r per unit area. A giant (domain-spanning) component
+    # emerges above the numerically known threshold n*r^2 = mass*r ~ 5.64
+    # (i.e. k ~ 3.59), Mertens & Moore, Phys. Rev. E 86, 061109 (2012).
+    density = mass * r
+    k_mean = 2.0 / np.pi * density
+    tprint(f"stick density n*r^2 = mass*r = {density:.3g} = {density / 5.6373:.2g} x threshold 5.64, "
+           f"~{k_mean:.3g} crossings per fiber")
+    if density < 5.6373:
+      tprint("  below percolation threshold: NO giant component expected, "
+             "the largest component will only be a small local cluster")
+    else:
+      tprint("  above percolation threshold: giant component expected")
+
+    rng = np.random.default_rng(seed)
+
+    # place fibers (batched) until the clipped total length reaches `mass`
+    seg_a, seg_b, seg_len = [], [], []
+    total = 0.0
+    while total < mass:
+      n_batch = max(1024, int(1.2 * (mass - total) / r))
+      mid = rng.uniform(-0.5 * r, 1.0 + 0.5 * r, size=(n_batch, 2))
+      ang = rng.uniform(0.0, np.pi, size=n_batch)
+      half = 0.5 * r * np.column_stack([np.cos(ang), np.sin(ang)])
+      p0, p1 = mid - half, mid + half
+
+      # Liang-Barsky clip to [0,1]^2: keep param t in [t0,t1] with p*t <= q per side
+      t0, t1 = np.zeros(n_batch), np.ones(n_batch)
+      keep = np.ones(n_batch, dtype=bool)
+      for dim in range(2):
+        d = p1[:, dim] - p0[:, dim]
+        for p, q in ((-d, p0[:, dim]), (d, 1.0 - p0[:, dim])):
+          with np.errstate(divide='ignore', invalid='ignore'):
+            tq = q / p
+          t0 = np.where(p < 0, np.maximum(t0, tq), t0)
+          t1 = np.where(p > 0, np.minimum(t1, tq), t1)
+          keep &= ~((p == 0) & (q < 0))
+      keep &= t0 < t1
+      a = (p0 + t0[:, None] * (p1 - p0))[keep]
+      b = (p0 + t1[:, None] * (p1 - p0))[keep]
+      l = np.linalg.norm(b - a, axis=1)
+      seg_a.append(a); seg_b.append(b); seg_len.append(l)
+      total += l.sum()
+
+    a, b = np.vstack(seg_a), np.vstack(seg_b)
+    lengths = np.concatenate(seg_len)
+    n_fib = min(np.searchsorted(np.cumsum(lengths), mass) + 1, len(lengths))
+    a, b = a[:n_fib], b[:n_fib]
+    tprint(f"placed {n_fib} fibers, total length {lengths[:n_fib].sum():.6g}")
+
+    # candidate pairs: fibers of length <= r can only meet if midpoints are within r
+    tree = cKDTree(0.5 * (a + b))
+    cand = tree.query_pairs(r, output_type='ndarray')
+    i, j = cand[:, 0], cand[:, 1]
+    di, dj, w = b[i] - a[i], b[j] - a[j], a[j] - a[i]
+    cross2d = lambda u, v: u[:, 0] * v[:, 1] - u[:, 1] * v[:, 0]
+    denom = cross2d(di, dj)
+    ok = np.abs(denom) > 1e-12  # exactly parallel fibers (probability zero) are skipped
+    with np.errstate(divide='ignore', invalid='ignore'):
+      s = cross2d(w, dj) / denom
+      t = cross2d(w, di) / denom
+    ok &= (s >= 0) & (s <= 1) & (t >= 0) & (t <= 1)
+    i, j, s, t = i[ok], j[ok], s[ok], t[ok]
+    pts = a[i] + s[:, None] * (b[i] - a[i])
+    n_x = len(pts)
+    tprint(f"{n_x} fiber-fiber intersections ({len(cand)} candidate pairs)")
+
+    # nodes: fiber endpoints then intersection points; split each fiber into
+    # edges between consecutive parameters along it
+    raw_nodes = np.vstack([a, b, pts])
+    fiber = np.concatenate([np.arange(n_fib), np.arange(n_fib), i, j])
+    param = np.concatenate([np.zeros(n_fib), np.ones(n_fib), s, t])
+    node  = np.concatenate([np.arange(2 * n_fib),
+                            2 * n_fib + np.arange(n_x),
+                            2 * n_fib + np.arange(n_x)])
+    order = np.lexsort((param, fiber))
+    fo, no = fiber[order], node[order]
+    adj = fo[:-1] == fo[1:]
+    edges = np.column_stack([no[:-1][adj], no[1:][adj]]).astype(np.int64)
+
+    # merge close nodes, setting a lower bound on edge lengths; iterate since
+    # merged centroids can again end up closer than the tolerance
+    merge_tol = r * 1e-4 if min_edge is None else min_edge
+    n_raw = raw_nodes.shape[0]
+    merged = raw_nodes
+    while True:
+      close = cKDTree(merged).query_pairs(merge_tol, output_type='ndarray')
+      if len(close) == 0:
+        break
+      n_cur = merged.shape[0]
+      g = sp.csr_matrix((np.ones(len(close)), (close[:, 0], close[:, 1])), shape=(n_cur, n_cur))
+      n_groups, labels = sp.csgraph.connected_components(g, directed=False)
+      centroids = np.zeros((n_groups, 2))
+      np.add.at(centroids, labels, merged)
+      centroids /= np.bincount(labels)[:, None]
+      edges = labels[edges]
+      merged = centroids
+    n_merged = merged.shape[0]
+    tprint(f"merged {n_raw - n_merged} nodes closer than {merge_tol:.1e}")
+
+    # drop self-loops and duplicate edges
+    edges = np.sort(edges, axis=1)
+    edges = np.unique(edges[edges[:, 0] != edges[:, 1]], axis=0)
+
+    # keep only the largest connected component
+    A = sp.csr_matrix((np.ones(len(edges)), (edges[:, 0], edges[:, 1])), shape=(n_merged, n_merged))
+    n_comp, comp = sp.csgraph.connected_components(A, directed=False)
+    keep_node = comp == np.bincount(comp).argmax()
+    remap = np.full(n_merged, -1, dtype=np.int64)
+    remap[keep_node] = np.arange(keep_node.sum())
+    edges = remap[edges[keep_node[edges[:, 0]]]]
+    tprint(f"{n_comp} components, keeping largest with {keep_node.sum()} nodes")
+
+    nodes = np.zeros((keep_node.sum(), 3))
+    nodes[:, :2] = merged[keep_node]
+
+    final_mass = np.linalg.norm(nodes[edges[:, 0]] - nodes[edges[:, 1]], axis=1).sum()
+    tprint(f"final mass (total edge length): {final_mass:.6g}")
+    tprint("nodes", nodes.shape)
+    tprint("edges", edges.shape)
+    self.nodes = nodes
+    self.edges = edges
+    self.info = {"size": np.array([1.0, 1.0, 0.0])}
+    self.edgeProps = None
+
+  def generate_synthetic_properties(self, width=None):
+    """Build the 17-column edgeProps array for a synthetic network.
+
+    density = 1 (mass = length), all stiffnesses = 1,
+    n_1 = (0,0,1) (or fallback if tangent is vertical),
+    n_2 = tangent x n_1 normalized, widths constant,
+    fiber_id = 0..n_edges-1, fiber_edge_id = 0.
+
+    If width is None, picks 0.1 * mean(edge length).
+    """
+    nodes = self.nodes
+    edges = self.edges
+    n_edges = edges.shape[0]
+    tprint(f"generating synthetic properties for {n_edges} edges")
+
+    p1 = nodes[edges[:, 0]]
+    p2 = nodes[edges[:, 1]]
+    tangent = p2 - p1
+    lengths = np.linalg.norm(tangent, axis=1)
+    t_hat = tangent / lengths[:, None]
+
+    # n_1 = (0,0,1), projected orthogonal to tangent.
+    # If the tangent is (nearly) parallel to z, fall back to (1,0,0).
+    z = np.array([0.0, 0.0, 1.0])
+    cos_tz = t_hat @ z
+    near_z = np.abs(cos_tz) > 0.99
+    n1 = np.tile(z, (n_edges, 1))
+    n1[near_z] = np.array([1.0, 0.0, 0.0])
+    # remove tangent component, renormalize
+    n1 -= np.einsum('ij,ij->i', n1, t_hat)[:, None] * t_hat
+    n1 /= np.linalg.norm(n1, axis=1, keepdims=True)
+    # n_2 = tangent x n_1
+    n2 = np.cross(t_hat, n1)
+    n2 /= np.linalg.norm(n2, axis=1, keepdims=True)
+
+    mass = lengths
+
+    EA   = np.ones(n_edges)
+    kG1A = np.ones(n_edges)
+    kG2A = np.ones(n_edges)
+    GxIx = np.ones(n_edges)
+    E1I1 = np.ones(n_edges)
+    E2I2 = np.ones(n_edges)
+
+    if width is None:
+      width = 0.1 * lengths.mean()
+    tprint(f"  using width = {width:.3e}")
+    width1 = np.full(n_edges, width)
+    width2 = np.full(n_edges, width)
+
+    fiber_id      = np.arange(n_edges, dtype=np.float64)
+    fiber_edge_id = np.zeros(n_edges)
+
+    self.edgeProps = np.column_stack([
+      mass,
+      EA, kG1A, kG2A,
+      GxIx, E1I1, E2I2,
+      n1, n2,
+      width1, width2,
+      fiber_id, fiber_edge_id,
+    ])
+    tprint("edgeProps", self.edgeProps.shape)
+
   def read_morgan(self, path, rescale_props=None, quirk=None):
-    tprint("reading nodes")
-    nodes   = pandas.read_csv(path + "/nodes.csv")
-    nodes   = nodes.to_numpy()[:,1:]
+    # sidecar cache of the parsed CSVs: parsing ~17 GB of text (100M-edge nets) costs
+    # minutes even multi-threaded, re-reading the arrays from HDF5 costs seconds.
+    # The raw arrays are cached (before --rescale-props / quirks, which vary per run).
+    cache = os.path.join(path, "cache.h5")
+    csvs = [os.path.join(path, n + ".csv") for n in ("nodes", "edges", "edgeProperties")]
+    if os.path.exists(cache) and os.path.getmtime(cache) >= max(map(os.path.getmtime, csvs)):
+      tprint(f"reading parsed-CSV cache '{cache}'")
+      with h5py.File(cache) as f:
+        nodes, edges, edgeProps = f["nodes"][:], f["edges"][:], f["edgeProps"][:]
+    else:
+      try:
+        # probe the csv module, not just pyarrow: spack's default arrow is built ~csv
+        import pyarrow.csv  # noqa: F401 -- multi-threaded CSV parser backend
+        engine = "pyarrow"
+      except ImportError:
+        tprint("pyarrow not installed: falling back to the single-threaded CSV parser")
+        engine = "c"
 
-    tprint("reading edges")
-    edges   = pandas.read_csv(path + '/edges.csv')
-    edges   = edges.to_numpy()[:,1:]
+      tprint("reading nodes")
+      nodes = pandas.read_csv(csvs[0], engine=engine).to_numpy()[:,1:]
 
-    tprint("reading edgeProps")
-    edgeProps   = pandas.read_csv(path + '/edgeProperties.csv')
-    edgeProps   = edgeProps.to_numpy()[:,1:]
+      tprint("reading edges")
+      edges = pandas.read_csv(csvs[1], engine=engine).to_numpy()[:,1:]
+
+      tprint("reading edgeProps")
+      edgeProps = pandas.read_csv(csvs[2], engine=engine).to_numpy()[:,1:]
+
+      tprint(f"writing parsed-CSV cache '{cache}'")
+      try:
+        with h5py.File(cache, "w") as f:
+          for k, v in (("nodes", nodes), ("edges", edges), ("edgeProps", edgeProps)):
+            f.create_dataset(k, data=v, compression="gzip", compression_opts=1)
+      except OSError as e:
+        tprint(f"  cache write failed (non-fatal): {e}")
 
     if rescale_props is not None:
       n_props = edgeProps.shape[-1]
-      print(rescale_props)
+      tprint("rescale_props", rescale_props)
       edgeProps *= rescale_props
 
     if quirk == "morgan-2026-01-30":
@@ -182,6 +408,96 @@ class Network:
     self.edges = edges
     self.edgeProps = edgeProps
     self.info = info
+
+    # clamp to >= 1e-10
+    #self.edgeProps = np.clip(self.edgeProps, 1e-10, 1e+10)
+
+  def subdivide_long_edges(self, p):
+    """Subdivide edges longer than (xy extent)/p into equal-length pieces.
+
+    Motivation: for a p x p domain-decomposition grid the subdomain side is
+    R = (xy extent)/p.  Where the longest edge exceeds R -- the network length
+    scale R0 of Goertz et al. (Assumption 3.5.3, longest-edge / locality bound)
+    -- subdomains slice through single fibers, the homogeneity constant sigma
+    blows up and the two-level Schwarz condition number re-accelerates.  Refining
+    the long edges below R keeps R > R0 so the flat coarse space stays effective.
+    On a unit-bbox network (see --rescale-bbox) the threshold R equals 1/p.
+
+    An edge of length L is split into k = ceil(L / R) equal segments by inserting
+    k-1 evenly spaced interior nodes.  Per-edge properties are copied to every
+    segment except the mass (column 0), which is extensive and is divided by k so
+    total mass is conserved; the intensive stiffnesses, normals, widths and
+    fiber_id / fiber_edge_id are copied unchanged (all segments are the same
+    fiber).  This leaves types_points/_faces stale -- recompute compute_types
+    afterwards to type the new nodes and rebuild the face types.
+    """
+    nodes = self.nodes
+    edges = self.edges
+    props = self.edgeProps
+    n_nodes_old, n_edges_old = nodes.shape[0], edges.shape[0]
+
+    ext = nodes[:, :2].max(0) - nodes[:, :2].min(0)
+    R = float(ext.max()) / p
+
+    p0 = nodes[edges[:, 0]]
+    p1 = nodes[edges[:, 1]]
+    lengths = np.linalg.norm(p1 - p0, axis=1)
+    nseg = np.maximum(np.ceil(lengths / R).astype(np.int64), 1)
+    long_mask = nseg > 1
+    n_long = int(long_mask.sum())
+
+    tprint(f"subdivide: xy extent {ext[0]:.4g} x {ext[1]:.4g}, "
+           f"threshold R = ext/{p} = {R:.4g}")
+    tprint(f"  longest edge {lengths.max():.4g} ({lengths.max()/R:.2f} x R), "
+           f"edges over R: {n_long}/{n_edges_old}")
+    if n_long == 0:
+      tprint("  nothing to subdivide")
+      return
+
+    split_edges = edges[long_mask]
+    split_nseg  = nseg[long_mask]
+    split_p0    = p0[long_mask]
+    split_p1    = p1[long_mask]
+    S = split_edges.shape[0]
+
+    # interior nodes: k-1 per split edge, evenly interpolated along the edge
+    n_int  = split_nseg - 1
+    starts = np.cumsum(n_int) - n_int            # 0-based offset into the new block
+    M = int(n_int.sum())
+    edge_of_int = np.repeat(np.arange(S), n_int)
+    within = np.arange(M) - np.repeat(starts, n_int)          # 0 .. k-2 within edge
+    t = (within + 1) / split_nseg[edge_of_int]
+    int_coords = (split_p0[edge_of_int]
+                  + t[:, None] * (split_p1[edge_of_int] - split_p0[edge_of_int]))
+
+    # segment edges: k per split edge, chaining a - I0 - .. - I(k-2) - b
+    T = int(split_nseg.sum())
+    seg_starts = np.cumsum(split_nseg) - split_nseg
+    seg_edge = np.repeat(np.arange(S), split_nseg)
+    q = np.arange(T) - np.repeat(seg_starts, split_nseg)      # 0 .. k-1 within edge
+    nseg_seg = split_nseg[seg_edge]
+    base = n_nodes_old + starts[seg_edge]        # global id of the edge's first interior node
+    a = split_edges[seg_edge, 0]
+    b = split_edges[seg_edge, 1]
+    left  = np.where(q == 0,            a, base + q - 1)
+    right = np.where(q == nseg_seg - 1, b, base + q)
+    seg_edges = np.column_stack([left, right]).astype(edges.dtype)
+
+    self.nodes = np.vstack([nodes, int_coords])
+    self.edges = np.vstack([edges[~long_mask], seg_edges]).astype(edges.dtype)
+    if props is not None:
+      seg_props = props[long_mask][seg_edge].copy()
+      seg_props[:, 0] = seg_props[:, 0] / nseg_seg           # split extensive mass
+      self.edgeProps = np.vstack([props[~long_mask], seg_props])
+
+    new_len_max = np.linalg.norm(
+        self.nodes[self.edges[:, 1]] - self.nodes[self.edges[:, 0]], axis=1).max()
+    tprint(f"  added {M} nodes, {T - S} net edges "
+           f"({n_nodes_old}->{self.nodes.shape[0]} nodes, "
+           f"{n_edges_old}->{self.edges.shape[0]} edges)")
+    tprint(f"  longest edge now {new_len_max:.4g} ({new_len_max/R:.2f} x R)")
+
+
 
   def verify_nonzero(self):
     """Verify that material properties are nonzero where required.
@@ -263,6 +579,53 @@ class Network:
       tprint("verify_nonzero: FAILED — see above")
 
 
+  def prop_cutoff(self, percent):
+    """Floor each stiffness component (edgeProps cols 1..6) at its `percent`-th percentile,
+    shrinking the coefficient contrast (max/min) while raising at most ~`percent`% of fibers per
+    component. For each component prints a per-decade log histogram, a few reference percentile
+    thresholds for context, and the applied floor. Mutates edgeProps in place.
+    """
+    if self.edgeProps is None:
+      tprint("prop_cutoff: no edgeProps loaded, skipping")
+      return
+
+    labels = ["mass", "EA", "kG_1A", "kG_2A", "G_xI_x", "E_1I_1", "E_2I_2"]
+    props = self.edgeProps
+    n = props.shape[0]
+    if n == 0:
+      tprint("prop_cutoff: 0 fibers, skipping")
+      return
+    ref = [0.5, 1, 2, 5]
+    tprint(f"prop_cutoff: flooring cols 1..6 at the {percent:g}-th percentile, {n} fibers")
+
+    for c in range(1, 7):
+      col = props[:, c]
+      cmin, cmax = col.min(), col.max()
+      contrast = cmax / cmin if cmin > 0 else np.inf
+      tprint(f"  col {c} ({labels[c]}): min={cmin:.3e} max={cmax:.3e} "
+             f"contrast={contrast:.3e} nonpos={(col <= 0).sum()}")
+
+      pos = col[col > 0]
+      if pos.size:
+        lo_e = int(np.floor(np.log10(pos.min())))
+        hi_e = int(np.ceil(np.log10(pos.max())))
+        edges = 10.0 ** np.arange(lo_e, hi_e + 1)
+        hist, _ = np.histogram(pos, bins=edges)
+        bars = " ".join(f"1e{lo_e+i:+03d}:{hist[i]}" for i in range(len(hist)))
+        tprint(f"    log-hist (#fibers per decade): {bars}")
+
+      refs = " ".join(f"p{p:g}={np.percentile(col, p):.3e}" for p in ref)
+      tprint(f"    ref thresholds: {refs}")
+
+      # apply the floor at the requested percentile
+      t = np.percentile(col, percent)
+      n_below = int((col < t).sum())
+      props[:, c] = np.clip(col, t, None)
+      contrast_after = cmax / t if t > 0 else np.inf
+      tprint(f"    floored at p{percent:g}={t:.3e}: raised {n_below} fibers "
+             f"({100*n_below/n:.3g}%), contrast {contrast:.3e} -> {contrast_after:.3e}")
+
+
   def node_edge_dedupe(self, merge_tol):
     nodes = self.nodes
     edges = self.edges
@@ -273,18 +636,24 @@ class Network:
     n_edgeProps = edgeProps.shape[0]
     edgeProps_dim = edgeProps.shape[1]
 
-    _, inv, counts = np.unique(nodes, axis=0, return_inverse=True, return_counts=True)
-    n_dup = (counts > 1).sum()
-    tprint(f"nodes: bit exact duplicates: {n_dup}")
+    # sorting a scalar int64 key is much faster than np.unique(..., axis=0)'s row lexsort
+    assert n_nodes < 3_000_000_000, "edge int64-key encoding would overflow"
 
-    canon = np.sort(edges, axis=1)
-    unique_edges, edge_inv, edge_counts = np.unique(canon, axis=0, return_inverse=True, return_counts=True)
-    n_dup_edges = (edge_counts > 1).sum()
-    tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {(edges[:,0] == edges[:,1]).sum()}")
+    if args.check_dups:
+      # bit-exact duplicates are distance-0 pairs, subsumed by the KD-tree merge below;
+      # only worth the extra full sorts as an explicit diagnostic
+      _, counts = np.unique(nodes, axis=0, return_counts=True)
+      n_dup = (counts > 1).sum()
+      tprint(f"nodes: bit exact duplicates: {n_dup}")
+
+      canon = np.sort(edges, axis=1).astype(np.int64)
+      _, edge_counts = np.unique(canon[:,0] * n_nodes + canon[:,1], return_counts=True)
+      n_dup_edges = (edge_counts > 1).sum()
+      tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {(edges[:,0] == edges[:,1]).sum()}")
 
     tprint("build KD tree")
     tree = cKDTree(nodes)
-    d, _ = tree.query(nodes, k=2)   # k=1 is self → distance 0
+    d, _ = tree.query(nodes, k=2, workers=-1)   # k=1 is self → distance 0
     nn = d[:, 1]                     # nearest non-self distance
 
     tprint("nearest neighbor distance")
@@ -315,8 +684,10 @@ class Network:
     tprint("edges", edges.shape)
     tprint("edgeProps", edgeProps.shape)
 
-    canon = np.sort(edges, axis=1)
-    unique_edges, idx, edge_inv, edge_counts = np.unique(canon, axis=0, return_index=True, return_inverse=True, return_counts=True)
+    canon = np.sort(edges, axis=1).astype(np.int64)
+    _, idx, edge_counts = np.unique(canon[:,0] * n_nodes + canon[:,1],
+                                    return_index=True, return_counts=True)
+    unique_edges = canon[idx]
     n_dup_edges = (edge_counts > 1).sum()
     n_loops = (unique_edges[:,0] == unique_edges[:,1]).sum()
     tprint(f"edges: duplicates: {n_dup_edges}, self-loops: {n_loops}")
@@ -344,12 +715,19 @@ class Network:
     maxs = nodes.max(axis=0)
     dims = maxs - mins
 
+    # small circle of nodes around the (xy) domain center
+    center = (mins[:2] + maxs[:2]) / 2
+    radius = args.center_radius * max(dims[0], dims[1])
+    dist = np.linalg.norm(nodes[:, :2] - center, axis=1)
+
     sides = {
       "xmin": nodes[:,0] - mins[0] <= tol * dims[0],
       "xmax": maxs[0] - nodes[:,0] <= tol * dims[0],
       "ymin": nodes[:,1] - mins[1] <= tol * dims[1],
-      "ymax": maxs[1] - nodes[:,1] <= tol * dims[1]
+      "ymax": maxs[1] - nodes[:,1] <= tol * dims[1],
+      "center": dist <= radius,
     }
+    tprint(f"center circle: c={center}, r={radius:.3e}, {sides['center'].sum()} nodes")
 
     dir_side = np.array([sides[x.split('=')[0]]  for x in args.dirichlet])
     dir_desc = np.array([int(x.split('=')[1], 0) for x in args.dirichlet], dtype=np.int32)
@@ -371,14 +749,15 @@ class Network:
 
     A = sp.csr_matrix((np.ones(len(edges)), (edges[:,0], edges[:,1])), shape=(n_nodes, n_nodes))
     n_comp, labels = sp.csgraph.connected_components(A, directed=False)
-    free = sum(1 for c in range(n_comp) if types_points[labels == c].sum() == 0)
-    tprint(f"{n_comp} components, {free} without any Dirichlet node")
+    # one bincount pass instead of an O(n_comp * n_nodes) per-component scan
+    free_mask = np.bincount(labels[types_points != 0], minlength=n_comp) == 0
+    tprint(f"{n_comp} components, {free_mask.sum()} without any Dirichlet node")
 
     sizes = np.bincount(labels)
     order = np.argsort(sizes)[::-1]
-    tprint(f"component sizes: {sizes[order].tolist()}")
+    tprint(f"component sizes{f' (top 20 of {n_comp})' if n_comp > 20 else ''}: "
+           f"{sizes[order[:20]].tolist()}")
 
-    free_mask = np.array([types_points[labels == c].sum() == 0 for c in range(n_comp)])
     free_sizes = sizes[free_mask]
     if len(free_sizes):
         tprint(f"floating: count={len(free_sizes)} total_nodes={free_sizes.sum()} "
@@ -396,26 +775,26 @@ class Network:
 
     self.nodes        = nodes[keep_node]
     self.types_points = types_points[keep_node]
-    n_nodes      = len(nodes)
 
     keep_edge = keep_node[edges[:,0]] & keep_node[edges[:,1]]
     self.edges     = remap[edges[keep_edge]]
     self.edgeProps = edgeProps[keep_edge]
     self.types_faces  = types_faces[keep_edge]
-    n_edges   = len(edges)
-    tprint(f"after pruning: {n_nodes} nodes, {n_edges} edges")
+    tprint(f"after pruning: {self.nodes.shape[0]} nodes, {self.edges.shape[0]} edges")
 
 
   def write_h5(self, out, no_props=False):
+    # gzip level 1: on real fiber props level 4 compresses only ~4% smaller but writes
+    # ~25% slower; shuffle actively hurts (breaks the exact-value repetition gzip finds)
     tprint(f"writing h5 file to '{out}'")
     with h5py.File(out, "w") as f:
       g = f.create_group("domain")
-      g.create_dataset("points", data=self.nodes, compression="gzip")
-      g.create_dataset("edges", data=self.edges, compression="gzip")
+      g.create_dataset("points", data=self.nodes, compression="gzip", compression_opts=1)
+      g.create_dataset("edges", data=self.edges, compression="gzip", compression_opts=1)
       if hasattr(self, "edgeProps") and self.edgeProps is not None and not no_props:
-        g.create_dataset("properties", data=self.edgeProps, compression="gzip")
-      g.create_dataset("types_points", data=self.types_points, compression="gzip")
-      g.create_dataset("types_faces", data=self.types_faces, compression="gzip")
+        g.create_dataset("properties", data=self.edgeProps, compression="gzip", compression_opts=1)
+      g.create_dataset("types_points", data=self.types_points, compression="gzip", compression_opts=1)
+      g.create_dataset("types_faces", data=self.types_faces, compression="gzip", compression_opts=1)
       for k, v in self.info.items():
         g.attrs[k] = v
 
@@ -487,13 +866,13 @@ class Network:
       root.create_dataset(
           "Offsets",
           data=np.arange(0, n_conn + 2, 2, dtype=np.int64),
-          compression="gzip",
+          compression="gzip", compression_opts=1,
       )
 
       root.create_dataset(
         "Types",
         data=np.full(n_cells, 3, dtype=np.uint8),
-        compression="gzip",
+        compression="gzip", compression_opts=1,
       )
 
       root.create_dataset("NumberOfPoints",          data=np.array([n_points], dtype=np.int64))
@@ -517,31 +896,65 @@ class Network:
     self.nodes = (self.nodes - mins) * scale
     self.info["size"] = (maxs - mins) * scale
 
+  def scale(self, s):
+    tprint(f"scaling coordinates by {s:g}")
+    self.nodes = self.nodes * s
+    if "size" in self.info:
+      self.info["size"] = np.asarray(self.info["size"], dtype=float) * s
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="make_geo2 by Joseph Holten")
   parser.add_argument("-i", "--input", help="input", default=".")
   parser.add_argument("-o", "--output", help="output", default="graph")
   parser.add_argument("-t", "--dirichlet-tol", help="tolerance to the edge", type=float, default=2e-2)
+  parser.add_argument("--center-radius", help="radius of the 'center' dirichlet circle, relative to max xy extent", type=float, default=5e-2)
   parser.add_argument("--merge-tol", help="merge nodes tolerance", type=float, default=1e-6)
   parser.add_argument("--dirichlet", help="borders to clamp as dirichlet",
                       nargs="+", default=["xmin=0b111111","xmax=0b111111"])
   parser.add_argument("--min-comp-size", type=int, default=10)
+  parser.add_argument("--check-dups", action="store_true",
+    help="report bit-exact duplicate nodes/edges before merging (diagnostic only: "
+         "duplicates are subsumed by the KD-tree merge; costs extra full sorts)")
   parser.add_argument("--grid", type=int, nargs="+", metavar="N",
     help="generate grid graph, 1 arg: NxN, 2 args: NXxNY")
   parser.add_argument("--hex", type=int, nargs="+", metavar="N",
     help="generate hexagonal honeycomb graph, 1 arg: NxN, 2 args: NXxNY")
+  parser.add_argument("--mikado", type=float, nargs="+", metavar="X",
+    help="generate random mikado fiber graph on the unit square, "
+         "1 arg: MASS (total fiber length), 2 args: MASS R (fiber length, default 0.05)")
+  parser.add_argument("--seed", type=int, default=0,
+    help="random seed for --mikado")
+  parser.add_argument("--min-edge", type=float, default=None, metavar="LEN",
+    help="minimum edge length for --mikado: nodes closer than LEN are merged "
+         "(default: r*1e-4)")
   parser.add_argument("--clamp-xy", type=float, nargs="+", metavar="X", default=None,
     help="clamp network to xy bounding box, drop edges with any endpoint outside, relative, at most two args")
   parser.add_argument("--no-props", action="store_true",
                     help="do not write per-edge properties to h5")
   parser.add_argument("--rescale-bbox", action="store_true",
                     help="rescale network so xy bbox is 1x1 (z scaled by same factor)")
+  parser.add_argument("--scale", type=float, default=None,
+                    help="multiply all coordinates by SCALE (applied after --rescale-bbox); "
+                         "with fixed material properties this moves H/l_c, i.e. selects the "
+                         "Timoshenko shear- vs bending-dominated regime")
   parser.add_argument("--rescale-props", default=None,
                     help="rescale network material properties, format '1,2,3,...'")
   parser.add_argument("--quirk", default=None, choices=Network.QUIRKS,
                     help="apply quirk")
+  parser.add_argument("--prop-cutoff", type=float, metavar="PCT", default=None,
+                    help="floor each stiffness component (edgeProps cols 1..6) at its PCT-th "
+                         "percentile to shrink coefficient contrast, raising at most ~PCT%% of "
+                         "fibers per component. Prints a per-decade log histogram, reference "
+                         "thresholds, and the applied floor, then writes the clipped network. "
+                         "Applied to the final (post-clamp) fibers.")
+  parser.add_argument("--subdivide", type=int, default=None, metavar="P",
+                    help="subdivide edges longer than (xy extent)/P into equal "
+                         "pieces, so no edge exceeds the P x P subdomain scale "
+                         "(= 1/P on a unit-bbox network); mass (property col 0) "
+                         "is split evenly, other properties copied")
   args = parser.parse_args()
 
+  rescale_props = None
   if args.rescale_props is not None:
     rescale_props = np.array(list(map(float, args.rescale_props.split(","))))
 
@@ -554,6 +967,7 @@ if __name__ == "__main__":
     else:
       parser.error("--grid takes 1 or 2 arguments")
     network.generate_grid(nx, ny)
+    network.generate_synthetic_properties(width=0.1 / max(nx, ny))
   elif args.hex is not None:
     if len(args.hex) == 1:
       nx = ny = args.hex[0]
@@ -566,8 +980,18 @@ if __name__ == "__main__":
     else:
       parser.error("--hex takes 1 or 2 arguments")
     network.generate_honeycomb(nx, ny, nz)
+    network.generate_synthetic_properties(width=0.1 / max(nx, ny))
+  elif args.mikado is not None:
+    if len(args.mikado) == 1:
+      mass, r = args.mikado[0], 0.05
+    elif len(args.mikado) == 2:
+      mass, r = args.mikado
+    else:
+      parser.error("--mikado takes 1 or 2 arguments")
+    network.generate_mikado(mass, r=r, seed=args.seed, min_edge=args.min_edge)
+    network.generate_synthetic_properties(width=1/mass)
   else:
-    network.read_morgan(args.input, rescale_props=args.rescale_props, quirk=args.quirk)
+    network.read_morgan(args.input, rescale_props=rescale_props, quirk=args.quirk)
     network.verify_nonzero()
     if args.clamp_xy is not None:
       if len(args.clamp_xy) == 1:
@@ -579,10 +1003,16 @@ if __name__ == "__main__":
       network.clamp_xy(fx, fy)
     network.node_edge_dedupe(args.merge_tol)
   tprint("info", network.info)
+  if args.subdivide is not None:
+    network.subdivide_long_edges(args.subdivide)
+  if args.prop_cutoff is not None:
+    network.prop_cutoff(args.prop_cutoff)
   if args.rescale_bbox:
     network.rescale_bbox()
+  if args.scale is not None:
+    network.scale(args.scale)
   network.compute_types(args.dirichlet_tol)
-  if args.grid is None and args.hex is None:
+  if args.grid is None and args.hex is None and args.mikado is None:
     network.drop_floating_and_small_components(args.min_comp_size)
   network.write_h5(args.output, no_props=args.no_props)
   network.write_vtkhdf_view(args.output)
