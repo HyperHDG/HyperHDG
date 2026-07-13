@@ -168,9 +168,11 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, drumhead, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
     PetscCall(PetscOptionsBool("-mat_only", "only compute matrix", NULL, mat_only, &mat_only, &is_set));
-    PetscCall(PetscOptionsInt("-tau_s", "hdg penalty parameter exponent s with tau ~ h^s", NULL, tau_s, &tau_s, &is_set));
     PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, set_mem_max, &set_mem_max, &is_set));
-    if (is_set) {
+    // dedicated flag: is_set is clobbered by every option parsed after -tau_s
+    PetscBool tau_s_set = PETSC_FALSE;
+    PetscCall(PetscOptionsInt("-tau_s", "hdg penalty parameter exponent s with tau ~ h^s", NULL, tau_s, &tau_s, &tau_s_set));
+    if (tau_s_set) {
       switch (tau_s) {
       case  1: tau = 1./nx; break; // tau ~ h
       case  0: tau = 1;    break;
