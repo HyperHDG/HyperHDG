@@ -263,6 +263,12 @@ class TimoshenkoWave
   struct data_type
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
+    // Cached LU factorization of the local matrix. The matrix is time-independent (cf.
+    // assemble_loc_matrix, which ignores its time argument), so it is factorized once per edge
+    // and reused in every solve_local_problem call.
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> loc_mat_lu;
+    std::array<int, n_loc_dofs_> loc_mat_ipiv;
+    bool loc_mat_factored = false;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
@@ -513,7 +519,15 @@ class TimoshenkoWave
         hy_assert(0 == 1, "This has not been implemented!");
       // std::cout << "-- solve_local" << std::endl;
       // std::cout << rhs << std::endl;
-      return rhs / assemble_loc_matrix(hyper_edge, time);
+      if (!hyper_edge.data.loc_mat_factored)
+      {
+        hyper_edge.data.loc_mat_lu = assemble_loc_matrix(hyper_edge, time);
+        Wrapper::lapack_lu_factor<n_loc_dofs_, lSol_float_t>(hyper_edge.data.loc_mat_lu.data(),
+                                                             hyper_edge.data.loc_mat_ipiv);
+        hyper_edge.data.loc_mat_factored = true;
+      }
+      return Wrapper::lapack_lu_solve<n_loc_dofs_, 1U, lSol_float_t>(
+        hyper_edge.data.loc_mat_lu.data(), hyper_edge.data.loc_mat_ipiv, rhs.data());
     }
     catch (Wrapper::LAPACKexception& exc)
     {
