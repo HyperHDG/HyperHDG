@@ -1,7 +1,5 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
-// TODO: write the integrator function where the func can be vector valued in diff wave!! -> andreas
-
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
@@ -108,20 +106,18 @@ struct TestTimoWave0
     SmallVec<space_dimT, param_float_t> res(0.);
     return res;
   }
-};  // end of struct DiffusionParametersDefault
+};  // end of struct TestTimoWave0
 
 namespace LocalSolver
 {
 
 /*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
+ * \brief   Local solver for the Timoshenko beam-network wave equation (dual-mixed HDG).
  *
- * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
- * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
- **************************************************************************************************/
-/*!*************************************************************************************************
- * \brief   Local solver for the equation that governs the bending and change of length of an
- *          elastic Bernoulli beam.
+ * Second-order-in-time elastic beam system, reduced to first order via the velocity/momentum
+ * field and advanced by one implicit one-step theta scheme per call (theta = 1/2 is the
+ * energy-conserving Crank-Nicolson step). See hdg_gauss.pdf for the high-order Gauss time
+ * stepping that reuses this same mass-shifted local solve once per (complex) stage.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -264,24 +260,38 @@ class TimoshenkoWave
   static constexpr unsigned int system_dim = system_dimension();
 
   /*!***********************************************************************************************
-   * \brief   (Globally constant) penalty parameter for HDG scheme.
+   * \brief   Step parameters of the one-step theta scheme (see also hdg_gauss.pdf).
+   *
+   * These three constants are the only time-discretisation input to the local solve:
+   *   tau_      HDG stabilisation parameter (globally constant), tau > 0.
+   *   theta_    one-step theta weight on the new time level; theta = 1/2 is Crank-Nicolson.
+   *   delta_t_  time step Delta t.
+   * The local operator depends on the step only through these: the mass is shifted by
+   * 1/(theta_*delta_t_) and the stiffness/coupling is weighted by theta_ (see assemble_loc_matrix /
+   * assemble_schur). For the high-order Gauss generalisation of hdg_gauss.pdf the per-stage solve is
+   * structurally identical, with the real step factor (theta_, delta_t_) replaced by the complex
+   * stage factor Delta t * theta_l (sigma_l = 1/(Delta t theta_l)); CN is the single-stage case.
    ************************************************************************************************/
   const lSol_float_t tau_;
   const lSol_float_t theta_;
   const lSol_float_t delta_t_;
-  const bool full_lu_ = false;  // solve local problems via full-matrix LU instead of Schur
+  /*!***********************************************************************************************
+   * \brief   Solve local problems via a full-matrix LU instead of the displacement Schur path.
+   *
+   * The three solve routines are three views of the same local saddle system:
+   *   assemble_loc_matrix   the full n_loc_dofs_ saddle form -- the authoritative definition;
+   *   assemble_schur        its hand-eliminated displacement Schur complement (production path);
+   *   full_lu_ (this flag)  factor+solve assemble_loc_matrix directly (reference).
+   * The two solve paths must agree; -loc_lu_full selects the reference LU, kept for deep-dt
+   * convergence studies where the Schur mass shift loses stiffness digits (see data_type below).
+   ************************************************************************************************/
+  const bool full_lu_ = false;
 
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
     TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT>>,
     lSol_float_t>
     integrator;
-
-  typedef TPP::Quadrature::Tensorial<
-    TPP::Quadrature::GaussLegendre<quad_deg>,
-    TPP::ShapeFunction<TPP::ShapeType::Tensorial<TPP::ShapeType::Legendre<poly_deg>, hyEdge_dimT>>,
-    lSol_float_t>
-    vec_integrator;
 
   /*!***********************************************************************************************
    *  \brief  Define type of (hyperedge related) data that is stored in HyDataContainer.
@@ -845,14 +855,37 @@ class TimoshenkoWave
     return bdr_values;
   }
 
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
-  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
-                              SmallMatOutT& lambda_values_out,
-                              hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+  /*!***********************************************************************************************
+   * \brief   Zero every dynamic-Dirichlet trace dof of \c lambda in place (leaves bit-6 faces).
+   *
+   * A face flagged static-only (bit 6) keeps its trace; on every other face the components whose
+   * Dirichlet bit is set are constrained, so their trace contribution is removed. Shared by the
+   * two flux entry points below (and mirrors the masking done in the error evaluation).
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatT>
+  void zero_dirichlet_trace(SmallMatT& lambda, hyEdgeT& hyper_edge) const
   {
-    // std::cout << "------------- trace_to_flux" << std::endl;
+    for (unsigned int node = 0; node < 2 * hyEdge_dimT; ++node)
+      for (unsigned int dof = 0; dof < 2 * space_dim; ++dof)
+        if (is_dirichlet(hyper_edge, node, dof))
+          lambda[node][dof] = 0.;
+  }
 
+  /*!***********************************************************************************************
+   * \brief   Shared core of trace_to_flux / residual_flux: apply the condensed local operator.
+   *
+   * \c solution_type selects the local-solve right-hand side (see solve_local_problem): 0 is the
+   * homogeneous operator action A*lambda (used to assemble the time-constant system matrix); 1 is
+   * the residual, i.e. operator action plus the old-time-step / body-load / Dirichlet data. The
+   * Dirichlet trace dofs are removed on input and output so constrained faces stay pinned.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& apply_local_flux(const SmallMatInT& lambda_values_in,
+                                 SmallMatOutT& lambda_values_out,
+                                 const unsigned int solution_type,
+                                 hyEdgeT& hyper_edge,
+                                 const lSol_float_t time = 0.) const
+  {
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
               "Both matrices must be of same size which corresponds to the number of faces!");
@@ -863,23 +896,12 @@ class TimoshenkoWave
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
     SmallMatInT lambda_in = lambda_values_in;
-
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
-      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
-          lambda_in[i][j] = 0.;
-    }
+    zero_dirichlet_trace(lambda_in, hyper_edge);
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
-    // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
-    //     std::cout << lambda_values_loc[i][j] << " ";
-    // std::cout << std::endl;
-
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values_loc, 0U, hyper_edge, time);
+      solve_local_problem(lambda_values_loc, solution_type, hyper_edge, time);
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
 
@@ -887,26 +909,26 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
         lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
-    // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
-    //     std::cout << result(i,j) << " ";
-    // std::cout << std::endl;
-
-    // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-    //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
-    //     std::cout << lambda_values_loc[i][j] << " ";
-    // std::cout << std::endl << std::endl;
-
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
-      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
-          lambda_values_out[i][j] = 0.;
-    }
+    zero_dirichlet_trace(lambda_values_out, hyper_edge);
 
     return lambda_values_out;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Homogeneous condensed operator action (assembles the time-constant system matrix).
+   *
+   * A distinct entry point from residual_flux (kept separate for historical reasons); both
+   * delegate to apply_local_flux, differing only in the local-solve rhs (solution_type 0 vs 1).
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
+                              SmallMatOutT& lambda_values_out,
+                              hyEdgeT& hyper_edge,
+                              const lSol_float_t time = 0.) const
+  {
+    return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, time);
   }
 
   template <typename hyEdgeT>
@@ -917,51 +939,19 @@ class TimoshenkoWave
     return hyper_edge.node_descriptor[node] & (1ul << dof);
   }
 
+  /*!***********************************************************************************************
+   * \brief   Residual of the condensed operator (operator action plus old-step / load data).
+   *
+   * A distinct entry point from trace_to_flux (kept separate for historical reasons); see
+   * apply_local_flux for the shared body.
+   ************************************************************************************************/
   template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
                               const lSol_float_t time = 0.) const
   {
-    // std::cout << "------------- residual_flux" << std::endl;
-
-    hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
-                lambda_values_in.size() == 2 * hyEdge_dimT,
-              "Both matrices must be of same size which corresponds to the number of faces!");
-    for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
-      hy_assert(
-        lambda_values_in[i].size() == lambda_values_out[i].size() &&
-          lambda_values_in[i].size() == n_glob_dofs_per_node(),
-        "Both matrices must be of same size which corresponds to the number of dofs per face!");
-
-    SmallMatInT lambda_in = lambda_values_in;
-
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
-      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
-          lambda_in[i][j] = 0.;
-    }
-
-    SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
-
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
-
-    auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
-      for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
-    lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
-
-    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i) {
-      if (hyper_edge.node_descriptor[i] & (1<<6)) continue;  // static-only flag
-      for (unsigned int j = 0; j < 2*space_dim; j++)
-        if (hyper_edge.node_descriptor[i] & (1<<j))
-          lambda_values_out[i][j] = 0.;
-    }
-
-    return lambda_values_out;
+    return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, time);
   }
 
   /*!***********************************************************************************************
@@ -1388,9 +1378,6 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_v = hyper_edge.data.flux_v;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_s = hyper_edge.data.flux_s;
 
-    // SmallVec<4 * space_dim, lSol_float_t> extra_coeffs =
-    //   get_extra_coeffs(hyper_edge);
-
     flux_u *= 0;
     flux_r *= 0;
     flux_v *= 0;
@@ -1413,11 +1400,6 @@ class TimoshenkoWave
           bdr_int += helper;
         }
 
-        // std::cout << "---- compute fluxes" << std::endl;
-        // std::cout << i << " " << j << "|" << bdr_int << " " << u_old[j] << std::endl;
-
-        // NOTE: also need theta of old v with extra coeffs
-        // NOTE: why no normal_int_vec here?
         for (unsigned int dim = 0; dim < space_dim; dim++) {
           flux_u[dim*n_shape_fct_ + i] += grad_int_vec[0]
             * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * u_old[dim*n_shape_fct_+j];
@@ -1458,16 +1440,6 @@ class TimoshenkoWave
   {
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
 
-    // std::cout << "  ---  set_data before" << std::endl;
-    // std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    // std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    // std::cout << "lambda" << std::endl;
-    // for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-    //   for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-    //     std::cout << lambda_values[i][j] << " ";
-    //   std::cout << std::endl;
-    // }
-
     SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
       solve_local_problem(lambda_values, 1U, hyper_edge, time);
 
@@ -1488,31 +1460,6 @@ class TimoshenkoWave
     }
 
     compute_fluxes(lambda_values, hyper_edge, time);
-
-    //std::cout << "----- set_data " << std::endl;
-    //std::cout << "u " << hyper_edge.data.u_old << std::endl;
-    //std::cout << "r " << hyper_edge.data.r_old << std::endl;
-    //std::cout << "n " << hyper_edge.data.n_old << std::endl;
-    //std::cout << "m " << hyper_edge.data.m_old << std::endl;
-    //std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    //std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    //std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
-    //std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
-    //std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
-    //std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
-    //std::cout << "lambda_in" << std::endl;
-    //for (unsigned int i=0; i < lambda_values_in.size(); i++) {
-    //  for (unsigned int j=0; j < lambda_values_in[i].size(); j++)
-    //    std::cout << lambda_values_in[i][j] << " ";
-    //  std::cout << std::endl;
-    //}
-    //std::cout << "lambda " << std::endl;
-    //for (unsigned int i=0; i < lambda_values.size(); i++) {
-    //  for (unsigned int j=0; j < lambda_values[i].size(); j++)
-    //    std::cout << lambda_values[i][j] << " ";
-    //  std::cout << std::endl;
-    //}
-
   }
 
   template <class hyEdgeT, typename SmallMatT>
@@ -1526,10 +1473,6 @@ class TimoshenkoWave
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
-
-    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs(1.);
-
-    // TODO: set v,s to something!!
 
     // first u then r in skeletal variables
     SmallVec<space_dim, lSol_float_t> helper;
@@ -1596,21 +1539,6 @@ class TimoshenkoWave
       for (unsigned int dim = 0; dim < space_dim; dim++)
         r_old[i+dim*n_shape_fct_] = res[dim];
     }
-
-    // std::cout << "----- make_initial (normals)" << std::endl;
-    // std::cout << (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
-    // std::cout << (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(0);
-    // std::cout << (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(1);
-
-    // std::cout << "----- make_initial (glob)" << std::endl;
-    // std::cout << "u " << hyper_edge.data.u_old;
-    // std::cout << "v " << hyper_edge.data.v_old;
-    // for (unsigned int i=0; i < lambda_values.size(); i++) {
-    //   std::cout << "lambda " << i << "| ";
-    //   for (unsigned int j=0; j < lambda_values[i].size(); j++)
-    //     std::cout << lambda_values[i][j] << " ";
-    //   std::cout << std::endl;
-    // }
 
     // transform global dofs to edge dofs
     u_old = glob_dof_to_loc_dof(u_old, hyper_edge);
@@ -1700,24 +1628,6 @@ class TimoshenkoWave
     }
 
     compute_fluxes(lambda_values_loc, hyper_edge, time);
-
-    //std::cout << "----- make_initial" << std::endl;
-    //std::cout << "u " << hyper_edge.data.u_old << std::endl;
-    //std::cout << "r " << hyper_edge.data.r_old << std::endl;
-    //std::cout << "n " << hyper_edge.data.n_old << std::endl;
-    //std::cout << "m " << hyper_edge.data.m_old << std::endl;
-    //std::cout << "v " << hyper_edge.data.v_old << std::endl;
-    //std::cout << "s " << hyper_edge.data.s_old << std::endl;
-    //for (unsigned int i=0; i < lambda_values.size(); i++) {
-    //  std::cout << "lambda " << i << "| ";
-    //  for (unsigned int j=0; j < lambda_values[i].size(); j++)
-    //    std::cout << lambda_values_loc[i][j] << " ";
-    //  std::cout << std::endl;
-    //}
-    //std::cout << "flux_u " << hyper_edge.data.flux_u << std::endl;
-    //std::cout << "flux_r " << hyper_edge.data.flux_r << std::endl;
-    //std::cout << "flux_v " << hyper_edge.data.flux_v << std::endl;
-    //std::cout << "flux_s " << hyper_edge.data.flux_s << std::endl;
 
     return lambda_values;
   }
@@ -1815,9 +1725,6 @@ class TimoshenkoWave
 
     coeffs = rhs / mat;
 
-    //for (unsigned int i = 0; i < coeffs.size(); i++)
-    //  hy_check(std::isfinite(coeffs[i]), "error coef? " << coeffs[i] << " coeffs " << coeffs << " rhs " << rhs << " mat " << mat);
-
     for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++) {
       hyper_edge.data.n_old[i] = coeffs[0*space_dim*n_shape_fct_+i];
       hyper_edge.data.m_old[i] = coeffs[1*space_dim*n_shape_fct_+i];
@@ -1870,7 +1777,7 @@ class TimoshenkoWave
 
     return lambda_values_in;
   }
-};  // end of class LengtheningBernoulliBendingWave
+};  // end of class TimoshenkoWave
 
 // -------------------------------------------------------------------------------------------------
 // assemble_loc_matrix
@@ -1941,7 +1848,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   }
 
   return local_mat;
-}  // end of Diffusion::assemble_loc_matrix
+}  // end of TimoshenkoWave::assemble_loc_matrix_a
 
 
 template <unsigned int hyEdge_dimT,
@@ -2014,19 +1921,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
   }
 
-  // // Dump sparsity pattern of the local matrix as a PGM image (debug):
-  // //   ... && magic /tmp/mat.bin mat.png && sxiv mat.png
-  // auto it = local_mat.begin();
-  // char tmp[n_loc_dofs_*n_loc_dofs_+2] = {0};
-  // for (unsigned i = 0; i < n_loc_dofs_*n_loc_dofs_; i++)
-  //   tmp[i] = *it++ < 1e-16 ? 255 : 0;
-  // FILE* f = fopen("/tmp/mat.bin", "wb");
-  // fprintf(f, "P5\n%d %d\n255\n", n_loc_dofs_, n_loc_dofs_);
-  // fwrite(tmp, 1, 2+n_loc_dofs_*n_loc_dofs_, f);
-  // fclose(f);
-
   return local_mat;
-}  // end of Diffusion::assemble_loc_matrix
+}  // end of TimoshenkoWave::assemble_loc_matrix
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_lambda
@@ -2054,11 +1950,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     hy_assert(lambda_values[i].size() == 2 * space_dim * n_shape_bdr_,
               "The size of lambda should be the amount of ansatz functions at boundary.");
 
-  // for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-  //   for (unsigned int j = 0; j < 1 * space_dim; ++j)
-  //     std::cout << lambda_values[face][j] << " ";
-  // std::cout << std::endl;
-
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   lSol_float_t integral;
 
@@ -2078,10 +1969,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         }
       }
 
-  //std::cout << "-- rhs_from_lambda" << std::endl;
-  //std::cout << right_hand_side << std::endl;
   return right_hand_side;
-}  // end of Diffusion::assemble_rhs_from_lambda
+}  // end of TimoshenkoWave::assemble_rhs_from_lambda
 
 // -------------------------------------------------------------------------------------------------
 // assemble_rhs_from_global_rhs
@@ -2100,11 +1989,9 @@ inline SmallVec<
     n_loc_dofs_,
   lSol_float_t>
 TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-// NOTE: dim unncessary
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  // constexpr unsigned int n_dofs_lap = n_loc_dofs_ / 2;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   std::array<lSol_float_t, 3> integrals;
 
@@ -2118,8 +2005,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
-    // NOTE: it should probably not be *(space+dim) but *spac + dim???
-
     // distributed loads
     if (loaded)
     {
@@ -2140,14 +2025,8 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
         right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
     }
 
-    // NOTE: sign??
-    // NOTE: think it should be subtracted here
-    // NOTE: flux_* should be constructed with the sign as on the LHS, then it will be subtracted here
-
-    // NOTE: it should probably not be *(space+dim) but *spac + dim???
-
-
-    // NOTE: this fixes???
+    // old-time-step contribution of the theta scheme: (1 - theta) times the fluxes stored from
+    // the previous step (see compute_fluxes; LHS terms enter with -, RHS terms with +)
     for (unsigned int dim = 0; dim < space_dim; dim++) {
       right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_u[dim*n_shape_fct_+i];
       right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_r[dim*n_shape_fct_+i];
@@ -2155,12 +2034,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_s[dim*n_shape_fct_+i];
     }
 
-    // std::cout << "  -- n" << std::endl;
-    // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-    //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
-    // std::cout << std::endl;
-
-    // std::cout << "------ global_rhs" << std::endl;
     // dirichlet values
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
@@ -2178,7 +2051,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
           right_hand_side[(0 * space_dim + comp) * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
           right_hand_side[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
-          // std::cout << i << " " << comp << "|" << theta_*integrals1[comp] << std::endl;
         }
 
         // phi
@@ -2198,11 +2070,6 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
     }
   }
 
-  // std::cout << "  -- n" << std::endl;
-  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
-  // std::cout << std::endl;
-
   auto extra_coeffs = get_extra_coeffs(hyper_edge);
 
   // time derivatives
@@ -2215,41 +2082,7 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
       right_hand_side[(5 * space_dim + d) * n_shape_fct_ + i] -= hyper_edge.data.r_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_ * extra_coeffs[3*space_dim+d];
     }
 
-  // std::cout << "-- rhs_from_global_rhs" << std::endl;
-  // std::cout << "  -- u" << std::endl;
-  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  //   std::cout << right_hand_side[i] << " ";
-  // std::cout << std::endl;
-  // std::cout << "  -- r" << std::endl;
-  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  //   std::cout << right_hand_side[i+space_dim*n_shape_fct_] << " ";
-  // std::cout << std::endl;
-  // std::cout << "  -- n" << std::endl;
-  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  //   std::cout << right_hand_side[i+2*space_dim*n_shape_fct_] << " ";
-  // std::cout << std::endl;
-  // std::cout << "  -- m" << std::endl;
-  // for (unsigned int i = 0; i < space_dim * n_shape_fct_; i++)
-  //   std::cout << right_hand_side[i+3*space_dim*n_shape_fct_] << " ";
-  // std::cout << std::endl;
-
-  // std::cout << "  -- v" << std::endl;
-  // std::cout << hyper_edge.data.v_old << std::endl;
-  // std::cout << "  -- s" << std::endl;
-  // std::cout << hyper_edge.data.s_old << std::endl;
-  // std::cout << std::endl;
-
-  // std::cout << "  -- flux_u" << std::endl;
-  // std::cout << hyper_edge.data.flux_u << std::endl;
-  // std::cout << "  -- flux_r" << std::endl;
-  // std::cout << hyper_edge.data.flux_r << std::endl;
-  // std::cout << std::endl;
-
-
-  //std::cout << "  -- rhs global" << std::endl;
-  //std::cout << right_hand_side << std::endl;
-
   return right_hand_side;
-}  // end of Bilaplacian::assemble_rhs_from_global_rhs
+}  // end of TimoshenkoWave::assemble_rhs_from_global_rhs
 
 }  // namespace LocalSolver
