@@ -44,11 +44,14 @@ static PetscErrorCode CreateDeg(
     PetscInt poly_deg, const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
     HDGBase** hdg
 ) {
-  PetscBool loc_lu_full = PETSC_FALSE;
+  PetscBool loc_lu_full = PETSC_FALSE, loc_stage = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_lu_full", &loc_lu_full, NULL));
-  const std::vector<double> vals = {tau, theta, dt, (double)loc_lu_full};
+  // condense-last per-stage saddle A(h) (Phase A of the hoRK/Gauss migration); stage factor
+  // h defaults to theta*dt (= dt/2 at CN). See HORK_GAUSS_PLAN.md.
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_stage", &loc_stage, NULL));
+  const std::vector<double> vals = {tau, theta, dt, (double)loc_lu_full, (double)loc_stage};
   PetscCall(InitTest<Test>(path));
   switch (poly_deg) {
   case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, vals)); break;

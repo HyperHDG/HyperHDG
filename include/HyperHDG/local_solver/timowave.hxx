@@ -286,6 +286,17 @@ class TimoshenkoWave
    * convergence studies where the Schur mass shift loses stiffness digits (see data_type below).
    ************************************************************************************************/
   const bool full_lu_ = false;
+  /*!***********************************************************************************************
+   * \brief   Use the condense-last per-stage saddle A(h) instead of the theta-method solve.
+   *
+   * Phase A of the hoRK / Gauss migration (see HORK_GAUSS_PLAN.md): the note's stage form (eq 5/10)
+   * parametrized by a single stage factor h = Delta t * theta_l (= Delta t/2 at CN, s=1), solved via
+   * a full-matrix LU (the path that later takes a complex h for horkirk's Gauss stages). Off by
+   * default -> the CN path is unchanged. Only the homogeneous operator (solution_type 0) is wired so
+   * far; the field-history stage RHS F_hat is the next step.
+   ************************************************************************************************/
+  const bool use_stage_ = false;
+  const lSol_float_t stage_h_ = 0.;  // stage factor h; defaults to theta_*delta_t_ (Delta t/2 at CN)
 
   typedef TPP::Quadrature::Tensorial<
     TPP::Quadrature::GaussLegendre<quad_deg>,
@@ -332,9 +343,11 @@ class TimoshenkoWave
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  // NOTE: tau, theta, delta_t, [full_lu]
+  // NOTE: tau, theta, delta_t, [full_lu, use_stage, stage_h]
   TimoshenkoWave(const constructor_value_type& vals = std::vector(3, 1.)) : tau_(vals[0]),
-    theta_(vals[1]), delta_t_(vals[2]), full_lu_(vals.size() > 3 && vals[3] != 0.) {}
+    theta_(vals[1]), delta_t_(vals[2]), full_lu_(vals.size() > 3 && vals[3] != 0.),
+    use_stage_(vals.size() > 4 && vals[4] != 0.),
+    stage_h_(vals.size() > 5 ? vals[5] : theta_ * delta_t_) {}
 
   template <typename point_t, typename geom_t,
             lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
@@ -739,6 +752,104 @@ class TimoshenkoWave
     }
   }
 
+  /*!***********************************************************************************************
+   * \brief   Per-stage condense-last saddle A(h) (note eq 5/10), full n_loc_dofs_ form.
+   *
+   * The same three-field local saddle as assemble_loc_matrix, but in the note's stage form weighted
+   * by the single stage factor h instead of the theta-method (theta_, delta_t_): the theta prefactors
+   * drop, and the velocity (z) block becomes the sigma-weighted mass with sigma = 1/h --
+   * (y,z) = sigma M, (z,y) = -sigma M, (z,z) = C_u^{-1} M. Eliminating z leaves the y-mass C_u/h^2 M,
+   * matching the theta-method's C_u/(theta dt^2) M up to the overall theta scale (h = theta dt).
+   * At CN (h = Delta t/2) the condensed operator is the CN operator / theta. See HORK_GAUSS_PLAN.md.
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix_stage(
+    hyEdgeT& hyper_edge, const lSol_float_t h) const
+  {
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
+    const lSol_float_t sigma = 1. / h;
+    SmallVec<4 * space_dim, lSol_float_t> extra_coeffs = get_extra_coeffs(hyper_edge);
+
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int j = 0; j < n_shape_fct_; ++j)
+      {
+        const lSol_float_t vol_integral =
+          integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        const auto grad_int_vec =
+          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                         decltype(hyEdgeT::geometry)>(
+            i, j, hyper_edge.geometry);
+        lSol_float_t face_integral = 0.;
+        SmallVec<hyEdge_dimT, lSol_float_t> normal_int_vec(0.);
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        {
+          const lSol_float_t helper =
+            integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+          face_integral += helper;
+          normal_int_vec += helper * hyper_edge.geometry.local_normal(face);
+        }
+
+        for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+        {
+          // compliance a(q,q) and equilibrium -b(q,w_y): identical to the theta form
+          local_mat(dim * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
+            vol_integral / extra_coeffs[dim];
+          local_mat(dim * n_shape_fct_ + i, (2 * space_dim + dim) * n_shape_fct_ + j) -=
+            grad_int_vec[0];
+          // b^T and tau<y,w_y>: stage form drops the theta weight
+          local_mat((2 * space_dim + dim) * n_shape_fct_ + i, dim * n_shape_fct_ + j) +=
+            (normal_int_vec[0] - grad_int_vec[0]);
+          local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
+                    (2 * space_dim + dim) * n_shape_fct_ + j) += tau_ * face_integral;
+          // inertia d(z,z) = C_u^{-1} M and the sigma-weighted (y,z)/(z,y) coupling
+          local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
+                    (4 * space_dim + dim) * n_shape_fct_ + j) +=
+            vol_integral / extra_coeffs[2 * space_dim + dim];
+          local_mat((4 * space_dim + dim) * n_shape_fct_ + i,
+                    (2 * space_dim + dim) * n_shape_fct_ + j) -= sigma * vol_integral;
+          local_mat((2 * space_dim + dim) * n_shape_fct_ + i,
+                    (4 * space_dim + dim) * n_shape_fct_ + j) += sigma * vol_integral;
+        }
+
+        // cross product (i x r, i x n); stage form drops the theta on the (y,q) direction
+        local_mat(2 * n_shape_fct_ + i, (3 * space_dim + 1) * n_shape_fct_ + j) += vol_integral;
+        local_mat(1 * n_shape_fct_ + i, (3 * space_dim + 2) * n_shape_fct_ + j) -= vol_integral;
+        local_mat((3 * space_dim + 2) * n_shape_fct_ + i, 1 * n_shape_fct_ + j) += vol_integral;
+        local_mat((3 * space_dim + 1) * n_shape_fct_ + i, 2 * n_shape_fct_ + j) -= vol_integral;
+      }
+
+    return local_mat;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Trace right-hand side of the stage saddle (note: the -<zeta, w_q nu> + tau<zeta, w_y>
+   *          terms). Identical to assemble_rhs_from_lambda but without the theta weight on tau.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatT>
+  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_lambda_stage(
+    const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
+  {
+    SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        {
+          const lSol_float_t integral =
+            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+          for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+          {
+            right_hand_side[(2 * space_dim + dim) * n_shape_fct_ + i] +=
+              tau_ * lambda_values[face][j + dim] * integral;
+            right_hand_side[dim * n_shape_fct_ + i] -=
+              hyper_edge.geometry.local_normal(face).operator[](0) * lambda_values[face][j + dim] *
+              integral;
+          }
+        }
+    return right_hand_side;
+  }
+
   template <typename hyEdgeT, typename SmallMatT>
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
                                                                  const unsigned int solution_type,
@@ -747,6 +858,28 @@ class TimoshenkoWave
   {
     try
     {
+      auto& data = hyper_edge.data;
+
+      if (use_stage_)
+      {
+        // condense-last per-stage solve: A(h) coeffs = rhs, full-matrix LU (note eq 5/10).
+        SmallVec<n_loc_dofs_, lSol_float_t> rhs;
+        if (solution_type == 0)
+          rhs = assemble_rhs_from_lambda_stage(lambda_values, hyper_edge);
+        else
+          hy_assert(0 == 1, "stage field-history RHS (F_hat) not implemented yet");
+        if (!data.full_lu_factorized)
+        {
+          data.full_lu = assemble_loc_matrix_stage(hyper_edge, stage_h_);
+          Wrapper::lapack_factorize(n_loc_dofs_, data.full_lu.data().data(),
+                                    data.full_ipiv.data());
+          data.full_lu_factorized = true;
+        }
+        Wrapper::lapack_solve_factored(n_loc_dofs_, 1, data.full_lu.data().data(),
+                                       data.full_ipiv.data(), rhs.data().data());
+        return rhs;
+      }
+
       SmallVec<n_loc_dofs_, lSol_float_t> rhs;
       if (solution_type == 0)
         rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
@@ -755,8 +888,6 @@ class TimoshenkoWave
               assemble_rhs_from_global_rhs(hyper_edge, time);
       else
         hy_assert(0 == 1, "This has not been implemented!");
-
-      auto& data = hyper_edge.data;
 
       if (full_lu_)
       {
