@@ -7,6 +7,7 @@ endfunction()
 
 add_hyperhdg_test(diffusion_dimensions.cxx)
 add_hyperhdg_test(diffusion_floatings.cxx)
+add_hyperhdg_test(gauss_tableau.cxx)
 add_hyperhdg_test(diffusion_plotting.cxx)
 add_hyperhdg_test(plot_refined.cxx)
 add_hyperhdg_test(plot_simple.cxx)

@@ -15,6 +15,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <array>
+#include <complex>
 // #include <exception>
 
 namespace Wrapper
@@ -251,6 +252,48 @@ extern "C"
    * This function is \b not to be used in regular code. It only / solely is defined to allow the
    * use of functions \c lapack_solve that will be implemented below.
    ************************************************************************************************/
+  void zgetrf_(int* M, int* N, std::complex<double>* A, int* lda, int* IPIV, int* INFO);
+  /*!***********************************************************************************************
+   * \brief   This function is not (never) to be used.
+   *
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
+   * use of functions \c lapack_solve that will be implemented below.
+   ************************************************************************************************/
+  void zgetrs_(char* C,
+               int* N,
+               int* NRHS,
+               std::complex<double>* A,
+               int* LDA,
+               int* IPIV,
+               std::complex<double>* B,
+               int* LDB,
+               int* INFO);
+  /*!***********************************************************************************************
+   * \brief   This function is not (never) to be used.
+   *
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
+   * use of functions \c lapack_solve that will be implemented below.
+   ************************************************************************************************/
+  void zgeev_(char* JOBVL,
+              char* JOBVR,
+              int* N,
+              std::complex<double>* A,
+              int* LDA,
+              std::complex<double>* W,
+              std::complex<double>* VL,
+              int* LDVL,
+              std::complex<double>* VR,
+              int* LDVR,
+              std::complex<double>* WORK,
+              int* LWORK,
+              double* RWORK,
+              int* INFO);
+  /*!***********************************************************************************************
+   * \brief   This function is not (never) to be used.
+   *
+   * This function is \b not to be used in regular code. It only / solely is defined to allow the
+   * use of functions \c lapack_solve that will be implemented below.
+   ************************************************************************************************/
   void sgesv_(int* n, int* nrhs, float* a, int* lda, int* ipiv, float* b, int* ldb, int* info);
   /*!***********************************************************************************************
    * \brief   This function is not (never) to be used.
@@ -312,6 +355,13 @@ inline void lapack_factorize(int system_size, float* mat_a, int* ipiv)
   if (info != 0)
     throw LAPACKexception();
 }
+inline void lapack_factorize(int system_size, std::complex<double>* mat_a, int* ipiv)
+{
+  int info = -1;
+  zgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
 /*!*************************************************************************************************
  * \brief   Solve using LU factors produced by \c lapack_factorize --- DO NOT USE.
  *
@@ -339,6 +389,48 @@ inline void lapack_solve_factored(int system_size,
   int info = -1;
   char trans = 'N';
   sgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_solve_factored(int system_size,
+                                  int n_rhs_cols,
+                                  std::complex<double>* mat_a,
+                                  int* ipiv,
+                                  std::complex<double>* rhs_b)
+{
+  int info = -1;
+  char trans = 'N';
+  zgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
+ * \brief   Right eigendecomposition of a dense complex matrix (zgeev).
+ *
+ * On exit \c eig_vals holds the eigenvalues and the columns of \c eig_vecs (column-major) the
+ * right eigenvectors of \c mat_a; \c mat_a is destroyed. Heap-allocates the LAPACK workspace --
+ * intended for tiny setup-time systems (Butcher tableaux), not for per-edge work.
+ **************************************************************************************************/
+inline void lapack_eig(int system_size,
+                       std::complex<double>* mat_a,
+                       std::complex<double>* eig_vals,
+                       std::complex<double>* eig_vecs)
+{
+  int info = -1, lwork = -1, one = 1;
+  char jobvl = 'N', jobvr = 'V';
+  std::complex<double> wkopt;
+  double* rwork = new double[2 * system_size];
+  zgeev_(&jobvl, &jobvr, &system_size, mat_a, &system_size, eig_vals, NULL, &one, eig_vecs,
+         &system_size, &wkopt, &lwork, rwork, &info);
+  if (info == 0)
+  {
+    lwork = (int)wkopt.real();
+    std::complex<double>* work = new std::complex<double>[lwork];
+    zgeev_(&jobvl, &jobvr, &system_size, mat_a, &system_size, eig_vals, NULL, &one, eig_vecs,
+           &system_size, work, &lwork, rwork, &info);
+    delete[] work;
+  }
+  delete[] rwork;
   if (info != 0)
     throw LAPACKexception();
 }
