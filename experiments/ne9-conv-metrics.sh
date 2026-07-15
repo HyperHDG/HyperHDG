@@ -7,5 +7,5 @@
 set -e
 f="${1:?usage: ne9-conv-metrics.sh <results.json>}"
 yq -p=json -r \
-  '[.Stdout.poly_deg, .Stdout.theta, .Stdout.nt, .Stdout.nx, .Stdout.e_rel, .Stdout.e_trace, .Stdout.iterations] | @tsv' \
+  '[.Stdout.poly_deg, .Stdout.theta // "-", .Stdout.nt, .Stdout.nx, .Stdout.e_rel, .Stdout.e_trace, .Stdout.iterations] | @tsv' \
   "$f" | sort

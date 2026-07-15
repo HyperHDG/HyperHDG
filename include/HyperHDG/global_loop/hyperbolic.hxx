@@ -299,6 +299,23 @@ class Hyperbolic
       });
   }
   /*!***********************************************************************************************
+   * \brief   Gauss step protocol: combine stashed stage data into the new state on every edge.
+   *
+   * Explicit driver-called completion of a Gauss time step (after all per-stage set_data calls).
+   * Optional capability: solvers without it fail loudly at runtime, not at compile time.
+   ************************************************************************************************/
+  void finalize_step()
+  {
+    std::for_each(hyper_graph_.begin(), hyper_graph_.end(),
+                  [&](auto hyper_edge)
+                  {
+                    if constexpr (requires { local_solver_.finalize_step(hyper_edge); })
+                      local_solver_.finalize_step(hyper_edge);
+                    else
+                      hy_check(false, "LocalSolverT implements no finalize_step!");
+                  });
+  }
+  /*!***********************************************************************************************
    * \brief   Evaluate the initial flux of the problem.
    *
    * \param   x_vec         A vector containing the input vector \f$x\f$.

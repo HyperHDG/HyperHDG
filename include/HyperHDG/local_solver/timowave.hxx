@@ -115,9 +115,9 @@ namespace LocalSolver
  * \brief   Local solver for the Timoshenko beam-network wave equation (dual-mixed HDG).
  *
  * Second-order-in-time elastic beam system, reduced to first order via the velocity/momentum
- * field and advanced by one implicit one-step theta scheme per call (theta = 1/2 is the
- * energy-conserving Crank-Nicolson step). See hdg_gauss.pdf for the high-order Gauss time
- * stepping that reuses this same mass-shifted local solve once per (complex) stage.
+ * field and advanced by fully implicit Gauss collocation (hdg_gauss.pdf): one mass-shifted local
+ * solve per stage. n_stages = 1 is the implicit midpoint rule, which reproduces the classic
+ * Crank-Nicolson trajectory (stage values = CN midpoint averages; see HORK_GAUSS_PLAN.md).
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -127,7 +127,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = TestTimoWave0,
-          typename lSol_float_t = double>
+          typename lSol_float_t = double,
+          unsigned int n_stages = 1>
 class TimoshenkoWave
 {
  public:
@@ -262,26 +263,43 @@ class TimoshenkoWave
   /*!***********************************************************************************************
    * \brief   Step parameters of the local solve (see also hdg_gauss.pdf and HORK_GAUSS_PLAN.md).
    *
-   * These three constants are the only time-discretisation input to the local solve:
+   * The only runtime time-discretisation inputs are:
    *   tau_      HDG stabilisation parameter (globally constant), tau > 0.
-   *   theta_    Butcher eigenvalue of the stage; theta = 1/2 is CN / implicit midpoint (s=1).
    *   delta_t_  time step Delta t.
    * The local system is assembled in the STAGE NORMALIZATION of hdg_gauss.pdf (eq 5): the step
-   * enters the matrix only through sigma = 1/(theta*Delta t), which weights the (y,z)/(z,y)
+   * enters the matrix only through sigma_l = 1/(theta_l*Delta t), which weights the (y,z)/(z,y)
    * couplings (see assemble_loc_matrix / assemble_schur). Deviation from the note: the z-rows keep
    * their C_u scaling -- (z,z) = M, (z,y) = -sigma*C_u*M -- instead of the note's C_u^{-1} d-form,
    * so massless welds (C_u = 0) stay regular (z = 0 there). This costs the literal symmetry of the
-   * local saddle (row scaling), but leaves the condensed trace operator unchanged. The theta-method
-   * loads of assemble_rhs_from_global_rhs are expressed in the same normalization; for Gauss stages
-   * theta_l (hence sigma_l) becomes complex, CN being the single-stage case.
+   * local saddle (row scaling), but leaves the condensed trace operator unchanged.
    ************************************************************************************************/
   const lSol_float_t tau_;
-  const lSol_float_t theta_;
   const lSol_float_t delta_t_;
   /*!***********************************************************************************************
-   * \brief   Mass-shift weight sigma = 1/(theta * Delta t) of the stage normalization.
+   * \brief   Gauss tableau data, one entry per stage (hdg_gauss.pdf; HORK_GAUSS_PLAN.md).
+   *
+   * Per stage l: Butcher eigenvalue theta_l (stage shift sigma_l = 1/(theta_l*dt)), collocation
+   * node c_l, load weight omega_l = (T^{-1} 1)_l, recombination weight w_l = (d^T T)_l with
+   * d^T = b^T A^{-1}; stage_affine_ = 1 - sum_j d_j multiplies the old state in the endpoint
+   * update y+ = stage_affine_*y^n + sum_l w_l*y_l. Currently only the single-stage tableau
+   * (implicit midpoint: theta = c = 1/2, omega = 1, w = 2, affine = -1), whose trajectory is
+   * Crank-Nicolson's. s >= 2 has complex conjugate theta_l and lands with the complex LAPACK
+   * plumbing (eigen-decomposition of the Butcher matrix via dgeev in the constructor).
    ************************************************************************************************/
-  lSol_float_t sigma() const { return 1. / (theta_ * delta_t_); }
+  static_assert(n_stages == 1, "only the s = 1 (implicit midpoint) tableau is implemented; "
+                               "s >= 2 requires the complex stage plumbing");
+  static constexpr std::array<lSol_float_t, n_stages> stage_theta_{0.5};
+  static constexpr std::array<lSol_float_t, n_stages> stage_c_{0.5};
+  static constexpr std::array<lSol_float_t, n_stages> stage_omega_{1.};
+  static constexpr std::array<lSol_float_t, n_stages> stage_w_{2.};
+  static constexpr lSol_float_t stage_affine_ = -1.;
+  /*!***********************************************************************************************
+   * \brief   Mass-shift weight sigma_l = 1/(theta_l * Delta t) of the stage normalization.
+   ************************************************************************************************/
+  lSol_float_t sigma(const unsigned int stage = 0) const
+  {
+    return 1. / (stage_theta_[stage] * delta_t_);
+  }
   /*!***********************************************************************************************
    * \brief   Solve local problems via a full-matrix LU instead of the displacement Schur path.
    *
@@ -311,9 +329,9 @@ class TimoshenkoWave
 
   struct data_type
   {
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, flux_u, flux_r, n_old, m_old, flux_v, flux_s;
+    SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, v_old, r_old, s_old, n_old, m_old;
     // Cached Schur factorization of the local matrix (see assemble_schur). The matrix only depends
-    // on geometry and (tau_, theta_, delta_t_), all constant across time steps / Krylov iterations.
+    // on geometry and (tau_, delta_t_, tableau), all constant across time steps / Krylov iterations.
     // Shared per-edge integral blocks (row-major n x n, M diagonal) used in reduction/back-sub:
     std::array<lSol_float_t, n_shape_fct_> M_inv;                       // 1 / diag(M)
     std::array<lSol_float_t, n_shape_fct_ * n_shape_fct_> Gmat;         // G   = int (grad phi) phi
@@ -333,15 +351,18 @@ class TimoshenkoWave
     SmallSquareMat<n_loc_dofs_, lSol_float_t> full_lu;
     std::array<int, n_loc_dofs_> full_ipiv;
     bool full_lu_factorized = false;
+    // Per-stage local solution (q,y,z) stashed by set_data(zeta), consumed by finalize_step.
+    // Real at s = 1; becomes complex per-representative with the multi-stage plumbing.
+    std::array<SmallVec<n_loc_dofs_, lSol_float_t>, n_stages> stage_coeffs;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
    *
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
-  // NOTE: tau, theta, delta_t, [full_lu]
-  TimoshenkoWave(const constructor_value_type& vals = std::vector(3, 1.)) : tau_(vals[0]),
-    theta_(vals[1]), delta_t_(vals[2]), full_lu_(vals.size() > 3 && vals[3] != 0.) {}
+  // NOTE: tau, delta_t, [full_lu]
+  TimoshenkoWave(const constructor_value_type& vals = std::vector(2, 1.)) : tau_(vals[0]),
+    delta_t_(vals[1]), full_lu_(vals.size() > 2 && vals[2] != 0.) {}
 
   template <typename point_t, typename geom_t,
             lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
@@ -358,25 +379,6 @@ class TimoshenkoWave
     return ret;
   }
 
-
-  template <typename point_t, typename geom_t,
-            lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
-            unsigned int n_comps = 3>
-  std::array<lSol_float_t, n_comps> integrate_vol_phivecfunccomp_beam_avg(const unsigned int i,
-                                                                         std::array<int, n_comps> comps, geom_t& geom, const lSol_float_t time) const
-  {
-    std::array<lSol_float_t, n_comps> ret;
-    for (unsigned int j = 0; j < n_comps; j++) {
-      ret[j] = theta_ * integrator::template integrate_vol_phivecfunccomp<
-        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[j], geom,
-                                                                         time);
-      ret[j] += (1-theta_) * integrator::template integrate_vol_phivecfunccomp<
-        point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(i, comps[j], geom,
-                                                                         time-delta_t_);
-
-    }
-    return ret;
-  }
 
   template <typename point_t,
             typename geom_t,
@@ -398,31 +400,6 @@ class TimoshenkoWave
     return ret;
   }
 
-
-
-  template <typename point_t,
-            typename geom_t,
-            lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
-            unsigned int n_comps = 3>
-  std::array<lSol_float_t, n_comps> integrate_bdr_phivecfunccomp_beam_avg(const unsigned int i,
-                                               const unsigned int bdr,
-                                               std::array<int, n_comps> comps,
-                                               geom_t& geom,
-                                               const lSol_float_t time = 0.) const
-  {
-   std::array<lSol_float_t, n_comps> ret;
-   for (unsigned int j = 0; j < n_comps; j++) {
-     ret[j] = theta_ * integrator::template integrate_bdr_phivecfunccomp<
-       point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(
-                 i, bdr, comps[j], geom, time);
-     ret[j] += (1-theta_) * integrator::template integrate_bdr_phivecfunccomp<
-       point_t, geom_t, fun, Point<hyEdge_dimT, lSol_float_t>>(
-                 i, bdr, comps[j], geom, time-delta_t_);
-
-   }
-
-    return ret;
-  }
 
 
   /*!***********************************************************************************************
@@ -503,10 +480,96 @@ class TimoshenkoWave
     const SmallMatT& lambda_values,
     hyEdgeT& hyper_edge) const;
 
+  /*!***********************************************************************************************
+   * \brief   Gauss stage loads (hdg_gauss.pdf eq 7): history enters through (y^n, z^n) only.
+   *
+   * g_y = (f(t_stage), w_y) + sigma*omega*(z^n, w_y);  g_z = -sigma*omega*C_u*(y^n, w_z) in our
+   * C_u-scaled z-row normalization. Data (f, Dirichlet values) are sampled at the collocation node
+   * t_stage = time - dt + c_l*dt, not endpoint-averaged: at s = 1 this is the O(dt^2) load
+   * difference to the retired trapezoid scheme (exact match for f = 0 and time-independent BC).
+   * No flux caches, no old trace: q and lambda are algebraic and never history.
+   ************************************************************************************************/
   template <typename hyEdgeT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_global_rhs(
-    hyEdgeT& hyper_edge,
-    const lSol_float_t time) const;
+  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_stage(hyEdgeT& hyper_edge,
+                                                                const lSol_float_t time,
+                                                                const unsigned int stage = 0) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    SmallVec<n_loc_dofs_, lSol_float_t> rhs;
+    const lSol_float_t t_stage = time - (1. - stage_c_[stage]) * delta_t_;
+    const lSol_float_t sig_om = sigma(stage) * stage_omega_[stage];
+
+    // body loads act on material only if the parameters opt in (massless welds unloaded)
+    bool loaded = true;
+    if constexpr (requires { parameters::massless_unloaded; })
+      if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
+        loaded = hyper_edge.geometry.extra_data()[0] > 0;
+
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+    {
+      if (loaded)
+      {
+        auto integrals = integrate_vol_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::right_hand_side_n>(i, {1, -1, -2},
+                                                                      hyper_edge.geometry, t_stage);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+          rhs[(2 * space_dim + comp) * n_shape_fct_ + i] += integrals[comp];
+        integrals = integrate_vol_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::right_hand_side_m>(i, {1, -1, -2},
+                                                                      hyper_edge.geometry, t_stage);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+          rhs[(3 * space_dim + comp) * n_shape_fct_ + i] += integrals[comp];
+      }
+
+      // Dirichlet data at the collocation node (bit-6 static-only faces keep their trace)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      {
+        if (hyper_edge.node_descriptor[face] & (1 << 6)) continue;
+        if (!hyper_edge.node_descriptor[face]) continue;
+        auto integrals = integrate_bdr_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u>(i, face, {1, -1, -2},
+                                                                      hyper_edge.geometry, t_stage);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+        {
+          rhs[(0 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+          rhs[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integrals[comp];
+        }
+        integrals = integrate_bdr_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi>(i, face, {1, -1, -2},
+                                                                        hyper_edge.geometry,
+                                                                        t_stage);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+        {
+          rhs[(1 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+          rhs[(3 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integrals[comp];
+        }
+      }
+    }
+
+    // history: sigma*omega mass pairings of (y^n, z^n); M = area * Id (orthonormal basis)
+    const auto extra = get_extra_coeffs(hyper_edge);
+    const lSol_float_t mass = hyper_edge.geometry.area();
+    for (unsigned int d = 0; d < space_dim; ++d)
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      {
+        rhs[(2 * space_dim + d) * n_shape_fct_ + i] +=
+          sig_om * mass * hyper_edge.data.v_old[d * n_shape_fct_ + i];
+        rhs[(3 * space_dim + d) * n_shape_fct_ + i] +=
+          sig_om * mass * hyper_edge.data.s_old[d * n_shape_fct_ + i];
+        rhs[(4 * space_dim + d) * n_shape_fct_ + i] -=
+          sig_om * mass * extra[2 * space_dim + d] * hyper_edge.data.u_old[d * n_shape_fct_ + i];
+        rhs[(5 * space_dim + d) * n_shape_fct_ + i] -=
+          sig_om * mass * extra[3 * space_dim + d] * hyper_edge.data.r_old[d * n_shape_fct_ + i];
+      }
+
+    return rhs;
+  }
 
   template <class hyEdgeT, typename SmallMatT>
   inline SmallMatT glob_dof_to_loc_dof(
@@ -815,7 +878,8 @@ class TimoshenkoWave
   inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
                                                                  const unsigned int solution_type,
                                                                  hyEdgeT& hyper_edge,
-                                                                 const lSol_float_t time) const
+                                                                 const lSol_float_t time,
+                                                                 const unsigned int stage = 0) const
   {
     try
     {
@@ -826,7 +890,7 @@ class TimoshenkoWave
         rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
       else if (solution_type == 1)
         rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge) +
-              assemble_rhs_from_global_rhs(hyper_edge, time);
+              assemble_rhs_stage(hyper_edge, time, stage);
       else
         hy_assert(0 == 1, "This has not been implemented!");
 
@@ -1433,105 +1497,48 @@ class TimoshenkoWave
     return extra_coeffs;
   }
 
-  template <class hyEdgeT>
-  void compute_fluxes(
-    const std::array<std::array<lSol_float_t, 2*n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_loc,
-    hyEdgeT& hyper_edge,
-    const lSol_float_t time = 0.) const
-  {
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& u_old = hyper_edge.data.u_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& r_old = hyper_edge.data.r_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& n_old = hyper_edge.data.n_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_u = hyper_edge.data.flux_u;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_r = hyper_edge.data.flux_r;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_v = hyper_edge.data.flux_v;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& flux_s = hyper_edge.data.flux_s;
-
-    flux_u *= 0;
-    flux_r *= 0;
-    flux_v *= 0;
-    flux_s *= 0;
-
-    // NOTE: when we compute fluxes, -= for stuff from LHS, += for stuff from RHS
-    //       finally is += to rhs
-
-    for (unsigned int i = 0; i < n_shape_fct_; i++) {
-      for (unsigned int j = 0; j < n_shape_fct_; j++) {
-        SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec =
-          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
-              decltype(hyEdgeT::geometry)>(j, i, hyper_edge.geometry);
-        lSol_float_t bdr_int = 0;
-
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        {
-          auto helper = integrator::template integrate_bdr_phiphi<decltype(hyEdgeT::geometry)>(i, j, face, hyper_edge.geometry);
-          // grad_int_vec += helper * hyper_edge.geometry.local_normal(face);
-          bdr_int += helper;
-        }
-
-        for (unsigned int dim = 0; dim < space_dim; dim++) {
-          flux_u[dim*n_shape_fct_ + i] += grad_int_vec[0]
-            * n_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * u_old[dim*n_shape_fct_+j];
-          flux_r[dim*n_shape_fct_ + i] += grad_int_vec[0]
-            * m_old[dim*n_shape_fct_ +j] + tau_ * bdr_int * r_old[dim*n_shape_fct_+j];
-        }
-      }
-
-      for (unsigned int dim = 0; dim < space_dim; dim++) {
-        flux_v[dim*n_shape_fct_ + i] += v_old[dim*n_shape_fct_+i] * hyper_edge.geometry.area();
-        flux_s[dim*n_shape_fct_ + i] += s_old[dim*n_shape_fct_+i] * hyper_edge.geometry.area();
-      }
-
-      // Consider the cross product (textbook orientation: + i x n)
-      flux_r[2 * n_shape_fct_ + i] += n_old[1 * n_shape_fct_ + i] * hyper_edge.geometry.area();
-      flux_r[1 * n_shape_fct_ + i] -= n_old[2 * n_shape_fct_ + i] * hyper_edge.geometry.area();
-
-      for (unsigned int dim = 0; dim < space_dim; ++dim)
-      {
-        for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        {
-          for (unsigned int face = 0; face < 2 * hyEdge_dimT; face++) {
-            flux_u[dim*n_shape_fct_+i] -= tau_*lambda_values_loc[face][j+dim*n_shape_bdr_]
-              * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
-            flux_r[dim*n_shape_fct_+i] -= tau_*lambda_values_loc[face][j+(dim+space_dim)*n_shape_bdr_]
-              * integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(i,j, face, hyper_edge.geometry);
-          }
-        }
-      }
-    }
-  }
-
+  /*!***********************************************************************************************
+   * \brief   Solve the stage-local problem from the stage trace zeta and stash its solution.
+   *
+   * \c lambda_values_in is the stage trace zeta of the Gauss step protocol; the stage-local
+   * solution (q,y,z) is stashed in slot \c stage, the state advances in finalize_step (idempotent:
+   * re-calling overwrites the slot).
+   ************************************************************************************************/
   template <class hyEdgeT>
   void set_data(
     const std::array<std::array<lSol_float_t, 2*n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
     hyEdgeT& hyper_edge,
-    const lSol_float_t time = 0.) const
+    const lSol_float_t time = 0.,
+    const unsigned int stage = 0) const
   {
     auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+    hyper_edge.data.stage_coeffs[stage] =
+      solve_local_problem(lambda_values, 1U, hyper_edge, time, stage);
+  }
 
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values, 1U, hyper_edge, time);
-
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& u_old = hyper_edge.data.u_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& r_old = hyper_edge.data.r_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& n_old = hyper_edge.data.n_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
-
-    for (unsigned int i = 0; i < space_dim*n_shape_fct_; i++) {
-      n_old[i] = coeffs[i+0*space_dim*n_shape_fct_];
-      m_old[i] = coeffs[i+1*space_dim*n_shape_fct_];
-      u_old[i] = coeffs[i+2*space_dim*n_shape_fct_];
-      r_old[i] = coeffs[i+3*space_dim*n_shape_fct_];
-      v_old[i] = coeffs[i+4*space_dim*n_shape_fct_];
-      s_old[i] = coeffs[i+5*space_dim*n_shape_fct_];
-    }
-
-    compute_fluxes(lambda_values, hyper_edge, time);
+  /*!***********************************************************************************************
+   * \brief   Gauss protocol: combine the stashed stage solutions into the new state.
+   *
+   * Endpoint update y+ = stage_affine_ * y^n + sum_l Re(w_l y_l); at s = 1 that is
+   * y+ = 2 y_1 - y^n. q = (n, m) is algebraic and linear in (y, lambda), so the same extrapolation
+   * is exact for it at s = 1 (multi-stage recovers q via recover_dual instead). Explicitly driver-
+   * called once all stage set_data calls are in -- no per-edge completion tally.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  void finalize_step(hyEdgeT& hyper_edge) const
+  {
+    auto& data = hyper_edge.data;
+    constexpr unsigned int nf = space_dim * n_shape_fct_;
+    SmallVec<nf, lSol_float_t>* fields[6] = {&data.n_old, &data.m_old, &data.u_old,
+                                             &data.r_old, &data.v_old, &data.s_old};
+    for (unsigned int f = 0; f < 6; ++f)
+      for (unsigned int i = 0; i < nf; ++i)
+      {
+        lSol_float_t val = stage_affine_ * (*fields[f])[i];
+        for (unsigned int l = 0; l < n_stages; ++l)
+          val += stage_w_[l] * data.stage_coeffs[l][f * nf + i];
+        (*fields[f])[i] = val;
+      }
   }
 
   /*!***********************************************************************************************
@@ -1697,8 +1704,6 @@ class TimoshenkoWave
     // transform global dofs to edge dofs
     u_old = glob_dof_to_loc_dof(u_old, hyper_edge);
     r_old = glob_dof_to_loc_dof(r_old, hyper_edge);
-    //n_old = glob_dof_to_loc_dof(n_old, hyper_edge);
-    //m_old = glob_dof_to_loc_dof(m_old, hyper_edge);
     v_old = glob_dof_to_loc_dof(v_old, hyper_edge);
     s_old = glob_dof_to_loc_dof(s_old, hyper_edge);
 
@@ -1707,8 +1712,6 @@ class TimoshenkoWave
       assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
     add_dirichlet_rhs_static(rhs, hyper_edge, time);
     recover_dual(hyper_edge, rhs);
-
-    compute_fluxes(lambda_values_loc, hyper_edge, time);
 
     return lambda_values;
   }
@@ -1737,7 +1740,7 @@ class TimoshenkoWave
     int comps[] = {1, -1, -2};
     static_assert(space_dim <= 3);
 
-    // same massless_unloaded opt-in as assemble_rhs_from_global_rhs: the static problem
+    // same massless_unloaded opt-in as assemble_rhs_stage: the static problem
     // this reconstructs must match the network solver's (unloaded weld) RHS
     bool loaded = true;
     if constexpr (requires { parameters::massless_unloaded; })
@@ -1811,8 +1814,6 @@ class TimoshenkoWave
       }
     }
 
-    compute_fluxes(lambda_values, hyper_edge, time);
-
     // write edge-local lambda back to global frame; edge_dof_to_node_dof accumulates,
     // so zero the destination first
     for (unsigned int i = 0; i < lambda_values_in.size(); ++i)
@@ -1834,13 +1835,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          unsigned int n_stages>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-    n_loc_dofs_,
+  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t,
+                 n_stages>::n_loc_dofs_,
   lSol_float_t>
-TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, n_stages>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
@@ -1873,124 +1875,5 @@ TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   return right_hand_side;
 }  // end of TimoshenkoWave::assemble_rhs_from_lambda
 
-// -------------------------------------------------------------------------------------------------
-// assemble_rhs_from_global_rhs
-// -------------------------------------------------------------------------------------------------
-
-
-template <unsigned int hyEdge_dimT,
-          unsigned int space_dim,
-          unsigned int poly_deg,
-          unsigned int quad_deg,
-          template <unsigned int, typename> typename parametersT,
-          typename lSol_float_t>
-template <typename hyEdgeT>
-inline SmallVec<
-  TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-    n_loc_dofs_,
-  lSol_float_t>
-TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
-  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
-{
-  using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
-  std::array<lSol_float_t, 3> integrals;
-
-  // parameters may opt in (massless_unloaded = true) to body loads acting on material
-  // only: massless edges (properties mass == 0, virtual welds) get no volume RHS
-  // (cf. TimoshenkoBeam::assemble_rhs_from_global_rhs in timoshenko_network.hxx)
-  bool loaded = true;
-  if constexpr (requires { parameters::massless_unloaded; })
-    if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
-      loaded = hyper_edge.geometry.extra_data()[0] > 0;
-
-  for (unsigned int i = 0; i < n_shape_fct_; ++i)
-  {
-    // distributed loads
-    if (loaded)
-    {
-      // f
-      integrals = integrate_vol_phivecfunccomp_beam_avg<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-          parameters::right_hand_side_n
-        >(i, {1, -1, -2}, hyper_edge.geometry, time);
-      for (unsigned int comp = 0; comp < 3; comp++)
-        right_hand_side[(2*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
-
-      // g
-      integrals = integrate_vol_phivecfunccomp_beam_avg<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
-          parameters::right_hand_side_m
-        >(i, {1, -1, -2}, hyper_edge.geometry, time);
-      for (unsigned int comp = 0; comp < 3; comp++)
-        right_hand_side[(3*space_dim+comp) * n_shape_fct_ + i] = integrals[comp];
-    }
-
-    // old-time-step contribution of the theta scheme: (1 - theta) times the fluxes stored from
-    // the previous step (see compute_fluxes; LHS terms enter with -, RHS terms with +)
-    for (unsigned int dim = 0; dim < space_dim; dim++) {
-      right_hand_side[(2*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_u[dim*n_shape_fct_+i];
-      right_hand_side[(3*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_r[dim*n_shape_fct_+i];
-      right_hand_side[(4*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_v[dim*n_shape_fct_+i];
-      right_hand_side[(5*space_dim+dim) * n_shape_fct_+i] -= (1-theta_)*hyper_edge.data.flux_s[dim*n_shape_fct_+i];
-    }
-
-    // dirichlet values
-    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-    {
-      if (hyper_edge.node_descriptor[face] & (1<<6)) continue;
-      if (hyper_edge.node_descriptor[face]) {
-        // u
-        auto integrals1 = integrate_bdr_phivecfunccomp_beam<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
-        auto integrals2 = integrate_bdr_phivecfunccomp_beam<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u>(i, face, {1,-1,-2}, hyper_edge.geometry, time-delta_t_);
-
-        for (unsigned int comp = 0; comp < 3; comp++) {
-          right_hand_side[(0 * space_dim + comp) * n_shape_fct_ + i] -=
-            hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
-          right_hand_side[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
-        }
-
-        // phi
-        integrals1 = integrate_bdr_phivecfunccomp_beam<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
-        integrals2 = integrate_bdr_phivecfunccomp_beam<
-          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi>(i, face, {1,-1,-2}, hyper_edge.geometry, time-delta_t_);
-
-        for (unsigned int comp = 0; comp < 3; comp++) {
-          right_hand_side[(1 * space_dim + comp) * n_shape_fct_ + i] -=
-            hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
-          right_hand_side[(3 * space_dim + comp) * n_shape_fct_ + i] += tau_ * (theta_*integrals1[comp]+(1-theta_)*integrals2[comp]);
-        }
-      }
-    }
-  }
-
-  auto extra_coeffs = get_extra_coeffs(hyper_edge);
-
-  // time derivatives
-  for (unsigned int d = 0; d < space_dim; d++)
-    for (unsigned int i = 0; i < n_shape_fct_; i++)
-    {
-      right_hand_side[(2 * space_dim + d) * n_shape_fct_ + i] += hyper_edge.data.v_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_;
-      right_hand_side[(3 * space_dim + d) * n_shape_fct_ + i] += hyper_edge.data.s_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_;
-      right_hand_side[(4 * space_dim + d) * n_shape_fct_ + i] -= hyper_edge.data.u_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_ * extra_coeffs[2*space_dim+d];
-      right_hand_side[(5 * space_dim + d) * n_shape_fct_ + i] -= hyper_edge.data.r_old[d*n_shape_fct_+i] * hyper_edge.geometry.area() / delta_t_ * extra_coeffs[3*space_dim+d];
-    }
-
-  // The trapezoidal (theta-method) loads above are written in the historic theta-weighted row
-  // normalization; the local system is assembled in the stage normalization (y/z rows divided by
-  // theta, q rows unchanged -- see assemble_loc_matrix). Rescale accordingly. This block goes away
-  // with the Gauss stage loads (hdg_gauss.pdf eq 7), which are stage-normalized from the start.
-  for (unsigned int i = 2 * space_dim * n_shape_fct_; i < n_loc_dofs_; ++i)
-    right_hand_side[i] /= theta_;
-
-  return right_hand_side;
-}  // end of TimoshenkoWave::assemble_rhs_from_global_rhs
 
 }  // namespace LocalSolver

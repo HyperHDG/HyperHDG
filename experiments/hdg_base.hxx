@@ -28,6 +28,7 @@ struct HDGBase {
   virtual sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) = 0;
   virtual void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) = 0;
   virtual void set_data(Span x_vec, const Real time = 0.) = 0;
+  virtual void finalize_step() = 0;
   virtual void set_refinement(unsigned int i) = 0;
   virtual ~HDGBase() = default;
 };
@@ -93,6 +94,13 @@ struct HDGWrapper : HDGBase {
   }
   void set_data(Span x_vec, const Real time = 0.) {
     hdg.set_data(x_vec, time);
+  }
+  void finalize_step() {
+    // Gauss step completion; only the hyperbolic loop provides it (optional capability).
+    if constexpr (requires { hdg.finalize_step(); })
+      hdg.finalize_step();
+    else
+      hy_check(false, "finalize_step is not available for this global loop");
   }
   void set_refinement(unsigned int i) {
     hdg.set_refinement(i);

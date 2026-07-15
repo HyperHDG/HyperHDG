@@ -41,14 +41,14 @@ static PetscErrorCode InitTest(const char* path)
 // hdg must be deallocated with `delete`.
 template<template<unsigned int, typename> typename Test>
 static PetscErrorCode CreateDeg(
-    PetscInt poly_deg, const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
+    PetscInt poly_deg, const char* path, PetscReal tau, PetscReal dt,
     HDGBase** hdg
 ) {
   PetscBool loc_lu_full = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_lu_full", &loc_lu_full, NULL));
-  const std::vector<double> vals = {tau, theta, dt, (double)loc_lu_full};
+  const std::vector<double> vals = {tau, dt, (double)loc_lu_full};
   PetscCall(InitTest<Test>(path));
   switch (poly_deg) {
   case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, vals)); break;
@@ -65,20 +65,20 @@ static PetscErrorCode CreateDeg(
 // select the test problem by name. hdg must be deallocated with `delete`.
 PetscErrorCode PetscHDGCreate(
     PetscInt poly_deg, const char* test,
-    const char* path, PetscReal tau, PetscReal theta, PetscReal dt,
+    const char* path, PetscReal tau, PetscReal dt,
     HDGBase** hdg
 ) {
   PetscFunctionBeginUser;
-  if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, path, tau, theta, dt, hdg));
-  else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, path, tau, theta, dt, hdg));
+  if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, path, tau, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -121,7 +121,6 @@ int main(int argc, char **argv) {
     PetscInt nt = 1, nx = 1, poly_deg = 1, tau_s = 0;
     PetscInt N;            // global system size
     PetscReal tau = 1;     // HDG penalty
-    PetscReal theta = .5;  // one-step theta method
     PetscReal T = 1, dt = 0, rtol = 1e-10, e_abs = 0, e_rel = 0, n_abs = 0, e_trace = 0,
               n_trace = 0;
     PetscInt iterations = 0, its = 0;
@@ -152,12 +151,12 @@ int main(int argc, char **argv) {
     VecScatter scatter = NULL;
     Mat mat;
     KSP ksp = NULL;
+    Vec lam_local = NULL;  // previous endpoint trace lambda^n (local layout)
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
     PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
     PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, poly_deg, &poly_deg, &is_set));
-    PetscCall(PetscOptionsReal("-theta", "one-step theta scheme, weight on the new time level; stiff modes amplify by -(1-theta)/theta per step, so theta >= 0.5: 0.5 = Crank-Nicolson (energy-conserving), 1 = fully implicit (damped); verified ne18-22", NULL, theta, &theta, &is_set));
     PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, tau, &tau, &is_set));
     PetscCall(PetscOptionsInt("-nx", "number of refinements", NULL, nx, &nx, &is_set));
     PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, nt, &nt, &is_set));
@@ -188,15 +187,6 @@ int main(int argc, char **argv) {
     }
     PetscOptionsEnd();
 
-    // theta < 0.5 amplifies every under-resolved stiff mode by |-(1-theta)/theta| > 1 per
-    // step -- on the fiber networks (omega_max*dt >> 1) that is a guaranteed blow-up
-    // (ne18-22: theta = 0.25 grew by exactly x3 per step). Warn, don't fail: on a problem
-    // with resolved dynamics a conditionally stable theta may still be intentional.
-    if (theta < 0.5)
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-        "# WARNING: theta = %g < 0.5 amplifies stiff modes by %g per step\n",
-        (double)theta, (double)((1 - theta) / theta)));
-
     PetscCall(PetscOptionsGetBool(NULL, NULL, "-help", &help, &is_set));
     if (help) {
       PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD);
@@ -219,7 +209,7 @@ int main(int argc, char **argv) {
     dt = T / nt;
 
     HDGBase *hdg = NULL;
-    PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, theta, dt, &hdg));
+    PetscCall(PetscHDGCreate(poly_deg, timowave_test, domain_path, tau, dt, &hdg));
     // set_refinement rebuilds the hypernode factory and drops the distributed (owned/global) dof
     // numbering, so only refine when actually requested; nx==1 is the construction default and a
     // no-op for hyEdge_dim==1. Refinement is not yet supported together with the distributed
@@ -238,7 +228,6 @@ int main(int argc, char **argv) {
     PRIN2IY(poly_deg);
     PRIN2FY(tau);
     PRIN2IY(tau_s);
-    PRIN2FY(theta);
     PRIN2IY(nt);
     PRIN2IY(nx);
     PRIN2FY(dt);
@@ -324,6 +313,10 @@ int main(int argc, char **argv) {
       PetscCall(VecRestoreSpan(sol_local, span));
     }
     PRIN2SP();
+
+    // previous endpoint trace lambda^n for the Gauss step protocol (see the timestep loop)
+    PetscCall(VecDuplicate(sol_local, &lam_local));
+    PetscCall(VecCopy(sol_local, lam_local));
 
     e_abs = PetscMax(temp2[0], e_abs);
     n_abs = PetscMax(temp3[0], n_abs);
@@ -458,8 +451,16 @@ int main(int argc, char **argv) {
 
         PetscCall(VecGetSpan(sol_local, span));
         PetscLogEventBegin(e_set, 0,0,0,0);
-        hdg->set_data(span, ti);
+        hdg->set_data(span, ti);   // stage trace zeta -> stash stage locals
         PetscLogEventEnd(e_set, 0,0,0,0);
+        PetscCall(VecRestoreSpan(sol_local, span));
+
+        hdg->finalize_step();
+        // endpoint trace, exact at s=1: lambda^{n+1} = 2 zeta_1 - lambda^n (zeta_1 = midpoint)
+        PetscCall(VecScale(lam_local, -1.));
+        PetscCall(VecAXPY(lam_local, 2., sol_local));
+
+        PetscCall(VecGetSpan(lam_local, span));
         if (*plot && (i % plot_stride == 0 || i == nt)) {
           PetscLogEventBegin(e_plot, 0,0,0,0);
           hdg->plot_solution(span, ti);
@@ -475,7 +476,7 @@ int main(int argc, char **argv) {
         n_abs = PetscMax(norm, n_abs);
         e_trace = PetscMax(temp2[1], e_trace);
         n_trace = PetscMax(temp3[1], n_trace);
-        PetscCall(VecRestoreSpan(sol_local, span));
+        PetscCall(VecRestoreSpan(lam_local, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
         PetscCall(VecSetValue(norms, i, norm, INSERT_VALUES));
@@ -517,6 +518,7 @@ end:
     PetscCall(VecDestroy(&norms));
     PetscCall(VecDestroy(&rhs));
     PetscCall(VecDestroy(&sol_local));
+    PetscCall(VecDestroy(&lam_local));
     PetscCall(VecScatterDestroy(&scatter));
 
     if (set_mem_max) {

@@ -71,85 +71,38 @@ not carry over.
   Debug `hy_assert`: imaginary residue of the finalize combination ≈ 0
   (catches any conjugation-convention slip in the θ/ω/w chain).
 
-## s=1 ≡ CN (the Phase-2 correctness backbone)
+## Landed: Gauss s=1 REPLACES the trapezoid scheme (no dual path)
 
-Tableau: A=(1/2), b=(1) ⇒ θ₁=1/2, T=(1), ω₁=1, σ₁=2/Δt, d=bᵀA⁻¹=2, w₁=2.
-Bijection: stage values = CN midpoint averages (q₁,y₁,z₁,ζ₁)=(q̄,ȳ,z̄,λ̄).
-  - q-eq: algebraic ⇒ holds at both levels ⇒ holds for averages.
-  - y-eq: (z^{n+1}−z^n)/Δt = σ₁(z₁−z^n) turns the CN time-difference into the
-    σ₁(z₁,·) term + the load σ₁ω₁(z^n,·).   [z-eq identical with the C_u scaling]
-  - balance: CN balances the averaged flux = the stage flux of (q₁,y₁,ζ₁).
-Back: finalize y⁺=2y₁−y^n (=(1−Σd)y^n+w₁·y₁); s=1 only: λ⁺=2ζ₁−λ^n is exact
-(ζ₁=λ̄), so e_trace IS comparable to GOLDEN at s=1 without a static trace solve.
-Exact for f=0 + time-independent BC; time-dependent data differ at O(Δt²):
-stage samples t^{n+1/2}, the implementation endpoint-averages (main.pdf's
-f^{k−1/2} is itself pointwise-midpoint, closer to the stage form than our code).
+The trapezoidal θ-scheme is ripped out, not kept alongside: no `-gauss` /
+`-theta` options, no `flux_*` caches, no `compute_fluxes`, no θ-averaged
+load integrators, no `assemble_rhs_from_global_rhs`. The single time stepper
+is the Gauss step protocol above; `timowave.cxx` runs it unconditionally
+(stage solve → `set_data` stash → `finalize_step` → endpoint trace
+`λ⁺ = 2ζ₁ − λⁿ`, exact at s=1 only).
 
-## Phases (each ends in a commit + verification)
+- `n_stages` is a compile-time template parameter of `TimoshenkoWave`
+  (default 1; `static_assert(n_stages == 1)` until the complex plumbing).
+- Tableau data are per-stage `std::array`s (`stage_theta_`, `stage_c_`,
+  `stage_omega_`, `stage_w_` + scalar `stage_affine_`), currently the single
+  implicit-midpoint entry {1/2, 1/2, 1, 2; −1} whose trajectory is CN's.
+  s ≥ 2 fills them from the Butcher eigen-decomposition (dgeev) instead.
+- `sigma(stage)`, `assemble_rhs_stage(edge, time, stage)`,
+  `set_data(λ, edge, time, stage)`, per-stage `data.stage_coeffs[stage]`.
+- Verified (ne9-06/ne9-07 scripts, output saved): temporal order 2 and
+  spatial h^{p+1} against the θ=0.5 rows of `output/GOLDEN-ne9-0*`;
+  iteration counts identical (same operator), e_rel differs at O(Δt²) only
+  (midpoint vs endpoint-averaged sampling of time-dependent Dirichlet data).
 
-### Phase 0 — concepts refactor (independent cleanup, lands first)
-Replace the `HAS_MEMBER_FUNCTION` trait layer (pre-`requires` era) with inline
-C++20 `requires`-expressions at the call sites:
-- `global_loop/prototype.hxx`: the three `prototype_*` macros lose their
-  `has_fun_name` parameter; dispatch via
-  `if constexpr (requires { local_solver_.fun_name(args...); })`.
-- Direct `if constexpr` sites: parabolic, hyperbolic, elliptic,
-  nonlinear_eigenvalue, shifted_inverse_eigenvalue, mass_approx_eigenvalue,
-  plot.hxx (`bulk_values`/`energy`/`n_energy_components` — shared machinery,
-  mechanical swap).
-- Fallback branches become dependent `static_assert` (`always_false_v`)
-  instead of Release-silent `hy_assert(false, …)` → the `error_def`
-  silent-zero bug class becomes a compile error.
-- Delete the macro from `compile_time_tricks.hxx`.
-Verify: full build + ctest; rerun ne9-01/02 → `ne9-conv-metrics.sh` identical
-to `output/GOLDEN-ne9-0*` (pure refactor).
+## Next steps
 
-### Phase 1 — complex LAPACK plumbing
-`lapack_factorize` / `lapack_solve_factored` overloads for
-`std::complex<double>` (`zgetrf`/`zgetrs`); `dgeev` wrapper for tableau setup.
-
-### Phase 2 — stage machinery in timowave (real, s=1)
-- Stage operator Â(h): DONE (`assemble_loc_matrix_stage` behind `-loc_stage`,
-  see above).
-- `n_stages` template param (default 1); tableau members; slots in `data_type`.
-- Stage entry points alongside the untouched θ-path: `trace_to_flux(…,stage)`,
-  `residual_flux(…,stage)` with eq-(7) loads, `set_data(ζ,stage)`,
-  `finalize_step`.
-- s=1 is real ⇒ end-to-end testable with zero complex infrastructure.
-- **Verify — CN reproduction against GOLDEN:**
-  (i) stage matrix at θ=1/2 equals today's `trace_to_flux_mat` up to the
-  overall θ scale;
-  (ii) rerun `ne9-01-conv-t` / `ne9-02-conv-x` through the stage path,
-  compare `experiments/ne9-conv-metrics.sh` vs `output/GOLDEN-ne9-0*`:
-  identical orders and floors. For f = 0 with time-independent BCs the
-  midpoint and trapezoid update maps coincide → must match to solver
-  tolerance; configs with time-dependent Dirichlet data may differ at
-  O(Δt²) in the load (midpoint samples `t^{n−1/2}`, trapezoid averages
-  endpoints) — same order, same floor.
-
-### Phase 3 — global loop + driver stage plumbing
-- `global_loop/hyperbolic.hxx`: thread `stage` through matrix / residual /
-  set_data entries, add `finalize_step` pass; `requires`-dispatch with
-  `static_assert` fallback for the new signatures.
-- `experiments/timowave.cxx`: stage loop, per-stage factorized solves.
-
-### Phase 4 — complex end-to-end (s = 2, 3)
-- Loop instance with `dof_value_t = std::complex<double>` for stage solves;
-  state and diagnostics stay real.
-- Global stage solves: factor-once complex direct solve; conv studies do not
-  need complex PETSc. Production choice (complex PETSc build vs 2N×2N real
-  block form — latter loses cholmod/SPD) deferred until network-scale runs.
-- Verify: temporal order 4 (s=2) / 6 (s=3) on ne9-01-style runs; spatial
-  `h^{p+1}` unchanged (ne9-02 style); energy conservation over long runs.
-
-## Open items
-- **λ and (n,m) at output times**: algebraic → recompute on demand. Endpoint
-  trace via a static condensed trace solve given the new `(y,z)` (do NOT
-  extrapolate the collocation polynomial — loses accuracy at low s), then
-  local recovery of `(n,m)`. Needed for `e_trace` and energy diagnostics;
-  volume errors need only `(y,z)`.
-- **Retire the trapezoidal path** (`flux_*`, `(n,m)`-as-state, θ-weighted
-  rhs) once the Gauß path is the default; consolidate `data` state to the
-  single real `(y,z)` block.
+1. Complex LAPACK plumbing: `zgetrf`/`zgetrs` overloads for the local stage
+   solves, `dgeev` wrapper for the tableau setup.
+2. s = 2, 3 tableaux + complex per-representative stage solves (local caches
+   and `stage_coeffs` become complex, ⌈s/2⌉ representatives).
+3. Global loop / driver stage plumbing: stage-indexed `trace_to_flux_mat` /
+   residual entries, per-stage factorized global solves.
+4. Endpoint trace and (n,m) at output times via a static condensed trace
+   solve + `recover_dual` (the s=1 extrapolation shortcut does not carry
+   over).
 
 Verification helper: `experiments/ne9-conv-metrics.sh <results.json>`.
