@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <complex>
 
 namespace GlobalLoop
 {
@@ -193,14 +194,16 @@ class Hyperbolic
   }
 
 
-  template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  template <typename hyNode_index_t = dof_index_t,
+            typename MatVecT = LargeVecT,
+            typename time_t = dof_value_t>
+  sparse_mat<MatVecT> trace_to_flux_mat(const time_t time = 0.)
   {
-    return prototype_mat_generate(trace_to_flux);
+    return prototype_mat_generate(trace_to_flux, MatVecT);
   }
  
-  template <typename hyNode_index_t = dof_index_t, typename SpanT>
-  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.) {
+  template <typename hyNode_index_t = dof_index_t, typename SpanT, typename time_t = dof_value_t>
+  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, time_t time = 0.) {
     hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
     prototype_mat_vec_multiply_span(residual_flux);
   }
@@ -268,14 +271,15 @@ class Hyperbolic
    * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
    * \param   time          Time at which the old time step ended.
    ************************************************************************************************/
-  template <typename SpanT, typename hyNode_index_t = dof_index_t>
-  void set_data(const SpanT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t, typename time_t = dof_value_t>
+  void set_data(const SpanT& x_vec, const time_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+    using span_value_t = typename std::decay_t<SpanT>::value_type;
 
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+    std::array<std::array<span_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
 
     // Do matrix--vector multiplication by iterating over all hyperedges.
     std::for_each(
@@ -314,6 +318,52 @@ class Hyperbolic
                     else
                       hy_check(false, "LocalSolverT implements no finalize_step!");
                   });
+  }
+  // -----------------------------------------------------------------------------------------------
+  // Gauss stage introspection: stage counts and endpoint-recombination weights. The stage SOLVES
+  // reuse the generic entries above (trace_to_flux_mat / residual_flux2 / set_data), instantiated
+  // with complex vectors and a Gauss::StageTime as the time argument (the local solver unpacks
+  // time and stage index from it).
+  // -----------------------------------------------------------------------------------------------
+  /*!***********************************************************************************************
+   * \brief   Number of Gauss collocation stages / solved stage representatives of the solver.
+   ************************************************************************************************/
+  static constexpr unsigned int n_gauss_stages()
+  {
+    if constexpr (requires { LocalSolverT::n_gauss_stages(); })
+      return LocalSolverT::n_gauss_stages();
+    else
+      return 1;
+  }
+  static constexpr unsigned int n_gauss_reps()
+  {
+    if constexpr (requires { LocalSolverT::n_gauss_reps(); })
+      return LocalSolverT::n_gauss_reps();
+    else
+      return 1;
+  }
+  /*!***********************************************************************************************
+   * \brief   Endpoint-update weights for the driver's trace recombination.
+   ************************************************************************************************/
+  void stage_weights(const unsigned int rep,
+                     dof_value_t& affine,
+                     dof_value_t& mult,
+                     dof_value_t& w_re,
+                     dof_value_t& w_im) const
+  {
+    if constexpr (requires {
+                    local_solver_.stage_affine();
+                    local_solver_.stage_mult(rep);
+                    local_solver_.stage_w(rep);
+                  })
+    {
+      affine = local_solver_.stage_affine();
+      mult = local_solver_.stage_mult(rep);
+      w_re = local_solver_.stage_w(rep).real();
+      w_im = local_solver_.stage_w(rep).imag();
+    }
+    else
+      hy_check(false, "LocalSolverT exposes no stage weights!");
   }
   /*!***********************************************************************************************
    * \brief   Evaluate the initial flux of the problem.

@@ -29,8 +29,9 @@
 #define prototype_mat_vec_multiply_span(fun_name)                                                 \
   [&]()                                                                                           \
   {                                                                                               \
+    using span_value_t = typename std::decay_t<decltype(vec_Ax)>::value_type;                     \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                             \
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;      \
+    std::array<std::array<span_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;     \
                                                                                                   \
     std::fill(vec_Ax.begin(), vec_Ax.end(), 0.);                                                  \
     std::for_each(                                                                                \
@@ -157,12 +158,13 @@ struct sparse_mat
  * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
  * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
-#define prototype_mat_generate(fun_name)                                                      \
+#define prototype_mat_generate(fun_name, mat_vec_t)                                         \
   [&]()                                                                                       \
   {                                                                                           \
+    using mat_value_t = typename mat_vec_t::value_type;                                       \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                         \
     std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;        \
-    std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
+    std::array<std::array<mat_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
     auto nedges = hyper_graph_.n_hyEdges();                                                  \
     using iedge_t = decltype(nedges); \
     /* Each rank's hypergraph holds only its owned hyperedges (data-level distribution), so */ \
@@ -170,7 +172,7 @@ struct sparse_mat
     iedge_t estart = 0; \
     iedge_t eend = nedges; \
     \
-    sparse_mat<LargeVecT> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
+    sparse_mat<mat_vec_t> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
                                      n_dofs_per_node * n_dofs_per_node);                      \
                                                                                               \
     auto value_it = result_mat.value_vec.begin();                                             \

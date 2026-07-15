@@ -2,8 +2,11 @@
 
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/gauss_tableau.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <complex>
 #include <iostream>
+#include <type_traits>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 
@@ -204,6 +207,18 @@ class TimoshenkoWave
    * \brief   Dimension of of the solution evaluated with respect to a hypernode.
    ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return 6*space_dim; }
+  /*!***********************************************************************************************
+   * \brief   Gauss stage counts and the scalar type of the stage solves.
+   *
+   * n_stages collocation stages (temporal order 2s); only the ceil(s/2) eigen-representatives
+   * are solved. The condensed stage operator and all stage quantities are stage_float_t-valued:
+   * real at s = 1, complex for s >= 2 (conjugate-pair eigenvalues of the Butcher matrix).
+   ************************************************************************************************/
+  static constexpr unsigned int n_gauss_stages() { return n_stages; }
+  static constexpr unsigned int n_reps_ = (n_stages + 1) / 2;
+  static constexpr unsigned int n_gauss_reps() { return n_reps_; }
+  using stage_float_t =
+    std::conditional_t<(n_stages > 1), std::complex<lSol_float_t>, lSol_float_t>;
 
  private:
   // -----------------------------------------------------------------------------------------------
@@ -291,29 +306,79 @@ class TimoshenkoWave
   const lSol_float_t tau_;
   const lSol_float_t delta_t_;
   /*!***********************************************************************************************
-   * \brief   Gauss tableau data, one entry per stage (hdg_gauss.pdf; HORK_GAUSS_PLAN.md).
+   * \brief   Gauss tableau data in the eigenbasis of the Butcher matrix (hdg_gauss.pdf; plan).
    *
-   * Per stage l: Butcher eigenvalue theta_l (stage shift sigma_l = 1/(theta_l*dt)), collocation
-   * node c_l, load weight omega_l = (T^{-1} 1)_l, recombination weight w_l = (d^T T)_l with
-   * d^T = b^T A^{-1}; stage_affine_ = 1 - sum_j d_j multiplies the old state in the endpoint
-   * update y+ = stage_affine_*y^n + sum_l w_l*y_l. Currently only the single-stage tableau
-   * (implicit midpoint: theta = c = 1/2, omega = 1, w = 2, affine = -1), whose trajectory is
-   * Crank-Nicolson's. s >= 2 has complex conjugate theta_l and lands with the complex LAPACK
-   * plumbing (eigen-decomposition of the Butcher matrix via dgeev in the constructor).
+   * Built at construction by Gauss::build_tableau (ported from ~/phd/hoRK/horkirk.c): nodes and
+   * weights by Newton on the Legendre polynomial, Butcher A = W V^{-1}, eigendecomposition
+   * A = T diag(theta) T^{-1} via zgeev with conjugate-pair enforcement, so only the ceil(s/2)
+   * representatives are solved. Per representative l: eigenvalue theta_l (stage shift
+   * sigma_l = 1/(theta_l*dt)), load weight omega_l = (T^{-1} 1)_l, data-combination row
+   * tinv_l = (T^{-1})_{l,:}, value-form recombination weight w_l = (b^T A^{-1} T)_l and
+   * multiplicity mult_l (2 for a conjugate pair). Endpoint update:
+   *   y+ = affine * y^n + sum_l mult_l * Re(w_l * y_l),  affine = 1 - b^T A^{-1} 1 = (-1)^s.
+   * s = 1 is the (all-real) implicit midpoint whose trajectory is Crank-Nicolson\'s; s >= 2 has
+   * complex representatives, hence the stage scalar type stage_float_t.
    ************************************************************************************************/
-  static_assert(n_stages == 1, "only the s = 1 (implicit midpoint) tableau is implemented; "
-                               "s >= 2 requires the complex stage plumbing");
-  static constexpr std::array<lSol_float_t, n_stages> stage_theta_{0.5};
-  static constexpr std::array<lSol_float_t, n_stages> stage_c_{0.5};
-  static constexpr std::array<lSol_float_t, n_stages> stage_omega_{1.};
-  static constexpr std::array<lSol_float_t, n_stages> stage_w_{2.};
-  static constexpr lSol_float_t stage_affine_ = -1.;
+  struct stage_data_t
+  {
+    std::array<lSol_float_t, n_stages> c;
+    std::array<stage_float_t, n_reps_> theta, omega, w;
+    std::array<std::array<stage_float_t, n_stages>, n_reps_> tinv;
+    std::array<lSol_float_t, n_reps_> mult;
+    lSol_float_t affine;
+  };
+  /*!***********************************************************************************************
+   * \brief   Convert a tableau entry to the stage scalar (checks realness at s = 1).
+   ************************************************************************************************/
+  static stage_float_t stage_cast(const std::complex<double> z)
+  {
+    if constexpr (n_stages == 1)
+    {
+      hy_assert(std::abs(z.imag()) < 1e-12, "the s = 1 tableau must be real");
+      return static_cast<lSol_float_t>(z.real());
+    }
+    else
+      return stage_float_t(z.real(), z.imag());
+  }
+  static stage_data_t make_stage_data()
+  {
+    const Gauss::Tableau tab = Gauss::build_tableau(n_stages);
+    hy_assert(tab.n_reps == n_reps_, "expected ceil(s/2) stage representatives");
+    stage_data_t sd;
+    sd.affine = tab.affine;
+    for (unsigned int j = 0; j < n_stages; ++j)
+      sd.c[j] = tab.c[j];
+    for (unsigned int l = 0; l < n_reps_; ++l)
+    {
+      sd.theta[l] = stage_cast(tab.theta[l]);
+      sd.omega[l] = stage_cast(tab.omega[l]);
+      sd.w[l] = stage_cast(tab.w[l]);
+      sd.mult[l] = tab.mult[l];
+      for (unsigned int j = 0; j < n_stages; ++j)
+        sd.tinv[l][j] = stage_cast(tab.tinv[l * n_stages + j]);
+    }
+    return sd;
+  }
+  const stage_data_t stages_;
   /*!***********************************************************************************************
    * \brief   Mass-shift weight sigma_l = 1/(theta_l * Delta t) of the stage normalization.
    ************************************************************************************************/
-  lSol_float_t sigma(const unsigned int stage = 0) const
+  stage_float_t sigma(const unsigned int stage = 0) const
   {
-    return 1. / (stage_theta_[stage] * delta_t_);
+    return stage_float_t(1.) / (stages_.theta[stage] * delta_t_);
+  }
+  /*!***********************************************************************************************
+   * \brief   Unpack the time argument: a Gauss::StageTime carries (time, stage index), a plain
+   *          scalar means stage 0. This is how the stage index rides through the generic
+   *          global-loop entries without stage-specific loop plumbing.
+   ************************************************************************************************/
+  template <typename time_t>
+  static constexpr std::pair<lSol_float_t, unsigned int> split_stage_time(const time_t& time)
+  {
+    if constexpr (requires { time.time; time.stage; })
+      return {static_cast<lSol_float_t>(time.time), time.stage};
+    else
+      return {static_cast<lSol_float_t>(time), 0u};
   }
   /*!***********************************************************************************************
    * \brief   Solve local problems via a full-matrix LU instead of the displacement Schur path.
@@ -368,9 +433,22 @@ class TimoshenkoWave
     SmallSquareMat<n_loc_dofs_, lSol_float_t> full_lu;
     std::array<int, n_loc_dofs_> full_ipiv;
     bool full_lu_factorized = false;
-    // Per-stage local solution (q,y,z) stashed by set_data(zeta), consumed by finalize_step.
-    // Real at s = 1; becomes complex per-representative with the multi-stage plumbing.
-    std::array<SmallVec<n_loc_dofs_, lSol_float_t>, n_stages> stage_coeffs;
+    // Per-representative stage-local solution (q,y,z) stashed by set_data(zeta), consumed by
+    // finalize_step. Real at s = 1, complex for s >= 2 (conjugate partners are analytic).
+    std::array<SmallVec<n_loc_dofs_, stage_float_t>, n_reps_> stage_coeffs;
+    // Complex per-representative full-matrix LU caches of the stage operators (s >= 2 only;
+    // s = 1 reuses the real Schur / full_lu paths above). [[no_unique_address]] keeps the s = 1
+    // data_type free of the complex storage.
+    struct stage_lu_t
+    {
+      std::array<SmallSquareMat<n_loc_dofs_, stage_float_t>, n_reps_> lu;
+      std::array<std::array<int, n_loc_dofs_>, n_reps_> ipiv;
+      std::array<bool, n_reps_> factorized{};
+    };
+    struct stage_lu_empty_t
+    {};
+    [[no_unique_address]] std::conditional_t<(n_stages > 1), stage_lu_t, stage_lu_empty_t>
+      stage_lu;
   };
   /*!***********************************************************************************************
    * \brief   Constructor for local solver.
@@ -379,7 +457,7 @@ class TimoshenkoWave
    ************************************************************************************************/
   // NOTE: tau, delta_t, [full_lu]
   TimoshenkoWave(const constructor_value_type& vals = std::vector(2, 1.)) : tau_(vals[0]),
-    delta_t_(vals[1]), full_lu_(vals.size() > 2 && vals[2] != 0.) {}
+    delta_t_(vals[1]), stages_(make_stage_data()), full_lu_(vals.size() > 2 && vals[2] != 0.) {}
 
   template <typename point_t, typename geom_t,
             lSol_float_t fun(const point_t&, const point_t&, const lSol_float_t),
@@ -430,11 +508,11 @@ class TimoshenkoWave
    * their C_u scaling (deviation from the note's C_u^{-1} d-form) so massless welds stay regular:
    * C_u = 0 gives z = 0 and a vanishing mass shift, not a division by zero.
    ************************************************************************************************/
-  template <bool with_z, typename hyEdgeT>
-  inline SmallSquareMat<(with_z ? 6 : 4) * space_dim * n_shape_fct_, lSol_float_t>
-  assemble_loc_matrix(hyEdgeT& hyper_edge, const lSol_float_t sigma = 0.) const
+  template <bool with_z, typename mat_float_t = lSol_float_t, typename hyEdgeT>
+  inline SmallSquareMat<(with_z ? 6 : 4) * space_dim * n_shape_fct_, mat_float_t>
+  assemble_loc_matrix(hyEdgeT& hyper_edge, const mat_float_t sigma = 0.) const
   {
-    SmallSquareMat<(with_z ? 6 : 4) * space_dim * n_shape_fct_, lSol_float_t> local_mat;
+    SmallSquareMat<(with_z ? 6 : 4) * space_dim * n_shape_fct_, mat_float_t> local_mat;
     SmallVec<4 * space_dim, lSol_float_t> extra_coeffs = get_extra_coeffs(hyper_edge);
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -493,28 +571,22 @@ class TimoshenkoWave
   }
 
   template <typename hyEdgeT, typename SmallMatT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_from_lambda(
-    const SmallMatT& lambda_values,
-    hyEdgeT& hyper_edge) const;
+  inline SmallVec<n_loc_dofs_, typename SmallMatT::value_type::value_type>
+  assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const;
 
   /*!***********************************************************************************************
-   * \brief   Gauss stage loads (hdg_gauss.pdf eq 7): history enters through (y^n, z^n) only.
+   * \brief   Body loads and Dirichlet data of one collocation node (real, single time).
    *
-   * g_y = (f(t_stage), w_y) + sigma*omega*(z^n, w_y);  g_z = -sigma*omega*C_u*(y^n, w_z) in our
-   * C_u-scaled z-row normalization. Data (f, Dirichlet values) are sampled at the collocation node
-   * t_stage = time - dt + c_l*dt, not endpoint-averaged: at s = 1 this is the O(dt^2) load
-   * difference to the retired trapezoid scheme (exact match for f = 0 and time-independent BC).
-   * No flux caches, no old trace: q and lambda are algebraic and never history.
+   * The f-loads land on the y-rows, the Dirichlet data on the q- and y-rows (bit-6 static-only
+   * faces keep their trace). Shared by all stage representatives, which combine these vectors
+   * with their (complex) T^{-1} row weights in assemble_rhs_stage.
    ************************************************************************************************/
   template <typename hyEdgeT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_stage(hyEdgeT& hyper_edge,
-                                                                const lSol_float_t time,
-                                                                const unsigned int stage = 0) const
+  inline SmallVec<n_loc_dofs_, lSol_float_t> assemble_rhs_data(hyEdgeT& hyper_edge,
+                                                               const lSol_float_t time) const
   {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     SmallVec<n_loc_dofs_, lSol_float_t> rhs;
-    const lSol_float_t t_stage = time - (1. - stage_c_[stage]) * delta_t_;
-    const lSol_float_t sig_om = sigma(stage) * stage_omega_[stage];
 
     // body loads act on material only if the parameters opt in (massless welds unloaded)
     bool loaded = true;
@@ -529,18 +601,18 @@ class TimoshenkoWave
         auto integrals = integrate_vol_phivecfunccomp_beam<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::right_hand_side_n>(i, {1, -1, -2},
-                                                                      hyper_edge.geometry, t_stage);
+                                                                      hyper_edge.geometry, time);
         for (unsigned int comp = 0; comp < 3; ++comp)
           rhs[(2 * space_dim + comp) * n_shape_fct_ + i] += integrals[comp];
         integrals = integrate_vol_phivecfunccomp_beam<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::right_hand_side_m>(i, {1, -1, -2},
-                                                                      hyper_edge.geometry, t_stage);
+                                                                      hyper_edge.geometry, time);
         for (unsigned int comp = 0; comp < 3; ++comp)
           rhs[(3 * space_dim + comp) * n_shape_fct_ + i] += integrals[comp];
       }
 
-      // Dirichlet data at the collocation node (bit-6 static-only faces keep their trace)
+      // Dirichlet data (bit-6 static-only faces keep their trace)
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
       {
         if (hyper_edge.node_descriptor[face] & (1 << 6)) continue;
@@ -548,7 +620,7 @@ class TimoshenkoWave
         auto integrals = integrate_bdr_phivecfunccomp_beam<
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value_u>(i, face, {1, -1, -2},
-                                                                      hyper_edge.geometry, t_stage);
+                                                                      hyper_edge.geometry, time);
         for (unsigned int comp = 0; comp < 3; ++comp)
         {
           rhs[(0 * space_dim + comp) * n_shape_fct_ + i] -=
@@ -559,7 +631,7 @@ class TimoshenkoWave
           Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
           decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi>(i, face, {1, -1, -2},
                                                                         hyper_edge.geometry,
-                                                                        t_stage);
+                                                                        time);
         for (unsigned int comp = 0; comp < 3; ++comp)
         {
           rhs[(1 * space_dim + comp) * n_shape_fct_ + i] -=
@@ -569,9 +641,40 @@ class TimoshenkoWave
       }
     }
 
+    return rhs;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Gauss stage loads (hdg_gauss.pdf eq 7): history enters through (y^n, z^n) only.
+   *
+   * Eigenbasis stage l of the collocation system: the data terms mix the collocation nodes with
+   * the T^{-1} row of the representative, rhs_l = sum_j tinv_{l,j} * data(t^n + c_j*dt), and the
+   * history enters as sigma_l*omega_l mass pairings of (y^n, z^n):
+   * g_y += sigma*omega*(z^n, w_y), g_z -= sigma*omega*C_u*(y^n, w_z) in our C_u-scaled z-row
+   * normalization. At s = 1 (tinv = {1}, c = 1/2) the single midpoint sample is the O(dt^2) load
+   * difference to the retired trapezoid scheme (exact match for f = 0 and time-independent BC).
+   * No flux caches, no old trace: q and lambda are algebraic and never history.
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  inline SmallVec<n_loc_dofs_, stage_float_t> assemble_rhs_stage(hyEdgeT& hyper_edge,
+                                                                 const lSol_float_t time,
+                                                                 const unsigned int stage = 0) const
+  {
+    SmallVec<n_loc_dofs_, stage_float_t> rhs;
+
+    for (unsigned int j = 0; j < n_stages; ++j)
+    {
+      const lSol_float_t t_node = time - (1. - stages_.c[j]) * delta_t_;
+      const SmallVec<n_loc_dofs_, lSol_float_t> data_j = assemble_rhs_data(hyper_edge, t_node);
+      const stage_float_t weight = stages_.tinv[stage][j];
+      for (unsigned int i = 0; i < n_loc_dofs_; ++i)
+        rhs[i] += weight * data_j[i];
+    }
+
     // history: sigma*omega mass pairings of (y^n, z^n); M = area * Id (orthonormal basis)
     const auto extra = get_extra_coeffs(hyper_edge);
     const auto& c_old = hyper_edge.data.coeffs_old;
+    const stage_float_t sig_om = sigma(stage) * stages_.omega[stage];
     const lSol_float_t mass = hyper_edge.geometry.area();
     for (unsigned int d = 0; d < space_dim; ++d)
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -642,11 +745,13 @@ class TimoshenkoWave
   }
 
   template <class hyEdgeT, typename SmallMatT>
-  inline std::array<std::array<double, 2 * space_dim>, 2 * hyEdge_dimT> node_dof_to_edge_dof(
-    const SmallMatT& glob_lambda,
-    hyEdgeT& hyper_edge) const
+  inline std::array<std::array<typename SmallMatT::value_type::value_type, 2 * space_dim>,
+                    2 * hyEdge_dimT>
+  node_dof_to_edge_dof(const SmallMatT& glob_lambda, hyEdgeT& hyper_edge) const
   {
-    std::array<std::array<double, 2 * space_dim>, 2 * hyEdge_dimT> loc_lambda;
+    std::array<std::array<typename SmallMatT::value_type::value_type, 2 * space_dim>,
+               2 * hyEdge_dimT>
+      loc_lambda;
     hy_assert(loc_lambda.size() == 2, "Only implemented in one dimension!");
     for (unsigned int i = 0; i < loc_lambda.size(); ++i)
     {
@@ -893,25 +998,46 @@ class TimoshenkoWave
   }
 
   template <typename hyEdgeT, typename SmallMatT>
-  inline SmallVec<n_loc_dofs_, lSol_float_t> solve_local_problem(const SmallMatT& lambda_values,
-                                                                 const unsigned int solution_type,
-                                                                 hyEdgeT& hyper_edge,
-                                                                 const lSol_float_t time,
-                                                                 const unsigned int stage = 0) const
+  inline SmallVec<n_loc_dofs_, stage_float_t> solve_local_problem(const SmallMatT& lambda_values,
+                                                                  const unsigned int solution_type,
+                                                                  hyEdgeT& hyper_edge,
+                                                                  const lSol_float_t time,
+                                                                  const unsigned int stage = 0)
+    const
   {
     try
     {
       auto& data = hyper_edge.data;
 
-      SmallVec<n_loc_dofs_, lSol_float_t> rhs;
-      if (solution_type == 0)
-        rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge);
-      else if (solution_type == 1)
-        rhs = assemble_rhs_from_lambda(lambda_values, hyper_edge) +
-              assemble_rhs_stage(hyper_edge, time, stage);
+      SmallVec<n_loc_dofs_, stage_float_t> rhs;
+      {
+        const auto rhs_lambda = assemble_rhs_from_lambda(lambda_values, hyper_edge);
+        for (unsigned int i = 0; i < n_loc_dofs_; ++i)
+          rhs[i] = rhs_lambda[i];
+      }
+      if (solution_type == 1)
+        rhs += assemble_rhs_stage(hyper_edge, time, stage);
       else
-        hy_assert(0 == 1, "This has not been implemented!");
+        hy_assert(solution_type == 0, "This has not been implemented!");
 
+      if constexpr (n_stages > 1)
+      {
+        // complex stage operator: cached per-representative full-matrix LU (the Schur reduction
+        // machinery below stays real / s = 1 only)
+        auto& slu = data.stage_lu;
+        if (!slu.factorized[stage])
+        {
+          slu.lu[stage] = assemble_loc_matrix<true, stage_float_t>(hyper_edge, sigma(stage));
+          Wrapper::lapack_factorize(n_loc_dofs_, slu.lu[stage].data().data(),
+                                    slu.ipiv[stage].data());
+          slu.factorized[stage] = true;
+        }
+        Wrapper::lapack_solve_factored(n_loc_dofs_, 1, slu.lu[stage].data().data(),
+                                       slu.ipiv[stage].data(), rhs.data().data());
+        return rhs;
+      }
+      else
+      {
       if (full_lu_)
       {
         if (!data.full_lu_factorized)
@@ -975,6 +1101,7 @@ class TimoshenkoWave
       solve_coupled(data.lu_D, data.ipiv_D, -1., compD_dim_n, compD_dim_r);
 
       return result;
+      }
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -985,12 +1112,12 @@ class TimoshenkoWave
     }
   }
 
-  template <typename hyEdgeT>
-  inline SmallMat<2 * hyEdge_dimT, 2 * space_dim * n_shape_bdr_, lSol_float_t>
-  extract_fluxes_from_coeffs(const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
+  template <typename hyEdgeT, typename flux_float_t>
+  inline SmallMat<2 * hyEdge_dimT, 2 * space_dim * n_shape_bdr_, flux_float_t>
+  extract_fluxes_from_coeffs(const SmallVec<n_loc_dofs_, flux_float_t>& coeffs,
                              hyEdgeT& hyper_edge) const
   {
-    SmallMat<2 * hyEdge_dimT, 2 * space_dim * n_shape_bdr_, lSol_float_t> bdr_values;
+    SmallMat<2 * hyEdge_dimT, 2 * space_dim * n_shape_bdr_, flux_float_t> bdr_values;
     lSol_float_t integral;
 
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1038,8 +1165,14 @@ class TimoshenkoWave
                                  SmallMatOutT& lambda_values_out,
                                  const unsigned int solution_type,
                                  hyEdgeT& hyper_edge,
-                                 const lSol_float_t time = 0.) const
+                                 const lSol_float_t time = 0.,
+                                 const unsigned int stage = 0) const
   {
+    // The condensed stage operator is stage_float_t-valued (complex for n_stages > 1), so the
+    // output arrays must be stage_float_t; real inputs (unit-vector probing) are fine.
+    static_assert(
+      std::is_same_v<typename SmallMatOutT::value_type::value_type, stage_float_t>,
+      "apply_local_flux output must be stage_float_t-valued");
     hy_assert(lambda_values_in.size() == lambda_values_out.size() &&
                 lambda_values_in.size() == 2 * hyEdge_dimT,
               "Both matrices must be of same size which corresponds to the number of faces!");
@@ -1054,16 +1187,17 @@ class TimoshenkoWave
 
     SmallMatInT lambda_values_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
 
-    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
-      solve_local_problem(lambda_values_loc, solution_type, hyper_edge, time);
+    SmallVec<n_loc_dofs_, stage_float_t> coeffs =
+      solve_local_problem(lambda_values_loc, solution_type, hyper_edge, time, stage);
 
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
 
+    SmallMatOutT out_loc;
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
+        out_loc[i][j] = tau_ * lambda_values_loc[i][j] - result(i, j);
 
-    lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
+    lambda_values_out = edge_dof_to_node_dof(out_loc, lambda_values_out, hyper_edge);
 
     zero_dirichlet_trace(lambda_values_out, hyper_edge);
 
@@ -1076,13 +1210,24 @@ class TimoshenkoWave
    * A distinct entry point from residual_flux (kept separate for historical reasons); both
    * delegate to apply_local_flux, differing only in the local-solve rhs (solution_type 0 vs 1).
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT,
+            typename time_t = lSol_float_t>
   SmallMatOutT& trace_to_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+                              const time_t time = 0.) const
   {
-    return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, time);
+    const auto [t, stage] = split_stage_time(time);
+    using out_float_t = typename SmallMatOutT::value_type::value_type;
+    if constexpr (std::is_same_v<out_float_t, stage_float_t>)
+      return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, t, stage);
+    else
+    {
+      // real entry of the global loop: only meaningful while the stage operator is real
+      hy_check(false, "the condensed stage operator is complex for n_stages > 1; "
+                      "instantiate with stage_float_t vectors");
+      return lambda_values_out;
+    }
   }
 
   template <typename hyEdgeT>
@@ -1099,13 +1244,23 @@ class TimoshenkoWave
    * A distinct entry point from trace_to_flux (kept separate for historical reasons); see
    * apply_local_flux for the shared body.
    ************************************************************************************************/
-  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT,
+            typename time_t = lSol_float_t>
   SmallMatOutT& residual_flux(const SmallMatInT& lambda_values_in,
                               SmallMatOutT& lambda_values_out,
                               hyEdgeT& hyper_edge,
-                              const lSol_float_t time = 0.) const
+                              const time_t time = 0.) const
   {
-    return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, time);
+    const auto [t, stage] = split_stage_time(time);
+    using out_float_t = typename SmallMatOutT::value_type::value_type;
+    if constexpr (std::is_same_v<out_float_t, stage_float_t>)
+      return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, t, stage);
+    else
+    {
+      hy_check(false, "the condensed stage operator is complex for n_stages > 1; "
+                      "instantiate with stage_float_t vectors");
+      return lambda_values_out;
+    }
   }
 
   /*!***********************************************************************************************
@@ -1507,16 +1662,22 @@ class TimoshenkoWave
    * solution (q,y,z) is stashed in slot \c stage, the state advances in finalize_step (idempotent:
    * re-calling overwrites the slot).
    ************************************************************************************************/
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename lambda_float_t, typename time_t = lSol_float_t>
   void set_data(
-    const std::array<std::array<lSol_float_t, 2*n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
+    const std::array<std::array<lambda_float_t, 2*n_shape_bdr_*space_dim>, 2 * hyEdge_dimT>& lambda_values_in,
     hyEdgeT& hyper_edge,
-    const lSol_float_t time = 0.,
-    const unsigned int stage = 0) const
+    const time_t time = 0.) const
   {
-    auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
-    hyper_edge.data.stage_coeffs[stage] =
-      solve_local_problem(lambda_values, 1U, hyper_edge, time, stage);
+    const auto [t, stage] = split_stage_time(time);
+    if constexpr (std::is_same_v<lambda_float_t, stage_float_t>)
+    {
+      auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
+      hyper_edge.data.stage_coeffs[stage] =
+        solve_local_problem(lambda_values, 1U, hyper_edge, t, stage);
+    }
+    else
+      hy_check(false, "the stage trace is complex for n_stages > 1; "
+                      "call set_data with stage_float_t values");
   }
 
   /*!***********************************************************************************************
@@ -1531,9 +1692,22 @@ class TimoshenkoWave
   void finalize_step(hyEdgeT& hyper_edge) const
   {
     auto& data = hyper_edge.data;
-    data.coeffs_old *= stage_affine_;
-    for (unsigned int l = 0; l < n_stages; ++l)
-      data.coeffs_old += stage_w_[l] * data.stage_coeffs[l];
+    data.coeffs_old *= stages_.affine;
+    for (unsigned int l = 0; l < n_reps_; ++l)
+      for (unsigned int i = 0; i < n_loc_dofs_; ++i)
+        data.coeffs_old[i] +=
+          stages_.mult[l] * std::real(stages_.w[l] * data.stage_coeffs[l][i]);
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Endpoint-update weights, exposed for the driver's trace recombination
+   *          lambda+ = affine * lambda^n + sum_l mult_l * Re(w_l * zeta_l).
+   ************************************************************************************************/
+  lSol_float_t stage_affine() const { return stages_.affine; }
+  lSol_float_t stage_mult(const unsigned int rep) const { return stages_.mult[rep]; }
+  std::complex<lSol_float_t> stage_w(const unsigned int rep) const
+  {
+    return std::complex<lSol_float_t>(std::real(stages_.w[rep]), std::imag(stages_.w[rep]));
   }
 
   /*!***********************************************************************************************
@@ -1839,19 +2013,21 @@ template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
   TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t,
                  n_stages>::n_loc_dofs_,
-  lSol_float_t>
+  typename SmallMatT::value_type::value_type>
 TimoshenkoWave<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, n_stages>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
-  static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
-                "Lambda values should have same floating point arithmetics as local solver!");
+  using lambda_float_t = typename SmallMatT::value_type::value_type;
+  static_assert(std::is_same<lambda_float_t, lSol_float_t>::value ||
+                  std::is_same<lambda_float_t, stage_float_t>::value,
+                "Lambda values must be real or stage-typed!");
   hy_assert(lambda_values.size() == 2 * hyEdge_dimT,
             "The size of the lambda values should be twice the dimension of a hyperedge.");
   for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     hy_assert(lambda_values[i].size() == 2 * space_dim * n_shape_bdr_,
               "The size of lambda should be the amount of ansatz functions at boundary.");
 
-  SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
+  SmallVec<n_loc_dofs_, lambda_float_t> right_hand_side;
   lSol_float_t integral;
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)

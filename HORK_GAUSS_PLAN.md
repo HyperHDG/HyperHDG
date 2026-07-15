@@ -80,29 +80,58 @@ is the Gauss step protocol above; `timowave.cxx` runs it unconditionally
 (stage solve → `set_data` stash → `finalize_step` → endpoint trace
 `λ⁺ = 2ζ₁ − λⁿ`, exact at s=1 only).
 
-- `n_stages` is a compile-time template parameter of `TimoshenkoWave`
-  (default 1; `static_assert(n_stages == 1)` until the complex plumbing).
-- Tableau data are per-stage `std::array`s (`stage_theta_`, `stage_c_`,
-  `stage_omega_`, `stage_w_` + scalar `stage_affine_`), currently the single
-  implicit-midpoint entry {1/2, 1/2, 1, 2; −1} whose trajectory is CN's.
-  s ≥ 2 fills them from the Butcher eigen-decomposition (dgeev) instead.
-- `sigma(stage)`, `assemble_rhs_stage(edge, time, stage)`,
-  `set_data(λ, edge, time, stage)`, per-stage `data.stage_coeffs[stage]`.
-- Verified (ne9-06/ne9-07 scripts, output saved): temporal order 2 and
+- `n_stages` is a compile-time template parameter of `TimoshenkoWave`,
+  tied to the spatial degree in the driver alias: deg ≤ 2 → s = 1, deg 3 →
+  s = 2 (temporal order 2s covers spatial order p+1).
+- Tableau data are built at construction by `Gauss::build_tableau`
+  (`gauss_tableau.hxx`, ported from `~/phd/hoRK/horkirk.c`): Gauss nodes by
+  Newton on P_s, Butcher A = W V⁻¹, zgeev eigen-decomposition with enforced
+  conjugate pairing and phase-fixed real columns. Value-form weights:
+  ω = T⁻¹𝟙, w = (bᵀA⁻¹T), affine = 1 − bᵀA⁻¹𝟙 = R(∞) = (−1)^s.
+  Invariants tested in `tests_c++/gauss_tableau.cxx`.
+- Verified s=1 (ne9-06/ne9-07 scripts, output saved): temporal order 2 and
   spatial h^{p+1} against the θ=0.5 rows of `output/GOLDEN-ne9-0*`;
   iteration counts identical (same operator), e_rel differs at O(Δt²) only
   (midpoint vs endpoint-averaged sampling of time-dependent Dirichlet data).
 
+## Landed: s = 2 (order 4) via complex stage solves
+
+- Stage scalar `stage_float_t` = complex for s ≥ 2; only the ⌈s/2⌉
+  representatives are solved (conjugates analytic). Local stage systems:
+  per-representative complex full-matrix LU cached in `data_type`
+  (`[[no_unique_address]]`-gated so s = 1 keeps its Schur/full-LU paths and
+  data size). Stage loads combine the data at ALL collocation nodes with the
+  representative's T⁻¹ row (eq 7): rhs_ℓ = Σⱼ τ_{ℓj}·data(tⁿ+cⱼΔt) +
+  σ_ℓω_ℓ·(history mass terms).
+- NO stage-specific global-loop plumbing: the stage index rides inside a
+  `Gauss::StageTime{time, stage}` passed as the (now template-typed) `time`
+  argument of the GENERIC loop entries (`trace_to_flux_mat` /
+  `residual_flux2` / `set_data`), instantiated with complex vectors; the
+  local solver unpacks it via `split_stage_time`. The prototype macros
+  derive the scalar from the span/matrix type.
+- Global stage solves: NO complex PETSc — the condensed complex stage
+  operator is assembled once (complex COO through the generic probing),
+  densified and zgetrf-factored; each step is one zgetrs (conv-study scale;
+  production choice complex-PETSc vs 2N×2N real block deferred). PETSc real
+  Vecs shuttle Re/Im halves for scatters/layout only. Single rank enforced.
+- Endpoint trace: λ⁺ = affine·λⁿ + Σ mult·Re(w·ζ) (driver AXPYs via
+  `stage_weights`). Same recombination as the state — Gauss-quadrature
+  superconvergent; observed e_trace order ≈ 3.3 on wave4 (time-dependent
+  Dirichlet), the static-trace-solve upgrade remains the open item.
+- **Verified s=2** (`ne9-08-conv-gauss2.sh`, deg 3): temporal e_rel ratios
+  ≈ 2^4.0 over nt 8→32, flooring exactly at the golden deg-3 spatial floor;
+  spatial h⁴ values match `GOLDEN-ne9-02` deg-3 rows to 3–4 digits with
+  nt = 64 instead of the golden's nt = 8000.
+
 ## Next steps
 
-1. Complex LAPACK plumbing: `zgetrf`/`zgetrs` overloads for the local stage
-   solves, `dgeev` wrapper for the tableau setup.
-2. s = 2, 3 tableaux + complex per-representative stage solves (local caches
-   and `stage_coeffs` become complex, ⌈s/2⌉ representatives).
-3. Global loop / driver stage plumbing: stage-indexed `trace_to_flux_mat` /
-   residual entries, per-stage factorized global solves.
-4. Endpoint trace and (n,m) at output times via a static condensed trace
-   solve + `recover_dual` (the s=1 extrapolation shortcut does not carry
-   over).
+1. Endpoint trace and (n,m) at output times via a static condensed trace
+   solve + `recover_dual` (restores full-order e_trace for s ≥ 2 with
+   time-dependent data).
+2. s = 3 (order 6): tableau builder already generic; needs the real-eigenvalue
+   representative wired through (mult = 1 slot) and a driver test.
+3. Production-scale stage solves: complex PETSc build vs 2N×2N real block
+   form (loses cholmod/SPD) — decide at network scale.
 
-Verification helper: `experiments/ne9-conv-metrics.sh <results.json>`.
+Verification helpers: `experiments/ne9-conv-metrics.sh <results.json>`;
+tableau invariants: `tests_c++/gauss_tableau.cxx`.
