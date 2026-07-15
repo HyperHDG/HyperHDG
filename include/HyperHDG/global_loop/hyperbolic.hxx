@@ -320,10 +320,10 @@ class Hyperbolic
                   });
   }
   // -----------------------------------------------------------------------------------------------
-  // Gauss stage introspection: stage counts and endpoint-recombination weights. The stage SOLVES
-  // reuse the generic entries above (trace_to_flux_mat / residual_flux2 / set_data), instantiated
-  // with complex vectors and a Gauss::StageTime as the time argument (the local solver unpacks
-  // time and stage index from it).
+  // Gauss stage introspection: stage counts only. The stage SOLVES reuse the generic entries
+  // above (trace_to_flux_mat / residual_flux2 / set_data), instantiated with complex vectors and
+  // a Gauss::StageTime as the time argument (the local solver unpacks time and stage index); the
+  // endpoint recombination of state AND trace happens inside finalize_step.
   // -----------------------------------------------------------------------------------------------
   /*!***********************************************************************************************
    * \brief   Number of Gauss collocation stages / solved stage representatives of the solver.
@@ -341,29 +341,6 @@ class Hyperbolic
       return LocalSolverT::n_gauss_reps();
     else
       return 1;
-  }
-  /*!***********************************************************************************************
-   * \brief   Endpoint-update weights for the driver's trace recombination.
-   ************************************************************************************************/
-  void stage_weights(const unsigned int rep,
-                     dof_value_t& affine,
-                     dof_value_t& mult,
-                     dof_value_t& w_re,
-                     dof_value_t& w_im) const
-  {
-    if constexpr (requires {
-                    local_solver_.stage_affine();
-                    local_solver_.stage_mult(rep);
-                    local_solver_.stage_w(rep);
-                  })
-    {
-      affine = local_solver_.stage_affine();
-      mult = local_solver_.stage_mult(rep);
-      w_re = local_solver_.stage_w(rep).real();
-      w_im = local_solver_.stage_w(rep).imag();
-    }
-    else
-      hy_check(false, "LocalSolverT exposes no stage weights!");
   }
   /*!***********************************************************************************************
    * \brief   Evaluate the initial flux of the problem.

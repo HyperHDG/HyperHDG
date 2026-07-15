@@ -139,7 +139,6 @@ int main(int argc, char **argv) {
     PetscInt plot_stride = 1;
     PetscBool plot_energy = PETSC_TRUE;
     char domain_path[PATH_MAX] = "domains/single1.geo";
-    char static_init[PATH_MAX] = {0};
     char timowave_test[256] = {0};
     const char *pc_type;
     KSPMonitorYAML_Ctx ksp_monitor_yaml_ctx;
@@ -155,7 +154,6 @@ int main(int argc, char **argv) {
     VecScatter scatter = NULL;
     Mat mat = NULL;
     KSP ksp = NULL;
-    Vec lam_local = NULL;  // previous endpoint trace lambda^n (local layout)
     Vec g_im = NULL, l_im = NULL;  // multi-stage: imaginary halves (global / local layout)
     // multi-stage: dense complex stage operators, factored once per representative
     std::vector<std::vector<std::complex<PetscReal>>> stage_lu;
@@ -175,7 +173,6 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-plot_values", "PointData/values selection: all|disp|z|mag|none, or raw 'i,j,k' / 'mag:i,j,k' (Timoshenko layout: displacement = components 6,7,8)", NULL, plot_values, plot_values, sizeof(plot_values), &is_set));
     PetscCall(PetscOptionsString("-plot_props", "CellData/properties columns: all|beams|none or raw 'i,j,k'; beams = 7..15 = normals+widths+fiber_id (render with netvis --beams-cols 0,1,2:3,4,5:6:7 --beams-skip 8=-1)", NULL, plot_props, plot_props, sizeof(plot_props), &is_set));
     PetscCall(PetscOptionsBool("-plot_energy", "write per-cell CellData/energies at each plotted step", NULL, plot_energy, &plot_energy, &is_set));
-    PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, drumhead, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
     PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, print_timestep, &print_timestep, &is_set));
@@ -310,28 +307,15 @@ int main(int argc, char **argv) {
       return e;
     };
 
-    // Initial trace at t=0, built into the local vector sol_local (owned + ghost). For -static, the
-    // file holds the global static trace written by `network` in the same global numbering: load it
-    // into the distributed rhs, then scatter-forward so each rank has its full local part *including
-    // ghost dofs* before make_initial_from_static reads per-edge (ghost-referencing) values.
+    // Initial state at t=0: make_initial seeds the per-edge data (state coeffs_old AND the
+    // endpoint trace lambda_old -- the trace is protocol-managed state, so the driver holds no
+    // trace vector; diagnostics ignore their span argument). Static init (-static) was removed
+    // pending its rework.
     PRIN2S(s_mk);
     {
       std::span<PetscReal> span;
-      if (*static_init) {
-        PetscViewer viewer;
-        PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, static_init, FILE_MODE_READ, &viewer));
-        PetscCall(VecLoad(rhs, viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
-        PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecGetSpan(sol_local, span));
-        hdg->make_initial_from_static(span);
-      }
-      else {
-        temp = hdg->make_initial(zero_v);
-        PetscCall(VecGetSpan(sol_local, span));
-        for (size_t k = 0; k < span.size(); ++k) span[k] = temp[k];
-      }
+      temp = hdg->make_initial(zero_v);
+      PetscCall(VecGetSpan(sol_local, span));
       if (*plot)
         hdg->plot_solution(span, 0.);
       temp2 = global_errors(hdg->errors(span, 0));
@@ -339,10 +323,6 @@ int main(int argc, char **argv) {
       PetscCall(VecRestoreSpan(sol_local, span));
     }
     PRIN2SP();
-
-    // previous endpoint trace lambda^n for the Gauss step protocol (see the timestep loop)
-    PetscCall(VecDuplicate(sol_local, &lam_local));
-    PetscCall(VecCopy(sol_local, lam_local));
 
     e_abs = PetscMax(temp2[0], e_abs);
     n_abs = PetscMax(temp3[0], n_abs);
@@ -442,12 +422,6 @@ int main(int argc, char **argv) {
       PetscReal ti = i*dt, error = 0, norm = 0;
 
         std::span<PetscReal> span, span_im;
-        // endpoint recombination weights lambda+ = affine*lambda^n + sum_l mult_l*Re(w_l zeta_l)
-        // (s = 1: affine = -1, w = 2 -- the exact midpoint extrapolation; s >= 2:
-        // Gauss-quadrature superconvergent like the state update in finalize_step)
-        PetscReal st_affine, st_mult, st_wre, st_wim;
-        hdg->stage_weights(0, st_affine, st_mult, st_wre, st_wim);
-        PetscCall(VecScale(lam_local, st_affine));
 
         if (!multi) {
         // Residual built from local parts: each rank evaluates the residual over its owned edges into
@@ -487,13 +461,9 @@ int main(int argc, char **argv) {
         hdg->set_data(span, ti);   // stage trace zeta -> stash stage locals
         PetscLogEventEnd(e_set, 0,0,0,0);
         PetscCall(VecRestoreSpan(sol_local, span));
-
-        PetscCall(VecAXPY(lam_local, st_mult * st_wre, sol_local));
         } else {
         // one complex solve per stage representative; conjugate partners are analytic
         for (PetscInt rep = 0; rep < n_greps; rep++) {
-          hdg->stage_weights(rep, st_affine, st_mult, st_wre, st_wim);
-
           // stage residual: complex loads split into the two real halves
           PetscCall(VecZeroEntries(sol_local));
           PetscCall(VecZeroEntries(l_im));
@@ -540,15 +510,14 @@ int main(int argc, char **argv) {
           PetscLogEventEnd(e_set, 0,0,0,0);
           PetscCall(VecRestoreSpan(sol_local, span));
           PetscCall(VecRestoreSpan(l_im, span_im));
-
-          PetscCall(VecAXPY(lam_local, st_mult * st_wre, sol_local));
-          PetscCall(VecAXPY(lam_local, -st_mult * st_wim, l_im));
         }
         }
 
+        // advances state AND endpoint trace (lambda+ = affine*lambda^n + sum mult*Re(w*zeta),
+        // recombined per edge from the stashed stage traces)
         hdg->finalize_step();
 
-        PetscCall(VecGetSpan(lam_local, span));
+        PetscCall(VecGetSpan(sol_local, span));
         if (*plot && (i % plot_stride == 0 || i == nt)) {
           PetscLogEventBegin(e_plot, 0,0,0,0);
           hdg->plot_solution(span, ti);
@@ -564,7 +533,7 @@ int main(int argc, char **argv) {
         n_abs = PetscMax(norm, n_abs);
         e_trace = PetscMax(temp2[1], e_trace);
         n_trace = PetscMax(temp3[1], n_trace);
-        PetscCall(VecRestoreSpan(lam_local, span));
+        PetscCall(VecRestoreSpan(sol_local, span));
 
         PetscCall(VecSetValue(errors, i, error, INSERT_VALUES));
         PetscCall(VecSetValue(norms, i, norm, INSERT_VALUES));
@@ -611,7 +580,6 @@ end:
     PetscCall(VecDestroy(&norms));
     PetscCall(VecDestroy(&rhs));
     PetscCall(VecDestroy(&sol_local));
-    PetscCall(VecDestroy(&lam_local));
     PetscCall(VecDestroy(&g_im));
     PetscCall(VecDestroy(&l_im));
     PetscCall(VecScatterDestroy(&scatter));

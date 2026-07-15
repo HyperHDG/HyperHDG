@@ -433,9 +433,17 @@ class TimoshenkoWave
     SmallSquareMat<n_loc_dofs_, lSol_float_t> full_lu;
     std::array<int, n_loc_dofs_> full_ipiv;
     bool full_lu_factorized = false;
-    // Per-representative stage-local solution (q,y,z) stashed by set_data(zeta), consumed by
-    // finalize_step. Real at s = 1, complex for s >= 2 (conjugate partners are analytic).
+    // Endpoint trace lambda^n on this edge's nodes (node frame, REAL): recombined alongside
+    // coeffs_old in finalize_step from the stashed stage traces; errors/energy read it instead
+    // of a driver-provided trace vector (lambda is protocol-managed state, never plumbing).
+    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> lambda_old{};
+    // Per-representative stage-local solution (q,y,z) and stage trace zeta stashed by
+    // set_data(zeta), consumed by finalize_step. Real at s = 1, complex for s >= 2 (conjugate
+    // partners are analytic).
     std::array<SmallVec<n_loc_dofs_, stage_float_t>, n_reps_> stage_coeffs;
+    std::array<std::array<std::array<stage_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>,
+               n_reps_>
+      stage_trace;
     // Complex per-representative full-matrix LU caches of the stage operators (s >= 2 only;
     // s = 1 reuses the real Schur / full_lu paths above). [[no_unique_address]] keeps the s = 1
     // data_type free of the complex storage.
@@ -1272,10 +1280,10 @@ class TimoshenkoWave
    * \param   time              Time at which analytic functions are evaluated.
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename lambda_float_t = lSol_float_t>
   std::array<lSol_float_t, 2U> errors(
-    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
-      lambda_values,
+    const std::array<std::array<lambda_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      /*lambda_values: unused -- the endpoint trace is read from data.lambda_old*/,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
@@ -1291,9 +1299,9 @@ class TimoshenkoWave
     const lSol_float_t len = hyper_edge.geometry.area();
     const auto& c_old = hyper_edge.data.coeffs_old;
 
-    // Input lambdas are in node-frame (global). Convert to edge-frame so we can compare against
-    // analytic_result_u/phi which is evaluated against edge-local normals (comps = {1,-1,-2}).
-    auto lambda_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    // The stored endpoint trace is in node-frame (global). Convert to edge-frame so we can
+    // compare against analytic_result_u/phi evaluated on edge-local normals (comps = {1,-1,-2}).
+    auto lambda_loc = node_dof_to_edge_dof(hyper_edge.data.lambda_old, hyper_edge);
 
     for (unsigned int dim = 0; dim < space_dim; dim++) {
       for (unsigned int i = 0; i < coeffs.size(); ++i)
@@ -1378,14 +1386,13 @@ class TimoshenkoWave
    * \param   time              Time at which analytic functions are evaluated.
    * \retval  norm              Local squared L2 norm of the analytic solution.
    ************************************************************************************************/
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename lambda_float_t = lSol_float_t>
   std::array<lSol_float_t, 2U> norms(
-    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
-      lambda_values,
+    const std::array<std::array<lambda_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      /*lambda_values: unused (norm of the analytic solution)*/,
     hyEdgeT& hyper_edge,
     const lSol_float_t time = 0.) const
   {
-    (void)lambda_values;
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
     std::array<lSol_float_t,3> comps = {1,-1,-2};
@@ -1434,10 +1441,10 @@ class TimoshenkoWave
   // Per-edge energy split into 6*space_dim components, ordered (block of size space_dim each):
   //   0: ½ ∫ n²/C_n   1: ½ ∫ m²/C_m   2: ½ ∫ v²/C_u   3: ½ ∫ s²/C_r
   //   4: ½ τ Σ_bdr ∫ (u-λ_u)²            5: ½ τ Σ_bdr ∫ (r-λ_r)²
-  template <class hyEdgeT>
+  template <class hyEdgeT, typename lambda_float_t = lSol_float_t>
   std::array<lSol_float_t, n_energy_components()> energy(
-    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
-      lambda_values,
+    const std::array<std::array<lambda_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      /*lambda_values: unused -- the endpoint trace is read from data.lambda_old*/,
     hyEdgeT& hyper_edge,
     const lSol_float_t /*time*/ = 0.) const
   {
@@ -1447,7 +1454,7 @@ class TimoshenkoWave
     const auto& c_old = hyper_edge.data.coeffs_old;
 
     auto extra = get_extra_coeffs(hyper_edge);
-    auto lambda_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    auto lambda_loc = node_dof_to_edge_dof(hyper_edge.data.lambda_old, hyper_edge);
 
     for (unsigned int d = 0; d < space_dim; ++d) {
       const lSol_float_t Cn = extra[0 * space_dim + d];
@@ -1671,6 +1678,7 @@ class TimoshenkoWave
     const auto [t, stage] = split_stage_time(time);
     if constexpr (std::is_same_v<lambda_float_t, stage_float_t>)
     {
+      hyper_edge.data.stage_trace[stage] = lambda_values_in;
       auto lambda_values = node_dof_to_edge_dof(lambda_values_in, hyper_edge);
       hyper_edge.data.stage_coeffs[stage] =
         solve_local_problem(lambda_values, 1U, hyper_edge, t, stage);
@@ -1697,17 +1705,16 @@ class TimoshenkoWave
       for (unsigned int i = 0; i < n_loc_dofs_; ++i)
         data.coeffs_old[i] +=
           stages_.mult[l] * std::real(stages_.w[l] * data.stage_coeffs[l][i]);
-  }
-
-  /*!***********************************************************************************************
-   * \brief   Endpoint-update weights, exposed for the driver's trace recombination
-   *          lambda+ = affine * lambda^n + sum_l mult_l * Re(w_l * zeta_l).
-   ************************************************************************************************/
-  lSol_float_t stage_affine() const { return stages_.affine; }
-  lSol_float_t stage_mult(const unsigned int rep) const { return stages_.mult[rep]; }
-  std::complex<lSol_float_t> stage_w(const unsigned int rep) const
-  {
-    return std::complex<lSol_float_t>(std::real(stages_.w[rep]), std::imag(stages_.w[rep]));
+    // the endpoint trace is the same recombination of the stashed stage traces (exact at s = 1,
+    // Gauss-quadrature superconvergent otherwise); real by conjugate symmetry
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      for (unsigned int dof = 0; dof < n_glob_dofs_per_node(); ++dof)
+      {
+        lSol_float_t val = stages_.affine * data.lambda_old[face][dof];
+        for (unsigned int l = 0; l < n_reps_; ++l)
+          val += stages_.mult[l] * std::real(stages_.w[l] * data.stage_trace[l][face][dof]);
+        data.lambda_old[face][dof] = val;
+      }
   }
 
   /*!***********************************************************************************************
@@ -1830,6 +1837,11 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < 2*space_dim; ++j)
         if (hyper_edge.node_descriptor[i] & (1<<j))
             lambda_values[i][j] = 0.;
+
+    // seed the stored endpoint trace (node frame, post Dirichlet zeroing)
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+        hyper_edge.data.lambda_old[i][j] = lambda_values[i][j];
 
     auto lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
 
@@ -1992,6 +2004,11 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < lambda_values_in[i].size(); ++j)
         lambda_values_in[i][j] = 0.;
     edge_dof_to_node_dof(lambda_values, lambda_values_in, hyper_edge);
+
+    // seed the stored endpoint trace
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+        hyper_edge.data.lambda_old[i][j] = lambda_values_in[i][j];
 
     return lambda_values_in;
   }

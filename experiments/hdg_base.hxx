@@ -27,7 +27,6 @@ struct HDGBase {
   virtual Vector errors(const Span& x_vec, const Real time = 0.) = 0;
   virtual Vector norms(const Span& x_vec, const Real time = 0.) = 0;
   virtual Vector make_initial(const Vector& x_vec, const Real time = 0.) = 0;
-  virtual void make_initial_from_static(const Span& x_vec, const Real time = 0.) = 0;
   virtual sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) = 0;
   virtual void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) = 0;
   virtual void set_data(Span x_vec, const Real time = 0.) = 0;
@@ -36,9 +35,6 @@ struct HDGBase {
   // Gauss stage interface (s >= 2, complex stage operators; defaults keep non-Gauss loops valid):
   virtual Idx n_gauss_stages() { return 1; }
   virtual Idx n_gauss_reps() { return 1; }
-  virtual void stage_weights(Idx rep, Real& affine, Real& mult, Real& w_re, Real& w_im) {
-    hy_check(false, "stage_weights is not available for this global loop");
-  }
   virtual sparse_mat<std::vector<std::complex<Real>>> trace_to_flux_mat_stage(Idx stage,
                                                                               Real time = 0.) {
     hy_check(false, "trace_to_flux_mat_stage is not available for this global loop");
@@ -102,10 +98,6 @@ struct HDGWrapper : HDGBase {
   {
     return hdg.make_initial(x_vec, time);
   }
-  void make_initial_from_static(const Span& x_vec, const Real time = 0.)
-  {
-    return hdg.make_initial_from_static(x_vec, time);
-  }
   sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
     return hdg.trace_to_flux_mat(time);
   }
@@ -136,12 +128,6 @@ struct HDGWrapper : HDGBase {
       return HDG::n_gauss_reps();
     else
       return 1;
-  }
-  void stage_weights(Idx rep, Real& affine, Real& mult, Real& w_re, Real& w_im) {
-    if constexpr (requires { hdg.stage_weights(rep, affine, mult, w_re, w_im); })
-      hdg.stage_weights(rep, affine, mult, w_re, w_im);
-    else
-      hy_check(false, "stage_weights is not available for this global loop");
   }
   // The stage solves reuse the loop's generic entries, instantiated with complex vectors and a
   // Gauss::StageTime as the time argument; the re/im split here exists only because the PETSc
