@@ -47,10 +47,15 @@ not carry over.
 - **`data_type`**: real state `(u,r,v,s)` + per-representative complex LU
   caches + per-representative complex stage-field slots `(y_ℓ, z_ℓ)`.
   POD, fixed size via `n_stages` (redistribution-safe).
-- **Stage operator**: `Â(h) = τF + C_sig·K + (C_u/h²)M` — `assemble_schur`
-  with the overall `θ·(...)` normalization dropped consistently from matrix
-  and rhs (ζ invariant to the common scale). At s=1 equals today's operator
-  up to the overall factor θ = 1/2.
+- **Stage operator**: `Â(h) = τF + C_sig·K + (C_u/h²)M`, i.e. the θ-method
+  operator with the overall `θ·(...)` normalization dropped consistently from
+  matrix and rhs (ζ invariant to the common scale). At s=1 equals today's
+  operator up to the overall factor θ = 1/2. **Landed** (merge of
+  jprecond/hork-gauss): `assemble_loc_matrix_stage(h)` +
+  `assemble_rhs_from_lambda_stage` behind `-loc_stage`, full-matrix LU form —
+  chosen over a hand-rolled stage Schur because it complexifies trivially
+  (zgetrf). Verified: symmetric to ~1e-17, CN run bit-identical to GOLDEN.
+  A stage-Schur fast path is an optional later optimization.
 - **Step protocol** (driver-controlled, no tally):
   1. per representative ℓ: `b_ℓ = residual_flux(stage ℓ)`;
      solve `Â_ℓ ζ_ℓ = b_ℓ` — independent, any order, parallelizable;
@@ -85,6 +90,8 @@ to `output/GOLDEN-ne9-0*` (pure refactor).
 `std::complex<double>` (`zgetrf`/`zgetrs`); `dgeev` wrapper for tableau setup.
 
 ### Phase 2 — stage machinery in timowave (real, s=1)
+- Stage operator Â(h): DONE (`assemble_loc_matrix_stage` behind `-loc_stage`,
+  see above).
 - `n_stages` template param (default 1); tableau members; slots in `data_type`.
 - Stage entry points alongside the untouched θ-path: `trace_to_flux(…,stage)`,
   `residual_flux(…,stage)` with eq-(7) loads, `set_data(ζ,stage)`,
