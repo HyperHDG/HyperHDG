@@ -1,6 +1,9 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
-#include <span>
+#include <HyperHDG/compile_time_tricks.hxx>
+
 #include <cmath>
+#include <concepts>
+#include <span>
 
 // MPI distribution is handled at the data level (distribute_domain.hxx): each rank's hypergraph
 // holds only its owned hyperedges, so the loops below assemble all of them with no assembly-level
@@ -17,11 +20,13 @@
  * - hyEdge_dim and n_dofs_per_node need to be constexpr variables,
  * - the algortihm library needs to be included,
  * - hyper_graph_ is an instance of HDGHyperGraph,
- * - has_fun_name is constructed via the macro HAS_MEMBER_FUNCTION,
  * - local_solver_ is a LocalSolverT,
  * - ... .
+ *
+ * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
+ * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
-#define prototype_mat_vec_multiply_span(fun_name, has_fun_name)                                   \
+#define prototype_mat_vec_multiply_span(fun_name)                                                 \
   [&]()                                                                                           \
   {                                                                                               \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                             \
@@ -39,22 +44,15 @@
           dofs_new[node].fill(0.);                                                                \
         }                                                                                         \
                                                                                                   \
-        if constexpr (has_fun_name<                                                               \
-                        LocalSolverT,                                                             \
-                        std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(    \
-                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
-                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
-                          dof_value_t)>::value)                                                   \
+        if constexpr (requires { local_solver_.fun_name(dofs_old, dofs_new, prvalue_of(time)); })             \
           local_solver_.fun_name(dofs_old, dofs_new, time);                                       \
-        else if constexpr (                                                                       \
-          has_fun_name<LocalSolverT,                                                              \
-                       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(     \
-                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
-                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
-                         decltype(hyper_edge)&, dof_value_t)>::value)                             \
+        else if constexpr (requires {                                                             \
+                             local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, prvalue_of(time));        \
+                           })                                                                     \
           local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                           \
         else                                                                                      \
-          hy_assert(false, "Function seems not to be implemented!");                              \
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,                       \
+                        "LocalSolverT implements no usable overload of " #fun_name "!");          \
                                                                                                   \
         for (unsigned int node = 0; node < hyNodes.size(); ++node)                                \
           hyper_graph_.hyNode_factory().add_to_dof_values(hyNodes[node], vec_Ax, dofs_new[node]); \
@@ -73,11 +71,13 @@
  * - hyEdge_dim and n_dofs_per_node need to be constexpr variables,
  * - the algortihm library needs to be included,
  * - hyper_graph_ is an instance of HDGHyperGraph,
- * - has_fun_name is constructed via the macro HAS_MEMBER_FUNCTION,
  * - local_solver_ is a LocalSolverT,
  * - ... .
+ *
+ * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
+ * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
-#define prototype_mat_vec_multiply(fun_name, has_fun_name)                                        \
+#define prototype_mat_vec_multiply(fun_name)                                                      \
   [&]()                                                                                           \
   {                                                                                               \
     LargeVecT vec_Ax(x_vec.size(), 0.);                                                           \
@@ -95,22 +95,15 @@
           dofs_new[node].fill(0.);                                                                \
         }                                                                                         \
                                                                                                   \
-        if constexpr (has_fun_name<                                                               \
-                        LocalSolverT,                                                             \
-                        std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(    \
-                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
-                          std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,  \
-                          dof_value_t)>::value)                                                   \
+        if constexpr (requires { local_solver_.fun_name(dofs_old, dofs_new, prvalue_of(time)); })             \
           local_solver_.fun_name(dofs_old, dofs_new, time);                                       \
-        else if constexpr (                                                                       \
-          has_fun_name<LocalSolverT,                                                              \
-                       std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(     \
-                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
-                         std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,   \
-                         decltype(hyper_edge)&, dof_value_t)>::value)                             \
+        else if constexpr (requires {                                                             \
+                             local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, prvalue_of(time));        \
+                           })                                                                     \
           local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                           \
         else                                                                                      \
-          hy_assert(false, "Function seems not to be implemented!");                              \
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,                       \
+                        "LocalSolverT implements no usable overload of " #fun_name "!");          \
                                                                                                   \
         for (unsigned int node = 0; node < hyNodes.size(); ++node)                                \
           hyper_graph_.hyNode_factory().add_to_dof_values(hyNodes[node], vec_Ax, dofs_new[node]); \
@@ -158,11 +151,13 @@ struct sparse_mat
  * - hyEdge_dim and n_dofs_per_node need to be constexpr variables,
  * - the algortihm library needs to be included,
  * - hyper_graph_ is an instance of HDGHyperGraph,
- * - has_fun_name is constructed via the macro HAS_MEMBER_FUNCTION,
  * - local_solver_ is a LocalSolverT,
  * - ... .
+ *
+ * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
+ * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx).
  **************************************************************************************************/
-#define prototype_mat_generate(fun_name, has_fun_name)                                        \
+#define prototype_mat_generate(fun_name)                                                      \
   [&]()                                                                                       \
   {                                                                                           \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                         \
@@ -192,8 +187,10 @@ struct sparse_mat
         for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      \
           for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      \
           {                                                                                   \
-            if constexpr (has_is_dirichlet<LocalSolverT,                                      \
-                            bool(decltype(hyper_edge)&, unsigned int, unsigned int)>::value)  \
+            if constexpr (requires {                                                          \
+                            { local_solver_.is_dirichlet(hyper_edge, node_j, dof_j)           \
+                            } -> std::convertible_to<bool>;                                   \
+                          })                                                                  \
               if (local_solver_.is_dirichlet(hyper_edge, node_j, dof_j))                      \
               {                                                                               \
                 *(row_it++) = dof_indices[node_j][dof_j];                                     \
@@ -207,24 +204,16 @@ struct sparse_mat
               dofs_new[node].fill(0.);                                                        \
             }                                                                                 \
             dofs_old[node_j][dof_j] = 1.;                                                     \
-            if constexpr (                                                                    \
-              has_fun_name<                                                                   \
-                LocalSolverT,                                                                 \
-                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(        \
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
-                  dof_value_t)>::value)                                                       \
+            if constexpr (requires { local_solver_.fun_name(dofs_old, dofs_new, prvalue_of(time)); })     \
               local_solver_.fun_name(dofs_old, dofs_new, time);                               \
-            else if constexpr (                                                               \
-              has_fun_name<                                                                   \
-                LocalSolverT,                                                                 \
-                std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&(        \
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
-                  std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>&,      \
-                  decltype(hyper_edge)&, dof_value_t)>::value)                                \
+            else if constexpr (requires {                                                     \
+                                 local_solver_.fun_name(dofs_old, dofs_new, hyper_edge,       \
+                                                        prvalue_of(time));                                \
+                               })                                                             \
               local_solver_.fun_name(dofs_old, dofs_new, hyper_edge, time);                   \
             else                                                                              \
-              hy_assert(false, "Function seems not to be implemented!");                      \
+              static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,               \
+                            "LocalSolverT implements no usable overload of " #fun_name "!");  \
                                                                                               \
             for (unsigned int node_i = 0; node_i < hyNodes.size(); ++node_i)                  \
               for (unsigned int dof_i = 0; dof_i < n_dofs_per_node; ++dof_i)                  \
@@ -250,11 +239,15 @@ struct sparse_mat
  * - hyEdge_dim and n_dofs_per_node need to be constexpr variables,
  * - the algortihm library needs to be included,
  * - hyper_graph_ is an instance of HDGHyperGraph,
- * - has_fun_name is constructed via the macro HAS_MEMBER_FUNCTION,
  * - local_solver_ is a LocalSolverT,
  * - ... .
+ *
+ * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
+ * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx). Note that
+ * the result flows through error_def::sum_error, so a wrong return type is a compile error as
+ * well (instead of the former Release-silent zero result).
  **************************************************************************************************/
-#define prototype_errors(fun_name, has_fun_name)                                                   \
+#define prototype_errors(fun_name)                                                                 \
   [&]()                                                                                            \
   {                                                                                                \
     typedef typename LocalSolverT::error_def::error_t error_t;                                     \
@@ -271,20 +264,14 @@ struct sparse_mat
         for (unsigned int node = 0; node < hyNodes.size(); ++node)                                 \
           hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, dofs[node]);          \
                                                                                                    \
-        if constexpr (has_fun_name<LocalSolverT,                                                   \
-                                   error_t(std::array<std::array<dof_value_t, n_dofs_per_node>,    \
-                                                      2 * hyEdge_dim>&,                            \
-                                           dof_value_t)>::value)                                   \
+        if constexpr (requires { local_solver_.fun_name(dofs, prvalue_of(time)); })                            \
           result = LocalSolverT::error_def::sum_error(result, local_solver_.fun_name(dofs, time)); \
-        else if constexpr (has_fun_name<LocalSolverT,                                              \
-                                        error_t(                                                   \
-                                          std::array<std::array<dof_value_t, n_dofs_per_node>,     \
-                                                     2 * hyEdge_dim>&,                             \
-                                          decltype(hyper_edge)&, dof_value_t)>::value)             \
+        else if constexpr (requires { local_solver_.fun_name(dofs, hyper_edge, prvalue_of(time)); })           \
           result = LocalSolverT::error_def::sum_error(                                             \
             result, local_solver_.fun_name(dofs, hyper_edge, time));                               \
         else                                                                                       \
-          hy_assert(false, "Function seems not to be ímplemented");                                \
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,                        \
+                        "LocalSolverT implements no usable overload of " #fun_name "!");           \
       });                                                                                          \
                                                                                                    \
     return LocalSolverT::error_def::postprocess_error(result);                                     \

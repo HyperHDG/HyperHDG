@@ -34,24 +34,6 @@ template <class TopologyT,
           typename dof_index_t = unsigned int>
 class Elliptic
 {
- private:
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(is_dirichlet, has_is_dirichlet);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(errors, has_errors);
-  HAS_MEMBER_FUNCTION(norms, has_norms);
  public:
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
@@ -214,7 +196,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -246,7 +228,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
   {
-    return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
+    return prototype_mat_generate(trace_to_flux);
   }
 
   template<typename hyNode_index_t = dof_index_t>
@@ -271,7 +253,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(residual_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -290,7 +272,7 @@ class Elliptic
   template <typename SpanT, typename SpanT_, typename hyNode_index_t = dof_index_t>
   void residual_flux2(const SpanT& x_vec, SpanT_& vec_Ax, const dof_value_t time = 0.)
   {
-    prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
+    prototype_mat_vec_multiply_span(residual_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -315,14 +297,14 @@ class Elliptic
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> errors(const SpanT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(errors, has_errors);
+    auto result = prototype_errors(errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
 
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> norms(const SpanT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(norms, has_norms);
+    auto result = prototype_errors(norms);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************

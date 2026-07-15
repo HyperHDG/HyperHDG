@@ -636,6 +636,37 @@ class TimoshenkoBeam
     return std::array<lSol_float_t, 1U>({error});
   }
 
+  /*!***********************************************************************************************
+   * \brief   Local squared contribution to the L2 norm of the analytic solution.
+   *
+   * Evaluates the same integrals as \c errors, but with a vanishing discrete solution, so that
+   * the result is the squared L2 norm of the analytic solution (for relative errors). Before the
+   * requires-based dispatch this function was missing and the global norms silently evaluated to
+   * zero in Release builds.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  std::array<lSol_float_t, 1U> norms(
+    const std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
+      lambda_values,
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const
+  {
+    (void)lambda_values;
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    std::array<lSol_float_t, 3> comps = {1, -1, -2};
+    std::array<lSol_float_t, n_shape_fct_> coeffs;
+    coeffs.fill(0.);
+    lSol_float_t norm = 0.;
+
+    for (unsigned int dim = 0; dim < 3; ++dim)
+      norm += integrator::template integrate_vol_diffsquare_discanacomp<
+        Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
+        parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, comps[dim],
+                                                                         hyper_edge.geometry, time);
+
+    return std::array<lSol_float_t, 1U>({norm});
+  }
+
   // Edge-local frame vector: idx == 0 → inner_normal(0),
   // idx == -k (k>=1) → outer_normal(k-1).
   // Convention: nonneg → inner, neg → outer.

@@ -10,37 +10,22 @@
 #define UNUSED(x) /* nothing */
 
 /*!*************************************************************************************************
- * \brief   Check if some class implements some function with some signature.
+ * \brief   Dependent false for static_assert in discarded if-constexpr branches.
  *
- * This macro receives the name of the function that is checked to be implemented with a given
- * signature (not handled to the macro itself) and the name of a struct (output) that can be used
- * to check whether function func is implemented.
- *
- * Having invoked the macro, we are able to use the template struct \c name to check whether
- * function \c fun is a (static or non-static) member function of an element of class \c C, where
- * \c Ret(Args) is the supposed signature.
- *
- * \param[in]   func    The name of the function that is checked to be implemented.
- * \param[out]  name    The resulting struct whose value is true if the function is implemented.
+ * Local-solver dispatch tests candidate call expressions with C++20 requires-expressions directly
+ * at the call site (cf. global_loop/prototype.hxx). The fallback branch uses
+ * \c static_assert(always_false_v<...>, ...) so that a local solver implementing no usable
+ * overload is a compile error instead of a Release-silent \c hy_assert.
  **************************************************************************************************/
-#define HAS_MEMBER_FUNCTION(func, name)                                                            \
-  template <typename, typename T>                                                                  \
-  struct name                                                                                      \
-  {                                                                                                \
-    static_assert(std::integral_constant<T, false>::value,                                         \
-                  "Second template parameter must be function signature.");                        \
-  };                                                                                               \
-  template <typename C, typename Ret, typename... Args>                                            \
-  struct name<C, Ret(Args...)>                                                                     \
-  {                                                                                                \
-   private:                                                                                        \
-    template <typename T>                                                                          \
-    static constexpr auto check(T*) ->                                                             \
-      typename std::is_same<decltype(std::declval<T>().func(std::declval<Args>()...)), Ret>::type; \
-    template <typename>                                                                            \
-    static constexpr std::false_type check(...);                                                   \
-    typedef decltype(check<C>(0)) type;                                                            \
-                                                                                                   \
-   public:                                                                                         \
-    static constexpr bool value = type::value;                                                     \
-  }
+template <typename...>
+inline constexpr bool always_false_v = false;
+/*!*************************************************************************************************
+ * \brief   declval-style helper: yields a prvalue copy of its argument (unevaluated contexts only).
+ *
+ * Inside the dispatch requires-expressions the trailing scalar (time/eigenvalue) must be passed as
+ * an rvalue: local solvers commonly default that parameter (e.g. \c time \c = \c 0.) behind a
+ * \c hyEdgeT& parameter, and a named lvalue would bind to that reference, making the shorter
+ * overload spuriously viable (its body then fails to compile). Not defined — like std::declval.
+ **************************************************************************************************/
+template <typename T>
+std::remove_cvref_t<T> prvalue_of(T&&) noexcept;

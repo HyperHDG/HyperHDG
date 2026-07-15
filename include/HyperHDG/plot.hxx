@@ -315,18 +315,6 @@ void plot(HyperGraphT& hyper_graph,
 namespace PlotFunctions
 {
 /*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for energy() to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(energy, has_energy);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for n_energy_components() to exist.
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(n_energy_components, has_n_energy_components);
-/*!*************************************************************************************************
  * \brief   Turn fileType enum into string.
  **************************************************************************************************/
 std::string fileType_to_string(const PlotOptions::fileType& type)
@@ -648,21 +636,18 @@ void plot_edge_values(HyperGraphT& hyper_graph,
       std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
       LocalSolverT::system_dimension()>
       local_values;
-    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT,
-                                                 decltype(local_values)(decltype(abscissas.data())&,
-                                                                        decltype(hyEdge_dofs)&,
-                                                                        decltype(time))>::value)
+    if constexpr (requires { local_solver.bulk_values(abscissas.data(), hyEdge_dofs, prvalue_of(time)); })
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
-    else if constexpr (PlotFunctions::has_bulk_values<
-                         LocalSolverT, decltype(local_values)(
-                                         decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
-                                         decltype(hyper_graph[he_number])&, decltype(time))>::value)
+    else if constexpr (requires(decltype(hyper_graph[he_number])& geometry) {
+                         local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+                       })
     {
       auto geometry = hyper_graph[he_number];
       local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
     }
     else
-      hy_assert(false, "Function seems not to be implemented!");
+      static_assert(always_false_v<LocalSolverT>,
+                    "LocalSolverT implements no usable overload of bulk_values!");
 
     myfile << "      ";
     for (unsigned int corner = 0; corner < Hypercube<edge_dim>::n_vertices(); ++corner)
@@ -1299,8 +1284,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
   // Energy buffer: only populated when plot_options.energy and LocalSolverT supplies energy().
   std::vector<float> energies_buf;
-  constexpr bool has_energy_api =
-    PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value;
+  constexpr bool has_energy_api = requires { LocalSolverT::n_energy_components(); };
 
   std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim>
     hyEdge_dofs;
@@ -1321,22 +1305,19 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
 
     std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
 
-    using bulk_fn = decltype(local_values)(
-      decltype(abscissas.data())&, decltype(hyEdge_dofs)&, decltype(time));
-    using bulk_fn_geom = decltype(local_values)(
-      decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
-      decltype(hyper_graph[he])&, decltype(time));
-
     if (n_values_out > 0) {
-      if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value) {
+      if constexpr (requires { local_solver.bulk_values(abscissas.data(), hyEdge_dofs, prvalue_of(time)); }) {
         local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
       }
-      else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value) {
+      else if constexpr (requires(decltype(hyper_graph[he])& geometry) {
+                           local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+                         }) {
         auto geometry = hyper_graph[he];
         local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
       }
       else {
-        hy_check(false, "bulk_values overload not found on LocalSolverT");
+        static_assert(always_false_v<LocalSolverT>,
+                      "LocalSolverT implements no usable overload of bulk_values!");
       }
 
       for (unsigned int p = 0; p < points_per_edge; ++p) {
@@ -1473,7 +1454,7 @@ void plot_vtkhdf(HyperGraphT& hyper_graph,
   if (plot_options.fileNumber == 0) {
     unsigned int n_e_comp = 0;
     if (plot_options.energy) {
-      if constexpr (PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value)
+      if constexpr (requires { LocalSolverT::n_energy_components(); })
         n_e_comp = LocalSolverT::n_energy_components();
       else
         hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
