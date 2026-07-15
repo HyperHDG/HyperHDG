@@ -71,6 +71,20 @@ not carry over.
   Debug `hy_assert`: imaginary residue of the finalize combination ≈ 0
   (catches any conjugation-convention slip in the θ/ω/w chain).
 
+## s=1 ≡ CN (the Phase-2 correctness backbone)
+
+Tableau: A=(1/2), b=(1) ⇒ θ₁=1/2, T=(1), ω₁=1, σ₁=2/Δt, d=bᵀA⁻¹=2, w₁=2.
+Bijection: stage values = CN midpoint averages (q₁,y₁,z₁,ζ₁)=(q̄,ȳ,z̄,λ̄).
+  - q-eq: algebraic ⇒ holds at both levels ⇒ holds for averages.
+  - y-eq: (z^{n+1}−z^n)/Δt = σ₁(z₁−z^n) turns the CN time-difference into the
+    σ₁(z₁,·) term + the load σ₁ω₁(z^n,·).   [z-eq identical with the C_u scaling]
+  - balance: CN balances the averaged flux = the stage flux of (q₁,y₁,ζ₁).
+Back: finalize y⁺=2y₁−y^n (=(1−Σd)y^n+w₁·y₁); s=1 only: λ⁺=2ζ₁−λ^n is exact
+(ζ₁=λ̄), so e_trace IS comparable to GOLDEN at s=1 without a static trace solve.
+Exact for f=0 + time-independent BC; time-dependent data differ at O(Δt²):
+stage samples t^{n+1/2}, the implementation endpoint-averages (main.pdf's
+f^{k−1/2} is itself pointwise-midpoint, closer to the stage form than our code).
+
 ## Phases (each ends in a commit + verification)
 
 ### Phase 0 — concepts refactor (independent cleanup, lands first)
