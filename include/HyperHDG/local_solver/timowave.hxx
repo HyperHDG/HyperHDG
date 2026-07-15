@@ -1534,6 +1534,90 @@ class TimoshenkoWave
     compute_fluxes(lambda_values, hyper_edge, time);
   }
 
+  /*!***********************************************************************************************
+   * \brief   Dirichlet boundary data of the static problem, added to a local right-hand side.
+   *
+   * Any face with a nonzero node descriptor is treated as Dirichlet (the initializers' static
+   * problems consider every constrained face, including bit-6 static-only ones): q-rows receive
+   * -<g, w_q nu>, y-rows tau<g, w_y>, for g = dirichlet_value_u / _phi. Shared by make_initial and
+   * make_initial_from_static. HACK (inherited): assumes dirichlet_value_* returns zero in
+   * non-constrained directions.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  void add_dirichlet_rhs_static(SmallVec<n_loc_dofs_, lSol_float_t>& rhs,
+                                hyEdgeT& hyper_edge,
+                                const lSol_float_t time = 0.) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      {
+        if (!hyper_edge.node_descriptor[face])
+          continue;
+        auto integrals = integrate_bdr_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value_u>(i, face, {1, -1, -2},
+                                                                      hyper_edge.geometry, time);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+        {
+          rhs[(0 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+          rhs[(2 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integrals[comp];
+        }
+        integrals = integrate_bdr_phivecfunccomp_beam<
+          Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
+          decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi>(i, face, {1, -1, -2},
+                                                                        hyper_edge.geometry, time);
+        for (unsigned int comp = 0; comp < 3; ++comp)
+        {
+          rhs[(1 * space_dim + comp) * n_shape_fct_ + i] -=
+            hyper_edge.geometry.local_normal(face).operator[](0) * integrals[comp];
+          rhs[(3 * space_dim + comp) * n_shape_fct_ + i] += tau_ * integrals[comp];
+        }
+      }
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Recover the algebraic dual (n, m) from the stored (u, r) and static boundary data.
+   *
+   * The constitutive rows of the static system read (M/C) q - G w (+ cross terms) = b_q, so
+   * q = C * M^{-1} * (b_q - (A_static w)_q). \c rhs must hold the q-row boundary data (lambda +
+   * Dirichlet contributions); only its first 2*space_dim blocks are read. The dual is algebraic --
+   * slaved to (y, lambda) at the same instant -- so the same recovery serves the initializers now
+   * and the Gauss output-time diagnostics later. (This also fixes the formerly missing material
+   * factor C: for unit coefficients, i.e. the wave4-type tests, nothing changes.)
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  void recover_dual(hyEdgeT& hyper_edge, const SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  {
+    auto& data = hyper_edge.data;
+    SmallVec<4 * space_dim * n_shape_fct_, lSol_float_t> coeffs_w;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+      {
+        coeffs_w[(2 * space_dim + dim) * n_shape_fct_ + i] = data.u_old[i + dim * n_shape_fct_];
+        coeffs_w[(3 * space_dim + dim) * n_shape_fct_ + i] = data.r_old[i + dim * n_shape_fct_];
+      }
+    const auto res = assemble_loc_matrix<false>(hyper_edge) * coeffs_w;
+    const auto extra = get_extra_coeffs(hyper_edge);  // C_n, C_m in components 0 .. 2*space_dim-1
+
+    SmallSquareMat<n_shape_fct_> mmat;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int j = 0; j < n_shape_fct_; ++j)
+        mmat(i, j) = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+
+    SmallVec<n_shape_fct_> temp;
+    for (unsigned int d = 0; d < 2 * space_dim; ++d)
+    {
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        temp[i] = rhs[d * n_shape_fct_ + i] - res[d * n_shape_fct_ + i];
+      temp = temp / mmat;
+      auto& target = d < space_dim ? data.n_old : data.m_old;
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        target[(d % space_dim) * n_shape_fct_ + i] = extra[d] * temp[i];
+    }
+  }
+
   template <class hyEdgeT, typename SmallMatT>
   SmallMatT& make_initial(SmallMatT& lambda_values,
                           hyEdgeT& hyper_edge,
@@ -1541,8 +1625,6 @@ class TimoshenkoWave
   {
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& u_old = hyper_edge.data.u_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& r_old = hyper_edge.data.r_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& n_old = hyper_edge.data.n_old;
-    SmallVec<space_dim*n_shape_fct_, lSol_float_t>& m_old = hyper_edge.data.m_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& v_old = hyper_edge.data.v_old;
     SmallVec<space_dim*n_shape_fct_, lSol_float_t>& s_old = hyper_edge.data.s_old;
 
@@ -1620,84 +1702,11 @@ class TimoshenkoWave
     v_old = glob_dof_to_loc_dof(v_old, hyper_edge);
     s_old = glob_dof_to_loc_dof(s_old, hyper_edge);
 
-    SmallVec<n_shape_fct_*4*space_dim, lSol_float_t> coeffs_old;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int dim = 0; dim < space_dim; dim++) {
-        coeffs_old[(2*space_dim+dim)*n_shape_fct_+i] = u_old[i+dim*n_shape_fct_];
-      }
-    }
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int dim = 0; dim < space_dim; dim++) {
-        coeffs_old[(3*space_dim+dim)*n_shape_fct_+i] = r_old[i+dim*n_shape_fct_];
-      }
-    }
-
-    auto mat = assemble_loc_matrix<false>(hyper_edge);
-    auto coefs_nm = mat*coeffs_old;
-    auto temp_rhs = assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
-    for (unsigned int i = 0; i < 4*space_dim*n_shape_fct_; i++) {
-      coefs_nm[i] -= temp_rhs[i];
-    }
-
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-      {
-        if (hyper_edge.node_descriptor[face]) {
-          // u
-          auto integrals1 = integrate_bdr_phivecfunccomp_beam<
-            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-            decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_u>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
-
-          for (unsigned int comp = 0; comp < 3; comp++) {
-            coefs_nm[(0 * space_dim + comp) * n_shape_fct_ + i] +=
-              hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
-          }
-
-          // phi
-          integrals1 = integrate_bdr_phivecfunccomp_beam<
-            Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-            decltype(hyEdgeT::geometry), parametersT<space_dim, lSol_float_t>::dirichlet_value_phi>(i, face, {1,-1,-2}, hyper_edge.geometry, time);
-
-          for (unsigned int comp = 0; comp < 3; comp++) {
-            coefs_nm[(1 * space_dim + comp) * n_shape_fct_ + i] +=
-              hyper_edge.geometry.local_normal(face).operator[](0) * integrals1[comp];
-          }
-        }
-      }
-    }
-
-    // constitutive residuals equal -(M n) and -(M m): negate both blocks to recover n, m
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int d = 0; d < space_dim; ++d) {
-        coefs_nm[i+(0*space_dim+d)*n_shape_fct_] *= -1; // TODO: missing extra coefs -> function
-        coefs_nm[i+(1*space_dim+d)*n_shape_fct_] *= -1;
-      }
-    }
-
-    SmallSquareMat<n_shape_fct_> mmat;
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
-      for (unsigned int j = 0; j < n_shape_fct_; ++j) {
-        auto vol_integral = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
-        mmat(i, j) = vol_integral;
-      }
-    }
-
-    SmallVec<n_shape_fct_> temp;
-    for (unsigned int d = 0; d < space_dim; d++) {
-      for (unsigned int i = 0; i < n_shape_fct_; i++)
-        temp[i] = coefs_nm[(0*space_dim+d)*n_shape_fct_+i];
-      temp = temp / mmat;
-      for (unsigned int i = 0; i < n_shape_fct_; i++)
-        n_old[d*n_shape_fct_+i] = temp[i];
-    }
-
-    for (unsigned int d = 0; d < space_dim; d++) {
-      for (unsigned int i = 0; i < n_shape_fct_; i++)
-        temp[i] = coefs_nm[(1*space_dim+d)*n_shape_fct_+i];
-      temp = temp / mmat;
-      for (unsigned int i = 0; i < n_shape_fct_; i++)
-        m_old[d*n_shape_fct_+i] = temp[i];
-    }
+    // n, m are algebraic: recover them from (u, r) and the boundary data of the static problem.
+    SmallVec<n_loc_dofs_, lSol_float_t> rhs =
+      assemble_rhs_from_lambda(lambda_values_loc, hyper_edge);
+    add_dirichlet_rhs_static(rhs, hyper_edge, time);
+    recover_dual(hyper_edge, rhs);
 
     compute_fluxes(lambda_values_loc, hyper_edge, time);
 
@@ -1725,10 +1734,6 @@ class TimoshenkoWave
           lambda_values[face][d] = 0;
 
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    auto mat = assemble_loc_matrix<false>(hyper_edge);
-    SmallVec<4*space_dim*n_shape_fct_, lSol_float_t> rhs, coeffs;
-
-    lSol_float_t integral;
     int comps[] = {1, -1, -2};
     static_assert(space_dim <= 3);
 
@@ -1739,61 +1744,29 @@ class TimoshenkoWave
       if (parameters::massless_unloaded && hyper_edge.geometry.has_extra_data())
         loaded = hyper_edge.geometry.extra_data()[0] > 0;
 
-    // from lambda
+    // static rhs = lambda traces + body loads + Dirichlet data (helpers shared with make_initial)
+    SmallVec<n_loc_dofs_, lSol_float_t> rhs_full =
+      assemble_rhs_from_lambda(lambda_values, hyper_edge);
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
-      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-        {
-          integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
-            i, j, face, hyper_edge.geometry);
-          for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
-          {
-            rhs[(2 * space_dim + dim) * n_shape_fct_ + i] +=
-              tau_ * lambda_values[face][j + dim] * integral;
-            rhs[dim * n_shape_fct_ + i] -=
-              hyper_edge.geometry.local_normal(face).operator[](0)
-              * lambda_values[face][j + dim] * integral;
-          }
-        }
-
-    // from global
-    for (unsigned int i = 0; i < n_shape_fct_; ++i) {
       for (unsigned int c = 0; loaded && c < space_dim; c++) {
-        rhs[(2 * space_dim + c)* n_shape_fct_ + i] +=
+        rhs_full[(2 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::right_hand_side_n, Point<hyEdge_dimT, lSol_float_t>
           >(i, comps[c], hyper_edge.geometry, 0.);
 
-        rhs[(3 * space_dim + c)* n_shape_fct_ + i] +=
+        rhs_full[(3 * space_dim + c)* n_shape_fct_ + i] +=
           integrator::template integrate_vol_phivecfunccomp<
             Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
             parameters::right_hand_side_m, Point<hyEdge_dimT, lSol_float_t>
           >(i, comps[c], hyper_edge.geometry, 0.);
       }
-      // HACK: this only works if dirichlet_value_* returns zero in non-constrained directions
-      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face) {
-        for (unsigned int c = 0; c < space_dim; c++) {
-          if (hyper_edge.node_descriptor[face]) {
-            integral = integrator::template integrate_bdr_phivecfunccomp<
-              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-              decltype(hyEdgeT::geometry), parameters::dirichlet_value_u,
-              Point<hyEdge_dimT, lSol_float_t>>(i, face, comps[c], hyper_edge.geometry, 0.);
-            rhs[(0 * space_dim + c) * n_shape_fct_ + i] -=
-              hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-            rhs[(2 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
+    add_dirichlet_rhs_static(rhs_full, hyper_edge, 0.);
 
-            integral = integrator::template integrate_bdr_phivecfunccomp<
-              Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>,
-              decltype(hyEdgeT::geometry), parameters::dirichlet_value_phi,
-              Point<hyEdge_dimT, lSol_float_t>>(i, face, comps[c], hyper_edge.geometry, 0.);
-            rhs[(1 * space_dim + c) * n_shape_fct_ + i] -=
-              hyper_edge.geometry.local_normal(face).operator[](0) * integral;
-            rhs[(3 * space_dim + c) * n_shape_fct_ + i] += tau_ * integral;
-          }
-        }
-      }
-    }
+    auto mat = assemble_loc_matrix<false>(hyper_edge);
+    SmallVec<4 * space_dim * n_shape_fct_, lSol_float_t> rhs, coeffs;
+    for (unsigned int i = 0; i < 4 * space_dim * n_shape_fct_; ++i)
+      rhs[i] = rhs_full[i];
 
     coeffs = rhs / mat;
 
