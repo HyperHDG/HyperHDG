@@ -47,15 +47,20 @@ not carry over.
 - **`data_type`**: real state `(u,r,v,s)` + per-representative complex LU
   caches + per-representative complex stage-field slots `(y_ℓ, z_ℓ)`.
   POD, fixed size via `n_stages` (redistribution-safe).
-- **Stage operator**: `Â(h) = τF + C_sig·K + (C_u/h²)M`, i.e. the θ-method
-  operator with the overall `θ·(...)` normalization dropped consistently from
-  matrix and rhs (ζ invariant to the common scale). At s=1 equals today's
-  operator up to the overall factor θ = 1/2. **Landed** (merge of
-  jprecond/hork-gauss): `assemble_loc_matrix_stage(h)` +
-  `assemble_rhs_from_lambda_stage` behind `-loc_stage`, full-matrix LU form —
-  chosen over a hand-rolled stage Schur because it complexifies trivially
-  (zgetrf). Verified: symmetric to ~1e-17, CN run bit-identical to GOLDEN.
-  A stage-Schur fast path is an optional later optimization.
+- **Stage operator — LANDED, single path** (commits 404feab4, 1a7a121e): the
+  whole local solver is assembled in stage normalization by ONE
+  `assemble_loc_matrix<with_z>(sigma)` (`with_z=false` = the initializers'
+  static system); no flags, no `h` — the step enters only through
+  `sigma = 1/(theta*Δt)`. Deviation from hdg.pdf kept deliberately: z-rows
+  carry the C_u scaling ((z,z)=M, (z,y)=−σ·C_u·M) so massless welds (C_u=0)
+  stay regular (z≡0); costs the literal saddle symmetry, not the condensed
+  operator. Schur path (`assemble_schur`: S = τF + C_sig·K + σ²C_u·M) and
+  full-LU path both verified against GOLDEN (θ=.5, θ=1, -loc_lu_full) to
+  printed precision. The trapezoid loads are row-rescaled into this
+  normalization at the end of `assemble_rhs_from_global_rhs` — that block is
+  what the Gauss loads (eq 7) replace. `recover_dual(y, λ)` (algebraic n,m
+  recovery) and `add_dirichlet_rhs_static` exist and are shared by the unified
+  initializers; recover_dual is the output-time diagnostics helper too.
 - **Step protocol** (driver-controlled, no tally):
   1. per representative ℓ: `b_ℓ = residual_flux(stage ℓ)`;
      solve `Â_ℓ ζ_ℓ = b_ℓ` — independent, any order, parallelizable;
