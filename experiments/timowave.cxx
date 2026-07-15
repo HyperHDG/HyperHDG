@@ -132,7 +132,6 @@ int main(int argc, char **argv) {
     PetscInt iterations = 0, its = 0;
     PetscReal avg_iterations = 0, rnorm;
     const char* creason = NULL;
-    PetscBool have_cache = PETSC_FALSE;
     char plot[PATH_MAX] = {0};
     char plot_scale[PATH_MAX] = "1";
     char plot_values[64] = "all";
@@ -140,7 +139,6 @@ int main(int argc, char **argv) {
     PetscInt plot_stride = 1;
     PetscBool plot_energy = PETSC_TRUE;
     char domain_path[PATH_MAX] = "domains/single1.geo";
-    char mat_cache[PATH_MAX] = {0};
     char static_init[PATH_MAX] = {0};
     char timowave_test[256] = {0};
     const char *pc_type;
@@ -177,7 +175,6 @@ int main(int argc, char **argv) {
     PetscCall(PetscOptionsString("-plot_values", "PointData/values selection: all|disp|z|mag|none, or raw 'i,j,k' / 'mag:i,j,k' (Timoshenko layout: displacement = components 6,7,8)", NULL, plot_values, plot_values, sizeof(plot_values), &is_set));
     PetscCall(PetscOptionsString("-plot_props", "CellData/properties columns: all|beams|none or raw 'i,j,k'; beams = 7..15 = normals+widths+fiber_id (render with netvis --beams-cols 0,1,2:3,4,5:6:7 --beams-skip 8=-1)", NULL, plot_props, plot_props, sizeof(plot_props), &is_set));
     PetscCall(PetscOptionsBool("-plot_energy", "write per-cell CellData/energies at each plotted step", NULL, plot_energy, &plot_energy, &is_set));
-    PetscCall(PetscOptionsString("-mat_cache", "path to matrix cache", NULL, mat_cache, mat_cache, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-static", "path static init trace variables", NULL, static_init, static_init, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-domain", "domain path", NULL, domain_path, domain_path, PATH_MAX, &is_set));
     PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, drumhead, wave4, constant", NULL, timowave_test, timowave_test, sizeof(timowave_test), &is_set));
@@ -245,8 +242,6 @@ int main(int argc, char **argv) {
       PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
       PetscCheck(comm_size == 1, PETSC_COMM_WORLD, PETSC_ERR_SUP,
                  "multi-stage gauss runs on a single rank");
-      PetscCheck(!*mat_cache, PETSC_COMM_WORLD, PETSC_ERR_SUP,
-                 "-mat_cache is not supported for multi-stage gauss");
     }
 
     PRIN2SY(timowave_test);
@@ -358,50 +353,31 @@ int main(int argc, char **argv) {
     PetscCall(VecSetValue(norms,  0, temp3[0], INSERT_VALUES));
 
     if (!multi) {
-      PetscCall(PetscTestFile(mat_cache, 'r', &have_cache));
-      if (have_cache) {
-        PetscViewer viewer;
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# loading matrix\n"));
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
-        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_READ, &viewer));
-        PetscCall(MatLoad(mat, viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
-      } else {
-        PRIN2S(s_t2f);
-        auto mat_coo = hdg->trace_to_flux_mat();
-        mat_coo.eliminate_zeros();
-        PetscInt ncoo = mat_coo.value_vec.size();
-        PRIN2SP();
+      PRIN2S(s_t2f);
+      auto mat_coo = hdg->trace_to_flux_mat();
+      mat_coo.eliminate_zeros();
+      PetscInt ncoo = mat_coo.value_vec.size();
+      PRIN2SP();
 
-        PRIN2S(s_pa);
-        PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
-        // PETSc copies the index arrays into its own COO mapping, and MatSetValuesCOO only
-        // needs the values -- free the indices here (~2/3 of the COO staging, 68 GB at net3)
-        { auto drop_i = std::move(mat_coo.row_vec); }
-        { auto drop_j = std::move(mat_coo.col_vec); }
-        PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+      PRIN2S(s_pa);
+      PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      // PETSc copies the index arrays into its own COO mapping, and MatSetValuesCOO only
+      // needs the values -- free the indices here (~2/3 of the COO staging, 68 GB at net3)
+      { auto drop_i = std::move(mat_coo.row_vec); }
+      { auto drop_j = std::move(mat_coo.col_vec); }
+      PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
 
-        // PETSc retains internal COO mapping arrays on the matrix for repeated
-        // MatSetValuesCOO calls that never come (the operator is time-constant), and
-        // 3.24 has no API to drop them (~16-32 B per staged entry, 150-270 GB at net3).
-        // Swap into a clean duplicate instead; transient cost is one extra matrix.
-        {
-          Mat mat_clean;
-          PetscCall(MatDuplicate(mat, MAT_COPY_VALUES, &mat_clean));
-          PetscCall(MatDestroy(&mat));
-          mat = mat_clean;
-        }
-        PRIN2SP();
+      // PETSc retains internal COO mapping arrays on the matrix for repeated
+      // MatSetValuesCOO calls that never come (the operator is time-constant), and
+      // 3.24 has no API to drop them (~16-32 B per staged entry, 150-270 GB at net3).
+      // Swap into a clean duplicate instead; transient cost is one extra matrix.
+      {
+        Mat mat_clean;
+        PetscCall(MatDuplicate(mat, MAT_COPY_VALUES, &mat_clean));
+        PetscCall(MatDestroy(&mat));
+        mat = mat_clean;
       }
-
-      if (!have_cache && *mat_cache) {
-        PetscViewer viewer;
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# saving matrix\n"));
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mat_cache: %s\n", mat_cache));
-        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, mat_cache, FILE_MODE_WRITE, &viewer));
-        PetscCall(MatView(mat, viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
-      }
+      PRIN2SP();
     } else {
       // Assemble the condensed complex stage operators once (time-constant) and factor them
       // densely: at conv-study scale (N ~ 1e3) zgetrf is instant and zgetrs per step is O(N^2).
