@@ -62,6 +62,7 @@ static PetscErrorCode CreateDeg(
     stages = (poly_deg + 1) / 2;  // matched: temporal order covers spatial order p+1
   switch (10 * poly_deg + stages) {
   case 11: *hdg = new HDGWrapper(HDGTimoWave<1,1,Test>(path, vals)); break;
+  case 22: *hdg = new HDGWrapper(HDGTimoWave<2,2,Test>(path, vals)); break;
   case 32: *hdg = new HDGWrapper(HDGTimoWave<3,2,Test>(path, vals)); break;
   case 51: *hdg = new HDGWrapper(HDGTimoWave<5,1,Test>(path, vals)); break;
   case 52: *hdg = new HDGWrapper(HDGTimoWave<5,2,Test>(path, vals)); break;
@@ -69,7 +70,7 @@ static PetscErrorCode CreateDeg(
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
                "no compiled instantiation for poly_deg = %d, stages = %d "
-               "(available: (1,1), (3,2), (5,1), (5,2), (5,3))",
+               "(available: (1,1), (2,2), (3,2), (5,1), (5,2), (5,3))",
                (int)poly_deg, (int)stages);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
