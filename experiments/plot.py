@@ -21,6 +21,10 @@ def tex_escape(s):
     return str(s).replace('\\', '\\textbackslash{}').replace('_', r'\_').replace('&', r'\&').replace('%', r'\%').replace('#', r'\#')
 
 
+# matplotlib default color cycle, exported into the pgfplots output so the tikz
+# figures match the PNGs (\providecolor: a manuscript can override the palette)
+MPL_COLORS = ["1F77B4", "FF7F0E", "2CA02C", "D62728", "9467BD", "8C564B"]
+
 LEGEND_POS_MAP = {
     'best': 'outer north east',
     'upper right': 'north east',
@@ -142,8 +146,8 @@ def render_tikz(idx, name0, series, refs, args):
         f"% standalone: latexmk -pdf {tex_path.name} (keep {csv_path.name} next to it)",
         "% manuscript: \\usepackage{standalone} \\usepackage{pgfplots} \\pgfplotsset{compat=newest},",
         "%   then \\input this file -- the preamble below is skipped, fonts come from the manuscript.",
-        "%   \\renewcommand{\\figurewidth}{...} (default \\linewidth) and \\plotdatadir (default empty,",
-        "%   set with trailing /) before \\input as needed.",
+        "%   \\renewcommand{\\figurewidth}/\\figureheight (default \\linewidth) and \\plotdatadir",
+        "%   (default empty, set with trailing /) before \\input as needed.",
         "%   add \\usetikzlibrary{external} \\tikzexternalize to cache figures across manuscript compiles.",
         "\\documentclass{standalone}",
         "\\usepackage{amsmath}",
@@ -151,11 +155,18 @@ def render_tikz(idx, name0, series, refs, args):
         "\\pgfplotsset{compat=newest}",
         "\\begin{document}",
         "\\providecommand{\\figurewidth}{\\linewidth}",
+        "\\providecommand{\\figureheight}{\\linewidth}",
         "\\providecommand{\\plotdatadir}{}",
-        "\\begin{tikzpicture}",
     ]
+    L.extend(f"\\providecolor{{mplC{i}}}{{HTML}}{{{c}}}%" for i, c in enumerate(MPL_COLORS))
+    L.append("\\begin{tikzpicture}[baseline, trim axis left, trim axis right]")
 
-    axis_opts = ["width=\\figurewidth"]
+    axis_opts = [
+        "scale only axis",
+        "width=\\figurewidth",
+        "height=\\figureheight",
+        "cycle list={" + ",".join(f"{{mplC{i}}}" for i in range(len(MPL_COLORS))) + "}",
+    ]
     if args.log:
         if "x" in args.log: axis_opts.append(f"xmode=log, log basis x={{{args.xbase}}}")
         if "y" in args.log: axis_opts.append(f"ymode=log, log basis y={{{args.ybase}}}")

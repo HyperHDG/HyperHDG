@@ -12,5 +12,5 @@ jq -c '.Stdout | {nt, stages: .gauss_stages, e_rel}' $OUT.json \
     | experiments/plot.py -g stages -x nt --trans '1/x,y' -y e_rel \
         --log xy --xbase 2 --xlabel 'time step $\Delta t$' \
         --ylabel 'max rel. $L^2$ error' \
-        --ref "2;16,32;4e-2|4;16,32;9e-5|6;16,32;1e-7" \
-        --save "$OUT.png" --tikz "$OUT" --nshow
+        --ref "2;32,16;4e-3|4;32,16;1.5e-6|6;32,16;4e-10" \
+        --save "$OUT.png" --tikz "$OUT" --legend 'lower right' --nshow
