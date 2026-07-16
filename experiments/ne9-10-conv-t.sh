@@ -3,10 +3,11 @@
 # the spatial degree (deg 1/3/5 -> s = 1/2/3), so the matched design shows e_rel dropping at
 # order dt^{2s} = 2/4/6 per nt doubling. nx is fixed per degree (256/64/32) so the spatial
 # floor stays well below the temporal error at nt 32 (constants from the GOLDEN-ne9 tables).
-# Status: deg 1 clean 2; deg 3 averages 4 with non-monotone steps (3.0..4.4 -- max-over-time
-# e_rel artifact, identical in the old ne9-08 data); deg 5 (s = 3) sits at exactly order 4,
-# pending the endpoint-trace static solve (spatial h^6 is clean per ne9-09-conv-x, and the
-# limit shows in e_rel and e_trace alike). Stage systems are dense complex LU.
+# Status: deg 1 clean 2; deg 3 mixes orders 3..4; deg 5 (s = 3) sits at exactly order 4.
+# ROOT CAUSE (ne9-11): classical stiff order reduction -- wave4's time-dependent Dirichlet
+# data excites the stiff spatial modes (dt >> CFL), capping Gauss collocation at its stiff
+# order s+1 (odd s) / s (even s) regardless of spatial resolution. The full 2s = 2/4/6 shows
+# on the homogeneous-BC arm of ne9-11 (-wave4_px -pi/2). Stage systems are dense complex LU.
 # Rates: experiments/ne9-conv-rates.sh output/ne9-10-conv-t.json nt
 set -x
 
