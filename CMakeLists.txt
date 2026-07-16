@@ -163,6 +163,9 @@ if(NOT NOPYTHONTESTS)
   add_subdirectory(tests_python)
 endif()
 
+## Explicit nanobind python modules (petsc-free, see python/CMakeLists.txt)
+add_subdirectory(python)
+
 ## Print a summary
 include(FeatureSummary)
 feature_summary(WHAT ALL)
