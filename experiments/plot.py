@@ -108,8 +108,15 @@ def render_matplotlib(idx, name0, series, refs, args, plot_func):
     if args.log:
         if "x" in args.log: plt.xscale("log", base=args.xbase)
         if "y" in args.log: plt.yscale("log", base=args.ybase)
-    plt.xlabel(args.xlabel or args.x)
-    plt.ylabel(args.ylabel or args.y)
+    if args.ylim:
+        lo, hi = map(float, args.ylim.split(','))
+        plt.ylim(lo, hi)
+    # \strut in labels is for the tikz output (baseline alignment); mpl renders it literally
+    plt.xlabel((args.xlabel or args.x).replace('\\strut', ''))
+    if args.ytickoff:
+        plt.gca().tick_params(labelleft=False)
+    else:
+        plt.ylabel((args.ylabel or args.y).replace('\\strut', ''))
     plt.title(args.title)
     if args.group_by and args.legend:
         lbbox = args.legend.split(';')
@@ -170,8 +177,16 @@ def render_tikz(idx, name0, series, refs, args):
     if args.log:
         if "x" in args.log: axis_opts.append(f"xmode=log, log basis x={{{args.xbase}}}")
         if "y" in args.log: axis_opts.append(f"ymode=log, log basis y={{{args.ybase}}}")
+    if args.ylim:
+        lo, hi = args.ylim.split(',')
+        axis_opts.append(f"ymin={lo}, ymax={hi}")
     axis_opts.append(f"xlabel={{{args.xlabel or tex_escape(args.x)}}}")
-    axis_opts.append(f"ylabel={{{args.ylabel or tex_escape(args.y)}}}")
+    if args.ytickoff:
+        # right panel of a shared-axis manuscript row: label and tick labels live
+        # on the left neighbor, limits pinned to match via --ylim
+        axis_opts.append("yticklabels={}")
+    else:
+        axis_opts.append(f"ylabel={{{args.ylabel or tex_escape(args.y)}}}")
     if args.title: axis_opts.append(f"title={{{args.title}}}")
     if args.group_by and args.legend:
         axis_opts.append(f"legend pos={legend_pos}")
@@ -246,6 +261,8 @@ parser.add_argument("--comment", help="place some text in the bottom right corne
 parser.add_argument("--marker", help="set the marker", default="+")
 parser.add_argument("--figsize", help="figure size 'w,h' in inches", default="6,6")
 parser.add_argument("--eoc", help="plot experimental order of convergence log(y_i/y_{i-1})/log(x_i/x_{i-1}) instead of y", action="store_true")
+parser.add_argument("--ylim", help="pin y limits 'lo,hi' (shared-axis manuscript rows)")
+parser.add_argument("--ytickoff", help="suppress y label and tick labels (right panel of a shared-axis row)", action="store_true")
 parser.add_argument("--tikz", help="prefix for pgfplots output: writes <prefix>.tex + <prefix>.csv; the .tex compiles standalone and is \\input-able via the standalone package; width via \\figurewidth")
 
 args = parser.parse_args()

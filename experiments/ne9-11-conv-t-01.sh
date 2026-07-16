@@ -10,7 +10,7 @@ mkdir -p $OUT_DIR
 
 jq -c '.Stdout | {nt, stages: .gauss_stages, e_rel}' $OUT.json \
     | experiments/plot.py -g stages -x nt --trans '1/x,y' -y e_rel \
-        --log xy --xbase 2 --xlabel 'time step $\Delta t$' \
-        --ylabel 'max rel. $L^2$ error' \
+        --log xy --xbase 2 --xlabel 'time step $\Delta t$\strut' \
+        --ylabel 'max rel. $L^2$ error' --ylim '1e-11,10' \
         --ref "2;32,16;4e-3|4;32,16;1.5e-6|6;32,16;4e-10" \
         --save "$OUT.png" --tikz "$OUT" --legend 'lower right' --nshow
