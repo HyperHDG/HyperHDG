@@ -217,6 +217,16 @@ class TimoshenkoWave
   static constexpr unsigned int n_gauss_stages() { return n_stages; }
   static constexpr unsigned int n_reps_ = (n_stages + 1) / 2;
   static constexpr unsigned int n_gauss_reps() { return n_reps_; }
+  /*!***********************************************************************************************
+   * \brief   Stage-index sentinel selecting the endpoint-algebraic system (one past the reps).
+   *
+   * After finalize_step the driver solves this system to recompute the algebraic variables
+   * (trace lambda and the dual q = (n,m)) from the advanced differential state: the value-form
+   * recombination extrapolates them past the Gauss nodes and is limited to temporal order ~s+1
+   * with time-dependent data, while the differential state is order 2s (see
+   * apply_local_flux_static). Used for s >= 2; s = 1 keeps the exact extrapolation.
+   ************************************************************************************************/
+  static constexpr unsigned int endpoint_stage_ = n_reps_;
   using stage_float_t =
     std::conditional_t<(n_stages > 1), std::complex<lSol_float_t>, lSol_float_t>;
 
@@ -1244,6 +1254,100 @@ class TimoshenkoWave
   }
 
   /*!***********************************************************************************************
+   * \brief   Condensed endpoint-algebraic flux: slave (q, lambda) to the differential state.
+   *
+   * Selected by the stage sentinel endpoint_stage_. Unlike the initializers' full static solve,
+   * only the constitutive rows are eliminated -- the displacements are DATA, not unknowns: the
+   * dynamic system's algebraic constraints at an instant are the constitutive equations plus the
+   * flux continuity, with (u, r) given by the (order-2s) time integration. Operator
+   * (solution_type 0): flux of q(lambda) with w = 0, i.e. S = tau*F + B C M^{-1} B^T -- real
+   * symmetric positive definite. Residual (solution_type 1): flux of q(y*, g(time)) plus
+   * tau*<y*>, with y* = the advanced coeffs_old, zero trace input. Dirichlet treatment mirrors
+   * the stage path (assemble_rhs_data; bit-6 static-only faces keep their trace as a free dof).
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& apply_local_flux_static(const SmallMatInT& lambda_values_in,
+                                        SmallMatOutT& lambda_values_out,
+                                        const unsigned int solution_type,
+                                        hyEdgeT& hyper_edge,
+                                        const lSol_float_t time) const
+  {
+    static_assert(std::is_same_v<typename SmallMatInT::value_type::value_type, lSol_float_t> &&
+                    std::is_same_v<typename SmallMatOutT::value_type::value_type, lSol_float_t>,
+                  "the endpoint-algebraic system is real-valued");
+    SmallMatInT lambda_in = lambda_values_in;
+    zero_dirichlet_trace(lambda_in, hyper_edge);
+    const auto lambda_loc = node_dof_to_edge_dof(lambda_in, hyper_edge);
+
+    SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_lambda(lambda_loc, hyper_edge);
+    SmallVec<4 * space_dim * n_shape_fct_, lSol_float_t> coeffs_w;
+    if (solution_type == 1)
+    {
+      rhs += assemble_rhs_data(hyper_edge, time);  // only the q-rows are read below
+      for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+        {
+          coeffs_w[coeff_idx(fld_u, dim, i)] =
+            hyper_edge.data.coeffs_old[coeff_idx(fld_u, dim, i)];
+          coeffs_w[coeff_idx(fld_r, dim, i)] =
+            hyper_edge.data.coeffs_old[coeff_idx(fld_r, dim, i)];
+        }
+    }
+    const auto q = constitutive_q(hyper_edge, coeffs_w, rhs);
+
+    // the flux extraction reads the q and (u, r) blocks, which lead the full coefficient layout
+    SmallVec<n_loc_dofs_, lSol_float_t> coeffs;
+    for (unsigned int i = 0; i < 2 * space_dim * n_shape_fct_; ++i)
+      coeffs[i] = q[i];
+    for (unsigned int i = 2 * space_dim * n_shape_fct_; i < 4 * space_dim * n_shape_fct_; ++i)
+      coeffs[i] = coeffs_w[i];
+    const auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
+
+    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> out_loc{};
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < 2 * space_dim; ++j)
+        out_loc[i][j] = tau_ * lambda_loc[i][j] - result(i, j);
+
+    lambda_values_out = edge_dof_to_node_dof(out_loc, lambda_values_out, hyper_edge);
+    zero_dirichlet_trace(lambda_values_out, hyper_edge);
+    return lambda_values_out;
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Route possibly-complex dof vectors through the real endpoint-algebraic system
+   *          (narrow -> real machinery -> widen), mirroring apply_local_flux_widened.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& apply_local_flux_static_bridge(const SmallMatInT& lambda_values_in,
+                                               SmallMatOutT& lambda_values_out,
+                                               const unsigned int solution_type,
+                                               hyEdgeT& hyper_edge,
+                                               const lSol_float_t time) const
+  {
+    using in_float_t = typename SmallMatInT::value_type::value_type;
+    using out_float_t = typename SmallMatOutT::value_type::value_type;
+    if constexpr (std::is_same_v<in_float_t, lSol_float_t> &&
+                  std::is_same_v<out_float_t, lSol_float_t>)
+      return apply_local_flux_static(lambda_values_in, lambda_values_out, solution_type,
+                                     hyper_edge, time);
+    else
+    {
+      std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> in_r, out_r;
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+        {
+          in_r[i][j] = std::real(lambda_values_in[i][j]);
+          out_r[i][j] = 0.;
+        }
+      apply_local_flux_static(in_r, out_r, solution_type, hyper_edge, time);
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+          lambda_values_out[i][j] += out_r[i][j];  // callers accumulate into zeroed arrays
+      return lambda_values_out;
+    }
+  }
+
+  /*!***********************************************************************************************
    * \brief   Homogeneous condensed operator action (assembles the time-constant system matrix).
    *
    * A distinct entry point from residual_flux (kept separate for historical reasons); both
@@ -1257,6 +1361,9 @@ class TimoshenkoWave
                               const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    if (stage == endpoint_stage_)
+      return apply_local_flux_static_bridge(lambda_values_in, lambda_values_out, 0U, hyper_edge,
+                                            t);
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, t, stage);
@@ -1294,6 +1401,9 @@ class TimoshenkoWave
                               const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    if (stage == endpoint_stage_)
+      return apply_local_flux_static_bridge(lambda_values_in, lambda_values_out, 1U, hyper_edge,
+                                            t);
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, t, stage);
@@ -1713,6 +1823,23 @@ class TimoshenkoWave
     const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    if (stage == endpoint_stage_)
+    {
+      // Endpoint-algebraic trace: overwrite the finalize_step extrapolation of lambda and (n, m)
+      // with the solved values (real-valued; imaginary parts are solver round-off). The dual is
+      // recovered from the same q-row boundary data the residual was built with.
+      std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> lam_r;
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+          lam_r[i][j] = std::real(lambda_values_in[i][j]);
+      zero_dirichlet_trace(lam_r, hyper_edge);
+      hyper_edge.data.lambda_old = lam_r;
+      const auto lambda_loc = node_dof_to_edge_dof(lam_r, hyper_edge);
+      SmallVec<n_loc_dofs_, lSol_float_t> rhs = assemble_rhs_from_lambda(lambda_loc, hyper_edge);
+      rhs += assemble_rhs_data(hyper_edge, t);
+      recover_dual(hyper_edge, rhs);
+      return;
+    }
     if constexpr (std::is_same_v<lambda_float_t, stage_float_t>)
     {
       hyper_edge.data.stage_trace[stage] = lambda_values_in;
@@ -1829,6 +1956,27 @@ class TimoshenkoWave
         coeffs_w[coeff_idx(fld_u, dim, i)] = data.coeffs_old[coeff_idx(fld_u, dim, i)];
         coeffs_w[coeff_idx(fld_r, dim, i)] = data.coeffs_old[coeff_idx(fld_r, dim, i)];
       }
+    const auto q = constitutive_q(hyper_edge, coeffs_w, rhs);
+    // the q-rows are exactly the (n, m) blocks leading the coefficient layout
+    for (unsigned int i = 0; i < 2 * space_dim * n_shape_fct_; ++i)
+      data.coeffs_old[i] = q[i];
+  }
+
+  /*!***********************************************************************************************
+   * \brief   Constitutive q-solve: the algebraic (n, m) from displacements and boundary data.
+   *
+   * The constitutive rows of the static system read (M/C) q - G w (+ cross terms) = b_q, so
+   * q = C * M^{-1} * (b_q - (A_static w)_q). \c coeffs_w holds the displacements in the static
+   * 4-field layout (its q-blocks are ignored); \c rhs must hold the q-row boundary data (lambda
+   * + Dirichlet contributions), only its first 2*space_dim blocks are read. Shared by
+   * recover_dual and the endpoint-algebraic flux path (apply_local_flux_static).
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> constitutive_q(
+    hyEdgeT& hyper_edge,
+    const SmallVec<4 * space_dim * n_shape_fct_, lSol_float_t>& coeffs_w,
+    const SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  {
     const auto res = assemble_loc_matrix<false>(hyper_edge) * coeffs_w;
     const auto extra = get_extra_coeffs(hyper_edge);  // C_n, C_m in components 0 .. 2*space_dim-1
 
@@ -1837,16 +1985,17 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
         mmat(i, j) = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
+    SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> q;
     SmallVec<n_shape_fct_> temp;
     for (unsigned int d = 0; d < 2 * space_dim; ++d)
     {
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
         temp[i] = rhs[d * n_shape_fct_ + i] - res[d * n_shape_fct_ + i];
       temp = temp / mmat;
-      // d spans the q-rows, i.e. exactly the (n, m) blocks leading the coefficient layout
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        data.coeffs_old[d * n_shape_fct_ + i] = extra[d] * temp[i];
+        q[d * n_shape_fct_ + i] = extra[d] * temp[i];
     }
+    return q;
   }
 
   template <class hyEdgeT, typename SmallMatT>

@@ -313,7 +313,10 @@ struct ErrorTracker {
 };
 
 // Condensed stage operators, assembled once (time-constant), one per Gauss representative.
-// At s = 1 this is exactly the classic trace operator.
+// At s = 1 this is exactly the classic trace operator. For s >= 2 one extra operator sits at
+// the sentinel index n_gauss_reps(): the real SPD endpoint-algebraic system that recomputes
+// the trace and the dual (n,m) from the advanced state after finalize_step (the value-form
+// recombination only reaches temporal order ~s+1 for the algebraic variables).
 static PetscErrorCode AssembleStageMats(HDGBase* hdg, std::vector<Mat>& mats)
 {
   PetscInt bs = hdg->n_dofs_per_node();
@@ -321,7 +324,7 @@ static PetscErrorCode AssembleStageMats(HDGBase* hdg, std::vector<Mat>& mats)
   PetscInt n_owned = hdg->n_owned_dofs();
 
   PetscFunctionBeginUser;
-  mats.assign(hdg->n_gauss_reps(), NULL);
+  mats.assign(hdg->n_gauss_reps() + (hdg->n_gauss_stages() > 1 ? 1 : 0), NULL);
   for (PetscInt rep = 0; rep < (PetscInt)mats.size(); rep++) {
     auto mat_coo = hdg->trace_to_flux_mat_stage(rep);
     mat_coo.eliminate_zeros();
@@ -407,53 +410,70 @@ static PetscErrorCode CreateStageKSPs(
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Advance state and endpoint trace by one step: one solve per stage representative (s = 1: the
-// single real-valued stage; s >= 2: complex representatives, conjugate partners analytic), then
-// finalize (lambda+ = affine*lambda^n + sum mult*Re(w*zeta), recombined per edge from the
-// stashed stage traces). Residual built from local parts: each rank evaluates over its owned
-// edges into the local (owned + ghost) vector, then scatter-reverse with ADD assembles the
-// distributed rhs; the solution is scattered forward so set_data sees full data on ghost
-// endpoints.
-static PetscErrorCode DoTimestep(
-    HDGBase* hdg, const std::vector<KSP>& ksps, TraceWork& w,
-    KSPMonitorYAML_Ctx* monitor, PetscInt step, PetscReal t, PetscInt* iterations
+// One condensed solve at stage/endpoint index rep. Residual built from local parts: each rank
+// evaluates over its owned edges into the local (owned + ghost) vector, then scatter-reverse
+// with ADD assembles the distributed rhs; the solution is scattered forward so set_data sees
+// full data on ghost endpoints.
+static PetscErrorCode SolveStageSystem(
+    HDGBase* hdg, KSP ksp, TraceWork& w,
+    KSPMonitorYAML_Ctx* monitor, PetscInt step, PetscReal t, PetscInt rep, PetscInt* iterations
 ) {
   std::span<PetscScalar> span;
   PetscInt its;
 
   PetscFunctionBeginUser;
-  for (PetscInt rep = 0; rep < (PetscInt)ksps.size(); rep++) {
-    PetscCall(VecZeroEntries(w.sol_local));
-    PetscCall(VecGetSpan(w.sol_local, span));
-    PetscLogStagePush(logs.rf);
-    hdg->residual_flux_stage(std::span{w.zero}, span, rep, t);
-    PetscLogStagePop();
-    PetscCall(VecRestoreSpan(w.sol_local, span));
+  PetscCall(VecZeroEntries(w.sol_local));
+  PetscCall(VecGetSpan(w.sol_local, span));
+  PetscLogStagePush(logs.rf);
+  hdg->residual_flux_stage(std::span{w.zero}, span, rep, t);
+  PetscLogStagePop();
+  PetscCall(VecRestoreSpan(w.sol_local, span));
 
-    PetscCall(VecZeroEntries(w.rhs));
-    PetscCall(VecScatterBegin(w.scatter, w.sol_local, w.rhs, ADD_VALUES, SCATTER_REVERSE));
-    PetscCall(VecScatterEnd(w.scatter, w.sol_local, w.rhs, ADD_VALUES, SCATTER_REVERSE));
-    PetscCall(VecScale(w.rhs, -1.));
+  PetscCall(VecZeroEntries(w.rhs));
+  PetscCall(VecScatterBegin(w.scatter, w.sol_local, w.rhs, ADD_VALUES, SCATTER_REVERSE));
+  PetscCall(VecScatterEnd(w.scatter, w.sol_local, w.rhs, ADD_VALUES, SCATTER_REVERSE));
+  PetscCall(VecScale(w.rhs, -1.));
 
-    // enorm monitoring (-ksp_monitor_yaml_enorm): the reference solve needs the assembled
-    // rhs; only meaningful with -nt 1 (single-step conditioning studies, ne18-24)
-    if (step == 1 && rep == 0)
-      PetscCall(KSPMonitorYAML_Setup(ksps[0], w.rhs, monitor));
+  // enorm monitoring (-ksp_monitor_yaml_enorm): the reference solve needs the assembled
+  // rhs; only meaningful with -nt 1 (single-step conditioning studies, ne18-24)
+  if (step == 1 && rep == 0)
+    PetscCall(KSPMonitorYAML_Setup(ksp, w.rhs, monitor));
 
-    PetscCall(KSPSolve(ksps[rep], w.rhs, w.rhs));
-    PetscCall(KSPGetIterationNumber(ksps[rep], &its));
-    *iterations += its;
+  PetscCall(KSPSolve(ksp, w.rhs, w.rhs));
+  PetscCall(KSPGetIterationNumber(ksp, &its));
+  *iterations += its;
 
-    PetscCall(VecScatterBegin(w.scatter, w.rhs, w.sol_local, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterEnd(w.scatter, w.rhs, w.sol_local, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecGetSpan(w.sol_local, span));
-    PetscLogEventBegin(logs.set, 0,0,0,0);
-    hdg->set_data_stage(span, rep, t);  // stage trace zeta -> stash stage locals + trace
-    PetscLogEventEnd(logs.set, 0,0,0,0);
-    PetscCall(VecRestoreSpan(w.sol_local, span));
-  }
+  PetscCall(VecScatterBegin(w.scatter, w.rhs, w.sol_local, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(w.scatter, w.rhs, w.sol_local, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecGetSpan(w.sol_local, span));
+  PetscLogEventBegin(logs.set, 0,0,0,0);
+  hdg->set_data_stage(span, rep, t);  // stage trace zeta -> stash stage locals + trace
+  PetscLogEventEnd(logs.set, 0,0,0,0);
+  PetscCall(VecRestoreSpan(w.sol_local, span));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Advance state and endpoint trace by one step: one solve per stage representative (s = 1: the
+// single real-valued stage; s >= 2: complex representatives, conjugate partners analytic), then
+// finalize (state recombined per edge from the stashed stage solutions). For s >= 2 the
+// algebraic variables (trace lambda, dual (n,m)) are then recomputed from the advanced state
+// via the endpoint-algebraic solve at the sentinel index n_gauss_reps() -- the recombination
+// extrapolates them at temporal order ~s+1 only, the static recovery restores order 2s. s = 1
+// keeps the exact extrapolation (no extra solve on the production path).
+static PetscErrorCode DoTimestep(
+    HDGBase* hdg, const std::vector<KSP>& ksps, TraceWork& w,
+    KSPMonitorYAML_Ctx* monitor, PetscInt step, PetscReal t, PetscInt* iterations
+) {
+  const PetscInt n_reps = hdg->n_gauss_reps();
+
+  PetscFunctionBeginUser;
+  for (PetscInt rep = 0; rep < n_reps; rep++)
+    PetscCall(SolveStageSystem(hdg, ksps[rep], w, monitor, step, t, rep, iterations));
 
   hdg->finalize_step();
+
+  if ((PetscInt)ksps.size() > n_reps)
+    PetscCall(SolveStageSystem(hdg, ksps[n_reps], w, monitor, step, t, n_reps, iterations));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
