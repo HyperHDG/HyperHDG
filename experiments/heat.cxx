@@ -8,7 +8,7 @@
 #include <HyperHDG/global_loop/parabolic.hxx>
 #include "parameters.hxx"
 #include "../reproducibles_python/parameters/diffusion.hxx"
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 
 static const char help[] = "experiments regarding the heat equation\n";
 

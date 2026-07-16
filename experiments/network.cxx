@@ -8,7 +8,7 @@
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include "parameters.hxx"
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 #include "hdg_base.hxx"
 #include "net2as.hxx"
 

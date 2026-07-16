@@ -9,7 +9,7 @@
 
 #include "parameters.hxx"
 #include "hdg_base.hxx"
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 

@@ -1,5 +1,5 @@
 #include "net2as.hxx"
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/hashmapi.h>
 #include <petsc/private/hashseti.h>

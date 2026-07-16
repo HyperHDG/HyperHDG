@@ -1,4 +1,4 @@
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 #include "petsc.h"
 
 static PetscInt PETSC_PRIN2_ROW_LEN = 10;

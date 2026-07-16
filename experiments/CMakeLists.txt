@@ -7,14 +7,14 @@ add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-secu
 
 #######################
 
-add_library(prin2 prin2.cxx)
-target_link_libraries(prin2 PUBLIC PkgConfig::PETSC)
+add_library(petsc_util petsc_util.cxx)
+target_link_libraries(petsc_util PUBLIC PkgConfig::PETSC)
 
 if(NOT HYPERHDG_COMPLEX)
 add_library(net2as net2as.cxx)
 target_link_libraries(net2as
   PRIVATE
-  prin2
+  petsc_util
   $<$<BOOL:${HDF5_FOUND}>:HDF5::HDF5>
   PUBLIC
   PkgConfig::PETSC
@@ -34,7 +34,7 @@ if (HYPERHDG_PARHIP)
   target_compile_definitions(net2as PUBLIC HYPERHDG_PARHIP)
 endif()
 
-link_libraries(HyperHDG prin2)
+link_libraries(HyperHDG petsc_util)
 
 # The complex-PETSc build (preset "complex") serves the multi-stage Gauss timowave only; the
 # remaining binaries (and net2as) are real-scalar production code.

@@ -12,7 +12,7 @@
 
 #include "parameters.hxx"
 #include "hdg_base.hxx"
-#include "prin2.hxx"
+#include "petsc_util.hxx"
 #if !defined(PETSC_USE_COMPLEX)
 #include "net2as.hxx"  // real-build production preconditioner; not built against complex PETSc
 #endif
