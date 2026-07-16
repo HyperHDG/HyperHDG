@@ -1,0 +1,214 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{lemma}{Lemma}
+\newcommand{\dt}{\Delta t}
+\newcommand{\R}{\mathbb{R}}
+
+\title{Order reduction of Gau{\ss} collocation for the HDG Timoshenko wave solver\\
+  \large temporal order $s{+}1$ under time-dependent Dirichlet data,
+  full order $2s$ under compatible data}
+\author{ne9 notes}
+\date{July 16, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Summary of observations}
+
+The condensed HDG Timoshenko wave solver is stepped by $s$-stage Gau{\ss}
+collocation (temporal design order $2s$; only $\lceil s/2\rceil$ complex
+eigen-representatives are solved per step). Temporal convergence sweeps with the
+spatial discretization held constant (degree $5$, $n_x = 256$, cross domain,
+experiment \texttt{ne9-11-conv-t-stages.sh}) give the orders in
+Table~\ref{tab:orders}. The two arms use the \emph{same} manufactured solution
+family (\texttt{wave4}), differing only in a spatial phase $p_x$ of the
+standing-wave factor $\cos(\omega(x{+}y{+}z) + p_x)$:
+\begin{itemize}
+  \item \textbf{stiff arm} ($p_x = 0$): the Dirichlet data at the clamped tips is
+    $g(t) \propto \cos(\omega t + p)$ --- the supports move;
+  \item \textbf{compatible arm} ($p_x = -\pi/2$): the spatial factor becomes
+    $\sin(\omega s)$, which vanishes at every tip, so $g \equiv 0$ for all $t$
+    while the interior solution (both $u$ and $r$, all time phases) is unchanged
+    in structure.
+\end{itemize}
+
+\begin{table}[h]\centering
+\begin{tabular}{c c cccc c cccc}
+\toprule
+ & & \multicolumn{4}{c}{stiff arm ($p_x = 0$)} & \phantom{x}
+   & \multicolumn{4}{c}{compatible arm ($p_x = -\pi/2$)} \\
+\cmidrule{3-6}\cmidrule{8-11}
+$s$ & $n_t$: & 8 & 16 & 32 & 64 & & 8 & 16 & 32 & 64 \\
+\midrule
+1 & & 1.84 & 1.96 & 2.01 & 2.00 & & 1.47 & 1.88 & 1.98 & 1.99 \\
+2 & & 3.31 & 3.14 & 3.03 & 2.50 & & 3.83 & 3.96 & 4.00 & 4.00 \\
+3 & & 4.02 & 4.00 & 4.01 & 4.00 & & 5.89 & 5.97 & 6.00 & 6.00 \\
+\bottomrule
+\end{tabular}
+\caption{Observed temporal orders $\log_2(e_{n_t/2}/e_{n_t})$ of the relative
+  $L^2$ displacement error, at fixed spatial discretization (deg $5$,
+  $n_x = 256$). Compatible data reaches the design order $2s$; moving Dirichlet
+  data caps the scheme at its \emph{stiff} order: $s{+}1$ for odd $s$, degrading
+  towards $s$ for even $s$.}
+\label{tab:orders}
+\end{table}
+
+This is \emph{not} an implementation defect: the tableau, the eigenbasis stage
+protocol and the value-form endpoint recombination reproduce order $2s$ exactly
+in a nonstiff scalar replication, and the identical temporal errors are obtained
+for different spatial degrees and resolutions
+(\texttt{experiments/gauss\_value\_form\_check.py}). It is the classical
+\emph{order reduction} of implicit Runge--Kutta methods on stiff problems
+\cite{prothero,hw2,ssvh}.
+
+\section{Mechanism: every eigenmode is a Prothero--Robinson problem}
+
+After eliminating the algebraic variables, the semidiscrete system is
+$\dot x = L_h x + B_h\, g(t) + (\text{interior loads})$. The spectrum of the
+first-order wave operator reaches $|\lambda_{\max}| \sim c\,(p{+}1)/h$, so
+$\dt\,|\lambda_{\max}|$ is (up to constants) the CFL number: implicit time
+stepping above the CFL limit \emph{is} the stiff regime. Expanding
+$x = \sum_k y_k v_k$ in the eigenbasis $L_h v_k = \lambda_k v_k$
+($\lambda_k = i\omega_k$) gives scalar equations, all driven by the same data,
+\begin{equation*}
+  \dot y_k = \lambda_k y_k + b_k\, g(t),
+  \qquad b_k = \text{(modal coefficient of the boundary input)} .
+\end{equation*}
+Let $\varphi_k$ be the forced response, $\dot\varphi_k = \lambda_k\varphi_k +
+b_k g$. Substituting this identity puts the mode in Prothero--Robinson normal
+form \cite{prothero}
+\begin{equation}
+  \dot y_k = \lambda_k\,(y_k - \varphi_k) + \dot\varphi_k ,
+  \qquad y_k \equiv \varphi_k \ \text{if started on the forced trajectory.}
+  \label{eq:pr}
+\end{equation}
+For stiff modes the forced response is the quasi-static slaving series
+\begin{equation}
+  \varphi_k(t) = -\frac{b_k}{\lambda_k}\,g(t)
+                 -\frac{b_k}{\lambda_k^2}\,g'(t) - \cdots ,
+  \qquad \partial_t^{\,j}\varphi_k \propto g^{(j)} ,
+  \label{eq:slaving}
+\end{equation}
+and smoothness of the exact solution forces its stiff-mode content to be exactly
+\eqref{eq:slaving} (any free oscillation $e^{i\omega_k t}$ would destroy
+smoothness of time derivatives). Collocation applied to \eqref{eq:pr} in the
+stiff limit $|\lambda_k\dt| \gg 1$ has the endpoint error recursion
+\cite{hw2}
+\begin{equation}
+  e_{n+1} = R(\lambda_k\dt)\, e_n + \delta_n, \qquad
+  \delta_n = C\,\dt^{\,s+1}\varphi_k^{(s+1)}(\xi_n) + O(\dt^{\,s+2}),
+  \label{eq:defect}
+\end{equation}
+i.e.\ the leading defect is proportional to the first time derivative of the
+tracked data that the degree-$s$ collocation polynomial cannot represent. For
+Gau{\ss} methods $|R(iy)| = 1$ (unitary) and $R(\infty) = (-1)^s$: nothing damps
+the defects; they accumulate with alternating sign for odd $s$ (telescoping to
+global order $s{+}1$) and with constant sign for even $s$ (order $s$). This
+even/odd asymmetry matches Table~\ref{tab:orders}, including the degradation of
+$s = 2$ towards order $2$ as the sweep descends deeper into the stiff regime.
+
+\section{Why boundary data excites the stiff modes (and interior loads do not)}
+
+The reduction requires $O(1)$ total weight $b_k$ across the stiff spectrum.
+Homogenizing $u(0,t) = g(t)$ with a lifting, e.g.\ $v = u - (1-x)\,g(t)$ in 1D,
+yields a homogeneous-BC problem with source $-(1-x)\,\ddot g(t)$. The profile
+$(1-x)$ is smooth but \emph{violates the boundary condition}; integration by
+parts against the eigenfunctions leaves a boundary term, so its eigencoefficients
+decay only like $1/k$ --- every stiff mode is driven. (In the HDG scheme the
+data actually enters through the trace pinning on the boundary-adjacent elements,
+an input of support $O(h)$: a boundary delta layer in the limit, with the same
+conclusion.) In contrast, a spatially smooth interior load that is compatible
+with the boundary conditions has spectrally decaying coefficients: the stiff
+modes' forced responses \eqref{eq:slaving} are negligible and the classical
+order-$2s$ theory applies. Summed over modes, the surviving boundary-driven
+defect \eqref{eq:defect} carries an $O(1)$ constant; parabolic problems soften
+this to fractional orders $s{+}1{+}\alpha$ through analytic smoothing
+($|R| < 1$ off the imaginary axis) \cite{or}, while the unitary wave case shows
+the clean integer $s{+}1$ observed here.
+
+\section{The compatibility condition}
+
+\begin{lemma}[per-step exactness]
+If the tracked data $\varphi$ is a polynomial of degree $\le s$ on a step, the
+collocation step for \eqref{eq:pr} is exact for every $\lambda$: the error
+$e = u - \varphi$ is a degree-$s$ polynomial with $e(t_n) = 0$ and
+$e'(t_j) = \lambda\, e(t_j)$ at the $s$ Gau{\ss} nodes, a homogeneous collocation
+problem whose only solution is $e \equiv 0$ (away from a measure-zero resonance
+set of $\lambda\dt$).
+\end{lemma}
+
+By \eqref{eq:slaving}, $\partial_t^{\,j}\varphi_k \propto g^{(j)}$, so the
+operative compatibility condition on the boundary data is simply
+\begin{equation*}
+  \boxed{\ g^{(s+1)} \equiv 0 \ }
+  \qquad\text{(per step; e.g.\ $g$ globally polynomial of degree $\le s$),}
+\end{equation*}
+which also covers the homogeneous case $g \equiv 0$ and time-independent
+inhomogeneous data. Equivalently, in the language of \cite{ssvh,or}: the time
+derivatives of the solution from order $s{+}1$ upwards must satisfy the
+(homogeneous) boundary conditions, so that $\|L_h^m\, \partial_t^{\,j} x\|$
+stays bounded uniformly in $h$. Note this is stronger than the textbook
+\emph{corner} conditions at $t = 0$: the defect re-enters at every step, so the
+conditions must hold for all $t$. Smoothness of $g$ does not help --- $\cos
+\omega t$ is analytic and maximally incompatible.
+
+Inhomogeneous compatible tests are easy to construct by linearity: superposing a
+zero-forcing static field ($u \mathrel{+}= c\,s$ per arm, constant tip data) or
+a ramp ($u \mathrel{+}= (a + bt)\,c\,s$, tip data linear in $t$) onto the
+compatible arm leaves the forcing untouched and, by the Lemma, contributes no
+temporal error at all.
+
+\section{Consequences}
+
+\begin{itemize}
+\item The engineering-relevant regime --- clamped supports, interior/inertial
+  loading --- is the compatible one: the solver delivers its full design order
+  $2s$ there with $\lceil s/2\rceil$ global solves per step and no
+  post-processing. (An endpoint re-solve of the algebraic variables was
+  prototyped and removed again: for compatible data the value-form recombination
+  of trace and dual is already \emph{exact} --- linear time-invariant slaving of
+  a degree-$s$ polynomial --- and the extra recovery amplified round-off by
+  $\sim h^{-4}$ in the trace error.)
+\item Boundary-driven problems (prescribed support motion) are capped at order
+  $s{+}1$ / $s$ regardless of spatial resolution --- refining in space makes the
+  system stiffer, not better. If full order ever matters there, the known remedy
+  is corrected stage boundary values \cite{amp,cgad}, not more stages or finer
+  meshes; matching temporal to spatial order via odd stage counts ($s = p$) is
+  the brute-force alternative.
+\end{itemize}
+
+\begin{thebibliography}{9}\small
+\bibitem{prothero} A.~Prothero, A.~Robinson,
+  \emph{On the stability and accuracy of one-step methods for solving stiff
+  systems of ordinary differential equations}, Math.\ Comp.\ 28 (1974).
+\bibitem{hw2} E.~Hairer, G.~Wanner,
+  \emph{Solving Ordinary Differential Equations II}, Springer,
+  \S IV.15 (B-convergence, Prothero--Robinson analysis).
+\bibitem{ssvh} J.~M.~Sanz-Serna, J.~G.~Verwer, W.~H.~Hundsdorfer,
+  \emph{Convergence and order reduction of Runge--Kutta schemes applied to
+  evolutionary problems in partial differential equations},
+  Numer.\ Math.\ 50 (1986).
+\bibitem{or} A.~Ostermann, M.~Roche,
+  \emph{Runge--Kutta methods for partial differential equations and fractional
+  orders of convergence}, Math.\ Comp.\ 59 (1992).
+\bibitem{cgad} M.~H.~Carpenter, D.~Gottlieb, S.~Abarbanel, W.-S.~Don,
+  \emph{The theoretical accuracy of Runge--Kutta time discretizations for the
+  initial boundary value problem}, SIAM J.\ Sci.\ Comput.\ 16 (1995).
+\bibitem{amp} I.~Alonso-Mallo, C.~Palencia,
+  \emph{Optimal orders of convergence for Runge--Kutta methods and linear,
+  initial boundary value problems}, Appl.\ Numer.\ Math.\ (2003); see also
+  I.~Alonso-Mallo, B.~Cano on avoiding order reduction via corrected boundary
+  values.
+\end{thebibliography}
+
+\emph{Reproducibility:} \texttt{experiments/ne9-11-conv-t-stages.sh} (both arms),
+rates via \texttt{experiments/ne9-conv-rates.sh <json> nt gauss\_stages};
+scalar mechanism isolation: \texttt{experiments/gauss\_value\_form\_check.py}.
+Bibliographic details are from memory and should be verified before reuse.
+
+\end{document}
