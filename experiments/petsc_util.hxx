@@ -13,6 +13,10 @@ PetscErrorCode PetscPrin2iy(MPI_Comm comm, const char *name, PetscInt val);
 PetscErrorCode PetscPrin2fy(MPI_Comm comm, const char *name, PetscReal val);
 PetscErrorCode PetscPrin2iya(MPI_Comm comm, const char *name, PetscInt val, PetscInt num);
 PetscErrorCode PetscPrin2Options();
+// print |A - A^T|_F / |A|_F
+PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat);
+// print unused options as a YAML list, then suppress PETSc's own report
+PetscErrorCode PetscOptionsLeftYAML(PetscOptions options);
 // must call VecRestoreSpan(x, span) after
 PetscErrorCode VecGetSpan(Vec x, std::span<PetscScalar>& span);
 // must be called after each VecGetSpan(x, span)

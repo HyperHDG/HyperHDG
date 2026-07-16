@@ -56,40 +56,6 @@ PetscErrorCode PetscHDGCreate(const char *test, const char* domain, PetscReal ta
   return 0;
 }
 
-PetscErrorCode PetscOptionsLeftYAML(PetscOptions options) {
-    PetscInt unused;
-    char **names;
-    char **values;
-
-    PetscCall(PetscOptionsLeftGet(NULL, &unused, &names, &values));
-    if (unused == 0) goto end;
-
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "# WARNING! There are options you set that were not used!\n"));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "options_left:\n"));
-    for (PetscInt i = 0; i < unused; i++)
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  - name: \"%s\"\n    value: \"%s\"\n", names[i], values[i]));
-end:
-    PetscCall(PetscOptionsLeftRestore(NULL, &unused, &names, &values));
-    PetscCall(PetscOptionsSetValue(NULL, "-options_left", "0"));
-    return 0;
-}
-
-
-PetscErrorCode MatPrintSymmetry(const char* msg, Mat mat) {
-  Mat AT, D;
-  PetscReal nrm, nrm_a;
-
-  PetscFunctionBeginUser;
-  MatTranspose(mat, MAT_INITIAL_MATRIX, &AT);
-  MatDuplicate(mat, MAT_COPY_VALUES, &D);
-  MatAXPY(D, -1.0, AT, DIFFERENT_NONZERO_PATTERN);
-  MatNorm(D, NORM_FROBENIUS, &nrm);
-  MatNorm(mat, NORM_FROBENIUS, &nrm_a);
-  PetscPrintf(PETSC_COMM_WORLD, "%s: %g\n", msg, (double)(nrm/nrm_a));
-  MatDestroy(&AT); MatDestroy(&D);
-  PetscFunctionReturn(0);
-}
-
 int main(int argc, char **argv) {
     int rank, comm_size, proc_name_len;
     PetscReal rtol = 1e-10;
