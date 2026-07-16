@@ -155,14 +155,14 @@ end:
 // reuse the monitor's computation within the same iteration
 static PetscErrorCode KSPEnormCompute(KSP ksp, PetscInt it, KSPMonitorYAML_Ctx *ctx, PetscReal *enorm) {
   Vec sol;
-  PetscReal dot;
+  PetscScalar dot;
 
   PetscFunctionBeginUser;
   PetscCall(KSPBuildSolution(ksp, NULL, &sol));
   PetscCall(VecWAXPY(ctx->e, -1.0, sol, ctx->u_ref));
   PetscCall(MatMult(ctx->mat, ctx->e, ctx->Ke));
   PetscCall(VecDot(ctx->e, ctx->Ke, &dot));
-  *enorm = PetscSqrtReal(PetscMax(dot, 0.));
+  *enorm = PetscSqrtReal(PetscMax(PetscRealPart(dot), 0.));
   ctx->enorm_it = it;
   ctx->enorm_val = *enorm;
   PetscFunctionReturn(PETSC_SUCCESS);

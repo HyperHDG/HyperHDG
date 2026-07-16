@@ -1,0 +1,12 @@
+# Complex-scalar PETSc environment: timowave links against this for the multi-stage
+# Gauss path (complex stage systems solved natively by PETSc). The production binaries
+# (network etc.) stay on the real-scalar openblas environment.
+spack:
+  specs:
+  - petsc+complex+hdf5+metis+mumps+suite-sparse+openmp
+  view: true
+  packages:
+    blas:     {require: "openblas threads=openmp"}
+    lapack:   {require: "openblas threads=openmp"}
+  concretizer:
+    unify: true

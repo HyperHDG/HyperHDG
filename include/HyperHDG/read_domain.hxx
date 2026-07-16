@@ -211,7 +211,7 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   Vec points, props;
   IS edges, types_faces;
   PetscInt n_points, n_edges, n_props, sdim, hydim, propdim;
-  const PetscReal *ra;
+  const PetscScalar *ra;
   const PetscInt *ia;
   PetscBool has_props;
   // NOTE: HACK: world needs to be equal to HYPERHDG_COMM in prototype.hxx
@@ -257,7 +257,12 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
     domain_info(n_points, n_edges, n_points, n_points);
 
   PetscCallAbort(comm, VecGetArrayRead(points, &ra));
-  memcpy((void*)domain_info.points.data(), ra, n_points*sdim*sizeof(PetscReal));
+  {
+    // geometry data is real; element-wise so the complex-PETSc build narrows correctly
+    auto* dst = reinterpret_cast<typename pointT::value_type*>(domain_info.points.data());
+    for (PetscInt k = 0; k < n_points * sdim; k++)
+      dst[k] = PetscRealPart(ra[k]);
+  }
   PetscCallAbort(comm, VecRestoreArrayRead(points, &ra));
 
   PetscCallAbort(comm, ISGetIndices(edges, &ia));
@@ -284,9 +289,8 @@ read_domain_hdf5(const std::string& filename, bool serialize = true)
   PetscCallAbort(comm, VecGetArrayRead(props, &ra));
   for (PetscInt i = 0; i < n_props; i++) {
     domain_info.hyEdge_properties[i].resize(propdim);
-    memcpy(domain_info.hyEdge_properties[i].data(),
-              ra + i*propdim,
-              propdim*sizeof(PetscReal));
+    for (PetscInt k = 0; k < propdim; k++)
+      domain_info.hyEdge_properties[i][k] = PetscRealPart(ra[i * propdim + k]);
   }
   PetscCallAbort(comm, VecRestoreArrayRead(props, &ra));
 

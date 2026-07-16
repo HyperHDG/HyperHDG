@@ -6,6 +6,7 @@
 #include <HyperHDG/hypercube.hxx>
 
 #include <cmath>
+#include <complex>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -1272,6 +1273,9 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
   if constexpr (LocalSolverT::system_dimension() == 0) return;
 
   using dof_value_t = typename LargeVecT::value_type;
+  // bulk values / energies are physically real regardless of the dof scalar (complex-PETSc
+  // builds pass complex dof vectors whose content the local solver ignores)
+  using plot_value_t = decltype(std::real(std::declval<dof_value_t>()));
   constexpr unsigned int n_components = LocalSolverT::system_dimension();
 
   const ComponentSelect values_sel = ComponentSelect::parse(plot_options.values_select);
@@ -1303,7 +1307,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
         hyper_graph, he, lambda);
 
-    std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
+    std::array<std::array<plot_value_t, points_per_edge>, n_components> local_values;
 
     if (n_values_out > 0) {
       if constexpr (requires { local_solver.bulk_values(abscissas.data(), hyEdge_dofs, prvalue_of(time)); }) {
@@ -1326,7 +1330,7 @@ void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
           for (unsigned int d = 0; d < n_components; ++d)
             values[row + d] = static_cast<float>(local_values[d][p]);
         else if (values_sel.mag) {
-          dof_value_t sq = 0;
+          plot_value_t sq = 0;
           for (unsigned int c : values_sel.comps)
             sq += local_values[c][p] * local_values[c][p];
           values[row] = static_cast<float>(std::sqrt(sq));
@@ -1483,7 +1487,13 @@ void plot(HyperGraphT& hyper_graph,
   hy_check(!plot_options.outputDir.empty(), "output directory must not be empty!");
 
   if (plot_options.fileEnding == PlotOptions::vtu)
-    plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+  {
+    // legacy vtu writer predates complex dof vectors; vtkhdf is the maintained path
+    if constexpr (std::is_arithmetic_v<typename LargeVecT::value_type>)
+      plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+    else
+      hy_check(false, "vtu plotting is not available for complex dof vectors");
+  }
 #ifdef HYPERHDG_PETSC
   else if (plot_options.fileEnding == PlotOptions::vtkhdf)
     plot_vtkhdf(hyper_graph, local_solver, lambda, plot_options, time);

@@ -10,6 +10,7 @@ add_compile_options(-Wall -Wextra -Werror -Wno-unused-parameter -Wno-format-secu
 add_library(prin2 prin2.cxx)
 target_link_libraries(prin2 PUBLIC PkgConfig::PETSC)
 
+if(NOT HYPERHDG_COMPLEX)
 add_library(net2as net2as.cxx)
 target_link_libraries(net2as
   PRIVATE
@@ -18,6 +19,7 @@ target_link_libraries(net2as
   PUBLIC
   PkgConfig::PETSC
 )
+endif()
 
 if (HYPERHDG_PARHIP)
   message("USING PARHIP_ROOT=${PARHIP_ROOT}")
@@ -34,10 +36,16 @@ endif()
 
 link_libraries(HyperHDG prin2)
 
-add_executable(heat heat.cxx)
-add_executable(wave wave.cxx)
-
-link_libraries(net2as)
+# The complex-PETSc build (preset "complex") serves the multi-stage Gauss timowave only; the
+# remaining binaries (and net2as) are real-scalar production code.
+if(NOT HYPERHDG_COMPLEX)
+  add_executable(heat heat.cxx)
+  add_executable(wave wave.cxx)
+  link_libraries(net2as)
+endif()
 
 add_executable(timowave timowave.cxx)
-add_executable(network network.cxx)
+
+if(NOT HYPERHDG_COMPLEX)
+  add_executable(network network.cxx)
+endif()

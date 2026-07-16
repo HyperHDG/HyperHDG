@@ -328,9 +328,13 @@ class Hyperbolic
   /*!***********************************************************************************************
    * \brief   Number of Gauss collocation stages / solved stage representatives of the solver.
    ************************************************************************************************/
+  static constexpr bool gauss_stage_capable()
+  {
+    return requires { LocalSolverT::n_gauss_stages(); };
+  }
   static constexpr unsigned int n_gauss_stages()
   {
-    if constexpr (requires { LocalSolverT::n_gauss_stages(); })
+    if constexpr (gauss_stage_capable())
       return LocalSolverT::n_gauss_stages();
     else
       return 1;
@@ -437,10 +441,10 @@ class Hyperbolic
    * \retval  error         L2 error.
    ************************************************************************************************/
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const SpanT& x_vec, const dof_value_t time = 0.)
+  auto errors(const SpanT& x_vec, const double time = 0.)
   {
     auto result = prototype_errors(errors);
-    return std::vector<dof_value_t>(result.begin(), result.end());
+    return std::vector<typename decltype(result)::value_type>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
    * \brief   Calculate L2 norm of the analytic solution.
@@ -450,10 +454,10 @@ class Hyperbolic
    * \retval  norm          L2 norm of the analytic solution.
    ************************************************************************************************/
   template <typename SpanT, typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> norms(const SpanT& x_vec, const dof_value_t time = 0.)
+  auto norms(const SpanT& x_vec, const double time = 0.)
   {
     auto result = prototype_errors(norms);
-    return std::vector<dof_value_t>(result.begin(), result.end());
+    return std::vector<typename decltype(result)::value_type>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
    * \brief   Number of hyperedges in the underlying hypergraph.
@@ -556,7 +560,7 @@ class Hyperbolic
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
   template<typename SpanT>
-  void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
+  void plot_solution(const SpanT& lambda, const double time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }

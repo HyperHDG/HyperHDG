@@ -123,6 +123,38 @@ is the Gauss step protocol above; `timowave.cxx` runs it unconditionally
   spatial h⁴ values match `GOLDEN-ne9-02` deg-3 rows to 3–4 digits with
   nt = 64 instead of the golden's nt = 8000.
 
+## Landed: complex PETSc build + one unified driver path
+
+- Second spack env `spack/complex` (petsc+complex+mumps+…) with CMake preset
+  `complex` (CMakeUserPresets.json, local like `openblas`; cache var
+  `HYPERHDG_COMPLEX=ON` builds only prin2 + timowave):
+      eval $(spack env activate --sh spack/complex) && cmake --preset complex
+      cmake --build --preset complex --target timowave
+- The driver has ONE time-stepping path for any s: per-representative stage
+  operators (PETSc Mats from the complex COO of the generic probing) and one
+  KSP each. s = 1 is real-valued and runs in both builds with the classic
+  defaults (CG + net2as); s ≥ 2 requires the complex build and defaults to
+  direct LU (the stage operators are complex symmetric, NOT Hermitian — CG /
+  cholmod theory does not apply; net2as stays real-build-only for that reason
+  plus ~10 mechanical PetscReal*-vs-PetscScalar* sites).
+- The endpoint trace λ is protocol-managed per-edge state: set_data stashes
+  the stage trace ζ_ℓ next to the stage locals, finalize_step recombines
+  state AND trace; errors/energy read `data.lambda_old`, their span argument
+  is vestigial. No real-valued trace crosses the driver boundary; the driver
+  holds no λ vector. make_initial seeds λ⁰ (computed in a real buffer,
+  widened into possibly-complex outputs). -static was removed from the
+  driver/interface pending its rework.
+- Complex↔real bridges where the s=1 real operator meets complex storage:
+  `apply_local_flux_widened` (narrow → real machinery → widen) and the
+  set_data narrowing branch; read_domain/plot/prin2 made scalar-safe (plot
+  values are `plot_value_t = real`; legacy vtu writer gated for complex).
+- All dense-LAPACK global-solve machinery, the Re/Im half-vectors, and the
+  wrapper zipping glue are gone; `-mat_cache` removed.
+- Verified: s=1 anchors bit-exact in BOTH builds (deg 2: e_rel/e_trace
+  2.48402e-3 / 8.45959e-5); s=2 via PETSc complex LU identical to the former
+  dense path (deg 3, nt 32: 1.81203e-5 / 4.70214e-5); ne9-08 script now runs
+  the complex build.
+
 ## Next steps
 
 1. Endpoint trace and (n,m) at output times via a static condensed trace
@@ -130,8 +162,9 @@ is the Gauss step protocol above; `timowave.cxx` runs it unconditionally
    time-dependent data).
 2. s = 3 (order 6): tableau builder already generic; needs the real-eigenvalue
    representative wired through (mult = 1 slot) and a driver test.
-3. Production-scale stage solves: complex PETSc build vs 2N×2N real block
-   form (loses cholmod/SPD) — decide at network scale.
+3. Production-scale stage solves at network size: iterative solvers /
+   preconditioning for the complex-symmetric stage operators (net2as-style DD
+   is a research question there), np > 1 for the complex build.
 
 Verification helpers: `experiments/ne9-conv-metrics.sh <results.json>`;
 tableau invariants: `tests_c++/gauss_tableau.cxx`.

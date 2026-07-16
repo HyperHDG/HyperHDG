@@ -1213,6 +1213,37 @@ class TimoshenkoWave
   }
 
   /*!***********************************************************************************************
+   * \brief   Bridge for complex dof vectors over a REAL stage operator (complex-PETSc at s = 1):
+   *          narrow the trace to its real part, run the real machinery, widen the result.
+   *
+   * The trace of the real s = 1 operator is real-valued by construction; the imaginary parts of
+   * the input are solver round-off. Only instantiated when stage_float_t is real.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& apply_local_flux_widened(const SmallMatInT& lambda_values_in,
+                                         SmallMatOutT& lambda_values_out,
+                                         const unsigned int solution_type,
+                                         hyEdgeT& hyper_edge,
+                                         const lSol_float_t time,
+                                         const unsigned int stage) const
+  {
+    static_assert(std::is_same_v<stage_float_t, lSol_float_t>,
+                  "widening bridge only serves a real stage operator");
+    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> in_r, out_r;
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+      {
+        in_r[i][j] = std::real(lambda_values_in[i][j]);
+        out_r[i][j] = 0.;
+      }
+    apply_local_flux(in_r, out_r, solution_type, hyper_edge, time, stage);
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+        lambda_values_out[i][j] += out_r[i][j];  // callers accumulate into zeroed arrays
+    return lambda_values_out;
+  }
+
+  /*!***********************************************************************************************
    * \brief   Homogeneous condensed operator action (assembles the time-constant system matrix).
    *
    * A distinct entry point from residual_flux (kept separate for historical reasons); both
@@ -1229,6 +1260,9 @@ class TimoshenkoWave
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, t, stage);
+    else if constexpr (std::is_same_v<out_float_t, std::complex<lSol_float_t>>)
+      return apply_local_flux_widened(lambda_values_in, lambda_values_out, 0U, hyper_edge, t,
+                                      stage);
     else
     {
       // real entry of the global loop: only meaningful while the stage operator is real
@@ -1263,6 +1297,9 @@ class TimoshenkoWave
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, t, stage);
+    else if constexpr (std::is_same_v<out_float_t, std::complex<lSol_float_t>>)
+      return apply_local_flux_widened(lambda_values_in, lambda_values_out, 1U, hyper_edge, t,
+                                      stage);
     else
     {
       hy_check(false, "the condensed stage operator is complex for n_stages > 1; "
@@ -1683,6 +1720,17 @@ class TimoshenkoWave
       hyper_edge.data.stage_coeffs[stage] =
         solve_local_problem(lambda_values, 1U, hyper_edge, t, stage);
     }
+    else if constexpr (std::is_same_v<lambda_float_t, std::complex<lSol_float_t>> &&
+                       std::is_same_v<stage_float_t, lSol_float_t>)
+    {
+      // complex dof vectors over the real s = 1 operator (complex-PETSc build): the stage trace
+      // is real-valued by construction; narrow and recurse into the real branch
+      std::array<std::array<lSol_float_t, 2 * n_shape_bdr_ * space_dim>, 2 * hyEdge_dimT> lam_r;
+      for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+        for (unsigned int j = 0; j < 2 * n_shape_bdr_ * space_dim; ++j)
+          lam_r[i][j] = std::real(lambda_values_in[i][j]);
+      set_data(lam_r, hyper_edge, Gauss::StageTime{t, stage});
+    }
     else
       hy_check(false, "the stage trace is complex for n_stages > 1; "
                       "call set_data with stage_float_t values");
@@ -1802,10 +1850,16 @@ class TimoshenkoWave
   }
 
   template <class hyEdgeT, typename SmallMatT>
-  SmallMatT& make_initial(SmallMatT& lambda_values,
+  SmallMatT& make_initial(SmallMatT& lambda_values_out,
                           hyEdgeT& hyper_edge,
                           const lSol_float_t time = 0.) const
   {
+    // The initial trace is real; compute in a real buffer and widen into the output arrays at
+    // the end (the output scalar may be complex in the complex-PETSc build).
+    std::array<std::array<lSol_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT> lambda_values;
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      lambda_values[i].fill(0.);
+
     // L2 projections of the initial fields, in global dofs until the transform below
     SmallVec<space_dim*n_shape_fct_, lSol_float_t> u_old, r_old, v_old, s_old;
 
@@ -1900,7 +1954,11 @@ class TimoshenkoWave
     add_dirichlet_rhs_static(rhs, hyper_edge, time);
     recover_dual(hyper_edge, rhs);
 
-    return lambda_values;
+    for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+      for (unsigned int j = 0; j < n_glob_dofs_per_node(); ++j)
+        lambda_values_out[i][j] = lambda_values[i][j];
+
+    return lambda_values_out;
   }
 
   template <class hyEdgeT, typename SmallMatT>

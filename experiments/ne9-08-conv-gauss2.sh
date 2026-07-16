@@ -12,10 +12,10 @@ mkdir -p $OUT_DIR
 DATA_DIR=.
 DOMAIN="cross2.geo"
 DOMAIN="-domain $DATA_DIR/domains/$DOMAIN"
-BIN_DIR=build/openblas/experiments
+BIN_DIR=build/complex/experiments
 export OMP_NUM_THREADS=1
 
-cmake --build --preset openblas --target timowave
+cmake --build --preset complex --target timowave
 
 parallel --progress --bar --results $OUT.json --colsep ' ' \
   "$BIN_DIR/timowave $DOMAIN -deg 3 -nx {1} -test wave4 -nt {2}" \

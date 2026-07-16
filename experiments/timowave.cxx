@@ -7,14 +7,15 @@
 
 #include <HyperHDG/local_solver/timowave.hxx>
 #include <HyperHDG/global_loop/hyperbolic.hxx>
-#include <HyperHDG/wrapper/lapack.hxx>
 
 #include <complex>
 
 #include "parameters.hxx"
 #include "hdg_base.hxx"
 #include "prin2.hxx"
-#include "net2as.hxx"
+#if !defined(PETSC_USE_COMPLEX)
+#include "net2as.hxx"  // real-build production preconditioner; not built against complex PETSc
+#endif
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
@@ -26,7 +27,8 @@ using HDGTimoWave = GlobalLoop::Hyperbolic<
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
   LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, Test, PetscReal,
-                              (poly_deg <= 2 ? 1u : 2u)>
+                              (poly_deg <= 2 ? 1u : 2u)>,
+  std::vector<PetscScalar>
 >;
 
 // A test problem opts into runtime parameter setup by defining a static Init(path).
@@ -147,18 +149,13 @@ int main(int argc, char **argv) {
     PetscLogStage s_t2f, s_pa, s_ts, s_rf, s_mk, s_ksp;
     PetscLogEvent e_set, e_plot, e_errors;
 
-    std::vector<PetscReal> temp, temp2, temp3, zero_v;
-    std::vector<PetscInt> itemp;
-    sparse_mat<std::vector<PetscReal>> mat_coo;
+    std::vector<PetscReal> temp2, temp3;
+    std::vector<PetscScalar> zero_s;  // zero trace input of the residual evaluations
     Vec rhs = NULL, sol_local = NULL, errors = NULL, norms = NULL;
     VecScatter scatter = NULL;
-    Mat mat = NULL;
-    KSP ksp = NULL;
-    Vec g_im = NULL, l_im = NULL;  // multi-stage: imaginary halves (global / local layout)
-    // multi-stage: dense complex stage operators, factored once per representative
-    std::vector<std::vector<std::complex<PetscReal>>> stage_lu;
-    std::vector<std::vector<int>> stage_ipiv;
-    std::vector<std::complex<PetscReal>> zbuf;
+    // one condensed stage operator + KSP per representative (s = 1: the single real stage)
+    std::vector<Mat> stage_mats;
+    std::vector<KSP> stage_ksps;
     PC pc;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help_msg));
@@ -229,17 +226,14 @@ int main(int argc, char **argv) {
         hdg->set_refinement(nx);
     }
 
-    // Multi-stage Gauss (s >= 2): complex stage operators, solved by dense per-representative
-    // LU at conv-study scale (the production complex-solver choice is deferred; see
-    // HORK_GAUSS_PLAN.md). Single rank only.
+    // One unified time-stepping path for any stage count: per-representative stage operators
+    // and solves. Multi-stage representatives are complex, so s >= 2 needs the complex-PETSc
+    // build (cmake preset "complex"); s = 1 is real-valued and runs in both builds.
     const PetscInt n_greps = hdg->n_gauss_reps();
-    const bool multi = hdg->n_gauss_stages() > 1;
-    if (multi) {
-      PetscMPIInt comm_size;
-      PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &comm_size));
-      PetscCheck(comm_size == 1, PETSC_COMM_WORLD, PETSC_ERR_SUP,
-                 "multi-stage gauss runs on a single rank");
-    }
+#if !defined(PETSC_USE_COMPLEX)
+    PetscCheck(hdg->n_gauss_stages() == 1, PETSC_COMM_WORLD, PETSC_ERR_SUP,
+               "multi-stage gauss (deg 3) needs the complex-PETSc build: cmake preset 'complex'");
+#endif
 
     PRIN2SY(timowave_test);
     PRIN2IY(poly_deg);
@@ -262,21 +256,15 @@ int main(int argc, char **argv) {
     if      (0 == strcmp(plot_props, "beams")) hdg->plot_option("propertiesSelect", "7,8,9,10,11,12,13,14,15");
     else                                       hdg->plot_option("propertiesSelect", plot_props);
 
-    zero_v = hdg->zero_vector();              // local (owned + ghost), all zeros
     PetscInt bs = hdg->n_dofs_per_node();
     N = hdg->size_of_system();                // global system size
     PetscInt n_owned = hdg->n_owned_dofs();   // dofs owned by this rank
-    PetscInt n_local = zero_v.size();         // n_local_dofs(): owned + ghost
+    PetscInt n_local = hdg->n_local_dofs();   // owned + ghost
+    zero_s.assign(n_local, 0.);
 
-    // Distributed system matrix (owned rows per rank) and matching distributed rhs. The KSP solves in
-    // the global numbering from distribute_domain; per-edge local work happens in sol_local.
-    // Multi-stage gauss keeps only the rhs layout (the stage operators are dense complex LUs).
-    if (!multi) {
-      PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, n_owned, n_owned, N, N, &mat));
-      PetscCall(MatCreateVecs(mat, NULL, &rhs));
-    } else {
-      PetscCall(VecCreateFromOptions(PETSC_COMM_WORLD, NULL, bs, n_owned, N, &rhs));
-    }
+    // Distributed rhs/solution vector in the global numbering from distribute_domain; per-edge
+    // local work happens in sol_local.
+    PetscCall(VecCreateFromOptions(PETSC_COMM_WORLD, NULL, bs, n_owned, N, &rhs));
     PetscCall(PetscObjectSetName((PetscObject)rhs, "trace"));
 
     // Per-rank local vector (owned + ghost) plus a scatter between it and the global rhs:
@@ -313,8 +301,8 @@ int main(int argc, char **argv) {
     // pending its rework.
     PRIN2S(s_mk);
     {
-      std::span<PetscReal> span;
-      temp = hdg->make_initial(zero_v);
+      std::span<PetscScalar> span;
+      hdg->make_initial(std::vector<PetscReal>(n_local, 0.));
       PetscCall(VecGetSpan(sol_local, span));
       if (*plot)
         hdg->plot_solution(span, 0.);
@@ -332,20 +320,25 @@ int main(int argc, char **argv) {
     PetscCall(VecSetValue(errors, 0, e_abs, INSERT_VALUES));
     PetscCall(VecSetValue(norms,  0, temp3[0], INSERT_VALUES));
 
-    if (!multi) {
-      PRIN2S(s_t2f);
-      auto mat_coo = hdg->trace_to_flux_mat();
+    // Condensed stage operators, assembled once (time-constant) and handed to one KSP per
+    // representative. At s = 1 this is exactly the classic trace operator and the classic
+    // KSP defaults (CG + net2as); complex stage systems (s >= 2) default to direct LU.
+    PRIN2S(s_t2f);
+    stage_mats.assign(n_greps, NULL);
+    for (PetscInt rep = 0; rep < n_greps; rep++) {
+      auto mat_coo = hdg->trace_to_flux_mat_stage(rep);
       mat_coo.eliminate_zeros();
       PetscInt ncoo = mat_coo.value_vec.size();
-      PRIN2SP();
-
-      PRIN2S(s_pa);
-      PetscCall(MatSetPreallocationCOO(mat, ncoo, (PetscInt*)mat_coo.row_vec.data(), (PetscInt*)mat_coo.col_vec.data()));
+      PetscCall(MatCreateFromOptions(PETSC_COMM_WORLD, "t2f_", bs, n_owned, n_owned, N, N,
+                                     &stage_mats[rep]));
+      PetscCall(MatSetPreallocationCOO(stage_mats[rep], ncoo, (PetscInt*)mat_coo.row_vec.data(),
+                                       (PetscInt*)mat_coo.col_vec.data()));
       // PETSc copies the index arrays into its own COO mapping, and MatSetValuesCOO only
       // needs the values -- free the indices here (~2/3 of the COO staging, 68 GB at net3)
       { auto drop_i = std::move(mat_coo.row_vec); }
       { auto drop_j = std::move(mat_coo.col_vec); }
-      PetscCall(MatSetValuesCOO(mat, (PetscReal*)mat_coo.value_vec.data(), INSERT_VALUES));
+      PetscCall(MatSetValuesCOO(stage_mats[rep], (PetscScalar*)mat_coo.value_vec.data(),
+                                INSERT_VALUES));
 
       // PETSc retains internal COO mapping arrays on the matrix for repeated
       // MatSetValuesCOO calls that never come (the operator is time-constant), and
@@ -353,51 +346,50 @@ int main(int argc, char **argv) {
       // Swap into a clean duplicate instead; transient cost is one extra matrix.
       {
         Mat mat_clean;
-        PetscCall(MatDuplicate(mat, MAT_COPY_VALUES, &mat_clean));
-        PetscCall(MatDestroy(&mat));
-        mat = mat_clean;
+        PetscCall(MatDuplicate(stage_mats[rep], MAT_COPY_VALUES, &mat_clean));
+        PetscCall(MatDestroy(&stage_mats[rep]));
+        stage_mats[rep] = mat_clean;
       }
-      PRIN2SP();
-    } else {
-      // Assemble the condensed complex stage operators once (time-constant) and factor them
-      // densely: at conv-study scale (N ~ 1e3) zgetrf is instant and zgetrs per step is O(N^2).
-      PRIN2S(s_t2f);
-      stage_lu.resize(n_greps);
-      stage_ipiv.resize(n_greps);
-      for (PetscInt rep = 0; rep < n_greps; rep++) {
-        auto coo = hdg->trace_to_flux_mat_stage(rep);
-        stage_lu[rep].assign((size_t)N * (size_t)N, 0.);
-        for (size_t k = 0; k < coo.value_vec.size(); k++)  // duplicates sum, column-major
-          stage_lu[rep][coo.row_vec[k] + (size_t)N * coo.col_vec[k]] += coo.value_vec[k];
-        stage_ipiv[rep].resize(N);
-        Wrapper::lapack_factorize((int)N, stage_lu[rep].data(), stage_ipiv[rep].data());
-      }
-      zbuf.resize(N);
-      PetscCall(VecDuplicate(rhs, &g_im));
-      PetscCall(VecDuplicate(sol_local, &l_im));
-      PRIN2SP();
     }
+    PRIN2SP();
+
+    PetscCall(MatPrintSymmetry("t2f_symmetry", stage_mats[0]));
 
     if (mat_only) goto end;
 
-    if (!multi) {
-      PetscCall(PCRegister("net2as", PCCreate_Net2AS));
-      PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
+#if !defined(PETSC_USE_COMPLEX)
+    PetscCall(PCRegister("net2as", PCCreate_Net2AS));
+#endif
+    PetscCall(KSPMonitorRegister("yaml", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorYAML, NULL, NULL));
 
+    stage_ksps.assign(n_greps, NULL);
+    PRIN2S(s_ksp);
+    for (PetscInt rep = 0; rep < n_greps; rep++) {
+      KSP ksp;
       PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
-      PetscCall(KSPSetOperators(ksp, mat, mat));
-      PetscCall(KSPSetType(ksp, KSPCG));
+      PetscCall(KSPSetOperators(ksp, stage_mats[rep], stage_mats[rep]));
       PetscCall(KSPGetPC(ksp, &pc));
+#if !defined(PETSC_USE_COMPLEX)
+      PetscCall(KSPSetType(ksp, KSPCG));
       PetscCall(PCSetType(pc, "net2as"));
+#else
+      // the complex stage operators are complex-symmetric, not Hermitian: direct LU by default
+      PetscCall(KSPSetType(ksp, KSPPREONLY));
+      PetscCall(PCSetType(pc, PCLU));
+#endif
       PetscCall(KSPSetTolerances(ksp, rtol, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT));
-      PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", &ksp_monitor_yaml_ctx));
+      if (rep == 0)
+        PetscCall(KSPMonitorSetFromOptions(ksp, "-ksp_monitor_yaml", "yaml", &ksp_monitor_yaml_ctx));
       PetscCall(KSPSetFromOptions(ksp));
-      PetscCall(PCGetType(pc, &pc_type));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
+      if (rep == 0) {
+        PetscCall(PCGetType(pc, &pc_type));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "pc_type: %s\n", pc_type));
+      }
 
-      // Hand net2as the redistributed domain (points + edges in the partition's global numbering) so
-      // its adjacency/points conform to the distributed system matrix instead of an independent file
-      // read (which would use a different numbering).
+#if !defined(PETSC_USE_COMPLEX)
+      // Hand net2as the redistributed domain (points + edges in the partition's global numbering)
+      // so its adjacency/points conform to the distributed system matrix instead of an independent
+      // file read (which would use a different numbering).
       if (0 == strcmp(pc_type, "net2as")) {
         PetscInt node_bs = hdg->n_dofs_per_node();
         PetscInt n_owned_nodes = hdg->n_owned_dofs() / node_bs;
@@ -408,12 +400,12 @@ int main(int argc, char **argv) {
                                     coords.data(), (PetscInt)(edges_g.size() / 2),
                                     (PetscInt*)edges_g.data()));
       }
-
-      PetscTime(&ksp_monitor_yaml_ctx.t0);
-      PRIN2S(s_ksp);
+#endif
       PetscCall(KSPSetUp(ksp));
-      PRIN2SP();
+      stage_ksps[rep] = ksp;
     }
+    PetscTime(&ksp_monitor_yaml_ctx.t0);
+    PRIN2SP();
 
     PRIN2S(s_ts);
     for (PetscInt i = 1; i <= nt; i++) {
@@ -421,96 +413,42 @@ int main(int argc, char **argv) {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "#------------ TIMESTEP %d -------\n", i));
       PetscReal ti = i*dt, error = 0, norm = 0;
 
-        std::span<PetscReal> span, span_im;
+        std::span<PetscScalar> span;
 
-        if (!multi) {
-        // Residual built from local parts: each rank evaluates the residual over its owned edges into
-        // the local (owned + ghost) vector, then scatter-reverse with ADD pushes the ghost-row
-        // contributions to their owning rank, assembling the distributed rhs.
-        PetscCall(VecGetSpan(sol_local, span));
-        PetscLogStagePush(s_rf);
-        hdg->residual_flux2(std::span{zero_v}, span, ti);
-        PetscLogStagePop();
-        PetscCall(VecRestoreSpan(sol_local, span));
-
-        PetscCall(VecZeroEntries(rhs));
-        PetscCall(VecScatterBegin(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
-        PetscCall(VecScatterEnd(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
-
-        PetscCall(VecScale(rhs, -1.));
-
-        // enorm monitoring (-ksp_monitor_yaml_enorm): the reference solve needs the
-        // assembled rhs, so it happens here rather than next to KSPSetUp. The reference
-        // is this first step's solution -- enorm is only meaningful with -nt 1
-        // (single-step conditioning studies, ne18-24); later steps reuse a stale u_ref.
-        if (i == 1)
-          PetscCall(KSPMonitorYAML_Setup(ksp, rhs, &ksp_monitor_yaml_ctx));
-
-        PetscCall(KSPSolve(ksp, rhs, rhs));
-
-        PetscCall(KSPGetIterationNumber(ksp, &its));
-        iterations += its;
-
-        // Pull the distributed solution into the local vector (owned + ghost) so the per-edge
-        // operations below see full data on each rank's ghost endpoints.
-        PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
-
-        PetscCall(VecGetSpan(sol_local, span));
-        PetscLogEventBegin(e_set, 0,0,0,0);
-        hdg->set_data(span, ti);   // stage trace zeta -> stash stage locals
-        PetscLogEventEnd(e_set, 0,0,0,0);
-        PetscCall(VecRestoreSpan(sol_local, span));
-        } else {
-        // one complex solve per stage representative; conjugate partners are analytic
+        // One solve per stage representative (s = 1: the single real-valued stage; s >= 2:
+        // complex representatives, conjugate partners analytic). Residual built from local
+        // parts: each rank evaluates over its owned edges into the local (owned + ghost)
+        // vector, then scatter-reverse with ADD assembles the distributed rhs; the solution is
+        // scattered forward so set_data sees full data on ghost endpoints.
         for (PetscInt rep = 0; rep < n_greps; rep++) {
-          // stage residual: complex loads split into the two real halves
           PetscCall(VecZeroEntries(sol_local));
-          PetscCall(VecZeroEntries(l_im));
           PetscCall(VecGetSpan(sol_local, span));
-          PetscCall(VecGetSpan(l_im, span_im));
           PetscLogStagePush(s_rf);
-          hdg->residual_flux_stage(span, span_im, rep, ti);
+          hdg->residual_flux_stage(std::span{zero_s}, span, rep, ti);
           PetscLogStagePop();
           PetscCall(VecRestoreSpan(sol_local, span));
-          PetscCall(VecRestoreSpan(l_im, span_im));
+
           PetscCall(VecZeroEntries(rhs));
-          PetscCall(VecZeroEntries(g_im));
           PetscCall(VecScatterBegin(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
           PetscCall(VecScatterEnd(scatter, sol_local, rhs, ADD_VALUES, SCATTER_REVERSE));
-          PetscCall(VecScatterBegin(scatter, l_im, g_im, ADD_VALUES, SCATTER_REVERSE));
-          PetscCall(VecScatterEnd(scatter, l_im, g_im, ADD_VALUES, SCATTER_REVERSE));
+          PetscCall(VecScale(rhs, -1.));
 
-          // direct solve of the factored dense complex stage system, zeta = -A^{-1} b
-          {
-            PetscScalar *are, *aim;
-            PetscCall(VecGetArray(rhs, &are));
-            PetscCall(VecGetArray(g_im, &aim));
-            for (PetscInt k = 0; k < N; k++)
-              zbuf[k] = std::complex<PetscReal>(-are[k], -aim[k]);
-            Wrapper::lapack_solve_factored((int)N, 1, stage_lu[rep].data(),
-                                           stage_ipiv[rep].data(), zbuf.data());
-            for (PetscInt k = 0; k < N; k++) {
-              are[k] = zbuf[k].real();
-              aim[k] = zbuf[k].imag();
-            }
-            PetscCall(VecRestoreArray(rhs, &are));
-            PetscCall(VecRestoreArray(g_im, &aim));
-          }
+          // enorm monitoring (-ksp_monitor_yaml_enorm): the reference solve needs the assembled
+          // rhs; only meaningful with -nt 1 (single-step conditioning studies, ne18-24)
+          if (i == 1 && rep == 0)
+            PetscCall(KSPMonitorYAML_Setup(stage_ksps[0], rhs, &ksp_monitor_yaml_ctx));
 
-          // stage trace zeta -> local halves -> stash stage locals
+          PetscCall(KSPSolve(stage_ksps[rep], rhs, rhs));
+          PetscCall(KSPGetIterationNumber(stage_ksps[rep], &its));
+          iterations += its;
+
           PetscCall(VecScatterBegin(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
           PetscCall(VecScatterEnd(scatter, rhs, sol_local, INSERT_VALUES, SCATTER_FORWARD));
-          PetscCall(VecScatterBegin(scatter, g_im, l_im, INSERT_VALUES, SCATTER_FORWARD));
-          PetscCall(VecScatterEnd(scatter, g_im, l_im, INSERT_VALUES, SCATTER_FORWARD));
           PetscCall(VecGetSpan(sol_local, span));
-          PetscCall(VecGetSpan(l_im, span_im));
           PetscLogEventBegin(e_set, 0,0,0,0);
-          hdg->set_data_stage(span, span_im, rep, ti);
+          hdg->set_data_stage(span, rep, ti);  // stage trace zeta -> stash stage locals + trace
           PetscLogEventEnd(e_set, 0,0,0,0);
           PetscCall(VecRestoreSpan(sol_local, span));
-          PetscCall(VecRestoreSpan(l_im, span_im));
-        }
         }
 
         // advances state AND endpoint trace (lambda+ = affine*lambda^n + sum mult*Re(w*zeta),
@@ -540,12 +478,9 @@ int main(int argc, char **argv) {
     }
     PRIN2SP();
 
-    if (ksp) {
-      PetscCall(KSPGetConvergedReasonString(ksp, &creason));
-      PetscCall(KSPGetResidualNorm(ksp, &rnorm));
-    } else {
-      creason = "DIRECT_LU";  // multi-stage gauss: dense factored solves, no KSP
-      rnorm = 0.;
+    if (!stage_ksps.empty() && stage_ksps[0]) {
+      PetscCall(KSPGetConvergedReasonString(stage_ksps[0], &creason));
+      PetscCall(KSPGetResidualNorm(stage_ksps[0], &rnorm));
     }
 
     PetscCall(VecAssemblyBegin(errors));
@@ -574,14 +509,14 @@ end:
     PetscCall(PetscOptionsLeftYAML(NULL));
 
     delete hdg;
-    PetscCall(KSPDestroy(&ksp));
-    PetscCall(MatDestroy(&mat));
     PetscCall(VecDestroy(&errors));
     PetscCall(VecDestroy(&norms));
     PetscCall(VecDestroy(&rhs));
     PetscCall(VecDestroy(&sol_local));
-    PetscCall(VecDestroy(&g_im));
-    PetscCall(VecDestroy(&l_im));
+    for (auto& k : stage_ksps)
+      PetscCall(KSPDestroy(&k));
+    for (auto& m : stage_mats)
+      PetscCall(MatDestroy(&m));
     PetscCall(VecScatterDestroy(&scatter));
 
     if (set_mem_max) {

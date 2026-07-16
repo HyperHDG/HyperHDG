@@ -2,16 +2,19 @@
 
 #include <HyperHDG/gauss_tableau.hxx>  // Gauss::StageTime
 
+#include <petscsystypes.h>
+
 #include <complex>
 #include <vector>
 #include <span>
 #include <string>
 
 struct HDGBase {
-  using Real = double;
+  using Real = PetscReal;
+  using Scalar = PetscScalar;  // complex in the complex-PETSc build; dof/trace vectors use it
   using Idx = unsigned int;
   using Vector = std::vector<Real>;
-  using Span = std::span<Real>;
+  using Span = std::span<Scalar>;
 
   virtual void plot_solution(const Span& lambda, const Real time = 0.) = 0;
   virtual std::string plot_option(const std::string& option, std::string value = "") = 0;
@@ -32,18 +35,19 @@ struct HDGBase {
   virtual void set_data(Span x_vec, const Real time = 0.) = 0;
   virtual void finalize_step() = 0;
   virtual void set_refinement(unsigned int i) = 0;
-  // Gauss stage interface (s >= 2, complex stage operators; defaults keep non-Gauss loops valid):
+  // Gauss stage interface: the stage index rides in a Gauss::StageTime through the loop's
+  // generic entries. Meaningful only in the complex-PETSc build (Scalar complex), where the
+  // stage systems are solved natively; defaults keep non-Gauss loops valid.
   virtual Idx n_gauss_stages() { return 1; }
   virtual Idx n_gauss_reps() { return 1; }
-  virtual sparse_mat<std::vector<std::complex<Real>>> trace_to_flux_mat_stage(Idx stage,
-                                                                              Real time = 0.) {
+  virtual sparse_mat<std::vector<Scalar>> trace_to_flux_mat_stage(Idx stage, Real time = 0.) {
     hy_check(false, "trace_to_flux_mat_stage is not available for this global loop");
     return {};
   }
-  virtual void residual_flux_stage(Span re_vec, Span im_vec, Idx stage, Real time = 0.) {
+  virtual void residual_flux_stage(Span x_vec, Span vec_Ax, Idx stage, Real time = 0.) {
     hy_check(false, "residual_flux_stage is not available for this global loop");
   }
-  virtual void set_data_stage(Span re_vec, Span im_vec, Idx stage, Real time = 0.) {
+  virtual void set_data_stage(Span x_vec, Idx stage, Real time = 0.) {
     hy_check(false, "set_data_stage is not available for this global loop");
   }
   virtual ~HDGBase() = default;
@@ -86,7 +90,8 @@ struct HDGWrapper : HDGBase {
     return HDG::n_dofs_per_node;
   }
   Vector zero_vector() {
-    return hdg.zero_vector();
+    // real-typed by interface; the loop's LargeVecT may be complex (complex-PETSc build)
+    return Vector(hdg.n_local_dofs(), 0.);
   }
   Vector errors(const Span& x_vec, const Real time = 0.) {
     return hdg.errors(x_vec, time);
@@ -96,10 +101,21 @@ struct HDGWrapper : HDGBase {
   }
   Vector make_initial(const Vector& x_vec, const Real time = 0.)
   {
-    return hdg.make_initial(x_vec, time);
+    // the loop's LargeVecT may be complex (complex-PETSc build); the initial trace is real
+    decltype(hdg.zero_vector()) vec(x_vec.begin(), x_vec.end());
+    auto res = hdg.make_initial(vec, time);
+    Vector out(res.size());
+    for (size_t k = 0; k < res.size(); ++k)
+      out[k] = std::real(res[k]);
+    return out;
   }
   sparse_mat<Vector> trace_to_flux_mat(const Real time = 0.) {
-    return hdg.trace_to_flux_mat(time);
+    // request a real-valued COO explicitly where the loop supports it (its LargeVecT may be
+    // complex); loops without the MatVecT parameter are real-only anyway
+    if constexpr (requires { hdg.template trace_to_flux_mat<Idx, Vector>(time); })
+      return hdg.template trace_to_flux_mat<Idx, Vector>(time);
+    else
+      return hdg.trace_to_flux_mat(time);
   }
   void residual_flux2(Span x_vec, Span vec_Ax, Real time = 0.) {
     hdg.residual_flux2(x_vec, vec_Ax, time);
@@ -129,47 +145,36 @@ struct HDGWrapper : HDGBase {
     else
       return 1;
   }
-  // The stage solves reuse the loop's generic entries, instantiated with complex vectors and a
-  // Gauss::StageTime as the time argument; the re/im split here exists only because the PETSc
-  // vectors of the driver are real. Instantiated only for multi-stage solvers -- the requires
-  // guards of the loop cannot help here since the incompatibility (real-only local entries)
-  // sits inside the generic loop bodies.
-  using CVec = std::vector<std::complex<Real>>;
-  using CSpan = std::span<std::complex<Real>>;
-  static constexpr bool has_multi_stage() {
-    if constexpr (requires { HDG::n_gauss_stages(); })
-      return HDG::n_gauss_stages() > 1;
+  // The stage solves reuse the loop's generic entries with a Gauss::StageTime as the time
+  // argument. With complex PETSc the driver's Vec spans are already Scalar == complex, so this
+  // is pure forwarding -- no packing. Gated on the solver's stage capability (the requires
+  // guards of the loop cannot help: the incompatibility of stage-less solvers sits inside the
+  // generic loop bodies).
+  static constexpr bool has_gauss_stages() {
+    if constexpr (requires { HDG::gauss_stage_capable(); })
+      return HDG::gauss_stage_capable();
     else
       return false;
   }
-  sparse_mat<CVec> trace_to_flux_mat_stage(Idx stage, Real time = 0.) {
-    if constexpr (has_multi_stage())
-      return hdg.template trace_to_flux_mat<Idx, CVec>(Gauss::StageTime{time, stage});
+  sparse_mat<std::vector<Scalar>> trace_to_flux_mat_stage(Idx stage, Real time = 0.) {
+    if constexpr (has_gauss_stages())
+      return hdg.template trace_to_flux_mat<Idx, std::vector<Scalar>>(
+        Gauss::StageTime{time, stage});
     else {
       hy_check(false, "trace_to_flux_mat_stage is not available for this global loop");
       return {};
     }
   }
-  void residual_flux_stage(Span re_vec, Span im_vec, Idx stage, Real time = 0.) {
-    if constexpr (has_multi_stage()) {
-      CVec zin(re_vec.size(), 0.), zout(re_vec.size(), 0.);
-      CSpan sin(zin), sout(zout);
-      hdg.residual_flux2(sin, sout, Gauss::StageTime{time, stage});
-      for (size_t k = 0; k < zout.size(); ++k) {
-        re_vec[k] += zout[k].real();
-        im_vec[k] += zout[k].imag();
-      }
-    } else
+  void residual_flux_stage(Span x_vec, Span vec_Ax, Idx stage, Real time = 0.) {
+    if constexpr (has_gauss_stages())
+      hdg.residual_flux2(x_vec, vec_Ax, Gauss::StageTime{time, stage});
+    else
       hy_check(false, "residual_flux_stage is not available for this global loop");
   }
-  void set_data_stage(Span re_vec, Span im_vec, Idx stage, Real time = 0.) {
-    if constexpr (has_multi_stage()) {
-      CVec z(re_vec.size());
-      for (size_t k = 0; k < z.size(); ++k)
-        z[k] = std::complex<Real>(re_vec[k], im_vec[k]);
-      CSpan zs(z);
-      hdg.set_data(zs, Gauss::StageTime{time, stage});
-    } else
+  void set_data_stage(Span x_vec, Idx stage, Real time = 0.) {
+    if constexpr (has_gauss_stages())
+      hdg.set_data(x_vec, Gauss::StageTime{time, stage});
+    else
       hy_check(false, "set_data_stage is not available for this global loop");
   }
 };
