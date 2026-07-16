@@ -602,6 +602,23 @@ struct TestTimoWave4
   static constexpr std::array<param_float_t, 3> au{1, 2, 3},  pu{0.3, 0.8, 1.3};
   static constexpr std::array<param_float_t, 3> ar{5, 7, 11}, pr{0.5, 1.1, 1.7};
 
+  // Runtime SPATIAL phase of the standing-wave factor cos(w*(x+y+z) + px). The time phases
+  // pu/pr cannot silence the boundary (cos(w t + p) never vanishes identically); px moves the
+  // spatial nodes: px = -pi/2 turns the factor into sin(w*s), which is zero at every tip of
+  // cross2/single1 (s in {0, +-1}) -- Dirichlet data identically zero for all t. The per-arm
+  // forcing formulas below generalize by literally phase-shifting their trig factors (the
+  // u-parts and m' still cancel at unit wave speed; the +-arm-pair junction balance is
+  // pairwise smoothness through the center, independent of px). Default 0 = classic wave4.
+  static inline param_float_t px = 0.;
+
+  static PetscErrorCode Init(const char*)
+  {
+    PetscFunctionBeginUser;
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-wave4_px", &px, NULL));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "wave4_px: %g\n", (double)px));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   static SmallVec<space_dimT, param_float_t> uvec(const param_float_t time) {
     SmallVec<space_dimT, param_float_t> res(0.);
     for (unsigned int k = 0; k < 3; k++)
@@ -649,7 +666,7 @@ struct TestTimoWave4
   {
     const unsigned int ax = arm_axis(point);
     auto res = cross_e(ax, rvec(time));
-    res *= omega*sin(omega*point[ax]);
+    res *= omega*sin(omega*point[ax] + px);
     return scalar_product(res, normal);
   }
   // g = w sin(w x_ax) (e_ax x uvec) + cos(w x_ax) (rvec - e_ax (e_ax . rvec)), per arm
@@ -659,11 +676,11 @@ struct TestTimoWave4
   {
     const unsigned int ax = arm_axis(point);
     auto res = cross_e(ax, uvec(time));
-    res *= omega*sin(omega*point[ax]);
+    res *= omega*sin(omega*point[ax] + px);
     auto perp = rvec(time);
     perp[ax] = 0.;
     for (unsigned int k = 0; k < 3; k++)
-      res[k] += perp[k]*cos(omega*point[ax]);
+      res[k] += perp[k]*cos(omega*point[ax] + px);
     return scalar_product(res, normal);
   }
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
@@ -695,25 +712,25 @@ struct TestTimoWave4
 
   static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     auto res = uvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]));
+    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     auto res = dt_uvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]));
+    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     auto res = dt_rvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]));
+    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
     return res;
   }
 
   static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
     auto res = rvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]));
+    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
     return res;
   }
 };

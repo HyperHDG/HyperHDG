@@ -42,11 +42,14 @@ static PetscErrorCode InitTest(const char* path)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//  instantiate the wave solver for a fixed test problem at a runtime polynomial degree.
-// hdg must be deallocated with `delete`.
+//  instantiate the wave solver for a fixed test problem at runtime (degree, stages) choices.
+// stages = 0 selects the matched coupling (deg 1/3/5 -> s = 1/2/3). The compiled combinations
+// are kept sparse for compile-time reasons: the matched couplings plus the fixed-degree stage
+// ladder (5, s) for temporal-order studies with the spatial discretization held constant
+// (ne9-11). hdg must be deallocated with `delete`.
 template<template<unsigned int, typename> typename Test>
 static PetscErrorCode CreateDeg(
-    PetscInt poly_deg, const char* path, PetscReal tau, PetscReal dt,
+    PetscInt poly_deg, PetscInt stages, const char* path, PetscReal tau, PetscReal dt,
     HDGBase** hdg
 ) {
   PetscBool loc_lu_full = PETSC_FALSE;
@@ -55,42 +58,48 @@ static PetscErrorCode CreateDeg(
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_lu_full", &loc_lu_full, NULL));
   const std::vector<double> vals = {tau, dt, (double)loc_lu_full};
   PetscCall(InitTest<Test>(path));
-  switch (poly_deg) {
-  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,1,Test>(path, vals)); break;
-  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,2,Test>(path, vals)); break;
-  case 5: *hdg = new HDGWrapper(HDGTimoWave<5,3,Test>(path, vals)); break;
-  // case 7: *hdg = new HDGWrapper(HDGTimoWave<7,4,Test>(path, vals)); break;
+  if (stages == 0)
+    stages = (poly_deg + 1) / 2;  // matched: temporal order covers spatial order p+1
+  switch (10 * poly_deg + stages) {
+  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,1,Test>(path, vals)); break;
+  case 32: *hdg = new HDGWrapper(HDGTimoWave<3,2,Test>(path, vals)); break;
+  case 51: *hdg = new HDGWrapper(HDGTimoWave<5,1,Test>(path, vals)); break;
+  case 52: *hdg = new HDGWrapper(HDGTimoWave<5,2,Test>(path, vals)); break;
+  case 53: *hdg = new HDGWrapper(HDGTimoWave<5,3,Test>(path, vals)); break;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
-               "unsupported poly_deg = %d", (int)poly_deg);
+               "no compiled instantiation for poly_deg = %d, stages = %d "
+               "(available: (1,1), (3,2), (5,1), (5,2), (5,3))",
+               (int)poly_deg, (int)stages);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 // select the test problem by name. hdg must be deallocated with `delete`.
 PetscErrorCode PetscHDGCreate(
-    PetscInt poly_deg, const char* test,
+    PetscInt poly_deg, PetscInt stages, const char* test,
     const char* path, PetscReal tau, PetscReal dt,
     HDGBase** hdg
 ) {
   PetscFunctionBeginUser;
-  //if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, dt, hdg));
-  if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, dt, hdg));
-  else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, dt, hdg));
-  else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, path, tau, dt, hdg));
-  // else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, path, tau, dt, hdg));
+  //if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, stages, path, tau, dt, hdg));
+  // commented out to cut compile time while the (deg, stages) ladder is compiled (ne9-11):
+  // if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, stages, path, tau, dt, hdg));
+  if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, stages, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, stages, path, tau, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 // all CLI-configurable run parameters
 struct Options {
-  PetscInt poly_deg = 1, nx = 1, nt = 1, tau_s = 0;
+  PetscInt poly_deg = 1, stages = 0, nx = 1, nt = 1, tau_s = 0;
   PetscReal tau = 1;         // HDG penalty
   PetscReal T = 1, dt = 0;
   char plot[PATH_MAX] = {0};
@@ -112,6 +121,7 @@ static PetscErrorCode ParseOptions(Options& o, PetscBool* done)
   PetscFunctionBeginUser;
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "HDG Wave Equation Options", NULL);
   PetscCall(PetscOptionsInt("-deg", "polynomial degree", NULL, o.poly_deg, &o.poly_deg, &is_set));
+  PetscCall(PetscOptionsInt("-stages", "number of Gauss stages (0 = matched to degree: 1/3/5 -> 1/2/3)", NULL, o.stages, &o.stages, &is_set));
   PetscCall(PetscOptionsReal("-tau", "hdg penalty parameter, recommended: tau ~ h^s for s in {-1,0,1}", NULL, o.tau, &o.tau, &is_set));
   PetscCall(PetscOptionsInt("-nx", "number of refinements", NULL, o.nx, &o.nx, &is_set));
   PetscCall(PetscOptionsInt("-nt", "number of timesteps", NULL, o.nt, &o.nt, &is_set));
@@ -122,7 +132,7 @@ static PetscErrorCode ParseOptions(Options& o, PetscBool* done)
   PetscCall(PetscOptionsString("-plot_props", "CellData/properties columns: all|beams|none or raw 'i,j,k'; beams = 7..15 = normals+widths+fiber_id (render with netvis --beams-cols 0,1,2:3,4,5:6:7 --beams-skip 8=-1)", NULL, o.plot_props, o.plot_props, sizeof(o.plot_props), &is_set));
   PetscCall(PetscOptionsBool("-plot_energy", "write per-cell CellData/energies at each plotted step", NULL, o.plot_energy, &o.plot_energy, &is_set));
   PetscCall(PetscOptionsString("-domain", "domain path", NULL, o.domain_path, o.domain_path, PATH_MAX, &is_set));
-  PetscCall(PetscOptionsString("-test", "timowave test problem: stiffness, sinclamp, gaussian, drumhead, wave4, constant", NULL, o.test, o.test, sizeof(o.test), &is_set));
+  PetscCall(PetscOptionsString("-test", "timowave test problem: wave4 (others commented out); -wave4_px sets its spatial phase", NULL, o.test, o.test, sizeof(o.test), &is_set));
   PetscCall(PetscOptionsBool("-print_timestep", "print timestep progress", NULL, o.print_timestep, &o.print_timestep, &is_set));
   PetscCall(PetscOptionsBool("-mat_only", "only compute matrix", NULL, o.mat_only, &o.mat_only, &is_set));
   PetscCall(PetscOptionsBool("-mem_max", "print memory stats in yaml", NULL, o.mem_max, &o.mem_max, &is_set));
@@ -501,7 +511,7 @@ int main(int argc, char **argv) {
     if (opt.mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
     PetscCall(RegisterLogStages());
 
-    PetscCall(PetscHDGCreate(opt.poly_deg, opt.test, opt.domain_path, opt.tau, opt.dt, &hdg));
+    PetscCall(PetscHDGCreate(opt.poly_deg, opt.stages, opt.test, opt.domain_path, opt.tau, opt.dt, &hdg));
     // set_refinement rebuilds the hypernode factory and drops the distributed (owned/global) dof
     // numbering, so only refine when actually requested; nx==1 is the construction default and a
     // no-op for hyEdge_dim==1. Refinement is not yet supported together with the distributed
