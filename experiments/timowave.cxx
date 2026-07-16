@@ -19,15 +19,12 @@
 
 static const char help_msg[] = "experiments regarding the wave equation\n";
 
-// Gauss stage count tied to the spatial degree: temporal order 2s covers the spatial order
-// p+1 with s = 1 for deg <= 2 and s = 2 (order 4, complex stage solves) for deg 3.
-template<unsigned int poly_deg, template<unsigned int, typename param_float_t> typename Test>
+template<unsigned int poly_deg, unsigned int stage, template<unsigned int, typename param_float_t> typename Test>
 using HDGTimoWave = GlobalLoop::Hyperbolic<
   Topology::File<1,3>,
   Geometry::File<1,3>,
   NodeDescriptor::File<1,3>,
-  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, Test, PetscReal,
-                              (poly_deg <= 2 ? 1u : 2u)>,
+  LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2*poly_deg, Test, PetscReal, stage>,
   std::vector<PetscScalar>
 >;
 
@@ -59,10 +56,10 @@ static PetscErrorCode CreateDeg(
   const std::vector<double> vals = {tau, dt, (double)loc_lu_full};
   PetscCall(InitTest<Test>(path));
   switch (poly_deg) {
-  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,Test>(path, vals)); break;
-  case 2: *hdg = new HDGWrapper(HDGTimoWave<2,Test>(path, vals)); break;
-  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,Test>(path, vals)); break;
-    //case 6: *hdg = new HDGWrapper(HDGTimoWave<6,Test>(path, vals)); break;
+  case 1: *hdg = new HDGWrapper(HDGTimoWave<1,1,Test>(path, vals)); break;
+  case 3: *hdg = new HDGWrapper(HDGTimoWave<3,2,Test>(path, vals)); break;
+  case 5: *hdg = new HDGWrapper(HDGTimoWave<5,3,Test>(path, vals)); break;
+  // case 7: *hdg = new HDGWrapper(HDGTimoWave<7,4,Test>(path, vals)); break;
   default:
     PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
                "unsupported poly_deg = %d", (int)poly_deg);
@@ -77,16 +74,16 @@ PetscErrorCode PetscHDGCreate(
     HDGBase** hdg
 ) {
   PetscFunctionBeginUser;
-  if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, dt, hdg));
+  //if      (0 == strcmp(test, "stiffness")) PetscCall(CreateDeg<TimoshenkoStiffness>(poly_deg, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "sinclamp")) PetscCall(CreateDeg<TimoshenkoSinClamp>(poly_deg, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "gaussian")) PetscCall(CreateDeg<TimoshenkoGaussian>(poly_deg, path, tau, dt, hdg));
-  else if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, dt, hdg));
+  if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, path, tau, dt, hdg));
   else if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, path, tau, dt, hdg));
   else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, path, tau, dt, hdg));
-  else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, path, tau, dt, hdg));
+  // else if (0 == strcmp(test, "clamped"))  PetscCall(CreateDeg<TimoWaveClamped>(poly_deg, path, tau, dt, hdg));
   else PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "unknown test = \"%s\"", test);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -499,9 +496,6 @@ int main(int argc, char **argv) {
         hdg->set_refinement(opt.nx);
     }
 
-    // One unified time-stepping path for any stage count: per-representative stage operators
-    // and solves. Multi-stage representatives are complex, so s >= 2 needs the complex-PETSc
-    // build (cmake preset "complex"); s = 1 is real-valued and runs in both builds.
 #if !defined(PETSC_USE_COMPLEX)
     PetscCheck(hdg->n_gauss_stages() == 1, PETSC_COMM_WORLD, PETSC_ERR_SUP,
                "multi-stage gauss (deg 3) needs the complex-PETSc build: cmake preset 'complex'");
@@ -512,10 +506,6 @@ int main(int argc, char **argv) {
     PetscCall(work.Create(hdg));
     PetscCall(track.Create(opt.nt));
 
-    // Initial state at t=0: make_initial seeds the per-edge data (state coeffs_old AND the
-    // endpoint trace lambda_old -- the trace is protocol-managed state, so the driver holds no
-    // trace vector; diagnostics ignore their span argument). Static init (-static) was removed
-    // pending its rework.
     PRIN2S(logs.mk);
     {
       std::span<PetscScalar> span;
