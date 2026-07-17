@@ -3,7 +3,7 @@
 The convenience layer on top of the explicit binding path (see python/README.md): pass the
 complete module source (a tiny .cxx that calls HyperHDG::bind_python<...>) as a string,
 get a compiled extension module back. Unlike the legacy cython machinery this generates a
-regular CMake project in a visible build directory, so the user keeps full control (any
+regular CMake project in a visible cache directory, so the user keeps full control (any
 cmake_args, choice of HyperHDG tree/install) and everything that is compiled is on disk in
 plain sight.
 
@@ -14,12 +14,22 @@ plain sight.
       NB_MODULE(my_module, m) { HyperHDG::bind_python<...>(m, "..."); }
     ''')
 
+Everything lives in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/): the
+generated module.cxx and CMakeLists.txt next to the cmake build directory build/, which also
+holds the resulting .so. A content fingerprint (code + generated project + cmake args) skips
+the build when nothing changed; force=True rebuilds regardless.
+
 HyperHDG is located in this order:
   1. `hyperhdg=` argument -- path to a source tree (has include/HyperHDG) or an install
      prefix (has lib/cmake/HyperHDG, used via find_package).
   2. environment variable HYPERHDG_DIR (same two flavors).
   3. the source tree this file lives in (python/ -> repo root).
   4. plain find_package(HyperHDG CONFIG) from whatever CMake sees.
+
+nanobind: a source tree brings its own (submodules/nanobind.git). For an installed HyperHDG
+the generated project calls find_package(nanobind CONFIG); if the python nanobind package is
+importable (pip/pacman), its bundled cmake config is injected via -Dnanobind_DIR
+automatically, so `pip install nanobind` into the running interpreter is all it takes.
 """
 
 import hashlib
@@ -102,13 +112,29 @@ def _run(cmd, cwd, verbose):
         raise RuntimeError(f"{' '.join(map(str, cmd))} failed{output}")
 
 
-def compile(code, *, hyperhdg=None, output_dir=".", build_dir=None, cmake_args=(),
-            verbose=False):
-    """Compile a module source string; return the path of the .so placed in output_dir."""
+def _deliver(so, output_dir):
+    if output_dir is None:
+        return so
+    output_dir = Path(output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    target = output_dir / so.name
+    shutil.copy2(so, target)
+    return target
+
+
+def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=(),
+            force=False, verbose=False):
+    """Compile a module source string; return the path of the built .so.
+
+    Artifacts live in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/); the
+    .so stays in its build/ subdirectory unless output_dir is given, then it is copied
+    there. force=True recompiles regardless of the cached fingerprint.
+    """
     name = _module_name(code)
     mode, root = _find_hyperhdg(hyperhdg)
-    output_dir = Path(output_dir).resolve()
-    work = Path(build_dir).resolve() if build_dir else output_dir / ".hyperhdg-build" / name
+    cache = Path(cache_dir).resolve() if cache_dir else Path(".hyperhdg-cache").resolve()
+    work = cache / name
+    build = work / "build"
 
     if mode == "source":
         cmakelists = _SOURCE_TREE_CMAKE.format(name=name, root=root.as_posix())
@@ -129,37 +155,37 @@ def compile(code, *, hyperhdg=None, output_dir=".", build_dir=None, cmake_args=(
         "\0".join([code, cmakelists, *map(str, cmake_args)]).encode()).hexdigest()
 
     stamp = work / "fingerprint"
-    existing = sorted(output_dir.glob(f"{name}.*.so")) + sorted(output_dir.glob(f"{name}.so"))
-    if existing and stamp.is_file() and stamp.read_text() == fingerprint:
-        return existing[0]
+    so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
+    if not force and so and stamp.is_file() and stamp.read_text() == fingerprint:
+        return _deliver(so, output_dir)
 
     work.mkdir(parents=True, exist_ok=True)
+    stamp.unlink(missing_ok=True)  # a failed build must not leave a valid stamp behind
+    # write_text refreshes module.cxx's mtime, so force=True recompiles even unchanged code
     (work / "module.cxx").write_text(code)
     (work / "CMakeLists.txt").write_text(cmakelists)
     _run(["cmake", "-S", ".", "-B", "build", *cmake_args], work, verbose)
     _run(["cmake", "--build", "build", "--parallel"], work, verbose)
 
-    so = next(iter(sorted((work / "build").glob(f"{name}.*.so"))), None)
+    so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
     if so is None:
-        raise RuntimeError(f"build produced no {name}.*.so in {work / 'build'}")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    target = output_dir / so.name
-    shutil.copy2(so, target)
+        raise RuntimeError(f"build produced no {name}.*.so in {build}")
     stamp.write_text(fingerprint)
-    return target
+    return _deliver(so, output_dir)
 
 
-def load(code, **kwargs):
+def load(code, *, force=False, **kwargs):
     """Compile a module source string and import it."""
-    so = compile(code, **kwargs)
+    so = compile(code, force=force, **kwargs)
     name = _module_name(code)
     # extension modules cannot be re-initialized within a process: return the cached import
     # (compiling DIFFERENT code under an already-loaded module name needs a new name/process)
     if name in sys.modules:
         loaded = sys.modules[name]
-        if getattr(loaded, "__file__", None) != str(so):
-            raise ImportError(f"module '{name}' is already loaded from {loaded.__file__}; "
-                              "use a different NB_MODULE name or a fresh process")
+        if force or getattr(loaded, "__file__", None) != str(so):
+            raise ImportError(f"module '{name}' is already loaded from {loaded.__file__} "
+                              "and extension modules cannot be reloaded in-process; use a "
+                              "different NB_MODULE name or a fresh interpreter")
         return loaded
     spec = importlib.util.spec_from_file_location(name, so)
     module = importlib.util.module_from_spec(spec)

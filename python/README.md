@@ -148,10 +148,12 @@ hdg = mod.TimoWaveP1S1("domains/single1.geo", [tau, dt, 0.0])
 
 `load()` compiles and imports; `compile()` just returns the `.so` path. The string is the
 *whole* module — real C++, not template-parameter fragments — and it is compiled by a
-generated, human-readable CMake project in `./.hyperhdg-build/<name>/` (override with
-`build_dir=`); the `.so` lands in the current folder (override with `output_dir=`).
-Content-hash caching skips the build when code and options are unchanged (measured: cold
-~11 s, cache-hit load ~30 ms in a fresh process).
+generated, human-readable CMake project. Everything lives in
+`./.hyperhdg-cache/<name>/` (override the root with `cache_dir=`): the generated
+`module.cxx` and `CMakeLists.txt` next to the cmake build directory `build/`, which also
+holds the resulting `.so`. Pass `output_dir=` to additionally copy the `.so` somewhere (e.g.
+`"."`). Content-hash caching skips the build when code and options are unchanged (measured:
+cold ~9 s, cache hit ~1 ms); `force=True` recompiles regardless of the fingerprint.
 
 The user stays in control of the build:
 
@@ -160,6 +162,10 @@ The user stays in control of the build:
   source tree (header include-dirs, nanobind from its submodule) or an install prefix
   (`find_package(HyperHDG CONFIG)`, linking `HyperHDG::HyperHDG`). Default: the source tree
   this file lives in.
+- nanobind with an *installed* HyperHDG: the generated project uses
+  `find_package(nanobind CONFIG)`; if the python `nanobind` package is importable in the
+  running interpreter (`pip install nanobind`), its bundled cmake config is injected via
+  `-Dnanobind_DIR` automatically, so no system-wide nanobind is needed.
 
 One caveat inherent to CPython: extension modules cannot be re-initialized in a process, so
 recompiling *different* code under an already-imported module name needs a new `NB_MODULE`
