@@ -4,6 +4,7 @@
 #include <cmath>
 #include <concepts>
 #include <span>
+#include <type_traits>
 
 // MPI distribution is handled at the data level (distribute_domain.hxx): each rank's hypergraph
 // holds only its owned hyperedges, so the loops below assemble all of them with no assembly-level
@@ -157,11 +158,18 @@ struct sparse_mat
  *
  * The local solver overload (with/without hyper_edge) is selected via requires-expressions on the
  * actual call; if none is implemented, compilation fails (cf. compile_time_tricks.hxx).
+ *
+ * The _into variant fills a caller-provided sparse_mat (resize on a right-sized vector is free,
+ * so reusing one across repeated assemblies avoids the allocation); it truncates to the number of
+ * triplets actually written (the is_dirichlet shortcut writes fewer than the preallocation, and
+ * on reuse the tail would otherwise keep stale triplets from the previous, possibly compacted,
+ * fill). prototype_mat_generate is the allocating wrapper around it.
  **************************************************************************************************/
-#define prototype_mat_generate(fun_name, mat_vec_t)                                         \
+#define prototype_mat_generate_into(fun_name, result_mat)                                     \
   [&]()                                                                                       \
   {                                                                                           \
-    using mat_value_t = typename mat_vec_t::value_type;                                       \
+    using mat_value_t =                                                                       \
+      typename std::decay_t<decltype(result_mat.get_values())>::value_type;                   \
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;                                         \
     std::array<std::array<unsigned int, n_dofs_per_node>, 2 * hyEdge_dim> dof_indices;        \
     std::array<std::array<mat_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs_old, dofs_new;  \
@@ -172,8 +180,8 @@ struct sparse_mat
     iedge_t estart = 0; \
     iedge_t eend = nedges; \
     \
-    sparse_mat<mat_vec_t> result_mat((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
-                                     n_dofs_per_node * n_dofs_per_node);                      \
+    result_mat.resize((eend-estart) * 4 * hyEdge_dim * hyEdge_dim * \
+                      n_dofs_per_node * n_dofs_per_node);                                     \
                                                                                               \
     auto value_it = result_mat.value_vec.begin();                                             \
     auto col_it = result_mat.col_vec.begin(), row_it = result_mat.row_vec.begin();            \
@@ -227,6 +235,15 @@ struct sparse_mat
           }                                                                                   \
       }                                                                                       \
                                                                                               \
+    result_mat.resize(                                                                        \
+      static_cast<unsigned int>(value_it - result_mat.value_vec.begin()));                    \
+  }()
+
+#define prototype_mat_generate(fun_name, mat_vec_t)                                           \
+  [&]()                                                                                       \
+  {                                                                                           \
+    sparse_mat<mat_vec_t> result_mat;                                                         \
+    prototype_mat_generate_into(fun_name, result_mat);                                        \
     return result_mat;                                                                        \
   }()
 
