@@ -589,6 +589,44 @@ struct TestTimoWave3
 // timowave (TestTimoWave4 lives in its own petsc-free header)
 #include "timowave4.hxx"
 
+#include <functional>
+
+// Runtime-parameters benchmark variant of wave4 (ne9-14): identical problem, but the RHS and
+// Dirichlet functions forward through static inline std::function members, i.e. one indirect
+// call per quadrature point instead of the inlined compile-time function. The integrator call
+// sites in the local solver are untouched -- the static forwarders below remain the non-type
+// template arguments; only their bodies indirect. Measures what runtime-configurable parameter
+// functions would cost before committing the configure() API to them.
+template <unsigned int space_dimT, typename param_float_t = double>
+struct TestTimoWave4Fn : TestTimoWave4<space_dimT, param_float_t>
+{
+  using base = TestTimoWave4<space_dimT, param_float_t>;
+  using point_t = Point<space_dimT, param_float_t>;
+  using fn_t = std::function<param_float_t(const point_t&, const point_t&, param_float_t)>;
+
+  static inline fn_t right_hand_side_n_fn =
+    [](const point_t& p, const point_t& n, param_float_t t) { return base::right_hand_side_n(p, n, t); };
+  static inline fn_t right_hand_side_m_fn =
+    [](const point_t& p, const point_t& n, param_float_t t) { return base::right_hand_side_m(p, n, t); };
+  static inline fn_t dirichlet_value_u_fn =
+    [](const point_t& p, const point_t& n, param_float_t t) { return base::dirichlet_value_u(p, n, t); };
+  static inline fn_t dirichlet_value_phi_fn =
+    [](const point_t& p, const point_t& n, param_float_t t) { return base::dirichlet_value_phi(p, n, t); };
+
+  static param_float_t right_hand_side_n(const point_t& point, const point_t& normal,
+                                         const param_float_t time = 0.)
+  { return right_hand_side_n_fn(point, normal, time); }
+  static param_float_t right_hand_side_m(const point_t& point, const point_t& normal,
+                                         const param_float_t time = 0.)
+  { return right_hand_side_m_fn(point, normal, time); }
+  static param_float_t dirichlet_value_u(const point_t& point, const point_t& normal,
+                                         const param_float_t time = 0.)
+  { return dirichlet_value_u_fn(point, normal, time); }
+  static param_float_t dirichlet_value_phi(const point_t& point, const point_t& normal,
+                                           const param_float_t time = 0.)
+  { return dirichlet_value_phi_fn(point, normal, time); }
+};
+
 
 
 

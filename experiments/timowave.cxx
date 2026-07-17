@@ -76,6 +76,32 @@ static PetscErrorCode CreateDeg(
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Minimal instantiation ladder for the runtime-parameters benchmark (ne9-14): the wave4fn
+// variant only exists at (1,1) and (5,1) -- the real-build combos its baseline wave4 also has.
+template<template<unsigned int, typename> typename Test>
+static PetscErrorCode CreateDegBench(
+    PetscInt poly_deg, PetscInt stages, const char* path, PetscReal tau, PetscReal dt,
+    HDGBase** hdg
+) {
+  PetscBool loc_lu_full = PETSC_FALSE;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc_lu_full", &loc_lu_full, NULL));
+  const std::vector<double> vals = {tau, dt, (double)loc_lu_full};
+  PetscCall(InitTest<Test>(path));
+  if (stages == 0)
+    stages = 1;
+  switch (10 * poly_deg + stages) {
+  case 11: *hdg = new HDGWrapper(HDGTimoWave<1,1,Test>(path, vals)); break;
+  case 51: *hdg = new HDGWrapper(HDGTimoWave<5,1,Test>(path, vals)); break;
+  default:
+    PetscCheck(false, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE,
+               "no compiled benchmark instantiation for poly_deg = %d, stages = %d "
+               "(available: (1,1), (5,1))", (int)poly_deg, (int)stages);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // select the test problem by name. hdg must be deallocated with `delete`.
 PetscErrorCode PetscHDGCreate(
     PetscInt poly_deg, PetscInt stages, const char* test,
@@ -90,6 +116,7 @@ PetscErrorCode PetscHDGCreate(
   // if (0 == strcmp(test, "drumhead")) PetscCall(CreateDeg<TimoshenkoDrumhead>(poly_deg, stages, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "constant")) PetscCall(CreateDeg<TimoshenkoConstant>(poly_deg, stages, path, tau, dt, hdg));
   if (0 == strcmp(test, "wave4"))     PetscCall(CreateDeg<TestTimoWave4>(poly_deg, stages, path, tau, dt, hdg));
+  else if (0 == strcmp(test, "wave4fn")) PetscCall(CreateDegBench<TestTimoWave4Fn>(poly_deg, stages, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave1"))    PetscCall(CreateDeg<TestTimoWave1>(poly_deg, stages, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave3"))    PetscCall(CreateDeg<TestTimoWave3>(poly_deg, stages, path, tau, dt, hdg));
   // else if (0 == strcmp(test, "wave9"))    PetscCall(CreateDeg<TestTimoWave9>(poly_deg, stages, path, tau, dt, hdg));
@@ -490,6 +517,8 @@ int main(int argc, char **argv) {
     }
 
     if (opt.mem_max) PetscCall(PetscMemorySetGetMaximumUsage());
+    // logging always on: the final t_* YAML report reads the stage timings even without -log_view
+    PetscCall(PetscLogDefaultBegin());
     PetscCall(RegisterLogStages());
 
     PetscCall(PetscHDGCreate(opt.poly_deg, opt.stages, opt.test, opt.domain_path, opt.tau, opt.dt, &hdg));
@@ -576,6 +605,15 @@ int main(int argc, char **argv) {
     PRIN2FY(avg_iterations);
 
 end:
+    // total residual-assembly time: the rf stage is pushed inside the stepping loop, so no
+    // PRIN2SP bracket reports it (t_Timestepping includes it); needs stage accounting, hence
+    // the unconditional PetscLogDefaultBegin above
+    {
+      PetscEventPerfInfo info;
+      PetscCall(PetscLogStageGetPerfInfo(logs.rf, &info));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t_rf: %.5e\n", info.time));
+    }
+
     PetscCall(PetscOptionsLeftYAML(NULL));
 
     delete hdg;
