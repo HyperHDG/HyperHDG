@@ -14,11 +14,17 @@
 # few percent, the future GlobalLoop::Generic configure() may take runtime parameter objects;
 # if only t_rf moves while t_Timestepping is solve-dominated, likewise acceptable; otherwise
 # parameters stay compile-time.
-# RESULT (first run, grids 65/129, see output/ne9-14-runtime-params.1784295530/summary.txt):
-# fn/static in [0.83, 1.03] on every metric -- machine noise dominates, no measurable
-# std::function cost; the per-edge cost is the s = 1 local re-assembly/factorization itself.
-# Decision: runtime parameter objects are acceptable. Grid sizes were shrunk afterwards
-# (65/129 took ~20 min per run, ~4 h total, for a conclusion the small grids already give).
+# RESULT (2026-07-17, second run -- the FIRST run was invalid: build/openblas had been
+# configured without -DNDEBUG since Jul 15, hy_assert's per-call stringstream slowed every
+# per-edge op ~400x and drowned the effect entirely):
+#   t_t2f            1.00           (no parameter functions in the operator -- sanity)
+#   t_rf             1.79 (deg 1) / 3.00 (deg 5)   <- real std::function cost per quad point
+#   t_Timestepping   1.12 (deg 1) / 1.49 (deg 5)   (serial small-case; solve share grows
+#                                                    with problem size and rank count)
+# Decision: runtime parameter FUNCTIONS are not free. Prefer the wave4 px pattern (compile-time
+# function bodies reading runtime static inline VALUES) for runtime configurability; reserve
+# std::function indirection for cases that truly swap function forms at runtime, accepting
+# ~2-3x on residual assembly.
 set -xeo pipefail
 
 : ${PRESET:=openblas}
