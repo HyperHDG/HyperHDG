@@ -12,7 +12,8 @@ mkdir -p $OUT_DIR
 
 jq -c '.Stdout | {nx, s: .tau_s, e_rel}' $OUT.json \
     | experiments/plot.py -g s -x nx --trans '1/x,y' -y e_rel \
+        --w 'nx <= 2**6 and nx >= 4' \
         --log xy --xbase 2 --xlabel 'discretization size $h$\strut' \
         --ylim '1e-11,10' --ytickoff \
-        --ref "3;64,32;3e-6|4;64,32;5e-8" \
+        --ref "3;32,64;2e-4|4;64,32;1e-9" \
         --save "$OUT.png" --tikz "$OUT" --legend 'lower right' --nshow
