@@ -115,12 +115,55 @@ Honest concessions:
 - A config that was compiled once stays cached; for a fixed set of configs the day-to-day
   experience is fine.
 
-If the one-call UX ever becomes a requirement, it can be built *on top of* this system: a
-small `hyperhdg.compile(...)` helper that writes the tiny `.cxx` from a template and invokes
-`cmake --build` would give the same notebook ergonomics with the checked, versioned,
-preset-respecting machinery underneath. The explicit path composes up to the convenient one;
-extracting build control and transparency out of the string-substitution path does not work in
-reverse.
+That one-call UX exists *on top of* this system — see `hyperhdg.py` below: the same notebook
+ergonomics, with a regular generated CMake project underneath instead of string-substituted
+cython templates. The explicit path composes up to the convenient one; extracting build
+control and transparency out of the string-substitution path does not work in reverse.
+
+## On-demand compilation: `hyperhdg.py`
+
+For exploratory work, `python/hyperhdg.py` compiles a module source string on demand:
+
+```python
+import hyperhdg
+
+mod = hyperhdg.load('''
+#include <HyperHDG/bind_python.hxx>
+#include <HyperHDG/geometry/file.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
+#include <HyperHDG/topology/file.hxx>
+#include <HyperHDG/global_loop/hyperbolic.hxx>
+#include <HyperHDG/local_solver/timowave.hxx>
+#include "timowave4.hxx"
+
+using HDG = GlobalLoop::Hyperbolic<
+  Topology::File<1, 3>, Geometry::File<1, 3>, NodeDescriptor::File<1, 3>,
+  LocalSolver::TimoshenkoWave<1, 3, 1, 2, TestTimoWave4, double, 1>,
+  std::vector<double>>;
+
+NB_MODULE(jit_demo, m) { HyperHDG::bind_python<HDG>(m, "TimoWaveP1S1"); }
+''')
+hdg = mod.TimoWaveP1S1("domains/single1.geo", [tau, dt, 0.0])
+```
+
+`load()` compiles and imports; `compile()` just returns the `.so` path. The string is the
+*whole* module — real C++, not template-parameter fragments — and it is compiled by a
+generated, human-readable CMake project in `./.hyperhdg-build/<name>/` (override with
+`build_dir=`); the `.so` lands in the current folder (override with `output_dir=`).
+Content-hash caching skips the build when code and options are unchanged (measured: cold
+~11 s, cache-hit load ~30 ms in a fresh process).
+
+The user stays in control of the build:
+
+- `cmake_args=[...]` is passed straight to CMake (compiler, flags, generator, ...).
+- HyperHDG is located via the `hyperhdg=` argument or `HYPERHDG_DIR` env var — either a
+  source tree (header include-dirs, nanobind from its submodule) or an install prefix
+  (`find_package(HyperHDG CONFIG)`, linking `HyperHDG::HyperHDG`). Default: the source tree
+  this file lives in.
+
+One caveat inherent to CPython: extension modules cannot be re-initialized in a process, so
+recompiling *different* code under an already-imported module name needs a new `NB_MODULE`
+name or a fresh interpreter (`load()` raises a clear `ImportError` for this case).
 
 ### What becomes deletable
 
@@ -137,4 +180,6 @@ separate decision; nothing here depends on it.
 - `python/CMakeLists.txt` — `nanobind_add_module`; petsc-free on purpose (links only
   tpp/tpcc/LAPACK, not the `HyperHDG` interface target).
 - `python/timowave.py` — minimal scipy port of the PETSc driver's serial wave4 path.
+- `python/hyperhdg.py` — on-demand compile/load of module source strings (generated CMake
+  project, cached).
 - `python/demo.sh` — 5-minute walkthrough of the above (run from the repo root).
