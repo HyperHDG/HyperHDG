@@ -120,6 +120,68 @@ ergonomics, with a regular generated CMake project underneath instead of string-
 cython templates. The explicit path composes up to the convenient one; extracting build
 control and transparency out of the string-substitution path does not work in reverse.
 
+### How the legacy pipeline holds up today
+
+The design dates from ~2021 and served the project well: one `include()` call gives any of
+five global loops without a build system in sight. Reading it today, most of its problems
+are the natural cost of implementing a build system by hand inside a library — pieces that
+CMake and nanobind now provide natively:
+
+- **Two build trees that don't know about each other.** CMake freezes compiler and flags
+  into `cmake_cython.cfg` in *its* binary dir; the python side reads
+  `<repo>/build/cmake_cython.cfg` and writes artifacts to
+  `<repo>/build/{cython_files,shared_objects}` — both hardcoded relative to the package
+  location (`import_cxx/paths.py`). The two coincided only while everyone configured with
+  `-B build`; with CMake presets (`build/<preset>/`) the cfg is no longer found and the
+  machinery silently falls back to a hardcoded `g++-10`. *New path:* one build tree, owned
+  by CMake, per preset — the `hyperhdg.py` cache included, since it is a regular CMake
+  project too.
+- **Inseparable from the source checkout.** `main_dir()` resolves templates, headers, cfg
+  and artifacts relative to the package file; there is no `setup.py`; the CMake install
+  rules ship only the C++ headers. The python interface can only be used in-tree. *New
+  path:* modules are ordinary `.so`s importable from anywhere, and `hyperhdg.py` also
+  targets an installed HyperHDG prefix via `find_package`.
+- **Environment locks and hand-rolled staleness.** The exact python minor version is
+  asserted twice (cfg and `cython_log.txt`), and rebuild decisions rest on seven timestamp
+  rules approximating dependency tracking — including "is the `.so` older than
+  `compile_prep.py` itself". *New path:* exactly this bookkeeping is delegated to
+  CMake/ninja, which do it precisely (depfiles) and were built for it.
+- **Shell-out error handling.** Each compile step is `os.system(...)` + `assert`; failures
+  surface as raw compiler stderr in the middle of a script or notebook run. *New path:*
+  precompiled modules fail once, at build time; `hyperhdg.py` raises a python exception
+  carrying the CMake log.
+- **A template pair per global loop.** Every loop needs a hand-maintained `.pyx`/`.pxd`
+  pair kept in sync with the C++ signatures, plus numbered `CyReplaceNN` slots — which is
+  why the newer solver work (Gauss stages, complex scalars, span-based entries) never
+  became reachable from python. *New path:* the single `requires`-guarded `bind_python<>`
+  helper binds whatever protocol subset an instantiation offers, so new loop capabilities
+  appear in python without touching binding infrastructure.
+
+None of this is a criticism of the original choice: hand-written per-class extension
+modules, the 2021 alternative, would have been worse, and the string-config UX was ahead of
+its time. The machinery simply predates the tools that now make its job unnecessary.
+
+### Where the new path can still improve
+
+- **Coverage.** Only the hyperbolic/timowave module exists; the elliptic, parabolic and
+  eigenvalue loops are reachable from python only through the legacy path until their
+  (small) module `.cxx` files are written.
+- **Data crossing still copies.** Vectors cross the boundary as by-value `std::vector` both
+  ways. Zero-copy `nb::ndarray` ↔ `std::span` variants (e.g. an out-parameter
+  `residual_flux2`) are designed but not implemented yet.
+- **In-process iteration.** The legacy hash-named modules let a notebook re-`include()` a
+  changed config within one session; `hyperhdg.load()` reuses the `NB_MODULE` name, and
+  CPython cannot reload extension modules — changed code needs a new module name or a fresh
+  kernel. A hash-suffixed module-name mode in `hyperhdg.py` could restore the legacy
+  behavior here.
+- **Installed-prefix mode is untested in anger.** Nobody installs HyperHDG today; the
+  `find_package` branch works by construction but hasn't run against a real install, and
+  `find_dependency(nanobind)` in the exported HyperHDG config remains to be added.
+- **No python-side tests/CI yet.** `tests_python/` exercises only the legacy path; the new
+  modules are validated by the experiment drivers, not by the test suite.
+- **Plotting.** PETSc-free modules only reach the legacy VTU writer; the vtkhdf path is
+  guarded under `HYPERHDG_PETSC`.
+
 ## On-demand compilation: `hyperhdg.py`
 
 For exploratory work, `python/hyperhdg.py` compiles a module source string on demand:
