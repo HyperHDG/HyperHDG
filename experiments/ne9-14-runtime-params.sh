@@ -14,6 +14,11 @@
 # few percent, the future GlobalLoop::Generic configure() may take runtime parameter objects;
 # if only t_rf moves while t_Timestepping is solve-dominated, likewise acceptable; otherwise
 # parameters stay compile-time.
+# RESULT (first run, grids 65/129, see output/ne9-14-runtime-params.1784295530/summary.txt):
+# fn/static in [0.83, 1.03] on every metric -- machine noise dominates, no measurable
+# std::function cost; the per-edge cost is the s = 1 local re-assembly/factorization itself.
+# Decision: runtime parameter objects are acceptable. Grid sizes were shrunk afterwards
+# (65/129 took ~20 min per run, ~4 h total, for a conclusion the small grids already give).
 set -xeo pipefail
 
 : ${PRESET:=openblas}
@@ -25,7 +30,9 @@ OUT=$OUTDIR/$NAME.$NOW
 DOMAIN=$OUT/domain
 LOGG=$OUT/make_geo.log
 : ${NT:=20}
-: ${REPS:=3}
+: ${REPS:=2}
+: ${GRID_DEG1:=65}
+: ${GRID_DEG5:=33}
 NET="-pc_type net2as -net2as_p 7 -net2as_cb_type q1 -net2as_cb_trim -net2as_pc_factor_mat_solver_type cholmod -net2as_coarse_pc_type lu"
 KSP="-ksp_rtol 1e-9"
 # serial on purpose: single-rank stage timings, no MPI noise
@@ -47,7 +54,7 @@ if ! git diff-index --quiet HEAD; then echo dirty >> $OUT/rev; fi
 
 # ne18-19 grid convention: unit square, full clamp (type 63) on the boundary ring
 DIR="--dirichlet xmin=63 xmax=63 ymin=63 ymax=63 --dirichlet-tol 1e-3"
-for n in 65 129; do
+for n in $GRID_DEG1 $GRID_DEG5; do
   $PYTHON experiments/make_geo2.py --grid $n $DIR -o $DOMAIN-grid$n.geo.h5 | tee -a $LOGG
   $PYTHON experiments/gortz_constants.py $DOMAIN-grid$n.geo.h5 --mu --csv $OUT/gortz-grid$n.csv \
     | tee $OUT/gortz-grid$n.txt
@@ -60,7 +67,7 @@ run() { # $1 test  $2 deg  $3 grid  $4 rep
     -nt $NT -T 1 $KSP $NET | tee $log
 }
 for rep in $(seq 1 $REPS); do
-  for cfg in "1 129" "5 65"; do
+  for cfg in "1 $GRID_DEG1" "5 $GRID_DEG5"; do
     set -- $cfg
     run wave4   $1 $2 $rep
     run wave4fn $1 $2 $rep
