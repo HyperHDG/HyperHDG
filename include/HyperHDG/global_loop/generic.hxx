@@ -262,6 +262,128 @@ class Generic
   const std::vector<dof_index_t>& zero_indices_global() const { return zero_indices_global_; }
 
   // -----------------------------------------------------------------------------------------------
+  // Lifecycle: initialize. Optional capability, detected via constexpr: a solver without
+  // make_initial gets a no-op (the user opted into this semantics); a solver whose make_initial
+  // exists but does not accept the given ArgT is a compile error, not a silent skip.
+  // -----------------------------------------------------------------------------------------------
+  /*!***********************************************************************************************
+   * \brief   Write the initial trace into the caller's span (zero-filled first) and set up the
+   *          local solvers' initial state.
+   ************************************************************************************************/
+  template <typename SpanT, typename ArgT = dof_value_t, typename hyNode_index_t = dof_index_t>
+  void initialize(SpanT& x_vec, const ArgT arg = 0.)
+  {
+    using span_value_t = typename std::decay_t<SpanT>::value_type;
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;
+    std::array<std::array<span_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+
+    std::fill(x_vec.begin(), x_vec.end(), 0.);
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)
+          hyEdge_dofs[node].fill(0.);
+
+        if constexpr (requires { local_solver_.make_initial(hyEdge_dofs, prvalue_of(arg)); })
+          local_solver_.make_initial(hyEdge_dofs, arg);
+        else if constexpr (requires {
+                             local_solver_.make_initial(hyEdge_dofs, hyper_edge, prvalue_of(arg));
+                           })
+          local_solver_.make_initial(hyEdge_dofs, hyper_edge, arg);
+        else if constexpr (requires { local_solver_.make_initial(hyEdge_dofs, 0.); } ||
+                           requires { local_solver_.make_initial(hyEdge_dofs, hyper_edge, 0.); })
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
+                        "LocalSolverT has make_initial, but no overload for this ArgT!");
+        else
+          return;  // no make_initial: initialize is a no-op
+
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)
+          hyper_graph_.hyNode_factory().set_dof_values(hyNodes[node], x_vec, hyEdge_dofs[node]);
+      });
+  }
+  /*!***********************************************************************************************
+   * \brief   Initialize the state by solving the static problem for the given boundary trace
+   *          (reads and rewrites the caller's span). No-op without local support.
+   ************************************************************************************************/
+  template <typename SpanT, typename ArgT = dof_value_t, typename hyNode_index_t = dof_index_t>
+  void initialize_from_static(SpanT& x_vec, const ArgT arg = 0.)
+  {
+    using span_value_t = typename std::decay_t<SpanT>::value_type;
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;
+    std::array<std::array<span_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)
+          hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, hyEdge_dofs[node]);
+
+        if constexpr (requires {
+                        local_solver_.make_initial_from_static(hyEdge_dofs, prvalue_of(arg));
+                      })
+          local_solver_.make_initial_from_static(hyEdge_dofs, arg);
+        else if constexpr (requires {
+                             local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge,
+                                                                    prvalue_of(arg));
+                           })
+          local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, arg);
+        else if constexpr (requires { local_solver_.make_initial_from_static(hyEdge_dofs, 0.); } ||
+                           requires {
+                             local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, 0.);
+                           })
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
+                        "LocalSolverT has make_initial_from_static, but no overload for this "
+                        "ArgT!");
+        else
+          return;  // no make_initial_from_static: initialize_from_static is a no-op
+
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)
+          hyper_graph_.hyNode_factory().set_dof_values(hyNodes[node], x_vec, hyEdge_dofs[node]);
+      });
+  }
+  /*!***********************************************************************************************
+   * \brief   Post-process step: hand the solved trace to the local solvers (FESTUNG's
+   *          "Post-process Step"; the former set_data).
+   *
+   * For Gauss stage solvers the stage index rides in the argument (Gauss::StageTime); the
+   * sentinel stage == -1 means "all stages are in" and turns this call into the step
+   * recombination (the former finalize_step -- not a separate API here). Solvers without
+   * set_data get a no-op.
+   ************************************************************************************************/
+  template <typename SpanT, typename ArgT = dof_value_t, typename hyNode_index_t = dof_index_t>
+  void postprocess(const SpanT& x_vec, const ArgT arg = 0.)
+  {
+    using span_value_t = typename std::decay_t<SpanT>::value_type;
+    SmallVec<2 * hyEdge_dim, hyNode_index_t> hyNodes;
+    std::array<std::array<span_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs;
+
+    std::for_each(
+      hyper_graph_.begin(), hyper_graph_.end(),
+      [&](auto hyper_edge)
+      {
+        hyNodes = hyper_edge.topology.get_hyNode_indices();
+        for (unsigned int node = 0; node < hyNodes.size(); ++node)
+          hyper_graph_.hyNode_factory().get_dof_values(hyNodes[node], x_vec, hyEdge_dofs[node]);
+
+        if constexpr (requires { local_solver_.set_data(hyEdge_dofs, prvalue_of(arg)); })
+          local_solver_.set_data(hyEdge_dofs, arg);
+        else if constexpr (requires {
+                             local_solver_.set_data(hyEdge_dofs, hyper_edge, prvalue_of(arg));
+                           })
+          local_solver_.set_data(hyEdge_dofs, hyper_edge, arg);
+        else if constexpr (requires { local_solver_.set_data(hyEdge_dofs, 0.); } ||
+                           requires { local_solver_.set_data(hyEdge_dofs, hyper_edge, 0.); })
+          static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
+                        "LocalSolverT has set_data, but no overload for this ArgT!");
+        // else: no set_data -- postprocess is a no-op (steady problems)
+      });
+  }
+
+  // -----------------------------------------------------------------------------------------------
   // Core operators. No allocation: outputs are caller-provided spans / sparse_mat buffers.
   // -----------------------------------------------------------------------------------------------
   /*!***********************************************************************************************

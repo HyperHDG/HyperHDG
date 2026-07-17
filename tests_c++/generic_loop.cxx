@@ -3,16 +3,35 @@
 //
 // Part A: diffusion on a cubic grid -- Generic vs Elliptic (jacobian/residual/jacobian_mat and
 //         the configure-time zero_indices vs the read_dirichlet_indices pattern).
+// Part B: TimoshenkoWave (wave4) on a file domain -- Generic vs Hyperbolic, including the Gauss
+//         step protocol: postprocess with stage >= 0 vs set_data, stage == -1 vs finalize_step;
+//         states compared via residuals and errors (no linear solve needed).
 //
 // hy_check (not hy_assert) so the release build fails loudly too.
 
+#include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/elliptic.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
+#include <HyperHDG/global_loop/hyperbolic.hxx>
 #include <HyperHDG/local_solver/diffusion_uniform_ldgh.hxx>
+#include <HyperHDG/local_solver/timowave.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/node_descriptor/file.hxx>
+#include <HyperHDG/topology/file.hxx>
+
+#include "../experiments/timowave4.hxx"
+
+// the file-domain dispatcher (read_domain.hxx) checks PETSC_COMM_WORLD under the PETSc build,
+// which is valid only after PetscInitialize
+#if defined(HYPERHDG_PETSC)
+#include <petscsys.h>
+#elif defined(HYPERHDG_MPI)
+#include <mpi.h>
+#endif
 
 #include <cmath>
+#include <complex>
 #include <map>
 #include <numeric>
 #include <vector>
@@ -30,20 +49,53 @@ static double lcg_value(unsigned int& state)
 // accumulate a COO triplet set into (row, col) -> summed value (matches the duplicate-summing
 // semantics of PETSc MatSetValuesCOO / scipy.sparse)
 template <typename MatT>
-static map<pair<unsigned int, unsigned int>, double> coo_to_map(const MatT& mat)
+static auto coo_to_map(const MatT& mat)
 {
-  map<pair<unsigned int, unsigned int>, double> result;
+  using value_t = typename std::decay_t<decltype(mat.value_vec)>::value_type;
+  map<pair<unsigned int, unsigned int>, value_t> result;
   for (size_t i = 0; i < mat.value_vec.size(); ++i)
     result[{mat.row_vec[i], mat.col_vec[i]}] += mat.value_vec[i];
   return result;
 }
 
-static void check_equal(const vector<double>& a, const vector<double>& b, const char* what)
+// compare two COO maps entrywise (missing entries count as zero)
+template <typename MapT>
+static void check_mat_equal(const MapT& map_a, const MapT& map_b, const char* what,
+                            const double tol = 1e-12)
+{
+  const auto value_or_zero = [](const MapT& m, const auto& key)
+  {
+    const auto it = m.find(key);
+    return it == m.end() ? typename MapT::mapped_type(0.) : it->second;
+  };
+  for (const auto& [key, val] : map_a)
+    hy_check(abs(val - value_or_zero(map_b, key)) < tol,
+             what << ": entry (" << key.first << ", " << key.second << ") differs");
+  for (const auto& [key, val] : map_b)
+    hy_check(abs(val - value_or_zero(map_a, key)) < tol,
+             what << ": entry (" << key.first << ", " << key.second << ") differs");
+}
+
+template <typename Scalar>
+static void check_equal(const vector<Scalar>& a, const vector<Scalar>& b, const char* what,
+                        const double tol = 1e-12)
 {
   hy_check(a.size() == b.size(), what << ": size mismatch " << a.size() << " vs " << b.size());
   for (size_t i = 0; i < a.size(); ++i)
-    hy_check(abs(a[i] - b[i]) < 1e-12,
+    hy_check(abs(a[i] - b[i]) < tol,
              what << ": entry " << i << " differs, " << a[i] << " vs " << b[i]);
+}
+
+template <typename Scalar>
+static Scalar random_scalar(unsigned int& seed)
+{
+  if constexpr (requires { Scalar{0., 0.}.imag(); })
+  {
+    const double re = lcg_value(seed);
+    return Scalar{re, lcg_value(seed)};
+  }
+  else
+    return lcg_value(seed);
 }
 
 static int test_part_a()
@@ -79,20 +131,7 @@ static int test_part_a()
 
   sparse_mat<vector<double> > mat;
   generic.jacobian_mat(mat);
-  {
-    const auto map_g = coo_to_map(mat);
-    const auto map_e = coo_to_map(elliptic.trace_to_flux_mat());
-    for (const auto& [key, val] : map_e)
-    {
-      const auto it = map_g.find(key);
-      const double val_g = (it == map_g.end()) ? 0. : it->second;
-      hy_check(abs(val - val_g) < 1e-12, "A1 jacobian_mat: entry (" << key.first << ", "
-               << key.second << ") differs, " << val_g << " vs " << val);
-    }
-    for (const auto& [key, val] : map_g)
-      hy_check(map_e.count(key) || abs(val) < 1e-12,
-               "A1 jacobian_mat: spurious entry (" << key.first << ", " << key.second << ")");
-  }
+  check_mat_equal(coo_to_map(mat), coo_to_map(elliptic.trace_to_flux_mat()), "A1 jacobian_mat");
 
   // --- 2. zero set = all cubic boundary types; cross-validate against the established
   //        read_dirichlet_indices pattern ------------------------------------------------------
@@ -144,7 +183,100 @@ static int test_part_a()
   return 0;
 }
 
+// Part B: Generic vs Hyperbolic on TimoshenkoWave/wave4. The step protocol is solve-free: both
+// loops receive the SAME synthetic stage trace, so equal advanced states <=> equal residuals
+// (the residual reads the recombined per-edge state) and equal errors (which read it too).
+template <unsigned int poly_deg, unsigned int stages, typename Scalar>
+static int test_part_b(const string& domain)
+{
+  using LSol =
+    LocalSolver::TimoshenkoWave<1, 3, poly_deg, 2 * poly_deg, TestTimoWave4, double, stages>;
+  using Hyperbolic = GlobalLoop::Hyperbolic<Topology::File<1, 3>, Geometry::File<1, 3>,
+                                            NodeDescriptor::File<1, 3>, LSol, vector<Scalar> >;
+  using Generic = GlobalLoop::Generic<Topology::File<1, 3>, Geometry::File<1, 3>,
+                                      NodeDescriptor::File<1, 3>, LSol, vector<Scalar> >;
+
+  const vector<double> vals = {1., 0.03125};  // {tau, dt}
+  const double dt = vals[1];
+  Hyperbolic hyp(domain, vals);
+  Generic gen(domain, vals);
+
+  const unsigned int n = hyp.size_of_system();
+  hy_check(gen.size_of_system() == n, "B: system sizes must agree");
+
+  // initial state at t = 0 (also sets up the per-edge state on both loops)
+  const vector<Scalar> init_h = hyp.make_initial(hyp.zero_vector());
+  vector<Scalar> init_g = gen.zero_vector();
+  gen.initialize(init_g, 0.);
+  check_equal(init_g, init_h, "B initialize vs make_initial", 1e-10);
+
+  unsigned int seed = 7u;
+  vector<Scalar> x(n), out_g(n, 0.), out_h(n, 0.), out_j(n, 0.), zero(n, 0.);
+  for (auto& v : x)
+    v = random_scalar<Scalar>(seed);
+
+  sparse_mat<vector<Scalar> > mat;
+  for (int rep = 0; rep < static_cast<int>(Hyperbolic::n_gauss_reps()); ++rep)
+  {
+    const Gauss::StageTime st{dt, rep};
+
+    gen.residual(x, out_g, st);
+    hyp.residual_flux2(x, out_h, st);
+    check_equal(out_g, out_h, "B residual vs residual_flux2", 1e-9);
+
+    // jacobian: A x = residual(x) - residual(0) (the residual is affine in the trace and both
+    // calls share the zeroing), plus the direct apply where Hyperbolic offers it (s = 1)
+    gen.jacobian(x, out_j, st);
+    gen.residual(zero, out_g, st);
+    for (unsigned int i = 0; i < n; ++i)
+      out_h[i] -= out_g[i];
+    check_equal(out_j, out_h, "B jacobian vs residual difference", 1e-9);
+    if constexpr (stages == 1)
+      check_equal(out_j, hyp.trace_to_flux(x, dt), "B jacobian vs trace_to_flux", 1e-9);
+
+    gen.jacobian_mat(mat, st);  // reused buffer across reps: part of the contract
+    check_mat_equal(coo_to_map(mat),
+                    coo_to_map(hyp.template trace_to_flux_mat<unsigned int, vector<Scalar> >(st)),
+                    "B jacobian_mat vs trace_to_flux_mat", 1e-9);
+  }
+
+  // Gauss step protocol: identical synthetic stage traces into both loops, then the old
+  // finalize_step path vs the new postprocess(stage = -1) sentinel.
+  vector<Scalar> zeta(n);
+  for (auto& v : zeta)
+    v = random_scalar<Scalar>(seed);
+  for (int rep = 0; rep < static_cast<int>(Hyperbolic::n_gauss_reps()); ++rep)
+  {
+    hyp.set_data(zeta, Gauss::StageTime{dt, rep});
+    gen.postprocess(zeta, Gauss::StageTime{dt, rep});
+  }
+  hyp.finalize_step();
+  gen.postprocess(zeta, Gauss::StageTime{dt, -1});
+
+  gen.residual(zero, out_g, Gauss::StageTime{2 * dt, 0});
+  hyp.residual_flux2(zero, out_h, Gauss::StageTime{2 * dt, 0});
+  check_equal(out_g, out_h, "B advanced state via residual", 1e-9);
+  check_equal(gen.errors(zero, 2 * dt), hyp.errors(zero, 2 * dt), "B advanced state via errors",
+              1e-10);
+
+  return 0;
+}
+
 int main()
 {
-  return test_part_a();
+#if defined(HYPERHDG_PETSC)
+  PetscInitialize(nullptr, nullptr, nullptr, nullptr);
+#elif defined(HYPERHDG_MPI)
+  MPI_Init(nullptr, nullptr);
+#endif
+  int result = test_part_a();
+  result += test_part_b<1, 1, double>("domains/single1.geo");
+  result += test_part_b<1, 1, double>("domains/cross2.geo");
+  result += test_part_b<2, 2, complex<double> >("domains/single1.geo");
+#if defined(HYPERHDG_PETSC)
+  PetscFinalize();
+#elif defined(HYPERHDG_MPI)
+  MPI_Finalize();
+#endif
+  return result;
 }
