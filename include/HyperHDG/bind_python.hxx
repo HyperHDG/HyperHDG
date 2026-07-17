@@ -27,7 +27,10 @@
 
 #include <HyperHDG/gauss_tableau.hxx>  // Gauss::StageTime
 
+#include <span>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace HyperHDG
