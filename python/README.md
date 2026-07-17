@@ -169,11 +169,6 @@ its time. The machinery simply predates the tools that now make its job unnecess
 - **Data crossing still copies.** Vectors cross the boundary as by-value `std::vector` both
   ways. Zero-copy `nb::ndarray` ↔ `std::span` variants (e.g. an out-parameter
   `residual_flux2`) are designed but not implemented yet.
-- **In-process iteration.** The legacy hash-named modules let a notebook re-`include()` a
-  changed config within one session; `hyperhdg.load()` reuses the `NB_MODULE` name, and
-  CPython cannot reload extension modules — changed code needs a new module name or a fresh
-  kernel. A hash-suffixed module-name mode in `hyperhdg.py` could restore the legacy
-  behavior here.
 - **Installed-prefix mode is untested in anger.** Nobody installs HyperHDG today; the
   `find_package` branch works by construction but hasn't run against a real install, and
   `find_dependency(nanobind)` in the exported HyperHDG config remains to be added.
@@ -229,9 +224,14 @@ The user stays in control of the build:
   running interpreter (`pip install nanobind`), its bundled cmake config is injected via
   `-Dnanobind_DIR` automatically, so no system-wide nanobind is needed.
 
-One caveat inherent to CPython: extension modules cannot be re-initialized in a process, so
-recompiling *different* code under an already-imported module name needs a new `NB_MODULE`
-name or a fresh interpreter (`load()` raises a clear `ImportError` for this case).
+Extension modules can never be re-initialized in a CPython process; `load()` works around
+this the way the legacy machinery did: by default (`hash_name=True`) the `NB_MODULE` name is
+suffixed with a content hash, so *edited code simply loads as a new module in the same
+session* — variants coexist, switching back to earlier code returns the cached module
+instantly, and all variants share one build tree (an incremental rebuild per new variant).
+`compile()` defaults to `hash_name=False` for stable artifact names. (Re-binding an
+*identical* C++ type from a second variant — e.g. after editing only a comment — triggers a
+harmless nanobind "type already registered" warning.)
 
 ### What becomes deletable
 

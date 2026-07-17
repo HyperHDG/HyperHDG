@@ -123,18 +123,37 @@ def _deliver(so, output_dir):
 
 
 def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=(),
-            force=False, verbose=False):
+            force=False, hash_name=False, verbose=False):
     """Compile a module source string; return the path of the built .so.
 
     Artifacts live in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/); the
     .so stays in its build/ subdirectory unless output_dir is given, then it is copied
     there. force=True recompiles regardless of the cached fingerprint.
+
+    hash_name=True suffixes the NB_MODULE name with a content hash (the legacy cython
+    machinery's trick): every code variant becomes a distinctly named extension module, so
+    edited code stays importable within one interpreter session. The default keeps the
+    user's name for a stable artifact.
     """
-    name = _module_name(code)
+    base = _module_name(code)
     mode, root = _find_hyperhdg(hyperhdg)
     cache = Path(cache_dir).resolve() if cache_dir else Path(".hyperhdg-cache").resolve()
-    work = cache / name
+    work = cache / base  # one work/build tree per base name; variants share it
     build = work / "build"
+
+    if mode == "installed":
+        try:  # pip-installed nanobind ships its cmake config out of CMake's sight
+            import nanobind
+            cmake_args = [*cmake_args, f"-Dnanobind_DIR={nanobind.cmake_dir()}"]
+        except ImportError:
+            pass
+    cmake_args = ["-DCMAKE_BUILD_TYPE=Release", *cmake_args]
+
+    fingerprint = hashlib.sha256(
+        "\0".join([code, mode, str(root), *map(str, cmake_args)]).encode()).hexdigest()
+    name = f"{base}_{fingerprint[:8]}" if hash_name else base
+    if hash_name:
+        code = re.sub(r"NB_MODULE\(\s*" + re.escape(base), f"NB_MODULE({name}", code, count=1)
 
     if mode == "source":
         cmakelists = _SOURCE_TREE_CMAKE.format(name=name, root=root.as_posix())
@@ -144,17 +163,10 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
     else:
         paths = f"PATHS {root.as_posix()}" if root else ""
         cmakelists = _INSTALLED_CMAKE.format(name=name, package_paths=paths)
-        try:  # pip-installed nanobind ships its cmake config out of CMake's sight
-            import nanobind
-            cmake_args = [*cmake_args, f"-Dnanobind_DIR={nanobind.cmake_dir()}"]
-        except ImportError:
-            pass
 
-    cmake_args = ["-DCMAKE_BUILD_TYPE=Release", *cmake_args]
-    fingerprint = hashlib.sha256(
-        "\0".join([code, cmakelists, *map(str, cmake_args)]).encode()).hexdigest()
-
-    stamp = work / "fingerprint"
+    # one stamp per (possibly hash-suffixed) name: alternating between two code variants of
+    # the same base cache-hits both ways
+    stamp = work / f"{name}.fingerprint"
     so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
     if not force and so and stamp.is_file() and stamp.read_text() == fingerprint:
         return _deliver(so, output_dir)
@@ -174,18 +186,23 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
     return _deliver(so, output_dir)
 
 
-def load(code, *, force=False, **kwargs):
-    """Compile a module source string and import it."""
-    so = compile(code, force=force, **kwargs)
-    name = _module_name(code)
+def load(code, *, force=False, hash_name=True, **kwargs):
+    """Compile a module source string and import it.
+
+    hash_name=True (default) makes edited code reloadable within one session: each variant
+    imports under a content-hash-suffixed module name (extension modules can never be
+    re-initialized in-process, so a fresh name per variant is the only way).
+    """
+    so = compile(code, force=force, hash_name=hash_name, **kwargs)
+    name = so.name.split(".")[0]
     # extension modules cannot be re-initialized within a process: return the cached import
-    # (compiling DIFFERENT code under an already-loaded module name needs a new name/process)
     if name in sys.modules:
         loaded = sys.modules[name]
         if force or getattr(loaded, "__file__", None) != str(so):
             raise ImportError(f"module '{name}' is already loaded from {loaded.__file__} "
-                              "and extension modules cannot be reloaded in-process; use a "
-                              "different NB_MODULE name or a fresh interpreter")
+                              "and extension modules cannot be reloaded in-process; use "
+                              "hash_name=True (default), a different NB_MODULE name, or a "
+                              "fresh interpreter")
         return loaded
     spec = importlib.util.spec_from_file_location(name, so)
     module = importlib.util.module_from_spec(spec)
