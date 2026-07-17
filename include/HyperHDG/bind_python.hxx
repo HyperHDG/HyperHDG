@@ -95,7 +95,8 @@ auto bind_python(nanobind::module_& m, const char* name)
     cls.def(
       "trace_to_flux_mat_stage",
       [to_coo](GlobalLoopT& o, Idx rep, double t) {
-        return to_coo(o.template trace_to_flux_mat<Idx, Vec>(Gauss::StageTime{t, rep}));
+        return to_coo(
+          o.template trace_to_flux_mat<Idx, Vec>(Gauss::StageTime{t, static_cast<int>(rep)}));
       },
       nb::arg("rep"), nb::arg("time") = 0.);
 
@@ -118,7 +119,7 @@ auto bind_python(nanobind::module_& m, const char* name)
       [](GlobalLoopT& o, Vec x, Idx rep, double t) {
         Vec ax(x.size(), 0.);
         std::span<Scalar> x_span(x), ax_span(ax);
-        o.residual_flux2(x_span, ax_span, Gauss::StageTime{t, rep});
+        o.residual_flux2(x_span, ax_span, Gauss::StageTime{t, static_cast<int>(rep)});
         return ax;
       },
       nb::arg("x"), nb::arg("rep"), nb::arg("time") = 0.);
@@ -132,7 +133,7 @@ auto bind_python(nanobind::module_& m, const char* name)
     cls.def(
       "set_data_stage",
       [](GlobalLoopT& o, const Vec& v, Idx rep, double t) {
-        o.set_data(v, Gauss::StageTime{t, rep});
+        o.set_data(v, Gauss::StageTime{t, static_cast<int>(rep)});
       },
       nb::arg("x"), nb::arg("rep"), nb::arg("time") = 0.);
 

@@ -159,7 +159,7 @@ struct HDGWrapper : HDGBase {
   sparse_mat<std::vector<Scalar>> trace_to_flux_mat_stage(Idx stage, Real time = 0.) {
     if constexpr (has_gauss_stages())
       return hdg.template trace_to_flux_mat<Idx, std::vector<Scalar>>(
-        Gauss::StageTime{time, stage});
+        Gauss::StageTime{time, static_cast<int>(stage)});
     else {
       hy_check(false, "trace_to_flux_mat_stage is not available for this global loop");
       return {};
@@ -167,13 +167,13 @@ struct HDGWrapper : HDGBase {
   }
   void residual_flux_stage(Span x_vec, Span vec_Ax, Idx stage, Real time = 0.) {
     if constexpr (has_gauss_stages())
-      hdg.residual_flux2(x_vec, vec_Ax, Gauss::StageTime{time, stage});
+      hdg.residual_flux2(x_vec, vec_Ax, Gauss::StageTime{time, static_cast<int>(stage)});
     else
       hy_check(false, "residual_flux_stage is not available for this global loop");
   }
   void set_data_stage(Span x_vec, Idx stage, Real time = 0.) {
     if constexpr (has_gauss_stages())
-      hdg.set_data(x_vec, Gauss::StageTime{time, stage});
+      hdg.set_data(x_vec, Gauss::StageTime{time, static_cast<int>(stage)});
     else
       hy_check(false, "set_data_stage is not available for this global loop");
   }

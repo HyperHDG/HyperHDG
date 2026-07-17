@@ -31,11 +31,14 @@ namespace Gauss
  * Passed through the generic global-loop entries (trace_to_flux_mat / residual_flux2 / set_data)
  * in place of the plain time scalar; stage-aware local solvers unpack it, everything else keeps
  * receiving plain times.
+ *
+ * stage >= 0 addresses that stage representative; stage == -1 means "all stages are in" and turns
+ * set_data into the step recombination (formerly the separate finalize_step entry).
  **************************************************************************************************/
 struct StageTime
 {
   double time;
-  unsigned int stage;
+  int stage;
 };
 
 

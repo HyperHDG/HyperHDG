@@ -373,12 +373,12 @@ class TimoshenkoWave
    *          global-loop entries without stage-specific loop plumbing.
    ************************************************************************************************/
   template <typename time_t>
-  static constexpr std::pair<lSol_float_t, unsigned int> split_stage_time(const time_t& time)
+  static constexpr std::pair<lSol_float_t, int> split_stage_time(const time_t& time)
   {
     if constexpr (requires { time.time; time.stage; })
       return {static_cast<lSol_float_t>(time.time), time.stage};
     else
-      return {static_cast<lSol_float_t>(time), 0u};
+      return {static_cast<lSol_float_t>(time), 0};
   }
   /*!***********************************************************************************************
    * \brief   Solve local problems via a full-matrix LU instead of the displacement Schur path.
@@ -1257,6 +1257,7 @@ class TimoshenkoWave
                               const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    hy_assert(stage >= 0, "the finalize sentinel stage = -1 is a set_data-only convention");
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 0U, hyper_edge, t, stage);
@@ -1294,6 +1295,7 @@ class TimoshenkoWave
                               const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    hy_assert(stage >= 0, "the finalize sentinel stage = -1 is a set_data-only convention");
     using out_float_t = typename SmallMatOutT::value_type::value_type;
     if constexpr (std::is_same_v<out_float_t, stage_float_t>)
       return apply_local_flux(lambda_values_in, lambda_values_out, 1U, hyper_edge, t, stage);
@@ -1703,8 +1705,10 @@ class TimoshenkoWave
    * \brief   Solve the stage-local problem from the stage trace zeta and stash its solution.
    *
    * \c lambda_values_in is the stage trace zeta of the Gauss step protocol; the stage-local
-   * solution (q,y,z) is stashed in slot \c stage, the state advances in finalize_step (idempotent:
-   * re-calling overwrites the slot).
+   * solution (q,y,z) is stashed in slot \c stage, the state advances at stage == -1 (idempotent:
+   * re-calling overwrites the slot). The sentinel stage == -1 means "all stages are in": the
+   * trace argument is ignored and the stashed stage solutions recombine into the new state
+   * (see finalize_step).
    ************************************************************************************************/
   template <class hyEdgeT, typename lambda_float_t, typename time_t = lSol_float_t>
   void set_data(
@@ -1713,6 +1717,8 @@ class TimoshenkoWave
     const time_t time = 0.) const
   {
     const auto [t, stage] = split_stage_time(time);
+    if (stage < 0)
+      return finalize_step(hyper_edge);
     if constexpr (std::is_same_v<lambda_float_t, stage_float_t>)
     {
       hyper_edge.data.stage_trace[stage] = lambda_values_in;
@@ -1742,7 +1748,8 @@ class TimoshenkoWave
    * Endpoint update y+ = stage_affine_ * y^n + sum_l Re(w_l y_l); at s = 1 that is
    * y+ = 2 y_1 - y^n. q = (n, m) is algebraic and linear in (y, lambda), so the same extrapolation
    * is exact for it at s = 1 (multi-stage recovers q via recover_dual instead). Explicitly driver-
-   * called once all stage set_data calls are in -- no per-edge completion tally.
+   * called once all stage set_data calls are in -- no per-edge completion tally. Reached either
+   * directly (legacy loops) or through set_data with the stage == -1 sentinel.
    ************************************************************************************************/
   template <class hyEdgeT>
   void finalize_step(hyEdgeT& hyper_edge) const
