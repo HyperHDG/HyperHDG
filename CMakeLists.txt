@@ -18,6 +18,10 @@ endif()
 
 project(HyperHDG LANGUAGES CXX)
 
+# Export executable symbols (-rdynamic) so the hy_assert/hy_check failure stack traces show
+# function names instead of raw addresses (see include/HyperHDG/hy_assert.hxx).
+set(CMAKE_ENABLE_EXPORTS ON)
+
 # Include the submodule projects
 add_subdirectory(submodules)
 include_directories(submodules)

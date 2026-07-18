@@ -26,6 +26,54 @@
 
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <iostream>
+#include <sstream>
+
+#if __has_include(<execinfo.h>) && __has_include(<cxxabi.h>)
+#include <cxxabi.h>
+#include <execinfo.h>
+#include <cstdlib>
+#include <cstring>
+#define HY_HAVE_BACKTRACE
+#endif
+
+/*!*************************************************************************************************
+ * \brief   Best-effort stack trace to stderr, printed on hy_check / hy_assert failure.
+ *
+ * glibc backtrace + demangling; function names of the executable's own frames need exported
+ * symbols (CMAKE_ENABLE_EXPORTS / -rdynamic, set in the top-level CMakeLists) -- without them
+ * (and inside hidden-visibility shared objects like the python modules) frames degrade to raw
+ * addresses, which `addr2line -e <binary>` still resolves.
+ **************************************************************************************************/
+inline void __hy_print_stacktrace()
+{
+#ifdef HY_HAVE_BACKTRACE
+  void* frames[64];
+  const int n_frames = backtrace(frames, 64);
+  char** symbols = backtrace_symbols(frames, n_frames);
+  if (!symbols)
+    return;
+  std::cerr << "Stack trace (innermost first):" << std::endl;
+  for (int i = 1; i < n_frames; ++i)  // frame 0 is this function
+  {
+    // symbols[i] reads "module(mangled+0xoffset) [addr]"; demangle the middle when present
+    char* begin = std::strchr(symbols[i], '(');
+    char* plus = begin ? std::strchr(begin, '+') : nullptr;
+    char* demangled = nullptr;
+    if (begin && plus && plus > begin + 1)
+    {
+      *plus = '\0';
+      int status = 0;
+      demangled = abi::__cxa_demangle(begin + 1, nullptr, nullptr, &status);
+      *plus = '+';
+    }
+    std::cerr << "  #" << i - 1 << "  " << (demangled ? demangled : symbols[i]) << std::endl;
+    std::free(demangled);
+  }
+  std::free(symbols);
+#endif
+}
+
 #define hy_check(Expr, Msg)                                                 \
   do {                                                                       \
     if (!(Expr)) {                                                           \
@@ -34,6 +82,7 @@
       std::cerr << "Check failed: " << #Expr                                 \
                 << "\n  at " << __FILE__ << ":" << __LINE__                  \
                 << "\n  " << __hy_check_text.str() << std::endl;             \
+      __hy_print_stacktrace();                                               \
       std::abort();                                                          \
     }                                                                        \
   } while (0)
@@ -87,6 +136,7 @@ inline void __Hy_Assert(const char* expr_str,
     std::cerr << "Assert failed:  " << msg.str() << std::endl
               << "Expected:       " << expr_str << std::endl
               << "Source:         " << file << ", line " << line << std::endl;
+    __hy_print_stacktrace();
     abort();
   }
 }
