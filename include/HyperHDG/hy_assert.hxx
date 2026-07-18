@@ -49,12 +49,18 @@
  * \param   Expr  C++ Expression that can be evaluated to \c true or \c false.
  * \param   Msg   Message that is to be displayed if \c Expr is evaluated to \c false.
  **************************************************************************************************/
-#define hy_assert(Expr, Msg)                                           \
-  {                                                                    \
-    std::stringstream __hy_assertion_text;                             \
-    __hy_assertion_text << Msg;                                        \
-    __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); \
-  }                                                                    \
+// The message stringstream is only constructed on the failure path: building and formatting it
+// unconditionally made assert-enabled builds ~400x slower in the per-edge hot loops (ne9-14),
+// while the checks themselves are nearly free.
+#define hy_assert(Expr, Msg)                                              \
+  {                                                                       \
+    if (!(Expr)) [[unlikely]]                                             \
+    {                                                                     \
+      std::stringstream __hy_assertion_text;                              \
+      __hy_assertion_text << Msg;                                         \
+      __Hy_Assert(#Expr, false, __FILE__, __LINE__, __hy_assertion_text); \
+    }                                                                     \
+  }                                                                       \
   static_assert(true, "")
 
 // -------------------------------------------------------------------------------------------------
