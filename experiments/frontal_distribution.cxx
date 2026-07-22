@@ -82,9 +82,9 @@ int main(int argc, char **argv) {
 
   // log2 bins over the front height (rows = leading dimension of the dense panel)
   constexpr int NBINS = 32;
-  double bin_flops[NBINS] = {};
+  double bin_flops[NBINS] = {}, bin_nz[NBINS] = {};
   long bin_count[NBINS] = {};
-  double total_flops = 0;
+  double total_flops = 0, total_nz = 0;
   long max_rows = 0, max_cols = 0;
 
   for (size_t s = 0; s < nsuper; ++s) {
@@ -94,13 +94,17 @@ int main(int argc, char **argv) {
     // supernode touches rows-k rows, so potrf+trsm+syrk sum to sum_k (rows-k)^2
     double flops = 0;
     for (long k = 0; k < cols; ++k) flops += (double)(rows - k) * (rows - k);
+    // stored panel entries = triangular solve traffic (each entry read once per solve)
+    const double nz = (double)rows * cols;
     if (csv) fprintf(csv, "%ld,%ld,%.0f\n", cols, rows, flops);
 
     int b = 0;
     while ((1L << (b + 1)) <= rows && b < NBINS - 1) ++b;
     bin_flops[b] += flops;
+    bin_nz[b] += nz;
     bin_count[b] += 1;
     total_flops += flops;
+    total_nz += nz;
     if (rows > max_rows) max_rows = rows;
     if (cols > max_cols) max_cols = cols;
   }
@@ -108,19 +112,21 @@ int main(int argc, char **argv) {
 
   PetscCall(PetscPrintf(PETSC_COMM_SELF,
                         "n=%" PetscInt_FMT "  nnz=%" PetscInt_FMT "  ordering=%s  nsuper=%zu\n"
-                        "lnz=%.3e  flops(panels)=%.3e  flops(cholmod fl)=%.3e\n"
+                        "lnz=%.3e  panel nz=%.3e  flops(panels)=%.3e  flops(cholmod fl)=%.3e\n"
                         "max front: rows=%ld cols=%ld\n\n",
-                        n, ia[n], ordering_name(L->ordering), nsuper, c.lnz, total_flops, c.fl,
-                        max_rows, max_cols));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "%18s %12s %14s %8s %8s\n", "front rows", "supernodes",
-                        "flops", "%flops", "cum%"));
-  double cum = 0;
+                        n, ia[n], ordering_name(L->ordering), nsuper, c.lnz, total_nz, total_flops,
+                        c.fl, max_rows, max_cols));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "%18s %12s %14s %8s %8s %14s %8s %8s\n", "front rows",
+                        "supernodes", "flops", "%flops", "cum%", "rows*cols", "%solve", "cum%"));
+  double cum_flops = 0, cum_nz = 0;
   for (int b = 0; b < NBINS; ++b) {
     if (!bin_count[b]) continue;
-    cum += bin_flops[b];
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%7ld, %7ld) %12ld %14.3e %8.2f %8.2f\n", 1L << b,
-                          1L << (b + 1), bin_count[b], bin_flops[b], 100 * bin_flops[b] / total_flops,
-                          100 * cum / total_flops));
+    cum_flops += bin_flops[b];
+    cum_nz += bin_nz[b];
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%7ld, %7ld) %12ld %14.3e %8.2f %8.2f %14.3e %8.2f %8.2f\n",
+                          1L << b, 1L << (b + 1), bin_count[b], bin_flops[b],
+                          100 * bin_flops[b] / total_flops, 100 * cum_flops / total_flops, bin_nz[b],
+                          100 * bin_nz[b] / total_nz, 100 * cum_nz / total_nz));
   }
 
   cholmod_free_factor(&L, &c);
