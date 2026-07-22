@@ -11,6 +11,13 @@ add_library(petsc_util petsc_util.cxx)
 target_link_libraries(petsc_util PUBLIC PkgConfig::PETSC)
 
 if(NOT HYPERHDG_COMPLEX)
+# cholmod comes with petsc's suite-sparse, but petsc.pc only carries it in Libs.private
+find_library(CHOLMOD_LIBRARY cholmod HINTS ${PETSC_STATIC_LIBRARY_DIRS} REQUIRED)
+cmake_path(GET CHOLMOD_LIBRARY PARENT_PATH CHOLMOD_LIBDIR)
+find_path(CHOLMOD_INCLUDE_DIR cholmod.h HINTS ${CHOLMOD_LIBDIR}/../include REQUIRED)
+add_executable(frontal_distribution frontal_distribution.cxx)
+target_link_libraries(frontal_distribution PkgConfig::PETSC ${CHOLMOD_LIBRARY})
+target_include_directories(frontal_distribution PRIVATE ${CHOLMOD_INCLUDE_DIR})
 add_library(net2as net2as.cxx)
 target_link_libraries(net2as
   PRIVATE
