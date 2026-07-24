@@ -8,7 +8,8 @@
 # data excites the stiff spatial modes (dt >> CFL), capping Gauss collocation at its stiff
 # order s+1 (odd s) / s (even s) regardless of spatial resolution. The full 2s = 2/4/6 shows
 # on the homogeneous-BC arm of ne9-11 (-wave4_px -pi/2). Stage systems are dense complex LU.
-# Rates: experiments/ne9-conv-rates.sh output/ne9-10-conv-t.json nt
+# Rates: experiments/ne9-conv-rates.sh output/ne9-10-conv-t.json nt (e_dual needs a
+# re-recorded json; the stored one predates the dual-error reporting)
 set -x
 
 : "${OUT:=${OUT_DIR:=output}/$(basename "${0%.sh}")}" # set default if unset

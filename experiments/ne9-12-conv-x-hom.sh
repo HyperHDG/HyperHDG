@@ -8,8 +8,11 @@
 # companion for the manuscript's hybrid-variable panel). CAVEAT: at nx 2 every mesh node sits
 # on a zero of sin(2*pi*s), so n_trace ~ round-off and the RELATIVE e_trace explodes -- filter
 # nx > 2 when reading e_trace.
+# e_dual (recovered dual pair (n, m)) runs cleanly at h^{p+1} here (no stiff excitation);
+# excluded fine-mesh tails (deg 3: nx 64, deg 5: nx >= 32) sit on the dt-independent
+# roundoff floor of the endpoint dual recovery (~1.4e-8 at nx 32, growing ~h^-5).
 # Rates: experiments/ne9-conv-rates.sh output/ne9-12-conv-x-hom.json nx
-# Plots: experiments/ne9-12-conv-x-hom-01.sh (e_rel), ne9-12-conv-x-hom-02.sh (e_trace)
+# Plots: experiments/ne9-12-conv-x-hom-01.sh (e_rel + e_dual), ne9-12-conv-x-hom-02.sh (e_trace)
 set -x
 
 : "${OUT:=${OUT_DIR:=output}/$(basename "${0%.sh}")}" # set default if unset

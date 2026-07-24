@@ -4,6 +4,11 @@
 # order h^{p+1} = 2/4/6 per nx doubling. nt 256 is fixed: the temporal error dt^{2s} sits
 # 100x+ below the spatial one at every level for all three degrees (constants from the
 # GOLDEN-ne9 tables and ne9-09-conv-xt-01). Stage systems are dense complex LU.
+# e_dual (the recovered dual pair (n, m)) also runs at h^{p+1}, but on this stiff arm it
+# floors earlier: the time-dependent Dirichlet data leaves an O(dt^2) rough component in the
+# endpoint state whose 1/h-amplified derivative caps e_dual at ~1.8e-5 for deg 3, nx >= 16
+# (nt 256); deg 5 instead hits the dt-independent ~1.4e-8 * h^-5-ish roundoff floor of the
+# endpoint dual recovery at nx 32 (cf. the reverted endpoint-algebraic solve, 8ec51489).
 # Rates: experiments/ne9-conv-rates.sh output/ne9-09-conv-x.json nx
 set -x
 
