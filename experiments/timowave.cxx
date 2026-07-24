@@ -297,7 +297,7 @@ static std::vector<PetscReal> GlobalErrors(std::vector<PetscReal> e)
 // per-timestep error/norm history plus running maxima for the final report
 struct ErrorTracker {
   Vec errors = NULL, norms = NULL;
-  PetscReal e_abs = 0, n_abs = 0, e_trace = 0, n_trace = 0;
+  PetscReal e_abs = 0, n_abs = 0, e_trace = 0, n_trace = 0, e_dual = 0, n_dual = 0;
 
   PetscErrorCode Create(PetscInt nt) {
     PetscFunctionBeginUser;
@@ -317,6 +317,8 @@ struct ErrorTracker {
     n_abs = PetscMax(n[0], n_abs);
     e_trace = PetscMax(e[1], e_trace);
     n_trace = PetscMax(n[1], n_trace);
+    e_dual = PetscMax(e[2], e_dual);
+    n_dual = PetscMax(n[2], n_dual);
     PetscCall(VecSetValue(errors, step, e[0], INSERT_VALUES));
     PetscCall(VecSetValue(norms, step, n[0], INSERT_VALUES));
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -333,12 +335,17 @@ struct ErrorTracker {
     // relative error in the length-weighted skeleton norm (analytic trace norm from norms()[1]);
     // tests without an analytic solution (n_trace == 0) keep the absolute value
     if (n_trace > 0) e_trace /= n_trace;
+    // dual-pair (n, m) L2 error, relative when the parameters provide the analytic dual
+    // (norms()[2] > 0); parameters without analytic_result_n/_m report 0
+    if (n_dual > 0) e_dual /= n_dual;
 
     PRIN2FY(e_abs);
     PRIN2FY(n_abs);
     PRIN2FY(n_trace);
+    PRIN2FY(n_dual);
     PRIN2FY(e_rel);
     PRIN2FY(e_trace);
+    PRIN2FY(e_dual);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 

@@ -82,15 +82,17 @@ def main():
     n = hdg.n_local_dofs()  # serial: == size_of_system()
     zero = hdg.zero_vector()
 
-    # error/norm history: index 0 = state L2, index 1 = trace norm (as in the PETSc driver)
-    e_abs = n_abs = e_trace = n_trace = 0.0
+    # error/norm history: index 0 = state L2, index 1 = trace norm, index 2 = dual (n, m) L2
+    # (as in the PETSc driver)
+    e_abs = n_abs = e_trace = n_trace = e_dual = n_dual = 0.0
 
     def record(span, t):
-        nonlocal e_abs, n_abs, e_trace, n_trace
+        nonlocal e_abs, n_abs, e_trace, n_trace, e_dual, n_dual
         e = hdg.errors(span, t)
         nn = hdg.norms(span, t)
         e_abs, n_abs = max(e[0], e_abs), max(nn[0], n_abs)
         e_trace, n_trace = max(e[1], e_trace), max(nn[1], n_trace)
+        e_dual, n_dual = max(e[2], e_dual), max(nn[2], n_dual)
         return e[0]
 
     hdg.make_initial([0.0] * n)
@@ -121,11 +123,16 @@ def main():
     # (n_trace == 0) keep the absolute value
     if n_trace > 0:
         e_trace /= n_trace
+    # dual-pair (n, m) error, relative when the parameters provide the analytic dual
+    if n_dual > 0:
+        e_dual /= n_dual
     print(f"e_abs: {e_abs:.5e}")
     print(f"n_abs: {n_abs:.5e}")
     print(f"n_trace: {n_trace:.5e}")
+    print(f"n_dual: {n_dual:.5e}")
     print(f"e_rel: {e_rel:.5e}")
     print(f"e_trace: {e_trace:.5e}")
+    print(f"e_dual: {e_dual:.5e}")
 
 
 if __name__ == "__main__":

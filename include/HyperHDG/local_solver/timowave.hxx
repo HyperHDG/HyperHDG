@@ -151,14 +151,16 @@ class TimoshenkoWave
   {
     /*!*********************************************************************************************
      *  \brief  Define the typename returned by function errors.
+     *
+     *  Components: [0] primal volume L2 (u, r), [1] skeleton trace, [2] dual volume L2 (n, m).
      **********************************************************************************************/
-    typedef std::array<lSol_float_t, 2U> error_t;
+    typedef std::array<lSol_float_t, 3U> error_t;
     /*!*********************************************************************************************
      *  \brief  Define how initial error is generated.
      **********************************************************************************************/
     static error_t initial_error()
     {
-      std::array<lSol_float_t, 2U> summed_error;
+      error_t summed_error;
       summed_error.fill(0.);
       return summed_error;
     }
@@ -1311,6 +1313,86 @@ class TimoshenkoWave
   }
 
   /*!***********************************************************************************************
+   * \brief   Local squared L2 error of the dual pair (n, m), or the squared norm of its
+   *          analytic solution (use_discrete == false).
+   *
+   * The dual fields are odd under flipping the edge orientation (n = -du/ds - d x r,
+   * m = -dr/ds with d the axial direction), so the (point, normal, time) component interface
+   * of the primal error integrals cannot express them: the parameters instead provide the
+   * vector-valued analytic_result_n/_m(point, axial, time), receiving the edge's axial frame
+   * vector d = inner_normal(0) (orientation included) and returning the global dual vector.
+   * Parameters opt in by providing both functions; without them the contribution is zero.
+   ************************************************************************************************/
+  template <class hyEdgeT>
+  lSol_float_t dual_error_sq(hyEdgeT& hyper_edge,
+                             const lSol_float_t time,
+                             const bool use_discrete) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    using point_t = Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    if constexpr (!requires(const point_t& p, const lSol_float_t t) {
+                    parameters::analytic_result_n(p, p, t);
+                    parameters::analytic_result_m(p, p, t);
+                  })
+      return 0.;
+    else
+    {
+      static_assert(hyEdge_dimT == 1, "dual error is implemented for beam edges only");
+      // edge frame: component dim <-> {inner_normal(0), outer_normal(0), outer_normal(1)}
+      std::array<point_t, space_dim> frame;
+      for (unsigned int dim = 0; dim < space_dim; ++dim)
+        frame[dim] = edge_frame_vector<hyEdgeT, lSol_float_t>(hyper_edge, -static_cast<int>(dim));
+
+      // The endpoint recombination of finalize_step carries an O(dt^2) defect in the algebraic
+      // dual under time-dependent boundary data, so recover the exact endpoint dual from the
+      // stored (u, r, lambda) and the Dirichlet data instead of reading the recombined
+      // coefficients (the recovery recover_dual's doc anticipated for output-time diagnostics).
+      // Only test problems providing the analytic dual pay for this.
+      SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> dual;
+      if (use_discrete)
+      {
+        auto lambda_loc = node_dof_to_edge_dof(hyper_edge.data.lambda_old, hyper_edge);
+        SmallVec<n_loc_dofs_, lSol_float_t> rhs =
+          assemble_rhs_from_lambda(lambda_loc, hyper_edge);
+        add_dirichlet_rhs_static(rhs, hyper_edge, time);
+        dual = compute_dual(hyper_edge, rhs);
+      }
+      SmallVec<n_shape_fct_, lSol_float_t> coeffs_n, coeffs_m;
+      lSol_float_t integral = 0.;
+      for (unsigned int q = 0; q < integrator::quad_weights.size(); ++q)
+      {
+        Point<hyEdge_dimT, lSol_float_t> ref_pt;
+        ref_pt[0] = integrator::quad_points[q];
+        const point_t phys = hyper_edge.geometry.map_ref_to_phys(ref_pt);
+        const auto n_ana = parameters::analytic_result_n(phys, frame[0], time);
+        const auto m_ana = parameters::analytic_result_m(phys, frame[0], time);
+        lSol_float_t diff_sq = 0.;
+        for (unsigned int dim = 0; dim < space_dim; ++dim)
+        {
+          lSol_float_t nh = 0., mh = 0.;
+          if (use_discrete)
+          {
+            for (unsigned int i = 0; i < n_shape_fct_; ++i)
+            {
+              coeffs_n[i] = dual[coeff_idx(fld_n, dim, i)];
+              coeffs_m[i] = dual[coeff_idx(fld_m, dim, i)];
+            }
+            nh = integrator::shape_fun_t::template lin_comb_fct_val<lSol_float_t>(coeffs_n,
+                                                                                  ref_pt);
+            mh = integrator::shape_fun_t::template lin_comb_fct_val<lSol_float_t>(coeffs_m,
+                                                                                  ref_pt);
+          }
+          const lSol_float_t dn = nh - scalar_product(n_ana, frame[dim]);
+          const lSol_float_t dm = mh - scalar_product(m_ana, frame[dim]);
+          diff_sq += dn * dn + dm * dm;
+        }
+        integral += integrator::quad_weights[q] * diff_sq;
+      }
+      return integral * hyper_edge.geometry.area();
+    }
+  }
+
+  /*!***********************************************************************************************
    * \brief   Local squared contribution to the L2 error.
    *
    * \tparam  hyEdgeT           The geometry type / typename of the considered hyEdge's geometry.
@@ -1320,7 +1402,7 @@ class TimoshenkoWave
    * \retval  vec_b             Local part of vector b.
    ************************************************************************************************/
   template <class hyEdgeT, typename lambda_float_t = lSol_float_t>
-  std::array<lSol_float_t, 2U> errors(
+  std::array<lSol_float_t, 3U> errors(
     const std::array<std::array<lambda_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
       /*lambda_values: unused -- the endpoint trace is read from data.lambda_old*/,
     hyEdgeT& hyper_edge,
@@ -1409,7 +1491,7 @@ class TimoshenkoWave
       }
     }
 
-    return std::array<lSol_float_t, 2U>({error, trace});
+    return std::array<lSol_float_t, 3U>({error, trace, dual_error_sq(hyper_edge, time, true)});
   }
 
   /*!***********************************************************************************************
@@ -1426,7 +1508,7 @@ class TimoshenkoWave
    * \retval  norm              Local squared L2 norm of the analytic solution.
    ************************************************************************************************/
   template <class hyEdgeT, typename lambda_float_t = lSol_float_t>
-  std::array<lSol_float_t, 2U> norms(
+  std::array<lSol_float_t, 3U> norms(
     const std::array<std::array<lambda_float_t, n_glob_dofs_per_node()>, 2 * hyEdge_dimT>&
       /*lambda_values: unused (norm of the analytic solution)*/,
     hyEdgeT& hyper_edge,
@@ -1472,7 +1554,7 @@ class TimoshenkoWave
             bcoeffs, bdr, comps[dim], hyper_edge.geometry, time);
       }
 
-    return std::array<lSol_float_t, 2U>({norm, trace});
+    return std::array<lSol_float_t, 3U>({norm, trace, dual_error_sq(hyper_edge, time, false)});
   }
 
   static constexpr unsigned int n_energy_components() { return 6 * space_dim; }
@@ -1826,9 +1908,11 @@ class TimoshenkoWave
    * factor C: for unit coefficients, i.e. the wave4-type tests, nothing changes.)
    ************************************************************************************************/
   template <class hyEdgeT>
-  void recover_dual(hyEdgeT& hyper_edge, const SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> compute_dual(
+    hyEdgeT& hyper_edge,
+    const SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
   {
-    auto& data = hyper_edge.data;
+    const auto& data = hyper_edge.data;
     SmallVec<4 * space_dim * n_shape_fct_, lSol_float_t> coeffs_w;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       for (unsigned int dim = 0; dim < space_dim; ++dim)
@@ -1844,6 +1928,7 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
         mmat(i, j) = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
+    SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> dual;
     SmallVec<n_shape_fct_> temp;
     for (unsigned int d = 0; d < 2 * space_dim; ++d)
     {
@@ -1852,8 +1937,17 @@ class TimoshenkoWave
       temp = temp / mmat;
       // d spans the q-rows, i.e. exactly the (n, m) blocks leading the coefficient layout
       for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        data.coeffs_old[d * n_shape_fct_ + i] = extra[d] * temp[i];
+        dual[d * n_shape_fct_ + i] = extra[d] * temp[i];
     }
+    return dual;
+  }
+
+  template <class hyEdgeT>
+  void recover_dual(hyEdgeT& hyper_edge, const SmallVec<n_loc_dofs_, lSol_float_t>& rhs) const
+  {
+    const auto dual = compute_dual(hyper_edge, rhs);
+    for (unsigned int i = 0; i < 2 * space_dim * n_shape_fct_; ++i)
+      hyper_edge.data.coeffs_old[i] = dual[i];
   }
 
   template <class hyEdgeT, typename SmallMatT>

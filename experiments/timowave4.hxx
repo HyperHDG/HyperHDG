@@ -158,4 +158,37 @@ struct TestTimoWave4
     res *= cos(omega*(point[0]+point[1]+point[2]) + px);
     return res;
   }
+
+  // Dual fields of the manufactured solution (for the dual-variable error). Both are odd
+  // under flipping the edge orientation, so the evaluator passes the edge's axial frame
+  // vector d = inner_normal(0), orientation included. With sig = x+y+z (the signed arm
+  // coordinate on cross2/single1) and (d.1) = sum_k d_k = +-1 on an axis-aligned arm:
+  //   n = -du/ds - d x r = w sin(w sig + px) (d.1) uvec - cos(w sig + px) d x rvec
+  //   m = -dr/ds         = w sin(w sig + px) (d.1) rvec
+  static SmallVec<space_dimT, param_float_t> analytic_result_n(
+      const Point<space_dimT, param_float_t>& point,
+      const Point<space_dimT, param_float_t>& axial,
+      const param_float_t time = 0.)
+  {
+    const param_float_t sig = point[0] + point[1] + point[2];
+    const param_float_t dsum = axial[0] + axial[1] + axial[2];
+    auto res = uvec(time);
+    res *= omega * sin(omega*sig + px) * dsum;
+    const auto r = rvec(time);
+    const param_float_t c = cos(omega*sig + px);
+    for (unsigned int k = 0; k < 3; k++)
+      res[k] -= c * (axial[(k+1)%3]*r[(k+2)%3] - axial[(k+2)%3]*r[(k+1)%3]);
+    return res;
+  }
+  static SmallVec<space_dimT, param_float_t> analytic_result_m(
+      const Point<space_dimT, param_float_t>& point,
+      const Point<space_dimT, param_float_t>& axial,
+      const param_float_t time = 0.)
+  {
+    const param_float_t sig = point[0] + point[1] + point[2];
+    const param_float_t dsum = axial[0] + axial[1] + axial[2];
+    auto res = rvec(time);
+    res *= omega * sin(omega*sig + px) * dsum;
+    return res;
+  }
 };
