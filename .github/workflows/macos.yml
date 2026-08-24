@@ -4,6 +4,9 @@ name: macOS
 
 on: [push]
 
+env:
+  PYTHON: cython numpy scipy matplotlib pandas joblib
+
 
 jobs:
   # ============ Test code on the latest macOS using Apple Clang and the Accelerate ============
@@ -28,9 +31,13 @@ jobs:
     - name: Install Python dependencies
       run: |
         python3 -m pip install --upgrade pip
-        python3 -m pip install cython numpy scipy
-    - name: Conduct cmake test
-      uses: HyperHDG/actions@cmake
-      with:
-        c_compiler: clang
-        cxx_compiler: clang++
+        python3 -m pip install ${{ env.PYTHON }}
+    - name: Configure
+      run: >
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+        -DPython3_EXECUTABLE=$(which python3)
+    - name: Build
+      run: cmake --build build --config Debug
+    - name: Test
+      run: ctest --test-dir build -C Debug --output-on-failure
