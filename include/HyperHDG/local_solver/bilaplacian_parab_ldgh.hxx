@@ -113,8 +113,7 @@ struct Bilaplacian_parameters_default
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t = double>
 class BilaplacianParab
 {
@@ -697,8 +696,7 @@ class BilaplacianParab
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -787,8 +785,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::as
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
@@ -838,8 +835,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -905,8 +901,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -939,8 +934,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -983,8 +977,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::pr
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline std::array<
@@ -1030,8 +1023,7 @@ BilaplacianParab<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::du
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t, std::size_t sizeT, class input_array_t, typename hyEdgeT>
 std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>,

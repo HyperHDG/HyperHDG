@@ -39,6 +39,10 @@ class Parabolic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(is_dirichlet, has_is_dirichlet);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
   HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
@@ -48,6 +52,10 @@ class Parabolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(norms, has_norms);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -221,6 +229,20 @@ class Parabolic
 
     return vec_Ax;
   }
+
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  {
+    return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
+  }
+
+  template <typename hyNode_index_t = dof_index_t, typename SpanT>
+  void residual_flux2(const SpanT& x_vec, SpanT& vec_Ax, dof_value_t time = 0.)
+  {
+    hy_assert(x_vec.size() == vec_Ax.size(), "x_vec and vec_Ax need to be of same size");
+    prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
+  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -298,8 +320,8 @@ class Parabolic
    * \param   x_vec         A \c std::vector containing the input vector \f$x\f$.
    * \param   time          Time at which the old time step ended.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  void set_data(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void set_data(const SpanT& x_vec, const dof_value_t time = 0.)
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
@@ -408,6 +430,19 @@ class Parabolic
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
+   * \brief   Calculate L2 norm.
+   *
+   * \param   x_vec         A vector containing the input vector \f$x\f$.
+   * \param   time          Time at which norm is evaluated.
+   * \retval  error         L2 error.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> norms(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  {
+    auto result = prototype_errors(norms, has_norms);
+    return std::vector<dof_value_t>(result.begin(), result.end());
+  }
+  /*!***********************************************************************************************
    * \brief   Determine size of condensed system for the skeletal unknowns.
    *
    * Function that returns the size \f$n\f$ of the \f$n \times n\f$ linear, sparse system
@@ -442,7 +477,8 @@ class Parabolic
    * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  void plot_solution(const std::vector<dof_value_t>& lambda, const dof_value_t time = 0.)
+  template <typename SpanT>
+  void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }

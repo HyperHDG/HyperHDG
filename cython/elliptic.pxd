@@ -27,3 +27,4 @@ cdef extern from "<HyperHDG/global_loop/elliptic.hxx>" :
     unsigned int get_refinement()
     void set_refinement(unsigned int)
     sparse_mat trace_to_flux_mat()
+    vector[ unsigned int ] trace_to_flux_submat (vector[ unsigned int ])

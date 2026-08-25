@@ -834,6 +834,25 @@ class Diffusion
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, hy_edge.geometry,
                                                                       time)});
   }
+
+  template <class hyEdgeT>
+  std::array<lSol_float_t, 1U> norms(
+    const std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT>& lambda_values,
+    hyEdgeT& hy_edge,
+    const lSol_float_t time = 0.) const
+  {
+    SmallVec<n_loc_dofs_, lSol_float_t> coeffs =
+      solve_local_problem(lambda_values, 1U, hy_edge, time);
+
+    SmallVec<n_shape_fct_, lSol_float_t> u;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      u[i] = coeffs[hyEdge_dimT * n_shape_fct_ + i];
+
+    auto res =
+      integrator::template integrate_vol_phiphi<decltype(hyEdgeT::geometry), u.size(),
+                                                lSol_float_t>(u.data(), u.data(), hy_edge.geometry);
+    return std::array<lSol_float_t, 1U>({res});
+  }
   /*!***********************************************************************************************
    * \brief   Parabolic approximation version of local squared L2 error.
    *
@@ -925,8 +944,7 @@ class Diffusion
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -990,8 +1008,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
@@ -1017,7 +1034,9 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
       {
         integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
           i, j, face, hyper_edge.geometry);
+        // tau lambda v
         right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * lambda_values[face][j] * integral;
+        // lambda (p \cdot \normal)
         for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           right_hand_side[dim * n_shape_fct_ + i] -=
             hyper_edge.geometry.local_normal(face).operator[](dim) * lambda_values[face][j] *
@@ -1034,8 +1053,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
@@ -1049,6 +1067,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
   lSol_float_t integral;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
+    // f v
     right_hand_side[hyEdge_dimT * n_shape_fct_ + i] = integrator::template integrate_vol_phifunc<
       Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
       parameters::right_hand_side, Point<hyEdge_dimT, lSol_float_t> >(i, hyper_edge.geometry, time);
@@ -1060,7 +1079,9 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::dirichlet_value, Point<hyEdge_dimT, lSol_float_t> >(i, face,
                                                                         hyper_edge.geometry, time);
+      // tau u_D v
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+      // u_D (p \cdot \normal)
       for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
         right_hand_side[dim * n_shape_fct_ + i] -=
           hyper_edge.geometry.local_normal(face).operator[](dim) * integral;
@@ -1077,8 +1098,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallVecT>
 inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
@@ -1104,8 +1124,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallMat<2 * hyEdge_dimT,
@@ -1135,8 +1154,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallMat<2 * hyEdge_dimT,
@@ -1170,8 +1188,7 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_b
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,

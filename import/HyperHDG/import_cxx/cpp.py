@@ -3,7 +3,7 @@ from .paths import main_dir
 
 ## \brief   Extract classname from name that might contain template arguemnts.
 def extract_classname(fullname):
-  index = re.search('\<|\ ', fullname)
+  index = re.search(r'\<|\ ', fullname)
   return fullname[0:index.start() if index != None else len(fullname)]
 
 ## \brief   Find file with definition of classname in directory folder.

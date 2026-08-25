@@ -42,11 +42,18 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(is_dirichlet, has_is_dirichlet);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
   HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(errors, has_errors);
+  HAS_MEMBER_FUNCTION(norms, has_norms);
+
+ public:
   /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
    ************************************************************************************************/
@@ -143,6 +150,22 @@ class Elliptic
     static_assert(TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim(),
                   "Hyperedge dimension of hypergraph and local solver must be equal!");
   }
+
+  // stub
+  template <typename hyNode_index_t = dof_index_t>
+  LargeVecT make_initial(const LargeVecT& x_vec, const dof_index_t time = 0.)
+  {
+    return {};
+  }
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void set_data(const SpanT& x_vec, const dof_value_t time = 0.)
+  {
+  }
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  void make_initial_from_static(const SpanT& x_vec, const dof_index_t time = 0.)
+  {
+  }
+
   /*!***********************************************************************************************
    * \brief   Read indices of Dirichlet type hypernodes/faces.
    *
@@ -182,7 +205,7 @@ class Elliptic
    *
    * \retval  zero            A vector of the correct size for the unknowns of the given problem.
    ************************************************************************************************/
-  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_local_dofs(), 0.); }
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
    *
@@ -234,6 +257,13 @@ class Elliptic
     return prototype_mat_generate(trace_to_flux, has_trace_to_flux);
   }
 
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_submat(const std::vector<unsigned int>& nj,
+                                             const dof_value_t time = 0.)
+  {
+    return {};
+  }
+
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product containing data.
    *
@@ -266,6 +296,24 @@ class Elliptic
 
     return vec_Ax;
   }
+
+  template <typename SpanT, typename SpanT_, typename hyNode_index_t = dof_index_t>
+  void residual_flux2(const SpanT& x_vec, SpanT_& vec_Ax, const dof_value_t time = 0.)
+  {
+    prototype_mat_vec_multiply_span(residual_flux, has_residual_flux);
+
+    // Set all Dirichlet values to zero.
+    for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
+    {
+      hy_assert(dirichlet_indices_[i] >= 0 && dirichlet_indices_[i] < hyper_graph_.n_global_dofs(),
+                "All indices of Dirichlet nodes need to be larger than or equal to zero and "
+                  << "smaller than the total amount of degrees of freedom." << std::endl
+                  << "In this case, the index is " << dirichlet_indices_[i] << " and the total "
+                  << "amount of hypernodes is " << hyper_graph_.n_global_dofs() << ".");
+      vec_Ax[dirichlet_indices_[i]] = 0.;
+    }
+  }
+
   /*!***********************************************************************************************
    * \brief   Calculate L2 error of approximated function.
    *
@@ -274,10 +322,17 @@ class Elliptic
    * \param   time            Time at which analytical functions will be evaluated.
    * \retval  error           A vector containing the errors.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> errors(const SpanT& x_vec, const dof_value_t time = 0.)
   {
     auto result = prototype_errors(errors, has_errors);
+    return std::vector<dof_value_t>(result.begin(), result.end());
+  }
+
+  template <typename SpanT, typename hyNode_index_t = dof_index_t>
+  std::vector<dof_value_t> norms(const SpanT& x_vec, const dof_value_t time = 0.)
+  {
+    auto result = prototype_errors(norms, has_norms);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************
@@ -292,6 +347,40 @@ class Elliptic
    * \retval  n               Size of the condensed (square) system of equations.
    ************************************************************************************************/
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom owned by this rank (== \c size_of_system() if serial).
+   *
+   * Used to set the local row count of the distributed system matrix and vectors.
+   ************************************************************************************************/
+  dof_index_t n_owned_dofs() const { return hyper_graph_.n_owned_dofs(); }
+  /*!***********************************************************************************************
+   * \brief   Global dof index for each local dof; see \c HDGHyperGraph::local_to_global_dofs().
+   *
+   * Used to additively assemble a local (owned + ghost) residual into the global vector.
+   ************************************************************************************************/
+  std::vector<dof_index_t> local_to_global_dofs() const
+  {
+    return hyper_graph_.local_to_global_dofs();
+  }
+  /*!***********************************************************************************************
+   * \brief   Dimension of the surrounding space.
+   ************************************************************************************************/
+  static constexpr unsigned int space_dim() { return TopologyT::space_dim(); }
+  /*!***********************************************************************************************
+   * \brief   Flat coordinates of this rank's owned hypernodes; see
+   *          \c HDGHyperGraph::owned_point_coords().
+   ************************************************************************************************/
+  std::vector<double> owned_point_coords() const { return hyper_graph_.owned_point_coords(); }
+  /*!***********************************************************************************************
+   * \brief   This rank's owned hyperedges as global hypernode index pairs; see
+   *          \c HDGHyperGraph::owned_edges_global().
+   ************************************************************************************************/
+  std::vector<dof_index_t> owned_edges_global() const { return hyper_graph_.owned_edges_global(); }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom held in a local vector, i.e. owned + ghost
+   *          (== \c size_of_system() if serial). This is the length of \c zero_vector().
+   ************************************************************************************************/
+  dof_index_t n_local_dofs() const { return hyper_graph_.n_local_dofs(); }
   /*!***********************************************************************************************
    * \brief   Set plot option and return old plot option.
    *
@@ -316,6 +405,12 @@ class Elliptic
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
   void plot_solution(const LargeVecT& lambda, const dof_value_t time = 0.)
+  {
+    plot(hyper_graph_, local_solver_, lambda, plot_options, time);
+  }
+
+  template <typename SpanT>
+  void plot_solution(const SpanT& lambda, const dof_value_t time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);
   }

@@ -1,11 +1,15 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/epsilon_neighborhood_graph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <sstream>
 
@@ -50,8 +54,7 @@ bool is_unique(const vectorT& vec)
  **************************************************************************************************/
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
-          template <typename...>
-          typename vectorT,
+          template <typename...> typename vectorT,
           typename pointT,
           typename hyEdge_index_t = unsigned int,
           typename hyNode_index_t = hyEdge_index_t,
@@ -72,6 +75,24 @@ struct DomainInfo
   pt_index_t n_points;
 
   unsigned int n_properties;
+  /*!***********************************************************************************************
+   * \brief   Number of hypernodes owned by this rank (== n_hyNodes when not distributed).
+   *
+   * For a distributed hypergraph the local hypernodes are numbered owned-first: indices
+   * [0, n_owned_hyNodes) are owned by this rank, [n_owned_hyNodes, n_hyNodes) are ghosts.
+   ************************************************************************************************/
+  hyNode_index_t n_owned_hyNodes;
+  /*!***********************************************************************************************
+   * \brief   Total number of hypernodes across all ranks (== n_hyNodes when not distributed).
+   ************************************************************************************************/
+  hyNode_index_t n_global_hyNodes;
+  /*!***********************************************************************************************
+   * \brief   Local-to-global hypernode map (empty == identity, i.e. not distributed).
+   *
+   * lgmap[local_hyNode] is the global hypernode index. Used to emit global degree-of-freedom
+   * indices for the distributed matrix while all vector/span access stays in local indexing.
+   ************************************************************************************************/
+  vectorT<hyNode_index_t> lgmap;
   /*!***********************************************************************************************
    * \brief   Vector containing points.
    ************************************************************************************************/
@@ -99,6 +120,8 @@ struct DomainInfo
     n_hyNodes(n_hyNode),
     n_points(n_point),
     n_properties(0),
+    n_owned_hyNodes(n_hyNode),
+    n_global_hyNodes(n_hyNode),
     points(n_points),
     hyNodes_hyEdge(n_hyEdges),
     hyFaces_hyEdge(n_hyEdges),
@@ -152,6 +175,130 @@ struct DomainInfo
     return true;
   }  // end of check_consistency
 };  // end of struct DomainInfo
+
+#ifdef HYPERHDG_PETSC
+
+#include <petsc.h>
+#include <petscviewerhdf5.h>
+/*!*************************************************************************************************
+ * \brief   Function to read hdf5 file.
+ *
+ * \tparam  hyEdge_dim      The local dimension of a hyperedge.
+ * \tparam  space_dim       The dimension of the surrounding space.
+ * \tparam  vectorT         The typename of a large vector holding e.g. all points.
+ * \tparam  pointT          The typename of a point.
+ * \tparam  hyEdge_index_t  The index type for hyperedges. Default is \c unsigned \c int.
+ * \tparam  hyNode_index_t  The index type for hypernodes. Default is hyEdge_index_t.
+ * \tparam  pt_index_t      The index type for points. Default is hyNode_index_t.
+ *
+ * \param   filename        Name of the hdf5 file to be read.
+ * \retval  domain_info     Topological and geometrical information of hypergraph.
+ *
+ * \authors   Joseph Holten, Karlsruhe Institute of Technology, 2025.
+ **************************************************************************************************/
+template <unsigned int hyEdge_dim,
+          unsigned int space_dim,
+          template <typename...> typename vectorT = std::vector,
+          typename pointT = Point<space_dim, double>,
+          typename hyEdge_index_t = unsigned int,
+          typename hyNode_index_t = hyEdge_index_t,
+          typename pt_index_t = hyNode_index_t>
+DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+read_domain_hdf5(const std::string& filename, bool serialize = true)
+{
+  PetscViewer viewer;
+  Vec points, props;
+  IS edges, types_faces;
+  PetscInt n_points, n_edges, n_props, sdim, hydim, propdim;
+  const PetscReal* ra;
+  const PetscInt* ia;
+  PetscBool has_props;
+  // NOTE: HACK: world needs to be equal to HYPERHDG_COMM in prototype.hxx
+  MPI_Comm comm = PETSC_COMM_SELF, world = PETSC_COMM_WORLD;
+  int rank, size;
+
+  // TODO: assert PetscInt == HDG index type
+
+  MPI_Comm_rank(world, &rank);
+  MPI_Comm_size(world, &size);
+  // Serialize concurrent reads when every rank reads the whole file (token ring). When only rank 0
+  // reads (distributed path), serialize must be false to avoid a deadlock on the unmatched send.
+  if (serialize && rank != 0)
+    MPI_Recv(NULL, 0, MPI_INT, rank - 1, 0, world, MPI_STATUS_IGNORE);
+
+  PetscCallAbort(comm, PetscViewerHDF5Open(comm, filename.c_str(), FILE_MODE_READ, &viewer));
+  PetscCallAbort(comm, PetscViewerHDF5PushGroup(viewer, "/domain"));
+
+  PetscCallAbort(comm, VecCreate(comm, &points));
+  PetscCallAbort(comm, VecCreate(comm, &props));
+  PetscCallAbort(comm, ISCreate(comm, &edges));
+  PetscCallAbort(comm, ISCreate(comm, &types_faces));
+
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)points, "points"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)props, "properties"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)edges, "edges"));
+  PetscCallAbort(comm, PetscObjectSetName((PetscObject)types_faces, "types_faces"));
+
+  PetscCallAbort(comm, VecLoad(points, viewer));
+  PetscCallAbort(comm, ISLoad(edges, viewer));
+  PetscCallAbort(comm, ISLoad(types_faces, viewer));
+
+  if (serialize && rank != size - 1)
+    MPI_Send(NULL, 0, MPI_INT, rank + 1, 0, world);
+
+  PetscCallAbort(comm, ISGetSize(edges, &n_edges));
+  PetscCallAbort(comm, ISGetBlockSize(edges, &hydim));
+  n_edges /= hydim;
+  PetscCallAbort(comm, VecGetSize(points, &n_points));
+  PetscCallAbort(comm, VecGetBlockSize(points, &sdim));
+  n_points /= sdim;
+  // TODO: assert bs == point_t::size()
+
+  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
+    domain_info(n_points, n_edges, n_points, n_points);
+
+  PetscCallAbort(comm, VecGetArrayRead(points, &ra));
+  memcpy((void*)domain_info.points.data(), ra, n_points * sdim * sizeof(PetscReal));
+  PetscCallAbort(comm, VecRestoreArrayRead(points, &ra));
+
+  PetscCallAbort(comm, ISGetIndices(edges, &ia));
+  memcpy((void*)domain_info.hyNodes_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
+  memcpy((void*)domain_info.points_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
+  PetscCallAbort(comm, ISRestoreIndices(edges, &ia));
+
+  PetscCallAbort(comm, ISGetIndices(types_faces, &ia));
+  memcpy((void*)domain_info.hyFaces_hyEdge.data(), ia, n_edges * hydim * sizeof(PetscInt));
+  PetscCallAbort(comm, ISRestoreIndices(types_faces, &ia));
+
+  // props
+  PetscCallAbort(comm, PetscViewerHDF5HasDataset(viewer, "properties", &has_props));
+  if (!has_props)
+    goto end;
+
+  PetscCallAbort(comm, VecLoad(props, viewer));
+  PetscCallAbort(comm, VecGetSize(props, &n_props));
+  PetscCallAbort(comm, VecGetBlockSize(props, &propdim));
+  n_props /= propdim;
+  // TOOD: assert n_props == n_edges
+
+  domain_info.hyEdge_properties.resize(n_props);
+  domain_info.n_properties = propdim;
+  PetscCallAbort(comm, VecGetArrayRead(props, &ra));
+  for (PetscInt i = 0; i < n_props; i++)
+  {
+    domain_info.hyEdge_properties[i].resize(propdim);
+    memcpy(domain_info.hyEdge_properties[i].data(), ra + i * propdim, propdim * sizeof(PetscReal));
+  }
+  PetscCallAbort(comm, VecRestoreArrayRead(props, &ra));
+
+end:
+  VecDestroy(&points);
+  VecDestroy(&props);
+  ISDestroy(&edges);
+  ISDestroy(&types_faces);
+  return domain_info;
+}
+#endif
 
 /*!*************************************************************************************************
  * \brief   Function to read geo file.
@@ -361,6 +508,7 @@ read_domain_geo(const std::string& filename)
   {
     linestream = std::istringstream(line);
     domain_info.hyEdge_properties[hyEdge_iter].resize(domain_info.n_properties);
+    // FIXME: this might fail silently if e.g. the current line is empty
     for (unsigned int i = 0; i < domain_info.hyEdge_properties[hyEdge_iter].size(); ++i)
       linestream >> domain_info.hyEdge_properties[hyEdge_iter][i];
   }
@@ -370,6 +518,10 @@ read_domain_geo(const std::string& filename)
   infile.close();
   return domain_info;
 }  // end of read_domain_geo
+
+#ifdef HYPERHDG_PETSC
+#include <HyperHDG/distribute_domain.hxx>
+#endif
 
 /*!*************************************************************************************************
  * \brief   General Function to read domain from input file.
@@ -391,6 +543,26 @@ read_domain_geo(const std::string& filename)
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
+
+#ifdef HYPERHDG_HDF5
+bool read_domain_is_h5(const char* path)
+{
+  if (H5Fis_accessible(path, H5P_DEFAULT) <= 0)
+    return false;  // not an h5 file or inaccessible
+
+  hid_t file = H5Fopen(path, H5F_ACC_RDONLY, H5P_DEFAULT);
+  if (file < 0)
+    return false;  // error opening file or file is not h5
+
+  htri_t has_domain = H5Lexists(file, "/domain", H5P_DEFAULT);
+  if (has_domain <= 0)
+    return false;  // error or no such path
+
+  H5Fclose(file);
+  return true;
+}
+#endif
+
 template <unsigned int hyEdge_dim,
           unsigned int space_dim,
           template <typename...> typename vectorT = std::vector,
@@ -401,27 +573,67 @@ template <unsigned int hyEdge_dim,
 DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
 read_domain(std::string filename)
 {
-  hy_assert(std::filesystem::exists(filename), "File does not exist.");
+  hy_check(std::filesystem::exists(filename), "file '" << filename << "' does not exist.");
 
+  // NOTE: the following requires both hdf5 and mpi
+  //       only hdf5 without mpi and mpi without hdf5 is not supported
+  // TODO: support only mpi: rank0 reads .geo text file,
+  //       then scatters to other ranks and distributes
+  //       support only hdf5: just read_domain_hdf5
+  // TODO: the distribute domain should work on a DomainInfo
+  //       and hence should not care whether that was constructed
+  //       from a .h5 binary file or .geo text file
+#if defined(HYPERHDG_HDF5) && defined(HYPERHDG_MPI)
+  {
+    // The legacy replicated assembly (assembly-level edge split) has been removed, so multi-rank
+    // runs must distribute the domain at the data level. Only the HDF5 + hyEdge_dim == 1 path does
+    // that; any other domain type read on >1 rank would (silently) assemble the full matrix on
+    // every rank, so reject it here.
+    int n_ranks = 1;
+    MPI_Comm_size(PETSC_COMM_WORLD, &n_ranks);
+    hy_check(n_ranks == 1 || read_domain_is_h5(filename.c_str()),
+             "multi-rank runs require an HDF5 (.geo.h5) domain (hyEdge_dim == 1); '"
+               << filename << "' is not HDF5.");
+  }
+  if (read_domain_is_h5(filename.c_str()))
+  {
+    int comm_size = 1;
+    MPI_Comm_size(PETSC_COMM_WORLD, &comm_size);
+    if (comm_size > 1)
+    {
+      // Distributed: rank 0 reads, partitions and scatters owned chunks (hyEdge_dim == 1 only).
+      if constexpr (hyEdge_dim == 1)
+      {
+        auto domain_info =
+          distribute_domain<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t,
+                            pt_index_t>(filename, PETSC_COMM_WORLD);
+        hy_assert(domain_info.check_consistency(), "distribute_domain: inconsistent result");
+        return domain_info;
+      }
+      else
+        hy_check(false, "distributed domain reading is only supported for hyEdge_dim == 1.");
+    }
+    auto domain_info = read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                                        hyNode_index_t, pt_index_t>(filename);
+    hy_assert(domain_info.check_consistency(), "read_domain_geobin: inconsistent result");
+    return domain_info;
+  }
+#endif
+
+  // takes .pts and writes .geo file
   if (filename.substr(filename.size() - 4, filename.size()) == ".pts")
   {
     hy_assert(hyEdge_dim == 1, "This only works for graphs, so far!");
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
-  hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
-            "The given file needs to be a .geo file, since no other input file types are currently"
-              << " implemented.");
+  if (filename.substr(filename.size() - 4, filename.size()) == ".geo")
+  {
+    auto domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                                       hyNode_index_t, pt_index_t>(filename);
+    hy_assert(domain_info.check_consistency(), "read_domain_geo: inconsistent result");
+    return domain_info;
+  }
 
-  DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-    domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
-                                  hyNode_index_t, pt_index_t>(filename);
-
-  hy_assert(domain_info.check_consistency(),
-            "Domain info appears to be inconsistent!"
-              << std::endl
-              << "This assertion is never to be thrown since it can only be caused by internal "
-              << "assertions of DomainInfo.check_consistency()!");
-
-  return domain_info;
+  hy_check(false, "unrecognized domain file: " << filename);
 }  // end of read_domain

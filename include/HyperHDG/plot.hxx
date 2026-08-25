@@ -5,6 +5,7 @@
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hypercube.hxx>
 
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -36,7 +37,8 @@ struct PlotOptions
    ************************************************************************************************/
   enum fileType
   {
-    vtu
+    vtu,
+    vtkhdf,
   };
   /*!***********************************************************************************************
    * \brief   File ending and also way of plotting.
@@ -114,6 +116,13 @@ struct PlotOptions
    * \brief   Output a cell data array with the number of each edge and/or each node.
    ************************************************************************************************/
   bool numbers = false;
+  /*!***********************************************************************************************
+   * \brief   Append per-edge energy components to a CellData/energies dataset (vtkhdf only).
+   *
+   * Requires the local solver to expose \c n_energy_components() and \c energy(). Defaults to
+   * false.
+   ************************************************************************************************/
+  bool energy = false;
 };  // end of class PlotOptions
 
 /*!*************************************************************************************************
@@ -133,6 +142,8 @@ std::string set_plot_option(PlotOptions& plot_options,
   {
     if (value == "vtu")
       plot_options.fileEnding = PlotOptions::vtu;
+    if (value == "vtkhdf")
+      plot_options.fileEnding = PlotOptions::vtkhdf;
     else
       hy_assert(false, "You have chosen an invalid file type!");
   }
@@ -150,6 +161,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     plot_options.boundary_scale = std::stof(value);
   else if (option == "scale")
     plot_options.scale = stof(value);
+  else if (option == "energy")
+    plot_options.energy = (value == "true" || value == "1");
   // else if (option == "n_subintervals")
   //   plot_options.n_subintervals = stoi(value);
   else
@@ -176,6 +189,8 @@ std::string set_plot_option(PlotOptions& plot_options,
     return_value = std::to_string(plot_options.scale);
   else if (option == "boundaryScale")
     return_value = std::to_string(plot_options.boundary_scale);
+  else if (option == "energy")
+    return_value = std::to_string(plot_options.energy);
   // else if (option == "n_subintervals")
   //   return_value = std::to_string(plot_options.n_subintervals);
   else
@@ -233,6 +248,14 @@ namespace PlotFunctions
  **************************************************************************************************/
 HAS_MEMBER_FUNCTION(bulk_values, has_bulk_values);
 /*!*************************************************************************************************
+ * \brief   Prepare struct to check for energy() to exist (cf. compile_time_tricks.hxx).
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(energy, has_energy);
+/*!*************************************************************************************************
+ * \brief   Prepare struct to check for n_energy_components() to exist.
+ **************************************************************************************************/
+HAS_MEMBER_FUNCTION(n_energy_components, has_n_energy_components);
+/*!*************************************************************************************************
  * \brief   Turn fileType enum into string.
  **************************************************************************************************/
 std::string fileType_to_string(const PlotOptions::fileType& type)
@@ -241,6 +264,8 @@ std::string fileType_to_string(const PlotOptions::fileType& type)
   {
     case PlotOptions::fileType::vtu:
       return "vtu";
+    case PlotOptions::fileType::vtkhdf:
+      return "vtkhdf";
   }
   hy_assert(false, "File type seems to be invalid.");
   return "";
@@ -769,11 +794,674 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
-  std::cout << plot_options.fileName;
-  if (plot_options.printFileNumber)
-    std::cout << "." << plot_options.fileNumber << " was written\n";
   PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
+
+#ifdef HYPERHDG_PETSC
+#include <hdf5.h>
+#include <mpi.h>
+
+// --- Parallel (MPI-IO) HDF5 helpers ------------------------------------------------------------
+// The vtkhdf plot is written collectively: every rank contributes its owned hyperedges as one
+// contiguous slab of the single VTKHDF part, placed at a global offset obtained from an exclusive
+// prefix sum (MPI_Exscan). All ranks open the file with the MPI-IO driver and all dataset
+// create/extent/close calls are collective; only the data hyperslabs differ per rank. This removes
+// the serial token-ring entirely and supports an arbitrary number of time steps.
+
+// File-access property list bound to MPI-IO over MPI_COMM_WORLD (caller closes).
+inline hid_t h5p_fapl_mpio()
+{
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, MPI_INFO_NULL);
+  return fapl;
+}
+
+// Collectively create a chunked dataset whose axis 0 is unlimited (extendable). gdims holds the
+// GLOBAL extents; chunk0 is the axis-0 chunk length. Returns the open dataset (caller closes).
+inline hid_t h5p_create(hid_t loc,
+                        const char* name,
+                        hid_t file_type,
+                        int ndim,
+                        const hsize_t* gdims,
+                        hsize_t chunk0)
+{
+  hsize_t maxdims[2], chunk[2];
+  for (int i = 0; i < ndim; ++i)
+    maxdims[i] = gdims[i];
+  maxdims[0] = H5S_UNLIMITED;
+  chunk[0] = std::max<hsize_t>(chunk0, 1);
+  for (int i = 1; i < ndim; ++i)
+    chunk[i] = std::max<hsize_t>(gdims[i], 1);
+  hid_t space = H5Screate_simple(ndim, gdims, maxdims);
+  hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(dcpl, ndim, chunk);
+  hid_t dset = H5Dcreate2(loc, name, file_type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+  H5Pclose(dcpl);
+  H5Sclose(space);
+  return dset;
+}
+
+// Collective hyperslab write of n_rows rows (n_cols columns, ignored for 1D datasets) starting at
+// file row row_start. Ranks with n_rows == 0 participate with an empty selection.
+inline void h5p_write_rows(hid_t dset,
+                           hid_t mem_type,
+                           hsize_t row_start,
+                           hsize_t n_rows,
+                           hsize_t n_cols,
+                           const void* data)
+{
+  hid_t fspace = H5Dget_space(dset);
+  int ndim = H5Sget_simple_extent_ndims(fspace);
+  hsize_t start[2] = {row_start, 0};
+  hsize_t count[2] = {n_rows, n_cols};
+  hsize_t mdims[2] = {n_rows, n_cols};
+  hid_t mspace = H5Screate_simple(ndim, mdims, nullptr);
+  if (n_rows == 0)
+  {
+    H5Sselect_none(fspace);
+    H5Sselect_none(mspace);
+  }
+  else
+    H5Sselect_hyperslab(fspace, H5S_SELECT_SET, start, nullptr, count, nullptr);
+  hid_t dxpl = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+  H5Dwrite(dset, mem_type, mspace, fspace, dxpl, data);
+  H5Pclose(dxpl);
+  H5Sclose(mspace);
+  H5Sclose(fspace);
+}
+
+// Collectively grow an open dataset's axis-0 extent to new_rows (other extents unchanged).
+inline void h5p_set_rows(hid_t dset, hsize_t new_rows)
+{
+  hid_t fspace = H5Dget_space(dset);
+  hsize_t dims[2] = {0, 0};
+  H5Sget_simple_extent_dims(fspace, dims, nullptr);
+  H5Sclose(fspace);
+  dims[0] = new_rows;
+  H5Dset_extent(dset, dims);
+}
+
+// Collectively append one scalar at index `step` to an extendable 1D dataset; all ranks perform the
+// (collective) extent, only rank 0 writes the value.
+inline void h5p_append1(hid_t loc,
+                        const char* name,
+                        hid_t mem_type,
+                        int64_t step,
+                        const void* val,
+                        int rank)
+{
+  hid_t dset = H5Dopen2(loc, name, H5P_DEFAULT);
+  hy_check(dset >= 0, "h5p_append1: cannot open '" << name << "'");
+  hsize_t newsize = static_cast<hsize_t>(step + 1);
+  H5Dset_extent(dset, &newsize);
+  hid_t fspace = H5Dget_space(dset);
+  hsize_t start = static_cast<hsize_t>(step), count = 1;
+  hid_t mspace = H5Screate_simple(1, &count, nullptr);
+  if (rank == 0)
+    H5Sselect_hyperslab(fspace, H5S_SELECT_SET, &start, nullptr, &count, nullptr);
+  else
+  {
+    H5Sselect_none(fspace);
+    H5Sselect_none(mspace);
+  }
+  hid_t dxpl = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+  H5Dwrite(dset, mem_type, mspace, fspace, dxpl, val);
+  H5Pclose(dxpl);
+  H5Sclose(mspace);
+  H5Sclose(fspace);
+  H5Dclose(dset);
+}
+
+// Update a scalar int64 attribute on a group (delete + recreate; HDF5 attrs are not extendable).
+inline void h5_set_attr_i64(hid_t loc, const char* name, int64_t value)
+{
+  if (H5Aexists(loc, name) > 0)
+    H5Adelete(loc, name);
+  hid_t space = H5Screate(H5S_SCALAR);
+  hid_t attr = H5Acreate2(loc, name, H5T_STD_I64LE, space, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(attr, H5T_NATIVE_INT64, &value);
+  H5Aclose(attr);
+  H5Sclose(space);
+}
+
+// =================================================================================================
+// plot_vtkhdf_mesh: write the static mesh (geometry, topology, NumberOf* arrays, types_points).
+// Truncates the file.
+// =================================================================================================
+template <class HyperGraphT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf_mesh(HyperGraphT& hyper_graph,
+                      const PlotOptions& plot_options,
+                      unsigned int n_components,
+                      unsigned int n_energy_components = 0)
+{
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+  constexpr unsigned int space_dim = HyperGraphT::space_dim();
+  static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
+
+  constexpr unsigned int n_subpoints = n_subdivisions + 1;
+  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+  constexpr unsigned int cells_per_edge = Hypercube<edge_dim>::pow(n_subdivisions);
+  constexpr unsigned int verts_per_cell = Hypercube<edge_dim>::n_vertices();
+
+  // VTK cell type id (same logic as plot_vtu)
+  uint8_t element_id = 0;
+  if constexpr (edge_dim == 1)
+    element_id = 3;  // VTK_LINE
+  else if constexpr (edge_dim == 2)
+    element_id = 8;
+  else if constexpr (edge_dim == 3)
+    element_id = 11;
+
+  // Abscissas (same as plot_vtu, no boundary scaling since we don't do boundaries)
+  SmallVec<n_subpoints, float> abscissas;
+  for (unsigned int i = 0; i < n_subpoints; ++i)
+    abscissas[i] = plot_options.scale * (1.f * i / n_subdivisions - 0.5f) + 0.5f;
+
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const pt_index_t n_points = static_cast<pt_index_t>(n_edges) * points_per_edge;
+  const pt_index_t n_cells = static_cast<pt_index_t>(n_edges) * cells_per_edge;
+  const pt_index_t n_conn = n_cells * verts_per_cell;
+
+  // -----------------------------------------------------------------------
+  // Build buffers
+  // -----------------------------------------------------------------------
+
+  // Points: (n_points, 3), row-major, padded to 3D
+  std::vector<float> points(3 * n_points, 0.f);
+  for (hyEdge_index_t he = 0; he < n_edges; ++he)
+  {
+    auto edge = hyper_graph.hyEdge_geometry(he);
+    for (unsigned int p = 0; p < points_per_edge; ++p)
+    {
+      const Point<space_dim> pt =
+        (Point<space_dim>)edge.template lexicographic<n_subpoints>(p, abscissas);
+      const pt_index_t row = he * points_per_edge + p;
+      for (unsigned int d = 0; d < space_dim; ++d)
+        points[3 * row + d] = pt[d];
+      // dims [space_dim, 3) already zero
+    }
+  }
+
+  // Connectivity: lexicographic sub-cube vertices per edge.
+  // We replicate vtu_sub_cube_connectivity inline here to fill a buffer
+  // instead of streaming text. Only handle 1D for now; 2D/3D can follow
+  // the same pattern as plot_vtu if needed.
+  std::vector<int64_t> connectivity;
+  connectivity.reserve(n_conn);
+  for (hyEdge_index_t he = 0; he < n_edges; ++he)
+  {
+    const pt_index_t offset = he * points_per_edge;
+    if constexpr (edge_dim == 1)
+      for (unsigned int i = 0; i < n_subdivisions; ++i)
+      {
+        connectivity.push_back(offset + i);
+        connectivity.push_back(offset + i + 1);
+      }
+    else
+      hy_check(edge_dim == 1, "expected edge_dim == 1 found edge_dim == " << edge_dim);
+  }
+
+  // Types: one per cell. Offsets (VTKHDF convention, length n_cells+1) are written analytically in
+  // the collective section below, so no buffer is built here.
+  std::vector<uint8_t> types(n_cells, element_id);
+
+  // This rank's owned counts (concatenated into the single VTKHDF part further below).
+  const int64_t np = n_points;
+  const int64_t nc = n_cells;
+  const int64_t nci = n_conn;
+
+  // -----------------------------------------------------------------------
+  // Collective layout: every rank contributes its owned edges as one slab of the single VTKHDF
+  // part. Global totals (Allreduce) size the datasets; exclusive prefix sums (Exscan) give this
+  // rank's starting point/cell/connectivity row. Connectivity is shifted into this rank's global
+  // point range. Runtime-dependent CellData/properties presence is reduced so all ranks create the
+  // same datasets even when some own zero edges.
+  // -----------------------------------------------------------------------
+  int mpi_rank = 0, mpi_size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  long long mine[3] = {np, nc, nci};  // {points, cells, connectivity ids} owned by this rank
+  long long off[3] = {0, 0, 0};       // exclusive prefix sums (this rank's first row)
+  long long tot[3] = {0, 0, 0};       // global totals
+  MPI_Exscan(mine, off, 3, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(mine, tot, 3, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (mpi_rank == 0)
+  {
+    off[0] = off[1] = off[2] = 0;
+  }
+
+  for (auto& c : connectivity)
+    c += static_cast<int64_t>(off[0]);
+
+  int has_props_l = (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data()) ? 1 : 0;
+  int n_props_l =
+    has_props_l ? static_cast<int>(hyper_graph.hyEdge_geometry(0).extra_data().size()) : 0;
+  int has_props = 0, n_properties = 0;
+  MPI_Allreduce(&has_props_l, &has_props, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_props_l, &n_properties, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  // -----------------------------------------------------------------------
+  // Write file
+  // -----------------------------------------------------------------------
+
+  // H5F_ACC_TRUNC - truncate; opened collectively via the MPI-IO driver so every rank writes its
+  // slab into the shared file.
+  hid_t fapl = h5p_fapl_mpio();
+  hid_t file = H5Fcreate(plot_options.fileName.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+  H5Pclose(fapl);
+  hy_check(file >= 0, "failed to create HDF5 file '" << plot_options.fileName << "'");
+
+  hid_t root = H5Gcreate2(file, "VTKHDF", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  // --- attribute: Version = [2, 0]
+  {
+    hsize_t dim = 2;
+    hid_t space = H5Screate_simple(1, &dim, nullptr);
+    hid_t attr = H5Acreate2(root, "Version", H5T_STD_I64LE, space, H5P_DEFAULT, H5P_DEFAULT);
+    int64_t version[2] = {2, 0};
+    H5Awrite(attr, H5T_NATIVE_INT64, version);
+    H5Aclose(attr);
+    H5Sclose(space);
+  }
+  // --- attribute: Type = "UnstructuredGrid"
+  {
+    const char* s = "UnstructuredGrid";
+    hid_t stype = H5Tcopy(H5T_C_S1);
+    H5Tset_size(stype, std::strlen(s));
+    H5Tset_strpad(stype, H5T_STR_NULLPAD);
+    hid_t space = H5Screate(H5S_SCALAR);
+    hid_t attr = H5Acreate2(root, "Type", stype, space, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(attr, stype, s);
+    H5Aclose(attr);
+    H5Sclose(space);
+    H5Tclose(stype);
+  }
+
+  // --- geometry: each rank writes its slab into globally-sized datasets
+  {
+    hsize_t gd[2] = {(hsize_t)tot[0], 3};
+    hid_t ds = h5p_create(root, "Points", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[0]);
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[0], (hsize_t)np, 3, points.data());
+    H5Dclose(ds);
+  }
+  {
+    hsize_t gd = (hsize_t)tot[2];
+    hid_t ds = h5p_create(root, "Connectivity", H5T_STD_I64LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, (hsize_t)off[2], (hsize_t)nci, 1, connectivity.data());
+    H5Dclose(ds);
+  }
+  // Offsets has tot_cells+1 entries (VTKHDF convention, leading 0). Offsets[i] = i*verts_per_cell.
+  // Rank 0 writes its cells plus the leading 0; other ranks write only their cells' running ends.
+  {
+    hsize_t gd = (hsize_t)(tot[1] + 1);
+    hid_t ds = h5p_create(root, "Offsets", H5T_STD_I64LE, 1, &gd, gd);
+    const hsize_t ostart = (mpi_rank == 0) ? 0 : (hsize_t)(off[1] + 1);
+    const hsize_t ocount = (mpi_rank == 0) ? (hsize_t)(nc + 1) : (hsize_t)nc;
+    std::vector<int64_t> obuf(ocount);
+    for (hsize_t i = 0; i < ocount; ++i)
+      obuf[i] = static_cast<int64_t>((ostart + i) * verts_per_cell);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, ostart, ocount, 1, obuf.data());
+    H5Dclose(ds);
+  }
+  {
+    hsize_t gd = (hsize_t)tot[1];
+    hid_t ds = h5p_create(root, "Types", H5T_STD_U8LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_UINT8, (hsize_t)off[1], (hsize_t)nc, 1, types.data());
+    H5Dclose(ds);
+  }
+
+  // --- per-piece counts (single concatenated piece → length 1, written by rank 0)
+  auto write_count = [&](const char* name, int64_t total)
+  {
+    hsize_t gd = 1;
+    hid_t ds = h5p_create(root, name, H5T_STD_I64LE, 1, &gd, 1);
+    h5p_write_rows(ds, H5T_NATIVE_INT64, 0, (mpi_rank == 0 ? 1 : 0), 1, &total);
+    H5Dclose(ds);
+  };
+  write_count("NumberOfPoints", tot[0]);
+  write_count("NumberOfCells", tot[1]);
+  write_count("NumberOfConnectivityIds", tot[2]);
+
+  // --- point data group
+  hid_t pdata = H5Gcreate2(root, "PointData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  // --- types points
+  if constexpr (n_subdivisions == 1 && edge_dim == 1)
+  {
+    std::vector<int32_t> node_types(n_points);
+    for (hyEdge_index_t he = 0; he < n_edges; ++he)
+    {
+      auto edge = hyper_graph[he];
+      const pt_index_t b = he * points_per_edge;
+      node_types[b + 0] = static_cast<int32_t>(edge.node_descriptor[0]);
+      node_types[b + 1] = static_cast<int32_t>(edge.node_descriptor[1]);
+    }
+    hsize_t gd = (hsize_t)tot[0];
+    hid_t ds = h5p_create(pdata, "types_points", H5T_STD_I32LE, 1, &gd, gd);
+    h5p_write_rows(ds, H5T_NATIVE_INT32, (hsize_t)off[0], (hsize_t)n_points, 1, node_types.data());
+    H5Dclose(ds);
+  }
+
+  // --- empty extendable PointData/values: (0, n_components); one time step occupies tot_points
+  // rows
+  {
+    hsize_t gd[2] = {0, n_components};
+    hid_t ds = h5p_create(pdata, "values", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[0]);
+    H5Dclose(ds);
+  }
+
+  // --- static CellData/properties from hyper_edge.geometry.extra_data() (collective if any rank
+  // has)
+  hid_t cdata = H5Gcreate2(root, "CellData", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (has_props)
+  {
+    std::vector<float> props_buf;
+    hsize_t myrows = 0;
+    if (n_edges > 0 && hyper_graph.hyEdge_geometry(0).has_extra_data())
+    {
+      props_buf.assign(static_cast<size_t>(n_cells) * n_properties, 0.f);
+      myrows = (hsize_t)n_cells;
+      for (hyEdge_index_t he = 0; he < n_edges; ++he)
+      {
+        auto geom = hyper_graph.hyEdge_geometry(he);
+        const auto& props = geom.extra_data();
+        hy_check((int)props.size() == n_properties,
+                 "all hyperedges must have the same number of properties; "
+                 "edge "
+                   << he << " has " << props.size() << ", expected " << n_properties);
+        for (unsigned int c = 0; c < cells_per_edge; ++c)
+        {
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_properties;
+          for (int d = 0; d < n_properties; ++d)
+            props_buf[row + d] = static_cast<float>(props[d]);
+        }
+      }
+    }
+    hsize_t gd[2] = {(hsize_t)tot[1], (hsize_t)n_properties};
+    hid_t ds = h5p_create(cdata, "properties", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[1]);
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, (hsize_t)off[1], myrows, (hsize_t)n_properties,
+                   props_buf.data());
+    H5Dclose(ds);
+  }
+
+  // --- empty extendable CellData/energies: (0, n_energy_components); one step = tot_cells rows
+  if (n_energy_components > 0)
+  {
+    hsize_t gd[2] = {0, n_energy_components};
+    hid_t ds = h5p_create(cdata, "energies", H5T_IEEE_F32LE, 2, gd, (hsize_t)tot[1]);
+    H5Dclose(ds);
+  }
+  H5Gclose(cdata);
+
+  // --- Steps group + NSteps=0 attribute
+  hid_t steps = H5Gcreate2(root, "Steps", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  h5_set_attr_i64(steps, "NSteps", 0);
+
+  auto make_empty_1d = [&](hid_t loc, const char* name, hid_t file_type)
+  {
+    hsize_t gd = 0;
+    hid_t ds = h5p_create(loc, name, file_type, 1, &gd, 1);
+    H5Dclose(ds);
+  };
+
+  make_empty_1d(steps, "Values", H5T_IEEE_F64LE);
+  make_empty_1d(steps, "PartOffsets", H5T_STD_I64LE);
+  make_empty_1d(steps, "PointOffsets", H5T_STD_I64LE);
+  make_empty_1d(steps, "CellOffsets", H5T_STD_I64LE);
+  make_empty_1d(steps, "ConnectivityIdOffsets", H5T_STD_I64LE);
+  make_empty_1d(steps, "NumberOfParts", H5T_STD_I64LE);
+
+  hid_t pdo = H5Gcreate2(steps, "PointDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  make_empty_1d(pdo, "values", H5T_STD_I64LE);
+  H5Gclose(pdo);
+
+  if (n_energy_components > 0)
+  {
+    hid_t cdo = H5Gcreate2(steps, "CellDataOffsets", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    make_empty_1d(cdo, "energies", H5T_STD_I64LE);
+    H5Gclose(cdo);
+  }
+
+  H5Gclose(steps);
+  H5Gclose(pdata);
+  H5Gclose(root);
+  H5Fclose(file);
+}
+
+// =================================================================================================
+// plot_vtkhdf_bulk: open existing file R/W, write PointData/values for this step.
+// (Currently overwrites — temporal append comes next.)
+// =================================================================================================
+template <class HyperGraphT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf_bulk(HyperGraphT& hyper_graph,
+                      const LocalSolverT& local_solver,
+                      const LargeVecT& lambda,
+                      const PlotOptions& plot_options,
+                      const floatT time = 0.)
+{
+  constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
+  static_assert(edge_dim <= 3, "Plotting hyperedges with dim > 3 is hard.");
+
+  constexpr unsigned int n_subpoints = n_subdivisions + 1;
+  constexpr unsigned int points_per_edge = Hypercube<edge_dim>::pow(n_subpoints);
+  constexpr unsigned int cells_per_edge = Hypercube<edge_dim>::pow(n_subdivisions);
+
+  SmallVec<n_subpoints, float> abscissas;
+  for (unsigned int i = 0; i < n_subpoints; ++i)
+    abscissas[i] = plot_options.scale * (1.f * i / n_subdivisions - 0.5f) + 0.5f;
+
+  const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
+  const pt_index_t n_points = static_cast<pt_index_t>(n_edges) * points_per_edge;
+  const pt_index_t n_cells = static_cast<pt_index_t>(n_edges) * cells_per_edge;
+
+  if constexpr (LocalSolverT::system_dimension() == 0)
+    return;
+
+  using dof_value_t = typename LargeVecT::value_type;
+  constexpr unsigned int n_components = LocalSolverT::system_dimension();
+
+  std::vector<float> values(static_cast<size_t>(n_points) * n_components, 0.f);
+
+  // Energy buffer: only populated when plot_options.energy and LocalSolverT supplies energy().
+  std::vector<float> energies_buf;
+  constexpr bool has_energy_api =
+    PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value;
+
+  std::array<std::array<dof_value_t, HyperGraphT::n_dofs_per_node()>, 2 * edge_dim> hyEdge_dofs;
+
+  if (plot_options.energy)
+  {
+    if constexpr (has_energy_api)
+      energies_buf.assign(static_cast<size_t>(n_cells) * LocalSolverT::n_energy_components(), 0.f);
+    else
+      hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
+  }
+
+  for (hyEdge_index_t he = 0; he < n_edges; ++he)
+  {
+    hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(hyper_graph,
+                                                                                        he, lambda);
+
+    std::array<std::array<dof_value_t, points_per_edge>, n_components> local_values;
+
+    using bulk_fn =
+      decltype(local_values)(decltype(abscissas.data())&, decltype(hyEdge_dofs)&, decltype(time));
+    using bulk_fn_geom = decltype(local_values)(decltype(abscissas.data())&, decltype(hyEdge_dofs)&,
+                                                decltype(hyper_graph[he])&, decltype(time));
+
+    if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn>::value)
+    {
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, time);
+    }
+    else if constexpr (PlotFunctions::has_bulk_values<LocalSolverT, bulk_fn_geom>::value)
+    {
+      auto geometry = hyper_graph[he];
+      local_values = local_solver.bulk_values(abscissas.data(), hyEdge_dofs, geometry, time);
+    }
+    else
+    {
+      hy_check(false, "bulk_values overload not found on LocalSolverT");
+    }
+
+    for (unsigned int p = 0; p < points_per_edge; ++p)
+    {
+      const size_t row = (static_cast<size_t>(he) * points_per_edge + p) * n_components;
+      for (unsigned int d = 0; d < n_components; ++d)
+        values[row + d] = static_cast<float>(local_values[d][p]);
+    }
+
+    if (plot_options.energy)
+    {
+      if constexpr (has_energy_api)
+      {
+        constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
+        auto geometry = hyper_graph[he];
+        const auto local_e = local_solver.energy(hyEdge_dofs, geometry, time);
+        for (unsigned int c = 0; c < cells_per_edge; ++c)
+        {
+          const size_t row = (static_cast<size_t>(he) * cells_per_edge + c) * n_e_comp;
+          for (unsigned int d = 0; d < n_e_comp; ++d)
+            energies_buf[row + d] = static_cast<float>(local_e[d]);
+        }
+      }
+      else
+      {
+        hy_check(false,
+                 "plot_options.energy=true but LocalSolverT lacks energy()/n_energy_components()");
+      }
+    }
+  }
+
+  // --- collective temporal append. Every rank adds its slab of this step's point values to the end
+  // of the (static-mesh) PointData/values dataset; the per-step Steps bookkeeping is written once
+  // by rank 0. Global totals/offsets come from the same Allreduce/Exscan as the mesh layout.
+  int mpi_rank = 0, mpi_size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  long long mine[2] = {(long long)n_points, (long long)n_cells};
+  long long off[2] = {0, 0};  // exclusive prefix (this rank's first row within the step)
+  long long tot[2] = {0, 0};  // global rows per step
+  MPI_Exscan(mine, off, 2, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(mine, tot, 2, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (mpi_rank == 0)
+  {
+    off[0] = off[1] = 0;
+  }
+
+  const int64_t step = static_cast<int64_t>(plot_options.fileNumber);
+
+  hid_t fapl = h5p_fapl_mpio();
+  hid_t file = H5Fopen(plot_options.fileName.c_str(), H5F_ACC_RDWR, fapl);
+  H5Pclose(fapl);
+  hy_check(file >= 0, "failed to open HDF5 file '" << plot_options.fileName << "'");
+
+  hid_t root = H5Gopen2(file, "VTKHDF", H5P_DEFAULT);
+  hid_t pdata = H5Gopen2(root, "PointData", H5P_DEFAULT);
+  hid_t steps = H5Gopen2(root, "Steps", H5P_DEFAULT);
+  hid_t pdo = H5Gopen2(steps, "PointDataOffsets", H5P_DEFAULT);
+
+  // --- PointData/values: grow to (step+1)*tot_points rows, write this rank's slab for this step
+  {
+    hid_t ds = H5Dopen2(pdata, "values", H5P_DEFAULT);
+    h5p_set_rows(ds, static_cast<hsize_t>((step + 1) * tot[0]));
+    h5p_write_rows(ds, H5T_NATIVE_FLOAT, static_cast<hsize_t>(step * tot[0] + off[0]),
+                   (hsize_t)n_points, n_components, values.data());
+    H5Dclose(ds);
+  }
+
+  // --- CellData/energies (same scheme) + CellDataOffsets/energies
+  if (plot_options.energy)
+  {
+    if constexpr (has_energy_api)
+    {
+      constexpr unsigned int n_e_comp = LocalSolverT::n_energy_components();
+      hid_t cdata = H5Gopen2(root, "CellData", H5P_DEFAULT);
+      hid_t ds = H5Dopen2(cdata, "energies", H5P_DEFAULT);
+      hy_check(ds >= 0, "energies dataset missing: was plot_options.energy=true at fileNumber=0?");
+      h5p_set_rows(ds, static_cast<hsize_t>((step + 1) * tot[1]));
+      h5p_write_rows(ds, H5T_NATIVE_FLOAT, static_cast<hsize_t>(step * tot[1] + off[1]),
+                     (hsize_t)n_cells, n_e_comp, energies_buf.data());
+      H5Dclose(ds);
+      hid_t cdo = H5Gopen2(steps, "CellDataOffsets", H5P_DEFAULT);
+      int64_t off_energies = step * tot[1];
+      h5p_append1(cdo, "energies", H5T_NATIVE_INT64, step, &off_energies, mpi_rank);
+      H5Gclose(cdo);
+      H5Gclose(cdata);
+    }
+  }
+
+  // --- Steps bookkeeping (single concatenated part): rank 0 writes the values, all ranks extend
+  double t = static_cast<double>(time);
+  int64_t zero = 0, one = 1, off_values = step * tot[0];
+  h5p_append1(steps, "Values", H5T_NATIVE_DOUBLE, step, &t, mpi_rank);
+  h5p_append1(steps, "PartOffsets", H5T_NATIVE_INT64, step, &zero, mpi_rank);
+  h5p_append1(steps, "PointOffsets", H5T_NATIVE_INT64, step, &zero, mpi_rank);
+  h5p_append1(steps, "CellOffsets", H5T_NATIVE_INT64, step, &zero, mpi_rank);
+  h5p_append1(steps, "ConnectivityIdOffsets", H5T_NATIVE_INT64, step, &zero, mpi_rank);
+  h5p_append1(steps, "NumberOfParts", H5T_NATIVE_INT64, step, &one, mpi_rank);
+  h5p_append1(pdo, "values", H5T_NATIVE_INT64, step, &off_values, mpi_rank);
+
+  // --- update NSteps
+  h5_set_attr_i64(steps, "NSteps", step + 1);
+
+  H5Gclose(pdo);
+  H5Gclose(steps);
+  H5Gclose(pdata);
+  H5Gclose(root);
+  H5Fclose(file);
+}
+
+// =================================================================================================
+// plot_vtkhdf: dispatcher.
+// =================================================================================================
+template <class HyperGraphT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename floatT,
+          unsigned int n_subdivisions = 1,
+          typename hyEdge_index_t = unsigned int,
+          typename pt_index_t = unsigned int>
+void plot_vtkhdf(HyperGraphT& hyper_graph,
+                 const LocalSolverT& local_solver,
+                 const LargeVecT& lambda,
+                 const PlotOptions& plot_options,
+                 const floatT time = 0.)
+{
+  // Distributed plot: each rank holds its owned hyperedges. The plot is per-edge (no shared-node
+  // deduplication), so the ranks' slabs concatenate into one VTKHDF part. The mesh (static) is
+  // written once at fileNumber == 0; each step appends a block of point/cell data. The writers open
+  // the file collectively (MPI-IO) and place each rank's slab at a global offset, so any number of
+  // ranks and time steps is supported with no serial token ring.
+  if (plot_options.fileNumber == 0)
+  {
+    unsigned int n_e_comp = 0;
+    if (plot_options.energy)
+    {
+      if constexpr (PlotFunctions::has_n_energy_components<LocalSolverT, unsigned int()>::value)
+        n_e_comp = LocalSolverT::n_energy_components();
+      else
+        hy_check(false, "plot_options.energy=true but LocalSolverT lacks n_energy_components()");
+    }
+    plot_vtkhdf_mesh<HyperGraphT, n_subdivisions, hyEdge_index_t, pt_index_t>(
+      hyper_graph, plot_options, LocalSolverT::system_dimension(), n_e_comp);
+  }
+  plot_vtkhdf_bulk<HyperGraphT, LocalSolverT, LargeVecT, floatT, n_subdivisions, hyEdge_index_t,
+                   pt_index_t>(hyper_graph, local_solver, lambda, plot_options, time);
+}
+#endif
 
 // -------------------------------------------------------------------------------------------------
 // plot()
@@ -786,12 +1474,18 @@ void plot(HyperGraphT& hyper_graph,
           PlotOptions& plot_options,
           const floatT time)
 {
-  hy_assert(plot_options.fileEnding == PlotOptions::vtu,
-            "Only file ending vtu is supported at the moment. Your choice has been "
-              << plot_options.fileEnding << ", which is invalid.");
-  hy_assert(!plot_options.fileName.empty(), "File name must not be empty!");
-  hy_assert(!plot_options.outputDir.empty(), "Ouput directory must not be empty!");
-  plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+  hy_check(!plot_options.fileName.empty(), "expected non-empty file name");
+  hy_check(!plot_options.outputDir.empty(), "output directory must not be empty!");
+
+  if (plot_options.fileEnding == PlotOptions::vtu)
+    plot_vtu(hyper_graph, local_solver, lambda, plot_options, time);
+#ifdef HYPERHDG_PETSC
+  else if (plot_options.fileEnding == PlotOptions::vtkhdf)
+    plot_vtkhdf(hyper_graph, local_solver, lambda, plot_options, time);
+#endif
+  else
+    hy_assert(false, "Unsupported file ending.");
+
   if (plot_options.incrementFileNumber)
     ++plot_options.fileNumber;
-}  // end of void plot
+}

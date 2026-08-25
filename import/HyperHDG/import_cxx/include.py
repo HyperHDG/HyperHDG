@@ -15,7 +15,7 @@ def include(conf):
 
   # Start program.
   options = get_options()
-  print("Cythonizing ... ", end='', flush=True)
+  #print("Cythonizing ... ", end='', flush=True)
 
   # Create folders and log files and check for consistency.
   os.system("mkdir -p " + main_dir() + "/build " + main_dir() + "/build/cython_files " \
@@ -46,7 +46,7 @@ def include(conf):
       with open(main_dir() + "/cython/" + cython_from_cpp(conf.global_loop) + "." \
         + file_end, "r") as file:
         content = file.read()
-      content = re.sub("C\+\+ClassName", "\"" + cpp_class + "\"", content)
+      content = re.sub(r"C\+\+ClassName", "\"" + cpp_class + "\"", content)
       content = re.sub("CythonClassName", cython_class, content)
       content = re.sub("PythonClassName", python_class, content)
       content = re.sub("IncludeFiles", include_string, content)
@@ -70,9 +70,9 @@ def include(conf):
     mod = importlib.import_module(python_class)
 
   delta_t = 1000 * (datetime.datetime.now() - start_time).total_seconds()
-  if compilation_necessary:
-    print("DONE with compilation in " + "{:,.2f}".format(delta_t) + " milliseconds.", flush=True)
-  else:
-    print("DONE without compilation in " + "{:,.2f}".format(delta_t) + " milliseconds.", flush=True)
+  #if compilation_necessary:
+  #  print("DONE with compilation in " + "{:,.2f}".format(delta_t) + " milliseconds.", flush=True)
+  #else:
+  #  print("DONE without compilation in " + "{:,.2f}".format(delta_t) + " milliseconds.", flush=True)
 
   return getattr(mod, python_class)

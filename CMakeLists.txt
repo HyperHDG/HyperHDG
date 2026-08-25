@@ -1,9 +1,33 @@
 cmake_minimum_required(VERSION 3.16)
 
+option(HYPERHDG_PETSC "build with PETSc" OFF)
+option(HYPERHDG_MPI "build with MPI" OFF)
+option(HYPERHDG_HDF5 "build with HDF5" OFF)
+
+# the compilers must be set before project() is called
+if (HYPERHDG_PETSC)
+  set(HYPERHDG_PETSC_PREFIX "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}" CACHE STRING "PETSc prefix")
+  message("USING PETSC_PREFIX=${HYPERHDG_PETSC_PREFIX}")
+  set(ENV{PKG_CONFIG_PATH} ${HYPERHDG_PETSC_PREFIX}/lib/pkgconfig)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+  pkg_get_variable(CMAKE_C_COMPILER PETSc ccompiler)
+  pkg_get_variable(CMAKE_CXX_COMPILER PETSc cxxcompiler)
+endif()
+
 project(HyperHDG LANGUAGES CXX)
 
 # Include the submodule projects
 add_subdirectory(submodules)
+include_directories(submodules)
+
+if(HYPERHDG_PETSC AND HYPERHDG_HDF5)
+  add_subdirectory(reproducibles_petsc)
+  find_package(HDF5)
+else()
+  message("--- NOT BUILDING reproducibles_petsc as it requires HYPERHDG_PETSC AND HYPERHDG_HDF5")
+endif()
 
 ## Check whether appropriate compiler version is used
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -61,6 +85,8 @@ target_link_libraries(
   HyperHDG::tpp
   HyperHDG::tpcc
   ${LAPACK_LIBRARIES}
+  $<$<BOOL:${HYPERHDG_PETSC}>:PkgConfig::PETSC>
+  $<$<BOOL:${HDF5_FOUND}>:HDF5::HDF5>
 )
 
 ## Add the necessary C++ standard requirement
@@ -70,10 +96,17 @@ target_compile_features(
   cxx_std_20
 )
 
+target_compile_definitions(
+  HyperHDG
+  INTERFACE
+  $<$<BOOL:${HYPERHDG_MPI}>:HYPERHDG_MPI>
+  $<$<BOOL:${HYPERHDG_PETSC}>:HYPERHDG_PETSC>
+)
+
 ## Add the examples subdirectory
 add_subdirectory(examples)
 
-## Add tests if requested through the BUILD_TESTING option (default: ON)
+## Add tests if requested through the BUILD_TESTING option (default: ON - set by CTest)
 include(CTest)
 if(BUILD_TESTING)
   enable_testing()

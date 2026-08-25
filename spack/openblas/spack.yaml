@@ -1,0 +1,17 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - petsc+hdf5+metis+mumps+suite-sparse+pastix+openmp+ptscotch+X
+  - kahip
+  - feh
+  view: true
+  packages:
+    blas:     {require: "openblas threads=openmp"}
+    lapack:   {require: "openblas threads=openmp"}
+    argtable: {require: "cflags='-std=c89'"}
+  concretizer:
+    unify: true

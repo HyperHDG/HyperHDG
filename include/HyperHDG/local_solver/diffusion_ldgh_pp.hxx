@@ -639,8 +639,7 @@ class DiffusionPostprocess
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallSquareMat<
@@ -702,8 +701,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
@@ -746,8 +744,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallVec<
@@ -789,8 +786,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT, typename SmallVecT>
 inline SmallVec<
@@ -816,8 +812,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallMat<
@@ -847,8 +842,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename hyEdgeT>
 inline SmallMat<
@@ -883,8 +877,7 @@ DiffusionPostprocess<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
-          template <unsigned int, typename>
-          typename parametersT,
+          template <unsigned int, typename> typename parametersT,
           typename lSol_float_t>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,

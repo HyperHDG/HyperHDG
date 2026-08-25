@@ -8,7 +8,7 @@
 doxy_docs_ci/
 
 # Build directory created by Cython
-[Bb]uild/
+[Bb]uild*
 
 # Directory containing output of files
 [Oo]utput*/
@@ -46,6 +46,26 @@ prog
 
 # Ignore files that have been created from other input
 *.pts.geo
+
+# ignore profiles
+*.prof
+*.lprof
+profile_output*
+
+# ignore clangd lsp
+.cache
+*.eld
+*~
+
+CMakeUserPresets.json
+
+# the .spack-env holds a concretized view of the built dependencies
+# the spack.lock file is dependent on host compilers, so this is not portable
+.spack-env/
+spack.lock
+
+venv
+*.swp
 
 # macOS Finder metadata
 .DS_Store

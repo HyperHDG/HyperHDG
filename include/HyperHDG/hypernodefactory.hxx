@@ -2,6 +2,8 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
+#include <vector>
+
 /*!*************************************************************************************************
  * \brief   This class is responsible for the mapping of hypernodes to global degrees of freedom.
  *
@@ -37,14 +39,58 @@ class HyperNodeFactory
    * degree of freedom has a valid index.
    ************************************************************************************************/
   hyNode_index_t n_hyNodes_;
+  /*!***********************************************************************************************
+   * \brief   Number of locally owned hypernodes (== n_hyNodes_ when not distributed).
+   *
+   * Local hypernodes are numbered owned-first: [0, n_owned_hyNodes_) are owned, the remainder are
+   * ghosts. Only used to report the locally owned share of degrees of freedom for PETSc layouts.
+   ************************************************************************************************/
+  hyNode_index_t n_owned_hyNodes_;
+  /*!***********************************************************************************************
+   * \brief   Total number of hypernodes across all ranks (== n_hyNodes_ when not distributed).
+   ************************************************************************************************/
+  hyNode_index_t n_global_hyNodes_;
+  /*!***********************************************************************************************
+   * \brief   Local-to-global hypernode map (empty == identity, i.e. not distributed).
+   ************************************************************************************************/
+  std::vector<hyNode_index_t> lgmap_;
 
  public:
   /*!***********************************************************************************************
    * \brief   Construct HyperNodeFactory from total number of hypernodes.
    *
-   * \param   n_hyNodes           Total number of hypernodes.
+   * \param   n_hyNodes           Total number of (local) hypernodes.
    ************************************************************************************************/
-  HyperNodeFactory(const hyNode_index_t n_hyNodes) : n_hyNodes_(n_hyNodes) {}
+  HyperNodeFactory(const hyNode_index_t n_hyNodes)
+  : n_hyNodes_(n_hyNodes), n_owned_hyNodes_(n_hyNodes), n_global_hyNodes_(n_hyNodes)
+  {
+  }
+  /*!***********************************************************************************************
+   * \brief   Provide distributed-memory information: ownership counts and local-to-global map.
+   *
+   * When the hypergraph is distributed the local hypernodes are numbered owned-first and a
+   * local-to-global map translates them to the global numbering. An empty \c lgmap restores the
+   * non-distributed (identity) behaviour.
+   *
+   * \param   lgmap               Local-to-global hypernode map (size n_hyNodes_, or empty).
+   * \param   n_owned_hyNodes     Number of locally owned hypernodes.
+   * \param   n_global_hyNodes    Total number of hypernodes across all ranks.
+   ************************************************************************************************/
+  void set_distribution(const std::vector<hyNode_index_t>& lgmap,
+                        const hyNode_index_t n_owned_hyNodes,
+                        const hyNode_index_t n_global_hyNodes)
+  {
+    lgmap_ = lgmap;
+    if (!lgmap_.empty())
+    {
+      n_owned_hyNodes_ = n_owned_hyNodes;
+      n_global_hyNodes_ = n_global_hyNodes;
+      hy_assert(lgmap_.size() == n_hyNodes_, "The local-to-global map has "
+                                               << lgmap_.size() << " entries, but should have one "
+                                               << "per local hypernode, i.e., " << n_hyNodes_
+                                               << ".");
+    }
+  }
   /*!***********************************************************************************************
    * \brief   Copy constructot for HypernodeFactory.
    *
@@ -55,13 +101,22 @@ class HyperNodeFactory
    *
    * \param   hnf                 A \c HyperNodeFactory to be copied.
    ************************************************************************************************/
-  HyperNodeFactory(const HyperNodeFactory<n_dofs_per_nodeT>& hnf) : n_hyNodes_(hnf.n_hyNodes_) {}
+  HyperNodeFactory(const HyperNodeFactory<n_dofs_per_nodeT>& hnf)
+  : n_hyNodes_(hnf.n_hyNodes_),
+    n_owned_hyNodes_(hnf.n_owned_hyNodes_),
+    n_global_hyNodes_(hnf.n_global_hyNodes_),
+    lgmap_(hnf.lgmap_)
+  {
+  }
   /*!***********************************************************************************************
    * \brief   Copy assignment.
    ************************************************************************************************/
   HyperNodeFactory<n_dofs_per_nodeT>& operator=(const HyperNodeFactory<n_dofs_per_nodeT>& other)
   {
     n_hyNodes_ = other.n_hyNodes_;
+    n_owned_hyNodes_ = other.n_owned_hyNodes_;
+    n_global_hyNodes_ = other.n_global_hyNodes_;
+    lgmap_ = other.lgmap_;
     return *this;
   }
   /*!***********************************************************************************************
@@ -70,6 +125,9 @@ class HyperNodeFactory
   HyperNodeFactory<n_dofs_per_nodeT>& operator=(HyperNodeFactory<n_dofs_per_nodeT>&& other) noexcept
   {
     n_hyNodes_ = other.n_hyNodes_;
+    n_owned_hyNodes_ = other.n_owned_hyNodes_;
+    n_global_hyNodes_ = other.n_global_hyNodes_;
+    lgmap_ = std::move(other.lgmap_);
     return *this;
   }
   /*!***********************************************************************************************
@@ -78,6 +136,13 @@ class HyperNodeFactory
    * \retval  n_hypernodes        The total amount of hypernodes in the considered hypergraph.
    ************************************************************************************************/
   hyNode_index_t n_hyNodes() const { return n_hyNodes_; }
+  /*!***********************************************************************************************
+   * \brief   Whether the hypergraph is distributed (data already split across ranks).
+   *
+   * True iff a local-to-global map has been provided. When distributed, the matrix-generation loop
+   * must iterate over all (local, owned) hyperedges rather than re-splitting them across ranks.
+   ************************************************************************************************/
+  bool is_distributed() const { return !lgmap_.empty(); }
   /*!***********************************************************************************************
    * \brief   Returns the total amount of degrees of freedom in the considered hypergraph.
    *
@@ -88,7 +153,28 @@ class HyperNodeFactory
   template <typename dof_index_t = hyNode_index_t>
   dof_index_t n_global_dofs() const
   {
+    return n_global_hyNodes_ * n_dofs_per_nodeT;
+  }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom held in a local vector (owned + ghost hypernodes).
+   *
+   * Equals \c n_global_dofs() when the hypergraph is not distributed.
+   ************************************************************************************************/
+  template <typename dof_index_t = hyNode_index_t>
+  dof_index_t n_local_dofs() const
+  {
     return n_hyNodes_ * n_dofs_per_nodeT;
+  }
+  /*!***********************************************************************************************
+   * \brief   Number of degrees of freedom owned by this rank (owned hypernodes only).
+   *
+   * Equals \c n_global_dofs() when the hypergraph is not distributed. Used to set the local row
+   * count of distributed PETSc matrices/vectors.
+   ************************************************************************************************/
+  template <typename dof_index_t = hyNode_index_t>
+  dof_index_t n_owned_dofs() const
+  {
+    return n_owned_hyNodes_ * n_dofs_per_nodeT;
   }
   /*!***********************************************************************************************
    * \brief   Calculate global indices of degrees of freedom related to a hypernode.
@@ -104,6 +190,34 @@ class HyperNodeFactory
   SmallVecT& get_dof_indices(const hyNode_index_t hyNode_index, SmallVecT& dof_indices) const
   {
     const typename SmallVecT::value_type initial_dof_index = hyNode_index * n_dofs_per_nodeT;
+    hy_assert(dof_indices.size() == n_dofs_per_nodeT,
+              "The size of the local dof vector is "
+                << dof_indices.size()
+                << ", but should be equal to the amount of local dofs, which is "
+                << n_dofs_per_nodeT << ".");
+    if constexpr (n_dofs_per_nodeT > 0)
+      for (unsigned int i = 0; i < n_dofs_per_nodeT; ++i)
+        dof_indices[i] = initial_dof_index + i;
+    return dof_indices;
+  }
+  /*!***********************************************************************************************
+   * \brief   Calculate global indices of degrees of freedom related to a (local) hypernode.
+   *
+   * Like \c get_dof_indices, but maps the local hypernode through the local-to-global map so the
+   * resulting degree-of-freedom indices refer to the global numbering. When the hypergraph is not
+   * distributed (empty map) this is identical to \c get_dof_indices. This is used to assemble the
+   * distributed matrix in global indices while all vector access stays local.
+   *
+   * \tparam  SmallVecT           The typename of a small vector to be filled.
+   * \param   hyNode_index        Local index of the considered hypernode.
+   * \param   dof_indices         Reference to small vector to be filled.
+   * \retval  dof_indices         Reference to small vector containing the global dof indices.
+   ************************************************************************************************/
+  template <typename SmallVecT>
+  SmallVecT& get_global_dof_indices(const hyNode_index_t hyNode_index, SmallVecT& dof_indices) const
+  {
+    const hyNode_index_t global_hyNode = lgmap_.empty() ? hyNode_index : lgmap_[hyNode_index];
+    const typename SmallVecT::value_type initial_dof_index = global_hyNode * n_dofs_per_nodeT;
     hy_assert(dof_indices.size() == n_dofs_per_nodeT,
               "The size of the local dof vector is "
                 << dof_indices.size()
