@@ -31,23 +31,23 @@ operating system this can be done using
 This command installs
 
 - `doxygen` and `graphviz` provide the documentation system for all C++ and Python code. These
-packages are used to create a Doxygen documentation on your computer. This is useful to look up 
-interfaces and properties of functions utilized in HyperHDG. An on-line version of the documentation
-can also be found under this [link](https://hyperhdg.github.io/auto_pages/doxygen).
+  packages are used to create a Doxygen documentation on your computer. This is useful to look up
+  interfaces and properties of functions utilized in HyperHDG. An on-line version of the
+  documentation can also be found under this [link](https://hyperhdg.github.io/auto_pages/doxygen).
 
 - `cmake` is used to control the software compilation process in an compiler independent form.
 
 - `python3-dev`, `python3-numpy`, `python3-scipy`, `python3-matplotlib`, `python3-jupyterlab` and
-  `python3-pandas` procure the necessary Python functionalities
-if Python scripts are used to run HyperHDG.
+  `python3-pandas` procure the necessary Python functionalities if Python scripts are used to run
+  HyperHDG.
 
 - `cython3` facilitates Python language extensions to run C or C++ code within Python scripts. Thus,
-this package is necessary if HyperHDG is run in Python scrips. However, some Ubuntu distributions
-might require `cython3` to be replaced by `cython`.
+  this package is necessary if HyperHDG is run in Python scrips. However, some Ubuntu distributions
+  might require `cython3` to be replaced by `cython`.
 
 - `libblas-dev` and `liblapack-dev` allow to use the LAPACK library within HyperHDG. LAPACK contains
-efficient solvers for dense linear equation systems and which are used to solve the element-local
-systems of equations defined by the local hybrid discontinuous Galerkin (HDG) solvers.
+  efficient solvers for dense linear equation systems and which are used to solve the element-local
+  systems of equations defined by the local hybrid discontinuous Galerkin (HDG) solvers.
 
 
 Compilation of the C++ code can be done using a compiler that can deal with the standard `C++20`. A
@@ -77,7 +77,7 @@ visualize the output of simulations, we recommend to install `ParaView`.
 3. Follow the instructions given by the script and select your choice of setup.
 
 
-With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used. 
+With all these steps done and all tests of `setup.sh` passed, HyperHDG is ready to be used.
 If the last test fails with a linker error, the linker library paths in build/cmake_cython-file may
 need to be adapted.
 
@@ -91,7 +91,7 @@ enter its directory. Run the shell script
     $ CXX=compiler_name ./shell_scripts/setup.sh
 
 and follow its instructions to setup HyperHDG within a Docker container.
-Here, `compiler_name` is the name of some C++ compiler that support C++20 .The compiler need not be
+Here, `compiler_name` is the name of some C++ compiler that support C++20. The compiler need not be
 installed on your system; it will be installed within the Docker container. However, you need `root`
 privileges to run the command.
 
