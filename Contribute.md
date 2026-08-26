@@ -36,7 +36,7 @@ a successful revision by one of the [[Authors]].
 
 # Contributing to HyperHDG's wiki: branch `gh-wiki`
 
-Please do not try to directly change pages within the wiki of HyperHDG. These pages are 
+Please do not try to directly change pages within the wiki of HyperHDG. These pages are
 automatically generated from the repository's branch `gh-wiki`. Thus, to change the wiki, please
 create a pull-request to this branch. Changes will be implemented after a successful revision by one
 of the [[Authors]].
