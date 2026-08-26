@@ -49,3 +49,6 @@ prog
 
 # macOS Finder metadata
 .DS_Store
+
+# Cache of on-demand compiled python modules (python/hyperhdg.py)
+.hyperhdg-cache/
