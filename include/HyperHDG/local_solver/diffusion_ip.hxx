@@ -742,7 +742,7 @@ DiffusionIP<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assembl
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
       right_hand_side[hyEdge_dimT * n_shape_fct_ + i] +=
-        coeffs[j] * integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        coeffs[j] * integrator::integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
   return right_hand_side;
 }  // end of Diffusion::assemble_rhs_from_coeffs
