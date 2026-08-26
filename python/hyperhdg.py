@@ -16,8 +16,10 @@ plain sight.
 
 Everything lives in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/): the
 generated module.cxx and CMakeLists.txt next to the cmake build directory build/, which also
-holds the resulting .so. A content fingerprint (code + generated project + cmake args) skips
-the build when nothing changed; force=True rebuilds regardless.
+holds the resulting .so. Every call runs `cmake --build`, so an edited HyperHDG header
+recompiles the module like any other source change; a content fingerprint (code + generated
+project + cmake args) skips the far slower configure step when nothing changed, and
+force=True recompiles regardless.
 
 HyperHDG is located in this order:
   1. `hyperhdg=` argument -- path to a source tree (has include/HyperHDG) or an install
@@ -127,6 +129,14 @@ def _run(cmd, cwd, verbose):
         raise RuntimeError(f"{' '.join(map(str, cmd))} failed{output}")
 
 
+def _write_if_changed(path, content):
+    """Write only on a real change: an untouched mtime keeps the build system from
+    recompiling code that did not move."""
+    if path.is_file() and path.read_text() == content:
+        return
+    path.write_text(content)
+
+
 def _deliver(so, output_dir):
     if output_dir is None:
         return so
@@ -143,7 +153,9 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
 
     Artifacts live in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/); the
     .so stays in its build/ subdirectory unless output_dir is given, then it is copied
-    there. force=True recompiles regardless of the cached fingerprint.
+    there. The build system is always asked -- it, not the fingerprint, knows about the
+    HyperHDG headers module.cxx includes -- so only cmake's configure step is fingerprinted.
+    force=True reconfigures and recompiles regardless.
 
     hash_name=True suffixes the NB_MODULE name with a content hash (the legacy cython
     machinery's trick): every code variant becomes a distinctly named extension module, so
@@ -182,16 +194,21 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
     # one stamp per (possibly hash-suffixed) name: alternating between two code variants of
     # the same base cache-hits both ways
     stamp = work / f"{name}.fingerprint"
-    so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
-    if not force and so and stamp.is_file() and stamp.read_text() == fingerprint:
-        return _deliver(so, output_dir)
+    configured = (build / "CMakeCache.txt").is_file()
+    reconfigure = force or not configured or not stamp.is_file() \
+        or stamp.read_text() != fingerprint
 
     work.mkdir(parents=True, exist_ok=True)
     stamp.unlink(missing_ok=True)  # a failed build must not leave a valid stamp behind
-    # write_text refreshes module.cxx's mtime, so force=True recompiles even unchanged code
-    (work / "module.cxx").write_text(code)
-    (work / "CMakeLists.txt").write_text(cmakelists)
-    _run(["cmake", "-S", ".", "-B", "build", *cmake_args], work, verbose)
+    _write_if_changed(work / "module.cxx", code)
+    _write_if_changed(work / "CMakeLists.txt", cmakelists)
+    if force:  # a fresh mtime recompiles even unchanged code
+        (work / "module.cxx").touch()
+    if reconfigure:
+        _run(["cmake", "-S", ".", "-B", "build", *cmake_args], work, verbose)
+    # always: only the build system knows whether an edited HyperHDG header invalidates the
+    # cached .so -- the fingerprint sees module.cxx and the cmake arguments, not the headers
+    # it includes. A no-op ninja build costs milliseconds.
     _run(["cmake", "--build", "build", "--parallel"], work, verbose)
 
     so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
