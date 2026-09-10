@@ -851,7 +851,7 @@ if __name__ == "__main__":
                  help="Delaunay alpha radius for --surface: triangles above this "
                       "circumradius are dropped (~2x mean edge length keeps holes open "
                       "in disordered nets); 0 fills to the convex hull")
-  p.add_argument("--beams", type=int, default=0,
+  p.add_argument("--beams", type=int, default=1,
                  help="if 1, render edges as hollow rectangular beams using CellData normals/widths; overrides --tubes-radius")
   p.add_argument("--beams-array", default="properties",
                  help="CellData array holding beam normals and widths")
@@ -867,6 +867,7 @@ if __name__ == "__main__":
                  help="scale rotation vectors before applying")
   p.add_argument("--ref", type=int, default=1, help="show reference outline")
   p.add_argument("--ref-opacity", type=float, default=1., help="opacity of reference outline")
+  p.add_argument("--ref-color", help="color of reference outline")
   p.add_argument("--fps", type=int, default=30, help="target fps")
   p.add_argument("--duration", type=float, default=5, help="target duration of animation")
   p.add_argument("--frames", default=None,
@@ -911,7 +912,7 @@ if __name__ == "__main__":
       ops.append(Q1Mesh(dims, color=args.q1_color, line_width=args.line_width,
                         offset=offset, scale=scale))
     if args.q1 is None and args.ref:
-      ops.append(Reference(color=args.fg, opacity=args.ref_opacity, line_width=args.line_width))
+      ops.append(Reference(color=args.ref_color or args.fg, opacity=args.ref_opacity, line_width=args.line_width))
     if args.arrows != 0.:
       ops.append(CoarseArrows(scale=args.arrows, warp_scale=args.warp_scale, offset_z=args.arrows_offset))
     if args.warp_by.lower() != "none":

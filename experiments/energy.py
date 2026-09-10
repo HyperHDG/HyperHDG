@@ -68,9 +68,12 @@ def read_energies_csv(path):
     return np.atleast_1d(d["t"]), grouped
 
 
-def write_tikz(prefix, t, grouped, log=False):
+def write_tikz(prefix, t, grouped, log=False, percent=False):
     """PREFIX.csv + self-contained PREFIX.tex with the four collapsed lines:
-    strain (axial+bending), kinetic (trans+rot), hybrid (HDG stab.), total."""
+    strain (axial+bending), kinetic (trans+rot), hybrid (HDG stab.), total.
+    With percent=True the csv still holds the raw values (whose unit is the
+    code's internal one, e.g. lengths in um) and the plot rescales them to
+    percentages of the maximum total energy."""
     prefix = Path(prefix)
     if str(prefix.parent) not in (".", ""):
         prefix.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +98,12 @@ def write_tikz(prefix, t, grouped, log=False):
         "%   \\renewcommand{\\figurewidth}{...} (default \\linewidth) and \\plotdatadir (default empty,",
         "%   set with trailing /) before \\input as needed.",
         "%   add \\usetikzlibrary{external} \\tikzexternalize to cache figures across manuscript compiles.",
+    ]
+    if percent:
+        L.append(f"% energies are shown as percentages of the maximum total energy"
+                 f" Emax = {total.max():.10g},")
+        L.append(f"% attained at t = {t[total.argmax()]:.6g}; the csv holds the raw values.")
+    L += [
         "\\documentclass{standalone}",
         "\\usepackage{amsmath}",
         "\\usepackage{pgfplots}",
@@ -106,7 +115,7 @@ def write_tikz(prefix, t, grouped, log=False):
         "\\begin{axis}[",
         "  width=\\figurewidth,",
         "  xlabel={$t$ [s]},",
-        "  ylabel={energy},",
+        "  ylabel={energy [\\%]}," if percent else "  ylabel={energy},",
     ]
     if log:
         L.append("  ymode=log,")
@@ -118,11 +127,14 @@ def write_tikz(prefix, t, grouped, log=False):
         "  legend style={legend cell align=left, font=\\footnotesize},",
         "]",
     ])
+    def yspec(col):
+        return (f"y expr=100*\\thisrow{{{col}}}/{total.max():.10g}" if percent
+                else f"y={col}")
     for col, label in series:
-        L.append(f"\\addplot+[mark=none, thick] table[x=t, y={col}, col sep=comma] "
+        L.append(f"\\addplot+[mark=none, thick] table[x=t, {yspec(col)}, col sep=comma] "
                  f"{{\\plotdatadir {csv_path.name}}};")
         L.append(f"\\addlegendentry{{{label}}}")
-    L.append(f"\\addplot[black, thick] table[x=t, y=total, col sep=comma] "
+    L.append(f"\\addplot[black, thick] table[x=t, {yspec('total')}, col sep=comma] "
              f"{{\\plotdatadir {csv_path.name}}};")
     L.append("\\addlegendentry{total}")
     L.extend(["\\end{axis}", "\\end{tikzpicture}", "\\end{document}"])
@@ -137,6 +149,9 @@ def main():
                     help="path to wave.vtkhdf, or a reduced -energy.csv sidecar")
     ap.add_argument("-o", "--save", help="save plot to this path instead of showing")
     ap.add_argument("--log", action="store_true", help="log scale on y")
+    ap.add_argument("--percent", action="store_true",
+                    help="--tikz: plot energies as percentages of the maximum "
+                         "total energy (the csv keeps the raw values)")
     ap.add_argument("--all", action="store_true",
                     help="plot all 6*space_dim raw components instead of grouped")
     ap.add_argument("--tikz", metavar="PREFIX",
@@ -154,7 +169,7 @@ def main():
         t, grouped, raw, space_dim = read_energies(args.file)
 
     if args.tikz:
-        write_tikz(args.tikz, t, grouped, log=args.log)
+        write_tikz(args.tikz, t, grouped, log=args.log, percent=args.percent)
         if not args.save:
             return
     total = grouped.sum(axis=1)
