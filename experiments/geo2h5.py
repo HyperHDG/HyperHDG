@@ -15,7 +15,7 @@ The HDF5 layout mirrors make_geo2.py exactly:
     /domain/edges         (n_edges,  2^hyEdge_dim) i4   -- point indices
     /domain/types_faces   (n_edges,  2*hyEdge_dim) i4
     /domain/types_points  (n_points, 1)          i4     -- derived, see below
-    /domain/properties    (n_edges,  n_props)    f8     -- if present
+    /domain/properties    (n_edges,  n_props)    f8     -- see below
     /VTKHDF/...                                         -- view for ParaView
 
 Two restrictions of the HDF5 reader are checked here rather than silently
@@ -28,10 +28,20 @@ types_points has no .geo counterpart; it is derived as the maximum face type
 seen at each hypernode, which reproduces the Dirichlet marker make_geo2.py
 writes (a node is Dirichlet as soon as one incident face is).
 
+A .geo without a HYPEREDGE_PROPERTIES section (all of domains/*.geo) carries
+no material data, so the 17-column synthetic set of make_geo2.py is generated
+for it: mass = length, unit stiffnesses, cross-section normals from the edge
+tangent, one fiber per edge, and constant beam widths defaulting to
+0.1 * mean(edge length).  --width overrides the widths, --no-default-props
+suppresses the whole block.  Properties already in the .geo are passed
+through untouched.
+
 Examples
 --------
     geo2h5.py domains/cross.geo                  # -> domains/cross.geo.h5
     geo2h5.py domains/line3.geo -o /tmp/l3.geo.h5
+    geo2h5.py domains/cross.geo -w 1e-2 3e-2     # flat beams
+    geo2h5.py domains/cross.geo --no-default-props
 
 Author
 ------
@@ -44,6 +54,9 @@ import sys
 
 import h5py
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from make_geo2 import Network
 
 
 def clean(line):
@@ -142,6 +155,26 @@ def types_points(n_points, edges, types_faces):
   return out
 
 
+def default_properties(geo, width=None):
+  """Generate make_geo2.py's 17-column synthetic property set for the domain.
+
+  Reuses Network.generate_synthetic_properties so the columns (mass, the six
+  stiffnesses, the two cross-section normals, the two widths, the fiber ids)
+  stay identical to what make_geo2.py writes for --grid / --hex / --mikado.
+  """
+  if geo["hyEdge_dim"] != 1:
+    sys.exit("error: default properties are only defined for hyEdge_dim == 1")
+
+  net = Network()
+  # generate_synthetic_properties needs 3D coordinates for the normals
+  dim = min(geo["space_dim"], 3)
+  net.nodes = np.zeros((len(geo["points"]), 3))
+  net.nodes[:, :dim] = geo["points"][:, :dim]
+  net.edges = geo["edges"]
+  net.generate_synthetic_properties(width=width)
+  return net.edgeProps
+
+
 def write_h5(out, geo, vtkhdf=True):
   points = np.ascontiguousarray(geo["points"], dtype=np.float64)
   edges = np.ascontiguousarray(geo["edges"], dtype=np.int32)
@@ -194,10 +227,26 @@ def main():
   p.add_argument("-o", "--output", help="output .geo.h5 file (default: input with .geo.h5)")
   p.add_argument("--no-vtkhdf", action="store_true",
                  help="omit the VTKHDF view (netvis.py/ParaView then cannot read the file)")
+  p.add_argument("-w", "--width", type=float, nargs="+", metavar="X", default=None,
+                 help="beam widths for the generated properties: 'X' (square cross-section) "
+                      "or 'X Y'; default 0.1 * mean(edge length)")
+  p.add_argument("--no-default-props", action="store_true",
+                 help="do not generate synthetic properties for a .geo that has none")
   args = p.parse_args()
+
+  if args.width is not None and len(args.width) > 2:
+    p.error("--width takes one or two values")
 
   out = args.output or os.path.splitext(args.input)[0] + ".geo.h5"
   geo = read_geo(args.input)
+
+  if geo["properties"] is not None:
+    if args.width is not None:
+      print(f"warning: {args.input} has HYPEREDGE_PROPERTIES, ignoring --width", file=sys.stderr)
+  elif not args.no_default_props:
+    width = None if args.width is None else (args.width * 2)[:2]  # 'X' -> (X, X)
+    geo["properties"] = default_properties(geo, width=width)
+
   write_h5(out, geo, vtkhdf=not args.no_vtkhdf)
 
   print(f"{args.input} -> {out}: {len(geo['points'])} points, {len(geo['edges'])} edges, "

@@ -278,7 +278,8 @@ class Network:
     n_2 = tangent x n_1 normalized, widths constant,
     fiber_id = 0..n_edges-1, fiber_edge_id = 0.
 
-    If width is None, picks 0.1 * mean(edge length).
+    width is a scalar (both cross-section widths equal) or a (w1, w2) pair;
+    if None, picks 0.1 * mean(edge length).
     """
     nodes = self.nodes
     edges = self.edges
@@ -316,9 +317,10 @@ class Network:
 
     if width is None:
       width = 0.1 * lengths.mean()
-    tprint(f"  using width = {width:.3e}")
-    width1 = np.full(n_edges, width)
-    width2 = np.full(n_edges, width)
+    w1, w2 = width if np.ndim(width) else (width, width)
+    tprint(f"  using width = {w1:.3e} x {w2:.3e}")
+    width1 = np.full(n_edges, w1)
+    width2 = np.full(n_edges, w2)
 
     fiber_id      = np.arange(n_edges, dtype=np.float64)
     fiber_edge_id = np.zeros(n_edges)
