@@ -140,6 +140,8 @@ There are two ways to use HyperHDG on Windows:
   HyperHDG scripts: The just-in-time compiled Python modules are built by MinGW-w64's `g++` and
   are only compatible with this Python, not with the one from python.org or the Microsoft Store.
 
+  The native Windows support is new. If you encounter problems, please open an issue or use WSL 2.
+
 
 # Setup HyperHDG
 
