@@ -523,6 +523,103 @@ class Diffusion
     return lambda_values_out;
   }
   /*!***********************************************************************************************
+   * \brief   Local condensed matrix, i.e., the matrix representation of \c trace_to_flux.
+   *
+   * Column \c face * n_glob_dofs_per_node() + \c dof of the returned matrix is the result of
+   * \c trace_to_flux applied to the unit vector that is one for degree of freedom \c dof of face
+   * \c face (and its rows are ordered analogously). In contrast to calling \c trace_to_flux for all
+   * unit vectors, the local matrix is assembled and LU factorized only once and the factorization
+   * is reused for all unit vectors, which results in the same values.
+   *
+   * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
+   * \param   time                Time.
+   * \retval  loc_mat             Local condensed matrix.
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  SmallSquareMat<2 * hyEdge_dimT * n_shape_bdr_, lSol_float_t> trace_to_flux_mat(
+    hyEdgeT& hyper_edge,
+    const lSol_float_t time = 0.) const
+  {
+    using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
+    SmallSquareMat<2 * hyEdge_dimT * n_shape_bdr_, lSol_float_t> loc_mat;
+    std::array<std::array<lSol_float_t, n_shape_bdr_>, 2 * hyEdge_dimT> lambda_values;
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      lambda_values[face].fill(0.);
+
+    SmallSquareMat<n_loc_dofs_, lSol_float_t> lu_mat = assemble_loc_matrix(tau_, hyper_edge, time);
+    std::array<int, n_loc_dofs_> ipiv;
+    try
+    {
+      Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(lu_mat.data(), ipiv);
+    }
+    catch (Wrapper::LAPACKexception& exc)
+    {
+      hy_assert(0 == 1, exc.what() << std::endl
+                                   << "This can happen if quadrature is too inaccurate!");
+      throw exc;
+    }
+
+    // The boundary integrals and normals are needed for every unit vector. Evaluate them once. The
+    // loops below perform the same operations in the same order as assemble_rhs_from_lambda,
+    // primal_at_boundary, and dual_at_boundary (for a unit vector), and yield the same values.
+    std::array<lSol_float_t, n_shape_fct_ * n_shape_bdr_ * 2 * hyEdge_dimT> bdr_int;
+    std::array<std::array<lSol_float_t, hyEdge_dimT>, 2 * hyEdge_dimT> normals;
+    for (unsigned int i = 0; i < n_shape_fct_; ++i)
+      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+        for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+          bdr_int[(i * n_shape_bdr_ + j) * 2 * hyEdge_dimT + face] =
+            integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
+              i, j, face, hyper_edge.geometry);
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+      for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+        normals[face][dim] = hyper_edge.geometry.local_normal(face).operator[](dim);
+
+    for (unsigned int face_j = 0; face_j < 2 * hyEdge_dimT; ++face_j)
+      for (unsigned int dof_j = 0; dof_j < n_shape_bdr_; ++dof_j)
+      {
+        lambda_values[face_j][dof_j] = 1.;
+        SmallVec<n_loc_dofs_, lSol_float_t> coeffs;
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        {
+          const lSol_float_t integral =
+            bdr_int[(i * n_shape_bdr_ + dof_j) * 2 * hyEdge_dimT + face_j];
+          coeffs[hyEdge_dimT * n_shape_fct_ + i] += tau_ * integral;
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+            coeffs[dim * n_shape_fct_ + i] -= normals[face_j][dim] * integral;
+        }
+        Wrapper::lapack_solve_factored<n_loc_dofs_, 1, lSol_float_t>(lu_mat.data(), ipiv,
+                                                                     coeffs.data());
+
+        SmallMat<2 * hyEdge_dimT, n_shape_bdr_, lSol_float_t> primals, duals;
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+          for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+            for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+            {
+              const lSol_float_t integral =
+                bdr_int[(i * n_shape_bdr_ + j) * 2 * hyEdge_dimT + face];
+              primals(face, j) += coeffs[hyEdge_dimT * n_shape_fct_ + i] * integral;
+              for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+                duals(face, j) += normals[face][dim] * integral * coeffs[dim * n_shape_fct_ + i];
+            }
+
+        const unsigned int col = face_j * n_shape_bdr_ + dof_j;
+        for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
+          if (is_dirichlet<parameters>(hyper_edge.node_descriptor[i]))
+            for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+              loc_mat(i * n_shape_bdr_ + j, col) = 0.;
+          else
+            for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+              loc_mat(i * n_shape_bdr_ + j, col) =
+                duals(i, j) + tau_ * primals(i, j) -
+                tau_ * lambda_values[i][j] * hyper_edge.geometry.face_area(i);
+
+        lambda_values[face_j][dof_j] = 0.;
+      }
+
+    return loc_mat;
+  }
+  /*!***********************************************************************************************
    * \brief   Fill an array with 1 if the node is Dirichlet and 0 otherwise.
    ************************************************************************************************/
   template <typename hyEdgeT>

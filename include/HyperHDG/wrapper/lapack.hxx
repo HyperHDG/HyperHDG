@@ -293,6 +293,56 @@ inline void lapack_solve(int system_size, int n_rhs_cols, double* mat_a, double*
     throw LAPACKexception();
 }
 /*!*************************************************************************************************
+ * \brief   LU factorization of dense square matrix --- DO NOT USE.
+ *
+ * Caller provides storage for both the matrix (overwritten with the LU factors) and the pivot
+ * array. No heap allocation is performed.
+ **************************************************************************************************/
+inline void lapack_factorize(int system_size, double* mat_a, int* ipiv)
+{
+  int info = -1;
+  dgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_factorize(int system_size, float* mat_a, int* ipiv)
+{
+  int info = -1;
+  sgetrf_(&system_size, &system_size, mat_a, &system_size, ipiv, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
+ * \brief   Solve using LU factors produced by \c lapack_factorize --- DO NOT USE.
+ *
+ * The factored matrix \c mat_a and \c ipiv must come from a previous \c lapack_factorize call.
+ * \c rhs_b holds the right-hand side on entry and the solution on exit.
+ **************************************************************************************************/
+inline void lapack_solve_factored(int system_size,
+                                  int n_rhs_cols,
+                                  double* mat_a,
+                                  int* ipiv,
+                                  double* rhs_b)
+{
+  int info = -1;
+  char trans = 'N';
+  dgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_solve_factored(int system_size,
+                                  int n_rhs_cols,
+                                  float* mat_a,
+                                  int* ipiv,
+                                  float* rhs_b)
+{
+  int info = -1;
+  char trans = 'N';
+  sgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
  * \brief   Solve local system of equations with \c float floating point numbers --- DO NOT USE.
  *
  * Solve linear (dense) system of equations \f$Ax=b\f$, where \$A\$ is an \f$n \times n\f$ square
@@ -363,6 +413,46 @@ inline void lapack_qr(int n_rows, int n_cols, float* mat_a, float* tau)
   if (info != 0)
     throw LAPACKexception();
 }
+/*!*************************************************************************************************
+ * \brief   Solve local system of equations with caller provided pivot array --- DO NOT USE.
+ *
+ * Same as \c lapack_solve, but the pivot array \c ipiv of size \c system_size is provided by the
+ * caller, which avoids a heap allocation per solve.
+ **************************************************************************************************/
+inline void lapack_solve(int system_size, int n_rhs_cols, double* mat_a, int* ipiv, double* rhs_b)
+{
+  int info = -1;
+  dgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_solve(int system_size, int n_rhs_cols, float* mat_a, int* ipiv, float* rhs_b)
+{
+  int info = -1;
+  sgesv_(&system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+/*!*************************************************************************************************
+ * \brief   QR decomposition with caller provided work array --- DO NOT USE.
+ *
+ * Same as \c lapack_qr, but the work array \c work of size \c n_cols is provided by the caller,
+ * which avoids a heap allocation per decomposition.
+ **************************************************************************************************/
+inline void lapack_qr(int n_rows, int n_cols, double* mat_a, double* tau, double* work)
+{
+  int info = -1;
+  dgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
+inline void lapack_qr(int n_rows, int n_cols, float* mat_a, float* tau, float* work)
+{
+  int info = -1;
+  sgeqr2_(&n_rows, &n_cols, mat_a, &n_rows, tau, work, &info);
+  if (info != 0)
+    throw LAPACKexception();
+}
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -382,8 +472,28 @@ std::array<lapack_float_t, system_size * n_rhs_cols> lapack_solve(
   std::array<lapack_float_t, system_size * system_size>& dense_mat,
   std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
 {
-  lapack_solve(system_size, n_rhs_cols, dense_mat.data(), rhs.data());
+  std::array<int, system_size> ipiv;
+  lapack_solve(system_size, n_rhs_cols, dense_mat.data(), ipiv.data(), rhs.data());
   return rhs;
+}
+
+// -------------------------------------------------------------------------------------------------
+// lapack_factorize / lapack_solve_factored
+// -------------------------------------------------------------------------------------------------
+
+template <unsigned int system_size, typename lapack_float_t>
+void lapack_factorize(std::array<lapack_float_t, system_size * system_size>& dense_mat,
+                      std::array<int, system_size>& ipiv)
+{
+  lapack_factorize(system_size, dense_mat.data(), ipiv.data());
+}
+
+template <unsigned int system_size, unsigned int n_rhs_cols, typename lapack_float_t>
+void lapack_solve_factored(std::array<lapack_float_t, system_size * system_size>& dense_mat,
+                           std::array<int, system_size>& ipiv,
+                           std::array<lapack_float_t, system_size * n_rhs_cols>& rhs)
+{
+  lapack_solve_factored(system_size, n_rhs_cols, dense_mat.data(), ipiv.data(), rhs.data());
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -395,7 +505,8 @@ lapack_float_t lapack_det(std::array<lapack_float_t, n_rows * n_cols>& dense_mat
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  std::array<lapack_float_t, n_cols> work;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data(), work.data());
 
   lapack_float_t determinant = 1.;
   for (unsigned int i = 0; i < rank; ++i)
@@ -571,7 +682,8 @@ std::array<lapack_float_t, n_rows * n_rows> lapack_qr_decomp_q(
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  std::array<lapack_float_t, n_cols> work;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data(), work.data());
   return get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau);
 }
 
@@ -585,7 +697,8 @@ std::array<lapack_float_t, n_rows * n_cols>& lapack_qr_decomp_r(
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  std::array<lapack_float_t, n_cols> work;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data(), work.data());
   return get_r_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat);
 }
 
@@ -599,7 +712,8 @@ void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  std::array<lapack_float_t, n_cols> work;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data(), work.data());
 
   get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau, mat_q);
   get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat);
@@ -616,7 +730,8 @@ void lapack_qr_decomp(std::array<lapack_float_t, n_rows * n_cols>& dense_mat,
 {
   constexpr unsigned int rank = std::min(n_rows, n_cols);
   std::array<lapack_float_t, rank> tau;
-  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data());
+  std::array<lapack_float_t, n_cols> work;
+  lapack_qr(n_rows, n_cols, dense_mat.data(), tau.data(), work.data());
 
   get_q_from_lapack_qr_result<n_rows, n_cols, rank, lapack_float_t>(dense_mat, tau, mat_q);
   get_r_from_lapack_qr_result<n_rows, n_cols, lapack_float_t>(dense_mat, mat_r);
