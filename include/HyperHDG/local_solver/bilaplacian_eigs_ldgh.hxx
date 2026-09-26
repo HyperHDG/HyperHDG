@@ -683,7 +683,7 @@ BilaplacianEigs<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::ass
     for (unsigned int j = 0; j < n_shape_fct_; ++j)
     {
       // Integral_element phi_i phi_j dx in diagonal blocks
-      vol_integral = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+      vol_integral = integrator::integrate_vol_phiphi(i, j, hyper_edge.geometry);
       vol_func_integral = integrator::template integrate_vol_phiphifunc<
         Point<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>, decltype(hyEdgeT::geometry),
         parameters::inverse_bilaplacian_coefficient, Point<hyEdge_dimT, lSol_float_t> >(
