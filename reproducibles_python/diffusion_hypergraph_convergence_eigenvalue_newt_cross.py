@@ -70,7 +70,7 @@ def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_
   PyDP = HyperHDG.include(const)
 
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/cross.geo" )
+    "/../domains/cross_2d.geo" )
   HDG_wrapper.refine( 2 ** iteration )
   helper = helper_ev_newt(HDG_wrapper)
 
