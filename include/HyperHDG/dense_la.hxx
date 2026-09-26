@@ -1003,11 +1003,30 @@ using Point = SmallVec<n_rows, mat_entry_t>;
 
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations A * x = b <=> x = A / b.
+ *
+ * Small diagonal matrices (e.g. the transformation matrices of axis-parallel geometries) are
+ * treated without calling LAPACK. For these, LAPACK's LU decomposition with partial pivoting does
+ * not pivot and reduces to dividing by the diagonal entries. Singular matrices are still handed to
+ * LAPACK such that the corresponding exception is thrown.
  **************************************************************************************************/
 template <unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t>
 SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(SmallMat<n_rowsA, n_colsB, mat_entry_t>& b,
                                                   SmallMat<n_rowsA, n_rowsA, mat_entry_t>& A)
 {
+  if constexpr (n_rowsA <= 3)
+  {
+    bool is_regular_diagonal = true;
+    for (unsigned int i = 0; i < n_rowsA && is_regular_diagonal; ++i)
+      for (unsigned int j = 0; j < n_rowsA && is_regular_diagonal; ++j)
+        is_regular_diagonal = (i == j) ? (A(i, i) != 0.) : (A(i, j) == 0.);
+    if (is_regular_diagonal)
+    {
+      for (unsigned int j = 0; j < n_colsB; ++j)
+        for (unsigned int i = 0; i < n_rowsA; ++i)
+          b(i, j) /= A(i, i);
+      return b;
+    }
+  }
   return Wrapper::lapack_solve<n_rowsA, n_colsB, mat_entry_t>(A.data(), b.data());
 }
 /*!*************************************************************************************************
@@ -1020,6 +1039,30 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(const SmallMat<n_rowsA, n_cols
   SmallMat<n_rowsA, n_colsB, mat_entry_t> helperb(b);
   SmallMat<n_rowsA, n_rowsA, mat_entry_t> helperA(A);
   return helperb / helperA;
+}
+/*!*************************************************************************************************
+ * \brief   Solve linear system of equations A * x = b <=> x = A / b.
+ *
+ * Temporary matrices A (e.g. freshly assembled local matrices) are overwritten by LAPACK instead
+ * of being copied first.
+ **************************************************************************************************/
+template <unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t>
+SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(const SmallMat<n_rowsA, n_colsB, mat_entry_t>& b,
+                                                  SmallMat<n_rowsA, n_rowsA, mat_entry_t>&& A)
+{
+  SmallMat<n_rowsA, n_colsB, mat_entry_t> helperb(b);
+  return helperb / A;
+}
+/*!*************************************************************************************************
+ * \brief   Solve linear system of equations A * x = b <=> x = A / b.
+ *
+ * Temporary matrices A and right-hand sides b are overwritten instead of being copied first.
+ **************************************************************************************************/
+template <unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t>
+SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(SmallMat<n_rowsA, n_colsB, mat_entry_t>&& b,
+                                                  SmallMat<n_rowsA, n_rowsA, mat_entry_t>&& A)
+{
+  return b / A;
 }
 
 // -------------------------------------------------------------------------------------------------
