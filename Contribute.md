@@ -19,6 +19,15 @@ https://github.com/HyperHDG/HyperHDG/tree/main/.github/workflows) folder succeed
 indicated by a green check mark (as opposed to a red cross) on top of the file list of your branch.
 A yellow dot indicated that the tests are still running.
 
+The formatting check uses **clang-format 18.1.8** (cf. `CLANG_FORMAT_VERSION` in
+[clang_format.yml](https://github.com/HyperHDG/HyperHDG/blob/main/.github/workflows/clang_format.yml)).
+Other versions of clang-format format some constructs differently, so please use exactly this
+version. It can be installed on all operating systems (e.g. within a virtual environment) via
+
+    $ python3 -m pip install clang-format==18.1.8
+
+Afterwards, `./shell_scripts/clang_format.sh` (run from the main directory) formats all C++ files.
+
 With the aforementioned two requirements fulfilled, you can create a pull request which will be
 merged to the main branch after an additional revision by one of the [[Authors]] if it can be
 automatically merged. You will receive a feedback if any problems with the pull request occurred.
