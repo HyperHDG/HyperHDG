@@ -1,4 +1,4 @@
-import glob, re
+import glob, os, re
 from .paths import main_dir
 
 ## \brief   Extract classname from name that might contain template arguemnts.
@@ -11,5 +11,6 @@ def find_definition(folder, classname):
   for file in glob.glob(main_dir() + "/include/HyperHDG/" + folder + "/*.hxx"):
     with open(file, "r") as hxxfile:
       if ("\nclass " + classname + "\n{" or "\nstruct " + classname + "\n{") in hxxfile.read():
-        return re.sub(main_dir() + "/include/", '', file)
+        # Path relative to the include directory using '/' (glob yields '\' on Windows).
+        return os.path.relpath(file, main_dir() + "/include").replace(os.sep, "/")
   assert False, "File containing defintion of " + classname + " has not been found!"

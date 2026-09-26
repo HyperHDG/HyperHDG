@@ -15,7 +15,7 @@ import os, sys
 def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
   
   time_steps  = 10 ** 3
   time_end    = 2. * np.pi

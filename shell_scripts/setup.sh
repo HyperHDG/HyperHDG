@@ -26,9 +26,14 @@ setup_library()
     __pycache__ */__pycache__ */*/__pycache__ &&
 
   mkdir -p build && cd build &&
-  cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug && ctest -C Debug && cd .. &&
+  cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOC=ON && cmake --build . --config Debug &&
+  ctest -C Debug --output-on-failure && cd .. &&
 
-  cd build && make doxygen && cd ..
+  if command -v doxygen > /dev/null 2>&1; then
+    cmake --build build --target doxygen
+  else
+    echo "${COL}Doxygen has not been found. Skipping generation of documentation ...${NOR}"
+  fi
 }
 
 

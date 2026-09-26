@@ -13,7 +13,7 @@ import os, sys
 def diffusion_test(poly_degree, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
   
   try:
     import HyperHDG

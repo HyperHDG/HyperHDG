@@ -42,7 +42,7 @@ class helper_ev_newt():
 def eigenvalue_newt(poly_degree, dimension, iteration, initial="default", debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
   
   n_newton_steps = 25
   scaling_fac    = 1e-2

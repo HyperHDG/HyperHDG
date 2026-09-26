@@ -23,15 +23,18 @@ want to know how to setup HyperHDG, we recommend to visit the [Wiki's setup page
 
 | Task / Test   | Status                                        | Details                                                   |
 |:--------------|:----------------------------------------------|:----------------------------------------------------------|
-| Format code   | ![Clang](../../workflows/Clang/badge.svg)     | Check, whether C++ code obeys the formatting rules.       |
-| Build library | ![CMake](../../workflows/CMake/badge.svg)     | Build and test library to work for predefined test cases. |
-| Make doxygen  | ![Doxygen](../../workflows/Doxygen/badge.svg) | Automatically generate and deploy doxygen to web-page.    |
+| Format code     | [![Clang](https://github.com/HyperHDG/HyperHDG/actions/workflows/clang_format.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/clang_format.yml?query=branch%3Amain) | Check, whether C++ code obeys the formatting rules. |
+| Build (Linux)   | [![CMake](https://github.com/HyperHDG/HyperHDG/actions/workflows/cmake.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/cmake.yml?query=branch%3Amain) | Build and test library on Ubuntu with GCC and Clang. |
+| Build (macOS)   | [![macOS](https://github.com/HyperHDG/HyperHDG/actions/workflows/macos.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/macos.yml?query=branch%3Amain) | Build and test library on macOS with Apple Clang. |
+| Build (Windows) | [![Windows](https://github.com/HyperHDG/HyperHDG/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/windows.yml?query=branch%3Amain) | Build and test library on Windows with MinGW-w64 GCC (MSYS2). |
+| Make doxygen    | [![Doxygen](https://github.com/HyperHDG/HyperHDG/actions/workflows/make_doxygen.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/make_doxygen.yml?query=branch%3Amain) | Automatically generate and deploy doxygen to web-page. |
 
 </div>
 
-The status given in the table refers to the `main` branch. The build test covers building the
-library and testing it with several compilers. For more details on the tests, please refer to the
-files `.github/workflows`.
+The status given in the table refers to the `main` branch (the badges are explicitly filtered by
+`?branch=main`, so failing runs on feature branches do not show up here). The build tests cover
+building the library and testing it with several compilers and operating systems. For more details
+on the tests, please refer to the files in `.github/workflows`.
 
 
 # Copyright, License, and Contribution Policy
