@@ -33,3 +33,25 @@ jobs:
       uses: HyperHDG/actions@cmake
       with:
         cxx_compiler: ${{ matrix.comp.cxx }}
+
+  # ============== Test the optional OpenMP parallelization (HYPERHDG_OPENMP) with GCC =============
+  build_and_test_openmp:
+    name: Test code with g++-14 and OpenMP on ubuntu-24.04
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+       submodules: recursive
+    - name: Install Python and CXX compiler
+      run: |
+        sudo apt-get update;
+        sudo apt-get install -y cmake libblas-dev liblapack-dev;
+        sudo apt-get install -y ${{ env.PYTHON }} g++-14;
+    - name: Configure
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-14 -DHYPERHDG_OPENMP=ON
+    - name: Build
+      run: cmake --build build -j 4
+    - name: Test
+      run: OMP_NUM_THREADS=4 ctest --test-dir build --output-on-failure

@@ -1,5 +1,6 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/global_loop/mat_generate.hxx>
 #include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hy_assert.hxx>
 
@@ -81,7 +82,9 @@ class OperatorCache
     hy_assert(x_vec.size() + 1 == row_ptr_.size(), "Vector does not fit to cached operator!");
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
-    for (unsigned int row = 0; row + 1 < row_ptr_.size(); ++row)
+    const long long n_rows = (long long)row_ptr_.size() - 1;
+    HYPERHDG_OMP_PARALLEL_FOR
+    for (long long row = 0; row < n_rows; ++row)
     {
       dof_value_t sum = 0.;
       for (unsigned int k = row_ptr_[row]; k < row_ptr_[row + 1]; ++k)
