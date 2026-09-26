@@ -2,6 +2,7 @@
 
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/global_loop/mat_generate.hxx>
+#include <HyperHDG/global_loop/operator_cache.hxx>
 #include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
@@ -78,6 +79,10 @@ class Elliptic
    * \brief   Vector containing the indices of Dirichlet type nodes.
    ************************************************************************************************/
   std::vector<dof_index_t> dirichlet_indices_;
+  /*!***********************************************************************************************
+   * \brief   Optional cache of the condensed operator (cf. cache_operator).
+   ************************************************************************************************/
+  OperatorCache<LargeVecT, dof_value_t> operator_cache_;
   /*!***********************************************************************************************
    * \brief   Instantiation of a local solver.
    ************************************************************************************************/
@@ -204,7 +209,12 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
+    LargeVecT vec_Ax =
+      operator_cache_.enabled()
+        ? operator_cache_.apply(
+            x_vec, time, [&](const dof_value_t param)
+            { return trace_to_flux_mat<hyNode_index_t>(param, operator_cache_.factorize_once()); })
+        : prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -340,7 +350,27 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Set refinement level.
    ************************************************************************************************/
-  void set_refinement(unsigned int level) { hyper_graph_.set_refinement(level); }
+  void set_refinement(unsigned int level)
+  {
+    hyper_graph_.set_refinement(level);
+    operator_cache_.invalidate();
+  }
+  /*!***********************************************************************************************
+   * \brief   Use a cached sparse matrix for trace_to_flux (cf. OperatorCache).
+   *
+   * \param   enable            If true, trace_to_flux assembles the condensed matrix once and
+   *                            evaluates sparse matrix--vector products afterwards. This is faster
+   *                            if trace_to_flux is called often, but needs memory for the matrix.
+   * \param   factorize_once    Assemble the matrix with factorize_once (cf. trace_to_flux_mat).
+   * \param   time_independent  The operator does not depend on time, i.e., the matrix is not
+   *                            reassembled if trace_to_flux is called for another time.
+   ************************************************************************************************/
+  void cache_operator(const bool enable = true,
+                      const bool factorize_once = false,
+                      const bool time_independent = false)
+  {
+    operator_cache_.configure(enable, factorize_once, time_independent);
+  }
 };  // end of class Elliptic
 
 }  // end of namespace GlobalLoop

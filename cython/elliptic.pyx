@@ -45,6 +45,11 @@ cdef class PythonClassName :
     return return_val
   def plot_solution(self, vec):
     self.thisptr.plot_solution (vec)
+  # Let trace_to_flux use a sparse matrix that is assembled once (faster if trace_to_flux is called
+  # often, needs memory for the matrix). The matrix is reassembled if trace_to_flux is called with
+  # another time, unless time_independent = True.
+  def cache_operator(self, enable = True, factorize_once = False, time_independent = False):
+    self.thisptr.cache_operator(enable, factorize_once, time_independent)
   def refine(self, n_ref = 'default'):
     if n_ref == 'default':
       return self.thisptr.get_refinement()

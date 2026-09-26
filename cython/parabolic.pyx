@@ -47,6 +47,18 @@ cdef class PythonClassName :
     return return_val
   def plot_solution(self, vec, time = 0.):
     self.thisptr.plot_solution (vec, time)
+  # Condensed matrix in coordinate format (entries with equal indices have to be summed up).
+  # factorize_once = True computes the local matrix only once per combination of boundary
+  # conditions and reuses it for all hyperedges. This is only correct for uniform meshes with
+  # coefficients that are constant in space (not, e.g., for space dependent diffusion tensors).
+  def sparse_stiff_mat(self, time = 0., factorize_once = False):
+    helper = self.thisptr.trace_to_flux_mat(time, factorize_once)
+    return helper.get_cols(), helper.get_rows(), helper.get_values()
+  # Let trace_to_flux use a sparse matrix that is assembled once (faster if trace_to_flux is called
+  # often, needs memory for the matrix). The matrix is reassembled if trace_to_flux is called with
+  # another time, unless time_independent = True.
+  def cache_operator(self, enable = True, factorize_once = False, time_independent = False):
+    self.thisptr.cache_operator(enable, factorize_once, time_independent)
   def refine(self, n_ref = 'default'):
     if n_ref == 'default':
       return self.thisptr.get_refinement()

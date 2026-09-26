@@ -1,6 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/mat_generate.hxx>
+#include <HyperHDG/global_loop/operator_cache.hxx>
 #include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
@@ -36,6 +38,10 @@ class Parabolic
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
+  /*!***********************************************************************************************
+   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
+   ************************************************************************************************/
+  HAS_MEMBER_FUNCTION(trace_to_flux_mat, has_trace_to_flux_mat);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
@@ -80,6 +86,10 @@ class Parabolic
    * \brief   Instantiation of a local solver.
    ************************************************************************************************/
   const LocalSolverT local_solver_;
+  /*!***********************************************************************************************
+   * \brief   Optional cache of the condensed operator (cf. cache_operator).
+   ************************************************************************************************/
+  OperatorCache<LargeVecT, dof_value_t> operator_cache_;
   /*!***********************************************************************************************
    * \brief   Struct encoding the options for plotting.
    ************************************************************************************************/
@@ -173,6 +183,11 @@ class Parabolic
   {
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+
+    if (operator_cache_.enabled())
+      return operator_cache_.apply(
+        x_vec, time, [&](const dof_value_t param)
+        { return trace_to_flux_mat<hyNode_index_t>(param, operator_cache_.factorize_once()); });
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
@@ -453,7 +468,44 @@ class Parabolic
   /*!***********************************************************************************************
    * \brief   Set refinement level.
    ************************************************************************************************/
-  void set_refinement(unsigned int level) { hyper_graph_.set_refinement(level); }
+  void set_refinement(unsigned int level)
+  {
+    hyper_graph_.set_refinement(level);
+    operator_cache_.invalidate();
+  }
+  /*!***********************************************************************************************
+   * \brief   Assemble the condensed matrix of trace_to_flux in coordinate (triplet) format.
+   *
+   * Entries with the same row and column index have to be summed up. Cf. the function of the same
+   * name in the elliptic global loop for the meaning of \c factorize_once.
+   *
+   * \param   time  Parameter of trace_to_flux (time).
+   * \param   factorize_once  Compute the local matrix only once per combination of face types.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.,
+                                          const bool factorize_once = false)
+  {
+    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
+    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
+    return prototype_mat_generate_local(trace_to_flux, has_trace_to_flux, trace_to_flux_mat,
+                                        has_trace_to_flux_mat, factorize_once);
+  }
+  /*!***********************************************************************************************
+   * \brief   Use a cached sparse matrix for trace_to_flux (cf. OperatorCache).
+   *
+   * \param   enable          If true, trace_to_flux assembles the condensed matrix once and
+   *                          evaluates sparse matrix--vector products afterwards.
+   * \param   factorize_once  Assemble the matrix with factorize_once (cf. trace_to_flux_mat).
+   * \param   time_independent  The operator does not depend on the time, i.e., the matrix is
+   *                          not reassembled if trace_to_flux is called for another one.
+   ************************************************************************************************/
+  void cache_operator(const bool enable = true,
+                      const bool factorize_once = false,
+                      const bool time_independent = false)
+  {
+    operator_cache_.configure(enable, factorize_once, time_independent);
+  }
 };  // end of class Parabolic
 
 }  // end of namespace GlobalLoop
