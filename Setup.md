@@ -220,3 +220,9 @@ installed within the Docker container. However, you might need `root` privileges
 Afterwards, you can use the `run` command illustrated in the README of the HyperHDG [docker page](
 https://github.com/HyperHDG/docker) with the `<tag>` set to `hyperhdg_docker`. For the usage of the
 Docker notebook, please also refer to the README.
+
+
+# Performance options
+
+For faster assembly of matrices, cached operators for iterative solvers and time stepping, and the
+optional OpenMP parallelization, see the page [[Performance]].
