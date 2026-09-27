@@ -17,12 +17,12 @@ cdef extern from "<HyperHDG/global_loop/mass_approx_eigenvalue.hxx>" :
     CythonClassName ( CyReplace01 , CyReplace04 ) except +
     CythonClassName ( CyReplace01 ) except +
     vector[unsigned int] dirichlet_indices ()
-    vector[ CyReplace03 ] trace_to_flux (vector[ CyReplace03 ], CyReplace03 )
+    vector[ CyReplace03 ] trace_to_flux (vector[ CyReplace03 ], CyReplace03 ) except +
     vector[ CyReplace03 ] trace_to_mass_flux (vector[ CyReplace03 ], CyReplace03 )
     int size_of_system ()
     string plot_option (string, string)
     void plot_solution (vector[ CyReplace03 ], CyReplace03 )
-    sparse_mat trace_to_flux_mat(CyReplace03, bint)
+    sparse_mat trace_to_flux_mat(CyReplace03, bint) except +
     void cache_operator(bint, bint, bint)
     unsigned int get_refinement()
     void set_refinement(unsigned int)

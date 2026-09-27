@@ -42,3 +42,30 @@ assert info == 0, "CG did not converge!"
 error = HDG_wrapper.errors(solution)[0]
 print("Error with factorize_once = True:", error)
 assert error < 1e-3, "Error is too large!"
+
+# On a non-uniform hypergraph, factorize_once is wrong. This must raise a ValueError (the Python
+# interface is compiled in release mode, where only a sample of hyperedges is checked). In the
+# refined triangle, the interior hyperedges of the legs and of the hypotenuse have the same face
+# types, but different lengths.
+const                 = HyperHDG.config()
+const.global_loop     = "Elliptic"
+const.topology        = "File<1,2>"
+const.geometry        = "File<1,2>"
+const.node_descriptor = "File<1,2>"
+const.local_solver    = "Diffusion<1,2,4,TestParametersSinEllipt,double>"
+const.cython_replacements = ["string", "string"]
+const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
+const.debug_mode      = False
+
+HDG_wrapper = HyperHDG.include(const)(os.path.dirname(os.path.abspath(__file__)) \
+  + "/../domains/simplex_1_2.geo")
+HDG_wrapper.refine(4)
+HDG_wrapper.sparse_stiff_mat(False)
+for misuse in [lambda: HDG_wrapper.sparse_stiff_mat(True),
+               lambda: (HDG_wrapper.cache_operator(True, True),
+                        HDG_wrapper.trace_to_flux(HDG_wrapper.zero_vector()))]:
+  try:
+    misuse()
+    raise AssertionError("Misuse of factorize_once has not been detected!")
+  except ValueError as error:
+    print("Misuse of factorize_once detected:", str(error)[:60], "...")

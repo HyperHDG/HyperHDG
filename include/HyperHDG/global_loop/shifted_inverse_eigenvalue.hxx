@@ -38,10 +38,6 @@ class ShiftedInverseEigenvalue
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
   HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_to_flux_mat, has_trace_to_flux_mat);
 
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
@@ -304,11 +300,8 @@ class ShiftedInverseEigenvalue
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t sigma = 0.,
                                           const bool factorize_once = false)
   {
-    constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
-    constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
-    const dof_value_t time = sigma;  // Name used by prototype_mat_generate_local.
-    return prototype_mat_generate_local(trace_to_flux, has_trace_to_flux, trace_to_flux_mat,
-                                        has_trace_to_flux_mat, factorize_once);
+    return MatGenerate::assemble_triplets<hyNode_index_t, LargeVecT>(hyper_graph_, local_solver_,
+                                                                     sigma, factorize_once);
   }
   /*!***********************************************************************************************
    * \brief   Use a cached sparse matrix for trace_to_flux (cf. OperatorCache).

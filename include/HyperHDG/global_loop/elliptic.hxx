@@ -44,10 +44,6 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
    ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_to_flux_mat, has_trace_to_flux_mat);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
   HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
@@ -247,15 +243,17 @@ class Elliptic
    *                          all hyperedges. This is only correct if all hyperedges have the same
    *                          local matrix, e.g., for uniform meshes with coefficients that are
    *                          constant in space. It is wrong for space dependent diffusion tensors
-   *or non-uniform meshes. Defaults to false (local matrix per hyperedge). \retval  sparse_mat
-   *Condensed matrix in coordinate format.
+   *                          or non-uniform meshes, which is detected for a sample of hyperedges
+   *                          (for all hyperedges in debug mode) and results in an exception.
+   *                          Defaults to false (local matrix per hyperedge).
+   * \retval  sparse_mat      Condensed matrix in coordinate format.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.,
                                           const bool factorize_once = false)
   {
-    return prototype_mat_generate_local(trace_to_flux, has_trace_to_flux, trace_to_flux_mat,
-                                        has_trace_to_flux_mat, factorize_once);
+    return MatGenerate::assemble_triplets<hyNode_index_t, LargeVecT>(hyper_graph_, local_solver_,
+                                                                     time, factorize_once);
   }
 
   /*!***********************************************************************************************

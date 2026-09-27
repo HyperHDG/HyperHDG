@@ -51,6 +51,7 @@ cdef class PythonClassName :
   # factorize_once = True computes the local matrix only once per combination of boundary
   # conditions and reuses it for all hyperedges. This is only correct for uniform meshes with
   # coefficients that are constant in space (not, e.g., for space dependent diffusion tensors).
+  # Violations are detected for a sample of hyperedges and raise a ValueError.
   def sparse_stiff_mat(self, time = 0., factorize_once = False):
     helper = self.thisptr.trace_to_flux_mat(time, factorize_once)
     return helper.get_cols(), helper.get_rows(), helper.get_values()
