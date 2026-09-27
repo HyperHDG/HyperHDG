@@ -69,7 +69,7 @@ class MassApproxEigenvalue
   /*!***********************************************************************************************
    * \brief   Optional cache of the condensed operator (cf. cache_operator).
    ************************************************************************************************/
-  OperatorCache<LargeVecT, dof_value_t> operator_cache_;
+  OperatorCache<LargeVecT> operator_cache_;
   /*!***********************************************************************************************
    * \brief   Struct encoding the options for plotting.
    ************************************************************************************************/
@@ -193,9 +193,8 @@ class MassApproxEigenvalue
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
     if (operator_cache_.enabled())
-      return operator_cache_.apply(
-        x_vec, time, [&](const dof_value_t param)
-        { return trace_to_flux_mat<hyNode_index_t>(param, operator_cache_.factorize_once()); });
+      return operator_cache_.template apply<hyNode_index_t>(x_vec, time, hyper_graph_,
+                                                            local_solver_);
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;

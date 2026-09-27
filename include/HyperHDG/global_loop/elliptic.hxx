@@ -78,7 +78,7 @@ class Elliptic
   /*!***********************************************************************************************
    * \brief   Optional cache of the condensed operator (cf. cache_operator).
    ************************************************************************************************/
-  OperatorCache<LargeVecT, dof_value_t> operator_cache_;
+  OperatorCache<LargeVecT> operator_cache_;
   /*!***********************************************************************************************
    * \brief   Instantiation of a local solver.
    ************************************************************************************************/
@@ -207,9 +207,7 @@ class Elliptic
   {
     LargeVecT vec_Ax =
       operator_cache_.enabled()
-        ? operator_cache_.apply(
-            x_vec, time, [&](const dof_value_t param)
-            { return trace_to_flux_mat<hyNode_index_t>(param, operator_cache_.factorize_once()); })
+        ? operator_cache_.template apply<hyNode_index_t>(x_vec, time, hyper_graph_, local_solver_)
         : prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
