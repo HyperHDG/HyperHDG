@@ -14,7 +14,8 @@
  *
  * Moreover, it is checked that
  * - using factorize_once for a space dependent diffusion coefficient throws std::invalid_argument
- *   (in debug and in release mode), and
+ *   (in debug and in release mode),
+ * - the cached operator rejects vectors of wrong size (std::invalid_argument), and
  * - exceptions of the local solver are forwarded to the caller (also if the assembly is
  *   parallelized with OpenMP, where they must not leave the parallel region).
  **************************************************************************************************/
@@ -278,6 +279,19 @@ int main()
     problem.set_refinement(3);
     successful &=
       check_cached(problem, reference, max_entry, "Diffusion on cross after refinement");
+  }
+
+  // A vector that does not fit to the cached operator must be rejected.
+  {
+    GlobalLoop::Elliptic<Topology::Cubic<2, 2>, Geometry::UnitCube<2, 2, double>,
+                         NodeDescriptor::Cubic<2, 2>,
+                         LocalSolver::Diffusion<2, 1, 2, ConstantParameters, double> >
+      problem(vector<unsigned int>{4, 4});
+    problem.cache_operator(true);
+    vector<double> too_short = problem.zero_vector();
+    too_short.pop_back();
+    successful &= throws<invalid_argument>("Vector of wrong size for cached operator",
+                                           [&]() { problem.trace_to_flux(too_short); });
   }
 
   // factorize_once must be detected to be wrong for space dependent coefficients.

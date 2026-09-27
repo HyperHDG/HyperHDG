@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 
 namespace GlobalLoop
@@ -28,7 +30,9 @@ namespace GlobalLoop
  *
  * The cache is rebuilt if the parameter of \c trace_to_flux (the time for elliptic and parabolic
  * problems, the shift for eigenvalue problems) changes, unless it has been declared to be
- * independent of this parameter. It must be invalidated if the hypergraph changes (refinement).
+ * independent of this parameter. It must be invalidated if the hypergraph changes (as done by
+ * \c set_refinement of the global loops). As a safeguard, it is also rebuilt if the numbers of
+ * hypernodes or hyperedges differ from those it has been assembled for.
  *
  * \warning The cache assumes that the condensed operator is determined by the hypergraph, the local
  *          solver, and the parameter of \c trace_to_flux only. This holds for the local solvers of
@@ -95,17 +99,27 @@ class OperatorCache
                   HyperGraphT& hyper_graph,
                   const LocalSolverT& local_solver)
   {
-    if (!valid_ || (!param_independent_ && param != param_))
+    // The size check guards against a stale matrix if the hypergraph has changed without the cache
+    // being invalidated (which set_refinement does).
+    const std::size_t n_rows =
+      (std::size_t)hyper_graph.hyNode_factory().n_hyNodes() * LocalSolverT::n_glob_dofs_per_node();
+    if (!valid_ || (!param_independent_ && param != param_) || row_ptr_.size() != n_rows + 1 ||
+        n_hyEdges_ != hyper_graph.n_hyEdges())
     {
       assemble<hyNode_index_t>(hyper_graph, local_solver, param);
       param_ = param;
     }
-    hy_assert(x_vec.size() + 1 == row_ptr_.size(), "Vector does not fit to cached operator!");
+    if (x_vec.size() != n_rows)
+    {
+      std::stringstream msg;
+      msg << "The vector has size " << x_vec.size() << ", but the cached operator has " << n_rows
+          << " rows.";
+      throw std::invalid_argument(msg.str());
+    }
 
     LargeVecT vec_Ax(x_vec.size(), 0.);
-    const long long n_rows = (long long)row_ptr_.size() - 1;
     HYPERHDG_OMP_PARALLEL_FOR
-    for (long long row = 0; row < n_rows; ++row)
+    for (long long row = 0; row < (long long)n_rows; ++row)
     {
       dof_value_t sum = 0.;
       for (std::size_t k = row_ptr_[row]; k < row_ptr_[row + 1]; ++k)
@@ -134,6 +148,7 @@ class OperatorCache
 
     const std::size_t n_hyEdges = hyper_graph.n_hyEdges();
     const std::size_t n_hyNodes = hyper_graph.hyNode_factory().n_hyNodes();
+    n_hyEdges_ = n_hyEdges;
 
     // Hypernodes of all hyperedges, and hyperedges of all hypernodes.
     std::vector<hyNode_index_t> edge_nodes(n_hyEdges * n_faces);
@@ -227,6 +242,7 @@ class OperatorCache
 
   bool enabled_ = false, factorize_once_ = false, param_independent_ = false, valid_ = false;
   dof_value_t param_ = 0.;
+  std::size_t n_hyEdges_ = 0;
   std::vector<std::size_t> row_ptr_;
   std::vector<unsigned int> col_ind_;
   std::vector<dof_value_t> values_;
