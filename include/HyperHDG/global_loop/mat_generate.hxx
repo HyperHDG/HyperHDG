@@ -229,9 +229,9 @@ void check_reused_local_matrix(const dof_value_t* computed,
  * same local matrix, e.g. for uniform meshes with constant (in space) coefficients. It is wrong if,
  * for example, the diffusion tensor is space dependent or the hyperedges differ in size or shape.
  * Therefore, the local matrices of some hyperedges (the last one of every combination of face types
- * and 16 hyperedges evenly spread over all hyperedges) are recomputed and compared to the reused
- * ones, and an \c std::invalid_argument is thrown if they differ. This costs at most one local
- * matrix per combination of face types plus 16, which is negligible unless the mesh is small.
+ * and up to 16 hyperedges evenly spread over all hyperedges, at most one per 32 hyperedges) are
+ * recomputed and compared to the reused ones, and an \c std::invalid_argument is thrown if they
+ * differ. This costs at most one local matrix per combination of face types plus 16.
  * If the code is compiled without \c NDEBUG, this check is done for every hyperedge (which is as
  * expensive as \c factorize_once being false).
  *
@@ -298,7 +298,8 @@ void for_each_local_matrix(HyperGraphT& hyper_graph,
     {
       for (const auto& face_types_and_edge : last_edge_of_face_types)
         samples.push_back(face_types_and_edge.second);
-      const std::size_t n_spread = std::min<std::size_t>(n_hyEdges, 16);
+      // At most one spread sample per 32 hyperedges, such that small meshes are checked cheaply.
+      const std::size_t n_spread = std::min<std::size_t>(n_hyEdges / 32, 16);
       for (std::size_t k = 0; k < n_spread; ++k)
         samples.push_back(n_spread == 1 ? 0 : k * (n_hyEdges - 1) / (n_spread - 1));
       std::sort(samples.begin(), samples.end());
