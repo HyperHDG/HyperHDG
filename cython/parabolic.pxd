@@ -7,9 +7,9 @@ cdef extern from "<HyperHDG/global_loop/prototype.hxx>" :
   cdef cppclass sparse_mat "sparse_mat<std::vector< CyReplace03 > >" :
     sparse_mat ( unsigned int ) except +
     sparse_mat () except +
-    vector[ unsigned int ] get_cols()
-    vector[ unsigned int ] get_rows()
-    vector[ CyReplace03 ] get_values()
+    vector[ unsigned int ]& get_cols()
+    vector[ unsigned int ]& get_rows()
+    vector[ CyReplace03 ]& get_values()
 
 cdef extern from "<HyperHDG/global_loop/parabolic.hxx>" :
   cdef cppclass CythonClassName C++ClassName :

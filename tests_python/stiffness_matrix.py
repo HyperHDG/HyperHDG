@@ -31,6 +31,10 @@ n = HDG_wrapper.size_of_system()
 matrices = []
 for args in [(), (False,), (True,)]:
   col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat(*args)
+  # The triplets are returned as NumPy arrays of matching lengths.
+  assert all(isinstance(array, np.ndarray) for array in (col_ind, row_ind, vals))
+  assert col_ind.dtype == row_ind.dtype == np.uintc and vals.dtype == np.float64
+  assert len(col_ind) == len(row_ind) == len(vals) > 0
   matrices.append(sp.csr_matrix((vals, (row_ind, col_ind)), shape=(n, n)))
 
 for A in matrices[1:]:
