@@ -35,7 +35,16 @@ template <class TopologyT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
 class Elliptic
+: public CondensedOperator<
+    Elliptic<TopologyT, GeometryT, NodeDescriptorT, LocalSolverT, LargeVecT, dof_index_t>,
+    LargeVecT,
+    dof_index_t>
 {
+  /*!***********************************************************************************************
+   * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
+   ************************************************************************************************/
+  friend class CondensedOperator<Elliptic, LargeVecT, dof_index_t>;
+
  private:
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
@@ -75,10 +84,6 @@ class Elliptic
    * \brief   Vector containing the indices of Dirichlet type nodes.
    ************************************************************************************************/
   std::vector<dof_index_t> dirichlet_indices_;
-  /*!***********************************************************************************************
-   * \brief   Optional cache of the condensed operator (cf. cache_operator).
-   ************************************************************************************************/
-  OperatorCache<LargeVecT> operator_cache_;
   /*!***********************************************************************************************
    * \brief   Instantiation of a local solver.
    ************************************************************************************************/
@@ -205,10 +210,9 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    LargeVecT vec_Ax =
-      operator_cache_.enabled()
-        ? operator_cache_.template apply<hyNode_index_t>(x_vec, time, hyper_graph_, local_solver_)
-        : prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
+    LargeVecT vec_Ax = this->operator_cached()
+                         ? this->template cached_trace_to_flux<hyNode_index_t>(x_vec, time)
+                         : prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -222,36 +226,6 @@ class Elliptic
     }
 
     return vec_Ax;
-  }
-
-  /*!***********************************************************************************************
-   * \brief   Assemble the condensed matrix.
-   *
-   * Function that assembles the condensed matrix \f$A\f$ of the LDG-H method, i.e., the matrix of
-   * the linear map evaluated by \c trace_to_flux, in coordinate (triplet) format. Entries with the
-   * same row and column index have to be summed up (as done by SciPy's \c csr_matrix).
-   *
-   * If the local solver provides \c trace_to_flux_mat, its local matrix is factorized once per
-   * hyperedge. Otherwise, the local problem is solved for every local unit vector.
-   *
-   * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
-   * \param   time            Time at which given analyitic functions will be evaluated.
-   * \param   factorize_once  If true, the local matrix is only computed (and factorized) once for
-   *                          every combination of face types (boundary conditions) and reused for
-   *                          all hyperedges. This is only correct if all hyperedges have the same
-   *                          local matrix, e.g., for uniform meshes with coefficients that are
-   *                          constant in space. It is wrong for space dependent diffusion tensors
-   *                          or non-uniform meshes, which is detected for a sample of hyperedges
-   *                          (for all hyperedges in debug mode) and results in an exception.
-   *                          Defaults to false (local matrix per hyperedge).
-   * \retval  sparse_mat      Condensed matrix in coordinate format.
-   ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.,
-                                          const bool factorize_once = false)
-  {
-    return MatGenerate::assemble_triplets<hyNode_index_t, LargeVecT>(hyper_graph_, local_solver_,
-                                                                     time, factorize_once);
   }
 
   /*!***********************************************************************************************
@@ -349,23 +323,7 @@ class Elliptic
   void set_refinement(unsigned int level)
   {
     hyper_graph_.set_refinement(level);
-    operator_cache_.invalidate();
-  }
-  /*!***********************************************************************************************
-   * \brief   Use a cached sparse matrix for trace_to_flux (cf. OperatorCache).
-   *
-   * \param   enable            If true, trace_to_flux assembles the condensed matrix once and
-   *                            evaluates sparse matrix--vector products afterwards. This is faster
-   *                            if trace_to_flux is called often, but needs memory for the matrix.
-   * \param   factorize_once    Assemble the matrix with factorize_once (cf. trace_to_flux_mat).
-   * \param   time_independent  The operator does not depend on time, i.e., the matrix is not
-   *                            reassembled if trace_to_flux is called for another time.
-   ************************************************************************************************/
-  void cache_operator(const bool enable = true,
-                      const bool factorize_once = false,
-                      const bool time_independent = false)
-  {
-    operator_cache_.configure(enable, factorize_once, time_independent);
+    this->invalidate_operator_cache();
   }
 };  // end of class Elliptic
 

@@ -232,4 +232,101 @@ class OperatorCache
   std::vector<dof_value_t> values_;
 };
 
+/*!*************************************************************************************************
+ * \brief   Assembly of the condensed matrix and optional operator cache of a global loop.
+ *
+ * Base class (CRTP) of the linear global loops. The global loop \c GlobalLoopT has to declare this
+ * class a friend, and to provide the members \c hyper_graph_ and \c local_solver_. Its
+ * \c trace_to_flux has to evaluate \c cached_trace_to_flux if \c operator_cached() is true, and its
+ * \c set_refinement has to call \c invalidate_operator_cache.
+ *
+ * \tparam  GlobalLoopT   The global loop.
+ * \tparam  LargeVecT     Type of large (global) vectors.
+ * \tparam  dof_index_t   Index type of hyperedges.
+ **************************************************************************************************/
+template <typename GlobalLoopT, typename LargeVecT, typename dof_index_t>
+class CondensedOperator
+{
+  /*!***********************************************************************************************
+   * \brief   Floating type is determined by floating type of large vector's entries.
+   ************************************************************************************************/
+  using dof_value_t = typename LargeVecT::value_type;
+
+ public:
+  /*!***********************************************************************************************
+   * \brief   Assemble the condensed matrix.
+   *
+   * Function that assembles the condensed matrix \f$A\f$ of the HDG method, i.e., the matrix of
+   * the linear map evaluated by \c trace_to_flux, in coordinate (triplet) format. Entries with the
+   * same row and column index have to be summed up (as done by SciPy's \c csr_matrix).
+   *
+   * If the local solver provides \c trace_to_flux_mat, its local matrix is factorized once per
+   * hyperedge. Otherwise, the local problem is solved for every local unit vector.
+   *
+   * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
+   * \param   param           Parameter of trace_to_flux, i.e., the time at which given analytic
+   *                          functions will be evaluated (or the shift for eigenvalue problems).
+   * \param   factorize_once  If true, the local matrix is only computed (and factorized) once for
+   *                          every combination of face types (boundary conditions) and reused for
+   *                          all hyperedges. This is only correct if all hyperedges have the same
+   *                          local matrix, e.g., for uniform meshes with coefficients that are
+   *                          constant in space. It is wrong for space dependent diffusion tensors
+   *                          or non-uniform meshes, which is detected for a sample of hyperedges
+   *                          (for all hyperedges in debug mode) and results in an exception.
+   *                          Defaults to false (local matrix per hyperedge).
+   * \retval  sparse_mat      Condensed matrix in coordinate format.
+   ************************************************************************************************/
+  template <typename hyNode_index_t = dof_index_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t param = 0.,
+                                          const bool factorize_once = false)
+  {
+    GlobalLoopT& loop = static_cast<GlobalLoopT&>(*this);
+    return MatGenerate::assemble_triplets<hyNode_index_t, LargeVecT>(
+      loop.hyper_graph_, loop.local_solver_, param, factorize_once);
+  }
+  /*!***********************************************************************************************
+   * \brief   Use a cached sparse matrix for trace_to_flux (cf. OperatorCache).
+   *
+   * \param   enable            If true, trace_to_flux assembles the condensed matrix once and
+   *                            evaluates sparse matrix--vector products afterwards. This is faster
+   *                            if trace_to_flux is called often, but needs memory for the matrix.
+   * \param   factorize_once    Assemble the matrix with factorize_once (cf. trace_to_flux_mat).
+   * \param   param_independent The operator does not depend on the parameter of trace_to_flux
+   *                            (time or shift), i.e., the matrix is not reassembled if
+   *                            trace_to_flux is called with another one.
+   ************************************************************************************************/
+  void cache_operator(const bool enable = true,
+                      const bool factorize_once = false,
+                      const bool param_independent = false)
+  {
+    operator_cache_.configure(enable, factorize_once, param_independent);
+  }
+
+ protected:
+  /*!***********************************************************************************************
+   * \brief   Whether trace_to_flux has to use cached_trace_to_flux.
+   ************************************************************************************************/
+  bool operator_cached() const { return operator_cache_.enabled(); }
+  /*!***********************************************************************************************
+   * \brief   Evaluate trace_to_flux with the cached matrix (which is assembled if necessary).
+   ************************************************************************************************/
+  template <typename hyNode_index_t>
+  LargeVecT cached_trace_to_flux(const LargeVecT& x_vec, const dof_value_t param)
+  {
+    GlobalLoopT& loop = static_cast<GlobalLoopT&>(*this);
+    return operator_cache_.template apply<hyNode_index_t>(x_vec, param, loop.hyper_graph_,
+                                                          loop.local_solver_);
+  }
+  /*!***********************************************************************************************
+   * \brief   Drop the cached matrix (after the hypergraph has changed).
+   ************************************************************************************************/
+  void invalidate_operator_cache() { operator_cache_.invalidate(); }
+
+ private:
+  /*!***********************************************************************************************
+   * \brief   Optional cache of the condensed operator (cf. cache_operator).
+   ************************************************************************************************/
+  OperatorCache<LargeVecT> operator_cache_;
+};
+
 }  // end of namespace GlobalLoop
