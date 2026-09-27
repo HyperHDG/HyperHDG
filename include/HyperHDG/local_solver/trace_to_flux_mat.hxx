@@ -23,6 +23,16 @@
  *   \c trace_to_flux for given local solution \c coeffs (the solution of the local problem),
  * and whose \c trace_to_flux solves the local problem with the matrix \c loc_mat_expr (which may
  * use \c hyper_edge and \c time).
+ *
+ * The local condensed matrix may only depend on the hyperedge's geometry and node descriptor, the
+ * local solver's parameters, and \c time. In particular, it must not depend on the data stored at
+ * the hyperedge (\c hyper_edge.data), since the operator cache of the global loops (cf.
+ * OperatorCache) reuses it as long as the hypergraph and \c time do not change.
+ *
+ * \c assemble_rhs_from_lambda and \c flux_from_coeffs are called for every local unit vector, and
+ * usually evaluate boundary integrals in every call. For local solvers whose local matrix is
+ * cheap compared to these integrals, a hand-written \c trace_to_flux_mat that evaluates the
+ * integrals only once can be considerably faster (cf. \c Diffusion::trace_to_flux_mat).
  **************************************************************************************************/
 #define HYPERHDG_LOCAL_TRACE_TO_FLUX_MAT(loc_mat_expr)                                            \
   template <typename hyEdgeT>                                                                     \

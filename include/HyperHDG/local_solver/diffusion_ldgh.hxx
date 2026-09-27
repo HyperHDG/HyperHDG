@@ -531,6 +531,14 @@ class Diffusion
    * unit vectors, the local matrix is assembled and LU factorized only once and the factorization
    * is reused for all unit vectors, which results in the same values.
    *
+   * This is a hand-written version of HYPERHDG_LOCAL_TRACE_TO_FLUX_MAT, which the other local
+   * solvers use. The macro evaluates the boundary integrals in assemble_rhs_from_lambda,
+   * primal_at_boundary, and dual_at_boundary once per local unit vector, whereas they are only
+   * evaluated once here. Since Diffusion is the most frequently used local solver, this is worth
+   * the duplication: The assembly of the condensed matrix is up to 1.8 times faster than with the
+   * macro (measured for hyperedge dimension 3 and polynomial degree 3, the gain grows with the
+   * polynomial degree). The matrix must not depend on \c hyper_edge.data (cf. OperatorCache).
+   *
    * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
    * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
    * \param   time                Time.

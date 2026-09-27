@@ -112,9 +112,9 @@ struct DiffusionAdvectionReactionParametersDefault
  * \tparam  quad_deg      The order of the quadrature rule.
  * \tparam  parametersT   Struct depending on templates \c space_dimTP and \c lSol_float_TP that
  *                        contains static parameter functions.
- *                        Defaults to above functions included in \c
- *DiffusionAdvectionReactionParametersDefault. \tparam  lSol_float_t  The floating point type
- *calculations are executed in. Defaults to double.
+ *                        Defaults to above functions included in
+ *                        \c DiffusionAdvectionReactionParametersDefault.
+ * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
