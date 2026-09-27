@@ -384,9 +384,9 @@ void for_each_local_matrix(HyperGraphT& hyper_graph,
 /*!*************************************************************************************************
  * \brief   Assemble the condensed matrix in coordinate (triplet) format.
  *
- * This returns the same matrix as \c prototype_mat_generate (with the same ordering of entries),
- * but it obtains the local condensed matrix of each hyperedge at once (cf. \c for_each_local_matrix
- * for details and the meaning of \c factorize_once). Entries with the same row and column index
+ * The local condensed matrix of each hyperedge is obtained at once (cf. \c for_each_local_matrix
+ * for details and the meaning of \c factorize_once), and its entries are stored column by column
+ * (and hyperedge by hyperedge). Entries with the same row and column index
  * have to be summed up (as done by SciPy's \c csr_matrix). Every hyperedge writes its own block of
  * triplets, so the result does not depend on the number of OpenMP threads.
  *
