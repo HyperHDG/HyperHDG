@@ -22,15 +22,6 @@
 #endif
 
 /*!*************************************************************************************************
- * \brief   True if HyperHDG is compiled in debug mode (i.e. without \c NDEBUG).
- **************************************************************************************************/
-#ifdef NDEBUG
-inline constexpr bool hy_debug_mode = false;
-#else
-inline constexpr bool hy_debug_mode = true;
-#endif
-
-/*!*************************************************************************************************
  * \brief   Parallelize the following loop with OpenMP (if HyperHDG is compiled with OpenMP).
  **************************************************************************************************/
 #ifdef _OPENMP
