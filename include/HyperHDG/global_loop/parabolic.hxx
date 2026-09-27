@@ -32,16 +32,24 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class Parabolic
-: public CondensedOperator<
-    Parabolic<TopologyT, GeometryT, NodeDescriptorT, LocalSolverT, LargeVecT, dof_index_t>,
-    LargeVecT,
-    dof_index_t>
+class Parabolic : public CondensedOperator<Parabolic,
+                                           TopologyT,
+                                           GeometryT,
+                                           NodeDescriptorT,
+                                           LocalSolverT,
+                                           LargeVecT,
+                                           dof_index_t>
 {
   /*!***********************************************************************************************
    * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
    ************************************************************************************************/
-  friend class CondensedOperator<Parabolic, LargeVecT, dof_index_t>;
+  friend class CondensedOperator<Parabolic,
+                                 TopologyT,
+                                 GeometryT,
+                                 NodeDescriptorT,
+                                 LocalSolverT,
+                                 LargeVecT,
+                                 dof_index_t>;
 
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).

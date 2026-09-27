@@ -32,19 +32,24 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue<TopologyT,
-                                                                           GeometryT,
-                                                                           NodeDescriptorT,
-                                                                           LocalSolverT,
-                                                                           LargeVecT,
-                                                                           dof_index_t>,
+class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue,
+                                                      TopologyT,
+                                                      GeometryT,
+                                                      NodeDescriptorT,
+                                                      LocalSolverT,
                                                       LargeVecT,
                                                       dof_index_t>
 {
   /*!***********************************************************************************************
    * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
    ************************************************************************************************/
-  friend class CondensedOperator<MassApproxEigenvalue, LargeVecT, dof_index_t>;
+  friend class CondensedOperator<MassApproxEigenvalue,
+                                 TopologyT,
+                                 GeometryT,
+                                 NodeDescriptorT,
+                                 LocalSolverT,
+                                 LargeVecT,
+                                 dof_index_t>;
 
   /*!***********************************************************************************************
    * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).

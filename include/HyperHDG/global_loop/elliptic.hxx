@@ -34,16 +34,24 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class Elliptic
-: public CondensedOperator<
-    Elliptic<TopologyT, GeometryT, NodeDescriptorT, LocalSolverT, LargeVecT, dof_index_t>,
-    LargeVecT,
-    dof_index_t>
+class Elliptic : public CondensedOperator<Elliptic,
+                                          TopologyT,
+                                          GeometryT,
+                                          NodeDescriptorT,
+                                          LocalSolverT,
+                                          LargeVecT,
+                                          dof_index_t>
 {
   /*!***********************************************************************************************
    * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
    ************************************************************************************************/
-  friend class CondensedOperator<Elliptic, LargeVecT, dof_index_t>;
+  friend class CondensedOperator<Elliptic,
+                                 TopologyT,
+                                 GeometryT,
+                                 NodeDescriptorT,
+                                 LocalSolverT,
+                                 LargeVecT,
+                                 dof_index_t>;
 
  private:
   /*!***********************************************************************************************
