@@ -32,6 +32,12 @@ if(APPLE AND NOT DEFINED BLA_VENDOR)
   set(BLA_VENDOR Apple)
 endif()
 find_package (LAPACK REQUIRED)
+# On Windows, FindPython looks up interpreters registered in the Windows registry before the ones
+# on PATH. This selects e.g. a python.org Python without NumPy instead of the MSYS2 Python of the
+# shell, so prefer the interpreter on PATH, which is the one that runs the Python scripts.
+if(WIN32 AND NOT DEFINED Python3_FIND_REGISTRY)
+  set(Python3_FIND_REGISTRY LAST)
+endif()
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
 
 # Locate Cython. Searching $PATH alone misses installations inside a virtual environment or a
