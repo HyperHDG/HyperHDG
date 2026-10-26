@@ -1,0 +1,409 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bbm}              % \mathbbm{1} for the all-ones vector
+\usepackage[margin=1in]{geometry}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\DeclareMathOperator*{\diag}{diag}
+
+% ---- notation ---------------------------------------------------------------
+% This standalone note works entirely at the discrete level, so the "discrete
+% solution" overbar of main.tex is dropped: it would clash with complex
+% conjugation in the conjugate-pair step (a bar stacked on a bar).  Discreteness
+% is clear from context and from the finite-dimensional spaces.  \bvec is kept
+% as an alias of \vec so the existing \bvec q, \bvec y, ... call sites are
+% unchanged, and \overline{...} now denotes complex conjugation only.
+\renewcommand{\vec}{\boldsymbol}
+\newcommand{\bvec}[1]{\vec{#1}}
+\newcommand{\jump}[1]{{[\![ #1 ]\!]}}
+\newcommand{\setEdge}{\mathcal E}        % edges  = "elements"
+\newcommand{\setNode}{\mathcal N}        % nodes  = skeleton / hybrid DOFs
+\newcommand{\edge}{\mathfrak e}
+\newcommand{\node}{\mathfrak n}
+\newcommand{\vLambda}{\vec\Lambda}       % nodal (hybrid) space
+\newcommand{\vldh}{\bvec\lambda}         % discrete free hybrid unknown
+\newcommand{\del}{\partial}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\one}{\mathbbm{1}}
+\newcommand{\kron}{\otimes}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\bg}{\mathbf{g}}
+% time-integration objects (NB: \tau is the HDG stabilization parameter, the
+% time step is \Delta t, and the Butcher eigenvalues are \theta_\ell)
+\newcommand{\mA}{\mathbf{A}}
+\newcommand{\mT}{\mathbf{T}}
+\newcommand{\mC}{\mathbf{C}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mTh}{\boldsymbol{\Theta}}
+\newcommand{\Mbar}{\bar{\mathcal M}}     % condensed nodal mass form
+\newcommand{\Kbar}{\bar{\mathcal K}}     % condensed nodal stiffness form
+\newcommand{\Cy}{\mathbf{C}_{\mathrm y}} % material inertia coefficient (SPD)
+\newcommand{\dt}{\Delta t}
+
+\title{High-order Gau\ss\ time stepping for the condensed HDG\\
+beam-network problem by diagonalizing the Butcher matrix\\
+(Tricks 1 \& 2)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+This note specializes the decoupling of \texttt{trick1.tex} to the hybridizable
+DG discretization of the Timoshenko beam network of \texttt{HDG\_Wave/main.tex}.
+It replaces the earlier generic model $\dot\bu=\mC\bu+\bg$ by the actual dual-mixed,
+\emph{second order in time} setting, and shows that the diagonalized Gau\ss\ step
+reduces, once the stage factor $\dt\,\theta_\ell$ is fixed, to \emph{one condensed
+bilinear form on the skeleton per stage} --- assembled through the same
+mass-shifted local solvers as the fully discrete Crank--Nicolson scheme of
+\texttt{main.tex}, of which it is the high-order generalization. The essential
+point is the \emph{order} of operations: the spatial condensation is performed
+\emph{after} the time/stage discretization, so that the edge-interior inertia is
+kept inside the local solve. Condensing the mass \emph{before} the time
+discretization (the ``second-order nodal ODE'' of an earlier draft) is a static
+condensation of the mass; it discards the edge-interior inertial modes and caps
+the spatial convergence at order two. Throughout, $\tau>0$ is the HDG
+stabilization parameter (as in \texttt{main.tex}), the time step is $\dt$, and the
+eigenvalues of the Butcher matrix are written $\theta_\ell$, since
+$\lambda,\mu,\nu$ already denote the hybrid unknown, its test function, and the
+endpoint orientation.
+
+\section{The semidiscrete problem as a first-order field system}
+
+We recall the discrete hybrid dual-mixed problem of \texttt{main.tex}. On the
+network $\Sigma=\bigcup_{\edge\in\setEdge}\edge$ one seeks the edgewise dual and
+primal fields and the nodal (hybrid) unknown
+\[
+  \bvec q=(\bvec n,\bvec m),\qquad
+  \bvec y=(\bvec u,\bvec r),\qquad
+  \vldh\in\vLambda=\{\,\vec\lambda:\setNode\to\R^6\,\},
+\]
+governed, for all discrete test functions, by
+\begin{subequations}\label{eq:saddle}
+\begin{alignat}{3}
+  &\phantom{{}-{}} a(\bvec q,\bvec w_{\mathrm q}) &&+ b(\bvec w_{\mathrm q},\bvec y)
+    &&= -\langle \vldh,\bvec w_{\mathrm q}\,\nu\rangle_\setEdge, \label{eq:saddle-1}\\
+  &-b(\bvec q,\bvec w_{\mathrm y})
+    &&+ c(\del_{tt}\bvec y,\bvec w_{\mathrm y})
+       +\langle\tau(\bvec y-\vldh),\bvec w_{\mathrm y}\rangle_\setEdge
+    &&= (\vec f,\bvec w_{\mathrm y})_\Sigma, \label{eq:saddle-2}
+\end{alignat}
+\end{subequations}
+with the compliance form $a$ (SPD, no derivatives), the equilibrium coupling $b$,
+and the inertia form $c(\bvec y,\bvec w)=(\Cy\bvec y,\bvec w)_\Sigma$ (SPD, $\Cy$
+the material inertia coefficient). Two facts drive hybridization: \eqref{eq:saddle}
+restricted to one edge is an \emph{element-local} (edgewise) problem, and the only
+time derivative is the second one, $\del_{tt}\bvec y$; both $\bvec q$ and the nodal
+$\vldh$ are algebraic.
+
+\paragraph{First-order field reformulation.}
+Exactly as in \texttt{main.tex}, we reduce the order in time by introducing the
+\emph{velocity/momentum field}
+\begin{equation}\label{eq:zdef}
+  \bvec z:=\Cy\,\del_t\bvec y,\qquad
+  d(\bvec z,\bvec w):=(\Cy^{-1}\bvec z,\bvec w)_\Sigma,
+\end{equation}
+so that $(\del_t\bvec z,\bvec w)_\Sigma=c(\del_{tt}\bvec y,\bvec w)$ and
+$d(\bvec z,\bvec z)=c(\del_t\bvec y,\del_t\bvec y)$ is the kinetic energy. The
+saddle system \eqref{eq:saddle} becomes the first-order-in-time system: find
+$(\bvec q,\bvec y,\bvec z,\vldh)$ with, for all test functions,
+\begin{subequations}\label{eq:first-field}
+\begin{alignat}{3}
+  &\phantom{{}-{}} a(\bvec q,\bvec w_{\mathrm q}) &&+ b(\bvec w_{\mathrm q},\bvec y)
+    &&= -\langle \vldh,\bvec w_{\mathrm q}\,\nu\rangle_\setEdge,\\
+  &-b(\bvec q,\bvec w_{\mathrm y})
+    &&+\langle\tau(\bvec y-\vldh),\bvec w_{\mathrm y}\rangle_\setEdge
+      +(\del_t\bvec z,\bvec w_{\mathrm y})_\Sigma
+    &&= (\vec f,\bvec w_{\mathrm y})_\Sigma,\\
+  & &&-(\del_t\bvec y,\bvec w_{\mathrm z})_\Sigma
+      +d(\bvec z,\bvec w_{\mathrm z})_\Sigma
+    &&= 0,
+\end{alignat}
+\end{subequations}
+together with the nodal flux-balance condition that determines $\vldh$. Now
+\emph{two} edge fields carry time derivatives, $\bvec y$ and $\bvec z$; $\bvec q$
+and $\vldh$ remain algebraic.
+
+\begin{remark}[Do not condense the mass first]\label{rem:guyan}
+It is tempting to eliminate the edge fields \emph{already at the semidiscrete
+level} and to write a second-order nodal ODE
+$\Mbar(\del_{tt}\vldh,\bvec\mu)+\Kbar(\vldh,\bvec\mu)=\bar F(\bvec\mu)$ with the
+\emph{static} condensed mass $\Mbar(\vldh,\bvec\mu)=c(\bvec Y_{\mathrm
+{st}}(\vldh),\bvec Y_{\mathrm{st}}(\bvec\mu))$ assembled from the static
+(elliptic) local solver $\bvec Y_{\mathrm{st}}$. This is a \emph{static
+condensation of the mass} (Guyan reduction). The semidiscrete primal field
+$\bvec y$ satisfies a genuine second-order edge ODE $c\,\del_{tt}\bvec y+S\bvec
+y=G(\vldh,\vec f)$: its interior degrees of freedom carry inertia and are
+\emph{not} algebraically slaved to the endpoint traces, so
+$\bvec y\neq \bvec Y_{\mathrm{st}}(\vldh)+\bvec Y_{\mathrm{st},\mathrm D}$ and
+$\del_{tt}\bvec Y_{\mathrm{st}}(\vldh)=\bvec Y_{\mathrm{st}}(\del_{tt}\vldh)$
+holds only for the static map. Consequently $\Mbar$ reproduces the inertia of the
+trace-driven constraint modes but discards the edge-interior modes; the resulting
+mass error is $O(h^2)$ \emph{independent of the polynomial degree} $p$, and it
+caps the spatial convergence at order two even for high $p$. We therefore keep the
+inertia at the field level $(\bvec y,\bvec z)$ and condense \emph{only after} the
+stage discretization below.
+\end{remark}
+
+\section{The fully implicit Gau\ss\ step}
+
+Collecting the dynamic fields $\bvec U:=(\bvec y,\bvec z)$ and eliminating the
+algebraic $\bvec q,\vldh$ pointwise in time (a \emph{static, elliptic}
+condensation, which touches only the stiffness and is exact) puts
+\eqref{eq:first-field} in the linear first-order form
+\begin{equation}\label{eq:first}
+  \del_t\bvec U=\mC\,\bvec U+\bvec g .
+\end{equation}
+Here $\mC$ acts on the \emph{field} space and, crucially, $\bvec U$ retains
+\emph{all} edge-interior inertial degrees of freedom --- no mass has been
+condensed. We never form $\mC$ explicitly; each stage below is assembled and
+condensed directly as a saddle system.
+
+Let $(\mA,b,c)$ be the $s$-stage Gau\ss\ tableau. The naive step solves the
+coupled stage system $\bigl[\mI-\dt\,(\mA\kron\mC)\bigr]\bvec Z=\dots$ with all $s$
+stages entangled over the whole field state. (For $s=1$, $\mA=\tfrac12$, this is
+the implicit midpoint / Crank--Nicolson scheme of \texttt{main.tex}; the point here
+is the high-order case $s>1$.)
+
+\section{Trick 1: one condensed bilinear form per stage}
+
+Diagonalize the Butcher matrix, $\mA=\mT\mTh\mT^{-1}$,
+$\mTh=\diag(\theta_1,\dots,\theta_s)\in\C^{s\times s}$ (distinct nonzero
+eigenvalues, generally complex). Exactly as in \texttt{trick1.tex}, the change of
+variables $\bvec Z=(\mT^{-1}\kron\mI)\bvec U$ block-diagonalizes the stage system
+into $s$ \emph{independent} problems
+$(\mI-\dt\,\theta_\ell\mC)\bvec Z_\ell=\bvec r_\ell$. Written out on the fields,
+stage $\ell$ is a complex saddle system \emph{structurally identical to the fully
+discrete Crank--Nicolson system of \texttt{main.tex}}, with the step factor
+$\tfrac{\dt}{2}$ replaced by $\dt\,\theta_\ell$. With
+$\sigma_\ell:=1/(\dt\,\theta_\ell)$, it reads: find
+$(\bvec q_\ell,\bvec y_\ell,\bvec z_\ell,\vec\zeta_\ell)$ with
+\begin{subequations}\label{eq:stage-saddle}
+\begin{alignat}{3}
+  &\phantom{{}-{}} a(\bvec q_\ell,\bvec w_{\mathrm q}) &&+ b(\bvec w_{\mathrm q},\bvec y_\ell)
+    &&= -\langle \vec\zeta_\ell,\bvec w_{\mathrm q}\,\nu\rangle_\setEdge,\\
+  &-b(\bvec q_\ell,\bvec w_{\mathrm y})
+    &&+\langle\tau(\bvec y_\ell-\vec\zeta_\ell),\bvec w_{\mathrm y}\rangle_\setEdge
+      +\sigma_\ell(\bvec z_\ell,\bvec w_{\mathrm y})_\Sigma
+    &&= \widehat g_{\mathrm y,\ell}(\bvec w_{\mathrm y}),\\
+  & &&-\sigma_\ell(\bvec y_\ell,\bvec w_{\mathrm z})_\Sigma
+      +d(\bvec z_\ell,\bvec w_{\mathrm z})_\Sigma
+    &&= \widehat g_{\mathrm z,\ell}(\bvec w_{\mathrm z}),
+\end{alignat}
+\end{subequations}
+together with the nodal balance condition.
+
+\paragraph{The stage unknowns and the physical trace.}
+The stage quantities are the \emph{Butcher-eigenbasis coordinates} of the physical
+stage values. Writing $\bvec q_j,\bvec y_j,\bvec z_j,\vldh_j$ for the values at the
+collocation node $t^n+c_j\dt$ ($j=1,\dots,s$, with $c_j$ the Gau\ss\ nodes),
+\begin{equation}\label{eq:zeta-lambda}
+  \vec\zeta_\ell=\sum_{j=1}^s(\mT^{-1})_{\ell j}\,\vldh_j,\qquad
+  \bvec y_\ell=\sum_{j=1}^s(\mT^{-1})_{\ell j}\,\bvec y_j,\qquad
+  \vldh_i=\sum_{\ell=1}^s\mT_{i\ell}\,\vec\zeta_\ell,
+\end{equation}
+and analogously for $\bvec q_\ell,\bvec z_\ell$. Thus $\vec\zeta_\ell$ is \emph{not}
+a trace at a physical time but a complex combination of the $s$ real stage traces
+$\vldh_j$. Since $\mT$ --- the eigenvector matrix of the real, nonsymmetric $\mA$
+--- is complex, $\vec\zeta_\ell\in\vLambda\kron\C$. This complexity is entirely an
+artifact of the diagonalization, not of the physics (the material data are real);
+Trick~2 recovers the real stage traces $\vldh_i$ by conjugation.
+
+\paragraph{The loads.}
+Writing $\one=(1,\dots,1)^\top$, $\omega_\ell:=(\mT^{-1}\one)_\ell
+=\sum_{j}(\mT^{-1})_{\ell j}$, and transforming the source by
+$\widetilde{\vec f}_\ell:=\sum_{j}(\mT^{-1})_{\ell j}\,\vec f(t^n+c_j\dt)$, the
+loads in \eqref{eq:stage-saddle} are explicitly
+\begin{equation}\label{eq:stage-loads}
+  \widehat g_{\mathrm y,\ell}(\bvec w_{\mathrm y})
+    = (\widetilde{\vec f}_\ell,\bvec w_{\mathrm y})_\Sigma
+      +\sigma_\ell\,\omega_\ell\,(\bvec z^n,\bvec w_{\mathrm y})_\Sigma,
+  \qquad
+  \widehat g_{\mathrm z,\ell}(\bvec w_{\mathrm z})
+    = -\,\sigma_\ell\,\omega_\ell\,(\bvec y^n,\bvec w_{\mathrm z})_\Sigma,
+\end{equation}
+where $(\bvec y^n,\bvec z^n)$ are the fields at the start of the step. \emph{Only}
+the initial value $(\bvec y^n,\bvec z^n)$ enters as history: $\bvec q$ and $\vldh$
+carry no time derivative and are recomputed algebraically at each stage
+(inhomogeneous Dirichlet data would enter these same loads through the splitting
+$\vldh=\lambda_{\mathrm D}+\vldh$). This is the collocation form of
+\texttt{trick1.tex}, eq.~(3.7); for $s=1$ ($\theta_1=\tfrac12$, $\omega_1=1$,
+$\sigma_1=2/\dt$) it is the diagonalized Crank--Nicolson step of \texttt{main.tex}.
+
+The decisive difference from \eqref{eq:first-field} is that in
+\eqref{eq:stage-saddle} the coupling $\del_t\to\sigma_\ell$ is \emph{algebraic}:
+restricting \eqref{eq:stage-saddle} to a single edge now defines genuine
+\emph{stage-$\ell$ local solvers}, which invert the local
+compliance--equilibrium--stabilization \emph{together with the
+$\sigma_\ell$-weighted mass}:
+\begin{equation}\label{eq:stage-locsolve}
+  \bvec Q_\ell:\vec\zeta_\ell\mapsto\bvec q_\ell,\qquad
+  \bvec Y_\ell:\vec\zeta_\ell\mapsto\bvec y_\ell,\qquad
+  \bvec Z_\ell:\vec\zeta_\ell\mapsto\bvec z_\ell,
+\end{equation}
+together with their data parts $\bvec Q_{\mathrm D,\ell},\bvec Y_{\mathrm
+D,\ell},\bvec Z_{\mathrm D,\ell}$. Unlike the static solver of
+Remark~\ref{rem:guyan}, these \emph{depend on} $\theta_\ell$: the reconstructed
+edge field $\bvec Y_\ell(\vec\zeta_\ell)$ already carries the edge-interior
+inertia.
+
+\begin{proposition}[Per-stage condensed form]\label{prop:perstage}
+For each $\ell=1,\dots,s$ the stage solve reduces to a single condensed problem on
+the nodal space: find $\vec\zeta_\ell\in\vLambda\kron\C$ with
+\begin{equation}\label{eq:stageform}
+  \boxed{\;\widehat A_\ell(\vec\zeta_\ell,\bvec\mu)=\widehat F_\ell(\bvec\mu)
+  \qquad\forall\bvec\mu\in\vLambda,\;}
+\end{equation}
+where, in complete analogy to the fully discrete condensed operator $\widehat A$ of
+\texttt{main.tex} (with $\theta_\ell$ in place of $\tfrac12$),
+\begin{equation}\label{eq:stageexplicit}
+  \widehat A_\ell(\vec\zeta_\ell,\bvec\mu)
+  = a\bigl(\bvec Q_\ell(\vec\zeta_\ell),\bvec Q_\ell(\bvec\mu)\bigr)
+  + d\bigl(\bvec Z_\ell(\vec\zeta_\ell),\bvec Z_\ell(\bvec\mu)\bigr)
+  + \bigl\langle\tau(\bvec Y_\ell(\vec\zeta_\ell)-\vec\zeta_\ell),
+      \bvec Y_\ell(\bvec\mu)-\bvec\mu\bigr\rangle_\setEdge .
+\end{equation}
+The form $\widehat A_\ell$ is complex-symmetric (not Hermitian) and invertible for
+$\tau>0$. The right-hand side is
+\begin{equation}\label{eq:stageF}
+  \widehat F_\ell(\bvec\mu)
+  =\langle\bvec Q_{\mathrm D,\ell}\,\nu+\tau\,\bvec Y_{\mathrm D,\ell},\bvec\mu\rangle_\setEdge,
+\end{equation}
+where the data fields $(\bvec Q_{\mathrm D,\ell},\bvec Y_{\mathrm D,\ell},\bvec
+Z_{\mathrm D,\ell})$ solve the stage system \eqref{eq:stage-saddle} with
+$\vec\zeta_\ell=0$ and the loads \eqref{eq:stage-loads}.
+\end{proposition}
+
+\begin{proof}
+Eliminating $\bvec q_\ell,\bvec y_\ell,\bvec z_\ell$ from
+\eqref{eq:stage-saddle} through the local solvers \eqref{eq:stage-locsolve} and
+inserting the result into the nodal flux-balance condition gives
+\eqref{eq:stageform}; testing the balance with the local reconstructions of
+$\bvec\mu$ and adding the three edge equations yields the symmetric representation
+\eqref{eq:stageexplicit}, exactly as in the fully discrete Lemma of
+\texttt{main.tex} with $\dt/2\rightsquigarrow\dt\,\theta_\ell$.
+\end{proof}
+
+\begin{remark}[Contrast with the static-mass form]\label{rem:contrast}
+Eliminating $\bvec z_\ell$ from \eqref{eq:stage-saddle} via its third equation,
+$\bvec z_\ell=\sigma_\ell\Cy\bvec y_\ell+\dots$, turns \eqref{eq:stageexplicit}
+into the equivalent second-order-style operator
+\begin{equation}\label{eq:stage-2nd}
+  c\bigl(\bvec Y_\ell(\vec\zeta_\ell),\bvec Y_\ell(\bvec\mu)\bigr)
+  +(\dt\,\theta_\ell)^2\Bigl[
+      a\bigl(\bvec Q_\ell(\vec\zeta_\ell),\bvec Q_\ell(\bvec\mu)\bigr)
+    + \bigl\langle\tau(\bvec Y_\ell(\vec\zeta_\ell)-\vec\zeta_\ell),
+        \bvec Y_\ell(\bvec\mu)-\bvec\mu\bigr\rangle_\setEdge\Bigr].
+\end{equation}
+This has the \emph{same shape} as the naive per-stage form
+$\Mbar+(\dt\,\theta_\ell)^2\Kbar$ of the earlier draft, but with the
+\emph{stage-dependent, mass-shifted} local solvers $\bvec Q_\ell,\bvec Y_\ell$ in
+place of the \emph{static} $\bvec Q,\bvec Y$. Solving the local problem with the
+mass included --- rather than reusing static local solvers and adding a static
+condensed mass --- is precisely what restores the optimal spatial order
+$h^{p+1}$. The Butcher diagonalization therefore still \emph{commutes with the
+condensation}, but the condensation must be carried out \emph{per stage, after}
+$\theta_\ell$ is fixed, so that the mass sits inside the local solve.
+\end{remark}
+
+\begin{remark}[Schur reduction; how many fields can be eliminated]\label{rem:schur}
+The second-order form \eqref{eq:stage-2nd} is a \emph{Schur complement} of the
+stage saddle \eqref{eq:stage-saddle}: the velocity field $\bvec z_\ell$ is
+eliminated through the third equation
+($d(\bvec z_\ell,\cdot)=\sigma_\ell(\bvec y_\ell,\cdot)+\widehat g_{\mathrm z,\ell}$,
+i.e.\ $\bvec z_\ell=\sigma_\ell\Cy\bvec y_\ell+\dots$) and recovered explicitly
+afterwards, leaving the complex weight $\alpha_\ell:=(\dt\,\theta_\ell)^2\in\C$ in
+front of the stiffness. This is exactly the last reduction of Hochbruck,
+K\"ohler \& Kumbhar (\emph{Preconditioned implicit time integration schemes for
+Maxwell's equations}, CRC\,1173 preprint 2022/29, eqs.~(3.12)--(3.14)): their
+first-order Maxwell pair $(\bvec H,\bvec E)$ decouples per stage into a size-$2N$
+system $(\mI-\dt\theta_\ell\mC)\bvec Z_\ell=\bvec r_\ell$, whose Schur complement in
+one field is $(\mI+\alpha_\ell\,\mC_{\mathrm H}\mC_{\mathrm E})\bvec Z_{\mathrm
+E,\ell}=\dots$ of size $N$, the partner $\bvec Z_{\mathrm H,\ell}$ following
+explicitly. Here $\mC_{\mathrm H}\mC_{\mathrm E}$ is the condensed stiffness
+$a(\bvec Q_\ell\cdot,\bvec Q_\ell\cdot)+\langle\tau(\cdot),\cdot\rangle$ and the
+mass $c(\bvec Y_\ell\cdot,\bvec Y_\ell\cdot)$ plays the role of their identity.
+
+Counting eliminations: of the three edge fields, \emph{two} leave the global solve.
+The dual $\bvec q_\ell$ is algebraic and is removed by the local elliptic solver
+$\bvec Q_\ell$; one of the two dynamical fields ($\bvec z_\ell$) is removed by the
+Schur step and recovered explicitly; the remaining field $\bvec y_\ell$ is condensed
+to the skeleton. What survives is a \emph{single} complex-symmetric nodal system
+\eqref{eq:stageform} per representative stage. One cannot remove \emph{both}
+dynamical fields --- each edge keeps one genuine (second-order) degree of freedom
+--- so three-to-one is the maximal reduction. As in Remark~\ref{rem:contrast}, the
+Schur step must be taken on the mass-shifted saddle \eqref{eq:stage-saddle} (its
+solvers carry $\theta_\ell$); taking it on the static solvers would reinstate the
+order reduction of Remark~\ref{rem:guyan}.
+\end{remark}
+
+\section{Trick 2: conjugate pairs}
+
+Since $\mA$, the material forms, and the data are real, the eigenvalues
+$\theta_\ell$, hence the shifts $\sigma_\ell=1/(\dt\,\theta_\ell)$, occur in
+complex-conjugate pairs. The local solvers and the condensed operator inherit this
+symmetry, $\bvec Q_{\ell'}=\overline{\bvec Q_\ell}$, $\bvec
+Y_{\ell'}=\overline{\bvec Y_\ell}$, $\bvec Z_{\ell'}=\overline{\bvec Z_\ell}$ and
+$\widehat A_{\ell'}=\overline{\widehat A_\ell}$ whenever
+$\theta_{\ell'}=\overline{\theta_\ell}$, so the stage solutions satisfy
+$\vec\zeta_{\ell'}=\overline{\vec\zeta_\ell}$ (Lemma~3.1 of \texttt{trick1.tex}).
+One therefore assembles and factorizes the condensed nodal operator $\widehat
+A_\ell$ for only $\lceil s/2\rceil$ representatives and obtains the conjugate
+partners for free.
+
+\section{Algorithm, recovery, and cost}
+
+One fully implicit, order-$2s$ Gau\ss\ step on \eqref{eq:first-field} is:
+\begin{enumerate}
+\item \textbf{Transform} the stage data by $\mT^{-1}$ to form the loads
+$\widehat g_{\mathrm y,\ell},\widehat g_{\mathrm z,\ell}$ and hence $\widehat F_\ell$.
+\item \textbf{Nodal solves:} for each representative $\ell$ ($\lceil s/2\rceil$ of
+them) assemble $\widehat A_\ell$ from the $\theta_\ell$-shifted local solvers
+$\bvec Q_\ell,\bvec Y_\ell,\bvec Z_\ell$ and solve the condensed
+problem~\eqref{eq:stageform} on $\vLambda$; conjugate the partners.
+\item \textbf{Back-transform} $\bvec U_i=\sum_\ell\mT_{i\ell}\,(\,\cdot\,)_\ell$ to
+recover the stage values $(\bvec y_i,\bvec z_i)$ (real up to round-off) and apply
+the Gau\ss\ update for $(\bvec y^{n+1},\bvec z^{n+1})$ and the trace.
+\item \textbf{Recover the edge fields} where needed via the local solvers,
+$\bvec q=\bvec Q_\ell(\vec\zeta_\ell)+\bvec Q_{\mathrm D,\ell}$ etc. --- the edge
+interior never enters the global solve.
+\end{enumerate}
+
+\begin{remark}[Cost and reuse]
+For fixed $\dt$ the shifts $\sigma_\ell$ are fixed complex numbers, so the
+$\lceil s/2\rceil$ condensed operators $\widehat A_\ell$ are assembled from the
+$\theta_\ell$-shifted local solvers and factorized \emph{once}, and reused at every
+step. Complex arithmetic is confined to these small nodal systems and the edgewise
+local solves. Unlike the earlier draft, one does \emph{not} pre-assemble a single
+real pair $\Mbar,\Kbar$ and combine them as $\Mbar+(\dt\,\theta_\ell)^2\Kbar$: the
+local solvers depend on $\theta_\ell$ because they invert stiffness \emph{and}
+mass. The per-step cost is nevertheless the same --- $\lceil s/2\rceil$ condensed
+solves, each factorized once --- and the naive step would instead couple all $s$
+stages into one real system over the whole field state.
+\end{remark}
+
+\begin{remark}[Order of condensation and time discretization]
+Two orderings are possible. \textbf{(a) Condense first:} reduce the semidiscrete
+problem to the nodal second-order ODE
+$\Mbar(\del_{tt}\vldh,\bvec\mu)+\Kbar(\vldh,\bvec\mu)=\bar F(\bvec\mu)$ with a
+static condensed mass (Remark~\ref{rem:guyan}), then apply Gau\ss. \textbf{(b)
+Condense last} (this note, and \texttt{main.tex}): discretize the first-order field
+system \eqref{eq:first-field} in time/stages, then condense each stage,
+\eqref{eq:stageform}. For $p=0$, where the edges carry no interior modes, the two
+orderings coincide. For $p\ge1$ they \emph{differ} by the edge-interior inertia:
+ordering (a) statically condenses the mass, and its spatial error saturates at
+$O(h^2)$ regardless of $p$; ordering (b) keeps the interior inertia inside the
+stage-$\ell$ local solve and attains the optimal rate $h^{p+1}$ established for the
+Crank--Nicolson scheme ($s=1$) in \texttt{main.tex}. An earlier version of this
+note used ordering (a); the present version uses (b). This is the ``one global
+condensed bilinear form per stage'' anticipated in the Remark ``Choice of time
+discretization'' of \texttt{main.tex}, now with the inertia correctly retained.
+\end{remark}
+
+\end{document}

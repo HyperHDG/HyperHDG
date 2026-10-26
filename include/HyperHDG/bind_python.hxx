@@ -22,9 +22,12 @@
 // first include: nanobind pulls in Python.h, which must precede any header defining libc
 // feature-test macros, else pyconfig.h redefines _POSIX_C_SOURCE/_XOPEN_SOURCE
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/complex.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
+
+#include <HyperHDG/gauss_tableau.hxx>  // Gauss::StageTime
 
 #include <string>
 #include <tuple>
@@ -119,13 +122,13 @@ auto bind_python(nanobind::module_& m, const char* name)
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.trace_to_flux(v, 0.); })
     cls.def(
-      "trace_to_flux", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.trace_to_flux(v, t); },
+      "trace_to_flux", [](GlobalLoopT& o, const Vec& v, double t) { return o.trace_to_flux(v, t); },
       nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.trace_to_mass_flux(v, 0.); })
     cls.def(
       "trace_to_mass_flux",
-      [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.trace_to_mass_flux(v, t); },
+      [](GlobalLoopT& o, const Vec& v, double t) { return o.trace_to_mass_flux(v, t); },
       nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.jacobian_of_trace_to_flux(v, 0., v, 0.); })
@@ -138,28 +141,59 @@ auto bind_python(nanobind::module_& m, const char* name)
   // condensed system as a COO triplet: assemble once, hand it to scipy, solve there
   if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0.); })
     cls.def(
-      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t) { return to_coo(o.trace_to_flux_mat(t)); },
+      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, double t) { return to_coo(o.trace_to_flux_mat(t)); },
       nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.residual_flux(v, 0.); })
     cls.def(
-      "residual_flux", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.residual_flux(v, t); },
+      "residual_flux", [](GlobalLoopT& o, const Vec& v, double t) { return o.residual_flux(v, t); },
       nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.set_data(v, 0.); })
     cls.def(
-      "set_data", [](GlobalLoopT& o, const Vec& v, Scalar t) { o.set_data(v, t); }, nb::arg("x"),
+      "set_data", [](GlobalLoopT& o, const Vec& v, double t) { o.set_data(v, t); }, nb::arg("x"),
       nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.make_initial(v, 0.); })
     cls.def(
-      "make_initial", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.make_initial(v, t); },
+      "make_initial", [](GlobalLoopT& o, const Vec& v, double t) { return o.make_initial(v, t); },
       nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.errors(v, 0.); })
     cls.def(
-      "errors", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.errors(v, t); }, nb::arg("x"),
+      "errors", [](GlobalLoopT& o, const Vec& v, double t) { return o.errors(v, t); }, nb::arg("x"),
       nb::arg("time") = 0.);
+
+  if constexpr (requires(GlobalLoopT o, Vec v) { o.norms(v, 0.); })
+    cls.def(
+      "norms", [](GlobalLoopT& o, const Vec& v, double t) { return o.norms(v, t); }, nb::arg("x"),
+      nb::arg("time") = 0.);
+
+  // Gauss collocation time stepping (hyperbolic loop): the condensed system of stage rep is
+  // assembled and solved like any other, the stage index rides in a Gauss::StageTime through the
+  // generic entries; finalize_step combines the stage data into the new state once all stages
+  // are set.
+  if constexpr (requires { GlobalLoopT::n_gauss_reps(); })
+  {
+    using Gauss::StageTime;
+    cls.def_static("n_gauss_stages", []() { return GlobalLoopT::n_gauss_stages(); });
+    cls.def_static("n_gauss_reps", []() { return GlobalLoopT::n_gauss_reps(); });
+    cls.def(
+      "trace_to_flux_mat_stage",
+      [to_coo](GlobalLoopT& o, int rep, double t)
+      { return to_coo(o.trace_to_flux_mat(StageTime{t, rep})); },
+      nb::arg("rep"), nb::arg("time"));
+    cls.def(
+      "residual_flux_stage",
+      [](GlobalLoopT& o, const Vec& v, int rep, double t)
+      { return o.residual_flux(v, StageTime{t, rep}); },
+      nb::arg("x"), nb::arg("rep"), nb::arg("time"));
+    cls.def(
+      "set_data_stage",
+      [](GlobalLoopT& o, const Vec& v, int rep, double t) { o.set_data(v, StageTime{t, rep}); },
+      nb::arg("x"), nb::arg("rep"), nb::arg("time"));
+    cls.def("finalize_step", [](GlobalLoopT& o) { o.finalize_step(); });
+  }
 
   if constexpr (requires(GlobalLoopT o, std::string s) { o.plot_option(s, s); })
     cls.def(
@@ -170,7 +204,7 @@ auto bind_python(nanobind::module_& m, const char* name)
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.plot_solution(v, 0.); })
     cls.def(
-      "plot_solution", [](GlobalLoopT& o, const Vec& v, Scalar t) { o.plot_solution(v, t); },
+      "plot_solution", [](GlobalLoopT& o, const Vec& v, double t) { o.plot_solution(v, t); },
       nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o) { o.get_refinement(); })
