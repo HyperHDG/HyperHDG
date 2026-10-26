@@ -34,19 +34,18 @@
  * \param   Expr  C++ Expression that can be evaluated to \c true or \c false.
  * \param   Msg   Message that is to be displayed if \c Expr is evaluated to \c false.
  **************************************************************************************************/
-#define hy_check(Expr, Msg)                                                \
-  do                                                                       \
-  {                                                                        \
-    if (!(Expr))                                                           \
-    {                                                                      \
-      std::stringstream __hy_check_text;                                   \
-      __hy_check_text << Msg;                                              \
-      std::cerr << "Check failed:   " << __hy_check_text.str() << std::endl \
-                << "Expected:       " << #Expr << std::endl                \
-                << "Source:         " << __FILE__ << ", line " << __LINE__ \
-                << std::endl;                                              \
-      std::abort();                                                        \
-    }                                                                      \
+#define hy_check(Expr, Msg)                                                              \
+  do                                                                                     \
+  {                                                                                      \
+    if (!(Expr))                                                                         \
+    {                                                                                    \
+      std::stringstream __hy_check_text;                                                 \
+      __hy_check_text << Msg;                                                            \
+      std::cerr << "Check failed:   " << __hy_check_text.str() << std::endl              \
+                << "Expected:       " << #Expr << std::endl                              \
+                << "Source:         " << __FILE__ << ", line " << __LINE__ << std::endl; \
+      std::abort();                                                                      \
+    }                                                                                    \
   } while (0)
 
 #ifndef NDEBUG

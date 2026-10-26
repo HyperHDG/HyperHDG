@@ -12,9 +12,14 @@
 // in particular for axis-aligned ones, where LAPACK emits a trivial Householder reflector.
 int main()
 {
-  const std::array<std::array<double, 3>, 8> directions = {{
-    {{1., 0., 0.}}, {{-1., 0., 0.}}, {{0., 1., 0.}}, {{0., -1., 0.}},
-    {{0., 0., 1.}}, {{0., 0., -1.}}, {{1., 1., 1.}}, {{2., -3., 5.}}}};
+  const std::array<std::array<double, 3>, 8> directions = {{{{1., 0., 0.}},
+                                                            {{-1., 0., 0.}},
+                                                            {{0., 1., 0.}},
+                                                            {{0., -1., 0.}},
+                                                            {{0., 0., 1.}},
+                                                            {{0., 0., -1.}},
+                                                            {{1., 1., 1.}},
+                                                            {{2., -3., 5.}}}};
 
   for (const auto& dir : directions)
   {
@@ -31,8 +36,8 @@ int main()
                        q(0, 2) * (q(1, 0) * q(2, 1) - q(1, 1) * q(2, 0));
 
     hy_check(det > 0.5, "QR frame must be right-handed (det(Q) = +1), but det = "
-                          << det << " for direction (" << dir[0] << ", " << dir[1] << ", "
-                          << dir[2] << ").");
+                          << det << " for direction (" << dir[0] << ", " << dir[1] << ", " << dir[2]
+                          << ").");
   }
 
   return 0;
