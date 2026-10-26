@@ -1068,33 +1068,68 @@ void qr_decomp(SmallMat<n_rows, n_cols, mat_entry_t>& mat,
 {
   static_assert(n_cols <= n_rows, "Function only defined for these matrices!");
   Wrapper::lapack_qr_decomp<n_rows, n_cols, mat_entry_t>(mat.data(), mat_q.data(), mat_r.data());
-  SmallVec<n_rows, mat_entry_t> factors(1.);
-  bool switch_necessary = false;
 
-  // Q should have determinant = +1 and not -1 (as it has for odd dimensions)!
-  if (n_rows % 2 == 1)
+  // Determinant of the raw (orthonormal) Householder matrix Q, computed robustly via
+  // Gaussian elimination with partial pivoting.  Its sign must NOT be inferred from the
+  // parity of n_rows: LAPACK emits a trivial reflector (tau = 0) for an already axis-
+  // aligned column, so the raw Q can have det = +1 even when n_rows is odd.  The former
+  // (-1)^n_rows assumption turned such axis-aligned frames left-handed (det(Q) = -1),
+  // which flipped the orientation of the outer normals w.r.t. the tangent.
+  mat_entry_t det_q;
   {
-    if (n_cols == n_rows)
-      factors[0] *= -1.;
-    else
-      factors[n_rows - 1] *= -1.;
+    SmallSquareMat<n_rows, mat_entry_t> lu = mat_q;
+    det_q = 1.;
+    for (unsigned int c = 0; c < n_rows; ++c)
+    {
+      unsigned int piv = c;
+      for (unsigned int r = c + 1; r < n_rows; ++r)
+        if (std::abs(lu(r, c)) > std::abs(lu(piv, c)))
+          piv = r;
+      if (piv != c)
+      {
+        for (unsigned int k = 0; k < n_rows; ++k)
+        {
+          const mat_entry_t tmp = lu(c, k);
+          lu(c, k) = lu(piv, k);
+          lu(piv, k) = tmp;
+        }
+        det_q = -det_q;
+      }
+      det_q *= lu(c, c);
+      for (unsigned int r = c + 1; r < n_rows; ++r)
+      {
+        const mat_entry_t f = lu(r, c) / lu(c, c);
+        for (unsigned int k = c; k < n_rows; ++k)
+          lu(r, k) -= f * lu(c, k);
+      }
+    }
   }
 
-  // Diagonal entries (but first) should be positive!
-  // The switch might be necessary to ensure that det(Q) = +1.
+  SmallVec<n_rows, mat_entry_t> factors(1.);
+
+  // A QR factorisation is unique only up to a sign per column: negating column i of Q and
+  // row i of R at the same time leaves Q*R unchanged.  Pin this freedom down by making R's
+  // diagonal non-negative -- but leave the very first entry free, since that is the sign we
+  // spend on fixing det(Q) below.  Each flip here negates det(Q), so we track it.
   for (unsigned int i = 1; i < n_cols; ++i)
     if (mat_r(i, i) < 0.)
     {
       factors[i] *= -1.;
-      switch_necessary = !switch_necessary;
+      det_q = -det_q;
     }
 
-  // If there is a non-positive entry, this is only allowed to be the index (0,0)!
-  // This step ensures that Q remains with determinant = +1.
-  if (switch_necessary)
-    factors[0] *= -1.;
+  // Enforce det(Q) = +1 by flipping (at most) one more column, chosen so that it does not
+  // break the non-negative-diagonal convention just established:
+  //   * n_cols <  n_rows: a trailing "outer" column (n_rows - 1).  It belongs to no R
+  //     diagonal and multiplies a zero row of R, so Q*R and R stay unchanged -- only the
+  //     frame handedness flips.  (For a 1-D edge, n_cols == 1, the loop above is empty, so
+  //     this is the only column ever flipped.)
+  //   * n_cols == n_rows: no spare outer column exists, so we flip column 0 -- the one whose
+  //     R diagonal we deliberately left unconstrained above.
+  if (det_q < 0.)
+    factors[(n_cols == n_rows) ? 0u : (n_rows - 1)] *= -1.;
 
-  // Multuply Q column-wise with the factors!
+  // Multiply Q column-wise with the factors!
   for (unsigned int i = 0; i < n_rows; ++i)
     if (factors[i] < 0.)
       for (unsigned int j = 0; j < n_rows; ++j)
