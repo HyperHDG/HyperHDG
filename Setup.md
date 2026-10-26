@@ -224,5 +224,5 @@ Docker notebook, please also refer to the README.
 
 # Performance options
 
-For faster assembly of matrices, cached operators for iterative solvers and time stepping, and the
-optional OpenMP parallelization, see the page [[Performance]].
+For faster assembly of matrices, their use in iterative solvers and time stepping, and the optional
+OpenMP parallelization, see the page [[Performance]].
