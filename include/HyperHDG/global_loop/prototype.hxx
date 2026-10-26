@@ -2,6 +2,8 @@
 
 #include <HyperHDG/compile_time_tricks.hxx>
 
+#include <concepts>
+
 /*!*************************************************************************************************
  * \brief   Macro that allows to use an implemented a matrix--vector multpilication.
  *
@@ -63,6 +65,12 @@ struct sparse_mat
   LargeVecT& get_values() { return value_vec; }
   std::vector<unsigned int>& get_cols() { return col_vec; }
   std::vector<unsigned int>& get_rows() { return row_vec; }
+  void resize(const unsigned int length)
+  {
+    value_vec.resize(length);
+    col_vec.resize(length);
+    row_vec.resize(length);
+  }
 };
 
 /*!*************************************************************************************************
@@ -79,6 +87,9 @@ struct sparse_mat
  * - the local solver overload (with/without hyper_edge) is selected by requires-expressions,
  * - local_solver_ is a LocalSolverT,
  * - ... .
+ *
+ * If the local solver provides \c is_dirichlet(hyper_edge, node, dof), Dirichlet dofs get an
+ * identity row/column instead of the local solver's (vanishing) contribution.
  **************************************************************************************************/
 #define prototype_mat_generate(fun_name)                                                      \
   [&]()                                                                                       \
@@ -104,6 +115,18 @@ struct sparse_mat
         for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)                      \
           for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)                      \
           {                                                                                   \
+            if constexpr (requires {                                                          \
+                            {                                                                 \
+                              local_solver_.is_dirichlet(hyper_edge, node_j, dof_j)           \
+                            } -> std::convertible_to<bool>;                                   \
+                          })                                                                  \
+              if (local_solver_.is_dirichlet(hyper_edge, node_j, dof_j))                      \
+              {                                                                               \
+                *(row_it++) = dof_indices[node_j][dof_j];                                     \
+                *(col_it++) = dof_indices[node_j][dof_j];                                     \
+                *(value_it++) = 1.;                                                           \
+                continue;                                                                     \
+              }                                                                               \
             for (unsigned int node = 0; node < hyNodes.size(); ++node)                        \
             {                                                                                 \
               dofs_old[node].fill(0.);                                                        \
@@ -133,6 +156,7 @@ struct sparse_mat
           }                                                                                   \
       });                                                                                     \
                                                                                               \
+    result_mat.resize(value_it - result_mat.value_vec.begin());                               \
     return result_mat;                                                                        \
   }()
 
