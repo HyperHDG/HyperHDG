@@ -4,6 +4,11 @@ name: Clang
 
 on: [push]
 
+env:
+  # Pinned version of clang-format. Different versions format code differently, so the check (and
+  # shell_scripts/clang_format.sh) must use the same version. Update both together.
+  CLANG_FORMAT_VERSION: 18.1.8
+
 jobs:
   formatting-check:
     name: Test clang-format to change nothing
@@ -11,5 +16,16 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install clang-format ${{ env.CLANG_FORMAT_VERSION }}
+      run: python3 -m pip install "clang-format==${{ env.CLANG_FORMAT_VERSION }}"
     - name: Conduct Clang-Format Test
-      uses: HyperHDG/actions@clang-format
+      run: |
+        clang-format --version
+        for pattern in "*.hxx" "*.h" "*.cxx" "*.cc" "*.c"; do
+          find . -path ./submodules -prune -o -wholename "${pattern}" -print \
+            | xargs --no-run-if-empty clang-format --dry-run --Werror
+        done
