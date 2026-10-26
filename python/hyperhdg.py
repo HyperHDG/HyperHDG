@@ -16,7 +16,9 @@ plain sight.
 
 Everything lives in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/): the
 generated module.cxx and CMakeLists.txt next to the cmake build directory build/, which also
-holds the resulting .so. Every call runs `cmake --build`, so an edited HyperHDG header
+holds the resulting extension module (.so, or .pyd on Windows). With hash_name=True (the
+default of load), every code variant has its own directory, so switching between variants
+does not rebuild them. Every call runs `cmake --build`, so an edited HyperHDG header
 recompiles the module like any other source change; a content fingerprint (code + generated
 project + cmake args) skips the far slower configure step when nothing changed, and
 force=True recompiles regardless.
@@ -34,7 +36,9 @@ importable (pip/pacman), its bundled cmake config is injected via -Dnanobind_DIR
 automatically, so `pip install nanobind` into the running interpreter is all it takes.
 """
 
+import contextlib
 import hashlib
+import importlib.machinery
 import importlib.util
 import os
 import re
@@ -137,6 +141,45 @@ def _write_if_changed(path, content):
     path.write_text(content)
 
 
+@contextlib.contextmanager
+def _locked(path):
+    """Hold an exclusive lock on path, so that processes building the same module (e.g. parallel
+    runs of a parameter sweep) wait for each other instead of writing the same build tree."""
+    with open(path, "a+") as handle:
+        if os.name == "nt":
+            import msvcrt
+            while True:
+                try:  # LK_LOCK retries for about 10 seconds, then raises
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    pass
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _find_extension(build, name):
+    """The extension module built for name: its file name ends with a suffix the running
+    interpreter can import (e.g. .cpython-313-darwin.so, .abi3.so, .pyd), and multi-config
+    generators (Visual Studio, Xcode) put it into a subdirectory such as Release/."""
+    for suffix in importlib.machinery.EXTENSION_SUFFIXES:
+        found = sorted(build.rglob(name + suffix))
+        if found:
+            return found[0]
+    return None
+
+
 def _deliver(so, output_dir):
     if output_dir is None:
         return so
@@ -149,38 +192,43 @@ def _deliver(so, output_dir):
 
 def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=(),
             force=False, hash_name=False, verbose=False):
-    """Compile a module source string; return the path of the built .so.
+    """Compile a module source string; return the path of the built extension module.
 
     Artifacts live in <cache_dir>/<module name>/ (default ./.hyperhdg-cache/<name>/); the
-    .so stays in its build/ subdirectory unless output_dir is given, then it is copied
+    module stays in its build/ subdirectory unless output_dir is given, then it is copied
     there. The build system is always asked -- it, not the fingerprint, knows about the
     HyperHDG headers module.cxx includes -- so only cmake's configure step is fingerprinted.
     force=True reconfigures and recompiles regardless.
 
     hash_name=True suffixes the NB_MODULE name with a content hash (the legacy cython
-    machinery's trick): every code variant becomes a distinctly named extension module, so
-    edited code stays importable within one interpreter session. The default keeps the
+    machinery's trick): every code variant becomes a distinctly named extension module
+    with its own build directory, so edited code stays importable within one interpreter
+    session and switching between variants does not rebuild them. The default keeps the
     user's name for a stable artifact.
+
+    The module is built for the running interpreter (sys.executable).
     """
     base = _module_name(code)
     mode, root = _find_hyperhdg(hyperhdg)
     cache = Path(cache_dir).resolve() if cache_dir else Path(".hyperhdg-cache").resolve()
-    work = cache / base  # one work/build tree per base name; variants share it
-    build = work / "build"
-
     if mode == "installed":
         try:  # pip-installed nanobind ships its cmake config out of CMake's sight
             import nanobind
             cmake_args = [*cmake_args, f"-Dnanobind_DIR={nanobind.cmake_dir()}"]
         except ImportError:
             pass
-    cmake_args = ["-DCMAKE_BUILD_TYPE=Release", *cmake_args]
+    # Build for the running interpreter: CMake would otherwise pick the first Python it finds,
+    # whose extension modules cannot be imported here (e.g. the system Python on macOS).
+    cmake_args = ["-DCMAKE_BUILD_TYPE=Release", f"-DPython_EXECUTABLE={sys.executable}",
+                  *cmake_args]
 
     fingerprint = hashlib.sha256(
         "\0".join([code, mode, str(root), *map(str, cmake_args)]).encode()).hexdigest()
     name = f"{base}_{fingerprint[:8]}" if hash_name else base
     if hash_name:
         code = re.sub(r"NB_MODULE\(\s*" + re.escape(base), f"NB_MODULE({name}", code, count=1)
+    work = cache / name  # one work/build tree per (possibly hash-suffixed) module name
+    build = work / "build"
 
     if mode == "source":
         cmakelists = _SOURCE_TREE_CMAKE.format(name=name, root=root.as_posix())
@@ -191,14 +239,19 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
         paths = f"PATHS {root.as_posix()}" if root else ""
         cmakelists = _INSTALLED_CMAKE.format(name=name, package_paths=paths)
 
-    # one stamp per (possibly hash-suffixed) name: alternating between two code variants of
-    # the same base cache-hits both ways
+    work.mkdir(parents=True, exist_ok=True)
+    with _locked(work / "lock"):
+        return _build(work, build, name, code, cmakelists, fingerprint, cmake_args, force,
+                      verbose, output_dir)
+
+
+def _build(work, build, name, code, cmakelists, fingerprint, cmake_args, force, verbose,
+           output_dir):
     stamp = work / f"{name}.fingerprint"
     configured = (build / "CMakeCache.txt").is_file()
     reconfigure = force or not configured or not stamp.is_file() \
         or stamp.read_text() != fingerprint
 
-    work.mkdir(parents=True, exist_ok=True)
     stamp.unlink(missing_ok=True)  # a failed build must not leave a valid stamp behind
     _write_if_changed(work / "module.cxx", code)
     _write_if_changed(work / "CMakeLists.txt", cmakelists)
@@ -211,9 +264,9 @@ def compile(code, *, hyperhdg=None, cache_dir=None, output_dir=None, cmake_args=
     # it includes. A no-op ninja build costs milliseconds.
     _run(["cmake", "--build", "build", "--parallel"], work, verbose)
 
-    so = next(iter(sorted(build.glob(f"{name}.*.so"))), None)
+    so = _find_extension(build, name)
     if so is None:
-        raise RuntimeError(f"build produced no {name}.*.so in {build}")
+        raise RuntimeError(f"build produced no extension module {name} in {build}")
     stamp.write_text(fingerprint)
     return _deliver(so, output_dir)
 

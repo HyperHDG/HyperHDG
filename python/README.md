@@ -127,12 +127,15 @@ export PYTHONPATH=$PWD/python
 export HYPERHDG_DIR=$PWD          # only needed away from the source tree
 ```
 
-`load()` compiles and imports, `compile()` just returns the `.so` path. The string is the
+`load()` compiles and imports, `compile()` just returns the path of the extension module
+(`.so`, or `.pyd` on Windows). The string is the
 *whole* module — real C++, not template-parameter fragments — and it is compiled by a
 generated, human-readable CMake project. Everything lives in `./.hyperhdg-cache/<name>/`
 (override with `cache_dir=`): the generated `module.cxx` and `CMakeLists.txt` next to the
-cmake build directory `build/`, which also holds the resulting `.so`. A content fingerprint
-over code and options skips the build when nothing changed; `force=True` rebuilds regardless.
+cmake build directory `build/`, which also holds the resulting module. The module is built for
+the running interpreter (`-DPython_EXECUTABLE=sys.executable`). A content fingerprint over code
+and options skips the build when nothing changed; `force=True` rebuilds regardless. Processes
+that build the same module at the same time wait for each other (a lock file in its directory).
 
 The user stays in control of the build:
 
@@ -150,7 +153,7 @@ Extension modules can never be re-initialized in a CPython process; `load()` wor
 this the way the legacy machinery did: by default (`hash_name=True`) the `NB_MODULE` name is
 suffixed with a content hash, so *edited code simply loads as a new module in the same
 session* — variants coexist, switching back to earlier code returns the cached module
-instantly, and all variants share one build tree.
+instantly, and every variant has its own build tree (so switching does not rebuild).
 
 A module built by CMake instead — an `.so` from `nanobind_add_module(...)`, imported the
 ordinary way — is the same thing without the cache; nothing in `bind_python.hxx` depends on
