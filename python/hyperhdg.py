@@ -75,6 +75,12 @@ add_subdirectory({root}/submodules/nanobind.git nanobind)
 
 nanobind_add_module({name} module.cxx)
 target_compile_features({name} PRIVATE cxx_std_20)
+# MinGW-w64 GCC: with the hidden visibility set by nanobind, inline members of libstdc++'s
+# explicitly instantiated templates (e.g. the move constructor of std::string) remain undefined
+# when linking. On Windows, visibility does not decide what a module exports (dllexport does).
+if(MINGW)
+  set_target_properties({name} PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 target_include_directories(
   {name}
   PRIVATE
@@ -96,6 +102,12 @@ find_package(HyperHDG CONFIG REQUIRED {package_paths})
 
 nanobind_add_module({name} module.cxx)
 target_compile_features({name} PRIVATE cxx_std_20)
+# MinGW-w64 GCC: with the hidden visibility set by nanobind, inline members of libstdc++'s
+# explicitly instantiated templates (e.g. the move constructor of std::string) remain undefined
+# when linking. On Windows, visibility does not decide what a module exports (dllexport does).
+if(MINGW)
+  set_target_properties({name} PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 target_link_libraries({name} PRIVATE HyperHDG::HyperHDG)
 """
 
