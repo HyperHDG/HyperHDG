@@ -111,9 +111,8 @@ auto bind_python(nanobind::module_& m, const char* name)
                   o.read_dirichlet_indices(v);
                 })
     cls.def(
-      "read_dirichlet_indices",
-      [](GlobalLoopT& o, const std::vector<unsigned int>& v) { o.read_dirichlet_indices(v); },
-      nb::arg("indices"));
+      "read_dirichlet_indices", [](GlobalLoopT& o, const std::vector<unsigned int>& v)
+      { o.read_dirichlet_indices(v); }, nb::arg("indices"));
   if constexpr (requires(GlobalLoopT o) { o.dirichlet_indices(); })
     cls.def("dirichlet_indices", [](GlobalLoopT& o) { return o.dirichlet_indices(); });
 
@@ -124,22 +123,21 @@ auto bind_python(nanobind::module_& m, const char* name)
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.trace_to_mass_flux(v, 0.); })
     cls.def(
-      "trace_to_mass_flux",
-      [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.trace_to_mass_flux(v, t); },
-      nb::arg("x"), nb::arg("time") = 0.);
+      "trace_to_mass_flux", [](GlobalLoopT& o, const Vec& v, Scalar t)
+      { return o.trace_to_mass_flux(v, t); }, nb::arg("x"), nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.jacobian_of_trace_to_flux(v, 0., v, 0.); })
     cls.def(
       "jacobian_of_trace_to_flux",
       [](GlobalLoopT& o, const Vec& x, Scalar eig, const Vec& x_val, Scalar eig_val)
-      { return o.jacobian_of_trace_to_flux(x, eig, x_val, eig_val); },
-      nb::arg("x"), nb::arg("eig"), nb::arg("x_val"), nb::arg("eig_val"));
+      { return o.jacobian_of_trace_to_flux(x, eig, x_val, eig_val); }, nb::arg("x"), nb::arg("eig"),
+      nb::arg("x_val"), nb::arg("eig_val"));
 
   // condensed system as a COO triplet: assemble once, hand it to scipy, solve there
   if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0.); })
     cls.def(
-      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t) { return to_coo(o.trace_to_flux_mat(t)); },
-      nb::arg("time") = 0.);
+      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t)
+      { return to_coo(o.trace_to_flux_mat(t)); }, nb::arg("time") = 0.);
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.residual_flux(v, 0.); })
     cls.def(
@@ -163,10 +161,8 @@ auto bind_python(nanobind::module_& m, const char* name)
 
   if constexpr (requires(GlobalLoopT o, std::string s) { o.plot_option(s, s); })
     cls.def(
-      "plot_option",
-      [](GlobalLoopT& o, const std::string& option, const std::string& value)
-      { return o.plot_option(option, value); },
-      nb::arg("option"), nb::arg("value") = "");
+      "plot_option", [](GlobalLoopT& o, const std::string& option, const std::string& value)
+      { return o.plot_option(option, value); }, nb::arg("option"), nb::arg("value") = "");
 
   if constexpr (requires(GlobalLoopT o, Vec v) { o.plot_solution(v, 0.); })
     cls.def(
