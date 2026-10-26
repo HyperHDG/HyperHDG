@@ -61,7 +61,7 @@ class helper_ev_approx():
 def eigenvalue_approx_MA(poly_degree, dimension, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
     
   exact_eigenval = (dimension * (np.pi ** 2)) ** 2
   sigma          = 3. * exact_eigenval / 4.

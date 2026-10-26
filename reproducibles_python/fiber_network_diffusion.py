@@ -28,7 +28,7 @@ domain = "fiber_network_615452"
 def diffusion_test(poly_degree, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
   
   try:
     import HyperHDG
@@ -73,7 +73,7 @@ def diffusion_test(poly_degree, debug_mode=False):
     print(iters, "\t", np.linalg.norm(A.dot(vec_x) - vectorRHS) / np.linalg.norm(vectorRHS),
           "\t", .5 * vec_x.dot(A.dot(vec_x)) - vec_x.dot(vectorRHS), " \t", datetime.now())
 
-  [vectorSolution, n_iter] = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
+  [vectorSolution, n_iter] = sp.linalg.cg(A, vectorRHS, tol=1e-10, callback=nonlocal_iterate, M=B)
   print(iters)
   if n_iter != 0:
     print("CG solver failed with a total number of ", n_iter, "iterations.")

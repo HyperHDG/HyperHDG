@@ -23,7 +23,7 @@ domain = "fiber_network_615452"
 
 start_time = datetime.now()
 print("Starting time is", start_time)
-os.system("mkdir -p output")
+os.makedirs("output", exist_ok=True)
 
 try:
   import HyperHDG
@@ -71,7 +71,7 @@ def nonlocal_iterate(vec_x):
 
 print(np.linalg.norm(vectorRHS))
 
-vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-10, callback=nonlocal_iterate, M=B)
+vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, tol=1e-10, callback=nonlocal_iterate, M=B)
 if num_iter != 0:
   raise RuntimeError("Linear solver did not converge!")
 
