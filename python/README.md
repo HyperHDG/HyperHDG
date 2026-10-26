@@ -156,6 +156,23 @@ A module built by CMake instead — an `.so` from `nanobind_add_module(...)`, im
 ordinary way — is the same thing without the cache; nothing in `bind_python.hxx` depends on
 how the module was produced.
 
+## Time-dependent example: Timoshenko network waves
+
+```sh
+python python/timowave.py -deg 3 -nx 8 -nt 256 -wave4_px -1.5707963267948966
+bash python/timowave_convergence.sh            # space, time and tau sweeps with rates
+```
+
+`python/timowave.py` drives `GlobalLoop::Hyperbolic` with `LocalSolver::TimoshenkoWave`
+(HDG in space, s-stage Gauss collocation in time) on the manufactured solution of
+`python/parameters/timowave.hxx`. Each time step solves the condensed system of every Gauss
+stage representative — complex for s >= 2 — with a scipy LU that is factorized once. The
+stage index travels through the generic loop entries as a `Gauss::StageTime`, so the binding
+needs no stage-specific loop methods: `trace_to_flux_mat_stage`, `residual_flux_stage` and
+`set_data_stage` are the plain entries called with that time argument, and `finalize_step`
+combines the stages into the new state. The output keys (`e_rel`, `e_trace`, `e_dual`, ...)
+are one `key: value` line each.
+
 ## Design rationale: why this instead of the runtime cython compile
 
 Both systems make the user spell C++ template parameters; the difference is where they land
@@ -248,8 +265,9 @@ its time. The machinery simply predates the tools that now make its job unnecess
 
 ### Where this path can still improve
 
-- **Coverage.** Only the elliptic diffusion example exists; parabolic and eigenvalue loops
-  are already covered by the `requires`-guards in `bind_python.hxx` but have no example.
+- **Coverage.** Examples exist for the elliptic (diffusion) and hyperbolic (timowave) loops;
+  parabolic and eigenvalue loops are already covered by the `requires`-guards in
+  `bind_python.hxx` but have no example.
 - **Data crossing still copies.** Vectors cross the boundary as by-value `std::vector` both
   ways; zero-copy `nb::ndarray` variants are possible but not implemented.
 - **Installed-prefix mode is untested in anger.** Nobody installs HyperHDG today; the
@@ -265,4 +283,7 @@ its time. The machinery simply predates the tools that now make its job unnecess
 - `python/hyperhdg.py` — compile/load a module source string (generated CMake project, cached).
 - `python/diffusion.py` — the example: graph and parameters from the command line.
 - `python/convergence.sh` — convergence sweep over degrees and refinement levels.
+- `python/timowave.py` — Timoshenko network waves with Gauss time stepping (manufactured
+  solution `python/parameters/timowave.hxx` on `domains/cross2.geo`).
+- `python/timowave_convergence.sh` — spatial, temporal and penalty convergence sweeps.
 - `python/check_vs_cython.py` — bit-for-bit comparison against the legacy cython bindings.
