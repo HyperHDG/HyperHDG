@@ -118,8 +118,8 @@ namespace LocalSolver
  * \brief   Local solver for the Timoshenko beam-network wave equation (dual-mixed HDG).
  *
  * Second-order-in-time elastic beam system, reduced to first order via the velocity/momentum
- * field and advanced by fully implicit Gauss collocation (hdg_gauss.pdf): one mass-shifted local
- * solve per stage. n_stages = 1 is the implicit midpoint rule, which reproduces the classic
+ * field and advanced by fully implicit Gauss collocation (doc/hdg_gauss.pdf): one mass-shifted
+ * local solve per stage. n_stages = 1 is the implicit midpoint rule, which reproduces the classic
  * Crank-Nicolson trajectory (stage values = CN midpoint averages).
  *
  * \authors   Joseph Holten, Karlsruhe Institute of Technology, 2025--2026.
@@ -292,12 +292,12 @@ class TimoshenkoWave
   static constexpr unsigned int system_dim = system_dimension();
 
   /*!***********************************************************************************************
-   * \brief   Step parameters of the local solve (see also hdg_gauss.pdf).
+   * \brief   Step parameters of the local solve (see also doc/hdg_gauss.pdf).
    *
    * The only runtime time-discretisation inputs are:
    *   tau_      HDG stabilisation parameter (globally constant), tau > 0.
    *   delta_t_  time step Delta t.
-   * The local system is assembled in the STAGE NORMALIZATION of hdg_gauss.pdf (eq 5): the step
+   * The local system is assembled in the STAGE NORMALIZATION of doc/hdg_gauss.pdf (eq 5): the step
    * enters the matrix only through sigma_l = 1/(theta_l*Delta t), which weights the (y,z)/(z,y)
    * couplings (see assemble_loc_matrix / assemble_schur). Deviation from the note: the z-rows keep
    * their C_u scaling -- (z,z) = M, (z,y) = -sigma*C_u*M -- instead of the note's C_u^{-1} d-form,
@@ -307,7 +307,7 @@ class TimoshenkoWave
   const lSol_float_t tau_;
   const lSol_float_t delta_t_;
   /*!***********************************************************************************************
-   * \brief   Gauss tableau data in the eigenbasis of the Butcher matrix (hdg_gauss.pdf).
+   * \brief   Gauss tableau data in the eigenbasis of the Butcher matrix (doc/hdg_gauss.pdf).
    *
    * Built at construction by Gauss::build_tableau (ported from hoRK's horkirk.c): nodes and
    * weights by Newton on the Legendre polynomial, Butcher A = W V^{-1}, eigendecomposition
@@ -507,7 +507,7 @@ class TimoshenkoWave
 
 
   /*!***********************************************************************************************
-   * \brief   The local saddle system in stage normalization (hdg_gauss.pdf eq 5), one assembler.
+   * \brief   The local saddle system in stage normalization (doc/hdg_gauss.pdf eq 5).
    *
    * Blocks (per variable group dim, in units of n_shape_fct_; see the block decomposition above):
    *   (q,q) = M/C_sig,  (q,y) = -G,  (y,q) = B-G,  (y,y) = tau*F        [always]
@@ -654,7 +654,7 @@ class TimoshenkoWave
   }
 
   /*!***********************************************************************************************
-   * \brief   Gauss stage loads (hdg_gauss.pdf eq 7): history enters through (y^n, z^n) only.
+   * \brief   Gauss stage loads (doc/hdg_gauss.pdf eq 7): history enters through (y^n, z^n) only.
    *
    * Eigenbasis stage l of the collocation system: the data terms mix the collocation nodes with
    * the T^{-1} row of the representative, rhs_l = sum_j tinv_{l,j} * data(t^n + c_j*dt), and the

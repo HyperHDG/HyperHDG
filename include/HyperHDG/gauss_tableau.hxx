@@ -10,7 +10,7 @@
  * columns (trick 2) so only the ceil(s/2) representatives are ever solved.
  *
  * Difference to horkirk: horkirk works with stage DERIVATIVES (update weights b^T T); the HDG
- * Gauss stepping (hdg_gauss.pdf) works with stage VALUES, so the recombination weights here are
+ * Gauss stepping (doc/hdg_gauss.pdf) works with stage VALUES, so the recombination weights here are
  * w = (b^T T) / theta = (b^T A^{-1} T) and the endpoint update reads
  *   y+ = affine * y^n + sum_reps mult_l * Re(w_l * y_l),   affine = 1 - b^T A^{-1} 1 = (-1)^s.
  **************************************************************************************************/
