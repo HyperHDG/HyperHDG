@@ -9,12 +9,14 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <exception>
 #include <limits>
 #include <map>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 /*!*************************************************************************************************
@@ -335,6 +337,10 @@ void for_each_local_matrix(HyperGraphT& hyper_graph,
  * have to be summed up (as done by SciPy's \c csr_matrix). Every hyperedge writes its own block of
  * triplets, so the result does not depend on the number of OpenMP threads.
  *
+ * If the local solver provides \c is_dirichlet(hyper_edge, node, dof), the column of a Dirichlet
+ * dof is replaced by the unit vector of that dof instead of the local solver's (vanishing)
+ * contribution, so the condensed matrix stays regular. Local solvers without it are unaffected.
+ *
  * \tparam  hyNode_index_t  Typename of the hypernode index.
  * \tparam  LargeVecT       Typename of the large vector.
  * \param   hyper_graph     The hypergraph.
@@ -384,6 +390,24 @@ sparse_mat<LargeVecT> assemble_triplets(HyperGraphT& hyper_graph,
               result_mat.value_vec[index] = loc_mat[(node_j * n_dofs_per_node + dof_j) * n_loc +
                                                     node_i * n_dofs_per_node + dof_i];
             }
+
+      if constexpr (requires(std::remove_cvref_t<decltype(hyper_graph[0])>& hyper_edge) {
+                      {
+                        local_solver.is_dirichlet(hyper_edge, 0U, 0U)
+                      } -> std::convertible_to<bool>;
+                    })
+      {
+        auto hyper_edge = hyper_graph[edge];
+        for (unsigned int node_j = 0; node_j < hyNodes.size(); ++node_j)
+          for (unsigned int dof_j = 0; dof_j < n_dofs_per_node; ++dof_j)
+            if (local_solver.is_dirichlet(hyper_edge, node_j, dof_j))
+            {
+              const unsigned int col = node_j * n_dofs_per_node + dof_j;
+              const std::size_t first = edge * n_loc * n_loc + col * n_loc;
+              for (unsigned int row = 0; row < n_loc; ++row)
+                result_mat.value_vec[first + row] = row == col ? 1. : 0.;
+            }
+      }
     });
 
   return result_mat;
