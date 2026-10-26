@@ -10,6 +10,7 @@ is asked for and cached afterwards, so there is no build step -- see python/READ
 """
 
 import argparse
+import inspect
 import os
 import re
 
@@ -17,6 +18,9 @@ import numpy as np
 import scipy.sparse as sp
 
 import hyperhdg  # python/hyperhdg.py, next to this script
+
+# SciPy renamed the tolerance of cg from tol to rtol in version 1.12 (Ubuntu 24.04 has 1.11).
+CG_TOLERANCE = "rtol" if "rtol" in inspect.signature(sp.linalg.cg).parameters else "tol"
 
 MODULE = """\
 #include <HyperHDG/bind_python.hxx>
@@ -73,7 +77,7 @@ def main():
     rows, cols, vals = hdg.trace_to_flux_mat()
     matrix = sp.coo_matrix((vals, (rows, cols)), shape=(size, size)).tocsr()
 
-    solution, info = sp.linalg.cg(matrix, rhs, rtol=1e-10)
+    solution, info = sp.linalg.cg(matrix, rhs, **{CG_TOLERANCE: 1e-10})
     if info != 0:
         raise RuntimeError(f"CG did not converge (info = {info})")
 
