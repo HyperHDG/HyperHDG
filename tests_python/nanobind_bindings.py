@@ -8,7 +8,7 @@
 # - Two variants of a module get separate build directories, so switching between them does not
 #   rebuild them.
 
-import os, sys
+import inspect, os, sys
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as sp_lin_alg
@@ -36,6 +36,9 @@ NB_MODULE(hdg_test_diffusion, m) {{
 }}
 """
 
+# SciPy renamed the tolerance of cg from tol to rtol in version 1.12 (Ubuntu 24.04 has 1.11).
+TOLERANCE = "rtol" if "rtol" in inspect.signature(sp_lin_alg.cg).parameters else "tol"
+
 def code(degree):
   return MODULE.format(degree=degree, quadrature=2 * degree)
 
@@ -44,7 +47,7 @@ def solve(hdg):
   rows, cols, vals = hdg.trace_to_flux_mat()
   A = sp.csr_matrix((vals, (rows, cols)), shape=(n, n))
   rhs = -np.asarray(hdg.residual_flux(hdg.zero_vector()))
-  solution, info = sp_lin_alg.cg(A, rhs, rtol=1e-13)
+  solution, info = sp_lin_alg.cg(A, rhs, **{TOLERANCE: 1e-13})
   assert info == 0, "CG did not converge!"
   return hdg.errors(list(solution))[0]
 
