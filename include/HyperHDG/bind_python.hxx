@@ -7,7 +7,8 @@
 //
 //   NB_MODULE(my_module, m) { HyperHDG::bind_python<MyGlobalLoop>(m, "MyGlobalLoop"); }
 //
-// then build it with nanobind_add_module (see python/CMakeLists.txt). This is an alternative
+// then build it with nanobind_add_module (python/hyperhdg.py generates such a CMake project and
+// builds it on demand, cf. python/README.md). This is an alternative
 // to the runtime cython compile machinery (import/ + cython/) for workflows that want full
 // control over the compile: the set of template instantiations is spelled out in the .cxx,
 // CMake produces a plain .so, python imports it.
@@ -16,12 +17,13 @@
 // subset of the global-loop protocol the instantiation provides (an elliptic loop gets no
 // set_data/make_initial, an eigenvalue loop no residual_flux, ...) -- one helper for all
 // loops instead of a .pyx/.pxd template pair per loop. Vectors cross the boundary as
-// std::vector copies; the condensed system crosses as a COO triplet consumed by
+// std::vector copies; the condensed system crosses as a COO triplet of NumPy arrays consumed by
 // scipy.sparse.
 
 // first include: nanobind pulls in Python.h, which must precede any header defining libc
 // feature-test macros, else pyconfig.h redefines _POSIX_C_SOURCE/_XOPEN_SOURCE
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
@@ -82,15 +84,31 @@ auto bind_python(nanobind::module_& m, const char* name)
   using Scalar = typename Vec::value_type;
   using Idx = unsigned int;
 
-  // COO triplet (rows, cols, values), ready for scipy.sparse.coo_matrix((vals, (rows, cols))):
-  // the loop emits one entry per local matrix position, duplicates are summed by scipy.
-  using Coo = std::tuple<std::vector<Idx>, std::vector<Idx>, Vec>;
-  auto to_coo = [](auto&& mat) -> Coo
-  { return {std::move(mat.row_vec), std::move(mat.col_vec), std::move(mat.value_vec)}; };
+  // COO triplet (rows, cols, values) of NumPy arrays, ready for
+  // scipy.sparse.coo_matrix((vals, (rows, cols))): the loop emits one entry per local matrix
+  // position, duplicates are summed by scipy. The arrays take over the vectors (no copy).
+  auto to_numpy = []<typename T>(std::vector<T>&& vec)
+  {
+    auto* owned = new std::vector<T>(std::move(vec));
+    nb::capsule owner(owned, [](void* ptr) noexcept { delete static_cast<std::vector<T>*>(ptr); });
+    return nb::ndarray<nb::numpy, T, nb::ndim<1>>(owned->data(), {owned->size()}, owner);
+  };
+  auto to_coo = [to_numpy](auto&& mat)
+  {
+    return std::make_tuple(to_numpy(std::move(mat.row_vec)), to_numpy(std::move(mat.col_vec)),
+                           to_numpy(std::move(mat.value_vec)));
+  };
 
   auto cls = nb::class_<GlobalLoopT>(m, name);
 
   // constructors: (topology), (topology, local solver), (topology, geometry, local solver)
+  static_assert(
+    std::is_constructible_v<GlobalLoopT, const TopoArgT&> ||
+      std::is_constructible_v<GlobalLoopT, const TopoArgT&, const SolverArgT&> ||
+      std::is_constructible_v<GlobalLoopT, const TopoArgT&, const TopoArgT&, const SolverArgT&>,
+    "No constructor of GlobalLoopT takes TopoArgT (and SolverArgT): pass the "
+    "constructor argument types as template arguments of bind_python, e.g. "
+    "std::vector<unsigned int> for the cubic topologies.");
   if constexpr (std::is_constructible_v<GlobalLoopT, const TopoArgT&>)
     cls.def(nb::init<const TopoArgT&>(), nb::arg("topology"));
   if constexpr (std::is_constructible_v<GlobalLoopT, const TopoArgT&, const SolverArgT&>)
@@ -134,7 +152,12 @@ auto bind_python(nanobind::module_& m, const char* name)
       nb::arg("x_val"), nb::arg("eig_val"));
 
   // condensed system as a COO triplet: assemble once, hand it to scipy, solve there
-  if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0.); })
+  if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0., true); })
+    cls.def(
+      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t, bool factorize_once)
+      { return to_coo(o.trace_to_flux_mat(t, factorize_once)); }, nb::arg("time") = 0.,
+      nb::arg("factorize_once") = false);
+  else if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0.); })
     cls.def(
       "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t)
       { return to_coo(o.trace_to_flux_mat(t)); }, nb::arg("time") = 0.);
