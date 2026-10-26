@@ -37,22 +37,6 @@ class Elliptic
 {
  private:
   /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(trace_to_flux_mat, has_trace_to_flux_mat);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(residual_flux, has_residual_flux);
-  /*!***********************************************************************************************
-   * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
-   ************************************************************************************************/
-  HAS_MEMBER_FUNCTION(errors, has_errors);
-  /*!***********************************************************************************************
    * \brief   Some constant variable that might be helpful.
    ************************************************************************************************/
   static constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
@@ -204,7 +188,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -244,8 +228,7 @@ class Elliptic
   sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.,
                                           const bool factorize_once = false)
   {
-    return prototype_mat_generate_local(trace_to_flux, has_trace_to_flux, trace_to_flux_mat,
-                                        has_trace_to_flux_mat, factorize_once);
+    return prototype_mat_generate_local(trace_to_flux, trace_to_flux_mat, factorize_once);
   }
 
   /*!***********************************************************************************************
@@ -265,7 +248,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT residual_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto vec_Ax = prototype_mat_vec_multiply(residual_flux, has_residual_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(residual_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -291,7 +274,7 @@ class Elliptic
   template <typename hyNode_index_t = dof_index_t>
   std::vector<dof_value_t> errors(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    auto result = prototype_errors(errors, has_errors);
+    auto result = prototype_errors(errors);
     return std::vector<dof_value_t>(result.begin(), result.end());
   }
   /*!***********************************************************************************************

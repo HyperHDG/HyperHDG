@@ -11,6 +11,7 @@ add_hyperhdg_test(diffusion_plotting.cxx)
 add_hyperhdg_test(plot_refined.cxx)
 add_hyperhdg_test(plot_simple.cxx)
 add_hyperhdg_test(point_functions.cxx)
+add_hyperhdg_test(qr_handedness.cxx)
 add_hyperhdg_test(stiffness_matrix.cxx)
 
 # Using factorize_once for non-uniform local matrices must be detected (and abort) in debug mode.

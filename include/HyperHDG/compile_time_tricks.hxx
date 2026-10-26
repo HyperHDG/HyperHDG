@@ -44,3 +44,24 @@
    public:                                                                                         \
     static constexpr bool value = type::value;                                                     \
   }
+
+/*!*************************************************************************************************
+ * \brief   Dependent false for static_assert in discarded if-constexpr branches.
+ *
+ * The local-solver dispatch of the global loops tests candidate call expressions with
+ * requires-expressions (cf. global_loop/prototype.hxx); the fallback branch uses
+ * \c static_assert(always_false_v<...>, ...), so a local solver implementing no usable overload
+ * is a compile error.
+ **************************************************************************************************/
+template <typename...>
+inline constexpr bool always_false_v = false;
+/*!*************************************************************************************************
+ * \brief   declval-style helper: yields a prvalue copy of its argument (unevaluated contexts only).
+ *
+ * Inside the dispatch requires-expressions the trailing scalar (time) must be passed as an rvalue:
+ * local solvers commonly default that parameter (e.g. \c time \c = \c 0.) behind a \c hyEdgeT&
+ * parameter, and a named lvalue would bind to that reference, making the shorter overload
+ * spuriously viable. Not defined -- like std::declval.
+ **************************************************************************************************/
+template <typename T>
+std::remove_cvref_t<T> prvalue_of(T&&) noexcept;
