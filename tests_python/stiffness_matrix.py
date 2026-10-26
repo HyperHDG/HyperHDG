@@ -65,11 +65,8 @@ HDG_wrapper = HyperHDG.include(const)(os.path.dirname(os.path.abspath(__file__))
   + "/../domains/simplex_1_2.geo")
 HDG_wrapper.refine(4)
 HDG_wrapper.sparse_stiff_mat(False)
-for misuse in [lambda: HDG_wrapper.sparse_stiff_mat(True),
-               lambda: (HDG_wrapper.cache_operator(True, True),
-                        HDG_wrapper.trace_to_flux(HDG_wrapper.zero_vector()))]:
-  try:
-    misuse()
-    raise AssertionError("Misuse of factorize_once has not been detected!")
-  except ValueError as error:
-    print("Misuse of factorize_once detected:", str(error)[:60], "...")
+try:
+  HDG_wrapper.sparse_stiff_mat(True)
+  raise AssertionError("Misuse of factorize_once has not been detected!")
+except ValueError as error:
+  print("Misuse of factorize_once detected:", str(error)[:60], "...")

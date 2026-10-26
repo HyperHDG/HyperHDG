@@ -64,11 +64,6 @@ cdef class PythonClassName :
   def sparse_stiff_mat(self, sigma = 0., factorize_once = False):
     cdef sparse_mat helper = self.thisptr.trace_to_flux_mat(sigma, factorize_once)
     return sparse_mat_to_numpy(helper)
-  # Let trace_to_flux use a sparse matrix that is assembled once (faster if trace_to_flux is called
-  # often, needs memory for the matrix). The matrix is reassembled if trace_to_flux is called with
-  # another shift, unless shift_independent = True.
-  def cache_operator(self, enable = True, factorize_once = False, shift_independent = False):
-    self.thisptr.cache_operator(enable, factorize_once, shift_independent)
   def refine(self, n_ref = 'default'):
     if n_ref == 'default':
       return self.thisptr.get_refinement()

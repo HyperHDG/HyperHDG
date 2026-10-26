@@ -1,10 +1,9 @@
-# Check trace_to_flux_mat (sparse_stiff_mat) and the operator cache (cache_operator) of all global
-# loops that provide them, for the local solvers that implement trace_to_flux_mat themselves and for
-# local solvers that use the fallback (trace_to_flux applied to unit vectors).
+# Check trace_to_flux_mat (sparse_stiff_mat) of all global loops that provide it, for the local
+# solvers that implement trace_to_flux_mat themselves and for local solvers that use the fallback
+# (trace_to_flux applied to unit vectors).
 #
 # For every case, the assembled matrix is compared to the matrix whose columns are the results of
-# the matrix-free trace_to_flux applied to all unit vectors, and trace_to_flux with cached operator
-# is compared to the matrix-free trace_to_flux.
+# the matrix-free trace_to_flux applied to all unit vectors.
 
 import os, sys
 import numpy as np
@@ -70,7 +69,6 @@ success = True
 for (name, loop, solver, params, constr, param_values, test_once, parabolic) in CASES:
   hdg = configure(loop, solver, params, 2, parabolic)([3, 2], **constr)
   n = hdg.size_of_system()
-  x = np.random.default_rng(0).standard_normal(n)
   for param in param_values:
     ref = dense_reference(hdg, loop, n, param)
     scale = np.abs(ref).max()
@@ -82,16 +80,5 @@ for (name, loop, solver, params, constr, param_values, test_once, parabolic) in 
       success &= ok
       print("%-28s %-25s param=%.2f factorize_once=%-5s deviation %.1e %s"
             % (name, loop, param, once, dev, "OK" if ok else "FAILED"))
-
-  # Cached operator (also for changing parameter values, which require a new assembly).
-  reference = [apply(hdg, loop, x, param) for param in param_values]
-  hdg.cache_operator(True)
-  cached = [apply(hdg, loop, x, param) for param in param_values * 2]
-  hdg.cache_operator(False)
-  dev = max(np.abs(c - r).max() / np.abs(r).max() for c, r in zip(cached, reference * 2))
-  ok = dev < 1e-12
-  success &= ok
-  print("%-28s %-25s cache_operator                   deviation %.1e %s"
-        % (name, loop, dev, "OK" if ok else "FAILED"))
 
 assert success, "Some operator matrices differ from the matrix-free operators!"

@@ -17,10 +17,6 @@
 #include <stdexcept>
 #include <vector>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 /*!*************************************************************************************************
  * \brief   Parallelize the following loop with OpenMP (if HyperHDG is compiled with OpenMP).
  **************************************************************************************************/
@@ -80,18 +76,6 @@ class ParallelExceptions
   std::atomic<bool> failed_{false};
   std::exception_ptr exception_;
 };
-
-/*!*************************************************************************************************
- * \brief   Number of threads that a parallel loop uses.
- **************************************************************************************************/
-inline unsigned int hyperhdg_n_threads()
-{
-#ifdef _OPENMP
-  return omp_get_max_threads();
-#else
-  return 1;
-#endif
-}
 
 namespace MatGenerate
 {
@@ -235,14 +219,11 @@ void check_reused_local_matrix(const dof_value_t* computed,
  * If the code is compiled without \c NDEBUG, this check is done for every hyperedge (which is as
  * expensive as \c factorize_once being false).
  *
- * The local matrices are computed in parallel if HyperHDG is compiled with OpenMP. Exceptions
- * thrown by the local solvers are forwarded to the caller.
+ * The local matrices are computed in parallel if HyperHDG is compiled with OpenMP. Then, \c sink
+ * is called concurrently for different hyperedges. Exceptions thrown by the local solvers are
+ * forwarded to the caller.
  *
  * \tparam  hyNode_index_t  Typename of the hypernode index.
- * \tparam  parallel_sink   If true, \c sink is called in parallel (it must be safe to call it for
- *                          different hyperedges concurrently). If false, \c sink is called by one
- *                          thread in increasing order of the hyperedges, which allows to sum up
- *                          contributions of several hyperedges in a deterministic order.
  * \param   hyper_graph     The hypergraph.
  * \param   local_solver    The local solver.
  * \param   time            Parameter of \c trace_to_flux (time or shift).
@@ -250,7 +231,6 @@ void check_reused_local_matrix(const dof_value_t* computed,
  * \param   sink            Callable that receives the local matrices.
  **************************************************************************************************/
 template <typename hyNode_index_t,
-          bool parallel_sink,
           typename HyperGraphT,
           typename LocalSolverT,
           typename dof_value_t,
@@ -335,50 +315,17 @@ void for_each_local_matrix(HyperGraphT& hyper_graph,
   };
 
   ParallelExceptions exceptions;
-  if constexpr (parallel_sink)
-  {
-    HYPERHDG_OMP_PARALLEL_FOR
-    for (long long edge = 0; edge < (long long)n_hyEdges; ++edge)
-      exceptions.run(
-        [&]()
-        {
-          auto hyper_edge = hyper_graph[edge];
-          std::vector<dof_value_t> buffer(!factorize_once || hy_debug_mode ? loc_size : 0);
-          const hyNodes_t hyNodes = hyper_edge.topology.get_hyNode_indices();
-          sink((std::size_t)edge, hyNodes, local_matrix(edge, hyper_edge, buffer.data()));
-        });
-    exceptions.rethrow();
-  }
-  else
-  {
-    // Compute the local matrices of a chunk of hyperedges in parallel, and hand them to the sink
-    // serially. The chunk size limits the memory of the buffer (to about 2^20 values, unless there
-    // are many threads).
-    const std::size_t chunk = std::min<std::size_t>(
-      std::max<std::size_t>(n_hyEdges, 1),
-      std::max<std::size_t>(8 * hyperhdg_n_threads(), (std::size_t(1) << 20) / loc_size));
-    std::vector<dof_value_t> buffer(!factorize_once || hy_debug_mode ? chunk * loc_size : 0);
-    std::vector<const dof_value_t*> loc_mats(chunk);
-    std::vector<hyNodes_t> hyNodes(chunk);
-    for (std::size_t begin = 0; begin < n_hyEdges; begin += chunk)
-    {
-      const std::size_t end = std::min(n_hyEdges, begin + chunk);
-      HYPERHDG_OMP_PARALLEL_FOR
-      for (long long edge = begin; edge < (long long)end; ++edge)
-        exceptions.run(
-          [&]()
-          {
-            const std::size_t k = edge - begin;
-            auto hyper_edge = hyper_graph[edge];
-            hyNodes[k] = hyper_edge.topology.get_hyNode_indices();
-            loc_mats[k] =
-              local_matrix(edge, hyper_edge, buffer.empty() ? nullptr : &buffer[k * loc_size]);
-          });
-      exceptions.rethrow();
-      for (std::size_t edge = begin; edge < end; ++edge)
-        sink(edge, hyNodes[edge - begin], loc_mats[edge - begin]);
-    }
-  }
+  HYPERHDG_OMP_PARALLEL_FOR
+  for (long long edge = 0; edge < (long long)n_hyEdges; ++edge)
+    exceptions.run(
+      [&]()
+      {
+        auto hyper_edge = hyper_graph[edge];
+        std::vector<dof_value_t> buffer(!factorize_once || hy_debug_mode ? loc_size : 0);
+        const hyNodes_t hyNodes = hyper_edge.topology.get_hyNode_indices();
+        sink((std::size_t)edge, hyNodes, local_matrix(edge, hyper_edge, buffer.data()));
+      });
+  exceptions.rethrow();
 }
 
 /*!*************************************************************************************************
@@ -416,7 +363,7 @@ sparse_mat<LargeVecT> assemble_triplets(HyperGraphT& hyper_graph,
   result_mat.row_vec.resize(n_triplets);
   result_mat.col_vec.resize(n_triplets);
 
-  for_each_local_matrix<hyNode_index_t, true>(
+  for_each_local_matrix<hyNode_index_t>(
     hyper_graph, local_solver, time, factorize_once,
     [&](const std::size_t edge, const auto& hyNodes, const auto* loc_mat)
     {

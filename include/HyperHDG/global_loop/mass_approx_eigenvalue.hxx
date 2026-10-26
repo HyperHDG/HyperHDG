@@ -1,8 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/condensed_operator.hxx>
 #include <HyperHDG/global_loop/mat_generate.hxx>
-#include <HyperHDG/global_loop/operator_cache.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/plot.hxx>
@@ -41,7 +41,7 @@ class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue,
                                                       dof_index_t>
 {
   /*!***********************************************************************************************
-   * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
+   * \brief   The base class assembles the condensed matrix (cf. trace_to_flux_mat).
    ************************************************************************************************/
   friend class CondensedOperator<MassApproxEigenvalue,
                                  TopologyT,
@@ -205,9 +205,6 @@ class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue,
     constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
     constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
 
-    if (this->operator_cached())
-      return this->template cached_trace_to_flux<hyNode_index_t>(x_vec, time);
-
     LargeVecT vec_Ax(x_vec.size(), 0.);
     SmallVec<2 * hyEdge_dim, hyNode_index_t> hyEdge_hyNodes;
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> hyEdge_dofs_old,
@@ -369,11 +366,7 @@ class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue,
   /*!***********************************************************************************************
    * \brief   Set refinement level.
    ************************************************************************************************/
-  void set_refinement(unsigned int level)
-  {
-    hyper_graph_.set_refinement(level);
-    this->invalidate_operator_cache();
-  }
+  void set_refinement(unsigned int level) { hyper_graph_.set_refinement(level); }
 };  // end of class MassApproxEigenvalue
 
 }  // end of namespace GlobalLoop

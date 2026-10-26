@@ -23,6 +23,5 @@ cdef extern from "<HyperHDG/global_loop/mass_approx_eigenvalue.hxx>" :
     string plot_option (string, string)
     void plot_solution (vector[ CyReplace03 ], CyReplace03 )
     sparse_mat trace_to_flux_mat(CyReplace03, bint) except +
-    void cache_operator(bint, bint, bint)
     unsigned int get_refinement()
     void set_refinement(unsigned int)

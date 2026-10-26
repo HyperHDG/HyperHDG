@@ -78,7 +78,7 @@ target_compile_features(
   cxx_std_20
 )
 
-## Optionally parallelize the assembly of matrices (and cached operators) with OpenMP. On macOS,
+## Optionally parallelize the assembly of matrices with OpenMP. On macOS,
 ## Apple Clang needs the libomp library, e.g. -DOpenMP_ROOT=$(brew --prefix libomp).
 option(HYPERHDG_OPENMP "Parallelize matrix assembly with OpenMP" OFF)
 if(HYPERHDG_OPENMP)

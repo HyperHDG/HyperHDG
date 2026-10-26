@@ -1,11 +1,10 @@
 /*!*************************************************************************************************
  * \file    stiffness_matrix.cxx
- * \brief   Check the assembly of the condensed (stiffness) matrix and the operator cache.
+ * \brief   Check the assembly of the condensed (stiffness) matrix.
  *
  * The matrix assembled by trace_to_flux_mat (with the local matrix being computed per hyperedge
- * and with the local matrix being computed only once) and the cached operator (cache_operator) are
- * compared to the matrix whose columns are obtained by applying the matrix-free operator
- * trace_to_flux to all unit vectors. This is done
+ * and with the local matrix being computed only once) is compared to the matrix whose columns are
+ * obtained by applying the matrix-free operator trace_to_flux to all unit vectors. This is done
  * - for the local solver Diffusion, which provides trace_to_flux_mat (one factorization per
  *   hyperedge), on a uniform mesh with mixed boundary conditions, on a uniform mesh with a space
  *   dependent diffusion coefficient, on a non-uniform hypergraph, and on a refined hypergraph with
@@ -14,8 +13,7 @@
  *
  * Moreover, it is checked that
  * - using factorize_once for a space dependent diffusion coefficient throws std::invalid_argument
- *   (in debug and in release mode),
- * - the cached operator rejects vectors of wrong size (std::invalid_argument), and
+ *   (in debug and in release mode), and
  * - exceptions of the local solver are forwarded to the caller (also if the assembly is
  *   parallelized with OpenMP, where they must not leave the parallel region).
  **************************************************************************************************/
@@ -162,24 +160,6 @@ vector<double> operator_columns(ProblemT& problem)
 }
 
 /*!*************************************************************************************************
- * \brief   Compare the (cached) trace_to_flux to a reference matrix.
- **************************************************************************************************/
-template <typename ProblemT>
-bool check_cached(ProblemT& problem,
-                  const vector<double>& reference,
-                  const double max_entry,
-                  const string& name)
-{
-  const vector<double> cached = operator_columns(problem);
-  double max_diff = 0.;
-  for (unsigned int k = 0; k < reference.size(); ++k)
-    max_diff = max(max_diff, abs(cached[k] - reference[k]));
-  const bool ok = max_entry > 0. && max_diff <= 1e-12 * max_entry;
-  cout << name << ": max. deviation " << max_diff << (ok ? "  OK" : "  FAILED") << endl;
-  return ok;
-}
-
-/*!*************************************************************************************************
  * \brief   Compare assembled matrix to matrix obtained by applying trace_to_flux to unit vectors.
  **************************************************************************************************/
 template <typename ProblemT>
@@ -209,16 +189,6 @@ bool check(ProblemT& problem, const string& name, const bool check_factorize_onc
          << ", max. deviation " << max_diff << ", max. entry " << max_entry
          << (ok ? "  OK" : "  FAILED") << endl;
     successful &= ok;
-  }
-  for (const bool factorize_once : {false, true})
-  {
-    if (factorize_once && !check_factorize_once)
-      continue;
-    problem.cache_operator(true, factorize_once);
-    successful &=
-      check_cached(problem, reference, max_entry,
-                   name + " (cache_operator, factorize_once = " + to_string(factorize_once) + ")");
-    problem.cache_operator(false);
   }
   return successful;
 }
@@ -267,31 +237,6 @@ int main()
       problem(string("domains/cross_2d.geo"));
     problem.set_refinement(2);
     successful &= check(problem, "Diffusion on refined cross", false);
-    // The cached operator has to be reassembled after the refinement has changed.
-    problem.set_refinement(3);
-    const vector<double> reference = operator_columns(problem);
-    double max_entry = 0.;
-    for (double entry : reference)
-      max_entry = max(max_entry, abs(entry));
-    problem.set_refinement(2);
-    problem.cache_operator(true);
-    problem.trace_to_flux(problem.zero_vector());  // Assemble the cache for refinement level 2.
-    problem.set_refinement(3);
-    successful &=
-      check_cached(problem, reference, max_entry, "Diffusion on cross after refinement");
-  }
-
-  // A vector that does not fit to the cached operator must be rejected.
-  {
-    GlobalLoop::Elliptic<Topology::Cubic<2, 2>, Geometry::UnitCube<2, 2, double>,
-                         NodeDescriptor::Cubic<2, 2>,
-                         LocalSolver::Diffusion<2, 1, 2, ConstantParameters, double> >
-      problem(vector<unsigned int>{4, 4});
-    problem.cache_operator(true);
-    vector<double> too_short = problem.zero_vector();
-    too_short.pop_back();
-    successful &= throws<invalid_argument>("Vector of wrong size for cached operator",
-                                           [&]() { problem.trace_to_flux(too_short); });
   }
 
   // factorize_once must be detected to be wrong for space dependent coefficients.
@@ -302,9 +247,6 @@ int main()
       problem(vector<unsigned int>{4, 4});
     successful &= throws<invalid_argument>("Misuse of factorize_once in trace_to_flux_mat",
                                            [&]() { problem.trace_to_flux_mat(0., true); });
-    problem.cache_operator(true, true);
-    successful &= throws<invalid_argument>("Misuse of factorize_once in cache_operator",
-                                           [&]() { problem.trace_to_flux(problem.zero_vector()); });
   }
 
   // Exceptions of the local solver must be forwarded (also from parallel loops).
@@ -317,10 +259,6 @@ int main()
       const string suffix = " (factorize_once = " + to_string(factorize_once) + ")";
       successful &= throws<runtime_error>("Exception in trace_to_flux_mat" + suffix,
                                           [&]() { problem.trace_to_flux_mat(0., factorize_once); });
-      problem.cache_operator(true, factorize_once);
-      successful &= throws<runtime_error>("Exception in cached trace_to_flux" + suffix,
-                                          [&]() { problem.trace_to_flux(problem.zero_vector()); });
-      problem.cache_operator(false);
     }
   }
 

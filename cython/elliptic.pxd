@@ -28,4 +28,3 @@ cdef extern from "<HyperHDG/global_loop/elliptic.hxx>" :
     void set_refinement(unsigned int)
     sparse_mat trace_to_flux_mat() except +
     sparse_mat trace_to_flux_mat(CyReplace03, bint) except +
-    void cache_operator(bint, bint, bint)

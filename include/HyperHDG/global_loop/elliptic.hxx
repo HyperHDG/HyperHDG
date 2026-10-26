@@ -1,8 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/condensed_operator.hxx>
 #include <HyperHDG/global_loop/mat_generate.hxx>
-#include <HyperHDG/global_loop/operator_cache.hxx>
 #include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
@@ -43,7 +43,7 @@ class Elliptic : public CondensedOperator<Elliptic,
                                           dof_index_t>
 {
   /*!***********************************************************************************************
-   * \brief   The base class assembles the condensed matrix and caches it (cf. cache_operator).
+   * \brief   The base class assembles the condensed matrix (cf. trace_to_flux_mat).
    ************************************************************************************************/
   friend class CondensedOperator<Elliptic,
                                  TopologyT,
@@ -218,9 +218,7 @@ class Elliptic : public CondensedOperator<Elliptic,
   template <typename hyNode_index_t = dof_index_t>
   LargeVecT trace_to_flux(const LargeVecT& x_vec, const dof_value_t time = 0.)
   {
-    LargeVecT vec_Ax = this->operator_cached()
-                         ? this->template cached_trace_to_flux<hyNode_index_t>(x_vec, time)
-                         : prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
+    auto vec_Ax = prototype_mat_vec_multiply(trace_to_flux, has_trace_to_flux);
 
     // Set all Dirichlet values to zero.
     for (dof_index_t i = 0; i < dirichlet_indices_.size(); ++i)
@@ -328,11 +326,7 @@ class Elliptic : public CondensedOperator<Elliptic,
   /*!***********************************************************************************************
    * \brief   Set refinement level.
    ************************************************************************************************/
-  void set_refinement(unsigned int level)
-  {
-    hyper_graph_.set_refinement(level);
-    this->invalidate_operator_cache();
-  }
+  void set_refinement(unsigned int level) { hyper_graph_.set_refinement(level); }
 };  // end of class Elliptic
 
 }  // end of namespace GlobalLoop

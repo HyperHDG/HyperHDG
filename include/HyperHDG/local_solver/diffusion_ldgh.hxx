@@ -537,7 +537,7 @@ class Diffusion
    * evaluated once here. Since Diffusion is the most frequently used local solver, this is worth
    * the duplication: The assembly of the condensed matrix is up to 1.8 times faster than with the
    * macro (measured for hyperedge dimension 3 and polynomial degree 3, the gain grows with the
-   * polynomial degree). The matrix must not depend on \c hyper_edge.data (cf. OperatorCache).
+   * polynomial degree). The matrix must not depend on \c hyper_edge.data.
    *
    * \tparam  hyEdgeT             The geometry type / typename of the considered hyEdge's geometry.
    * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).

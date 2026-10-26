@@ -25,9 +25,8 @@
  * use \c hyper_edge and \c time).
  *
  * The local condensed matrix may only depend on the hyperedge's geometry and node descriptor, the
- * local solver's parameters, and \c time. In particular, it must not depend on the data stored at
- * the hyperedge (\c hyper_edge.data), since the operator cache of the global loops (cf.
- * OperatorCache) reuses it as long as the hypergraph and \c time do not change.
+ * local solver's parameters, and \c time, but not on the data stored at the hyperedge
+ * (\c hyper_edge.data), just like \c trace_to_flux.
  *
  * \c assemble_rhs_from_lambda and \c flux_from_coeffs are called for every local unit vector, and
  * usually evaluate boundary integrals in every call. For local solvers whose local matrix is
