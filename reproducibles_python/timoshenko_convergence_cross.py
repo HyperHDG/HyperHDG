@@ -13,7 +13,7 @@ import os, sys
 def diffusion_test(poly_degree, iteration, debug_mode=False):
   start_time = datetime.now()
   print("Starting time is", start_time)
-  os.system("mkdir -p output")
+  os.makedirs("output", exist_ok=True)
   
   try:
     import HyperHDG
@@ -45,7 +45,7 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
     nonlocal iters
     iters += 1
 
-  vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, rtol=1e-12, callback=nonlocal_iterate)
+  vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, tol=1e-12, callback=nonlocal_iterate)
   if num_iter != 0:
     raise RuntimeError("Linear solver did not converge!")
   error = HDG_wrapper.errors(vectorSolution)[0]

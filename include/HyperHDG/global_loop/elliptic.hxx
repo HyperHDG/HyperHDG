@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/mat_generate.hxx>
 #include <HyperHDG/global_loop/prototype.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
@@ -204,22 +205,30 @@ class Elliptic
   }
 
   /*!***********************************************************************************************
-   * \brief   Evaluate condensed matrix-vector product.
+   * \brief   Assemble the condensed matrix.
    *
-   * Function that evaluates the condensed, matrix-free version of the matrix-vector product
-   * \f$A x = y\f$, where \f$A\f$ is the condensed matrix of the LDG-H method, \f$x\f$ is the
-   * vector of parameters to define the skeletal variable \f$\lambda\f$, and \f$y\f$ is the
-   * resulting vector, which has the same size as the input vector \f$x\f$.
+   * Function that assembles the condensed matrix \f$A\f$ of the LDG-H method, i.e., the matrix of
+   * the linear map evaluated by \c trace_to_flux, in coordinate (triplet) format. Entries with the
+   * same row and column index have to be summed up (as done by SciPy's \c csr_matrix).
+   *
+   * If the local solver provides \c trace_to_flux_mat, its local matrix is factorized once per
+   * hyperedge. Otherwise, the local problem is solved for every local unit vector.
    *
    * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
-   * \param   x_vec           A vector containing the input vector \f$x\f$.
    * \param   time            Time at which given analyitic functions will be evaluated.
-   * \retval  y_vec           A vector containing the product \f$y = Ax\f$.
+   * \param   factorize_once  If true, the local matrix is only computed (and factorized) once for
+   *                          every combination of face types (boundary conditions) and reused for
+   *                          all hyperedges. This is only correct if all hyperedges have the same
+   *                          local matrix, e.g., for uniform meshes with coefficients that are
+   *                          constant in space. It is wrong for space dependent diffusion tensors
+   *or non-uniform meshes. Defaults to false (local matrix per hyperedge). \retval  sparse_mat
+   *Condensed matrix in coordinate format.
    ************************************************************************************************/
   template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.)
+  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t time = 0.,
+                                          const bool factorize_once = false)
   {
-    return prototype_mat_generate(trace_to_flux);
+    return prototype_mat_generate_local(trace_to_flux, trace_to_flux_mat, factorize_once);
   }
 
   /*!***********************************************************************************************

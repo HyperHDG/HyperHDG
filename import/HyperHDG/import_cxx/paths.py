@@ -6,4 +6,8 @@ def this_dir():
 
 ## Return path to main directory of HyperHDG.
 def main_dir():
-  return this_dir() + "/../../.."
+  return os.path.abspath(this_dir() + "/../../..").replace(os.sep, "/")
+
+## Return file ending of Python extension modules ('.pyd' on Windows, '.so' otherwise).
+def so_suffix():
+  return ".pyd" if os.name == "nt" else ".so"

@@ -1,6 +1,6 @@
 import os, sys, importlib, re, datetime
 from .cmake import get_options
-from .compile_prep import compile_commands, need_compile
+from .compile_prep import compile_commands, need_compile, run_command
 from .config import *
 from .names import files, cython_from_cpp
 from .paths import main_dir
@@ -18,8 +18,8 @@ def include(conf):
   print("Cythonizing ... ", end='', flush=True)
 
   # Create folders and log files and check for consistency.
-  os.system("mkdir -p " + main_dir() + "/build " + main_dir() + "/build/cython_files " \
-            + main_dir() + "/build/shared_objects")
+  os.makedirs(main_dir() + "/build/cython_files", exist_ok=True)
+  os.makedirs(main_dir() + "/build/shared_objects", exist_ok=True)
   if not os.path.isfile(main_dir() + "/build/cython_log.txt"):
     file = open(main_dir() + "/build/cython_log.txt", "w")
     file.write("Python version: " + str(sys.version_info))
@@ -59,9 +59,16 @@ def include(conf):
     if not (conf.debug_mode):
       compile_command += " -DNDEBUG"
     #Actually compile the prepared files.
-    assert os.system(cython_command) == 0
-    assert os.system(compile_command) == 0
-    assert os.system(link_command) == 0
+    assert run_command(cython_command) == 0
+    assert run_command(compile_command) == 0
+    assert run_command(link_command) == 0
+
+  # Since Python 3.8, Windows does not search PATH for the DLLs an extension module depends on
+  # (libstdc++, LAPACK, ...). They reside next to the compiler (e.g. MSYS2's ucrt64/bin).
+  if os.name == "nt" and hasattr(os, "add_dll_directory"):
+    compiler_dir = os.path.dirname(options.compile_com)
+    if os.path.isdir(compiler_dir):
+      os.add_dll_directory(compiler_dir)
 
   try:
     mod = importlib.import_module(python_class)

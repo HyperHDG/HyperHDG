@@ -32,6 +32,12 @@ if(APPLE AND NOT DEFINED BLA_VENDOR)
   set(BLA_VENDOR Apple)
 endif()
 find_package (LAPACK REQUIRED)
+# On Windows, FindPython looks up interpreters registered in the Windows registry before the ones
+# on PATH. This selects e.g. a python.org Python without NumPy instead of the MSYS2 Python of the
+# shell, so prefer the interpreter on PATH, which is the one that runs the Python scripts.
+if(WIN32 AND NOT DEFINED Python3_FIND_REGISTRY)
+  set(Python3_FIND_REGISTRY LAST)
+endif()
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
 
 # Locate Cython. Searching $PATH alone misses installations inside a virtual environment or a
@@ -39,7 +45,9 @@ find_package (Python3 COMPONENTS Interpreter Development NumPy)
 # back to invoking it as a module ("python -m cython") if no executable is found.
 get_filename_component (_python_bindir "${Python3_EXECUTABLE}" DIRECTORY)
 find_program (CYTHON_EXECUTABLE NAMES cython cython3 cython.bat HINTS "${_python_bindir}")
-if(NOT CYTHON_EXECUTABLE)
+# On Windows, found "cython" scripts cannot necessarily be executed by the Windows shell. Invoking
+# Cython as a module of the selected interpreter always works.
+if(NOT CYTHON_EXECUTABLE OR WIN32)
   set(CYTHON_EXECUTABLE "${Python3_EXECUTABLE} -m cython")
 endif()
 
@@ -115,8 +123,20 @@ if(APPLE AND CMAKE_OSX_SYSROOT)
   set(MACOS_SYSROOT_FLAG "-isysroot ${CMAKE_OSX_SYSROOT}")
 endif()
 
+## Python extension modules must not be linked against libpython on Linux and macOS: If the
+## interpreter itself contains a static copy of libpython (e.g. Python managed by uv/pyenv, conda,
+## python-build-standalone), a second Python runtime would be loaded and the import fails with
+## "initialization ... did not return an extension module". The symbols are provided by the running
+## interpreter instead (macOS requires an explicit permission for undefined symbols). On Windows,
+## however, extension modules have to be linked against the Python import library.
+if(WIN32)
+  set(PYTHON_MODULE_LINK ${Python3_LIBRARIES})
+elseif(APPLE)
+  set(PYTHON_MODULE_LINK "-undefined dynamic_lookup")
+endif()
+
 ## Prepare nice output for linked libraries.
-foreach (linked_lib ${LAPACK_LIBRARIES} ${Python3_LIBRARIES})
+foreach (linked_lib ${LAPACK_LIBRARIES} ${PYTHON_MODULE_LINK})
   # On macOS, find_package(LAPACK) reports Accelerate as a path to the .framework directory, which
   # the linker cannot consume directly. Translate such entries into the proper "-framework <name>"
   # flag. Regular library paths (the Linux case) are passed through unchanged.
