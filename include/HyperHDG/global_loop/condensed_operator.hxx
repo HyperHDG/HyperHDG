@@ -53,6 +53,7 @@ class CondensedOperator
    * hyperedge. Otherwise, the local problem is solved for every local unit vector.
    *
    * \tparam  hyNode_index_t  Typename of the hypernode index. Defaults to \c unsigned \c int.
+   * \tparam  paramT          Type of the parameter (passed through to the local solver).
    * \param   param           Parameter of trace_to_flux, i.e., the time at which given analytic
    *                          functions will be evaluated (or the shift for eigenvalue problems).
    * \param   factorize_once  If true, the local matrix is only computed (and factorized) once for
@@ -65,8 +66,8 @@ class CondensedOperator
    *                          Defaults to false (local matrix per hyperedge).
    * \retval  sparse_mat      Condensed matrix in coordinate format.
    ************************************************************************************************/
-  template <typename hyNode_index_t = dof_index_t>
-  sparse_mat<LargeVecT> trace_to_flux_mat(const dof_value_t param = 0.,
+  template <typename hyNode_index_t = dof_index_t, typename paramT = dof_value_t>
+  sparse_mat<LargeVecT> trace_to_flux_mat(const paramT& param = paramT(),
                                           const bool factorize_once = false)
   {
     GlobalLoop& loop = static_cast<GlobalLoop&>(*this);

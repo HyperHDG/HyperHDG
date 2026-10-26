@@ -80,15 +80,6 @@ class ParallelExceptions
 namespace MatGenerate
 {
 /*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(trace_to_flux, has_trace_to_flux);
-/*!*************************************************************************************************
- * \brief   Prepare struct to check for function to exist (cf. compile_time_tricks.hxx).
- **************************************************************************************************/
-HAS_MEMBER_FUNCTION(trace_to_flux_mat, has_trace_to_flux_mat);
-
-/*!*************************************************************************************************
  * \brief   Throw if the degrees of freedom of a hypergraph cannot be indexed by \c unsigned \c int.
  *
  * The global loops index degrees of freedom by \c unsigned \c int. Without this check, too large
@@ -119,14 +110,15 @@ void check_dof_index_range(const HyperGraphT& hyper_graph)
  *
  * \param   local_solver  The local solver.
  * \param   hyper_edge    The hyperedge.
- * \param   time          Parameter of \c trace_to_flux (time or shift).
+ * \param   time          Parameter of \c trace_to_flux (time or shift). It is passed through to the
+ *                        local solver, so it may also be of a non-scalar type.
  * \param   loc_mat       Array of \f$n^2\f$ entries that is filled with the local matrix in
  *                        column-major order, i.e., entry (row, col) is \c loc_mat[col * n + row].
  **************************************************************************************************/
-template <typename LocalSolverT, typename hyEdgeT, typename dof_value_t>
+template <typename LocalSolverT, typename hyEdgeT, typename timeT, typename dof_value_t>
 void local_condensed_matrix(const LocalSolverT& local_solver,
                             hyEdgeT& hyper_edge,
-                            const dof_value_t time,
+                            const timeT& time,
                             dof_value_t* loc_mat)
 {
   constexpr unsigned int hyEdge_dim = LocalSolverT::hyEdge_dim();
@@ -134,11 +126,9 @@ void local_condensed_matrix(const LocalSolverT& local_solver,
   constexpr unsigned int n_loc = 2 * hyEdge_dim * n_dofs_per_node;
   using dofs_t = std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim>;
 
-  if constexpr (has_trace_to_flux_mat<LocalSolverT, SmallSquareMat<n_loc, dof_value_t>(
-                                                      hyEdgeT&, dof_value_t)>::value)
+  if constexpr (requires { local_solver.trace_to_flux_mat(hyper_edge, prvalue_of(time)); })
   {
-    const SmallSquareMat<n_loc, dof_value_t> helper =
-      local_solver.trace_to_flux_mat(hyper_edge, time);
+    const auto helper = local_solver.trace_to_flux_mat(hyper_edge, time);
     for (unsigned int col = 0; col < n_loc; ++col)
       for (unsigned int row = 0; row < n_loc; ++row)
         loc_mat[col * n_loc + row] = helper(row, col);
@@ -155,14 +145,18 @@ void local_condensed_matrix(const LocalSolverT& local_solver,
           dofs_new[node].fill(0.);
         }
         dofs_old[node_j][dof_j] = 1.;
-        if constexpr (has_trace_to_flux<LocalSolverT,
-                                        dofs_t&(dofs_t&, dofs_t&, dof_value_t)>::value)
+        if constexpr (requires {
+                        local_solver.trace_to_flux(dofs_old, dofs_new, prvalue_of(time));
+                      })
           local_solver.trace_to_flux(dofs_old, dofs_new, time);
-        else if constexpr (has_trace_to_flux<LocalSolverT, dofs_t&(dofs_t&, dofs_t&, hyEdgeT&,
-                                                                   dof_value_t)>::value)
+        else if constexpr (requires {
+                             local_solver.trace_to_flux(dofs_old, dofs_new, hyper_edge,
+                                                        prvalue_of(time));
+                           })
           local_solver.trace_to_flux(dofs_old, dofs_new, hyper_edge, time);
         else
-          hy_assert(false, "Function seems not to be implemented!");
+          static_assert(always_false_v<LocalSolverT, hyEdgeT>,
+                        "LocalSolverT implements no usable overload of trace_to_flux!");
 
         const unsigned int col = node_j * n_dofs_per_node + dof_j;
         for (unsigned int node_i = 0; node_i < 2 * hyEdge_dim; ++node_i)
@@ -181,14 +175,16 @@ void check_reused_local_matrix(const dof_value_t* computed,
                                const std::size_t size,
                                const std::size_t edge)
 {
-  dof_value_t max_entry = 0., max_diff = 0.;
+  // Absolute values are real also for complex dof values.
+  using real_t = decltype(std::abs(std::declval<dof_value_t>()));
+  real_t max_entry = 0., max_diff = 0.;
   for (std::size_t k = 0; k < size; ++k)
   {
-    max_entry = std::max(max_entry, (dof_value_t)std::abs(reused[k]));
-    max_diff = std::max(max_diff, (dof_value_t)std::abs(computed[k] - reused[k]));
+    max_entry = std::max(max_entry, (real_t)std::abs(reused[k]));
+    max_diff = std::max(max_diff, (real_t)std::abs(computed[k] - reused[k]));
   }
-  const dof_value_t tolerance =
-    std::max((dof_value_t)1e-10, (dof_value_t)1e3 * std::numeric_limits<dof_value_t>::epsilon());
+  const real_t tolerance =
+    std::max((real_t)1e-10, (real_t)1e3 * std::numeric_limits<real_t>::epsilon());
   if (!(max_diff <= tolerance * max_entry))  // Also true if max_diff is NaN.
   {
     std::stringstream msg;
@@ -224,20 +220,22 @@ void check_reused_local_matrix(const dof_value_t* computed,
  * forwarded to the caller.
  *
  * \tparam  hyNode_index_t  Typename of the hypernode index.
+ * \tparam  dof_value_t     Typename of the entries of the local matrices.
  * \param   hyper_graph     The hypergraph.
  * \param   local_solver    The local solver.
- * \param   time            Parameter of \c trace_to_flux (time or shift).
- * \param   factorize_once  Compute the local matrix only once per combination of face types.
- * \param   sink            Callable that receives the local matrices.
+ * \param   time            Parameter of \c trace_to_flux (time or shift, cf.
+ *local_condensed_matrix). \param   factorize_once  Compute the local matrix only once per
+ *combination of face types. \param   sink            Callable that receives the local matrices.
  **************************************************************************************************/
 template <typename hyNode_index_t,
+          typename dof_value_t,
           typename HyperGraphT,
           typename LocalSolverT,
-          typename dof_value_t,
+          typename timeT,
           typename SinkT>
 void for_each_local_matrix(HyperGraphT& hyper_graph,
                            const LocalSolverT& local_solver,
-                           const dof_value_t time,
+                           const timeT& time,
                            const bool factorize_once,
                            SinkT&& sink)
 {
@@ -345,10 +343,14 @@ void for_each_local_matrix(HyperGraphT& hyper_graph,
  * \param   factorize_once  Compute the local matrix only once per combination of face types.
  * \retval  sparse_mat      Condensed matrix in coordinate format.
  **************************************************************************************************/
-template <typename hyNode_index_t, typename LargeVecT, typename HyperGraphT, typename LocalSolverT>
+template <typename hyNode_index_t,
+          typename LargeVecT,
+          typename HyperGraphT,
+          typename LocalSolverT,
+          typename timeT>
 sparse_mat<LargeVecT> assemble_triplets(HyperGraphT& hyper_graph,
                                         const LocalSolverT& local_solver,
-                                        const typename LargeVecT::value_type time,
+                                        const timeT& time,
                                         const bool factorize_once)
 {
   constexpr unsigned int hyEdge_dim = HyperGraphT::hyEdge_dim();
@@ -363,7 +365,7 @@ sparse_mat<LargeVecT> assemble_triplets(HyperGraphT& hyper_graph,
   result_mat.row_vec.resize(n_triplets);
   result_mat.col_vec.resize(n_triplets);
 
-  for_each_local_matrix<hyNode_index_t>(
+  for_each_local_matrix<hyNode_index_t, typename LargeVecT::value_type>(
     hyper_graph, local_solver, time, factorize_once,
     [&](const std::size_t edge, const auto& hyNodes, const auto* loc_mat)
     {
