@@ -191,7 +191,7 @@ class Diffusion
    ************************************************************************************************/
   static constexpr unsigned int node_system_dimension() { return 1; }
 
- private:
+ protected:  // derived solvers (e.g. DiffusionOperator) reuse the assembly helpers
   // -----------------------------------------------------------------------------------------------
   // Private, static constexpr functions
   // -----------------------------------------------------------------------------------------------

@@ -142,8 +142,9 @@ class SmallMat
   /*!***********************************************************************************************
    * \brief   Copy constructor.
    ************************************************************************************************/
-  SmallMat(const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other) : entries_(other.entries_) {}
-  // { for (unsigned int i = 0; i < size(); ++i)  entries_[i] = other[i]; }
+  // Defaulted copy/move keep SmallMat trivially copyable, so structs of SmallMats (e.g. local
+  // operators) can live in contiguous stores and be memcpy'd or copied to a device.
+  SmallMat(const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other) = default;
   /*!***********************************************************************************************
    * \brief   Conversion between different floating points artithmetics.
    ************************************************************************************************/
@@ -156,29 +157,17 @@ class SmallMat
   /*!***********************************************************************************************
    * \brief   Move constructor.
    ************************************************************************************************/
-  SmallMat(SmallMat<n_rowsT, n_colsT, mat_entry_t>&& other) noexcept
-  : entries_(std::move(other.entries_))
-  {
-  }
+  SmallMat(SmallMat<n_rowsT, n_colsT, mat_entry_t>&& other) noexcept = default;
   /*!***********************************************************************************************
    * \brief   Copy assignment.
    ************************************************************************************************/
   SmallMat<n_rowsT, n_colsT, mat_entry_t>& operator=(
-    const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other)
-  {
-    for (unsigned int i = 0; i < size(); ++i)
-      entries_[i] = other[i];
-    return *this;
-  }
+    const SmallMat<n_rowsT, n_colsT, mat_entry_t>& other) = default;
   /*!***********************************************************************************************
    * \brief   Move assignment.
    ************************************************************************************************/
   SmallMat<n_rowsT, n_colsT, mat_entry_t>& operator=(
-    SmallMat<n_rowsT, n_colsT, mat_entry_t>&& other) noexcept
-  {
-    std::swap(entries_, other.entries_);
-    return *this;
-  }
+    SmallMat<n_rowsT, n_colsT, mat_entry_t>&& other) noexcept = default;
 
   // -----------------------------------------------------------------------------------------------
   // Return array with data:
