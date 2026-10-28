@@ -5,22 +5,15 @@
 #include <HyperHDG/global_loop/prototype.hxx>  // sparse_mat
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
-#include <HyperHDG/plot.hxx>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <exception>
-#include <functional>
 #include <map>
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 
 namespace GlobalLoop
 {
@@ -29,31 +22,34 @@ namespace GlobalLoop
  *
  * The loop is a scatter--gather engine over hyperedges. For every hyperedge it gathers the local
  * trace from a global vector, hands it to the hyperedge's local operator, and scatters the result.
- * It never sees block matrices, factorizations, or boundary conditions of the local solver.
+ * It never sees block matrices, factorizations, or boundary conditions of the local solver, and
+ * it never allocates global vectors: every entry point writes into caller-provided vectors (any
+ * type with size() and operator[], e.g. std::vector or std::span).
  *
  * Local solver protocol (cf. local_operator_design_v2.md):
  * - \c Args: runtime parameters (time, ...) forwarded to every call,
  * - \c local_operator(edge, Stiffness, args): builds the immutable per-edge operator with
  *   \c apply<k>(edge, in, args, out) and \c residual(edge, lambda, load, args, r),
  * - \c local_load(edge, args): the local right-hand side (loads, Dirichlet data) used by residual,
+ * - \c error_sq(edge, op, lambda, args): per-edge error contribution; its type needs operator+,
  * - optional \c operator_key(edge, Stiffness, args): share one operator among equal edges,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
  * Store: after \c prepare the operators live in a contiguous vector (one per distinct key) until
- * \c release. Without prepare every sweep streams: build, use, drop per hyperedge.
+ * \c release. Without prepare every sweep streams: build, use, drop per hyperedge. Every public
+ * sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
  *
  * Constraints: a sorted index set of global dofs owned by the loop. apply is the identity there,
  * residual returns x_i (prescribed values are zero in this prototype, Dirichlet data enters via
  * the local load), assemble replaces the rows by zero or identity rows.
  *
- * Parallelism: with OpenMP, sweeps run in parallel over hyperedges with per-thread scatter
- * buffers summed in thread order, so results are deterministic for a fixed thread count.
+ * Serial. Parallel sweeps (scatter strategy) are a separate step.
  **************************************************************************************************/
 template <class TopologyT,
           class GeometryT,
           class NodeDescriptorT,
           class LocalSolverT,
-          typename LargeVecT = std::vector<double>,
+          typename dof_value_t = double,
           typename dof_index_t = unsigned int>
 class LocalOperatorLoop
 {
@@ -61,7 +57,8 @@ class LocalOperatorLoop
   static constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
   static constexpr unsigned int n_dofs_per_node = LocalSolverT::n_glob_dofs_per_node();
   static constexpr unsigned int n_loc = 2 * hyEdge_dim * n_dofs_per_node;
-  using dof_value_t = typename LargeVecT::value_type;
+  using value_type = dof_value_t;
+  using index_type = dof_index_t;
   using Args = typename LocalSolverT::Args;
   using HyperGraphT = HDGHyperGraph<n_dofs_per_node,
                                     TopologyT,
@@ -70,23 +67,31 @@ class LocalOperatorLoop
                                     typename LocalSolverT::data_type>;
   // The hypergraph keeps its hyEdge type private; name it through operator[].
   using Edge = decltype(std::declval<HyperGraphT&>()[(unsigned int)0]);
-  using Operator = std::remove_cvref_t<decltype(std::declval<const LocalSolverT&>().local_operator(
-    std::declval<Edge&>(), Stiffness{}, std::declval<const Args&>()))>;
+  using Operator = std::remove_cvref_t<
+    decltype(std::declval<const LocalSolverT&>()
+               .local_operator(std::declval<Edge&>(), Stiffness{}, std::declval<const Args&>()))>;
   template <unsigned int k>
   using Traces = SmallMat<n_loc, k, dof_value_t>;
+  using error_t = std::remove_cvref_t<decltype(std::declval<const LocalSolverT&>().error_sq(
+    std::declval<Edge&>(),
+    std::declval<const Operator&>(),
+    std::declval<const Traces<1>&>(),
+    std::declval<const Args&>()))>;
+  static_assert(
+    requires(error_t a, error_t b) { a + b; },
+    "The error type of the local solver must provide operator+ (e.g. a SmallVec).");
 
  private:
   HyperGraphT hyper_graph_;
   const LocalSolverT local_solver_;
-  PlotOptions plot_options_;
 
-  std::vector<Operator> store_;             // one operator per distinct key (prepared only)
-  std::vector<std::size_t> slot_;           // hyperedge -> index into store_
-  std::vector<std::size_t> representative_; // slot -> a hyperedge with that key
+  std::vector<Operator> store_;              // one operator per distinct key (prepared only)
+  std::vector<std::size_t> slot_;            // hyperedge -> index into store_
+  std::vector<std::size_t> representative_;  // slot -> a hyperedge with that key
   bool prepared_ = false;
 
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
-  std::vector<dof_value_t> free_mask_;     // 1 on free dofs, 0 on constrained dofs
+  std::vector<dof_value_t> free_mask_;    // 1 on free dofs, 0 on constrained dofs
 
  public:
   LocalOperatorLoop(const typename TopologyT::constructor_value_type& construct_topo,
@@ -107,10 +112,11 @@ class LocalOperatorLoop
   {
   }
 
-  // ---- sizes, refinement, plotting (as in the other loops) --------------------------------------
+  // ---- sizes, refinement
+  // ---------------------------------------------------------------------------
 
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
-  LargeVecT zero_vector() const { return LargeVecT(hyper_graph_.n_global_dofs(), 0.); }
+  std::size_t n_hyEdges() const { return hyper_graph_.n_hyEdges(); }
   unsigned int get_refinement() { return hyper_graph_.get_refinement(); }
   void set_refinement(unsigned int level)
   {
@@ -119,16 +125,9 @@ class LocalOperatorLoop
     constraints_.clear();
     free_mask_.clear();
   }
-  std::string plot_option(const std::string& option, std::string value = "")
-  {
-    return set_plot_option(plot_options_, option, value);
-  }
-  void plot_solution(const LargeVecT& lambda, const dof_value_t time = 0.)
-  {
-    plot(hyper_graph_, local_solver_, lambda, plot_options_, time);
-  }
 
-  // ---- constraints -------------------------------------------------------------------------------
+  // ---- constraints
+  // -------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
    * \brief   Constrain every dof of every hypernode whose node type satisfies \c pred.
@@ -151,81 +150,72 @@ class LocalOperatorLoop
             free_mask_[dofs[d]] = 0.;
         }
     }
-    constraints_.clear();
-    for (dof_index_t i = 0; i < free_mask_.size(); ++i)
-      if (free_mask_[i] == 0.)
-        constraints_.push_back(i);
+    collect_constraints();
   }
   /*!***********************************************************************************************
    * \brief   Constrain the Dirichlet nodes as the local solver's parameters define them.
    ************************************************************************************************/
   void constrain_dirichlet_nodes()
   {
-    constrain_nodes([](unsigned int type)
-                    { return LocalSolverT::template constrained_node<GeometryT::space_dim()>(type); });
+    constrain_nodes(
+      [](unsigned int type)
+      { return LocalSolverT::template constrained_node<GeometryT::space_dim()>(type); });
   }
-  void set_constraints(const std::vector<unsigned int>& indices)
+  template <class IndexVecT>
+  void set_constraints(const IndexVecT& indices)
   {
     free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
-    for (unsigned int i : indices)
+    for (std::size_t k = 0; k < indices.size(); ++k)
     {
-      hy_assert(i < free_mask_.size(), "Constraint index out of range.");
-      free_mask_[i] = 0.;
+      hy_assert(indices[k] < free_mask_.size(), "Constraint index out of range.");
+      free_mask_[indices[k]] = 0.;
     }
-    constraints_.clear();
-    for (dof_index_t i = 0; i < free_mask_.size(); ++i)
-      if (free_mask_[i] == 0.)
-        constraints_.push_back(i);
+    collect_constraints();
   }
   const std::vector<dof_index_t>& constraints() const { return constraints_; }
 
-  // ---- store -------------------------------------------------------------------------------------
+  // ---- store
+  // -------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
    * \brief   Build the operators of all hyperedges (one per distinct key) and keep them.
-   *
-   * Pass 1 (serial): keys and deduplication. Pass 2 (parallel over slots): factorizations. Slots
-   * are distinct, so no scatter buffers are needed, which is why this is a parallel_for and not a
-   * sweep.
    ************************************************************************************************/
   void prepare(const Args& args = Args())
   {
     release();
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
     slot_.resize(n_edges);
-    std::vector<std::size_t>& representative = representative_;
 
-    if constexpr (requires(Edge & e) { local_solver_.operator_key(e, Stiffness{}, args); })
+    if constexpr (requires(Edge& e) { local_solver_.operator_key(e, Stiffness{}, args); })
     {
-      using Key = std::remove_cvref_t<decltype(local_solver_.operator_key(
-        std::declval<Edge&>(), Stiffness{}, args))>;
+      using Key = std::remove_cvref_t<decltype(local_solver_.operator_key(std::declval<Edge&>(),
+                                                                          Stiffness{}, args))>;
       std::map<Key, std::size_t> slot_of_key;
       for (std::size_t e = 0; e < n_edges; ++e)
       {
         Edge edge = hyper_graph_[e];
         auto [it, inserted] = slot_of_key.emplace(
-          local_solver_.operator_key(edge, Stiffness{}, args), representative.size());
+          local_solver_.operator_key(edge, Stiffness{}, args), representative_.size());
         if (inserted)
-          representative.push_back(e);
+          representative_.push_back(e);
         slot_[e] = it->second;
       }
     }
     else
     {
-      representative.resize(n_edges);
+      representative_.resize(n_edges);
       for (std::size_t e = 0; e < n_edges; ++e)
-        slot_[e] = representative[e] = e;
+        slot_[e] = representative_[e] = e;
     }
 
-    store_.resize(representative.size());
+    store_.resize(representative_.size());
     try
     {
-      parallel_for(representative.size(),
-                   [&](std::size_t s)
-                   {
-                     Edge edge = hyper_graph_[representative[s]];
-                     store_[s] = local_solver_.local_operator(edge, Stiffness{}, args);
-                   });
+      for (std::size_t s = 0; s < representative_.size(); ++s)
+      {
+        Edge edge = hyper_graph_[representative_[s]];
+        store_[s] = local_solver_.local_operator(edge, Stiffness{}, args);
+      }
     }
     catch (...)
     {
@@ -245,71 +235,83 @@ class LocalOperatorLoop
   bool prepared() const { return prepared_; }
   std::size_t n_operators() const { return store_.size(); }
 
-  // ---- sweeps ------------------------------------------------------------------------------------
-  // Every public sweep decides once whether the store is used, and instantiates a branch-free
-  // per-edge body for that mode (cf. dispatch / visit).
+  // ---- sweeps
+  // ------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief   y = J x with identity rows on constrained dofs.
+   * \brief   y = J x with identity rows on constrained dofs. y is overwritten.
    ************************************************************************************************/
-  LargeVecT apply(const LargeVecT& x, const Args& args = Args())
+  template <class VecInT, class VecOutT>
+  void apply(const VecInT& x, VecOutT& y, const Args& args = Args())
   {
-    hy_assert(x.size() == hyper_graph_.n_global_dofs(), "Vector has wrong size.");
-    LargeVecT y(x.size(), 0.);
+    check_sizes(x, y);
+    zero(y);
     dispatch(
       [&](auto mode)
       {
-        sweep<mode.value>(y, args,
-                          [&](Edge& edge, const Operator& op, const Dofs& dofs, LargeVecT& out)
+        sweep<mode.value>(args,
+                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
                             op.apply(edge, in, args, res);
-                            scatter(dofs, res, out);
+                            scatter(dofs, res, y);
                           });
       });
     for (dof_index_t i : constraints_)
       y[i] = x[i];
-    return y;
   }
   /*!***********************************************************************************************
-   * \brief   r = F(x): flux balance on free dofs, x_i on constrained dofs (prescribed value zero).
+   * \brief   r = F(x): flux balance on free dofs, x_i on constrained dofs. r is overwritten.
    ************************************************************************************************/
-  LargeVecT residual(const LargeVecT& x, const Args& args = Args())
+  template <class VecInT, class VecOutT>
+  void residual(const VecInT& x, VecOutT& r, const Args& args = Args())
   {
-    hy_assert(x.size() == hyper_graph_.n_global_dofs(), "Vector has wrong size.");
-    LargeVecT r(x.size(), 0.);
+    check_sizes(x, r);
+    zero(r);
     dispatch(
       [&](auto mode)
       {
-        sweep<mode.value>(r, args,
-                          [&](Edge& edge, const Operator& op, const Dofs& dofs, LargeVecT& out)
+        sweep<mode.value>(args,
+                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
                             op.residual(edge, in, local_solver_.local_load(edge, args), args, res);
-                            scatter(dofs, res, out);
+                            scatter(dofs, res, r);
                           });
       });
     for (dof_index_t i : constraints_)
       r[i] = x[i];
-    return r;
   }
   /*!***********************************************************************************************
-   * \brief   Triplets of J: every hyperedge's block is apply<n_loc> of the identity.
-   *
-   * Entries in constrained rows are multiplied by zero (branch-free mask); with \c identity_rows a
-   * unit diagonal entry is appended for every constrained dof. Every hyperedge writes its own
-   * block, so the result does not depend on the number of threads.
+   * \brief   Number of triplets assemble() writes: one block per hyperedge plus the identity rows.
    ************************************************************************************************/
-  sparse_mat<LargeVecT> assemble(const Args& args = Args(), const bool identity_rows = false)
+  std::size_t n_triplets(const bool identity_rows = false) const
+  {
+    return hyper_graph_.n_hyEdges() * (std::size_t)n_loc * n_loc +
+           (identity_rows ? constraints_.size() : 0);
+  }
+  /*!***********************************************************************************************
+   * \brief   Triplets of J into caller-provided arrays of size n_triplets(identity_rows).
+   *
+   * Every hyperedge's block is apply<n_loc> of the identity (so the matrix is the matrix-free
+   * operator by construction). Entries in constrained rows are multiplied by zero (branch-free
+   * mask); with \c identity_rows a unit diagonal entry is appended for every constrained dof.
+   * Duplicate (row, col) pairs have to be summed by the consumer (as scipy's coo_matrix does).
+   ************************************************************************************************/
+  template <class IndexVecT, class ValueVecT>
+  void assemble(const Args& args,
+                const bool identity_rows,
+                IndexVecT& rows,
+                IndexVecT& cols,
+                ValueVecT& vals)
   {
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
     const std::size_t block = (std::size_t)n_loc * n_loc;
-    sparse_mat<LargeVecT> result;
-    result.value_vec.resize(n_edges * block + (identity_rows ? constraints_.size() : 0));
-    result.row_vec.resize(result.value_vec.size());
-    result.col_vec.resize(result.value_vec.size());
+    hy_assert(rows.size() == n_triplets(identity_rows) && cols.size() == rows.size() &&
+                vals.size() == rows.size(),
+              "Triplet arrays must have size n_triplets(identity_rows).");
     if (free_mask_.size() != hyper_graph_.n_global_dofs())
       free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
 
@@ -323,9 +325,9 @@ class LocalOperatorLoop
       for (unsigned int col = 0; col < n_loc; ++col)
         for (unsigned int row = 0; row < n_loc; ++row, ++index)
         {
-          result.row_vec[index] = dofs[row];
-          result.col_vec[index] = dofs[col];
-          result.value_vec[index] = loc_mat(row, col) * free_mask_[dofs[row]];
+          rows[index] = dofs[row];
+          cols[index] = dofs[col];
+          vals[index] = loc_mat(row, col) * free_mask_[dofs[row]];
         }
     };
 
@@ -333,35 +335,29 @@ class LocalOperatorLoop
     {
       // Shared operators: one dense block per slot, then a copy per hyperedge.
       std::vector<Traces<n_loc> > blocks(store_.size());
-      parallel_for(store_.size(),
-                   [&](std::size_t s)
-                   {
-                     Edge edge = hyper_graph_[representative_[s]];
-                     store_[s].apply(edge, identity, args, blocks[s]);
-                   });
-      parallel_for(n_edges,
-                   [&](std::size_t e)
-                   {
-                     Dofs dofs;
-                     local_dof_indices(hyper_graph_[e], dofs);
-                     write_block(e, dofs, blocks[slot_[e]]);
-                   });
+      for (std::size_t s = 0; s < store_.size(); ++s)
+      {
+        Edge edge = hyper_graph_[representative_[s]];
+        store_[s].apply(edge, identity, args, blocks[s]);
+      }
+      for (std::size_t e = 0; e < n_edges; ++e)
+      {
+        Dofs dofs;
+        local_dof_indices(hyper_graph_[e], dofs);
+        write_block(e, dofs, blocks[slot_[e]]);
+      }
     }
     else
       dispatch(
         [&](auto mode)
         {
-          parallel_for(n_edges,
-                       [&](std::size_t e)
-                       {
-                         Edge edge = hyper_graph_[e];
-                         Dofs dofs;
-                         local_dof_indices(edge, dofs);
-                         Traces<n_loc> loc_mat;
-                         visit<mode.value>(e, edge, args, [&](const Operator& op)
-                                           { op.apply(edge, identity, args, loc_mat); });
-                         write_block(e, dofs, loc_mat);
-                       });
+          sweep<mode.value>(args,
+                            [&](std::size_t e, Edge& edge, const Operator& op, const Dofs& dofs)
+                            {
+                              Traces<n_loc> loc_mat;
+                              op.apply(edge, identity, args, loc_mat);
+                              write_block(e, dofs, loc_mat);
+                            });
         });
 
     if (identity_rows)
@@ -369,64 +365,67 @@ class LocalOperatorLoop
       std::size_t index = n_edges * block;
       for (dof_index_t i : constraints_)
       {
-        result.row_vec[index] = i;
-        result.col_vec[index] = i;
-        result.value_vec[index++] = 1.;
+        rows[index] = i;
+        cols[index] = i;
+        vals[index++] = 1.;
       }
     }
-    return result;
   }
   /*!***********************************************************************************************
-   * \brief   Fold f(edge, operator, local trace) over all hyperedges (serial).
+   * \brief   Fold f(edge, operator, local trace) over all hyperedges with operator+.
    ************************************************************************************************/
-  template <class F, class R, class Combine = std::plus<> >
-  R reduce(const LargeVecT& x, const Args& args, F f, R result, Combine combine = Combine())
+  template <class VecT, class F, class R>
+  R reduce(const VecT& x, const Args& args, F f, R result)
   {
-    const std::size_t n_edges = hyper_graph_.n_hyEdges();
     dispatch(
       [&](auto mode)
       {
-        for (std::size_t e = 0; e < n_edges; ++e)
-        {
-          Edge edge = hyper_graph_[e];
-          Dofs dofs;
-          local_dof_indices(edge, dofs);
-          Traces<1> in;
-          gather(dofs, x, in);
-          visit<mode.value>(e, edge, args, [&](const Operator& op)
-                            { result = combine(result, f(edge, op, in)); });
-        }
+        sweep<mode.value>(args,
+                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
+                          {
+                            Traces<1> in;
+                            gather(dofs, x, in);
+                            result = result + f(edge, op, in);
+                          });
       });
     return result;
   }
   /*!***********************************************************************************************
-   * \brief   Errors as the local solver defines them (reduce + square root), cf. Elliptic::errors.
+   * \brief   Errors: sum of the local solver's error_sq, square root taken componentwise.
    ************************************************************************************************/
-  std::vector<dof_value_t> errors(const LargeVecT& x, const Args& args = Args())
+  template <class VecT>
+  error_t errors(const VecT& x, const Args& args = Args())
   {
-    using error_t = std::remove_cvref_t<decltype(local_solver_.error_sq(
-      std::declval<Edge&>(), std::declval<const Operator&>(), std::declval<const Traces<1>&>(),
-      args))>;
-    error_t init;
-    init.fill(0.);
     error_t sum = reduce(
       x, args, [&](Edge& edge, const Operator& op, const Traces<1>& lam)
-      { return local_solver_.error_sq(edge, op, lam, args); }, init,
-      [](error_t a, const error_t& b)
-      {
-        for (std::size_t k = 0; k < a.size(); ++k)
-          a[k] += b[k];
-        return a;
-      });
-    std::vector<dof_value_t> result(sum.begin(), sum.end());
-    for (auto& v : result)
-      v = std::sqrt(v);
-    return result;
+      { return local_solver_.error_sq(edge, op, lam, args); }, error_t());
+    for (unsigned int k = 0; k < sum.size(); ++k)
+      sum[k] = std::sqrt(sum[k]);
+    return sum;
   }
 
  private:
   using Dofs = std::array<dof_index_t, n_loc>;
 
+  void collect_constraints()
+  {
+    constraints_.clear();
+    for (dof_index_t i = 0; i < free_mask_.size(); ++i)
+      if (free_mask_[i] == 0.)
+        constraints_.push_back(i);
+  }
+  template <class VecInT, class VecOutT>
+  void check_sizes(const VecInT& x, const VecOutT& y) const
+  {
+    hy_assert(x.size() == hyper_graph_.n_global_dofs() && y.size() == x.size(),
+              "Vectors must have size_of_system() entries.");
+  }
+  template <class VecT>
+  static void zero(VecT& y)
+  {
+    for (std::size_t i = 0; i < y.size(); ++i)
+      y[i] = 0.;
+  }
   void local_dof_indices(const Edge& edge, Dofs& dofs) const
   {
     const auto& hyNodes = edge.topology.get_hyNode_indices();
@@ -438,19 +437,21 @@ class LocalOperatorLoop
         dofs[face * n_dofs_per_node + d] = node_dofs[d];
     }
   }
-  static void gather(const Dofs& dofs, const LargeVecT& x, Traces<1>& loc)
+  template <class VecT>
+  static void gather(const Dofs& dofs, const VecT& x, Traces<1>& loc)
   {
     for (unsigned int i = 0; i < n_loc; ++i)
       loc[i] = x[dofs[i]];
   }
-  static void scatter(const Dofs& dofs, const Traces<1>& loc, LargeVecT& y)
+  template <class VecT>
+  static void scatter(const Dofs& dofs, const Traces<1>& loc, VecT& y)
   {
     for (unsigned int i = 0; i < n_loc; ++i)
       y[dofs[i]] += loc[i];
   }
   /*!***********************************************************************************************
-   * \brief   Call f with a compile-time bool (std::true_type / std::false_type) telling whether
-   *          the store is used. The runtime decision is taken once per public call.
+   * \brief   Call f with std::true_type / std::false_type telling whether the store is used. The
+   *          runtime decision is taken once per public call.
    ************************************************************************************************/
   template <class F>
   void dispatch(F&& f) const
@@ -461,80 +462,26 @@ class LocalOperatorLoop
       f(std::false_type{});
   }
   /*!***********************************************************************************************
-   * \brief   Hand the operator of hyperedge e to f: from the store, or built on the fly.
-   ************************************************************************************************/
-  template <bool use_store, class F>
-  void visit(const std::size_t e, Edge& edge, const Args& args, F&& f) const
-  {
-    if constexpr (use_store)
-      f(store_[slot_[e]]);
-    else
-    {
-      const Operator op = local_solver_.local_operator(edge, Stiffness{}, args);
-      f(op);
-    }
-  }
-  /*!***********************************************************************************************
-   * \brief   Run body(i) for i in [0, n), in parallel with OpenMP. The first exception thrown by a
-   *          body is rethrown after the loop (an exception leaving an OpenMP region would
-   *          terminate the program).
-   ************************************************************************************************/
-  template <class Body>
-  static void parallel_for(const std::size_t n, Body body)
-  {
-    std::exception_ptr failure;
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static)
-#endif
-    for (long long i = 0; i < (long long)n; ++i)
-    {
-      try
-      {
-        body((std::size_t)i);
-      }
-      catch (...)
-      {
-#ifdef _OPENMP
-#pragma omp critical(hyperhdg_local_operator_loop)
-#endif
-        if (!failure)
-          failure = std::current_exception();
-      }
-    }
-    if (failure)
-      std::rethrow_exception(failure);
-  }
-  /*!***********************************************************************************************
-   * \brief   Run body(edge, operator, dofs, out) over all hyperedges, scattering into y.
-   *
-   * With OpenMP every thread scatters into its own buffer; the buffers are summed in thread order
-   * afterwards (deterministic for a fixed thread count). Memory: n_threads * n_dofs, which is
-   * fine for a prototype and not for very large graphs (coloring or node-centric scatter then).
+   * \brief   Run body(e, edge, operator, dofs) over all hyperedges; the operator comes from the
+   *store or is built on the fly, decided at compile time.
    ************************************************************************************************/
   template <bool use_store, class Body>
-  void sweep(LargeVecT& y, const Args& args, Body body)
+  void sweep(const Args& args, Body body)
   {
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
-#ifdef _OPENMP
-    std::vector<LargeVecT> buffers(omp_get_max_threads(), LargeVecT(y.size(), 0.));
-    auto out_of = [&](std::size_t) -> LargeVecT& { return buffers[omp_get_thread_num()]; };
-#else
-    auto out_of = [&](std::size_t) -> LargeVecT& { return y; };
-#endif
-    parallel_for(n_edges,
-                 [&](std::size_t e)
-                 {
-                   Edge edge = hyper_graph_[e];
-                   Dofs dofs;
-                   local_dof_indices(edge, dofs);
-                   visit<use_store>(e, edge, args, [&](const Operator& op)
-                                    { body(edge, op, dofs, out_of(e)); });
-                 });
-#ifdef _OPENMP
-    for (const LargeVecT& buffer : buffers)
-      for (std::size_t i = 0; i < y.size(); ++i)
-        y[i] += buffer[i];
-#endif
+    for (std::size_t e = 0; e < n_edges; ++e)
+    {
+      Edge edge = hyper_graph_[e];
+      Dofs dofs;
+      local_dof_indices(edge, dofs);
+      if constexpr (use_store)
+        body(e, edge, store_[slot_[e]], dofs);
+      else
+      {
+        const Operator op = local_solver_.local_operator(edge, Stiffness{}, args);
+        body(e, edge, op, dofs);
+      }
+    }
   }
 };  // end of class LocalOperatorLoop
 

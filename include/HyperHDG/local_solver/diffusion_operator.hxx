@@ -20,8 +20,8 @@ namespace LocalSolver
  *   tabulates the coupling blocks B (trace -> local rhs), C (local solution -> flux) and the
  *   diagonal D (-tau * face area), i.e. the boundary integrals are evaluated once per operator.
  *   The condensed operator is S = C A^{-1} B + D. The operator is a trivially copyable value.
- * - \c Operator::apply<k> applies S to k traces at once (assembly uses k = n_loc with the identity),
- *   \c Operator::residual adds the local load before the solve.
+ * - \c Operator::apply<k> applies S to k traces at once (assembly uses k = n_loc with the
+ *identity), \c Operator::residual adds the local load before the solve.
  * - \c local_load(edge, args) is the right-hand side of the local problem: volume source and
  *   Dirichlet data (as in Diffusion, Dirichlet values enter through the local load; the trace
  *   on Dirichlet nodes is constrained to zero by the loop).
@@ -32,7 +32,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = DiffusionParametersDefault,
           typename lSol_float_t = double>
-class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
+class DiffusionOperator
+: public Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>
 {
   using Base = Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>;
   using Base::n_loc_dofs_;
@@ -43,10 +44,10 @@ class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, para
 
  public:
   using Base::Base;  // DiffusionOperator(tau)
-  using typename Base::constructor_value_type;
-  using typename Base::data_type;
   using Base::hyEdge_dim;
   using Base::n_glob_dofs_per_node;
+  using typename Base::constructor_value_type;
+  using typename Base::data_type;
 
   /*!***********************************************************************************************
    * \brief   Runtime arguments forwarded by the loop to every call.
@@ -156,7 +157,7 @@ class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, para
         {
           const lSol_float_t integral =
             integrator::template integrate_bdr_phipsi<decltype(Edge::geometry)>(i, j, face,
-                                                                                 edge.geometry);
+                                                                                edge.geometry);
           op.B(hyEdge_dimT * n_shape_fct_ + i, col) += tau_ * integral;
           op.C(col, hyEdge_dimT * n_shape_fct_ + i) += tau_ * integral;
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
@@ -178,11 +179,10 @@ class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, para
    * which is what factorize_once of Elliptic::trace_to_flux_mat assumes, here by construction.
    ************************************************************************************************/
   template <class Edge>
-    requires(parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>::constant_coefficients)
-  std::array<long long, hyEdge_dimT * decltype(Edge::geometry)::space_dim()> operator_key(
-    Edge& edge,
-    GlobalLoop::Stiffness,
-    const Args&) const
+    requires(
+      parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>::constant_coefficients)
+  std::array<long long, hyEdge_dimT* decltype(Edge::geometry)::space_dim()>
+  operator_key(Edge& edge, GlobalLoop::Stiffness, const Args&) const
   {
     constexpr unsigned int space_dim = decltype(Edge::geometry)::space_dim();
     std::array<long long, hyEdge_dimT * space_dim> key;
@@ -203,13 +203,13 @@ class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, para
     return Base::assemble_rhs_from_global_rhs(edge, args.time);
   }
   /*!***********************************************************************************************
-   * \brief   Squared L2 error of the primal unknown on one hyperedge.
+   * \brief   Squared L2 error of the primal unknown on one hyperedge (SmallVec: has operator+).
    ************************************************************************************************/
   template <class Edge>
-  std::array<lSol_float_t, 1U> error_sq(Edge& edge,
-                                        const Operator& op,
-                                        const SmallVec<n_loc, lSol_float_t>& lambda,
-                                        const Args& args) const
+  SmallVec<1, lSol_float_t> error_sq(Edge& edge,
+                                     const Operator& op,
+                                     const SmallVec<n_loc, lSol_float_t>& lambda,
+                                     const Args& args) const
   {
     using parameters = parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>;
     const SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
@@ -217,10 +217,12 @@ class DiffusionOperator : public Diffusion<hyEdge_dimT, poly_deg, quad_deg, para
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
-    return std::array<lSol_float_t, 1U>({integrator::template integrate_vol_diffsquare_discana<
+    SmallVec<1, lSol_float_t> error;
+    error[0] = integrator::template integrate_vol_diffsquare_discana<
       Point<decltype(Edge::geometry)::space_dim(), lSol_float_t>, decltype(Edge::geometry),
       parameters::analytic_result, Point<hyEdge_dimT, lSol_float_t> >(coeffs, edge.geometry,
-                                                                      args.time)});
+                                                                      args.time);
+    return error;
   }
 };  // end of class DiffusionOperator
 
