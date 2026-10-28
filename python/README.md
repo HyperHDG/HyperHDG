@@ -270,7 +270,7 @@ its time. The machinery simply predates the tools that now make its job unnecess
 ## Prototype: one global loop over local operators
 
 `include/HyperHDG/global_loop/local_operator_loop.hxx` is a prototype of a single global loop
-(design note `local_operator_design_v2.md`): a scatter–gather engine whose only knowledge of the
+(design note `doc/local_operator_design.md`): a scatter–gather engine whose only knowledge of the
 physics is an immutable per-hyperedge *local operator* that the local solver returns from
 `local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at once; assembly
 is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by construction) and
