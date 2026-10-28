@@ -270,209 +270,126 @@ its time. The machinery simply predates the tools that now make its job unnecess
 ## Prototype: one global loop over local operators
 
 `include/HyperHDG/global_loop/local_operator_loop.hxx` is a prototype of a single global loop
-(cf. the design note `local_operator_design_v2.md`): a scatter–gather engine whose only
-knowledge of the physics is an immutable per-hyperedge *local operator* that the local solver
-returns from `local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at
-once; assembly is `apply<n_loc>` of the identity) and `residual`; the loop owns the store
-(`prepare` / `release`, one operator per distinct `operator_key`, streaming without `prepare`),
-the constraint index set (Dirichlet rows: identity in `apply`, masked in `assemble`), and
-`reduce` for errors. `include/HyperHDG/local_solver/diffusion_operator.hxx` wraps
-`LocalSolver::Diffusion` into this protocol (LU of the local matrix plus the coupling blocks
-B, C, D tabulated once per operator; identical elements share one operator when the parameters
-declare `constant_coefficients`). Both loops are bound with the same `bind_python.hxx`.
+(design note `local_operator_design_v2.md`): a scatter–gather engine whose only knowledge of the
+physics is an immutable per-hyperedge *local operator* that the local solver returns from
+`local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at once; assembly
+is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by construction) and
+`residual(…, load, …)` with the load supplied by the solver. The loop owns the store (`prepare` /
+`release`: one operator per distinct `operator_key`; streaming without `prepare`; each public
+sweep decides once and runs a branch-free body), the constraint index set (Dirichlet rows:
+identity in `apply`, masked in `assemble`), `n_triplets` + `assemble` into caller arrays, and
+`reduce` / `errors` (the solver's error type must have `operator+`). Nothing in the loop
+allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
+`std::span`). Serial; parallel sweeps are a separate step.
+
+`include/HyperHDG/local_solver/diffusion_operator.hxx` wraps `LocalSolver::Diffusion` into the
+protocol: LU of the local matrix plus the coupling blocks B, C, D tabulated once per operator
+(S = C A⁻¹ B + D); congruent elements share one operator when the parameters declare
+`constant_coefficients` (key: rounded span vectors). Operators are trivially copyable (`SmallMat`
+copy/move defaulted), the store is one contiguous array.
+
+Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's
+`apply(x, y)`, `residual(x, r)` and `assemble(rows, cols, vals)` write into caller-allocated
+arrays; Elliptic's vector methods gained NumPy overloads (lists still work), so both loops cross
+the boundary at the same cost.
+
+### Driver
+
+`python/operator_loop.py` is one function, `solve(opt) -> Result`, reading the fields of
+`Options` (dim, degree, n, tau, loop, method, prepare, rtol, repeat) from any object that has
+them, argparse namespace or dataclass alike; `main` parses the
+same fields from the command line and prints the result as YAML, options included, so every
+record is self-describing. Sweeps are the shell's job: `python/operator_loop.sh` runs one solve
+per parameter tuple under GNU parallel (`--results x.json`, YAML parsed in place by `yq`), and jq
+turns the records into the tables below. `python/operator_loop_convergence.py` is the same ladder
+in pure python; `python/operator_loop_check.py` compares both loops to roundoff (products,
+residuals, matrices, prepared vs streaming, CG solution, L2 error) on seven cases and exits
+non-zero on a violation.
 
 ```sh
-python python/operator_loop.py check   # vs GlobalLoop::Elliptic: products, matrices, CG, errors
-bash python/operator_loop.sh           # convergence ladders (parallel) + benchmarks (serial)
-OMP_NUM_THREADS=8 bash python/operator_loop.sh --openmp
+python python/operator_loop.py --dim 2 --degree 3 --n 16          # one solve, YAML
+python python/operator_loop_convergence.py --dim 2 --degree 2    # ladder, pure python
+python python/operator_loop_check.py                             # roundoff comparison
+bash python/operator_loop.sh                                     # sweeps -> output/operator_loop/
 ```
 
-`check` (seven (dim, degree) cases, `output/operator_loop_check.txt`): matrix-free product,
-residual and assembled matrix agree with Elliptic to 1e-16 relative, prepared and streaming
-agree, the CG solutions and L2 errors agree to 1e-9 or better; one operator is stored for the
-whole uniform mesh.
+### Results (this machine, 16 cores, OpenBLAS; whole sweep ~1 min)
 
-Convergence (`output/operator_loop_convergence.txt`):
+Convergence, both loops assembled, scipy CG to 1e-10:
 
 ```
- dim  deg     n     dofs   err Elliptic  err prototype   rel diff   rate
-   1    1     1        2   6.803853e-02   6.803853e-02    0.0e+00      -
-   1    1     2        3   1.861732e-02   1.861732e-02    0.0e+00   1.87
-   1    1     4        5   4.926253e-03   4.926253e-03    0.0e+00   1.92
-   1    1     8        9   1.270112e-03   1.270112e-03    0.0e+00   1.96
-   1    1    16       17   3.226245e-04   3.226245e-04    3.4e-14   1.98
-   1    1    32       33   8.131014e-05   8.131014e-05    4.7e-14   1.99
-
-   1    2     1        2   8.204167e-03   8.204167e-03    0.0e+00      -
-   1    2     2        3   1.149712e-03   1.149712e-03    0.0e+00   2.84
-   1    2     4        5   1.516769e-04   1.516769e-04    7.3e-14   2.92
-   1    2     8        9   1.945601e-05   1.945601e-05    1.5e-12   2.96
-   1    2    16       17   2.462858e-06   2.462858e-06    4.9e-12   2.98
-   1    2    32       33   3.097784e-07   3.097784e-07    9.6e-12   2.99
-
-   1    3     1        2   8.047704e-04   8.047704e-04    0.0e+00      -
-   1    3     2        3   5.555413e-05   5.555413e-05    0.0e+00   3.86
-   1    3     4        5   3.630860e-06   3.630860e-06    2.2e-12   3.94
-   1    3     8        9   2.317485e-07   2.317485e-07    8.0e-11   3.97
-   1    3    16       17   1.463228e-08   1.463228e-08    3.9e-10   3.99
-   1    3    32       33   9.190977e-10   9.190977e-10    1.7e-09   3.99
-
-   2    1     1        8   2.805466e-02   2.805466e-02    0.0e+00      -
-   2    1     2       24   1.107770e-02   1.107770e-02    3.4e-15   1.34
-   2    1     4       80   3.553054e-03   3.553054e-03    1.5e-13   1.64
-   2    1     8      288   1.028444e-03   1.028444e-03    1.7e-15   1.79
-   2    1    16     1088   2.804889e-04   2.804889e-04    7.6e-13   1.87
-
-   2    2     1       12   4.519633e-03   4.519633e-03    0.0e+00      -
-   2    2     2       36   7.740424e-04   7.740424e-04    4.5e-14   2.55
-   2    2     4      120   1.185884e-04   1.185884e-04    8.1e-13   2.71
-   2    2     8      432   1.660193e-05   1.660193e-05    8.4e-13   2.84
-   2    2    16     1632   2.215511e-06   2.215511e-06    3.3e-11   2.91
-
-   2    3     1       16   4.886773e-04   4.886773e-04    0.0e+00      -
-   2    3     2       48   4.074029e-05   4.074029e-05    2.4e-13   3.58
-   2    3     4      160   2.982416e-06   2.982416e-06    9.7e-10   3.77
-   2    3     8      576   2.035861e-07   2.035861e-07    1.3e-10   3.87
-   2    3    16     2176   1.340516e-08   1.340516e-08    1.7e-09   3.92
+dim  degree  n   dofs  elliptic      operator      reldiff
+1    1       1   2     6.803853e-02  6.803853e-02  0.0e+00
+1    1       2   3     1.861732e-02  1.861732e-02  0.0e+00
+1    1       4   5     4.926253e-03  4.926253e-03  0.0e+00
+1    1       8   9     1.270112e-03  1.270112e-03  0.0e+00
+1    1       16  17    3.226245e-04  3.226245e-04  3.4e-14
+1    2       1   2     8.204167e-03  8.204167e-03  0.0e+00
+1    2       2   3     1.149712e-03  1.149712e-03  0.0e+00
+1    2       4   5     1.516769e-04  1.516769e-04  7.3e-14
+1    2       8   9     1.945601e-05  1.945601e-05  1.5e-12
+1    2       16  17    2.462858e-06  2.462858e-06  4.9e-12
+1    3       1   2     8.047704e-04  8.047704e-04  0.0e+00
+1    3       2   3     5.555413e-05  5.555413e-05  0.0e+00
+1    3       4   5     3.630860e-06  3.630860e-06  2.2e-12
+1    3       8   9     2.317485e-07  2.317485e-07  8.0e-11
+1    3       16  17    1.463228e-08  1.463228e-08  3.9e-10
+2    1       1   8     2.805466e-02  2.805466e-02  0.0e+00
+2    1       2   24    1.107770e-02  1.107770e-02  3.4e-15
+2    1       4   80    3.553054e-03  3.553054e-03  5.9e-14
+2    1       8   288   1.028444e-03  1.028444e-03  1.6e-10
+2    1       16  1088  2.804889e-04  2.804889e-04  2.1e-11
+2    2       1   12    4.519633e-03  4.519633e-03  0.0e+00
+2    2       2   36    7.740424e-04  7.740424e-04  4.5e-14
+2    2       4   120   1.185884e-04  1.185884e-04  1.4e-11
+2    2       8   432   1.660193e-05  1.660193e-05  4.4e-10
+2    2       16  1632  2.215511e-06  2.215511e-06  5.0e-10
+2    3       1   16    4.886773e-04  4.886773e-04  0.0e+00
+2    3       2   48    4.074029e-05  4.074029e-05  2.4e-13
+2    3       4   160   2.982417e-06  2.982417e-06  1.4e-08
+2    3       8   576   2.035861e-07  2.035861e-07  1.7e-10
+2    3       16  2176  1.340521e-08  1.340521e-08  8.6e-08
 ```
 
-Benchmarks, this machine (16 cores, OpenBLAS), best of 3, serial build:
+Timings in ms (setup = matrix assembly incl. scipy csr, or `prepare` for matrix-free; apply =
+one product; `prepare true` is `factorize_once` for Elliptic). Best of 3, serial:
 
 ```
-OpenMP: False, threads: 1
-dim 2, degree 1, 4096 hyperedges, 16640 dofs
-  Elliptic trace_to_flux_mat (per edge)                96.7 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          43.1 ms  
-  prototype assemble, streaming                        78.6 ms  
-  prototype prepare                                     3.3 ms  
-  prototype assemble, prepared                         48.7 ms  
-  Elliptic trace_to_flux x10                          378.7 ms  
-  prototype apply x10, streaming                      287.1 ms  
-  prototype apply x10, prepared                        59.2 ms  
-  Elliptic errors                                      31.8 ms  
-  prototype errors (prepared)                           8.5 ms  
-
-dim 2, degree 3, 1024 hyperedges, 8448 dofs
-  Elliptic trace_to_flux_mat (per edge)               149.9 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          27.5 ms  
-  prototype assemble, streaming                       125.1 ms  
-  prototype prepare                                     0.3 ms  
-  prototype assemble, prepared                         24.4 ms  
-  Elliptic trace_to_flux x10                          693.3 ms  
-  prototype apply x10, streaming                      630.3 ms  
-  prototype apply x10, prepared                        23.2 ms  
-  Elliptic errors                                      66.2 ms  
-  prototype errors (prepared)                           8.3 ms  
-
-dim 3, degree 1, 512 hyperedges, 6912 dofs
-  Elliptic trace_to_flux_mat (per edge)                68.2 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          24.8 ms  
-  prototype assemble, streaming                        55.5 ms  
-  prototype prepare                                     0.5 ms  
-  prototype assemble, prepared                         29.8 ms  
-  Elliptic trace_to_flux x10                          292.0 ms  
-  prototype apply x10, streaming                      230.5 ms  
-  prototype apply x10, prepared                        13.6 ms  
-  Elliptic errors                                      25.2 ms  
-  prototype errors (prepared)                           3.8 ms  
-
-dim 3, degree 2, 216 hyperedges, 6804 dofs
-  Elliptic trace_to_flux_mat (per edge)               310.3 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          81.2 ms  
-  prototype assemble, streaming                       295.4 ms  
-  prototype prepare                                     1.0 ms  
-  prototype assemble, prepared                         48.7 ms  
-  Elliptic trace_to_flux x10                         1858.1 ms  
-  prototype apply x10, streaming                     1659.4 ms  
-  prototype apply x10, prepared                        25.3 ms  
-  Elliptic errors                                     174.2 ms  
-  prototype errors (prepared)                          13.6 ms  
-
-dim 3, degree 3, 64 hyperedges, 3840 dofs
-  Elliptic trace_to_flux_mat (per edge)               711.1 ms  
-  Elliptic trace_to_flux_mat (factorize_once)         312.3 ms  
-  prototype assemble, streaming                       732.6 ms  
-  prototype prepare                                     7.6 ms  
-  prototype assemble, prepared                         55.3 ms  
-  Elliptic trace_to_flux x10                         5185.0 ms  
-  prototype apply x10, streaming                     4898.2 ms  
-  prototype apply x10, prepared                        28.5 ms  
-  Elliptic errors                                     510.6 ms  
-  prototype errors (prepared)                          21.3 ms
+dim  degree  n   dofs  loop      method      prepare  iters  t_setup  t_solve  t_apply  t_errors
+2    1       32  4224  elliptic  assembled   true     172    1        11       3.679    4
+2    1       32  4224  elliptic  matrixfree  true     172    0        658      4.21     4
+2    1       32  4224  operator  assembled   false    172    6        12       3.017    4
+2    1       32  4224  operator  assembled   true     172    1        12       0.557    1
+2    1       32  4224  operator  matrixfree  false    172    0        534      3.014    4
+2    1       32  4224  operator  matrixfree  true     172    0        103      0.553    1
+2    3       16  2176  elliptic  assembled   true     153    3        9        16.556   16
+2    3       16  2176  elliptic  matrixfree  true     153    0        2626     16.559   16
+2    3       16  2176  operator  assembled   false    153    21       9        15.118   17
+2    3       16  2176  operator  assembled   true     153    1        11       0.435    2
+2    3       16  2176  operator  matrixfree  false    153    0        2381     15.006   17
+2    3       16  2176  operator  matrixfree  true     153    0        76       0.433    2
+3    1       8   6912  elliptic  assembled   true     60     9        11       29.012   25
+3    1       8   6912  elliptic  matrixfree  true     60     0        1791     28.834   25
+3    1       8   6912  operator  assembled   false    60     40       12       22.876   26
+3    1       8   6912  operator  assembled   true     60     6        11       1.008    4
+3    1       8   6912  operator  matrixfree  false    60     0        1411     22.918   25
+3    1       8   6912  operator  matrixfree  true     60     0        66       1.018    4
+3    2       4   2160  elliptic  assembled   true     41     32       6        54.277   51
+3    2       4   2160  elliptic  matrixfree  true     41     0        2286     53.946   53
+3    2       4   2160  operator  assembled   false    41     81       6        48.003   52
+3    2       4   2160  operator  assembled   true     41     6        6        0.5      4
+3    2       4   2160  operator  matrixfree  false    41     0        2033     48.344   52
+3    2       4   2160  operator  matrixfree  true     41     1        22       0.502    4
+3    3       3   1728  elliptic  assembled   true     36     278      8        214.28   217
+3    3       3   1728  elliptic  matrixfree  true     36     0        7866     216.382  215
+3    3       3   1728  operator  assembled   false    36     317      7        206.409  213
+3    3       3   1728  operator  assembled   true     36     13       8        1.104    10
+3    3       3   1728  operator  matrixfree  false    36     0        7547     204.888  217
+3    3       3   1728  operator  matrixfree  true     36     8        38       1.016    9
 ```
 
-Prototype compiled with OpenMP, 8 threads (Elliptic stays serial):
-
-```
-OpenMP: True, threads: 8
-dim 2, degree 1, 4096 hyperedges, 16640 dofs
-  Elliptic trace_to_flux_mat (per edge)                92.8 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          43.0 ms  
-  prototype assemble, streaming                        52.9 ms  
-  prototype prepare                                     3.1 ms  
-  prototype assemble, prepared                         44.3 ms  
-  Elliptic trace_to_flux x10                          316.3 ms  
-  prototype apply x10, streaming                       40.0 ms  
-  prototype apply x10, prepared                        11.2 ms  
-  Elliptic errors                                      24.2 ms  
-  prototype errors (prepared)                           7.8 ms  
-
-dim 2, degree 3, 1024 hyperedges, 8448 dofs
-  Elliptic trace_to_flux_mat (per edge)               121.5 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          21.3 ms  
-  prototype assemble, streaming                        32.6 ms  
-  prototype prepare                                     0.4 ms  
-  prototype assemble, prepared                         19.5 ms  
-  Elliptic trace_to_flux x10                          683.1 ms  
-  prototype apply x10, streaming                       92.2 ms  
-  prototype apply x10, prepared                         5.6 ms  
-  Elliptic errors                                      66.2 ms  
-  prototype errors (prepared)                           8.2 ms  
-
-dim 3, degree 1, 512 hyperedges, 6912 dofs
-  Elliptic trace_to_flux_mat (per edge)                67.3 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          25.8 ms  
-  prototype assemble, streaming                        30.8 ms  
-  prototype prepare                                     0.5 ms  
-  prototype assemble, prepared                         28.1 ms  
-  Elliptic trace_to_flux x10                          296.3 ms  
-  prototype apply x10, streaming                       31.7 ms  
-  prototype apply x10, prepared                         3.0 ms  
-  Elliptic errors                                      25.3 ms  
-  prototype errors (prepared)                           3.8 ms  
-
-dim 3, degree 2, 216 hyperedges, 6804 dofs
-  Elliptic trace_to_flux_mat (per edge)               307.4 ms  
-  Elliptic trace_to_flux_mat (factorize_once)          73.8 ms  
-  prototype assemble, streaming                        78.5 ms  
-  prototype prepare                                     0.9 ms  
-  prototype assemble, prepared                         45.9 ms  
-  Elliptic trace_to_flux x10                         1861.8 ms  
-  prototype apply x10, streaming                      206.5 ms  
-  prototype apply x10, prepared                         4.5 ms  
-  Elliptic errors                                     174.8 ms  
-  prototype errors (prepared)                          13.5 ms  
-
-dim 3, degree 3, 64 hyperedges, 3840 dofs
-  Elliptic trace_to_flux_mat (per edge)               700.3 ms  
-  Elliptic trace_to_flux_mat (factorize_once)         322.9 ms  
-  prototype assemble, streaming                       149.9 ms  
-  prototype prepare                                     7.8 ms  
-  prototype assemble, prepared                         56.0 ms  
-  Elliptic trace_to_flux x10                         5137.2 ms  
-  prototype apply x10, streaming                      639.5 ms  
-  prototype apply x10, prepared                         5.1 ms  
-  Elliptic errors                                     505.9 ms  
-  prototype errors (prepared)                          21.3 ms
-```
-
-Reading: streaming assembly equals Elliptic's per-edge assembly (same work). Prepared assembly
-(including `prepare`) is 0.8x of `factorize_once` at degree 1 and 1.1x, 1.6x, 5x at degrees 2
-and 3: `factorize_once` keys on boundary patterns (27 on a 4^3 cube), the prototype on shape only
-(one operator), since constraints and loads are not part of the operator; it is correct by
-construction (the key, not a promise). Both assembly timings are dominated by the conversion of
-the triplets to Python lists (~30 ns per entry; cf. the NumPy return of #105), so they understate
-the C++-side difference. The prepared matrix-free product is 6–180x faster than Elliptic because
-the factorization is reused across products, which is what a Krylov or time-stepping loop needs.
-The per-thread scatter buffers of the OpenMP sweep are a prototype shortcut (memory
-n_threads × n_dofs).
+Reading: with the store prepared, assembly is as fast as or faster than `factorize_once` (3D
+degree 3: 13 vs 278 ms, because `factorize_once` keys on boundary patterns and the prototype on
+shape only), one product is 7–200x faster than Elliptic's (the factorization is reused), which
+makes the matrix-free CG 6–200x faster, and the error evaluation 4–20x. Streaming (no store)
+costs the same as Elliptic's per-edge path, since it does the same work.

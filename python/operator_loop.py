@@ -1,31 +1,26 @@
 #!/usr/bin/env python3
-"""Prototype of the local-operator global loop, checked against GlobalLoop::Elliptic.
+"""Solve one LDG-H diffusion problem with the local-operator loop or with GlobalLoop::Elliptic.
 
-    python python/operator_loop.py check          # consistency: matrix-free, matrices, errors
-    python python/operator_loop.py convergence    # error ladders of both loops side by side
-    python python/operator_loop.py bench          # runtimes: assembly, matrix-free products, CG
+    python python/operator_loop.py --dim 2 --degree 3 --n 16 --loop operator --method assembled
 
-Both loops run LDG-H diffusion (TestParametersSinEllipt) on the unit cube with Cubic topology.
-Elliptic uses LocalSolver::Diffusion; the prototype uses GlobalLoop::LocalOperatorLoop with
-LocalSolver::DiffusionOperator, which derives from Diffusion and only adds the operator protocol.
-The C++ is compiled on first use via python/hyperhdg.py (one module per dimension and degree).
+Prints the result as YAML to stdout. solve(opt) is the whole driver: it reads the fields of
+Options from any object that has them (argparse namespace, dataclass, SimpleNamespace) and
+returns a Result; main() only parses the command line and dumps the result. Parameter sweeps are the shell's business
+(python/operator_loop.sh with GNU parallel); python/operator_loop_convergence.py is a pure python
+example; python/operator_loop_check.py compares both loops to roundoff.
 
-Every command takes --dim and --degree to run a single case (one process per instantiation), so
-cases can run as independent processes; python/operator_loop.sh does that with GNU parallel
-(compiles in parallel, timings serial). Without --dim/--degree all cases run in this process.
-
-Options: --openmp compiles the module with OpenMP (the prototype's sweeps then run in parallel;
-Elliptic stays serial), --threads N sets OMP_NUM_THREADS for the bench.
+The (dim, degree) instantiation of both loops is compiled on first use (python/hyperhdg.py).
 """
 
 import argparse
-import os
 import sys
 import time
+from dataclasses import asdict, dataclass, fields
 
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+import yaml
 
 import hyperhdg  # python/hyperhdg.py, next to this script
 
@@ -53,8 +48,7 @@ using Elliptic = GlobalLoop::Elliptic<
   std::vector<double> >;
 using OpLoop = GlobalLoop::LocalOperatorLoop<
   Topo, Geom, Node,
-  LocalSolver::DiffusionOperator<{dim}, {degree}, {quadrature}, TestParametersSinEllipt, double>,
-  std::vector<double> >;
+  LocalSolver::DiffusionOperator<{dim}, {degree}, {quadrature}, TestParametersSinEllipt, double> >;
 
 NB_MODULE({name}, m)
 {{
@@ -63,37 +57,53 @@ NB_MODULE({name}, m)
 }}
 """
 
-OPENMP = False
+
+@dataclass
+class Options:
+  dim: int = 2
+  degree: int = 1
+  n: int = 4                  # elements per direction of the unit cube
+  tau: float = 1.0            # HDG penalty
+  loop: str = "operator"      # operator | elliptic
+  method: str = "assembled"   # assembled (scipy CG on the matrix) | matrixfree (CG on the product)
+  prepare: bool = True        # operator: keep the operator store; elliptic: factorize_once
+  rtol: float = 1e-10         # CG tolerance
+  repeat: int = 1             # timings: best of this many runs
+
+
+@dataclass
+class Result:
+  opt: dict                   # the options the result was computed with
+  dofs: int
+  edges: int
+  operators: int              # stored operators (0 for elliptic / streaming)
+  error: float                # L2 error of the primal unknown
+  iterations: int             # CG iterations
+  t_build: float              # construct + constraints [s]
+  t_setup: float              # assembled: matrix; matrixfree: prepare [s]
+  t_solve: float              # CG [s]
+  t_apply: float              # one matrix-free product [s]
+  t_errors: float             # error evaluation [s]
 
 
 def module(dim, degree):
-  name = f"hdg_oploop_d{dim}_p{degree}" + ("_omp" if OPENMP else "")
-  code = MODULE.format(dim=dim, degree=degree, quadrature=2 * degree, name=name)
-  args = ["-DCMAKE_CXX_FLAGS=-fopenmp", "-DCMAKE_MODULE_LINKER_FLAGS=-fopenmp"] if OPENMP else []
-  return hyperhdg.load(code, hash_name=False, cmake_args=args)
+  name = f"hdg_oploop_d{dim}_p{degree}"
+  return hyperhdg.load(MODULE.format(dim=dim, degree=degree, quadrature=2 * degree, name=name),
+                       hash_name=False)
 
 
-def problems(dim, degree, n_elements, tau=1.0):
-  mod = module(dim, degree)
-  ell = mod.Elliptic([n_elements] * dim, tau)
-  op = mod.OpLoop([n_elements] * dim, tau)
-  op.constrain_dirichlet_nodes()
-  return ell, op
+def problem(opt):
+  """The problem object of the chosen loop, Dirichlet dofs constrained."""
+  mod = module(opt.dim, opt.degree)
+  if opt.loop == "elliptic":
+    return mod.Elliptic([opt.n] * opt.dim, opt.tau)
+  hdg = mod.OpLoop([opt.n] * opt.dim, opt.tau)
+  hdg.constrain_dirichlet_nodes()
+  return hdg
 
 
-def csr(coo, n):
-  rows, cols, vals = coo
-  return sp.coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsr()
-
-
-def solve_cg(matrix, rhs, rtol=1e-12):
-  solution, info = spla.cg(matrix, rhs, rtol=rtol, maxiter=100000)
-  assert info == 0, f"CG did not converge (info = {info})"
-  return solution
-
-
-def timed(fun, repeat=3):
-  best = float("inf")
+def timed(fun, repeat):
+  best, result = float("inf"), None
   for _ in range(repeat):
     start = time.perf_counter()
     result = fun()
@@ -101,218 +111,75 @@ def timed(fun, repeat=3):
   return best, result
 
 
-# ---------------------------------------------------------------------------------------------
-def check(dim, degree, n_elements, out):
-  ell, op = problems(dim, degree, n_elements)
-  n = ell.size_of_system()
-  rng = np.random.default_rng(1)
-  x = rng.standard_normal(n)
-  constrained = np.asarray(op.constraints(), dtype=int)
-  free = np.ones(n, dtype=bool)
-  free[constrained] = False
+def solve(opt):
+  t_build, hdg = timed(lambda: problem(opt), opt.repeat)
+  elliptic = opt.loop == "elliptic"
+  n = hdg.size_of_system()
+  zero = np.zeros(n)
 
-  def report(label, value, tol):
-    status = "ok" if value <= tol else "FAIL"
-    line = f"  {label:<52s} {value:10.3e}  {status}"
-    print(line)
-    out.write(line + "\n")
-    return value <= tol
+  # the operator and its right-hand side; Elliptic masks Dirichlet rows, the prototype keeps
+  # identity rows there, so both systems have the same solution. Elliptic allocates its results,
+  # the prototype writes into arrays the caller owns (y, triplets).
+  if elliptic:
+    apply = lambda x: hdg.trace_to_flux(x)
+    rhs = -hdg.residual_flux(zero)
+    triplets = lambda: hdg.trace_to_flux_mat(0., opt.prepare)
+  else:
+    y = np.empty(n)
+    def apply(x):
+      hdg.apply(x, y)
+      return y
+    hdg.residual(zero, rhs := np.empty(n))
+    rhs *= -1.
+    m = hdg.n_triplets(True)
+    rows, cols, vals = np.empty(m, np.uint32), np.empty(m, np.uint32), np.empty(m)
+    def triplets():
+      hdg.assemble(rows, cols, vals, 0., True)
+      return rows, cols, vals
+    if opt.prepare:
+      hdg.prepare()
 
-  passed = True
-  # matrix-free product: Elliptic zeroes Dirichlet rows, the prototype puts x_i there
-  y_ell = np.asarray(ell.trace_to_flux(list(x)))
-  y_op = np.asarray(op.apply(list(x)))
-  scale = np.abs(y_ell).max()
-  passed &= report("apply vs trace_to_flux (free rows, rel)",
-                   np.abs(y_ell - y_op)[free].max() / scale, 1e-13)
-  passed &= report("apply on constrained rows = x_i",
-                   np.abs(y_op[constrained] - x[constrained]).max(), 0.)
+  if opt.method == "assembled":
+    t_setup, matrix = timed(
+      lambda: sp.coo_matrix(((t := triplets())[2], (t[0], t[1])), shape=(n, n)).tocsr(),
+      opt.repeat)
+    operator = matrix
+  else:
+    t_setup = timed(lambda: hdg.prepare(), opt.repeat)[0] if opt.prepare and not elliptic else 0.
+    # scipy may keep the returned vector, so the matrix-free matvec hands out a copy
+    operator = spla.LinearOperator((n, n), matvec=lambda x: apply(x).copy(), dtype=float)
 
-  r_ell = np.asarray(ell.residual_flux(list(x)))
-  r_op = np.asarray(op.residual(list(x)))
-  passed &= report("residual vs residual_flux (free rows, rel)",
-                   np.abs(r_ell - r_op)[free].max() / np.abs(r_ell).max(), 1e-13)
+  iterations = [0]
+  def count(_): iterations[0] += 1
+  t_solve, (solution, info) = timed(
+    lambda: spla.cg(operator, rhs, rtol=opt.rtol, maxiter=100 * n, callback=count), 1)
+  if info != 0:
+    raise RuntimeError(f"CG did not converge (info = {info})")
 
-  a_ell = csr(ell.trace_to_flux_mat(), n)
-  a_op = csr(op.assemble(), n)
-  passed &= report("assemble vs trace_to_flux_mat (rel)",
-                   abs(a_ell - a_op).max() / abs(a_ell).max(), 1e-13)
+  t_apply = timed(lambda: apply(solution), opt.repeat)[0]
+  t_errors, error = timed(lambda: hdg.errors(solution)[0], opt.repeat)
 
-  # prepared store: identical results, bit for bit
-  op.prepare()
-  y_prep = np.asarray(op.apply(list(x)))
-  a_prep = csr(op.assemble(), n)
-  # (shared operators come from a representative hyperedge: equal up to roundoff)
-  passed &= report("prepared (shared) vs streaming apply (rel)",
-                   np.abs(y_prep - y_op).max() / scale, 1e-13)
-  passed &= report("prepared (shared) vs streaming assemble (rel)",
-                   abs(a_prep - a_op).max() / abs(a_ell).max(), 1e-13)
-  # the assembled matrix is apply on unit vectors, by construction
-  # (dgetrs with n_loc right-hand sides vs one: same factors, last bits may differ)
-  e = np.zeros(n)
-  e[n // 3] = 1.
-  col = np.asarray(op.apply(list(e)))
-  passed &= report("assemble column = apply(unit vector) (free rows, rel)",
-                   np.abs(a_prep[:, n // 3].toarray().ravel() - col)[free].max() / scale, 1e-14)
-
-  # solve both ways, compare solutions and errors
-  rhs_ell = -np.asarray(ell.residual_flux(list(np.zeros(n))))
-  sol_ell = solve_cg(a_ell, rhs_ell)
-  a_id = csr(op.assemble(0., True), n)
-  rhs_op = -np.asarray(op.residual(list(np.zeros(n))))
-  sol_op = solve_cg(a_id, rhs_op)
-  passed &= report("CG solution, identity rows vs Elliptic (rel)",
-                   np.abs(sol_ell - sol_op).max() / np.abs(sol_ell).max(), 1e-9)
-  err_ell, err_op = ell.errors(list(sol_ell))[0], op.errors(list(sol_op))[0]
-  passed &= report("L2 error Elliptic vs prototype (rel)",
-                   abs(err_ell - err_op) / err_ell, 1e-9)
-  line = f"  operators stored: {op.n_operators()} for {n} dofs, error {err_op:.6e}"
-  print(line)
-  out.write(line + "\n")
-  op.release()
-  return passed
+  return Result(opt=dict(vars(opt)), dofs=n, edges=opt.n ** opt.dim,
+                operators=0 if elliptic else hdg.n_operators(), error=float(error),
+                iterations=iterations[0], t_build=t_build, t_setup=t_setup, t_solve=t_solve,
+                t_apply=t_apply, t_errors=t_errors)
 
 
-def run_check(opt):
-  os.makedirs("output", exist_ok=True)
-  all_passed = True
-  with open("output/operator_loop_check.txt", "w") as out:
-    for dim, degree, n in [(1, 1, 8), (1, 3, 8), (2, 1, 4), (2, 2, 4), (2, 3, 3), (3, 1, 2),
-                           (3, 2, 2)]:
-      head = f"dim {dim}, degree {degree}, {n}^{dim} elements"
-      print(head)
-      out.write(head + "\n")
-      all_passed &= check(dim, degree, n, out)
-    verdict = "ALL CHECKS PASSED" if all_passed else "SOME CHECKS FAILED"
-    print(verdict)
-    out.write(verdict + "\n")
-  return 0 if all_passed else 1
-
-
-# ---------------------------------------------------------------------------------------------
-CONVERGENCE_HEADER = f"{'dim':>4} {'deg':>4} {'n':>5} {'dofs':>8} {'err Elliptic':>14} " \
-                     f"{'err prototype':>14} {'rel diff':>10} {'rate':>6}"
-
-
-def convergence_case(dim, degree, out):
-  previous = None
-  for it in range(6 if dim == 1 else 5):
-    n = 2 ** it
-    ell, op = problems(dim, degree, n)
-    size = ell.size_of_system()
-    sol_ell = solve_cg(csr(ell.trace_to_flux_mat(), size),
-                       -np.asarray(ell.residual_flux(ell.zero_vector())))
-    op.prepare()
-    sol_op = solve_cg(csr(op.assemble(0., True), size),
-                      -np.asarray(op.residual(op.zero_vector())))
-    err_ell, err_op = ell.errors(list(sol_ell))[0], op.errors(list(sol_op))[0]
-    rate = "-" if previous is None else f"{np.log2(previous / err_op):.2f}"
-    line = f"{dim:>4} {degree:>4} {n:>5} {size:>8} {err_ell:>14.6e} {err_op:>14.6e} " \
-           f"{abs(err_ell - err_op) / err_ell:>10.1e} {rate:>6}"
-    print(line)
-    out.write(line + "\n")
-    previous = err_op
-
-
-def run_convergence(opt):
-  os.makedirs("output", exist_ok=True)
-  cases = [(opt.dim, opt.degree)] if opt.dim else [(d, p) for d in (1, 2) for p in (1, 2, 3)]
-  suffix = f"_d{opt.dim}_p{opt.degree}" if opt.dim else ""
-  with open(f"output/operator_loop_convergence{suffix}.txt", "w") as out:
-    print(CONVERGENCE_HEADER)
-    out.write(CONVERGENCE_HEADER + "\n")
-    for dim, degree in cases:
-      convergence_case(dim, degree, out)
-      print()
-      out.write("\n")
-  return 0
-
-
-# ---------------------------------------------------------------------------------------------
-def bench_case(dim, degree, n_elements, out):
-  ell, op = problems(dim, degree, n_elements)
-  n = ell.size_of_system()
-  n_edges = n_elements ** dim
-  head = f"dim {dim}, degree {degree}, {n_edges} hyperedges, {n} dofs"
-  print(head)
-  out.write(head + "\n")
-  rows = []
-
-  def row(label, seconds, extra=""):
-    line = f"  {label:<46s} {seconds * 1e3:10.1f} ms  {extra}"
-    print(line)
-    out.write(line + "\n")
-    rows.append((label, seconds))
-
-  t, _ = timed(lambda: ell.trace_to_flux_mat())
-  row("Elliptic trace_to_flux_mat (per edge)", t)
-  t, _ = timed(lambda: ell.trace_to_flux_mat(0., True))
-  row("Elliptic trace_to_flux_mat (factorize_once)", t)
-  op.release()
-  t, _ = timed(lambda: op.assemble())
-  row("prototype assemble, streaming", t)
-  t, _ = timed(lambda: op.prepare())
-  row("prototype prepare", t)
-  t, _ = timed(lambda: op.assemble())
-  row("prototype assemble, prepared", t)
-
-  x = list(np.random.default_rng(0).standard_normal(n))
-  reps = 10
-  t, _ = timed(lambda: [ell.trace_to_flux(x) for _ in range(reps)])
-  row(f"Elliptic trace_to_flux x{reps}", t)
-  op.release()
-  t, _ = timed(lambda: [op.apply(x) for _ in range(reps)])
-  row(f"prototype apply x{reps}, streaming", t)
-  op.prepare()
-  t, _ = timed(lambda: [op.apply(x) for _ in range(reps)])
-  row(f"prototype apply x{reps}, prepared", t)
-  t, _ = timed(lambda: ell.errors(x))
-  row("Elliptic errors", t)
-  t, _ = timed(lambda: op.errors(x))
-  row("prototype errors (prepared)", t)
-  op.release()
-  print()
-  out.write("\n")
-
-
-BENCH_CASES = [(2, 1, 64), (2, 3, 32), (3, 1, 8), (3, 2, 6), (3, 3, 4)]
-
-
-def run_bench(opt):
-  os.makedirs("output", exist_ok=True)
-  cases = [c for c in BENCH_CASES if not opt.dim or (c[0], c[1]) == (opt.dim, opt.degree)]
-  suffix = (f"_d{opt.dim}_p{opt.degree}" if opt.dim else "") + \
-           (f"_omp{opt.threads}" if OPENMP else "")
-  with open(f"output/operator_loop_bench{suffix}.txt", "w") as out:
-    note = f"OpenMP: {OPENMP}, threads: {opt.threads if OPENMP else 1}"
-    print(note)
-    out.write(note + "\n")
-    for dim, degree, n in cases:
-      bench_case(dim, degree, n, out)
-  return 0
-
-
-def run_compile(opt):
-  module(opt.dim, opt.degree)
-  return 0
+def parse_args(argv=None):
+  parser = argparse.ArgumentParser(description=__doc__,
+                                   formatter_class=argparse.RawDescriptionHelpFormatter)
+  for f in fields(Options):
+    if f.type is bool:
+      parser.add_argument(f"--{f.name}", type=lambda v: v.lower() in ("1", "true", "yes"),
+                          default=f.default, metavar="BOOL")
+    else:
+      parser.add_argument(f"--{f.name}", type=f.type, default=f.default)
+  return parser.parse_args(argv)
 
 
 def main():
-  global OPENMP
-  parser = argparse.ArgumentParser(description=__doc__,
-                                   formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument("command", choices=["check", "convergence", "bench", "compile"])
-  parser.add_argument("--dim", type=int, help="run one case: dimension")
-  parser.add_argument("--degree", type=int, help="run one case: polynomial degree")
-  parser.add_argument("--openmp", action="store_true", help="compile the module with OpenMP")
-  parser.add_argument("--threads", type=int,
-                      default=int(os.environ.get("OMP_NUM_THREADS", os.cpu_count())))
-  opt = parser.parse_args()
-  OPENMP = opt.openmp
-  if OPENMP:
-    os.environ["OMP_NUM_THREADS"] = str(opt.threads)
-  return {"check": run_check, "convergence": run_convergence, "bench": run_bench,
-          "compile": run_compile}[opt.command](opt)
+  result = solve(parse_args())
+  print(yaml.safe_dump(asdict(result), sort_keys=False), end="")
 
 
 if __name__ == "__main__":
