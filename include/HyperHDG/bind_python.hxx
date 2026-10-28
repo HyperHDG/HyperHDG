@@ -139,6 +139,55 @@ auto bind_python(nanobind::module_& m, const char* name)
       "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t)
       { return to_coo(o.trace_to_flux_mat(t)); }, nb::arg("time") = 0.);
 
+  // condensed system with factorize_once (uniform meshes only, cf. Elliptic::trace_to_flux_mat)
+  if constexpr (requires(GlobalLoopT o) { o.trace_to_flux_mat(0., true); })
+    cls.def(
+      "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t, bool factorize_once)
+      { return to_coo(o.trace_to_flux_mat(t, factorize_once)); }, nb::arg("time"),
+      nb::arg("factorize_once"));
+
+  // ---- local-operator loop protocol (GlobalLoop::LocalOperatorLoop) ----------------------------
+  // Args is the solver's runtime parameter struct; the bindings assume it is constructible from
+  // the time alone (Args{time}).
+  if constexpr (requires { typename GlobalLoopT::Args; })
+  {
+    using Args = typename GlobalLoopT::Args;
+    if constexpr (requires(GlobalLoopT o, Vec v, Args a) { o.apply(v, a); })
+      cls.def(
+        "apply", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.apply(v, Args{t}); },
+        nb::arg("x"), nb::arg("time") = 0.);
+    if constexpr (requires(GlobalLoopT o, Vec v, Args a) { o.residual(v, a); })
+      cls.def(
+        "residual", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.residual(v, Args{t}); },
+        nb::arg("x"), nb::arg("time") = 0.);
+    if constexpr (requires(GlobalLoopT o, Args a) { o.assemble(a, true); })
+      cls.def(
+        "assemble", [to_coo](GlobalLoopT& o, Scalar t, bool identity_rows)
+        { return to_coo(o.assemble(Args{t}, identity_rows)); }, nb::arg("time") = 0.,
+        nb::arg("identity_rows") = false);
+    if constexpr (requires(GlobalLoopT o, Vec v, Args a) { o.errors(v, a); })
+      cls.def(
+        "errors", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.errors(v, Args{t}); },
+        nb::arg("x"), nb::arg("time") = 0.);
+    if constexpr (requires(GlobalLoopT o, Args a) { o.prepare(a); })
+      cls.def(
+        "prepare", [](GlobalLoopT& o, Scalar t) { o.prepare(Args{t}); }, nb::arg("time") = 0.);
+  }
+  if constexpr (requires(GlobalLoopT o) { o.release(); })
+    cls.def("release", [](GlobalLoopT& o) { o.release(); });
+  if constexpr (requires(GlobalLoopT o) { o.prepared(); })
+    cls.def("prepared", [](GlobalLoopT& o) { return o.prepared(); });
+  if constexpr (requires(GlobalLoopT o) { o.n_operators(); })
+    cls.def("n_operators", [](GlobalLoopT& o) { return o.n_operators(); });
+  if constexpr (requires(GlobalLoopT o) { o.constrain_dirichlet_nodes(); })
+    cls.def("constrain_dirichlet_nodes", [](GlobalLoopT& o) { o.constrain_dirichlet_nodes(); });
+  if constexpr (requires(GlobalLoopT o, std::vector<unsigned int> v) { o.set_constraints(v); })
+    cls.def(
+      "set_constraints", [](GlobalLoopT& o, const std::vector<unsigned int>& v)
+      { o.set_constraints(v); }, nb::arg("indices"));
+  if constexpr (requires(GlobalLoopT o) { o.constraints(); })
+    cls.def("constraints", [](GlobalLoopT& o) { return o.constraints(); });
+
   if constexpr (requires(GlobalLoopT o, Vec v) { o.residual_flux(v, 0.); })
     cls.def(
       "residual_flux", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.residual_flux(v, t); },
