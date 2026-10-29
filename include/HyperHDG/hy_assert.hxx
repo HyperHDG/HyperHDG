@@ -48,6 +48,18 @@
     }                                                                                    \
   } while (0)
 
+/*!*************************************************************************************************
+ * \brief   True if HyperHDG is compiled in debug mode (i.e. without \c NDEBUG).
+ *
+ * This allows to use \c if \c constexpr instead of preprocessor conditionals for code that is only
+ * executed if assertions are active.
+ **************************************************************************************************/
+#ifdef NDEBUG
+inline constexpr bool hy_debug_mode = false;
+#else
+inline constexpr bool hy_debug_mode = true;
+#endif
+
 #ifndef NDEBUG
 
 #include <iostream>

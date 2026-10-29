@@ -1,0 +1,42 @@
+# Author: Andreas Rupp, Heidelberg University, 2021.
+
+name: Reproducibles
+
+# Running all reproducibles takes too long for every push. Run them weekly (Monday, 03:00 UTC) and
+# on demand ("Run workflow" on the Actions page).
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+env:
+  PYTHON: python3-dev python3-numpy python3-scipy python3-matplotlib python3-pandas python3-joblib cython3
+
+
+jobs:
+  # ===== Run every script of reproducibles_python in debug mode (at most 15 s each) and check =====
+  # ===== that none of them reports a warning, an error, or a failure (cf. reproducibles_test.sh) ==
+  run_reproducibles:
+    name: Run reproducibles with g++-14 on ubuntu-24.04
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+       submodules: recursive
+    - name: Install Python and CXX compiler
+      run: |
+        sudo apt-get update;
+        sudo apt-get install -y cmake libblas-dev liblapack-dev;
+        sudo apt-get install -y ${{ env.PYTHON }} g++-14;
+    - name: Configure
+      run: cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-14 -DBUILD_TESTING=OFF
+    - name: Run reproducibles
+      run: ./shell_scripts/reproducibles_test.sh
+    - name: Upload log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: reproducibles-log
+        path: output/reproducibles_test.txt

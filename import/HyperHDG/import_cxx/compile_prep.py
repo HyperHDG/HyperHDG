@@ -60,7 +60,7 @@ def need_compile_check_hy_files(dependent_files, time_so):
       return True
     with open(filename, 'r') as file:
       content = file.read()
-    matches = re.finditer("\#include \<HyperHDG\/", content)
+    matches = re.finditer(r"\#include \<HyperHDG\/", content)
     for match in matches:
       start = match.start() + 10
       end   = start + re.search('>', content[start:len(content)]).end() - 1

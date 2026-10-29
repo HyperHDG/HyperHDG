@@ -1,5 +1,21 @@
 # distutils: language=c++
 
+import numpy
+
+# Copy the triplets of a sparse_mat into NumPy arrays (cols, rows, values). This is much faster than
+# converting the vectors into Python lists, and the arrays can directly be used by scipy.sparse.
+cdef object sparse_mat_to_numpy(sparse_mat& mat):
+  cdef size_t n = mat.get_values().size()
+  cdef unsigned int dummy_index = 0
+  cdef CyReplace03 dummy_value = 0
+  if n == 0:  # Typed memoryviews cannot be empty. Use slices of a single entry (for the dtypes).
+    return numpy.array(<unsigned int[:1]> &dummy_index)[:0], \
+           numpy.array(<unsigned int[:1]> &dummy_index)[:0], \
+           numpy.array(<CyReplace03[:1]> &dummy_value)[:0]
+  return numpy.array(<unsigned int[:n]> mat.get_cols().data()), \
+         numpy.array(<unsigned int[:n]> mat.get_rows().data()), \
+         numpy.array(<CyReplace03[:n]> mat.get_values().data())
+
 cdef class PythonClassName :
   cdef CythonClassName *thisptr # hold a C++ instance which we're wrapping
   def __cinit__(self, topo_constr, geom_constr = 'default', lsol_constr = 'default'):
@@ -39,6 +55,15 @@ cdef class PythonClassName :
     return return_val
   def plot_solution(self, vec, time = 0.):
     self.thisptr.plot_solution (vec, time)
+  # Condensed matrix in coordinate format (entries with equal indices have to be summed up).
+  # factorize_once = True computes the local matrix only once per combination of boundary
+  # conditions and reuses it for all hyperedges. This is only correct for uniform meshes with
+  # coefficients that are constant in space (not, e.g., for space dependent diffusion tensors).
+  # Violations are detected for a sample of hyperedges and raise a ValueError.
+  # Returns NumPy arrays (cols, rows, values) of the triplets, e.g. for scipy.sparse.csr_matrix.
+  def sparse_stiff_mat(self, sigma = 0., factorize_once = False):
+    cdef sparse_mat helper = self.thisptr.trace_to_flux_mat(sigma, factorize_once)
+    return sparse_mat_to_numpy(helper)
   def refine(self, n_ref = 'default'):
     if n_ref == 'default':
       return self.thisptr.get_refinement()

@@ -87,7 +87,7 @@ def eigenvalue_approx_SI(poly_degree, dimension, iteration, debug_mode=False):
 
   PyDP = HyperHDG.include(const)
   HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/cross.geo" )
+    "/../domains/cross_2d.geo" )
   HDG_wrapper.refine( 2 ** iteration )
 
   

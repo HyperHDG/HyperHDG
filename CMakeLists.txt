@@ -78,6 +78,27 @@ target_compile_features(
   cxx_std_20
 )
 
+## Optionally parallelize the assembly of matrices with OpenMP. On macOS,
+## Apple Clang needs the libomp library, e.g. -DOpenMP_ROOT=$(brew --prefix libomp).
+option(HYPERHDG_OPENMP "Parallelize matrix assembly with OpenMP" OFF)
+if(HYPERHDG_OPENMP)
+  find_package(OpenMP REQUIRED COMPONENTS CXX)
+  target_link_libraries(HyperHDG INTERFACE OpenMP::OpenMP_CXX)
+  # The Python interface compiles its modules with CMAKE_CXX_FLAGS (cf. cmake_cython.cfg.in).
+  string(APPEND CMAKE_CXX_FLAGS " ${OpenMP_CXX_FLAGS}")
+  foreach(omp_include_dir ${OpenMP_CXX_INCLUDE_DIRS})
+    string(APPEND CMAKE_CXX_FLAGS " -I${omp_include_dir}")
+  endforeach()
+  set(HYPERHDG_OPENMP_LIBRARIES ${OpenMP_CXX_LIBRARIES})
+  # Let the Python modules find the OpenMP runtime (e.g. libomp outside the system directories).
+  if(NOT WIN32)
+    foreach(omp_lib ${OpenMP_CXX_LIBRARIES})
+      get_filename_component(omp_lib_dir "${omp_lib}" DIRECTORY)
+      string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-rpath,${omp_lib_dir}")
+    endforeach()
+  endif()
+endif()
+
 ## Add the examples subdirectory
 add_subdirectory(examples)
 
@@ -136,7 +157,7 @@ elseif(APPLE)
 endif()
 
 ## Prepare nice output for linked libraries.
-foreach (linked_lib ${LAPACK_LIBRARIES} ${PYTHON_MODULE_LINK})
+foreach (linked_lib ${LAPACK_LIBRARIES} ${PYTHON_MODULE_LINK} ${HYPERHDG_OPENMP_LIBRARIES})
   # On macOS, find_package(LAPACK) reports Accelerate as a path to the .framework directory, which
   # the linker cannot consume directly. Translate such entries into the proper "-framework <name>"
   # flag. Regular library paths (the Linux case) are passed through unchanged.

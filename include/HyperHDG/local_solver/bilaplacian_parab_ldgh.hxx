@@ -2,6 +2,7 @@
 
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/local_solver/trace_to_flux_mat.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 
@@ -473,9 +474,27 @@ class BilaplacianParab
           lambda_values_in[i].size() == n_glob_dofs_per_node(),
         "Both matrices must be of same size which corresponds to the number of dofs per face!");
 
+    SmallVec<n_loc_dofs_, lSol_float_t> coeffs(
+      solve_local_problem(lambda_values_in, 0U, hyper_edge, time));
+    return flux_from_coeffs(lambda_values_in, coeffs, lambda_values_out, hyper_edge);
+  }
+  /*!***********************************************************************************************
+   * \brief   Evaluate trace_to_flux for given solution of the local problem.
+   *
+   * \param   lambda_values_in    Local part of vector x.
+   * \param   coeffs_vec          Solution of the local problem for \c lambda_values_in.
+   * \param   lambda_values_out   Local part that will be added to A * x.
+   * \param   hyper_edge          The geometry of the considered hyperedge (of typename GeomT).
+   * \retval  vecAx               Local part of vector A * x.
+   ************************************************************************************************/
+  template <typename hyEdgeT, typename SmallMatInT, typename SmallMatOutT>
+  SmallMatOutT& flux_from_coeffs(const SmallMatInT& lambda_values_in,
+                                 const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs_vec,
+                                 SmallMatOutT& lambda_values_out,
+                                 hyEdgeT& hyper_edge) const
+  {
     using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    std::array<lSol_float_t, n_loc_dofs_> coeffs =
-      solve_local_problem(lambda_values_in, 0U, hyper_edge, time);
+    const std::array<lSol_float_t, n_loc_dofs_>& coeffs = coeffs_vec.data();
 
     std::array<std::array<lSol_float_t, 2 * n_shape_bdr_>, 2 * hyEdge_dimT> primals(
       primal_at_boundary(coeffs, hyper_edge)),
@@ -498,6 +517,10 @@ class BilaplacianParab
 
     return lambda_values_out;
   }
+  /*!***********************************************************************************************
+   * \brief   Local condensed matrix (cf. HYPERHDG_LOCAL_TRACE_TO_FLUX_MAT).
+   ************************************************************************************************/
+  HYPERHDG_LOCAL_TRACE_TO_FLUX_MAT(assemble_loc_matrix(tau_, hyper_edge, time));
   /*!***********************************************************************************************
    * \brief   Evaluate local contribution to residual.
    *

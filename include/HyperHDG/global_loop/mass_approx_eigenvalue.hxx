@@ -1,6 +1,8 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/compile_time_tricks.hxx>
+#include <HyperHDG/global_loop/condensed_operator.hxx>
+#include <HyperHDG/global_loop/mat_generate.hxx>
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/plot.hxx>
@@ -30,8 +32,25 @@ template <class TopologyT,
           class LocalSolverT,
           typename LargeVecT = std::vector<double>,
           typename dof_index_t = unsigned int>
-class MassApproxEigenvalue
+class MassApproxEigenvalue : public CondensedOperator<MassApproxEigenvalue,
+                                                      TopologyT,
+                                                      GeometryT,
+                                                      NodeDescriptorT,
+                                                      LocalSolverT,
+                                                      LargeVecT,
+                                                      dof_index_t>
 {
+  /*!***********************************************************************************************
+   * \brief   The base class assembles the condensed matrix (cf. trace_to_flux_mat).
+   ************************************************************************************************/
+  friend class CondensedOperator<MassApproxEigenvalue,
+                                 TopologyT,
+                                 GeometryT,
+                                 NodeDescriptorT,
+                                 LocalSolverT,
+                                 LargeVecT,
+                                 dof_index_t>;
+
   /*!***********************************************************************************************
    * \brief   Floating type is determined by floating type of large vector's entries.
    ************************************************************************************************/

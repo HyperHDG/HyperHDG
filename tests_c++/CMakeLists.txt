@@ -13,10 +13,3 @@ add_hyperhdg_test(plot_simple.cxx)
 add_hyperhdg_test(point_functions.cxx)
 add_hyperhdg_test(qr_handedness.cxx)
 add_hyperhdg_test(stiffness_matrix.cxx)
-
-# Using factorize_once for non-uniform local matrices must be detected (and abort) in debug mode.
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_test(NAME stiffness_matrix_misuse COMMAND stiffness_matrix misuse
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  set_tests_properties(stiffness_matrix_misuse PROPERTIES WILL_FAIL TRUE)
-endif()

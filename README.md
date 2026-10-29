@@ -27,6 +27,7 @@ want to know how to setup HyperHDG, we recommend to visit the [Wiki's setup page
 | Build (Linux)   | [![CMake](https://github.com/HyperHDG/HyperHDG/actions/workflows/cmake.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/cmake.yml?query=branch%3Amain) | Build and test library on Ubuntu with GCC and Clang. |
 | Build (macOS)   | [![macOS](https://github.com/HyperHDG/HyperHDG/actions/workflows/macos.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/macos.yml?query=branch%3Amain) | Build and test library on macOS with Apple Clang. |
 | Build (Windows) | [![Windows](https://github.com/HyperHDG/HyperHDG/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/windows.yml?query=branch%3Amain) | Build and test library on Windows with MinGW-w64 GCC (MSYS2). |
+| Reproducibles   | [![Reproducibles](https://github.com/HyperHDG/HyperHDG/actions/workflows/reproducibles.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/reproducibles.yml?query=branch%3Amain) | Weekly run of all scripts in `reproducibles_python`. |
 | Make doxygen    | [![Doxygen](https://github.com/HyperHDG/HyperHDG/actions/workflows/make_doxygen.yml/badge.svg?branch=main)](https://github.com/HyperHDG/HyperHDG/actions/workflows/make_doxygen.yml?query=branch%3Amain) | Automatically generate and deploy doxygen to web-page. |
 
 </div>
