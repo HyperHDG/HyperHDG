@@ -45,7 +45,7 @@ def quantities(hdg, coo):
     rhs = -np.asarray(hdg.residual_flux(hdg.zero_vector()))
     rows, cols, vals = coo()
     matrix = sp.coo_matrix((vals, (rows, cols)), shape=(size, size)).tocsr()
-    solution, info = sp.linalg.cg(matrix, rhs, rtol=1e-12)
+    solution, info = sp.linalg.cg(matrix, rhs, **{diffusion.CG_TOLERANCE: 1e-12})
     assert info == 0, f"CG did not converge (info = {info})"
     return size, rhs, matrix, solution, hdg.errors(list(solution))[0]
 
