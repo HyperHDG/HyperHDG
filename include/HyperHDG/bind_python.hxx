@@ -269,7 +269,7 @@ auto bind_python(nanobind::module_& m, const char* name)
           auto out = detail::as_span(y);
           o.apply(detail::as_span(x), out, Args{t});
         },
-        nb::arg("x"), nb::arg("y"), nb::arg("time") = 0.);
+        nb::arg("x"), nb::arg("y").noconvert(), nb::arg("time") = 0.);
     if constexpr (requires(GlobalLoopT o, std::span<const Scalar> x, std::span<Scalar> y, Args a) {
                     o.residual(x, y, a);
                   })
@@ -280,7 +280,7 @@ auto bind_python(nanobind::module_& m, const char* name)
           auto out = detail::as_span(r);
           o.residual(detail::as_span(x), out, Args{t});
         },
-        nb::arg("x"), nb::arg("r"), nb::arg("time") = 0.);
+        nb::arg("x"), nb::arg("r").noconvert(), nb::arg("time") = 0.);
     if constexpr (requires(GlobalLoopT o, std::span<Idx> i, std::span<Scalar> v, Args a) {
                     o.assemble(a, true, i, i, v);
                   })
@@ -297,8 +297,8 @@ auto bind_python(nanobind::module_& m, const char* name)
           auto v = detail::as_span(vals);
           o.assemble(Args{t}, identity_rows, r, c, v);
         },
-        nb::arg("rows"), nb::arg("cols"), nb::arg("vals"), nb::arg("time") = 0.,
-        nb::arg("identity_rows") = false);
+        nb::arg("rows").noconvert(), nb::arg("cols").noconvert(), nb::arg("vals").noconvert(),
+        nb::arg("time") = 0., nb::arg("identity_rows") = false);
     }
     if constexpr (requires(GlobalLoopT o, std::span<const Scalar> x, Args a) { o.errors(x, a); })
       cls.def(

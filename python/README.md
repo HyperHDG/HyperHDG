@@ -310,6 +310,7 @@ non-zero on a violation.
 python python/operator_loop.py --dim 2 --degree 3 --n 16          # one solve, YAML
 python python/operator_loop_convergence.py --dim 2 --degree 2    # ladder, pure python
 python python/operator_loop_check.py                             # roundoff comparison
+python python/operator_loop_arrays.py                            # output arrays: noconvert
 bash python/operator_loop.sh                                     # sweeps -> output/operator_loop/
 ```
 
