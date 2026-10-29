@@ -343,3 +343,46 @@ client exists and the pieces are meaningless apart.
 4. Python: one nanobind template over Kind/Args; sparse_stiff_mat etc.
    stay as thin aliases.
 5. Retire the old loops.
+
+## 10. Repository structure (planned, separate branch `structure` off main)
+
+Independent of the loop redesign; not stacked on it. The only shared piece, NumPy across the
+binding boundary (the ndarray overloads of Elliptic's methods in bind_python.hxx), is cut into
+its own small branch `numpy-bindings` off main that both `operator-loop` and `structure` merge.
+
+Layout:
+
+    tests/
+      unit/        qr_handedness.cxx, point_functions.cxx, dense_la.cxx   fast, no solver
+      params/      manufactured solutions (parameter structs), shared by everything below
+      solvers/
+        <solver>.hxx   instantiation ladder: (dim, degree) types and names, one per solver
+        <solver>.cxx   C++ smoke test and example: first ladder entry, coarse mesh, CG
+                       (tests/solvers/cg.hxx, matrix-free, ~20 lines), error below a threshold
+        <solver>.py    python ladder test: every entry, convergence rates
+        bind.cxx       one generic nanobind module source, compiled once per solver with the
+                       solver's ladder header injected; class names <Solver>_D<dim>_P<deg>
+    examples/        python only: the just-in-time path (hyperhdg.load) on geo files, a few
+                     scripts (diffusion, timoshenko); the C++ examples are replaced by
+                     tests/solvers/*.cxx, which are compiled and run
+
+CMake: foreach(solver): executable from solvers/<solver>.cxx, nanobind module from bind.cxx,
+ctest running <solver>.py against that module (skipped without NumPy).
+
+Rules:
+- The ladder header is the single source of instantiations, read by the C++ test and the
+  binding. Python knows only the class-name convention and writes its ladder as plain numbers;
+  a mismatch fails with an attribute error naming the missing class. Nothing else crosses.
+- Tests never compile: they import the prebuilt ladder modules. The JIT path lives in
+  examples/ only (note at the top of tests/README.md).
+- Ladders stay small (dims 1-2, degrees 1-3); 3D high degree is research, not test suite.
+- Each <solver>.py is solve(opt) + a loop over the ladder, so the file reads as the example of
+  the bindings (preallocate y, rows, cols, vals via n_triplets; no helpers hiding it) and runs
+  as the test. The examples/ scripts share the same solve after the class is obtained.
+- Convergence asserts: observed rate on the last step >= degree + 1 - 0.3, and the finest
+  error below a bound. No equality on rates.
+- Removed: tests_c++, tests_python (incl. the cython local_solvers/run.py), reproducibles_python
+  (research scripts move to python/ next to the drivers), cython/, import/, examples/*.cxx.
+
+Order: numpy-bindings (small, first) -> structure (on the old loops) -> after operator-loop
+lands, a follow-up swaps the loop into tests/solvers and deletes python/operator_loop*.py.
