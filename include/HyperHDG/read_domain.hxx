@@ -1,7 +1,11 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
+#include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/epsilon_neighborhood_graph.hxx>
 #include <HyperHDG/hy_assert.hxx>
+#ifdef HYPERHDG_HAVE_HDF5
+#include <HyperHDG/read_domain_hdf5.hxx>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -374,8 +378,9 @@ read_domain_geo(const std::string& filename)
 /*!*************************************************************************************************
  * \brief   General Function to read domain from input file.
  *
- * At the moment, only self-defined .geo files are supported. These files are supposed to comprise
- * hypergraphs consisting of hypercuboids only. Other versions have not yet been implemented.
+ * Self-defined .geo files (cf. read_domain_geo) and, if HyperHDG is configured with HDF5, their
+ * HDF5 counterpart .geo.h5 (cf. read_domain_hdf5; any .h5 or .hdf5 name) are supported. These
+ * files are supposed to comprise hypergraphs consisting of hypercuboids only.
  *
  * \tparam  hyEdge_dim      The local dimension of a hyperedge.
  * \tparam  space_dim       The dimension of the surrounding space.
@@ -409,13 +414,28 @@ read_domain(std::string filename)
     make_epsilon_neighborhood_graph<space_dim, vectorT, pointT, hyEdge_index_t>(filename);
   }
 
-  hy_assert(filename.substr(filename.size() - 4, filename.size()) == ".geo",
-            "The given file needs to be a .geo file, since no other input file types are currently"
-              << " implemented.");
+  const bool is_hdf5 = filename.ends_with(".h5") || filename.ends_with(".hdf5");
+  hy_check(is_hdf5 || filename.ends_with(".geo"),
+           "The given file " << filename << " needs to be a .geo or a .geo.h5 file, since no other "
+                             << "input file types are currently implemented.");
+#ifndef HYPERHDG_HAVE_HDF5
+  hy_check(!is_hdf5, "The given file "
+                       << filename << " is an HDF5 file, but this code was "
+                       << "compiled without HDF5 (HYPERHDG_HAVE_HDF5): either CMake "
+                       << "did not find HDF5 (set HDF5_ROOT or CMAKE_PREFIX_PATH to "
+                       << "its install prefix), or this is a Cython module, which "
+                       << "is built without HDF5 (use the nanobind interface).");
+#endif
 
   DomainInfo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t, hyNode_index_t, pt_index_t>
-    domain_info = read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
-                                  hyNode_index_t, pt_index_t>(filename);
+    domain_info =
+#ifdef HYPERHDG_HAVE_HDF5
+      is_hdf5 ? read_domain_hdf5<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                                 hyNode_index_t, pt_index_t>(filename)
+              :
+#endif
+              read_domain_geo<hyEdge_dim, space_dim, vectorT, pointT, hyEdge_index_t,
+                              hyNode_index_t, pt_index_t>(filename);
 
   hy_assert(domain_info.check_consistency(),
             "Domain info appears to be inconsistent!"

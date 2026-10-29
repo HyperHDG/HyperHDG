@@ -86,6 +86,18 @@ target_include_directories(
   {root}/submodules/tensor_product_chain_complex.git/include
 )
 target_link_libraries({name} PRIVATE ${{LAPACK_LIBRARIES}})
+
+# HDF5 for .geo.h5 domain files, as in the top-level CMakeLists.txt (optional)
+find_package(HDF5 COMPONENTS C)
+if(HDF5_FOUND)
+  target_compile_options({name} PRIVATE -DHYPERHDG_HAVE_HDF5 ${{HDF5_C_DEFINITIONS}})
+  target_include_directories({name} PRIVATE ${{HDF5_INCLUDE_DIRS}})
+  target_link_libraries({name} PRIVATE ${{HDF5_C_LIBRARIES}})
+  if(HDF5_IS_PARALLEL)
+    find_package(MPI REQUIRED COMPONENTS C)
+    target_link_libraries({name} PRIVATE MPI::MPI_C)
+  endif()
+endif()
 """
 
 _INSTALLED_CMAKE = """\

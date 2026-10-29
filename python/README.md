@@ -16,6 +16,11 @@ git submodule update --init --recursive        # nanobind lives in submodules/na
 python python/diffusion.py domains/cross.geo --degree 2 --refine 8
 ```
 
+The domain may also be a `.geo.h5` file (the HDF5 counterpart of `.geo`, read and written by
+`include/HyperHDG/read_domain_hdf5.hxx`, with a VTKHDF view for ParaView; `domains/cross.geo.h5`
+is an example), if CMake finds HDF5: through `HDF5_ROOT` or `CMAKE_PREFIX_PATH` (a conda
+environment: `$CONDA_PREFIX`), or `h5cc` on `PATH`.
+
 `python/diffusion.py` is the command-line counterpart of
 `reproducibles_python/fiber_network_diffusion.py`: LDG-H diffusion on a hypergraph of
 one-dimensional hyperedges, condensed system assembled as a COO triplet and solved with

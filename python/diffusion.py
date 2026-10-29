@@ -46,7 +46,12 @@ NB_MODULE(hdg_diffusion, m) {{ HyperHDG::bind_python<HDG>(m, "{name}"); }}
 
 
 def space_dim(domain):
-    """Space dimension declared in the header of a .geo file."""
+    """Space dimension: declared in the header of a .geo file, the columns of the points of a
+    .geo.h5 file (cf. include/HyperHDG/read_domain_hdf5.hxx)."""
+    if domain.endswith((".h5", ".hdf5")):
+        import h5py
+        with h5py.File(domain, "r") as file:
+            return file["domain/points"].shape[1]
     with open(domain) as file:
         return int(re.search(r"Space_Dim\s*=\s*(\d+)", file.read()).group(1))
 
@@ -63,7 +68,7 @@ def problem(domain, degree, tau):
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("domain", help="hypergraph file (.geo)")
+    parser.add_argument("domain", help="hypergraph file (.geo or .geo.h5)")
     parser.add_argument("--degree", type=int, default=1, help="polynomial degree")
     parser.add_argument("--refine", type=int, default=1, help="uniform refinement level")
     parser.add_argument("--tau", type=float, default=1.0, help="HDG penalty parameter")

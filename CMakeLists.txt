@@ -32,6 +32,29 @@ if(APPLE AND NOT DEFINED BLA_VENDOR)
   set(BLA_VENDOR Apple)
 endif()
 find_package (LAPACK REQUIRED)
+
+## HDF5 for .geo.h5 domain files (include/HyperHDG/read_domain_hdf5.hxx). CMake's FindHDF5 looks
+## at HDF5_ROOT and CMAKE_PREFIX_PATH (a conda environment: $CONDA_PREFIX; a spack environment sets
+## it on activation) and at h5cc / h5pcc on PATH. A parallel HDF5 (e.g. hdf5-openmpi) includes
+## mpi.h, so MPI is looked up as well in that case. The Cython modules (cmake_cython.cfg.in) are
+## built without HDF5 and refuse .geo.h5 files with a message; use the nanobind path for them.
+option(HYPERHDG_HDF5 "Read and write .geo.h5 domain files with HDF5 (if found)" ON)
+if(HYPERHDG_HDF5)
+  find_package(HDF5 COMPONENTS C)
+  if(HDF5_FOUND)
+    set(HYPERHDG_HDF5_FOUND TRUE)
+    set(HYPERHDG_HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS})
+    set(HYPERHDG_HDF5_LIBRARIES ${HDF5_C_LIBRARIES})
+    if(HDF5_IS_PARALLEL)
+      find_package(MPI REQUIRED COMPONENTS C)
+      list(APPEND HYPERHDG_HDF5_INCLUDE_DIRS ${MPI_C_INCLUDE_DIRS})
+      list(APPEND HYPERHDG_HDF5_LIBRARIES ${MPI_C_LIBRARIES})
+    endif()
+  else()
+    message(WARNING "HDF5 not found: .geo.h5 domain files cannot be read. Set HDF5_ROOT (or "
+                    "CMAKE_PREFIX_PATH) to its install prefix, or -DHYPERHDG_HDF5=OFF.")
+  endif()
+endif()
 # On Windows, FindPython looks up interpreters registered in the Windows registry before the ones
 # on PATH. This selects e.g. a python.org Python without NumPy instead of the MSYS2 Python of the
 # shell, so prefer the interpreter on PATH, which is the one that runs the Python scripts.
@@ -60,7 +83,12 @@ target_include_directories(
   INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  ${HYPERHDG_HDF5_INCLUDE_DIRS}
 )
+if(HYPERHDG_HDF5_FOUND)
+  target_compile_definitions(HyperHDG INTERFACE HYPERHDG_HAVE_HDF5)
+  target_compile_options(HyperHDG INTERFACE ${HDF5_C_DEFINITIONS})
+endif()
 
 ## Link our target against upstream dependencies
 target_link_libraries(
@@ -69,6 +97,7 @@ target_link_libraries(
   HyperHDG::tpp
   HyperHDG::tpcc
   ${LAPACK_LIBRARIES}
+  ${HYPERHDG_HDF5_LIBRARIES}
 )
 
 ## Add the necessary C++ standard requirement
@@ -108,6 +137,9 @@ if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests_c++)
 endif()
+
+## Add the command-line tools (geo2h5; its tests need enable_testing above)
+add_subdirectory(tools)
 
 ## Build documentation if requested through the BUILD_DOC option (default: ON)
 if(BUILD_DOC)
