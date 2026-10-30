@@ -15,4 +15,18 @@ add_hyperhdg_test(qr_handedness.cxx)
 add_hyperhdg_test(stiffness_matrix.cxx)
 if(HYPERHDG_HDF5_FOUND)
   add_hyperhdg_test(domain_hdf5.cxx)
+  add_hyperhdg_test(plot_vtkhdf.cxx)
+  # End to end: ParaView's reader opens the files plot_vtkhdf wrote (only where pvpython exists).
+  find_program(PVPYTHON_EXECUTABLE pvpython)
+  if(PVPYTHON_EXECUTABLE)
+    set(plot_vtkhdf_files "")
+    foreach(dims 1-1 1-2 1-3 2-2 2-3 3-3)
+      list(APPEND plot_vtkhdf_files ${CMAKE_SOURCE_DIR}/output/plot_vtkhdf-${dims}.vtkhdf)
+    endforeach()
+    add_test(NAME plot_vtkhdf_paraview
+             COMMAND ${PVPYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/plot_vtkhdf_paraview.py
+                     ${plot_vtkhdf_files}
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(plot_vtkhdf_paraview PROPERTIES DEPENDS plot_vtkhdf)
+  endif()
 endif()

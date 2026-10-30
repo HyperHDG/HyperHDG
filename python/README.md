@@ -21,6 +21,15 @@ The domain may also be a `.geo.h5` file (the HDF5 counterpart of `.geo`, read an
 is an example), if CMake finds HDF5: through `HDF5_ROOT` or `CMAKE_PREFIX_PATH` (a conda
 environment: `$CONDA_PREFIX`), or `h5cc` on `PATH`.
 
+### Plotting as VTKHDF
+
+With HDF5 found, `plot_option("fileEnding", "vtkhdf")` makes `plot_solution(x, t)` write one HDF5
+file `output/<fileName>.vtkhdf` in the VTKHDF format: the mesh on the first call, then one time
+step per call (`t` is the step's time; `fileNumber` counts the steps), which ParaView opens as a
+time series. `plot_option("valuesSelect", "mag:0,1,2")` or `"i,j"` restricts the stored
+components of the solution, `"none"` drops them; a geometry's extra data becomes
+`CellData/properties`. The `.vtu` writer stays the default.
+
 ### `.geo` to `.geo.h5`, and inspecting `.h5` files
 
 ```sh
