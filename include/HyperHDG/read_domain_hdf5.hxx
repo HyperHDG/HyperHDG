@@ -335,7 +335,11 @@ void write_vtkhdf_view(const hid_t file,
  **************************************************************************************************/
 inline bool is_domain_hdf5(const std::string& filename)
 {
+#if H5_VERSION_GE(1, 12, 0)
   if (H5Fis_accessible(filename.c_str(), H5P_DEFAULT) <= 0)
+#else  // HDF5 1.10 (e.g. Ubuntu 24.04) has only the predecessor of H5Fis_accessible
+  if (H5Fis_hdf5(filename.c_str()) <= 0)
+#endif
     return false;
   const hid_t file = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   if (file < 0)
