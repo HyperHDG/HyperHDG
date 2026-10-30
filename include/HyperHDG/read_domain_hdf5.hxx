@@ -42,7 +42,7 @@ struct DomainInfo;
  * convention of the Python network generators. Files written by \c write_domain_hdf5 for
  * hyEdge_dim 1 contain no \c hypernodes dataset if the numbering agrees.
  *
- * \c tools/geo2h5 converts a .geo file into this format. The group \c /VTKHDF (optional, written by
+ * \c python/geo2h5.py converts a .geo file into this format. The group \c /VTKHDF (optional, written by
  *default) is a VTKHDF unstructured grid view of the same data for ParaView: \c Points and the
  *point/cell data are links into \c /domain, and the \c Connectivity of a network is a virtual
  *dataset over \c /domain/edges, so the view costs nothing but a few small arrays. ParaView chooses

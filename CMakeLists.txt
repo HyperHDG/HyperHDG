@@ -138,9 +138,6 @@ if(BUILD_TESTING)
   add_subdirectory(tests_c++)
 endif()
 
-## Add the command-line tools (geo2h5; its tests need enable_testing above)
-add_subdirectory(tools)
-
 ## Build documentation if requested through the BUILD_DOC option (default: ON)
 if(BUILD_DOC)
   add_subdirectory(doxygen)

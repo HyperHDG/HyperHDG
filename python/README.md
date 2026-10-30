@@ -21,6 +21,39 @@ The domain may also be a `.geo.h5` file (the HDF5 counterpart of `.geo`, read an
 is an example), if CMake finds HDF5: through `HDF5_ROOT` or `CMAKE_PREFIX_PATH` (a conda
 environment: `$CONDA_PREFIX`), or `h5cc` on `PATH`.
 
+### `.geo` to `.geo.h5`, and inspecting `.h5` files
+
+```sh
+python python/geo2h5.py domains/cross.geo                 # -> domains/cross.geo.h5
+python python/geo2h5.py domains/cross.geo out.geo.h5 --no-vtkhdf
+```
+
+The dimensions are read from the header and the matching `read_domain` instantiation is compiled
+on demand (a few seconds per combination, then cached). HDF5 ships `h5dump` and `h5ls` (packages
+`hdf5` or `hdf5-tools`, or `hdf5` in a conda environment); none of these prints data unless asked:
+
+```sh
+h5dump -n  domains/cross.geo.h5               # list groups, datasets and links
+h5dump -H  domains/cross.geo.h5               # shapes and types of everything, no data
+h5dump -A  domains/cross.geo.h5               # attributes (space_dim, hyperedge_dim, ...)
+h5dump -d /domain/edges domains/cross.geo.h5  # one dataset with its data
+h5dump -p -d /domain/points domains/cross.geo.h5   # plus chunking and compression
+h5ls -r    domains/cross.geo.h5               # one line per object, with shapes
+```
+
+From Python, h5py does the same:
+
+```python
+import h5py
+with h5py.File("domains/cross.geo.h5") as f:
+    f.visititems(lambda name, obj: print(name, getattr(obj, "shape", "")))
+    points, edges = f["domain/points"][:], f["domain/edges"][:]
+```
+
+ParaView reads the `/VTKHDF` view as an unstructured grid. It picks readers by file extension and
+does not know `.geo.h5`, so choose "VTKHDF Reader" when it asks, or symlink the file to a
+`.vtkhdf` name.
+
 `python/diffusion.py` is the command-line counterpart of
 `reproducibles_python/fiber_network_diffusion.py`: LDG-H diffusion on a hypergraph of
 one-dimensional hyperedges, condensed system assembled as a COO triplet and solved with
