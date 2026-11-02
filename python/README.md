@@ -63,10 +63,9 @@ ParaView reads the `/VTKHDF` view as an unstructured grid. It picks readers by f
 does not know `.geo.h5`, so choose "VTKHDF Reader" when it asks, or symlink the file to a
 `.vtkhdf` name.
 
-`python/diffusion.py` is the command-line counterpart of
-`reproducibles_python/fiber_network_diffusion.py`: LDG-H diffusion on a hypergraph of
-one-dimensional hyperedges, condensed system assembled as a COO triplet and solved with
-scipy's CG. Graph, polynomial degree, refinement level and penalty come from the command
+`python/diffusion.py` is a command-line example of the explicit path: LDG-H diffusion on a
+hypergraph of one-dimensional hyperedges read from a domain file, condensed system assembled
+as a COO triplet and solved with scipy's CG. Graph, polynomial degree, refinement level and penalty come from the command
 line — the (space dimension, degree) instantiation is compiled the first time it is asked
 for (~3.5 s) and cached afterwards (~8 ms).
 
@@ -209,8 +208,7 @@ how the module was produced.
 ## Design rationale: why this instead of the runtime cython compile
 
 Both systems make the user spell C++ template parameters; the difference is where they land
-and what checks them. The legacy path
-(`reproducibles_python/fiber_network_diffusion.py`):
+and what checks them. The legacy path, as the cython-era reproducibles wrote it:
 
 ```python
 const                 = HyperHDG.config()
@@ -222,7 +220,7 @@ const.local_solver    = "Diffusion<1,2,4,TestParametersSinEllipt,double>"
 const.cython_replacements = ["string", "string"]
 const.include_files   = ["reproducibles_python/parameters/diffusion.hxx"]
 PyDP = HyperHDG.include(const)          # text-substitutes .pyx/.pxd templates,
-hdg  = PyDP("domains/fiber_network_1000.geo")   # runs cython + a C++ compiler, imports the .so
+hdg  = PyDP("domains/cross.geo")   # runs cython + a C++ compiler, imports the .so
 ```
 
 Same amount of template spelling as the `using HDG = ...` above — but in compiler-checked,
