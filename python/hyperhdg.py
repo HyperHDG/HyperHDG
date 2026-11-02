@@ -48,7 +48,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-__all__ = ["compile", "load"]
+__all__ = ["compile", "load", "import_prebuilt"]
 
 
 class Module(ModuleType):
@@ -285,6 +285,31 @@ def _build(work, build, name, code, cmakelists, fingerprint, cmake_args, force, 
         raise RuntimeError(f"build produced no extension module {name} in {build}")
     stamp.write_text(fingerprint)
     return _deliver(so, output_dir)
+
+
+def import_prebuilt(name, build_dir=None, subdir=""):
+    """Import a module that CMake built in a HyperHDG build tree (nanobind_add_module), e.g.
+    the modules of reproducibles_python. The tree is build_dir, else $HYPERHDG_BUILD_DIR, else
+    build/ next to this source tree; subdir narrows the search to one of its subdirectories.
+
+    The module is returned as a Module, i.e. mod.TheClass and mod["TheClass"] both work.
+    """
+    if name in sys.modules:
+        return sys.modules[name]
+    if build_dir is None:
+        build_dir = os.environ.get("HYPERHDG_BUILD_DIR") or Path(__file__).resolve().parent.parent / "build"
+    where = Path(build_dir).resolve() / subdir
+    so = _find_extension(where, name) if where.is_dir() else None
+    if so is None:
+        raise ImportError(f"no prebuilt module {name} under {where}: configure and build HyperHDG "
+                          "(cmake -S . -B build && cmake --build build), or point HYPERHDG_BUILD_DIR "
+                          "at the build tree")
+    spec = importlib.util.spec_from_file_location(name, so)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.__class__ = Module
+    sys.modules[name] = module
+    return module
 
 
 def load(code, *, force=False, hash_name=True, **kwargs):

@@ -25,4 +25,7 @@ foreach(case
     COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/local_solvers/run.py ${case}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
+  # the migrated reproducibles import their precompiled modules from the build tree
+  set_tests_properties(local_solver_${case}_py PROPERTIES
+    ENVIRONMENT "HYPERHDG_BUILD_DIR=${CMAKE_BINARY_DIR}")
 endforeach()
