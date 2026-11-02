@@ -13,6 +13,8 @@ FAILURE_PATTERNS = [ "Traceback", "Assert failed", "ERROR", "also failed", "did 
 failed = False
 for script in re.split(r"\n\nTry ", content):
   name = script.split(" ...", 1)[0].strip()
+  # the YAML records of the migrated scripts ("- {..., error: 0.01}") are results, not failures
+  script = "\n".join(line for line in script.splitlines() if not line.startswith("- {"))
   problems = [ pattern for pattern in FAILURE_PATTERNS if pattern in script ]
   # "Error" must only be used for printed errors of a discretization, i.e., followed by ': '.
   if any(script[match.end():match.end() + 2] != ': ' for match in re.finditer("Error", script)):

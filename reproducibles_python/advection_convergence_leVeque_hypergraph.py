@@ -1,105 +1,33 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""The parabolic advection solver (AdvectionParab, Parabolic loop, theta scheme with theta = 1/2 and
+1, 10^3 time steps to t = 5) with LeVeque's rotating velocity field on the hypergraph of
+two-dimensional hyperedges in domains/leVeque_hg.geo, every hyperedge split 2^refinement times,
+degrees 0 to 2, refinements 5 to 7: the errors at t = 5 go to
+output/advection_convergence_leVeque_hypergraph.yaml, the state is plotted at the start and every 20 steps. The
+classes AdvectionParab_D2_P<degree> come from modules/advection_leveque_file_parabolic.cxx.
 
-import numpy as np
-import scipy.sparse.linalg as sp_lin_alg
-from scipy.sparse.linalg import LinearOperator
+    python3 reproducibles_python/advection_convergence_leVeque_hypergraph.py [--quick]
+"""
+import common
 
-from datetime import datetime
-
-import os, sys
-
-# --------------------------------------------------------------------------------------------------
-# Function diffusion_test.
-# --------------------------------------------------------------------------------------------------
-def diffusion_test(theta, poly_degree, refinement, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
-  os.makedirs("output", exist_ok=True)
-  
-  time_steps      = 10 ** 3
-  time_end        = 5
-  delta_time      = time_end / time_steps
-  output_interval = 20
-  
-  try:
-    import HyperHDG
-  except (ImportError, ModuleNotFoundError) as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-    import HyperHDG
-  
-  const                 = HyperHDG.config()
-  const.global_loop     = "Parabolic"
-  const.topology        = "File<2,3,std::vector,Point<3,double> >"
-  const.geometry        = "File<2,3,std::vector,Point<3,double> >"
-  const.node_descriptor = "File<2,3,std::vector,Point<3,double> >"
-  const.local_solver    = "AdvectionParab<2," + str(poly_degree) + "," + str(2*poly_degree) + \
-    ",LeVequeHG,double>"
-  const.cython_replacements = ["string", "string", "double", "vector[double]"]
-  const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
-  const.debug_mode      = debug_mode
-
-  PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/leVeque_hg.geo", lsol_constr= [0.,theta,delta_time] )
-  HDG_wrapper.refine( 2 ** refinement )
-
-  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-  
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
-
-  HDG_wrapper.plot_option( "fileName" , "leVeque_hyg" + str(theta) + "-" + str(poly_degree) \
-    + "-" + str(refinement) )
-  HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  # HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
-
-  for time_step in range(time_steps):
-    
-    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
-                 (time_step+1) * delta_time), -1.)
-
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
-    if num_iter != 0:
-      # print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
-      if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
-        raise RuntimeError("All linear solvers did not converge!")
-
-    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
-
-    if (time_step+1) % output_interval == 0:
-      HDG_wrapper.plot_solution(vectorSolution, time_end)
-    
-  error = HDG_wrapper.errors(vectorSolution, time_end)[0]
-  print( "Iteration: ", refinement, " Error: ", error )
-  f = open("output/advection_convergence_rotation_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Theta = " + str(theta) \
-          + ". Iteration = " + str(refinement) + ". Error = " + str(error) + ".\n")
-  f.close()
-  
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
-  
-
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  for theta in [0.5, 1.]:
-    print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(3):
-      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for refinement in range(5,8):
-        try:
-          diffusion_test(theta, poly_degree, refinement, debug_mode)
-        except RuntimeError as error:
-          print("ERROR: ", error)
+NAME = "advection_convergence_leVeque_hypergraph"
+hdg_module = common.module("advection_leveque_file_parabolic")
+DOMAIN = str(common.ROOT / "domains" / "leVeque_hg.geo")
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def diffusion_test(theta, poly_degree, refinement):
+  time_steps, time_end, output_interval = (10 ** 3 if not common.QUICK else 20), 5, 20
+  delta_time = time_end / time_steps
+  hdg = hdg_module[f"AdvectionParab_D2_P{poly_degree}"](DOMAIN, [0., theta, delta_time])
+  hdg.set_refinement(2 ** refinement)
+  filename = f"leVeque_hyg{theta}-{poly_degree}-{refinement}"
+  solution = common.time_stepping(
+    hdg, time_steps, delta_time, solvers=("gmres", "bicgstab"),
+    on_start=lambda x: common.plot(hdg, x, filename, time=time_end),
+    on_step=lambda step, x: step % output_interval == 0 and hdg.plot_solution(list(x), time_end))
+  error = hdg.errors(list(solution), time_end)[0]
+  common.report(NAME, error, theta=theta, poly_degree=poly_degree, refinement=refinement)
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  common.main(diffusion_test, rtol=1e-5, theta=[0.5, 1.], poly_degree=range(3), refinement=range(5, 8))

@@ -27,5 +27,5 @@ foreach(case
   )
   # the migrated reproducibles import their precompiled modules from the build tree
   set_tests_properties(local_solver_${case}_py PROPERTIES
-    ENVIRONMENT "HYPERHDG_BUILD_DIR=${CMAKE_BINARY_DIR}")
+    ENVIRONMENT "HYPERHDG_BUILD_DIR=${CMAKE_BINARY_DIR};OPENBLAS_NUM_THREADS=1;OMP_NUM_THREADS=1")
 endforeach()

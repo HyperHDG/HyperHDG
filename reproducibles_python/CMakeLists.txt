@@ -22,17 +22,55 @@ foreach(source ${module_sources})
 endforeach()
 add_custom_target(reproducibles DEPENDS ${modules})
 
-# The scripts already migrated to the precompiled modules; the others still go through the cython
-# path and the weekly reproducibles workflow.
+# Every script, in quick mode, checked against its expected records.
 set(migrated
   diffusion_convergence_elliptic
+  diffusion_convergence_elliptic_ip
+  diffusion_convergence_elliptic_postprocess
+  bilaplacian_convergence_elliptic
+  advection_diffusion_reaction_convergence_elliptic
+  diffusion_hypergraph_convergence_elliptic
+  diffusion_hypergraph_convergence_elliptic_ip
+  diffusion_hypergraph_convergence_elliptic_postprocess
+  bilaplacian_hypergraph_convergence_elliptic
+  advection_diffusion_reaction_hypergraph_convergence_elliptic
+  diffusion_convergence_hypergraph_elliptic
+  diffusion_convergence_hypergraph_elliptic_high_order
+  diffusion_convergence_hypergraph_elliptic_high_order_postprocess
+  diffusion_convergence_parabolic
+  bilaplacian_convergence_parabolic
+  advection_convergence_parabolic
+  advection_convergence_rotation
+  diffusion_convergence_eigenvalue_approx
+  diffusion_convergence_eigenvalue_shifted_inverse
+  diffusion_convergence_eigenvalue_newt
+  diffusion_convergence_eigenvalue_comb
+  diffusion_hypergraph_convergence_eigenvalue_approx
+  diffusion_hypergraph_convergence_eigenvalue_shifted_inverse
+  diffusion_hypergraph_convergence_eigenvalue_newt
+  diffusion_hypergraph_convergence_eigenvalue_comb
+  bilaplacian_convergence_eigenvalue_approx
+  bilaplacian_convergence_eigenvalue_shifted_inverse
+  bilaplacian_convergence_eigenvalue_newt
+  bilaplacian_convergence_eigenvalue_comb
+  bilaplacian_hypergraph_convergence_eigenvalue_approx
+  bilaplacian_hypergraph_convergence_eigenvalue_shifted_inverse
+  bilaplacian_hypergraph_convergence_eigenvalue_newt
+  bilaplacian_hypergraph_convergence_eigenvalue_comb
+  diffusion_convergence_eigenvalue_shifted_inverse_cross
+  diffusion_hypergraph_convergence_eigenvalue_newt_cross
+  diffusion_convergence_eigenvalue_cross
+  advection_convergence_leVeque_hypergraph
+  movie_advection_hypergraph
+  timoshenko_convergence_cross
 )
 foreach(script ${migrated})
   add_test(
     NAME reproducible_${script}
-    COMMAND Python::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/${script}.py --quick
+    COMMAND Python::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/${script}.py --quick --check
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
+  # one BLAS thread: the dense local solves are small, threaded BLAS only spins
   set_tests_properties(reproducible_${script} PROPERTIES
-    ENVIRONMENT "HYPERHDG_BUILD_DIR=${CMAKE_BINARY_DIR}")
+    ENVIRONMENT "HYPERHDG_BUILD_DIR=${CMAKE_BINARY_DIR};OPENBLAS_NUM_THREADS=1;OMP_NUM_THREADS=1")
 endforeach()

@@ -31,7 +31,9 @@ jobs:
         sudo apt-get install -y cmake libblas-dev liblapack-dev;
         sudo apt-get install -y ${{ env.PYTHON }} g++-14;
     - name: Configure
-      run: cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-14 -DBUILD_TESTING=OFF
+      run: cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-14 -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+    - name: Build the modules of the reproducibles
+      run: cmake --build build --target reproducibles -j 4
     - name: Run reproducibles
       run: ./shell_scripts/reproducibles_test.sh
     - name: Upload log

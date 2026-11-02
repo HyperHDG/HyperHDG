@@ -1,102 +1,28 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""Convergence of the parabolic advection solver (AdvectionParab, Parabolic loop, theta scheme with
+theta = 1/2 and 1, 10^4 time steps to t = 1) on the unit cube in one and two dimensions, degrees 1
+to 3, six refinements: the errors at t = 1 go to
+output/advection_convergence_parabolic.yaml, the final state of every run is plotted.
+The classes AdvectionParab_D<dim>_P<degree> come from modules/advection_parabolic.cxx.
 
-import numpy as np
-import scipy.sparse.linalg as sp_lin_alg
-from scipy.sparse.linalg import LinearOperator
+    python3 reproducibles_python/advection_convergence_parabolic.py [--quick]
+"""
+import common
 
-from datetime import datetime
-
-import os, sys
-
-
-# --------------------------------------------------------------------------------------------------
-# Function diffusion_test.
-# --------------------------------------------------------------------------------------------------
-def diffusion_test(theta, poly_degree, dimension, iteration, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
-  os.makedirs("output", exist_ok=True)
-  
-  time_steps  = 10 ** 4
-  time_end    = 1.
-  delta_time  = time_end / time_steps
-  
-  try:
-    import HyperHDG
-  except (ImportError, ModuleNotFoundError) as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-    import HyperHDG
-  
-  const                 = HyperHDG.config()
-  const.global_loop     = "Parabolic"
-  const.topology        = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.geometry        = "UnitCube<" + str(dimension) + "," + str(dimension) + ",double>"
-  const.node_descriptor = "Cubic<" + str(dimension) + "," + str(dimension) + ">"
-  const.local_solver    = "AdvectionParab<" + str(dimension) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",TestParametersSinParab,double>"
-  const.cython_replacements = ["vector[unsigned int]", "vector[unsigned int]", \
-    "double", "vector[double]"]
-  const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
-  const.debug_mode      = debug_mode
-
-  PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP([2 ** iteration] * dimension, lsol_constr= [0.,theta,delta_time] )
-
-  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-  
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
-
-  for time_step in range(time_steps):
-    
-    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
-                 (time_step+1) * delta_time), -1.)
-
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
-    if num_iter != 0:
-      # print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
-      if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
-        raise RuntimeError("All linear solvers did not converge!")
-
-    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
-    
-  error = HDG_wrapper.errors(vectorSolution, time_end)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/advection_convergence_parabolic_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
-  f.close()
-  
-  HDG_wrapper.plot_option( "fileName" , "adv_conv_parab" + str(dimension) + "-" + str(iteration) )
-  HDG_wrapper.plot_option( "printFileNumber" , "false" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
-  
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
-  
-
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  for theta in [0.5, 1.]:
-    print("\n Theta is set to be ", theta, "\n\n")
-    for poly_degree in range(1,4):
-      print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-      for dimension in range(1,3):
-        print("\n Dimension is ", dimension, "\n")
-        for iteration in range(6):
-          try:
-            diffusion_test(theta, poly_degree, dimension, iteration, debug_mode)
-          except RuntimeError as error:
-            print("ERROR: ", error)
+NAME = "advection_convergence_parabolic"
+hdg_module = common.module("advection_parabolic")
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def diffusion_test(theta, poly_degree, dimension, iteration):
+  time_steps, time_end = (10 ** 4 if not common.QUICK else 100), 1.
+  delta_time = time_end / time_steps
+  hdg = hdg_module[f"AdvectionParab_D{dimension}_P{poly_degree}"]([2 ** iteration] * dimension,
+                                                                  [0., theta, delta_time])
+  solution = common.time_stepping(hdg, time_steps, delta_time, solvers=("gmres", "bicgstab"))
+  error = hdg.errors(list(solution), time_end)[0]
+  common.report(NAME, error, theta=theta, poly_degree=poly_degree, dimension=dimension, iteration=iteration)
+  common.plot(hdg, solution, f"adv_conv_parab{dimension}-{iteration}", time=time_end)
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  common.main(diffusion_test, rtol=1e-5, theta=[0.5, 1.], poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(6))
